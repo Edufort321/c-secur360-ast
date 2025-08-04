@@ -1,170 +1,187 @@
-// AtmosphericTesting.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
+// EntryRegistry.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
-  Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
+  UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
+  PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
+  UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature, 
+  Volume2, Camera, Bluetooth, Battery, Signal, MapPin, Calendar, User, 
+  Phone, Mail, Building, Briefcase, Award
 } from 'lucide-react';
 
 // Import des types et du hook centralisé
 import {
   ConfinedSpaceComponentProps,
-  AtmosphericTestingData,
-  AtmosphericReading,
-  AlarmSettings,
+  EntryRegistryData,
+  PersonnelEntry,
+  EmergencyContact,
+  SafetyRole,
   generatePermitId
 } from './SafetyManager';
 
 import { styles, isMobile } from './styles';
 
-// =================== TYPES LOCAUX ÉTENDUS ===================
-interface AtmosphericLimits {
-  oxygen: {
-    min: number;
-    max: number;
-    critical_low: number;
-    critical_high: number;
-  };
-  lel: {
-    max: number;
-    critical: number;
-  };
-  h2s: {
-    max: number;
-    critical: number;
-  };
-  co: {
-    max: number;
-    critical: number;
-  };
+// =================== FONCTION UTILITAIRE POUR FIX BUILD ===================
+/**
+ * Fonction utilitaire pour convertir boolean | undefined en boolean
+ * Évite l'erreur TypeScript: "Type 'boolean | undefined' is not assignable to parameter of type 'boolean'"
+ */
+function ensureBoolean(value: boolean | undefined, defaultValue: boolean = false): boolean {
+  return value ?? defaultValue;
 }
 
-interface RegulationData {
-  name: string;
-  authority: string;
-  authority_phone: string;
-  code: string;
-  url?: string;
-  atmospheric_testing: {
-    frequency_minutes: number;
-    continuous_monitoring_required?: boolean;
-    documentation_required?: boolean;
-    limits: AtmosphericLimits;
+// =================== TYPES LOCAUX ÉTENDUS COMPATIBLES ===================
+interface EntryLog {
+  id: string;
+  timestamp: string;
+  action: 'entry' | 'exit' | 'emergency_exit'; // ✅ CORRECTION: Aligné avec EntryLogEntry du SafetyManager
+  // Propriétés requises par EntryLogEntry du SafetyManager
+  personnelId: string; // ✅ REQUIS pour compatibilité SafetyManager
+  authorizedBy: string; // ✅ REQUIS pour compatibilité SafetyManager
+  // Propriétés étendues locales
+  person_id: string;
+  person_name: string;
+  role: SafetyRole;
+  location: string;
+  atmospheric_conditions?: {
+    oxygen: number;
+    lel: number;
+    h2s: number;
+    co: number;
   };
-  personnel_requirements: {
-    min_age: number;
-    attendant_required: boolean;
-    bidirectional_communication_required?: boolean;
-    rescue_plan_required?: boolean;
-    competent_person_required?: boolean;
-  };
-  // ✅ CORRECTION RUNTIME ERROR : Utiliser les propriétés qui existent réellement
-  permit_validity_hours: number; // ✅ Cette propriété existe dans PROVINCIAL_REGULATIONS
-  atmosphere_testing_frequency: number; // ✅ Cette propriété existe
-  continuous_monitoring_required: boolean; // ✅ Cette propriété existe
-  emergency_contacts: Array<{
-    name: string;
-    role: string;
-    phone: string;
-    available_24h: boolean;
-  }>;
+  communication_verified: boolean;
+  equipment_verified: boolean;
+  notes?: string;
+  emergency?: boolean;
 }
 
-interface LegalAtmosphericData {
-  initial_testing_completed: boolean;
-  continuous_monitoring_required: boolean;
-  testing_frequency_minutes: number;
-  provincial_limits: AtmosphericLimits;
-  gas_detector_calibrated: boolean;
-  calibration_date: string;
-  calibration_certificate: string;
-  test_results_signed: boolean;
-  qualified_tester_name: string;
-  multi_level_testing_completed: boolean;
-  atmospheric_stability_confirmed: boolean;
+// Type séparé pour les vérifications de communication (non sauvegardé dans SafetyManager)
+interface CommunicationCheckLog {
+  id: string;
+  timestamp: string;
+  action: 'status_check'; // Type spécifique pour communication
+  personnelId: string;
+  authorizedBy: string;
+  person_id: string;
+  person_name: string;
+  role: SafetyRole;
+  location: string;
+  communication_verified: boolean;
+  equipment_verified: boolean;
+  notes?: string;
+  emergency?: boolean;
+}
+
+interface PersonnelStatus {
+  person_id: string;
+  current_status: 'outside' | 'inside' | 'emergency' | 'unknown';
+  last_entry_time?: string;
+  last_exit_time?: string;
+  total_time_inside: number; // en minutes
+  max_allowed_time: number; // en minutes selon réglementation
+  communication_last_verified?: string;
+  equipment_status: 'verified' | 'needs_check' | 'expired';
+}
+
+interface CommunicationLog {
+  id: string;
+  timestamp: string;
+  person_id: string;
+  person_name: string;
+  communication_type: 'radio' | 'visual' | 'hand_signal' | 'emergency_signal';
+  signal_strength: number; // 1-5
+  message?: string;
+  response_received: boolean;
+  emergency_indicated: boolean;
 }
 
 // =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
-    title: "Tests Atmosphériques Obligatoires",
-    legalCompliance: "Conformité Réglementaire Tests Atmosphériques",
-    limits: "Limites Réglementaires",
-    newReading: "Nouvelle Mesure Atmosphérique",
-    readingHistory: "Historique des Mesures",
-    continuousMonitoring: "Surveillance Continue Obligatoire",
-    multiLevelTesting: "Tests Multi-Niveaux Obligatoires",
-    deviceCalibration: "Calibration Équipement de Mesure",
-    addReading: "Ajouter Mesure",
-    level: "Niveau dans l'espace",
-    topLevel: "Niveau supérieur",
-    middleLevel: "Niveau moyen", 
-    bottomLevel: "Niveau inférieur",
-    oxygen: "Oxygène (O₂)",
-    lel: "Limite explosive (LEL)",
-    h2s: "Sulfure d'hydrogène (H₂S)",
-    co: "Monoxyde de carbone (CO)",
-    temperature: "Température",
-    humidity: "Humidité",
-    deviceId: "ID Appareil",
-    notes: "Notes",
-    safe: "SÉCURITAIRE",
-    warning: "ATTENTION", 
-    danger: "DANGER",
-    criticalValues: "VALEURS CRITIQUES",
-    retestRequired: "RETEST OBLIGATOIRE",
-    evacuationRequired: "ÉVACUATION REQUISE",
-    startMonitoring: "Démarrer Surveillance",
-    stopMonitoring: "Arrêter Surveillance",
-    resetTimer: "Réinitialiser Timer",
-    timeRemaining: "Temps restant",
-    frequencyMinutes: "Fréquence réglementaire",
-    calibrated: "Calibré",
-    certified: "Certifié",
-    validated: "Validé"
+    title: "Registre d'Entrée Obligatoire",
+    legalCompliance: "Conformité Réglementaire Entrée/Sortie",
+    currentOccupancy: "Occupation Actuelle",
+    entryLog: "Journal des Entrées/Sorties",
+    personnelManagement: "Gestion du Personnel",
+    communicationSystem: "Système de Communication",
+    emergencyProcedures: "Procédures d'Urgence",
+    addPerson: "Ajouter Personne",
+    recordEntry: "Enregistrer Entrée",
+    recordExit: "Enregistrer Sortie",
+    emergencyEvacuation: "Évacuation d'Urgence",
+    communicationCheck: "Vérification Communication",
+    personnelInside: "Personnel à l'intérieur",
+    personnelOutside: "Personnel à l'extérieur",
+    maxOccupancy: "Occupation maximale",
+    timeInside: "Temps à l'intérieur",
+    lastCommunication: "Dernière communication",
+    equipmentStatus: "État équipement",
+    entrant: "Entrant",
+    attendant: "Surveillant",
+    supervisor: "Superviseur",
+    rescuer: "Sauveteur",
+    emergency: "Urgence",
+    verified: "Vérifié",
+    needsCheck: "À vérifier",
+    expired: "Expiré",
+    inside: "À l'intérieur",
+    outside: "À l'extérieur",
+    unknown: "Inconnu",
+    signalStrength: "Force signal",
+    responseReceived: "Réponse reçue",
+    emergencySignal: "Signal d'urgence",
+    authorized: "Autorisé",
+    unauthorized: "Non autorisé",
+    attendantRequired: "Surveillant obligatoire",
+    communicationRequired: "Communication obligatoire",
+    maxTimeExceeded: "Temps maximum dépassé",
+    emergencyEvacuationInitiated: "Évacuation d'urgence déclenchée"
   },
   en: {
-    title: "Mandatory Atmospheric Testing",
-    legalCompliance: "Atmospheric Testing Regulatory Compliance",
-    limits: "Regulatory Limits",
-    newReading: "New Atmospheric Reading",
-    readingHistory: "Reading History",
-    continuousMonitoring: "Mandatory Continuous Monitoring",
-    multiLevelTesting: "Mandatory Multi-Level Testing",
-    deviceCalibration: "Measuring Equipment Calibration",
-    addReading: "Add Reading",
-    level: "Level in space",
-    topLevel: "Top level",
-    middleLevel: "Middle level",
-    bottomLevel: "Bottom level", 
-    oxygen: "Oxygen (O₂)",
-    lel: "Lower Explosive Limit (LEL)",
-    h2s: "Hydrogen Sulfide (H₂S)",
-    co: "Carbon Monoxide (CO)",
-    temperature: "Temperature",
-    humidity: "Humidity",
-    deviceId: "Device ID",
-    notes: "Notes",
-    safe: "SAFE",
-    warning: "WARNING",
-    danger: "DANGER", 
-    criticalValues: "CRITICAL VALUES",
-    retestRequired: "RETEST REQUIRED",
-    evacuationRequired: "EVACUATION REQUIRED",
-    startMonitoring: "Start Monitoring",
-    stopMonitoring: "Stop Monitoring", 
-    resetTimer: "Reset Timer",
-    timeRemaining: "Time remaining",
-    frequencyMinutes: "Regulatory frequency",
-    calibrated: "Calibrated",
-    certified: "Certified",
-    validated: "Validated"
+    title: "Mandatory Entry Registry",
+    legalCompliance: "Entry/Exit Regulatory Compliance",
+    currentOccupancy: "Current Occupancy",
+    entryLog: "Entry/Exit Log",
+    personnelManagement: "Personnel Management",
+    communicationSystem: "Communication System",
+    emergencyProcedures: "Emergency Procedures",
+    addPerson: "Add Person",
+    recordEntry: "Record Entry",
+    recordExit: "Record Exit",
+    emergencyEvacuation: "Emergency Evacuation",
+    communicationCheck: "Communication Check",
+    personnelInside: "Personnel Inside",
+    personnelOutside: "Personnel Outside",
+    maxOccupancy: "Maximum occupancy",
+    timeInside: "Time inside",
+    lastCommunication: "Last communication",
+    equipmentStatus: "Equipment status",
+    entrant: "Entrant",
+    attendant: "Attendant",
+    supervisor: "Supervisor",
+    rescuer: "Rescuer",
+    emergency: "Emergency",
+    verified: "Verified",
+    needsCheck: "Needs check",
+    expired: "Expired",
+    inside: "Inside",
+    outside: "Outside",
+    unknown: "Unknown",
+    signalStrength: "Signal strength",
+    responseReceived: "Response received",
+    emergencySignal: "Emergency signal",
+    authorized: "Authorized",
+    unauthorized: "Unauthorized",
+    attendantRequired: "Attendant required",
+    communicationRequired: "Communication required",
+    maxTimeExceeded: "Maximum time exceeded",
+    emergencyEvacuationInitiated: "Emergency evacuation initiated"
   }
 };
 
 // =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
-const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
+const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   language,
   permitData,
   selectedProvince,
@@ -176,337 +193,230 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   onValidationChange
 }) => {
   // Accès direct aux données depuis permitData
-  const atmosphericData = permitData.atmosphericTesting || {
-    equipment: {
-      deviceModel: '',
-      serialNumber: '',
-      calibrationDate: '',
-      nextCalibration: ''
-    },
-    readings: [],
-    continuousMonitoring: false,
-    alarmSettings: {
-      oxygen: { min: 19.5, max: 23.0 },
-      combustibleGas: { max: 10 },
-      hydrogenSulfide: { max: 10 },
-      carbonMonoxide: { max: 35 }
-    },
+  const entryRegistryData = permitData.entryRegistry || {
+    personnel: [],
+    entryLogs: [],
+    currentOccupancy: 0,
+    maxOccupancy: 3,
+    attendantPresent: false,
+    communicationSystemActive: false,
+    emergencyContactsNotified: false,
     lastUpdated: new Date().toISOString()
   };
 
-  const atmosphericReadings = atmosphericData.readings || [];
+  const personnel = entryRegistryData.personnel || [];
+  const entryLogs = entryRegistryData.entryLogs || [];
   
   // États locaux pour l'interface
-  const [retestTimer, setRetestTimer] = useState(0);
-  const [retestActive, setRetestActive] = useState(false);
-  const [continuousTimer, setContinuousTimer] = useState(0);
-  const [continuousActive, setContinuousActive] = useState(false);
-  const [lastDangerReading, setLastDangerReading] = useState<AtmosphericReading | null>(null);
+  const [showAddPersonForm, setShowAddPersonForm] = useState(false);
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('');
+  const [communicationTimer, setCommunicationTimer] = useState(0);
+  const [communicationActive, setCommunicationActive] = useState(false);
+  const [emergencyMode, setEmergencyMode] = useState(false);
   
-  // États saisie manuelle
-  const [manualReading, setManualReading] = useState({ 
-    level: 'top' as 'top' | 'middle' | 'bottom',
-    oxygen: '', 
-    lel: '', 
-    h2s: '', 
-    co: '', 
-    temperature: '', 
-    humidity: '',
-    device_id: '',
+  // États pour nouveau personnel
+  const [newPerson, setNewPerson] = useState({
+    name: '',
+    role: 'entrant' as SafetyRole,
+    phone: '',
+    email: '',
+    company: '',
+    certification: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
     notes: ''
   });
 
-  // État monitoring continu
-  const [isMonitoring, setIsMonitoring] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // États pour communication
+  const [communicationCheck, setCommunicationCheck] = useState({
+    person_id: '',
+    communication_type: 'radio' as 'radio' | 'visual' | 'hand_signal' | 'emergency_signal',
+    signal_strength: 5,
+    message: '',
+    response_received: false,
+    emergency_indicated: false
+  });
+
+  // États monitoring personnel
+  const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
+  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+  const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
+  const [localEntryLogs, setLocalEntryLogs] = useState<EntryLog[]>([]); // ✅ Logs locaux pour affichage
 
   const t = translations[language];
 
   // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
-  const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
+  const updateEntryRegistryData = React.useCallback((updates: Partial<EntryRegistryData>) => {
     // ✅ CORRECTION 1 : Vérification SafetyManager
     if (safetyManager) {
       try {
-        safetyManager.updateAtmosphericTesting(updates);
+        safetyManager.updateEntryRegistry(updates);
       } catch (error) {
-        console.warn('SafetyManager updateAtmosphericTesting failed:', error);
+        console.warn('SafetyManager updateEntryRegistry failed:', error);
       }
     }
     
     if (onUpdate) {
-      onUpdate('atmosphericTesting', updates);
+      onUpdate('entryRegistry', updates);
     }
     
-    // ✅ CORRECTION 2 : Vérification SafetyManager pour validation
+    // ✅ CORRECTION 2 : Vérification SafetyManager pour validation + FIX BUILD
     if (onValidationChange && safetyManager) {
       try {
-        const validation = safetyManager.validateSection('atmosphericTesting');
+        const validation = safetyManager.validateSection('entryRegistry');
         onValidationChange(validation.isValid, validation.errors);
       } catch (error) {
         console.warn('SafetyManager validateSection failed:', error);
-        // Fallback validation basique
-        const isValid = (updates.readings && updates.readings.length > 0) || atmosphericReadings.length > 0;
-        onValidationChange(isValid, isValid ? [] : ['Tests atmosphériques requis']);
+        // ✅ FIX BUILD : Fallback validation avec ensureBoolean
+        const hasAttendant = ensureBoolean(updates.attendantPresent) || ensureBoolean(entryRegistryData.attendantPresent);
+        const hasPersonnel = (updates.personnel && updates.personnel.length > 0) || personnel.length > 0;
+        const isValid = Boolean(hasAttendant && hasPersonnel); // Assure un boolean strict
+        onValidationChange(isValid, isValid ? [] : ['Surveillant et personnel requis']);
       }
     }
-  }, [safetyManager, onUpdate, onValidationChange, atmosphericReadings.length]);
+  }, [safetyManager, onUpdate, onValidationChange, entryRegistryData.attendantPresent, personnel.length]);
 
-  const updateReadings = useCallback((newReadings: AtmosphericReading[]) => {
-    updateAtmosphericData({ 
-      readings: newReadings,
+  const updatePersonnel = React.useCallback((newPersonnel: PersonnelEntry[]) => {
+    updateEntryRegistryData({ 
+      personnel: newPersonnel,
       lastUpdated: new Date().toISOString()
     });
-  }, [updateAtmosphericData]);
+  }, [updateEntryRegistryData]);
+
+  // =================== FONCTIONS DE CONVERSION POUR SAFETYMANAGER ===================
+  const convertToSafetyManagerLog = (log: EntryLog) => ({
+    id: log.id,
+    personnelId: log.personnelId,
+    action: log.action,
+    timestamp: log.timestamp,
+    authorizedBy: log.authorizedBy,
+    atmosphericReadings: log.atmospheric_conditions ? {
+      oxygen: log.atmospheric_conditions.oxygen,
+      combustibleGas: log.atmospheric_conditions.lel,
+      toxicGas: log.atmospheric_conditions.h2s + log.atmospheric_conditions.co
+    } : undefined,
+    notes: log.notes
+  });
+
+  const updateEntryLogs = React.useCallback((newLogs: EntryLog[]) => {
+    // Mettre à jour les logs locaux pour l'affichage
+    setLocalEntryLogs(newLogs);
+    
+    // ✅ Convertir et envoyer au SafetyManager
+    const currentSafetyManagerLogs = entryRegistryData.entryLogs || [];
+    const convertedNewLogs = newLogs.filter(log => 
+      !currentSafetyManagerLogs.some(existing => existing.id === log.id)
+    ).map(convertToSafetyManagerLog);
+
+    if (convertedNewLogs.length > 0) {
+      updateEntryRegistryData({ 
+        entryLogs: [...currentSafetyManagerLogs, ...convertedNewLogs],
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  }, [updateEntryRegistryData, entryRegistryData.entryLogs]);
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
-    const currentRegulations = regulations[selectedProvince];
-    if (!currentRegulations?.limits?.[type]) {
-      return 'safe'; // Fallback si pas de réglementation
-    }
-    
-    const limits = currentRegulations.limits[type];
-    
-    if (type === 'oxygen') {
-      const oxygenLimits = limits as AtmosphericLimits['oxygen'];
-      if (value <= oxygenLimits.critical_low || value >= oxygenLimits.critical_high) return 'danger';
-      if (value < oxygenLimits.min || value > oxygenLimits.max) return 'warning';
-    } else {
-      const gasLimits = limits as AtmosphericLimits['lel'] | AtmosphericLimits['h2s'] | AtmosphericLimits['co'];
-      if (value >= gasLimits.critical) return 'danger';
-      if (value > gasLimits.max) return 'warning';
-    }
-    
-    return 'safe';
+  const getCurrentPersonnelInside = () => {
+    return personnelStatuses.filter(status => status.current_status === 'inside');
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const getCurrentPersonnelOutside = () => {
+    return personnelStatuses.filter(status => status.current_status === 'outside');
   };
 
-  const getLevelColor = (level: string): string => {
+  const getPersonnelStatus = (personId: string): PersonnelStatus | undefined => {
+    return personnelStatuses.find(status => status.person_id === personId);
+  };
+
+  const getPersonById = (personId: string): PersonnelEntry | undefined => {
+    return personnel.find(person => person.id === personId);
+  };
+
+  const getRoleColor = (role: SafetyRole): string => {
     const colors = {
-      top: '#3b82f6',
-      middle: '#f59e0b', 
-      bottom: '#ef4444'
+      entrant: '#3b82f6',
+      attendant: '#10b981',
+      supervisor: '#f59e0b',
+      rescue: '#ef4444', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
+      admin: '#dc2626'
     };
-    return colors[level as keyof typeof colors] || '#6b7280';
+    return colors[role] || '#6b7280';
   };
 
-  const getLevelEmoji = (level: string): string => {
+  const getRoleEmoji = (role: SafetyRole): string => {
     const emojis = {
-      top: '⬆️',
-      middle: '↔️',
-      bottom: '⬇️'
+      entrant: '👷',
+      attendant: '👁️',
+      supervisor: '👨‍💼',
+      rescue: '🚑', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
+      admin: '🚨'
     };
-    return emojis[level as keyof typeof emojis] || '📍';
+    return emojis[role] || '👤';
   };
 
-  // =================== GESTION DES TIMERS ===================
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    
-    if (retestActive && retestTimer > 0) {
-      interval = setInterval(() => {
-        setRetestTimer(prev => {
-          if (prev <= 1) {
-            setRetestActive(false);
-            alert('🚨 RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
+  const getStatusColor = (status: string): string => {
+    const colors = {
+      inside: '#ef4444',
+      outside: '#10b981',
+      emergency: '#dc2626',
+      unknown: '#6b7280'
     };
-  }, [retestActive, retestTimer]);
+    return colors[status as keyof typeof colors] || '#6b7280';
+  };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    
-    if (continuousActive && continuousTimer > 0) {
-      interval = setInterval(() => {
-        setContinuousTimer(prev => {
-          if (prev <= 1) {
-            // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
-            const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
-            alert(`⏰ SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
-            return frequencyMinutes * 60;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}min`;
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [continuousActive, continuousTimer, selectedProvince, regulations]);
-
-  useEffect(() => {
-    const latestReading = atmosphericReadings[atmosphericReadings.length - 1];
-    if (latestReading && latestReading.status === 'danger') {
-      setLastDangerReading(latestReading);
-      setRetestTimer(15 * 60);
-      setRetestActive(true);
-    }
-  }, [atmosphericReadings]);
-
-  useEffect(() => {
-    if (atmosphericReadings.length > 0 && !continuousActive) {
-      // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
-      const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
-      setContinuousTimer(frequencyMinutes * 60);
-      setContinuousActive(true);
-    }
-  }, [atmosphericReadings.length, selectedProvince, regulations, continuousActive]);
-
-  // =================== FONCTIONS DE GESTION ===================
-  const addManualReading = useCallback(() => {
-    if (!manualReading.oxygen || !manualReading.lel || !manualReading.h2s || !manualReading.co) {
-      alert('⚠️ Veuillez saisir toutes les valeurs obligatoires (O₂, LEL, H₂S, CO)');
-      return;
-    }
-
-    const oxygen = parseFloat(manualReading.oxygen);
-    const lel = parseFloat(manualReading.lel);
-    const h2s = parseFloat(manualReading.h2s);
-    const co = parseFloat(manualReading.co);
-
-    if (oxygen < 0 || oxygen > 30 || lel < 0 || lel > 100 || h2s < 0 || h2s > 1000 || co < 0 || co > 1000) {
-      alert('⚠️ Valeurs hors plage acceptable. Vérifiez vos mesures.');
-      return;
-    }
-
-    const oxygenStatus = validateAtmosphericValue('oxygen', oxygen);
-    const lelStatus = validateAtmosphericValue('lel', lel);
-    const h2sStatus = validateAtmosphericValue('h2s', h2s);
-    const coStatus = validateAtmosphericValue('co', co);
-
-    const statuses = [oxygenStatus, lelStatus, h2sStatus, coStatus];
-    const overallStatus: 'safe' | 'caution' | 'danger' = statuses.includes('danger') ? 'danger' :
-      statuses.includes('warning') ? 'caution' : 'safe';
-
-    const newReading: AtmosphericReading = {
-      id: generatePermitId(),
-      timestamp: new Date().toISOString(),
-      location: `${t.level} ${manualReading.level}`,
-      readings: {
-        oxygen,
-        combustibleGas: lel,
-        hydrogenSulfide: h2s,
-        carbonMonoxide: co,
-        temperature: manualReading.temperature ? parseFloat(manualReading.temperature) : 20,
-        humidity: manualReading.humidity ? parseFloat(manualReading.humidity) : 50
-      },
-      status: overallStatus,
-      testedBy: 'Opérateur Manuel',
-      notes: manualReading.notes || undefined
-    };
-
-    const newReadings = [...atmosphericReadings, newReading];
-    updateReadings(newReadings);
-
-    setManualReading({ 
-      level: 'top',
-      oxygen: '', 
-      lel: '', 
-      h2s: '', 
-      co: '', 
-      temperature: '', 
-      humidity: '',
-      device_id: '',
-      notes: ''
-    });
-
-    if (overallStatus === 'danger') {
-      alert('🚨 DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Évacuation immédiate requise!');
-    } else if (overallStatus === 'caution') {
-      alert('⚠️ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
-    }
-  }, [manualReading, atmosphericReadings, updateReadings, t, validateAtmosphericValue]);
-
-  const toggleContinuousMonitoring = useCallback(() => {
-    if (isMonitoring) {
-      setIsMonitoring(false);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    } else {
-      setIsMonitoring(true);
-      setContinuousActive(true);
-      // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
-      const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
-      setContinuousTimer(frequencyMinutes * 60);
-    }
-  }, [isMonitoring, regulations, selectedProvince]);
-
-  const updateEquipmentData = useCallback((field: string, value: any) => {
-    const currentEquipment = atmosphericData.equipment || {
-      deviceModel: '',
-      serialNumber: '',
-      calibrationDate: '',
-      nextCalibration: ''
-    };
-    const updatedEquipment = { ...currentEquipment, [field]: value };
-    updateAtmosphericData({ equipment: updatedEquipment });
-  }, [atmosphericData.equipment, updateAtmosphericData]);
+    return `${mins}min`;
+  };
 
   // =================== HANDLERS POUR CHECKBOX AVEC SAFETYMANAGER ===================
-  const handleGasDetectorCalibrated = useCallback((checked: boolean) => {
-    updateAtmosphericData({ 
-      equipment: { 
-        ...atmosphericData.equipment, 
-        calibrationDate: atmosphericData.equipment?.calibrationDate || '',
-        serialNumber: atmosphericData.equipment?.serialNumber || '',
-        deviceModel: atmosphericData.equipment?.deviceModel || '',
-        nextCalibration: atmosphericData.equipment?.nextCalibration || ''
-      }
-    });
+  const handleAttendantPresent = React.useCallback((checked: boolean) => {
+    updateEntryRegistryData({ attendantPresent: checked });
     
     // ✅ CORRECTION 3 : Vérification SafetyManager pour mise à jour permis
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
-        const updatedPermit = { ...currentPermit, gas_detector_calibrated: checked };
+        const updatedPermit = { ...currentPermit, attendant_present: checked };
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager permit update failed:', error);
+        console.warn('SafetyManager attendant present update failed:', error);
       }
     }
-  }, [safetyManager, atmosphericData.equipment, updateAtmosphericData]);
+  }, [safetyManager, updateEntryRegistryData]);
 
-  const handleMultiLevelTestingCompleted = useCallback((checked: boolean) => {
-    // ✅ CORRECTION 4 : Vérification SafetyManager pour multi-level testing
+  const handleCommunicationSystemTested = React.useCallback((checked: boolean) => {
+    updateEntryRegistryData({ communicationSystemActive: checked });
+    
+    // ✅ CORRECTION 4 : Vérification SafetyManager pour communication system
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
-        const updatedPermit = { ...currentPermit, multi_level_testing_completed: checked };
+        const updatedPermit = { ...currentPermit, communication_system_tested: checked };
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager multi-level testing update failed:', error);
+        console.warn('SafetyManager communication system update failed:', error);
       }
     }
-  }, [safetyManager]);
+  }, [safetyManager, updateEntryRegistryData]);
 
-  const handleAtmosphericStabilityConfirmed = useCallback((checked: boolean) => {
-    // ✅ CORRECTION 5 : Vérification SafetyManager pour atmospheric stability
+  const handleEmergencyRetrievalReady = React.useCallback((checked: boolean) => {
+    // ✅ CORRECTION 5 : Vérification SafetyManager pour emergency retrieval
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
-        const updatedPermit = { ...currentPermit, atmospheric_stability_confirmed: checked };
+        const updatedPermit = { ...currentPermit, emergency_retrieval_ready: checked };
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager atmospheric stability update failed:', error);
+        console.warn('SafetyManager emergency retrieval update failed:', error);
       }
     }
   }, [safetyManager]);
@@ -517,21 +427,387 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     name: 'Réglementation provinciale',
     code: 'N/A',
     authority: 'Autorité compétente',
+    permit_validity_hours: 8, // ✅ Utiliser permit_validity_hours au lieu de max_work_period_hours
     atmosphere_testing_frequency: 30,
     continuous_monitoring_required: true,
-    permit_validity_hours: 8,
-    limits: {
-      oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
-      lel: { max: 10, critical: 25 },
-      h2s: { max: 10, critical: 15 },
-      co: { max: 35, critical: 100 }
+    max_entrants: 2,
+    communication_check_interval: 15,
+    requirements: {
+      attendant: true,
+      min_age: 18
     }
   };
+
+  // =================== GESTION DU PERSONNEL ===================
+  const addNewPerson = React.useCallback(() => {
+    if (!newPerson.name || !newPerson.role || !newPerson.phone) {
+      alert('⚠️ Veuillez remplir tous les champs obligatoires (nom, rôle, téléphone)');
+      return;
+    }
+
+    const newPersonnelEntry: PersonnelEntry = {
+      id: generatePermitId(),
+      name: newPerson.name,
+      role: newPerson.role,
+      certification: newPerson.certification ? [newPerson.certification] : [],
+      medicalFitness: {
+        valid: true,
+        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 an
+      },
+      emergencyContact: {
+        name: newPerson.emergency_contact_name || 'N/A',
+        phone: newPerson.emergency_contact_phone || newPerson.phone,
+        relationship: 'Contact d\'urgence'
+      }
+    };
+
+    const newPersonnelStatus: PersonnelStatus = {
+      person_id: newPersonnelEntry.id,
+      current_status: 'outside',
+      total_time_inside: 0,
+      // ✅ CORRECTION RUNTIME ERROR : Utiliser permit_validity_hours au lieu de max_work_period_hours
+      max_allowed_time: safeRegulations.permit_validity_hours ? 
+        safeRegulations.permit_validity_hours * 60 : 480, // 8h par défaut
+      equipment_status: 'needs_check'
+    };
+
+    const updatedPersonnel = [...personnel, newPersonnelEntry];
+    const updatedStatuses = [...personnelStatuses, newPersonnelStatus];
+
+    updatePersonnel(updatedPersonnel);
+    setPersonnelStatuses(updatedStatuses);
+
+    // Reset form
+    setNewPerson({
+      name: '',
+      role: 'entrant',
+      phone: '',
+      email: '',
+      company: '',
+      certification: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      notes: ''
+    });
+    setShowAddPersonForm(false);
+
+    alert(`✅ Personnel ajouté : ${newPersonnelEntry.name} (${newPersonnelEntry.role})`);
+  }, [newPerson, personnel, personnelStatuses, updatePersonnel, safeRegulations]);
+
+  const removePerson = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
+    
+    if (status?.current_status === 'inside') {
+      alert('⚠️ Impossible de supprimer : cette personne est actuellement à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    if (person && confirm(`Supprimer ${person.name} du registre ?`)) {
+      const updatedPersonnel = personnel.filter(p => p.id !== personId);
+      const updatedStatuses = personnelStatuses.filter(s => s.person_id !== personId);
+      
+      updatePersonnel(updatedPersonnel);
+      setPersonnelStatuses(updatedStatuses);
+      
+      alert(`🗑️ ${person.name} supprimé du registre`);
+    }
+  }, [personnel, personnelStatuses, updatePersonnel, getPersonById, getPersonnelStatus]);
+  // =================== GESTION ENTRÉES/SORTIES ===================
+  const recordEntry = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
+    
+    if (!person) {
+      alert('⚠️ Personne non trouvée dans le registre');
+      return;
+    }
+
+    if (status?.current_status === 'inside') {
+      alert('⚠️ Cette personne est déjà à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    // Vérification occupation maximale
+    const currentInside = getCurrentPersonnelInside();
+    if (currentInside.length >= entryRegistryData.maxOccupancy) {
+      alert(`⚠️ Occupation maximale atteinte (${entryRegistryData.maxOccupancy} personnes)`);
+      return;
+    }
+
+    // Vérification surveillant présent
+    if (!ensureBoolean(entryRegistryData.attendantPresent) && person.role !== 'attendant') {
+      alert('⚠️ Un surveillant doit être présent avant toute entrée d\'entrant');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    
+    const entryLog: EntryLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'entry',
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
+      person_id: personId,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: true,
+      equipment_verified: true,
+      notes: `Entrée autorisée - ${person.role}`
+    };
+
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === personId 
+        ? { ...s, current_status: 'inside' as const, last_entry_time: now }
+        : s
+    );
+
+    // Mise à jour personnel
+    const updatedPersonnel = personnel.map(p => 
+      p.id === personId 
+        ? { ...p, entryTime: now, status: 'inside' as const }
+        : p
+    );
+
+    const newOccupancy = currentInside.length + 1;
+    
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...localEntryLogs, entryLog]); // ✅ Utiliser logs locaux
+    updateEntryRegistryData({ currentOccupancy: newOccupancy });
+
+    alert(`✅ Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getCurrentPersonnelInside, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+
+  const recordExit = React.useCallback((personId: string) => {
+    const person = getPersonById(personId);
+    const status = getPersonnelStatus(personId);
+    
+    if (!person) {
+      alert('⚠️ Personne non trouvée dans le registre');
+      return;
+    }
+
+    if (status?.current_status !== 'inside') {
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const entryTime = status.last_entry_time ? new Date(status.last_entry_time) : new Date();
+    const exitTime = new Date();
+    const sessionDuration = Math.floor((exitTime.getTime() - entryTime.getTime()) / (1000 * 60)); // en minutes
+    
+    const exitLog: EntryLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'exit',
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
+      person_id: personId,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: true,
+      equipment_verified: true,
+      notes: `Sortie normale - Durée : ${formatDuration(sessionDuration)}`
+    };
+
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === personId 
+        ? { 
+            ...s, 
+            current_status: 'outside' as const, 
+            last_exit_time: now,
+            total_time_inside: s.total_time_inside + sessionDuration
+          }
+        : s
+    );
+
+    // Mise à jour personnel
+    const updatedPersonnel = personnel.map(p => 
+      p.id === personId 
+        ? { ...p, exitTime: now, status: 'outside' as const }
+        : p
+    );
+
+    const newOccupancy = Math.max(0, (entryRegistryData.currentOccupancy || 0) - 1);
+    
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...localEntryLogs, exitLog]); // ✅ Utiliser logs locaux
+    updateEntryRegistryData({ currentOccupancy: newOccupancy });
+
+    alert(`✅ Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+
+  const initiateEmergencyEvacuation = React.useCallback(() => {
+    if (!confirm('⚠️ CONFIRMER L\'ÉVACUATION D\'URGENCE de tous les entrants ?')) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const currentInside = getCurrentPersonnelInside();
+    
+    if (currentInside.length === 0) {
+      alert('ℹ️ Aucune personne à évacuer actuellement');
+      return;
+    }
+
+    const emergencyLogs: EntryLog[] = [];
+    const updatedStatuses = [...personnelStatuses];
+    const updatedPersonnel = [...personnel];
+
+    currentInside.forEach(status => {
+      const person = getPersonById(status.person_id);
+      if (person) {
+        const entryTime = status.last_entry_time ? new Date(status.last_entry_time) : new Date();
+        const exitTime = new Date();
+        const sessionDuration = Math.floor((exitTime.getTime() - entryTime.getTime()) / (1000 * 60));
+
+        // Log d'évacuation d'urgence
+        emergencyLogs.push({
+          id: generatePermitId(),
+          timestamp: now,
+          action: 'emergency_exit',
+          personnelId: person.id, // ✅ REQUIS pour SafetyManager
+          authorizedBy: 'ÉVACUATION D\'URGENCE', // ✅ REQUIS pour SafetyManager
+          person_id: person.id,
+          person_name: person.name,
+          role: person.role,
+          location: 'Espace clos',
+          communication_verified: false,
+          equipment_verified: false,
+          emergency: true,
+          notes: `ÉVACUATION D'URGENCE - Durée : ${formatDuration(sessionDuration)}`
+        });
+
+        // Mise à jour statut
+        const statusIndex = updatedStatuses.findIndex(s => s.person_id === person.id);
+        if (statusIndex !== -1) {
+          updatedStatuses[statusIndex] = {
+            ...updatedStatuses[statusIndex],
+            current_status: 'emergency',
+            last_exit_time: now,
+            total_time_inside: updatedStatuses[statusIndex].total_time_inside + sessionDuration
+          };
+        }
+
+        // Mise à jour personnel
+        const personIndex = updatedPersonnel.findIndex(p => p.id === person.id);
+        if (personIndex !== -1) {
+          updatedPersonnel[personIndex] = {
+            ...updatedPersonnel[personIndex],
+            exitTime: now,
+            status: 'emergency'
+          };
+        }
+      }
+    });
+
+    setEmergencyMode(true);
+    setPersonnelStatuses(updatedStatuses);
+    updatePersonnel(updatedPersonnel);
+    updateEntryLogs([...localEntryLogs, ...emergencyLogs]); // ✅ Utiliser logs locaux
+    updateEntryRegistryData({ 
+      currentOccupancy: 0,
+      emergencyContactsNotified: true 
+    });
+
+    alert(`🚨 ÉVACUATION D'URGENCE INITIÉE - ${currentInside.length} personnes évacuées - Contacts d'urgence notifiés`);
+  }, [personnelStatuses, personnel, entryLogs, getCurrentPersonnelInside, getPersonById, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+
+  // =================== GESTION COMMUNICATION ===================
+  const performCommunicationCheck = React.useCallback(() => {
+    if (!communicationCheck.person_id) {
+      alert('⚠️ Veuillez sélectionner une personne pour la vérification');
+      return;
+    }
+
+    const person = getPersonById(communicationCheck.person_id);
+    if (!person) {
+      alert('⚠️ Personne non trouvée');
+      return;
+    }
+
+    const status = getPersonnelStatus(communicationCheck.person_id);
+    if (status?.current_status !== 'inside') {
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    const commLog: CommunicationLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      person_id: communicationCheck.person_id,
+      person_name: person.name,
+      communication_type: communicationCheck.communication_type,
+      signal_strength: communicationCheck.signal_strength,
+      message: communicationCheck.message || undefined,
+      response_received: communicationCheck.response_received,
+      emergency_indicated: communicationCheck.emergency_indicated
+    };
+
+    const updatedCommLogs = [...communicationLogs, commLog];
+    setCommunicationLogs(updatedCommLogs);
+
+    // Mise à jour statut personnel
+    const updatedStatuses = personnelStatuses.map(s => 
+      s.person_id === communicationCheck.person_id 
+        ? { ...s, communication_last_verified: now }
+        : s
+    );
+    setPersonnelStatuses(updatedStatuses);
+
+    // Log dans l'entrée registry (communication check séparé)
+    const statusLog: CommunicationCheckLog = {
+      id: generatePermitId(),
+      timestamp: now,
+      action: 'status_check',
+      personnelId: communicationCheck.person_id,
+      authorizedBy: 'Surveillant',
+      person_id: communicationCheck.person_id,
+      person_name: person.name,
+      role: person.role,
+      location: 'Espace clos',
+      communication_verified: communicationCheck.response_received,
+      equipment_verified: true,
+      emergency: communicationCheck.emergency_indicated,
+      notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÉE' : ''}`
+    };
+
+    // Ajouter aux logs locaux de communication (pas dans SafetyManager)
+    setLocalCommunicationChecks(prev => [...prev, statusLog]);
+
+    // Reset form
+    setCommunicationCheck({
+      person_id: '',
+      communication_type: 'radio',
+      signal_strength: 5,
+      message: '',
+      response_received: false,
+      emergency_indicated: false
+    });
+
+    if (communicationCheck.emergency_indicated) {
+      alert('🚨 URGENCE SIGNALÉE ! Procédures d\'urgence activées !');
+      setEmergencyMode(true);
+    } else {
+      alert(`✅ Communication vérifiée avec ${person.name}`);
+    }
+  }, [communicationCheck, communicationLogs, personnelStatuses, entryLogs, getPersonById, getPersonnelStatus, updateEntryLogs]);
+
   // =================== RENDU JSX PRINCIPAL ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
-      {/* Section Conformité Réglementaire Tests Atmosphériques */}
+      {/* Section Conformité Réglementaire Entrée/Sortie */}
       <div style={{
         backgroundColor: '#dc2626',
         borderRadius: '16px',
@@ -548,7 +824,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           alignItems: 'center',
           gap: '12px'
         }}>
-          <Gauge style={{ width: '24px', height: '24px', color: '#fecaca' }} />
+          <UserCheck style={{ width: '24px', height: '24px', color: '#fecaca' }} />
           ⚖️ {t.legalCompliance}
         </h3>
         
@@ -566,7 +842,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: '0 0 12px 0',
             fontWeight: '600'
           }}>
-            🌬️ <strong>TESTS OBLIGATOIRES</strong> : Tests atmosphériques multi-niveaux requis avant entrée + surveillance continue selon {safeRegulations.code}.
+            👥 <strong>SURVEILLANCE OBLIGATOIRE</strong> : Surveillant qualifié requis en permanence + communication bidirectionnelle selon {safeRegulations.code}.
           </p>
           <p style={{ 
             color: '#fca5a5', 
@@ -574,11 +850,11 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immédiat si valeurs critiques.
+            ⏰ <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l'espace clos.
           </p>
         </div>
         
-        {/* Calibration équipement obligatoire */}
+        {/* Exigences surveillant obligatoire */}
         <div style={{ marginBottom: '20px' }}>
           <h4 style={{
             fontSize: isMobile ? '16px' : '18px',
@@ -586,35 +862,82 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             color: '#fecaca',
             marginBottom: '16px'
           }}>
-            🔧 {t.deviceCalibration}
+            👁️ {t.attendantRequired}
           </h4>
           
-          <div style={styles.grid2}>
-            <div>
-              <label style={{ ...styles.label, color: '#fca5a5' }}>Date calibration détecteur *</label>
-              <input
-                type="date"
-                value={atmosphericData.equipment?.calibrationDate || ''}
-                onChange={(e) => updateEquipmentData('calibrationDate', e.target.value)}
-                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
-                required
-              />
-            </div>
-            <div>
-              <label style={{ ...styles.label, color: '#fca5a5' }}>Certificat de calibration *</label>
-              <input
-                type="text"
-                placeholder="Ex: CAL-2024-001234"
-                value={atmosphericData.equipment?.serialNumber || ''}
-                onChange={(e) => updateEquipmentData('serialNumber', e.target.value)}
-                style={{ ...styles.input, backgroundColor: 'rgba(0, 0, 0, 0.4)', border: '1px solid #fca5a5' }}
-                required
-              />
-            </div>
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)',
+            marginBottom: '16px'
+          }}>
+            <input
+              type="checkbox"
+              id="attendant_present"
+              checked={ensureBoolean(entryRegistryData.attendantPresent)}
+              onChange={(e) => handleAttendantPresent(e.target.checked)}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="attendant_present"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              👁️ <strong>SURVEILLANT PRÉSENT</strong> : Je confirme qu'un surveillant qualifié est présent et maintient une surveillance constante *
+            </label>
           </div>
           
           <div style={{ 
-            marginTop: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            border: '1px solid rgba(254, 202, 202, 0.3)',
+            marginBottom: '16px'
+          }}>
+            <input
+              type="checkbox"
+              id="communication_system_tested"
+              checked={ensureBoolean(entryRegistryData.communicationSystemActive)}
+              onChange={(e) => handleCommunicationSystemTested(e.target.checked)}
+              style={{
+                width: '24px',
+                height: '24px',
+                accentColor: '#ef4444'
+              }}
+              required
+            />
+            <label 
+              htmlFor="communication_system_tested"
+              style={{
+                color: '#fecaca',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                flex: 1
+              }}
+            >
+              📡 <strong>COMMUNICATION TESTÉE</strong> : Système de communication bidirectionnelle testé et fonctionnel entre surveillant et entrants *
+            </label>
+          </div>
+          
+          <div style={{ 
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -625,9 +948,9 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           }}>
             <input
               type="checkbox"
-              id="gas_detector_calibrated"
-              checked={permitData.gas_detector_calibrated || false}
-              onChange={(e) => handleGasDetectorCalibrated(e.target.checked)}
+              id="emergency_retrieval_ready"
+              checked={ensureBoolean(permitData.emergency_retrieval_ready)}
+              onChange={(e) => handleEmergencyRetrievalReady(e.target.checked)}
               style={{
                 width: '24px',
                 height: '24px',
@@ -636,7 +959,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               required
             />
             <label 
-              htmlFor="gas_detector_calibrated"
+              htmlFor="emergency_retrieval_ready"
               style={{
                 color: '#fecaca',
                 fontSize: isMobile ? '15px' : '16px',
@@ -645,291 +968,14 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              🔧 <strong>DÉTECTEUR CALIBRÉ</strong> : Je certifie que le détecteur multi-gaz est calibré dans les 24h selon les spécifications du fabricant *
+              🚑 <strong>SAUVETAGE PRÊT</strong> : Équipe et équipement de sauvetage d'urgence prêts à intervenir immédiatement *
             </label>
           </div>
         </div>
-        
-        {/* Tests multi-niveaux obligatoires */}
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '12px',
-          border: '1px solid rgba(254, 202, 202, 0.3)',
-          marginBottom: '16px'
-        }}>
-          <input
-            type="checkbox"
-            id="multi_level_testing_completed"
-            checked={permitData.multi_level_testing_completed || false}
-            onChange={(e) => handleMultiLevelTestingCompleted(e.target.checked)}
-            style={{
-              width: '24px',
-              height: '24px',
-              accentColor: '#ef4444'
-            }}
-            required
-          />
-          <label 
-            htmlFor="multi_level_testing_completed"
-            style={{
-              color: '#fecaca',
-              fontSize: isMobile ? '15px' : '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              flex: 1
-            }}
-          >
-            📊 <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l'espace clos *
-          </label>
-        </div>
-        
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '12px',
-          border: '1px solid rgba(254, 202, 202, 0.3)'
-        }}>
-          <input
-            type="checkbox"
-            id="atmospheric_stability_confirmed"
-            checked={permitData.atmospheric_stability_confirmed || false}
-            onChange={(e) => handleAtmosphericStabilityConfirmed(e.target.checked)}
-            style={{
-              width: '24px',
-              height: '24px',
-              accentColor: '#ef4444'
-            }}
-            required
-          />
-          <label 
-            htmlFor="atmospheric_stability_confirmed"
-            style={{
-              color: '#fecaca',
-              fontSize: isMobile ? '15px' : '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              flex: 1
-            }}
-          >
-            ✅ <strong>STABILITÉ ATMOSPHÉRIQUE</strong> : Je confirme que l'atmosphère est stable et conforme aux limites de {safeRegulations.authority} *
-          </label>
-        </div>
       </div>
 
-      {/* Section Limites Réglementaires */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Shield style={{ width: '20px', height: '20px' }} />
-          {t.limits} - {safeRegulations.name}
-          <span style={{
-            fontSize: isMobile ? '12px' : '14px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            padding: '6px 12px',
-            borderRadius: '16px',
-            fontWeight: '700'
-          }}>
-            ⏱️ {safeRegulations.atmosphere_testing_frequency} min
-          </span>
-        </h3>
-        
-        <div style={styles.grid4}>
-          {Object.entries(safeRegulations.limits).map(([gas, limits]) => (
-            <div key={gas} style={{
-              backgroundColor: 'rgba(17, 24, 39, 0.6)',
-              borderRadius: '12px',
-              padding: isMobile ? '16px' : '20px',
-              border: '1px solid #4b5563',
-              transition: 'all 0.2s ease'
-            }}>
-              <h4 style={{ 
-                fontWeight: '700', 
-                color: 'white', 
-                marginBottom: '12px', 
-                fontSize: isMobile ? '15px' : '17px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                {gas === 'oxygen' ? '🫁 O₂' : 
-                 gas === 'lel' ? '🔥 LEL' : 
-                 gas === 'h2s' ? '☠️ H₂S' : 
-                 '💨 CO'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: isMobile ? '13px' : '14px' }}>
-                {gas === 'oxygen' ? (
-                  <>
-                    <div style={{ color: '#86efac', fontWeight: '600' }}>
-                      ✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%
-                    </div>
-                    <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                      🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ color: '#86efac', fontWeight: '600' }}>
-                      ✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}
-                    </div>
-                    <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                      🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section Surveillance Continue */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>
-          <Activity style={{ width: '20px', height: '20px' }} />
-          {t.continuousMonitoring}
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-            <button
-              onClick={toggleContinuousMonitoring}
-              style={{
-                ...styles.button,
-                ...(isMonitoring ? styles.buttonDanger : styles.buttonSuccess),
-                width: 'auto',
-                padding: '8px 12px',
-                fontSize: '14px',
-                minHeight: 'auto'
-              }}
-            >
-              {isMonitoring ? <Pause style={{ width: '16px', height: '16px' }} /> : <Play style={{ width: '16px', height: '16px' }} />}
-              {isMonitoring ? t.stopMonitoring : t.startMonitoring}
-            </button>
-            <button
-              onClick={() => {
-                setContinuousTimer(safeRegulations.atmosphere_testing_frequency * 60);
-                setContinuousActive(true);
-              }}
-              style={{
-                ...styles.button,
-                ...styles.buttonSecondary,
-                width: 'auto',
-                padding: '8px 12px',
-                fontSize: '14px',
-                minHeight: 'auto'
-              }}
-            >
-              <RotateCcw style={{ width: '16px', height: '16px' }} />
-              {t.resetTimer}
-            </button>
-          </div>
-        </h3>
-        
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
-          gap: '20px',
-          alignItems: 'center'
-        }}>
-          <div style={{
-            padding: '20px',
-            backgroundColor: continuousActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(107, 114, 128, 0.2)',
-            borderRadius: '12px',
-            border: `2px solid ${continuousActive ? '#10b981' : '#6b7280'}`,
-            textAlign: 'center'
-          }}>
-            <Clock style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: continuousActive ? '#10b981' : '#6b7280',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '24px' : '32px', 
-              fontWeight: 'bold', 
-              color: continuousActive ? '#86efac' : '#9ca3af',
-              fontFamily: 'JetBrains Mono, monospace',
-              marginBottom: '8px'
-            }}>
-              {formatTime(continuousTimer)}
-            </div>
-            <div style={{ 
-              color: continuousActive ? '#86efac' : '#9ca3af', 
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {t.timeRemaining}
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #3b82f6',
-            textAlign: 'center'
-          }}>
-            <Gauge style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: '#60a5fa',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '20px' : '24px', 
-              fontWeight: 'bold', 
-              color: '#93c5fd',
-              marginBottom: '8px'
-            }}>
-              {safeRegulations.atmosphere_testing_frequency} min
-            </div>
-            <div style={{ 
-              color: '#93c5fd', 
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {t.frequencyMinutes}
-            </div>
-          </div>
-          
-          <div style={{
-            padding: '20px',
-            backgroundColor: 'rgba(245, 158, 11, 0.2)',
-            borderRadius: '12px',
-            border: '2px solid #f59e0b',
-            textAlign: 'center'
-          }}>
-            <FileText style={{ 
-              width: isMobile ? '32px' : '40px', 
-              height: isMobile ? '32px' : '40px', 
-              color: '#fbbf24',
-              margin: '0 auto 12px'
-            }} />
-            <div style={{ 
-              fontSize: isMobile ? '20px' : '24px', 
-              fontWeight: 'bold', 
-              color: '#fde047',
-              marginBottom: '8px'
-            }}>
-              {atmosphericReadings.length}
-            </div>
-            <div style={{ 
-              color: '#fde047', 
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              Tests effectués
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerte retest obligatoire */}
-      {retestActive && (
+      {/* Mode urgence */}
+      {emergencyMode && (
         <div style={{
           backgroundColor: 'rgba(220, 38, 38, 0.2)',
           border: '2px solid #ef4444',
@@ -949,200 +995,331 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
               <div>
                 <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
-                  ⏰ {t.retestRequired}
+                  🚨 {t.emergencyEvacuationInitiated}
                 </h3>
                 <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
-                  {t.criticalValues} - {t.evacuationRequired}
+                  Procédures d'urgence activées - Contacts d'urgence notifiés
                 </p>
               </div>
             </div>
-            <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
-              <div style={{ 
-                fontSize: isMobile ? '28px' : '36px', 
-                fontWeight: 'bold', 
-                color: '#f87171',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                {formatTime(retestTimer)}
-              </div>
-              <div style={{ color: '#fca5a5', fontSize: '16px' }}>{t.timeRemaining}</div>
-            </div>
+            <button
+              onClick={() => setEmergencyMode(false)}
+              style={{
+                ...styles.button,
+                ...styles.buttonSecondary,
+                width: 'auto',
+                padding: '8px 12px',
+                fontSize: '14px'
+              }}
+            >
+              <X style={{ width: '16px', height: '16px' }} />
+              Fermer alerte
+            </button>
           </div>
         </div>
       )}
 
-      {/* Section Nouvelle Mesure */}
+      {/* Section Occupation Actuelle */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
-          <Activity style={{ width: '20px', height: '20px' }} />
-          {t.newReading}
-        </h3>
-        
-        {/* Sélection niveau */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={styles.label}>{t.level} *</label>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            {[
-              { value: 'top', label: t.topLevel, emoji: '⬆️' },
-              { value: 'middle', label: t.middleLevel, emoji: '↔️' },
-              { value: 'bottom', label: t.bottomLevel, emoji: '⬇️' }
-            ].map((level) => (
-              <button
-                key={level.value}
-                onClick={() => setManualReading(prev => ({ ...prev, level: level.value as any }))}
-                style={{
-                  ...styles.button,
-                  backgroundColor: manualReading.level === level.value ? getLevelColor(level.value) : '#4b5563',
-                  color: 'white',
-                  border: `2px solid ${manualReading.level === level.value ? getLevelColor(level.value) : '#6b7280'}`,
-                  width: 'auto',
-                  padding: '12px 16px',
-                  flex: isMobile ? '1' : 'none'
-                }}
-              >
-                {level.emoji} {level.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Valeurs atmosphériques */}
-        <div style={styles.grid4}>
-          <div>
-            <label style={styles.label}>{t.oxygen} (%) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="30"
-              placeholder="20.9"
-              value={manualReading.oxygen}
-              onChange={(e) => setManualReading(prev => ({ ...prev, oxygen: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{t.lel} (%) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="0"
-              value={manualReading.lel}
-              onChange={(e) => setManualReading(prev => ({ ...prev, lel: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{t.h2s} (ppm) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1000"
-              placeholder="0"
-              value={manualReading.h2s}
-              onChange={(e) => setManualReading(prev => ({ ...prev, h2s: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{t.co} (ppm) *</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="1000"
-              placeholder="0"
-              value={manualReading.co}
-              onChange={(e) => setManualReading(prev => ({ ...prev, co: e.target.value }))}
-              style={styles.input}
-              required
-            />
-          </div>
-        </div>
-        
-        {/* Valeurs supplémentaires */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
-          gap: '20px', 
-          marginTop: '20px' 
-        }}>
-          <div>
-            <label style={styles.label}>{t.temperature} (°C)</label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="20"
-              value={manualReading.temperature}
-              onChange={(e) => setManualReading(prev => ({ ...prev, temperature: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{t.humidity} (%)</label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="50"
-              value={manualReading.humidity}
-              onChange={(e) => setManualReading(prev => ({ ...prev, humidity: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-          <div>
-            <label style={styles.label}>{t.deviceId}</label>
-            <input
-              type="text"
-              placeholder="Ex: DET-001"
-              value={manualReading.device_id}
-              onChange={(e) => setManualReading(prev => ({ ...prev, device_id: e.target.value }))}
-              style={styles.input}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'end' }}>
+          <Users style={{ width: '20px', height: '20px' }} />
+          {t.currentOccupancy}
+          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+            <span style={{
+              fontSize: isMobile ? '12px' : '14px',
+              backgroundColor: (entryRegistryData.currentOccupancy || 0) >= entryRegistryData.maxOccupancy ? '#ef4444' : '#10b981',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontWeight: '700'
+            }}>
+              👥 {entryRegistryData.currentOccupancy || 0}/{entryRegistryData.maxOccupancy}
+            </span>
             <button
-              onClick={addManualReading}
+              onClick={initiateEmergencyEvacuation}
               style={{
                 ...styles.button,
-                ...styles.buttonSuccess,
-                width: '100%',
-                justifyContent: 'center',
-                fontSize: isMobile ? '15px' : '16px'
+                ...styles.buttonDanger,
+                width: 'auto',
+                padding: '8px 12px',
+                fontSize: '14px',
+                minHeight: 'auto'
               }}
+              disabled={(entryRegistryData.currentOccupancy || 0) === 0}
             >
-              <Plus style={{ width: '18px', height: '18px' }} />
-              {t.addReading}
+              <AlertTriangle style={{ width: '16px', height: '16px' }} />
+              {t.emergencyEvacuation}
             </button>
           </div>
-        </div>
+        </h3>
         
-        <div style={{ marginTop: '20px' }}>
-          <label style={styles.label}>{t.notes}</label>
-          <textarea
-            placeholder="Observations, conditions particulières..."
-            value={manualReading.notes}
-            onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
-            style={{ ...styles.input, height: '80px', resize: 'vertical' }}
-          />
+        <div style={styles.grid3}>
+          <div style={{
+            padding: '20px',
+            backgroundColor: (entryRegistryData.currentOccupancy || 0) > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(107, 114, 128, 0.2)',
+            borderRadius: '12px',
+            border: `2px solid ${(entryRegistryData.currentOccupancy || 0) > 0 ? '#ef4444' : '#6b7280'}`,
+            textAlign: 'center'
+          }}>
+            <UserCheck style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#f87171' : '#6b7280',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '24px' : '32px', 
+              fontWeight: 'bold', 
+              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af',
+              marginBottom: '8px'
+            }}>
+              {getCurrentPersonnelInside().length}
+            </div>
+            <div style={{ 
+              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.personnelInside}
+            </div>
+          </div>
+          
+          <div style={{
+            padding: '20px',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderRadius: '12px',
+            border: '2px solid #10b981',
+            textAlign: 'center'
+          }}>
+            <Shield style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#34d399',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '24px' : '32px', 
+              fontWeight: 'bold', 
+              color: '#86efac',
+              marginBottom: '8px'
+            }}>
+              {getCurrentPersonnelOutside().length}
+            </div>
+            <div style={{ 
+              color: '#86efac', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.personnelOutside}
+            </div>
+          </div>
+          
+          <div style={{
+            padding: '20px',
+            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+            borderRadius: '12px',
+            border: '2px solid #f59e0b',
+            textAlign: 'center'
+          }}>
+            <Wrench style={{ 
+              width: isMobile ? '32px' : '40px', 
+              height: isMobile ? '32px' : '40px', 
+              color: '#fbbf24',
+              margin: '0 auto 12px'
+            }} />
+            <div style={{ 
+              fontSize: isMobile ? '20px' : '24px', 
+              fontWeight: 'bold', 
+              color: '#fde047',
+              marginBottom: '8px'
+            }}>
+              {entryRegistryData.maxOccupancy}
+            </div>
+            <div style={{ 
+              color: '#fde047', 
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {t.maxOccupancy}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Section Historique des Mesures */}
+      {/* Section Gestion du Personnel */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
-          <FileText style={{ width: '20px', height: '20px' }} />
-          {t.readingHistory} ({atmosphericReadings.length})
+          <Users style={{ width: '20px', height: '20px' }} />
+          {t.personnelManagement} ({personnel.length})
+          <button
+            onClick={() => setShowAddPersonForm(!showAddPersonForm)}
+            style={{
+              ...styles.button,
+              ...styles.buttonSuccess,
+              width: 'auto',
+              padding: '8px 12px',
+              fontSize: '14px',
+              minHeight: 'auto',
+              marginLeft: 'auto'
+            }}
+          >
+            <UserPlus style={{ width: '16px', height: '16px' }} />
+            {t.addPerson}
+          </button>
         </h3>
         
-        {atmosphericReadings.length === 0 ? (
+        {/* Formulaire ajout personnel */}
+        {showAddPersonForm && (
+          <div style={{
+            backgroundColor: 'rgba(17, 24, 39, 0.6)',
+            borderRadius: '12px',
+            padding: isMobile ? '20px' : '24px',
+            border: '1px solid #4b5563',
+            marginBottom: '24px'
+          }}>
+            <h4 style={{ 
+              fontSize: isMobile ? '16px' : '18px', 
+              fontWeight: '700', 
+              color: 'white', 
+              marginBottom: '20px' 
+            }}>
+              👤 Nouveau Personnel
+            </h4>
+            
+            <div style={styles.grid2}>
+              <div>
+                <label style={styles.label}>Nom complet *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Jean Dupont"
+                  value={newPerson.name}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, name: e.target.value }))}
+                  style={styles.input}
+                  required
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Rôle *</label>
+                <select
+                  value={newPerson.role}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, role: e.target.value as SafetyRole }))}
+                  style={styles.input}
+                  required
+                >
+                  <option value="entrant">👷 Entrant</option>
+                  <option value="attendant">👁️ Surveillant</option>
+                  <option value="supervisor">👨‍💼 Superviseur</option>
+                  <option value="rescue">🚑 Sauveteur</option>
+                </select>
+              </div>
+              <div>
+                <label style={styles.label}>Téléphone *</label>
+                <input
+                  type="tel"
+                  placeholder="Ex: (514) 123-4567"
+                  value={newPerson.phone}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, phone: e.target.value }))}
+                  style={styles.input}
+                  required
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Email</label>
+                <input
+                  type="email"
+                  placeholder="Ex: jean.dupont@entreprise.ca"
+                  value={newPerson.email}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, email: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Entreprise</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Construction ABC Inc."
+                  value={newPerson.company}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, company: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Certification</label>
+                <input
+                  type="text"
+                  placeholder="Ex: CNESST-EC-2024-001"
+                  value={newPerson.certification}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, certification: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Contact d'urgence - Nom</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Marie Dupont"
+                  value={newPerson.emergency_contact_name}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, emergency_contact_name: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+              <div>
+                <label style={styles.label}>Contact d'urgence - Téléphone</label>
+                <input
+                  type="tel"
+                  placeholder="Ex: (514) 987-6543"
+                  value={newPerson.emergency_contact_phone}
+                  onChange={(e) => setNewPerson(prev => ({ ...prev, emergency_contact_phone: e.target.value }))}
+                  style={styles.input}
+                />
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '20px' }}>
+              <label style={styles.label}>Notes</label>
+              <textarea
+                placeholder="Qualifications, restrictions médicales, notes particulières..."
+                value={newPerson.notes}
+                onChange={(e) => setNewPerson(prev => ({ ...prev, notes: e.target.value }))}
+                style={{ ...styles.input, height: '80px', resize: 'vertical' }}
+              />
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              marginTop: '24px',
+              flexDirection: isMobile ? 'column' : 'row'
+            }}>
+              <button
+                onClick={addNewPerson}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSuccess,
+                  flex: 1
+                }}
+              >
+                <UserPlus style={{ width: '18px', height: '18px' }} />
+                Ajouter Personnel
+              </button>
+              <button
+                onClick={() => setShowAddPersonForm(false)}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonSecondary,
+                  flex: isMobile ? 1 : 'none',
+                  width: isMobile ? '100%' : 'auto'
+                }}
+              >
+                <X style={{ width: '18px', height: '18px' }} />
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Liste du personnel */}
+        {personnel.length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
             padding: isMobile ? '32px 20px' : '48px 32px', 
@@ -1151,42 +1328,40 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             borderRadius: '12px',
             border: '1px solid #374151'
           }}>
-            <Activity style={{ 
+            <Users style={{ 
               width: isMobile ? '56px' : '72px', 
               height: isMobile ? '56px' : '72px', 
               margin: '0 auto 20px', 
               color: '#4b5563'
             }} />
             <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucune mesure enregistrée
+              Aucun personnel enregistré
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Effectuez votre première mesure atmosphérique ci-dessus pour commencer la surveillance.
+              Ajoutez du personnel ci-dessus pour commencer à gérer les entrées/sorties.
             </p>
           </div>
         ) : (
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '16px', 
-            maxHeight: isMobile ? '400px' : '500px', 
-            overflowY: 'auto',
-            paddingRight: '8px'
+            gap: '16px'
           }}>
-            {atmosphericReadings.slice().reverse().map((reading) => {
-              const readingStyle = reading.status === 'danger' ? styles.readingDanger :
-                                 reading.status === 'caution' ? styles.readingWarning :
-                                 styles.readingSafe;
+            {personnel.map((person) => {
+              const status = getPersonnelStatus(person.id);
+              const isInside = status?.current_status === 'inside';
+              const statusColor = getStatusColor(status?.current_status || 'unknown');
               
               return (
                 <div
-                  key={reading.id}
+                  key={person.id}
                   style={{
-                    padding: isMobile ? '14px' : '18px',
+                    padding: isMobile ? '16px' : '20px',
                     borderRadius: '12px',
-                    borderLeft: '4px solid',
-                    transition: 'all 0.2s ease',
-                    ...readingStyle
+                    borderLeft: `4px solid ${getRoleColor(person.role)}`,
+                    backgroundColor: isInside ? 'rgba(239, 68, 68, 0.1)' : 'rgba(17, 24, 39, 0.6)',
+                    border: `1px solid ${isInside ? '#ef4444' : '#4b5563'}`,
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <div style={{ 
@@ -1202,114 +1377,479 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                         width: '14px',
                         height: '14px',
                         borderRadius: '50%',
-                        marginRight: '8px',
-                        flexShrink: 0,
-                        backgroundColor: reading.status === 'danger' ? '#ef4444' :
-                                       reading.status === 'caution' ? '#f59e0b' : '#10b981',
-                        boxShadow: reading.status === 'danger' ? '0 0 12px rgba(239, 68, 68, 0.6)' :
-                                  reading.status === 'caution' ? '0 0 8px rgba(245, 158, 11, 0.4)' :
-                                  '0 0 8px rgba(16, 185, 129, 0.4)',
-                        animation: reading.status === 'danger' ? 'pulse 2s infinite' : 'none'
+                        backgroundColor: statusColor,
+                        boxShadow: isInside ? '0 0 12px rgba(239, 68, 68, 0.6)' : '0 0 8px rgba(16, 185, 129, 0.4)',
+                        animation: isInside ? 'pulse 2s infinite' : 'none'
                       }}></div>
                       <span style={{
                         fontWeight: '700',
-                        color: reading.status === 'danger' ? '#fca5a5' :
-                              reading.status === 'caution' ? '#fde047' :
-                              '#86efac',
-                        fontSize: isMobile ? '15px' : '17px'
+                        color: 'white',
+                        fontSize: isMobile ? '16px' : '18px'
                       }}>
-                        {reading.status === 'danger' ? `🚨 ${t.danger}` :
-                         reading.status === 'caution' ? `⚠️ ${t.warning}` :
-                         `✅ ${t.safe}`}
+                        {getRoleEmoji(person.role)} {person.name}
                       </span>
                       <span style={{
                         padding: '4px 8px',
                         borderRadius: '12px',
                         fontSize: '11px',
                         fontWeight: '600',
-                        backgroundColor: getLevelColor(reading.location),
+                        backgroundColor: getRoleColor(person.role),
                         color: 'white'
                       }}>
-                        {getLevelEmoji(reading.location)} {reading.location}
+                        {person.role}
                       </span>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        backgroundColor: statusColor,
+                        color: 'white'
+                      }}>
+                        {status?.current_status === 'inside' ? t.inside :
+                         status?.current_status === 'outside' ? t.outside :
+                         status?.current_status === 'emergency' ? t.emergency :
+                         t.unknown}
+                      </span>
+                    </div>
+                    
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px',
+                      flexDirection: isMobile ? 'column' : 'row',
+                      width: isMobile ? '100%' : 'auto'
+                    }}>
+                      <button
+                        onClick={() => recordEntry(person.id)}
+                        disabled={isInside || !ensureBoolean(entryRegistryData.attendantPresent)}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonSuccess,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: (isInside || !ensureBoolean(entryRegistryData.attendantPresent)) ? 0.5 : 1,
+                          cursor: (isInside || !ensureBoolean(entryRegistryData.attendantPresent)) ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <LogIn style={{ width: '14px', height: '14px' }} />
+                        {t.recordEntry}
+                      </button>
+                      <button
+                        onClick={() => recordExit(person.id)}
+                        disabled={!isInside}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonWarning,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: !isInside ? 0.5 : 1,
+                          cursor: !isInside ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <LogOut style={{ width: '14px', height: '14px' }} />
+                        {t.recordExit}
+                      </button>
+                      <button
+                        onClick={() => removePerson(person.id)}
+                        disabled={isInside}
+                        style={{
+                          ...styles.button,
+                          ...styles.buttonDanger,
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          minHeight: 'auto',
+                          opacity: isInside ? 0.5 : 1,
+                          cursor: isInside ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        <UserMinus style={{ width: '14px', height: '14px' }} />
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '12px', fontSize: '14px' }}>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>📞 Téléphone:</span>
+                      <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                        {person.emergencyContact?.phone || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#9ca3af' }}>🏢 Entreprise:</span>
+                      <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                        N/A
+                      </span>
+                    </div>
+                    {status && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>⏱️ {t.timeInside}:</span>
+                        <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                          {formatDuration(status.total_time_inside)}
+                        </span>
+                      </div>
+                    )}
+                    {status?.communication_last_verified && (
+                      <div>
+                        <span style={{ color: '#9ca3af' }}>📡 {t.lastCommunication}:</span>
+                        <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
+                          {new Date(status.communication_last_verified).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{
+                    marginTop: '12px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #4b5563',
+                    fontSize: '13px',
+                    color: '#d1d5db'
+                  }}>
+                    <div>🚑 <strong>Contact d'urgence:</strong> {person.emergencyContact?.name || 'N/A'} - {person.emergencyContact?.phone || 'N/A'}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section Système de Communication */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <Volume2 style={{ width: '20px', height: '20px' }} />
+          {t.communicationSystem}
+        </h3>
+        
+        <div style={{
+          backgroundColor: 'rgba(17, 24, 39, 0.6)',
+          borderRadius: '12px',
+          padding: isMobile ? '20px' : '24px',
+          border: '1px solid #4b5563',
+          marginBottom: '24px'
+        }}>
+          <h4 style={{ 
+            fontSize: isMobile ? '16px' : '18px', 
+            fontWeight: '700', 
+            color: 'white', 
+            marginBottom: '20px' 
+          }}>
+            📡 {t.communicationCheck}
+          </h4>
+          
+          <div style={styles.grid2}>
+            <div>
+              <label style={styles.label}>Personne à contacter *</label>
+              <select
+                value={communicationCheck.person_id}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, person_id: e.target.value }))}
+                style={styles.input}
+                required
+              >
+                <option value="">Sélectionner une personne</option>
+                {getCurrentPersonnelInside().map(status => {
+                  const person = getPersonById(status.person_id);
+                  return person ? (
+                    <option key={person.id} value={person.id}>
+                      {getRoleEmoji(person.role)} {person.name} ({person.role})
+                    </option>
+                  ) : null;
+                })}
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>Type de communication *</label>
+              <select
+                value={communicationCheck.communication_type}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, communication_type: e.target.value as any }))}
+                style={styles.input}
+                required
+              >
+                <option value="radio">📻 Radio</option>
+                <option value="visual">👁️ Visuel</option>
+                <option value="hand_signal">✋ Signal manuel</option>
+                <option value="emergency_signal">🚨 Signal d'urgence</option>
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>Force du signal (1-5) *</label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={communicationCheck.signal_strength}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, signal_strength: parseInt(e.target.value) }))}
+                style={styles.input}
+              />
+              <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>
+                {communicationCheck.signal_strength}/5 - {
+                  communicationCheck.signal_strength >= 4 ? '📶 Excellent' :
+                  communicationCheck.signal_strength >= 3 ? '📶 Bon' :
+                  communicationCheck.signal_strength >= 2 ? '📶 Moyen' : '📶 Faible'
+                }
+              </div>
+            </div>
+            <div>
+              <label style={styles.label}>Message (optionnel)</label>
+              <input
+                type="text"
+                placeholder="Ex: Vérification statut général"
+                value={communicationCheck.message}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, message: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '16px', marginTop: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              flex: 1
+            }}>
+              <input
+                type="checkbox"
+                id="response_received"
+                checked={communicationCheck.response_received}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, response_received: e.target.checked }))}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  accentColor: '#10b981'
+                }}
+              />
+              <label 
+                htmlFor="response_received"
+                style={{
+                  color: '#d1d5db',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                ✅ {t.responseReceived}
+              </label>
+            </div>
+            
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              borderRadius: '8px',
+              flex: 1
+            }}>
+              <input
+                type="checkbox"
+                id="emergency_indicated"
+                checked={communicationCheck.emergency_indicated}
+                onChange={(e) => setCommunicationCheck(prev => ({ ...prev, emergency_indicated: e.target.checked }))}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  accentColor: '#ef4444'
+                }}
+              />
+              <label 
+                htmlFor="emergency_indicated"
+                style={{
+                  color: '#fca5a5',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                🚨 {t.emergencySignal}
+              </label>
+            </div>
+          </div>
+          
+          <button
+            onClick={performCommunicationCheck}
+            disabled={!communicationCheck.person_id}
+            style={{
+              ...styles.button,
+              ...styles.buttonPrimary,
+              width: '100%',
+              marginTop: '20px',
+              opacity: !communicationCheck.person_id ? 0.5 : 1,
+              cursor: !communicationCheck.person_id ? 'not-allowed' : 'pointer'
+            }}
+          >
+            <Volume2 style={{ width: '18px', height: '18px' }} />
+            Effectuer Vérification Communication
+          </button>
+        </div>
+      </div>
+
+      {/* Section Journal des Entrées/Sorties */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>
+          <History style={{ width: '20px', height: '20px' }} />
+          {t.entryLog} ({localEntryLogs.length + localCommunicationChecks.length})
+        </h3>
+        
+        {(localEntryLogs.length + localCommunicationChecks.length) === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: isMobile ? '32px 20px' : '48px 32px', 
+            color: '#9ca3af',
+            backgroundColor: 'rgba(17, 24, 39, 0.5)',
+            borderRadius: '12px',
+            border: '1px solid #374151'
+          }}>
+            <FileText style={{ 
+              width: isMobile ? '56px' : '72px', 
+              height: isMobile ? '56px' : '72px', 
+              margin: '0 auto 20px', 
+              color: '#4b5563'
+            }} />
+            <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
+              Aucune entrée enregistrée
+            </p>
+            <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
+              Les entrées/sorties et vérifications de communication apparaîtront ici.
+            </p>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px', 
+            maxHeight: isMobile ? '400px' : '500px', 
+            overflowY: 'auto',
+            paddingRight: '8px'
+          }}>
+            {/* Combiner et trier tous les logs par timestamp */}
+            {[...localEntryLogs, ...localCommunicationChecks]
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .map((log) => {
+              const actionColor = log.action === 'entry' ? '#10b981' :
+                                log.action === 'exit' ? '#f59e0b' :
+                                log.action === 'emergency_exit' ? '#ef4444' :
+                                '#6b7280';
+              
+              const actionEmoji = log.action === 'entry' ? '📥' :
+                                log.action === 'exit' ? '📤' :
+                                log.action === 'emergency_exit' ? '🚨' :
+                                '📡';
+              
+              return (
+                <div
+                  key={log.id}
+                  style={{
+                    padding: isMobile ? '14px' : '16px',
+                    borderRadius: '12px',
+                    borderLeft: `4px solid ${actionColor}`,
+                    backgroundColor: log.emergency ? 'rgba(239, 68, 68, 0.1)' : 'rgba(17, 24, 39, 0.6)',
+                    border: `1px solid ${log.emergency ? '#ef4444' : '#4b5563'}`,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '8px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '8px' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '18px' }}>{actionEmoji}</span>
+                      <span style={{
+                        fontWeight: '700',
+                        color: 'white',
+                        fontSize: isMobile ? '15px' : '16px'
+                      }}>
+                        {getRoleEmoji(log.role)} {log.person_name}
+                      </span>
+                      <span style={{
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        backgroundColor: actionColor,
+                        color: 'white'
+                      }}>
+                        {log.action === 'entry' ? 'ENTRÉE' :
+                         log.action === 'exit' ? 'SORTIE' :
+                         log.action === 'emergency_exit' ? 'ÉVACUATION' :
+                         'COMM'}
+                      </span>
+                      {log.emergency && (
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          animation: 'pulse 2s infinite'
+                        }}>
+                          🚨 URGENCE
+                        </span>
+                      )}
                     </div>
                     <div style={{ 
                       color: '#9ca3af', 
-                      fontSize: isMobile ? '13px' : '14px', 
+                      fontSize: isMobile ? '12px' : '13px', 
                       textAlign: isMobile ? 'center' : 'right'
                     }}>
-                      📅 {new Date(reading.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                      📅 {new Date(log.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                       <br />
-                      👤 {reading.testedBy}
+                      👤 {log.authorizedBy}
                     </div>
                   </div>
                   
-                  <div style={styles.grid4}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '8px', fontSize: '13px' }}>
                     <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>O₂:</span>
-                      <span style={{
-                        marginLeft: '8px',
-                        fontWeight: '600',
-                        fontSize: '15px',
-                        color: validateAtmosphericValue('oxygen', reading.readings.oxygen) === 'danger' ? '#fca5a5' :
-                              validateAtmosphericValue('oxygen', reading.readings.oxygen) === 'warning' ? '#fde047' :
-                              '#86efac'
-                      }}>
-                        {reading.readings.oxygen}%
+                      <span style={{ color: '#9ca3af' }}>📍 Lieu:</span>
+                      <span style={{ marginLeft: '6px', color: '#d1d5db', fontWeight: '600' }}>
+                        {log.location}
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>LEL:</span>
-                      <span style={{
-                        marginLeft: '8px',
-                        fontWeight: '600',
-                        fontSize: '15px',
-                        color: validateAtmosphericValue('lel', reading.readings.combustibleGas) === 'danger' ? '#fca5a5' :
-                              validateAtmosphericValue('lel', reading.readings.combustibleGas) === 'warning' ? '#fde047' :
-                              '#86efac'
+                      <span style={{ color: '#9ca3af' }}>📡 Comm:</span>
+                      <span style={{ 
+                        marginLeft: '6px', 
+                        color: log.communication_verified ? '#86efac' : '#fca5a5', 
+                        fontWeight: '600' 
                       }}>
-                        {reading.readings.combustibleGas}%
+                        {log.communication_verified ? '✅ OK' : '❌ NON'}
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>H₂S:</span>
-                      <span style={{
-                        marginLeft: '8px',
-                        fontWeight: '600',
-                        fontSize: '15px',
-                        color: validateAtmosphericValue('h2s', reading.readings.hydrogenSulfide) === 'danger' ? '#fca5a5' :
-                              validateAtmosphericValue('h2s', reading.readings.hydrogenSulfide) === 'warning' ? '#fde047' :
-                              '#86efac'
+                      <span style={{ color: '#9ca3af' }}>🛡️ Équip:</span>
+                      <span style={{ 
+                        marginLeft: '6px', 
+                        color: log.equipment_verified ? '#86efac' : '#fca5a5', 
+                        fontWeight: '600' 
                       }}>
-                        {reading.readings.hydrogenSulfide} ppm
-                      </span>
-                    </div>
-                    <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>CO:</span>
-                      <span style={{
-                        marginLeft: '8px',
-                        fontWeight: '600',
-                        fontSize: '15px',
-                        color: validateAtmosphericValue('co', reading.readings.carbonMonoxide) === 'danger' ? '#fca5a5' :
-                              validateAtmosphericValue('co', reading.readings.carbonMonoxide) === 'warning' ? '#fde047' :
-                              '#86efac'
-                      }}>
-                        {reading.readings.carbonMonoxide} ppm
+                        {log.equipment_verified ? '✅ OK' : '❌ NON'}
                       </span>
                     </div>
                   </div>
                   
-                  {(reading.readings.temperature || reading.readings.humidity || reading.notes) && (
+                  {log.notes && (
                     <div style={{
-                      marginTop: '12px',
-                      paddingTop: '12px',
+                      marginTop: '8px',
+                      paddingTop: '8px',
                       borderTop: '1px solid #4b5563',
-                      fontSize: '14px',
+                      fontSize: '12px',
                       color: '#d1d5db'
                     }}>
-                      {reading.readings.temperature && <span>🌡️ {reading.readings.temperature}°C </span>}
-                      {reading.readings.humidity && <span>💧 {reading.readings.humidity}% </span>}
-                      {reading.notes && <div style={{ marginTop: '6px' }}>📝 {reading.notes}</div>}
+                      📝 {log.notes}
                     </div>
                   )}
                 </div>
@@ -1322,4 +1862,4 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   );
 };
 
-export default React.memo(AtmosphericTesting);
+export default React.memo(EntryRegistry);
