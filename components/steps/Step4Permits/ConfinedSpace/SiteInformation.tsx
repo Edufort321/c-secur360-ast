@@ -700,7 +700,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           }}>
             <div style={{
               width: isMobile ? '20px' : '24px',
-              height: ieMobile ? '20px' : '24px',
+              height: isMobile ? '20px' : '24px',
               color: '#3b82f6',
               flexShrink: 0
             }}>{icon}</div>
