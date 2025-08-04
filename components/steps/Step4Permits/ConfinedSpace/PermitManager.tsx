@@ -1,4 +1,4 @@
-// PermitManager.tsx - Version Complète Corrigée Compatible SafetyManager
+// PermitManager.tsx - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 // Import SafetyManager et styles unifiés
-import { ConfinedSpaceComponentProps } from './SafetyManager';
+import { ConfinedSpaceComponentProps, ConfinedSpaceDetails } from './SafetyManager';
 import { styles } from './styles';
 
 // =================== INTERFACES ===================
@@ -39,6 +39,28 @@ interface PermitHistoryEntry {
   hazardCount: number;
   photoCount: number;
   qrCode?: string;
+}
+
+// ✅ TYPE GUARD FUNCTIONS POUR CORRIGER L'ERREUR BUILD
+function isSiteInformationComplete(siteInfo: ConfinedSpaceDetails | {}): siteInfo is ConfinedSpaceDetails {
+  return (
+    siteInfo && 
+    typeof siteInfo === 'object' &&
+    'projectNumber' in siteInfo &&
+    'workLocation' in siteInfo &&
+    'contractor' in siteInfo &&
+    'supervisor' in siteInfo
+  );
+}
+
+function getSiteInfoValue<K extends keyof ConfinedSpaceDetails>(
+  siteInfo: ConfinedSpaceDetails | {}, 
+  key: K
+): ConfinedSpaceDetails[K] | undefined {
+  if (siteInfo && typeof siteInfo === 'object' && key in siteInfo) {
+    return (siteInfo as ConfinedSpaceDetails)[key];
+  }
+  return undefined;
 }
 
 // =================== TRADUCTIONS ===================
@@ -281,7 +303,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     console.log(`[${type.toUpperCase()}] ${message}`);
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification('C-SECUR360', {
         body: message,
         icon: '/favicon.ico'
@@ -374,6 +396,8 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   };
 
   const handleCopyLink = async () => {
+    if (typeof window === 'undefined') return;
+    
     const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
     try {
       await navigator.clipboard.writeText(permitUrl);
@@ -404,25 +428,25 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       const allPermits = await safetyManager.loadPermitHistory();
       const filtered = allPermits.filter((permit: any) => 
         permit.permit_number?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.projectNumber?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.workLocation?.toLowerCase().includes(query.toLowerCase()) ||
-        permit.siteInformation?.contractor?.toLowerCase().includes(query.toLowerCase())
+        getSiteInfoValue(permit.siteInformation, 'projectNumber')?.toLowerCase().includes(query.toLowerCase()) ||
+        getSiteInfoValue(permit.siteInformation, 'workLocation')?.toLowerCase().includes(query.toLowerCase()) ||
+        getSiteInfoValue(permit.siteInformation, 'contractor')?.toLowerCase().includes(query.toLowerCase())
       );
       
       const results: PermitHistoryEntry[] = filtered.map((permit: any) => ({
         id: permit.id || '',
         permitNumber: permit.permit_number || '',
-        projectNumber: permit.siteInformation?.projectNumber || '',
-        workLocation: permit.siteInformation?.workLocation || '',
-        contractor: permit.siteInformation?.contractor || '',
-        spaceType: permit.siteInformation?.spaceType || '',
-        csaClass: permit.siteInformation?.csaClass || '',
+        projectNumber: getSiteInfoValue(permit.siteInformation, 'projectNumber') || '',
+        workLocation: getSiteInfoValue(permit.siteInformation, 'workLocation') || '',
+        contractor: getSiteInfoValue(permit.siteInformation, 'contractor') || '',
+        spaceType: getSiteInfoValue(permit.siteInformation, 'spaceType') || '',
+        csaClass: getSiteInfoValue(permit.siteInformation, 'csaClass') || '',
         status: permit.status || 'draft',
         createdAt: permit.created_at || '',
         lastModified: permit.last_modified || '',
-        hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                    (permit.siteInformation?.physicalHazards?.length || 0),
-        photoCount: permit.siteInformation?.spacePhotos?.length || 0,
+        hazardCount: (getSiteInfoValue(permit.siteInformation, 'atmosphericHazards')?.length || 0) + 
+                    (getSiteInfoValue(permit.siteInformation, 'physicalHazards')?.length || 0),
+        photoCount: getSiteInfoValue(permit.siteInformation, 'spacePhotos')?.length || 0,
         qrCode: qrCodeUrl
       }));
       
@@ -468,14 +492,27 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     }
   };
 
+  // ✅ CORRECTION BUILD PRINCIPALE - Fonction getSectionValidation avec type guards
   const getSectionValidation = (): ValidationSummary[] => {
     return [
       {
         sectionName: t.siteInformation,
         icon: <Building style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.siteInformation?.projectNumber && permit.siteInformation?.workLocation),
-        completionPercentage: getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor']),
-        errors: permit.siteInformation?.projectNumber ? [] : ['Numéro de projet manquant'],
+        // ✅ LIGNE 476 CORRIGÉE - Type guard pour éviter l'erreur union type
+        isComplete: Boolean(
+          isSiteInformationComplete(permit.siteInformation) &&
+          permit.siteInformation.projectNumber && 
+          permit.siteInformation.workLocation
+        ),
+        // ✅ LIGNE 477 CORRIGÉE - Type guard pour getFieldCompletionPercentage
+        completionPercentage: isSiteInformationComplete(permit.siteInformation)
+          ? getFieldCompletionPercentage(permit.siteInformation, ['projectNumber', 'workLocation', 'contractor', 'supervisor'])
+          : 0,
+        // ✅ LIGNE 478 CORRIGÉE - Type guard pour errors check
+        errors: (
+          isSiteInformationComplete(permit.siteInformation) &&
+          permit.siteInformation.projectNumber
+        ) ? [] : ['Numéro de projet manquant'],
         lastModified: permit.last_modified
       },
       {
@@ -519,11 +556,11 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
       lastSaved,
       permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
-      hazardCount: (permit.siteInformation?.atmosphericHazards?.length || 0) + 
-                   (permit.siteInformation?.physicalHazards?.length || 0),
-      photoCount: permit.siteInformation?.spacePhotos?.length || 0,
-      volume: permit.siteInformation?.dimensions?.volume || 0,
-      unitSystem: permit.siteInformation?.unitSystem || 'metric'
+      hazardCount: (getSiteInfoValue(permit.siteInformation, 'atmosphericHazards')?.length || 0) + 
+                   (getSiteInfoValue(permit.siteInformation, 'physicalHazards')?.length || 0),
+      photoCount: getSiteInfoValue(permit.siteInformation, 'spacePhotos')?.length || 0,
+      volume: getSiteInfoValue(permit.siteInformation, 'dimensions')?.volume || 0,
+      unitSystem: getSiteInfoValue(permit.siteInformation, 'unitSystem') || 'metric'
     };
   };
 
@@ -811,15 +848,15 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca3af' }}>Projet:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.projectNumber || 'N/A'}</span>
+                <span style={{ color: 'white' }}>{getSiteInfoValue(permit.siteInformation, 'projectNumber') || 'N/A'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca3af' }}>Lieu:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.workLocation || 'N/A'}</span>
+                <span style={{ color: 'white' }}>{getSiteInfoValue(permit.siteInformation, 'workLocation') || 'N/A'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca3af' }}>Entrepreneur:</span>
-                <span style={{ color: 'white' }}>{permit.siteInformation?.contractor || 'N/A'}</span>
+                <span style={{ color: 'white' }}>{getSiteInfoValue(permit.siteInformation, 'contractor') || 'N/A'}</span>
               </div>
             </div>
           </div>
