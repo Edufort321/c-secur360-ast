@@ -1,4 +1,4 @@
-// SafetyManager.tsx - PARTIE 1/2 - Types et Configuration avec Fix Saisie
+// SafetyManager.tsx - PARTIE 1/2 - Types et Configuration (Mode Validation Seule)
 "use client";
 
 import { create } from 'zustand';
@@ -652,7 +652,7 @@ function createAuditEntry(action: string, section: string, changes: any, oldValu
     oldValues
   };
 }
-// SafetyManager.tsx - PARTIE 2/2 - Store et Fonctions avec Fix Saisie Complet
+// SafetyManager.tsx - PARTIE 2/2 - Store en Mode Validation Seule
 
 // =================== FONCTION CREATEEMPTYPERMIT AVEC VALEURS GARANTIES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
@@ -840,7 +840,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-// =================== STORE ZUSTAND AVEC FIX DE SAISIE ===================
+// =================== STORE ZUSTAND EN MODE VALIDATION SEULE ===================
 interface SafetyManagerState {
   // État principal
   currentPermit: ConfinedSpacePermit;
@@ -861,7 +861,7 @@ interface SafetyManagerState {
   activeAlerts: Alert[];
   notifications: Notification[];
   
-  // Actions principales
+  // Actions principales - ✅ MODE VALIDATION SEULE: SYNCHRONISATION DÉSACTIVÉE
   updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
   updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@@ -890,7 +890,7 @@ interface SafetyManagerState {
   generatePDF: () => Promise<Blob>;
   sharePermit: (method: 'email' | 'sms' | 'whatsapp') => Promise<void>;
   
-  // Validation
+  // Validation - ✅ RESTE ACTIVE pour progression et rapport final
   validatePermitCompleteness: () => ValidationResult;
   validateSection: (section: keyof ConfinedSpacePermit) => ValidationResult;
   
@@ -926,502 +926,80 @@ export const useSafetyManager = create<SafetyManagerState>()(
       activeAlerts: [],
       notifications: [],
 
-      // =================== ACTIONS DE MISE À JOUR SÉCURISÉES ===================
+      // =================== ACTIONS EN MODE VALIDATION SEULE - SYNCHRONISATION DÉSACTIVÉE ===================
+      
       updateSiteInformation: (data) => {
-        set((state) => {
-          // ✅ FIX SAISIE: Protection contre les mises à jour trop fréquentes
-          const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
-            console.log('🚫 SafetyManager: Update trop fréquent ignoré');
-            return state;
-          }
-
-          console.log('🔄 SafetyManager: updateSiteInformation disponible', data);
-          
-          // ✅ FIX: S'assurer que siteInformation existe toujours
-          const currentSiteInfo = state.currentPermit.siteInformation || {
-            projectNumber: '',
-            workLocation: '',
-            contractor: '',
-            supervisor: '',
-            entryDate: '',
-            duration: '',
-            workerCount: 1,
-            workDescription: '',
-            spaceType: '',
-            csaClass: '',
-            entryMethod: '',
-            accessType: '',
-            spaceLocation: '',
-            spaceDescription: '',
-            dimensions: {
-              length: 0,
-              width: 0,
-              height: 0,
-              diameter: 0,
-              volume: 0,
-              spaceShape: 'rectangular'
-            },
-            unitSystem: 'metric',
-            entryPoints: [],
-            atmosphericHazards: [],
-            physicalHazards: [],
-            environmentalConditions: {
-              ventilationRequired: false,
-              ventilationType: '',
-              lightingConditions: '',
-              temperatureRange: '',
-              moistureLevel: '',
-              noiseLevel: '',
-              weatherConditions: '',
-            },
-            spaceContent: {
-              contents: '',
-              residues: '',
-              previousUse: '',
-              lastEntry: '',
-              cleaningStatus: '',
-            },
-            safetyMeasures: {
-              emergencyEgress: '',
-              communicationMethod: '',
-              monitoringEquipment: [],
-              ventilationEquipment: [],
-              emergencyEquipment: [],
-            },
-            spacePhotos: []
-          };
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            siteInformation: {
-              ...currentSiteInfo,
-              ...data
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          // Audit trail
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_site_information', 'siteInformation', data, currentSiteInfo)
-          );
-          
-          // ✅ FIX: Auto-save respectueux - DÉSACTIVÉ pendant la saisie
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            // Clear previous timer
-            if (state.inputDebounceTimer) {
-              clearTimeout(state.inputDebounceTimer);
-            }
-            
-            const timer = setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save différé depuis updateSiteInformation');
-                currentState.saveToDatabase();
-              }
-            }, 60000); // ✅ FIX: 60 secondes au lieu de secondes
-            
-            return { 
-              currentPermit: updatedPermit,
-              isUpdating: true,
-              lastUpdateTime: now,
-              inputDebounceTimer: timer
-            };
-          }
-          
-          return { 
-            currentPermit: updatedPermit,
-            isUpdating: true,
-            lastUpdateTime: now
-          };
-        });
-
-        // ✅ FIX: Reset isUpdating après délai
-        setTimeout(() => {
-          set({ isUpdating: false });
-          console.log('✅ SafetyManager: isUpdating reset');
-        }, 3000); // ✅ 3 secondes de grace period
+        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
+        console.log('🔇 SafetyManager: updateSiteInformation ignoré en mode validation seule', data);
+        return; // Sortir immédiatement sans rien faire
       },
 
       updateAtmosphericTesting: (data) => {
-        set((state) => {
-          const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
-            return state;
-          }
-
-          console.log('🔄 SafetyManager: updateAtmosphericTesting', data);
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            atmosphericTesting: {
-              ...state.currentPermit.atmosphericTesting,
-              ...data,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          // Vérifier les alertes de sécurité
-          let newAlerts: Alert[] = [];
-          if (data.readings) {
-            newAlerts = checkAtmosphericAlerts(data.readings);
-          }
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_atmospheric_testing', 'atmosphericTesting', data, state.currentPermit.atmosphericTesting)
-          );
-          
-          // Auto-save conditionnel
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            if (state.inputDebounceTimer) {
-              clearTimeout(state.inputDebounceTimer);
-            }
-            
-            const timer = setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save depuis updateAtmosphericTesting');
-                currentState.saveToDatabase();
-              }
-            }, 60000);
-            
-            return { 
-              currentPermit: updatedPermit,
-              activeAlerts: [...state.activeAlerts, ...newAlerts],
-              isUpdating: true,
-              lastUpdateTime: now,
-              inputDebounceTimer: timer
-            };
-          }
-          
-          return { 
-            currentPermit: updatedPermit,
-            activeAlerts: [...state.activeAlerts, ...newAlerts],
-            isUpdating: true,
-            lastUpdateTime: now
-          };
-        });
-
-        setTimeout(() => {
-          set({ isUpdating: false });
-        }, 3000);
+        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
+        console.log('🔇 SafetyManager: updateAtmosphericTesting ignoré en mode validation seule', data);
+        return; // Sortir immédiatement sans rien faire
       },
 
       updateEntryRegistry: (data) => {
-        set((state) => {
-          const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
-            return state;
-          }
-
-          console.log('🔄 SafetyManager: updateEntryRegistry', data);
-          
-          // Synchroniser entryLog et entryLogs pour compatibilité
-          const updatedData = { ...data };
-          if (data.entryLog && !data.entryLogs) {
-            updatedData.entryLogs = data.entryLog;
-          } else if (data.entryLogs && !data.entryLog) {
-            updatedData.entryLog = data.entryLogs;
-          }
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              ...updatedData,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_entry_registry', 'entryRegistry', updatedData, state.currentPermit.entryRegistry)
-          );
-          
-          // Auto-save conditionnel
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            if (state.inputDebounceTimer) {
-              clearTimeout(state.inputDebounceTimer);
-            }
-            
-            const timer = setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save depuis updateEntryRegistry');
-                currentState.saveToDatabase();
-              }
-            }, 60000);
-            
-            return { 
-              currentPermit: updatedPermit,
-              isUpdating: true,
-              lastUpdateTime: now,
-              inputDebounceTimer: timer
-            };
-          }
-          
-          return { 
-            currentPermit: updatedPermit,
-            isUpdating: true,
-            lastUpdateTime: now
-          };
-        });
-
-        setTimeout(() => {
-          set({ isUpdating: false });
-        }, 3000);
+        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
+        console.log('🔇 SafetyManager: updateEntryRegistry ignoré en mode validation seule', data);
+        return; // Sortir immédiatement sans rien faire
       },
 
       updateRescuePlan: (data) => {
-        set((state) => {
-          const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
-            return state;
-          }
-
-          console.log('🔄 SafetyManager: updateRescuePlan', data);
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            rescuePlan: {
-              ...state.currentPermit.rescuePlan,
-              ...data,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_rescue_plan', 'rescuePlan', data, state.currentPermit.rescuePlan)
-          );
-          
-          // Auto-save conditionnel
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            if (state.inputDebounceTimer) {
-              clearTimeout(state.inputDebounceTimer);
-            }
-            
-            const timer = setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save depuis updateRescuePlan');
-                currentState.saveToDatabase();
-              }
-            }, 60000);
-            
-            return { 
-              currentPermit: updatedPermit,
-              isUpdating: true,
-              lastUpdateTime: now,
-              inputDebounceTimer: timer
-            };
-          }
-          
-          return { 
-            currentPermit: updatedPermit,
-            isUpdating: true,
-            lastUpdateTime: now
-          };
-        });
-
-        setTimeout(() => {
-          set({ isUpdating: false });
-        }, 3000);
+        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
+        console.log('🔇 SafetyManager: updateRescuePlan ignoré en mode validation seule', data);
+        return; // Sortir immédiatement sans rien faire
       },
 
-      // =================== MÉTHODES POUR ENTRYREGISTRY ===================
+      // =================== MÉTHODES POUR ENTRYREGISTRY - DÉSACTIVÉES ===================
       updateRegistryData: (data) => {
-        console.log('🔄 SafetyManager: updateRegistryData disponible', data);
-        get().updateEntryRegistry(data);
-      },
-
-      // ✅ FIX: ALIAS DE COMPATIBILITÉ POUR LES COMPOSANTS EXISTANTS
-      updateSiteInfo: (data: any) => {
-        console.log('🔄 SafetyManager: updateSiteInfo (alias) disponible', data);
-        // Mapper les champs individuels vers updateSiteInformation
-        if (typeof data === 'object' && data.field && data.value !== undefined) {
-          const mappedData = { [data.field]: data.value };
-          get().updateSiteInformation(mappedData);
-        } else {
-          get().updateSiteInformation(data);
-        }
-      },
-
-      updateAtmosphericData: (data: any) => {
-        console.log('🔄 SafetyManager: updateAtmosphericData (alias) disponible', data);
-        get().updateAtmosphericTesting(data);
-      },
-
-      updateRegistryInfo: (data: any) => {
-        console.log('🔄 SafetyManager: updateRegistryInfo (alias) disponible', data);
-        get().updateEntryRegistry(data);
-      },
-
-      updateRescueData: (data: any) => {
-        console.log('🔄 SafetyManager: updateRescueData (alias) disponible', data);
-        get().updateRescuePlan(data);
+        console.log('🔇 SafetyManager: updateRegistryData ignoré en mode validation seule', data);
+        return;
       },
 
       updatePersonnel: (person) => {
-        set((state) => {
-          console.log('🔄 SafetyManager: updatePersonnel', person);
-          
-          const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
-          const existingIndex = currentPersonnel.findIndex(p => p.id === person.id);
-          
-          let updatedPersonnel;
-          if (existingIndex >= 0) {
-            updatedPersonnel = [...currentPersonnel];
-            updatedPersonnel[existingIndex] = person;
-          } else {
-            updatedPersonnel = [...currentPersonnel, { ...person, id: person.id || generateId() }];
-          }
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              personnel: updatedPersonnel,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_personnel', 'entryRegistry', { person }, { existingPerson: currentPersonnel[existingIndex] || null })
-          );
-          
-          // Auto-save plus lent pour les actions manuelles
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            if (state.inputDebounceTimer) {
-              clearTimeout(state.inputDebounceTimer);
-            }
-            
-            const timer = setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save depuis updatePersonnel');
-                currentState.saveToDatabase();
-              }
-            }, 90000); // ✅ 90 secondes pour actions manuelles
-            
-            return { 
-              currentPermit: updatedPermit,
-              inputDebounceTimer: timer
-            };
-          }
-          
-          return { currentPermit: updatedPermit };
-        });
+        console.log('🔇 SafetyManager: updatePersonnel ignoré en mode validation seule', person);
+        return;
       },
 
       updateEquipment: (equipment) => {
-        set((state) => {
-          console.log('🔄 SafetyManager: updateEquipment', equipment);
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              equipment: Array.isArray(equipment) ? equipment : [equipment],
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_equipment', 'entryRegistry', { equipment }, { oldEquipment: state.currentPermit.entryRegistry.equipment })
-          );
-          
-          return { currentPermit: updatedPermit };
-        });
+        console.log('🔇 SafetyManager: updateEquipment ignoré en mode validation seule', equipment);
+        return;
       },
 
       updateCompliance: (key: string, value: boolean) => {
-        set((state) => {
-          console.log('🔄 SafetyManager: updateCompliance', key, value);
-          
-          const currentCompliance = state.currentPermit.compliance || {};
-          const currentRegistryCompliance = state.currentPermit.entryRegistry.compliance || {};
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            compliance: {
-              ...currentCompliance,
-              [key]: value
-            },
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              compliance: {
-                ...currentRegistryCompliance,
-                [key]: value
-              },
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('update_compliance', 'compliance', { [key]: value }, { [key]: currentCompliance[key] })
-          );
-          
-          return { currentPermit: updatedPermit };
-        });
+        console.log('🔇 SafetyManager: updateCompliance ignoré en mode validation seule', key, value);
+        return;
       },
 
       recordEntryExit: (personId, action) => {
-        set((state) => {
-          console.log('🔄 SafetyManager: recordEntryExit', personId, action);
-          
-          const entryLog = state.currentPermit.entryRegistry.entryLog || [];
-          const newLogEntry: EntryLogEntry = {
-            id: generateId(),
-            personnelId: personId,
-            action: action as 'entry' | 'exit' | 'emergency_exit',
-            timestamp: new Date().toISOString(),
-            authorizedBy: 'current_user'
-          };
-          
-          // Mise à jour des entrants actifs
-          let activeEntrants = [...state.currentPermit.entryRegistry.activeEntrants];
-          if (action === 'entry' && !activeEntrants.includes(personId)) {
-            activeEntrants.push(personId);
-          } else if (action === 'exit' || action === 'emergency_exit') {
-            activeEntrants = activeEntrants.filter(id => id !== personId);
-          }
-          
-          const updatedEntryLog = [...entryLog, newLogEntry];
-          
-          const updatedPermit = {
-            ...state.currentPermit,
-            entryRegistry: {
-              ...state.currentPermit.entryRegistry,
-              entryLog: updatedEntryLog,
-              entryLogs: updatedEntryLog,
-              activeEntrants,
-              lastUpdated: new Date().toISOString()
-            },
-            last_modified: new Date().toISOString()
-          };
-          
-          updatedPermit.auditTrail.push(
-            createAuditEntry('record_entry_exit', 'entryRegistry', { personId, action }, null)
-          );
-          
-          // Auto-save immédiat pour les entrées/sorties (critique pour sécurité)
-          if (state.autoSaveEnabled) {
-            setTimeout(() => {
-              console.log('💾 Auto-save IMMÉDIAT pour sécurité: recordEntryExit');
-              get().saveToDatabase();
-            }, 10000); // Plus rapide pour les actions critiques
-          }
-          
-          return { currentPermit: updatedPermit };
-        });
+        console.log('🔇 SafetyManager: recordEntryExit ignoré en mode validation seule', personId, action);
+        return;
       },
 
-      // =================== GESTION BASE DE DONNÉES ROBUSTE ===================
+      // ✅ FIX: ALIAS DE COMPATIBILITÉ - DÉSACTIVÉS EN MODE VALIDATION SEULE
+      updateSiteInfo: (data: any) => {
+        console.log('🔇 SafetyManager: updateSiteInfo (alias) ignoré en mode validation seule', data);
+        return;
+      },
+
+      updateAtmosphericData: (data: any) => {
+        console.log('🔇 SafetyManager: updateAtmosphericData (alias) ignoré en mode validation seule', data);
+        return;
+      },
+
+      updateRegistryInfo: (data: any) => {
+        console.log('🔇 SafetyManager: updateRegistryInfo (alias) ignoré en mode validation seule', data);
+        return;
+      },
+
+      updateRescueData: (data: any) => {
+        console.log('🔇 SafetyManager: updateRescueData (alias) ignoré en mode validation seule', data);
+        return;
+      },
+
+      // =================== GESTION BASE DE DONNÉES ACTIVE ===================
       saveToDatabase: async () => {
         const state = get();
         
@@ -1632,7 +1210,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
         }
       },
 
-      // =================== QR CODE ET PARTAGE ===================
+      // =================== QR CODE ET PARTAGE ACTIFS ===================
       generateQRCode: async () => {
         const permit = get().currentPermit;
         if (!permit.permit_number) {
@@ -1749,7 +1327,7 @@ Accès: ${permitUrl}`;
         });
       },
 
-      // =================== VALIDATION COMPLÈTE ===================
+      // =================== VALIDATION COMPLÈTE ACTIVE ===================
       validatePermitCompleteness: () => {
         const permit = get().currentPermit;
         const errors: string[] = [];
@@ -1888,7 +1466,7 @@ Accès: ${permitUrl}`;
         };
       },
 
-      // =================== UTILITAIRES ===================
+      // =================== UTILITAIRES ACTIFS ===================
       createNewPermit: (province: ProvinceCode) => {
         const newPermit = createEmptyPermit();
         newPermit.province = province;
@@ -1954,7 +1532,7 @@ Accès: ${permitUrl}`;
         }
       },
 
-      // =================== GESTION ALERTES ET NOTIFICATIONS ===================
+      // =================== GESTION ALERTES ET NOTIFICATIONS ACTIVE ===================
       addAlert: (alert) => {
         const newAlert: Alert = {
           ...alert,
