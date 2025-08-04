@@ -1013,7 +1013,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
   // ✅ CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
-    const currentHazards = siteInfo.atmosphericHazards || [];
+    const currentHazards = (siteInfo.atmosphericHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
@@ -1033,7 +1033,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
 
   // ✅ CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
   const togglePhysicalHazard = useCallback((hazardType: string) => {
-    const currentHazards = siteInfo.physicalHazards || [];
+    const currentHazards = (siteInfo.physicalHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
       ? currentHazards.filter(h => h !== hazardType)
       : [...currentHazards, hazardType];
