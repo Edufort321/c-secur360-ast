@@ -1,4 +1,4 @@
-// AtmosphericTesting.tsx - Version Complète Corrigée Compatible SafetyManager
+// AtmosphericTesting.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -58,8 +58,11 @@ interface RegulationData {
     bidirectional_communication_required?: boolean;
     rescue_plan_required?: boolean;
     competent_person_required?: boolean;
-    max_work_period_hours?: number;
   };
+  // ✅ CORRECTION RUNTIME ERROR : Utiliser les propriétés qui existent réellement
+  permit_validity_hours: number; // ✅ Cette propriété existe dans PROVINCIAL_REGULATIONS
+  atmosphere_testing_frequency: number; // ✅ Cette propriété existe
+  continuous_monitoring_required: boolean; // ✅ Cette propriété existe
   emergency_contacts: Array<{
     name: string;
     role: string;
@@ -258,11 +261,11 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
     const currentRegulations = regulations[selectedProvince];
-    if (!currentRegulations?.atmospheric_testing?.limits?.[type]) {
+    if (!currentRegulations?.limits?.[type]) {
       return 'safe'; // Fallback si pas de réglementation
     }
     
-    const limits = currentRegulations.atmospheric_testing.limits[type];
+    const limits = currentRegulations.limits[type];
     
     if (type === 'oxygen') {
       const oxygenLimits = limits as AtmosphericLimits['oxygen'];
@@ -330,7 +333,8 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       interval = setInterval(() => {
         setContinuousTimer(prev => {
           if (prev <= 1) {
-            const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+            // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
+            const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
             alert(`⏰ SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
             return frequencyMinutes * 60;
           }
@@ -355,7 +359,8 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
 
   useEffect(() => {
     if (atmosphericReadings.length > 0 && !continuousActive) {
-      const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+      // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
+      const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
       setContinuousTimer(frequencyMinutes * 60);
       setContinuousActive(true);
     }
@@ -436,7 +441,8 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     } else {
       setIsMonitoring(true);
       setContinuousActive(true);
-      const frequencyMinutes = regulations[selectedProvince]?.atmospheric_testing?.frequency_minutes || 30;
+      // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
+      const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
       setContinuousTimer(frequencyMinutes * 60);
     }
   }, [isMonitoring, regulations, selectedProvince]);
@@ -506,21 +512,21 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager]);
 
   // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
+  // ✅ CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
   const safeRegulations = regulations[selectedProvince] || {
     name: 'Réglementation provinciale',
     code: 'N/A',
     authority: 'Autorité compétente',
-    atmospheric_testing: {
-      frequency_minutes: 30,
-      limits: {
-        oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
-        lel: { max: 10, critical: 25 },
-        h2s: { max: 10, critical: 15 },
-        co: { max: 35, critical: 100 }
-      }
+    atmosphere_testing_frequency: 30,
+    continuous_monitoring_required: true,
+    permit_validity_hours: 8,
+    limits: {
+      oxygen: { min: 19.5, max: 23.0, critical_low: 16.0, critical_high: 25.0 },
+      lel: { max: 10, critical: 25 },
+      h2s: { max: 10, critical: 15 },
+      co: { max: 35, critical: 100 }
     }
   };
-
   // =================== RENDU JSX PRINCIPAL ===================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
@@ -568,7 +574,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmospheric_testing.frequency_minutes} minutes + retest immédiat si valeurs critiques.
+            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immédiat si valeurs critiques.
           </p>
         </div>
         
@@ -730,12 +736,12 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             borderRadius: '16px',
             fontWeight: '700'
           }}>
-            ⏱️ {safeRegulations.atmospheric_testing.frequency_minutes} min
+            ⏱️ {safeRegulations.atmosphere_testing_frequency} min
           </span>
         </h3>
         
         <div style={styles.grid4}>
-          {Object.entries(safeRegulations.atmospheric_testing.limits).map(([gas, limits]) => (
+          {Object.entries(safeRegulations.limits).map(([gas, limits]) => (
             <div key={gas} style={{
               backgroundColor: 'rgba(17, 24, 39, 0.6)',
               borderRadius: '12px',
@@ -805,7 +811,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             </button>
             <button
               onClick={() => {
-                setContinuousTimer(safeRegulations.atmospheric_testing.frequency_minutes * 60);
+                setContinuousTimer(safeRegulations.atmosphere_testing_frequency * 60);
                 setContinuousActive(true);
               }}
               style={{
@@ -879,7 +885,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               color: '#93c5fd',
               marginBottom: '8px'
             }}>
-              {safeRegulations.atmospheric_testing.frequency_minutes} min
+              {safeRegulations.atmosphere_testing_frequency} min
             </div>
             <div style={{ 
               color: '#93c5fd', 
