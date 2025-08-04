@@ -311,7 +311,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       entrant: '#3b82f6',
       attendant: '#10b981',
       supervisor: '#f59e0b',
-      rescuer: '#ef4444',
+      rescue: '#ef4444', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
       admin: '#dc2626'
     };
     return colors[role] || '#6b7280';
@@ -322,7 +322,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       entrant: '👷',
       attendant: '👁️',
       supervisor: '👨‍💼',
-      rescuer: '🚑',
+      rescue: '🚑', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
       admin: '🚨'
     };
     return emojis[role] || '👤';
