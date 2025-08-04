@@ -666,7 +666,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // ✅ CORRECTION : Créer un SafetyManager mock complet pour TypeScript
   const mockSafetyManager: any = {
     // États principaux
-    currentPermit: createDefaultPermitData(selectedProvince),
+    currentPermit: createDefaultPermitData('QC'), // ✅ FIX: Valeur par défaut au lieu de selectedProvince
     permits: [],
     isSaving: false,
     isLoading: false,
