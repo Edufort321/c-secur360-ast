@@ -1039,17 +1039,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         validationData
       };
       
-      // ✅ SafetyManager sécurisé sans redirection
-      if (isSafetyManagerEnabled && safetyManager) {
-        try {
-          const permitNumber = await safetyManager.saveToDatabase();
-          if (permitNumber) {
-            dataToSave = { ...dataToSave, permit_number: permitNumber };
-          }
-        } catch (error) {
-          console.log('Erreur sauvegarde SafetyManager:', error);
-        }
-      }
+      // ⚠️ SAFETYMANAGER DÉSACTIVÉ - Pas de sauvegarde en base pour l'instant
+      console.log('🔇 SafetyManager désactivé - sauvegarde locale seulement');
       
       // ✅ Callback onSave sécurisé
       if (onSave) {
