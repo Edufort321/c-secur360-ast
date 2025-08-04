@@ -1,4 +1,4 @@
-// SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager
+// SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -456,26 +456,47 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.dimensions, onUpdate]);
 
-  // ✅ CORRECTION 6 : Handler updateEnvironmentalCondition avec vérifications SafetyManager
+  // ✅ CORRECTION BUILD CRITIQUE 6 : Handler updateEnvironmentalCondition avec conversion des types undefined -> boolean
   const updateEnvironmentalCondition = useCallback((field: string, value: any) => {
-    const updatedConditions = { ...siteInfo.environmentalConditions, [field]: value };
+    // ✅ SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des booléens par défaut
+    const sanitizedValue = value === undefined ? false : value;
+    const currentConditions = siteInfo.environmentalConditions || {};
+    
+    // ✅ Construire updatedConditions avec conversion des types pour EnvironmentalConditions
+    const updatedConditions = { 
+      ...currentConditions, 
+      [field]: sanitizedValue 
+    };
+    
+    // ✅ CONVERSION EXPLICITE pour respecter l'interface EnvironmentalConditions stricte
+    const typeSafeConditions = {
+      ventilationRequired: Boolean(updatedConditions.ventilationRequired ?? false),
+      ventilationType: String(updatedConditions.ventilationType ?? ''),
+      lightingConditions: String(updatedConditions.lightingConditions ?? ''),
+      temperatureRange: String(updatedConditions.temperatureRange ?? ''),
+      moistureLevel: String(updatedConditions.moistureLevel ?? ''),
+      noiseLevel: String(updatedConditions.noiseLevel ?? ''),
+      weatherConditions: String(updatedConditions.weatherConditions ?? '')
+    };
     
     if (safetyManager) {
       try {
-        safetyManager.updateSiteInformation({ environmentalConditions: updatedConditions });
+        // ✅ UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
+        safetyManager.updateSiteInformation({ environmentalConditions: typeSafeConditions });
       } catch (error) {
         console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
       }
     }
     
     if (onUpdate) {
-      onUpdate('siteInformation', { environmentalConditions: updatedConditions });
+      onUpdate('siteInformation', { environmentalConditions: typeSafeConditions });
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value });
+      console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value: sanitizedValue });
     }
   }, [safetyManager, siteInfo.environmentalConditions, onUpdate]);
+  // SiteInformation.tsx - PARTIE 2/2 - Fonctions Avancées et Rendu JSX Complet
 
   // =================== CALCUL VOLUME ===================
   const calculateVolume = useCallback(() => {
@@ -668,7 +689,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           }}>
             <div style={{
               width: isMobile ? '20px' : '24px',
-              height: isMobile ? '20px' : '24px',
+              height: ieMobile ? '20px' : '24px',
               color: '#3b82f6',
               flexShrink: 0
             }}>{icon}</div>
@@ -977,6 +998,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       )}
     </div>
   );
+
   // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
   // ✅ CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
