@@ -462,9 +462,20 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     const sanitizedValue = value === undefined ? false : value;
     const currentConditions = siteInfo.environmentalConditions || {};
     
-    // ✅ Construire updatedConditions avec conversion des types pour EnvironmentalConditions
+    // ✅ TYPE ASSERTION EXPLICITE pour éviter l'erreur Property does not exist on type '{}'
+    const typedCurrentConditions = currentConditions as {
+      ventilationRequired?: boolean;
+      ventilationType?: string;
+      lightingConditions?: string;
+      temperatureRange?: string;
+      moistureLevel?: string;
+      noiseLevel?: string;
+      weatherConditions?: string;
+    };
+    
+    // ✅ Construire updatedConditions avec type assertion
     const updatedConditions = { 
-      ...currentConditions, 
+      ...typedCurrentConditions, 
       [field]: sanitizedValue 
     };
     
