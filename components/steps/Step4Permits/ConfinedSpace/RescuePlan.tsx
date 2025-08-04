@@ -56,6 +56,21 @@ function getRescueTrainingValue(training: Record<string, boolean> | {} | undefin
   return false;
 }
 
+// ✅ TYPE GUARDS POUR LES CERTIFICATIONS
+function getRescueTeamCertificationValue(certifications: any, key: string): boolean {
+  if (certifications != null && typeof certifications === 'object' && key in certifications) {
+    return Boolean(certifications[key]);
+  }
+  return false;
+}
+
+function getEquipmentCertificationValue(certifications: any, key: string): string {
+  if (certifications != null && typeof certifications === 'object' && key in certifications) {
+    return String(certifications[key] || '');
+  }
+  return '';
+}
+
 // =================== COMPOSANT RESCUE PLAN ===================
 const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
   language = 'fr',
@@ -818,7 +833,8 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                   <input
                     type="checkbox"
                     id={cert.id}
-                    checked={rescueData.rescue_team_certifications?.[cert.field] || false}
+                    // ✅ LIGNE 821 CORRIGÉE - Utilisation de getRescueTeamCertificationValue
+                    checked={getRescueTeamCertificationValue(rescueData.rescue_team_certifications, cert.field)}
                     onChange={(e) => updatePermitData({ 
                       rescue_team_certifications: { 
                         ...rescueData.rescue_team_certifications, 
