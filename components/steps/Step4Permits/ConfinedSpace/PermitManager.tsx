@@ -63,6 +63,17 @@ function getSiteInfoValue<K extends keyof ConfinedSpaceDetails>(
   return undefined;
 }
 
+// ✅ TYPE GUARD POUR RESCUE PLAN
+function isRescuePlanComplete(rescuePlan: any): boolean {
+  return (
+    rescuePlan && 
+    typeof rescuePlan === 'object' &&
+    'emergencyContacts' in rescuePlan &&
+    Array.isArray(rescuePlan.emergencyContacts) &&
+    rescuePlan.emergencyContacts.length > 0
+  );
+}
+
 // =================== TRADUCTIONS ===================
 const translations = {
   fr: {
@@ -518,25 +529,64 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       {
         sectionName: t.rescuePlan,
         icon: <Shield style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.rescuePlan?.emergencyContacts?.length > 0),
-        completionPercentage: permit.rescuePlan?.emergencyContacts?.length > 0 ? 100 : 0,
-        errors: permit.rescuePlan?.emergencyContacts?.length > 0 ? [] : ['Plan de sauvetage incomplet'],
+        // ✅ LIGNES 521-523 CORRIGÉES - Type guard pour RescuePlan
+        isComplete: isRescuePlanComplete(permit.rescuePlan),
+        completionPercentage: isRescuePlanComplete(permit.rescuePlan) ? 100 : 0,
+        errors: isRescuePlanComplete(permit.rescuePlan) ? [] : ['Plan de sauvetage incomplet'],
         lastModified: permit.last_modified
       },
       {
         sectionName: t.atmosphericTesting,
         icon: <Activity style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.atmosphericTesting?.readings?.length > 0),
-        completionPercentage: permit.atmosphericTesting?.readings?.length > 0 ? 100 : 0,
-        errors: permit.atmosphericTesting?.readings?.length > 0 ? [] : ['Tests atmosphériques manquants'],
+        // ✅ TYPE GUARD pour atmosphericTesting aussi
+        isComplete: Boolean(
+          permit.atmosphericTesting && 
+          typeof permit.atmosphericTesting === 'object' &&
+          'readings' in permit.atmosphericTesting &&
+          Array.isArray(permit.atmosphericTesting.readings) &&
+          permit.atmosphericTesting.readings.length > 0
+        ),
+        completionPercentage: (
+          permit.atmosphericTesting && 
+          typeof permit.atmosphericTesting === 'object' &&
+          'readings' in permit.atmosphericTesting &&
+          Array.isArray(permit.atmosphericTesting.readings) &&
+          permit.atmosphericTesting.readings.length > 0
+        ) ? 100 : 0,
+        errors: (
+          permit.atmosphericTesting && 
+          typeof permit.atmosphericTesting === 'object' &&
+          'readings' in permit.atmosphericTesting &&
+          Array.isArray(permit.atmosphericTesting.readings) &&
+          permit.atmosphericTesting.readings.length > 0
+        ) ? [] : ['Tests atmosphériques manquants'],
         lastModified: permit.last_modified
       },
       {
         sectionName: t.entryRegistry,
         icon: <Users style={{ width: '20px', height: '20px' }} />,
-        isComplete: Boolean(permit.entryRegistry?.personnel?.length > 0),
-        completionPercentage: permit.entryRegistry?.personnel?.length > 0 ? 100 : 0,
-        errors: permit.entryRegistry?.personnel?.length > 0 ? [] : ['Personnel manquant'],
+        // ✅ TYPE GUARD pour entryRegistry aussi
+        isComplete: Boolean(
+          permit.entryRegistry && 
+          typeof permit.entryRegistry === 'object' &&
+          'personnel' in permit.entryRegistry &&
+          Array.isArray(permit.entryRegistry.personnel) &&
+          permit.entryRegistry.personnel.length > 0
+        ),
+        completionPercentage: (
+          permit.entryRegistry && 
+          typeof permit.entryRegistry === 'object' &&
+          'personnel' in permit.entryRegistry &&
+          Array.isArray(permit.entryRegistry.personnel) &&
+          permit.entryRegistry.personnel.length > 0
+        ) ? 100 : 0,
+        errors: (
+          permit.entryRegistry && 
+          typeof permit.entryRegistry === 'object' &&
+          'personnel' in permit.entryRegistry &&
+          Array.isArray(permit.entryRegistry.personnel) &&
+          permit.entryRegistry.personnel.length > 0
+        ) ? [] : ['Personnel manquant'],
         lastModified: permit.last_modified
       }
     ];
@@ -548,12 +598,34 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       new Date(safetyManager.lastSaved).toLocaleString() : 
       'Jamais';
 
+    // ✅ SÉCURISER ACCÈS AUX PROPRIÉTÉS AVEC TYPE GUARDS
+    const totalPersonnel = (
+      permit.entryRegistry && 
+      typeof permit.entryRegistry === 'object' &&
+      'personnel' in permit.entryRegistry &&
+      Array.isArray(permit.entryRegistry.personnel)
+    ) ? permit.entryRegistry.personnel.length : 0;
+
+    const activeEntrants = (
+      permit.entryRegistry && 
+      typeof permit.entryRegistry === 'object' &&
+      'activeEntrants' in permit.entryRegistry &&
+      Array.isArray(permit.entryRegistry.activeEntrants)
+    ) ? permit.entryRegistry.activeEntrants.length : 0;
+
+    const atmosphericReadings = (
+      permit.atmosphericTesting && 
+      typeof permit.atmosphericTesting === 'object' &&
+      'readings' in permit.atmosphericTesting &&
+      Array.isArray(permit.atmosphericTesting.readings)
+    ) ? permit.atmosphericTesting.readings.length : 0;
+
     return {
       totalSections: 4,
       completedSections: getSectionValidation().filter(s => s.isComplete).length,
-      totalPersonnel: permit.entryRegistry?.personnel?.length || 0,
-      activeEntrants: permit.entryRegistry?.activeEntrants?.length || 0,
-      atmosphericReadings: permit.atmosphericTesting?.readings?.length || 0,
+      totalPersonnel,
+      activeEntrants,
+      atmosphericReadings,
       lastSaved,
       permitAge: permit.created_at ? Math.floor((Date.now() - new Date(permit.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0,
       hazardCount: (getSiteInfoValue(permit.siteInformation, 'atmosphericHazards')?.length || 0) + 
