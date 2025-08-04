@@ -101,6 +101,15 @@ export interface PersonnelEntry {
     phone: string;
     relationship: string;
   };
+  
+  // Propriétés additionnelles pour EntryRegistry (COMPATIBILITÉ BUILD)
+  entryTime?: string;
+  exitTime?: string;
+  status?: 'inside' | 'outside' | 'emergency';
+  phone?: string;
+  email?: string;
+  company?: string;
+  notes?: string;
 }
 
 export interface EmergencyContact {
