@@ -1,4 +1,4 @@
-// SafetyManager.tsx - PARTIE 1/2 - Fix Saisie et Auto-save Build-Ready
+// SafetyManager.tsx - PARTIE 1/2 - Types et Configuration avec Fix Saisie
 "use client";
 
 import { create } from 'zustand';
@@ -16,9 +16,12 @@ try {
   if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
     supabase = createClient(supabaseUrl, supabaseKey);
     supabaseEnabled = true;
+    console.log('✅ SafetyManager: Supabase configuré');
+  } else {
+    console.log('📝 SafetyManager: Utilisation du localStorage');
   }
 } catch (error) {
-  console.log('Supabase non configuré, utilisation du localStorage');
+  console.log('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage');
   supabaseEnabled = false;
 }
 
@@ -27,7 +30,7 @@ export type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS'
 export type Language = 'fr' | 'en';
 export type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 export type UserRole = 'entrant' | 'attendant' | 'supervisor' | 'rescue' | 'admin';
-export type SafetyRole = UserRole; // Alias pour compatibilité avec EntryRegistry
+export type SafetyRole = UserRole;
 export type AlertType = 'info' | 'warning' | 'critical' | 'success';
 
 // =================== INTERFACE UNIVERSELLE POUR TOUS LES COMPOSANTS ===================
@@ -47,7 +50,7 @@ export interface ConfinedSpaceComponentProps {
   setAtmosphericReadings?: (readings: any[]) => void;
   updateParentData?: (field: string, value: any) => void;
   
-  // Props pour EntryRegistry
+  // Props pour EntryRegistry - ✅ FIX TYPE MISMATCH
   updatePermitData?: (data: any) => void;
   
   // Props pour tous les composants
@@ -79,7 +82,7 @@ export interface ConfinedSpaceComponentProps {
   customValidators?: any[];
   theme?: 'dark' | 'light';
   
-  // Callbacks standardisés (TYPE FIXES POUR BUILD)
+  // Callbacks standardisés
   onUpdate?: (section: string, data: any) => void;
   onSectionComplete?: (sectionData: any) => void;
   onValidationChange?: (isValid: boolean, errors: string[]) => void;
@@ -133,11 +136,15 @@ export interface SafetyManagerInstance {
   lastSaved: string | null;
   autoSaveEnabled: boolean;
   
+  // ✅ FIX SAISIE: États pour débounce
+  isUpdating: boolean;
+  lastUpdateTime: number;
+  
   // Alertes et notifications
   activeAlerts: Alert[];
   notifications: Notification[];
   
-  // Actions principales
+  // Actions principales - ✅ FIX: Fonction updateSiteInformation disponible
   updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
   updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@@ -148,7 +155,7 @@ export interface SafetyManagerInstance {
   updatePersonnel: (person: PersonnelEntry) => void;
   updateEquipment: (equipment: any) => void;
   updateCompliance: (key: string, value: boolean) => void;
-  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
+  recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
@@ -183,7 +190,7 @@ export interface ConfinedSpacePermit {
   last_modified: string;
   issue_date?: string;
   
-  // Données des sections principales - GARANTIES NON-UNDEFINED POUR PERMITMANAGER
+  // ✅ FIX: Données des sections principales - GARANTIES NON-UNDEFINED
   siteInformation: ConfinedSpaceDetails;
   atmosphericTesting: AtmosphericTestingData;
   entryRegistry: EntryRegistryData;
@@ -201,7 +208,7 @@ export interface ConfinedSpacePermit {
   // Propriétés pour EntryRegistry (COMPATIBILITÉ BUILD)
   attendant_present?: boolean;
   communication_system_tested?: boolean;
-  emergency_retrieval_ready?: boolean; // ✅ AJOUTÉ pour fix build
+  emergency_retrieval_ready?: boolean;
   
   // Conformité générale
   compliance?: Record<string, boolean>;
@@ -236,9 +243,9 @@ export interface ValidationData {
   lastValidated: string;
 }
 
-// ✅ INTERFACE CORRIGÉE POUR PERMITMANAGER - COMPATIBILITÉ BUILD ASSURÉE
+// ✅ INTERFACE CORRIGÉE POUR PERMETTRE LA SAISIE - TOUTES PROPRIÉTÉS DÉFINIES
 export interface ConfinedSpaceDetails {
-  // Informations principales - TOUTES GARANTIES DÉFINIES POUR PERMITMANAGER
+  // ✅ FIX: Informations principales - GARANTIES STRING DÉFINIES (pas undefined)
   projectNumber: string;
   workLocation: string;
   contractor: string;
@@ -355,12 +362,12 @@ export interface AtmosphericReading {
   timestamp: string;
   location: string;
   readings: {
-    oxygen: number; // %
-    combustibleGas: number; // % LEL
-    hydrogenSulfide: number; // ppm
-    carbonMonoxide: number; // ppm
-    temperature: number; // °C
-    humidity: number; // %
+    oxygen: number;
+    combustibleGas: number;
+    hydrogenSulfide: number;
+    carbonMonoxide: number;
+    temperature: number;
+    humidity: number;
   };
   status: 'safe' | 'caution' | 'danger';
   testedBy: string;
@@ -377,7 +384,7 @@ export interface AlarmSettings {
 export interface EntryRegistryData {
   personnel: PersonnelEntry[];
   entryLog: EntryLogEntry[];
-  entryLogs?: EntryLogEntry[]; // Alias pour compatibilité avec EntryRegistry.tsx
+  entryLogs?: EntryLogEntry[];
   activeEntrants: string[];
   maxOccupancy: number;
   communicationProtocol: CommunicationProtocol;
@@ -392,12 +399,12 @@ export interface EntryRegistryData {
     contact: string;
   };
   
-  // Propriétés manquantes utilisées dans EntryRegistry.tsx
+  // ✅ FIX: Propriétés manquantes utilisées dans EntryRegistry.tsx
   attendantPresent?: boolean;
   entryAuthorized?: boolean;
   emergencyProcedures?: boolean;
   communicationEstablished?: boolean;
-  communicationSystemActive?: boolean; // ✅ AJOUTÉ pour fix build
+  communicationSystemActive?: boolean;
   rescueTeamNotified?: boolean;
   atmosphericTestingCurrent?: boolean;
   equipmentInspected?: boolean;
@@ -406,7 +413,8 @@ export interface EntryRegistryData {
   hazardsIdentified?: boolean;
   controlMeasuresImplemented?: boolean;
   emergencyEquipmentAvailable?: boolean;
-  emergencyContactsNotified?: boolean; // ✅ AJOUTÉ pour fix build
+  emergencyContactsNotified?: boolean;
+  currentOccupancy?: number;
   
   // Autres propriétés potentielles
   entryDateTime?: string;
@@ -414,7 +422,6 @@ export interface EntryRegistryData {
   workDescription?: string;
   notes?: string;
   emergencyContacts?: EmergencyContact[];
-  currentOccupancy?: number; // ✅ AJOUTÉ pour fix build
 }
 
 export interface EntryLogEntry {
@@ -434,7 +441,7 @@ export interface EntryLogEntry {
 export interface CommunicationProtocol {
   type: 'radio' | 'cellular' | 'hardline';
   frequency?: string;
-  checkInterval: number; // minutes
+  checkInterval: number;
 }
 
 export interface RescuePlanData {
@@ -467,7 +474,7 @@ export interface RescuePlanData {
     cpr_certified?: boolean;
     rescue_training_hours?: number;
     response_time_verified?: boolean;
-    [key: string]: any; // Index signature pour accès dynamique
+    [key: string]: any;
   };
   equipment_certifications?: {
     harness_inspection_date?: string;
@@ -475,7 +482,7 @@ export interface RescuePlanData {
     mechanical_recovery_cert?: string;
     last_equipment_inspection?: string;
     equipment_serial_numbers?: string[];
-    [key: string]: any; // Index signature pour accès dynamique
+    [key: string]: any;
   };
   annual_drill_required?: boolean;
   last_effectiveness_test?: string;
@@ -510,7 +517,7 @@ export interface HospitalInfo {
   name: string;
   address: string;
   phone: string;
-  distance: number; // km
+  distance: number;
 }
 
 // =================== TYPES ADDITIONNELS ===================
@@ -639,9 +646,9 @@ function createAuditEntry(action: string, section: string, changes: any, oldValu
     oldValues
   };
 }
-// SafetyManager.tsx - PARTIE 2/2 - Complet avec Fix Auto-save
+// SafetyManager.tsx - PARTIE 2/2 - Store et Fonctions avec Fix Saisie Complet
 
-// =================== FONCTION CREATEEMPTYPERMIT GARANTIE POUR PERMITMANAGER ===================
+// =================== FONCTION CREATEEMPTYPERMIT AVEC VALEURS GARANTIES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
   const now = new Date().toISOString();
   
@@ -657,15 +664,15 @@ function createEmptyPermit(): ConfinedSpacePermit {
     // Propriétés pour EntryRegistry (COMPATIBILITÉ BUILD)
     attendant_present: false,
     communication_system_tested: false,
-    emergency_retrieval_ready: false, // ✅ AJOUTÉ
+    emergency_retrieval_ready: false,
     
-    // ✅ GARANTIR QUE SITEINFORMATION EST TOUJOURS DÉFINI POUR PERMITMANAGER
+    // ✅ FIX SAISIE: SITEINFORMATION TOUJOURS DÉFINI AVEC STRINGS NON-UNDEFINED
     siteInformation: {
-      // Informations principales - VALEURS PAR DÉFAUT GARANTIES NON-UNDEFINED
-      projectNumber: '', // ✅ Toujours string définie pour PermitManager
-      workLocation: '', // ✅ Toujours string définie pour PermitManager
-      contractor: '', // ✅ Toujours string définie  
-      supervisor: '', // ✅ Toujours string définie
+      // ✅ GARANTIE: Toutes les propriétés string sont définies (pas undefined)
+      projectNumber: '',
+      workLocation: '',
+      contractor: '',
+      supervisor: '',
       entryDate: '',
       duration: '',
       workerCount: 1,
@@ -760,7 +767,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
     entryRegistry: {
       personnel: [],
       entryLog: [],
-      entryLogs: [], // Alias pour compatibilité
+      entryLogs: [],
       activeEntrants: [],
       maxOccupancy: 1,
       communicationProtocol: {
@@ -776,12 +783,12 @@ function createEmptyPermit(): ConfinedSpacePermit {
         certification: '',
         contact: ''
       },
-      // Valeurs par défaut pour les propriétés manquantes
+      // ✅ FIX: Valeurs par défaut pour toutes les propriétés utilisées
       attendantPresent: false,
       entryAuthorized: false,
       emergencyProcedures: false,
       communicationEstablished: false,
-      communicationSystemActive: false, // ✅ AJOUTÉ
+      communicationSystemActive: false,
       rescueTeamNotified: false,
       atmosphericTestingCurrent: false,
       equipmentInspected: false,
@@ -790,8 +797,8 @@ function createEmptyPermit(): ConfinedSpacePermit {
       hazardsIdentified: false,
       controlMeasuresImplemented: false,
       emergencyEquipmentAvailable: false,
-      emergencyContactsNotified: false, // ✅ AJOUTÉ
-      currentOccupancy: 0 // ✅ AJOUTÉ
+      emergencyContactsNotified: false,
+      currentOccupancy: 0
     },
     
     rescuePlan: {
@@ -810,7 +817,6 @@ function createEmptyPermit(): ConfinedSpacePermit {
       responseTime: 5
     },
     
-    // Conformité générale
     compliance: {},
     
     validation: {
@@ -828,7 +834,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-// =================== STORE ZUSTAND OPTIMISÉ POUR LA SAISIE ===================
+// =================== STORE ZUSTAND AVEC FIX DE SAISIE ===================
 interface SafetyManagerState {
   // État principal
   currentPermit: ConfinedSpacePermit;
@@ -840,9 +846,10 @@ interface SafetyManagerState {
   lastSaved: string | null;
   autoSaveEnabled: boolean;
   
-  // ✅ FIX SAISIE: Debounce pour éviter les conflits
+  // ✅ FIX SAISIE: États pour éviter les conflits
   isUpdating: boolean;
   lastUpdateTime: number;
+  inputDebounceTimer: NodeJS.Timeout | null;
   
   // Alertes et notifications
   activeAlerts: Alert[];
@@ -859,7 +866,7 @@ interface SafetyManagerState {
   updatePersonnel: (person: any) => void;
   updateEquipment: (equipment: any) => void;
   updateCompliance: (key: string, value: boolean) => void;
-  recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void; // ✅ TYPE EXPLICITE
+  recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
@@ -897,11 +904,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
       isSaving: false,
       isLoading: false,
       lastSaved: null,
-      autoSaveEnabled: false, // ✅ FIX: Désactivé par défaut pour éviter les conflits
+      autoSaveEnabled: false, // ✅ FIX: Désactivé par défaut pour éviter les conflits de saisie
       
-      // ✅ FIX SAISIE: États pour debounce
+      // ✅ FIX SAISIE: États pour débounce et anti-conflit
       isUpdating: false,
       lastUpdateTime: 0,
+      inputDebounceTimer: null,
 
       activeAlerts: [],
       notifications: [],
@@ -909,19 +917,73 @@ export const useSafetyManager = create<SafetyManagerState>()(
       // =================== ACTIONS DE MISE À JOUR SÉCURISÉES ===================
       updateSiteInformation: (data) => {
         set((state) => {
-          // ✅ FIX SAISIE: Debounce pour éviter les mises à jour trop fréquentes
+          // ✅ FIX SAISIE: Protection contre les mises à jour trop fréquentes
           const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 500) {
-            console.log('🚫 Update trop fréquent, ignoré');
+          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
+            console.log('🚫 SafetyManager: Update trop fréquent ignoré');
             return state;
           }
 
-          console.log('🔄 SafetyManager: updateSiteInformation', data);
+          console.log('🔄 SafetyManager: updateSiteInformation disponible', data);
+          
+          // ✅ FIX: S'assurer que siteInformation existe toujours
+          const currentSiteInfo = state.currentPermit.siteInformation || {
+            projectNumber: '',
+            workLocation: '',
+            contractor: '',
+            supervisor: '',
+            entryDate: '',
+            duration: '',
+            workerCount: 1,
+            workDescription: '',
+            spaceType: '',
+            csaClass: '',
+            entryMethod: '',
+            accessType: '',
+            spaceLocation: '',
+            spaceDescription: '',
+            dimensions: {
+              length: 0,
+              width: 0,
+              height: 0,
+              diameter: 0,
+              volume: 0,
+              spaceShape: 'rectangular'
+            },
+            unitSystem: 'metric',
+            entryPoints: [],
+            atmosphericHazards: [],
+            physicalHazards: [],
+            environmentalConditions: {
+              ventilationRequired: false,
+              ventilationType: '',
+              lightingConditions: '',
+              temperatureRange: '',
+              moistureLevel: '',
+              noiseLevel: '',
+              weatherConditions: '',
+            },
+            spaceContent: {
+              contents: '',
+              residues: '',
+              previousUse: '',
+              lastEntry: '',
+              cleaningStatus: '',
+            },
+            safetyMeasures: {
+              emergencyEgress: '',
+              communicationMethod: '',
+              monitoringEquipment: [],
+              ventilationEquipment: [],
+              emergencyEquipment: [],
+            },
+            spacePhotos: []
+          };
           
           const updatedPermit = {
             ...state.currentPermit,
             siteInformation: {
-              ...state.currentPermit.siteInformation,
+              ...currentSiteInfo,
               ...data
             },
             last_modified: new Date().toISOString()
@@ -929,18 +991,30 @@ export const useSafetyManager = create<SafetyManagerState>()(
           
           // Audit trail
           updatedPermit.auditTrail.push(
-            createAuditEntry('update_site_information', 'siteInformation', data, state.currentPermit.siteInformation)
+            createAuditEntry('update_site_information', 'siteInformation', data, currentSiteInfo)
           );
           
-          // ✅ FIX: Auto-save plus conservateur - DÉSACTIVÉ pendant la saisie
+          // ✅ FIX: Auto-save respectueux - DÉSACTIVÉ pendant la saisie
           if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
+            // Clear previous timer
+            if (state.inputDebounceTimer) {
+              clearTimeout(state.inputDebounceTimer);
+            }
+            
+            const timer = setTimeout(() => {
               const currentState = get();
               if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateSiteInformation');
+                console.log('💾 Auto-save différé depuis updateSiteInformation');
                 currentState.saveToDatabase();
               }
-            }, 30000); // ✅ FIX: 30 secondes au lieu de 2
+            }, 60000); // ✅ FIX: 60 secondes au lieu de secondes
+            
+            return { 
+              currentPermit: updatedPermit,
+              isUpdating: true,
+              lastUpdateTime: now,
+              inputDebounceTimer: timer
+            };
           }
           
           return { 
@@ -950,17 +1024,17 @@ export const useSafetyManager = create<SafetyManagerState>()(
           };
         });
 
-        // ✅ FIX: Reset isUpdating après un délai
+        // ✅ FIX: Reset isUpdating après délai
         setTimeout(() => {
           set({ isUpdating: false });
-        }, 2000); // ✅ 2 secondes de grace period
+          console.log('✅ SafetyManager: isUpdating reset');
+        }, 3000); // ✅ 3 secondes de grace period
       },
 
       updateAtmosphericTesting: (data) => {
         set((state) => {
-          // ✅ FIX SAISIE: Debounce
           const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
             return state;
           }
 
@@ -986,15 +1060,27 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_atmospheric_testing', 'atmosphericTesting', data, state.currentPermit.atmosphericTesting)
           );
           
-          // ✅ FIX: Auto-save désactivé pendant la saisie
+          // Auto-save conditionnel
           if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
+            if (state.inputDebounceTimer) {
+              clearTimeout(state.inputDebounceTimer);
+            }
+            
+            const timer = setTimeout(() => {
               const currentState = get();
               if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateAtmosphericTesting');
+                console.log('💾 Auto-save depuis updateAtmosphericTesting');
                 currentState.saveToDatabase();
               }
-            }, 30000);
+            }, 60000);
+            
+            return { 
+              currentPermit: updatedPermit,
+              activeAlerts: [...state.activeAlerts, ...newAlerts],
+              isUpdating: true,
+              lastUpdateTime: now,
+              inputDebounceTimer: timer
+            };
           }
           
           return { 
@@ -1007,14 +1093,13 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
         setTimeout(() => {
           set({ isUpdating: false });
-        }, 2000);
+        }, 3000);
       },
 
       updateEntryRegistry: (data) => {
         set((state) => {
-          // ✅ FIX SAISIE: Debounce
           const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
             return state;
           }
 
@@ -1042,15 +1127,26 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_entry_registry', 'entryRegistry', updatedData, state.currentPermit.entryRegistry)
           );
           
-          // ✅ FIX: Auto-save désactivé pendant la saisie
+          // Auto-save conditionnel
           if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
+            if (state.inputDebounceTimer) {
+              clearTimeout(state.inputDebounceTimer);
+            }
+            
+            const timer = setTimeout(() => {
               const currentState = get();
               if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateEntryRegistry');
+                console.log('💾 Auto-save depuis updateEntryRegistry');
                 currentState.saveToDatabase();
               }
-            }, 30000);
+            }, 60000);
+            
+            return { 
+              currentPermit: updatedPermit,
+              isUpdating: true,
+              lastUpdateTime: now,
+              inputDebounceTimer: timer
+            };
           }
           
           return { 
@@ -1062,14 +1158,13 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
         setTimeout(() => {
           set({ isUpdating: false });
-        }, 2000);
+        }, 3000);
       },
 
       updateRescuePlan: (data) => {
         set((state) => {
-          // ✅ FIX SAISIE: Debounce
           const now = Date.now();
-          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+          if (state.isUpdating && now - state.lastUpdateTime < 1000) {
             return state;
           }
 
@@ -1089,15 +1184,26 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_rescue_plan', 'rescuePlan', data, state.currentPermit.rescuePlan)
           );
           
-          // ✅ FIX: Auto-save désactivé pendant la saisie
+          // Auto-save conditionnel
           if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
+            if (state.inputDebounceTimer) {
+              clearTimeout(state.inputDebounceTimer);
+            }
+            
+            const timer = setTimeout(() => {
               const currentState = get();
               if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateRescuePlan');
+                console.log('💾 Auto-save depuis updateRescuePlan');
                 currentState.saveToDatabase();
               }
-            }, 30000);
+            }, 60000);
+            
+            return { 
+              currentPermit: updatedPermit,
+              isUpdating: true,
+              lastUpdateTime: now,
+              inputDebounceTimer: timer
+            };
           }
           
           return { 
@@ -1109,12 +1215,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
         setTimeout(() => {
           set({ isUpdating: false });
-        }, 2000);
+        }, 3000);
       },
 
       // =================== MÉTHODES POUR ENTRYREGISTRY ===================
       updateRegistryData: (data) => {
-        console.log('🔄 SafetyManager: updateRegistryData', data);
+        console.log('🔄 SafetyManager: updateRegistryData disponible', data);
         get().updateEntryRegistry(data);
       },
 
@@ -1147,15 +1253,24 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_personnel', 'entryRegistry', { person }, { existingPerson: currentPersonnel[existingIndex] || null })
           );
           
-          // ✅ FIX: Auto-save seulement si activé et pas en cours de saisie
+          // Auto-save plus lent pour les actions manuelles
           if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
+            if (state.inputDebounceTimer) {
+              clearTimeout(state.inputDebounceTimer);
+            }
+            
+            const timer = setTimeout(() => {
               const currentState = get();
               if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updatePersonnel');
+                console.log('💾 Auto-save depuis updatePersonnel');
                 currentState.saveToDatabase();
               }
-            }, 45000); // ✅ FIX: 45 secondes pour les actions manuelles
+            }, 90000); // ✅ 90 secondes pour actions manuelles
+            
+            return { 
+              currentPermit: updatedPermit,
+              inputDebounceTimer: timer
+            };
           }
           
           return { currentPermit: updatedPermit };
@@ -1179,17 +1294,6 @@ export const useSafetyManager = create<SafetyManagerState>()(
           updatedPermit.auditTrail.push(
             createAuditEntry('update_equipment', 'entryRegistry', { equipment }, { oldEquipment: state.currentPermit.entryRegistry.equipment })
           );
-          
-          // ✅ FIX: Auto-save conditionnel
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateEquipment');
-                currentState.saveToDatabase();
-              }
-            }, 45000);
-          }
           
           return { currentPermit: updatedPermit };
         });
@@ -1223,17 +1327,6 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_compliance', 'compliance', { [key]: value }, { [key]: currentCompliance[key] })
           );
           
-          // ✅ FIX: Auto-save conditionnel
-          if (state.autoSaveEnabled && !state.isUpdating) {
-            setTimeout(() => {
-              const currentState = get();
-              if (!currentState.isUpdating) {
-                console.log('💾 Auto-save déclenché depuis updateCompliance');
-                currentState.saveToDatabase();
-              }
-            }, 45000);
-          }
-          
           return { currentPermit: updatedPermit };
         });
       },
@@ -1266,7 +1359,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
             entryRegistry: {
               ...state.currentPermit.entryRegistry,
               entryLog: updatedEntryLog,
-              entryLogs: updatedEntryLog, // Synchroniser avec l'alias
+              entryLogs: updatedEntryLog,
               activeEntrants,
               lastUpdated: new Date().toISOString()
             },
@@ -1277,12 +1370,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('record_entry_exit', 'entryRegistry', { personId, action }, null)
           );
           
-          // ✅ FIX: Auto-save immédiat pour les entrées/sorties (critique pour sécurité)
+          // Auto-save immédiat pour les entrées/sorties (critique pour sécurité)
           if (state.autoSaveEnabled) {
             setTimeout(() => {
               console.log('💾 Auto-save IMMÉDIAT pour sécurité: recordEntryExit');
               get().saveToDatabase();
-            }, 5000); // ✅ Plus rapide pour les actions critiques
+            }, 10000); // Plus rapide pour les actions critiques
           }
           
           return { currentPermit: updatedPermit };
@@ -1305,7 +1398,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           const permit = get().currentPermit;
           const validation = get().validatePermitCompleteness();
           
-          console.log('💾 Sauvegarde en cours...', permit.permit_number);
+          console.log('💾 Sauvegarde en cours...', permit.permit_number || 'nouveau');
           
           // Mise à jour de la validation
           permit.validation = {
