@@ -1023,7 +1023,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           volume: 0,
           spaceShape: 'rectangular'
         },
-        unitSystem: permitData.siteInformation?.unitSystem || 'metric',
+        unitSystem: (permitData.siteInformation?.unitSystem || 'metric') as 'metric' | 'imperial',
         entryPoints: [],
         atmosphericHazards: permitData.siteInformation?.atmosphericHazards || [],
         physicalHazards: permitData.siteInformation?.physicalHazards || [],
