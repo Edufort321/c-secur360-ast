@@ -1,4 +1,4 @@
-// SafetyManager.tsx - PARTIE 1/2 - Types et Configuration (Mode Validation Seule)
+// SafetyManager.tsx - PARTIE 1/2 - Types et Configuration FONCTIONNEL
 "use client";
 
 import { create } from 'zustand';
@@ -136,7 +136,7 @@ export interface SafetyManagerInstance {
   lastSaved: string | null;
   autoSaveEnabled: boolean;
   
-  // ✅ FIX SAISIE: États pour débounce
+  // ✅ États pour débounce intelligent
   isUpdating: boolean;
   lastUpdateTime: number;
   
@@ -144,7 +144,7 @@ export interface SafetyManagerInstance {
   activeAlerts: Alert[];
   notifications: Notification[];
   
-  // Actions principales - ✅ FIX: Fonction updateSiteInformation disponible
+  // Actions principales - ✅ TOUTES FONCTIONNELLES
   updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
   updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@@ -157,7 +157,7 @@ export interface SafetyManagerInstance {
   updateCompliance: (key: string, value: boolean) => void;
   recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
-  // ✅ FIX: ALIAS DE COMPATIBILITÉ POUR LES COMPOSANTS EXISTANTS
+  // ✅ ALIAS DE COMPATIBILITÉ POUR LES COMPOSANTS EXISTANTS
   updateSiteInfo: (data: any) => void;
   updateAtmosphericData: (data: any) => void;
   updateRegistryInfo: (data: any) => void;
@@ -196,7 +196,7 @@ export interface ConfinedSpacePermit {
   last_modified: string;
   issue_date?: string;
   
-  // ✅ FIX: Données des sections principales - GARANTIES NON-UNDEFINED
+  // ✅ Données des sections principales - GARANTIES NON-UNDEFINED
   siteInformation: ConfinedSpaceDetails;
   atmosphericTesting: AtmosphericTestingData;
   entryRegistry: EntryRegistryData;
@@ -249,9 +249,9 @@ export interface ValidationData {
   lastValidated: string;
 }
 
-// ✅ INTERFACE CORRIGÉE POUR PERMETTRE LA SAISIE - TOUTES PROPRIÉTÉS DÉFINIES
+// ✅ INTERFACE SITEINFO POUR LA SAISIE - TOUTES PROPRIÉTÉS DÉFINIES
 export interface ConfinedSpaceDetails {
-  // ✅ FIX: Informations principales - GARANTIES STRING DÉFINIES (pas undefined)
+  // ✅ Informations principales - GARANTIES STRING DÉFINIES
   projectNumber: string;
   workLocation: string;
   contractor: string;
@@ -405,7 +405,7 @@ export interface EntryRegistryData {
     contact: string;
   };
   
-  // ✅ FIX: Propriétés manquantes utilisées dans EntryRegistry.tsx
+  // ✅ Propriétés manquantes utilisées dans EntryRegistry.tsx
   attendantPresent?: boolean;
   entryAuthorized?: boolean;
   emergencyProcedures?: boolean;
@@ -652,7 +652,7 @@ function createAuditEntry(action: string, section: string, changes: any, oldValu
     oldValues
   };
 }
-// SafetyManager.tsx - PARTIE 2/2 - Store en Mode Validation Seule
+// SafetyManager.tsx - PARTIE 2/2 - Store FONCTIONNEL avec Saisie Libre
 
 // =================== FONCTION CREATEEMPTYPERMIT AVEC VALEURS GARANTIES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
@@ -672,7 +672,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
     communication_system_tested: false,
     emergency_retrieval_ready: false,
     
-    // ✅ FIX SAISIE: SITEINFORMATION TOUJOURS DÉFINI AVEC STRINGS NON-UNDEFINED
+    // ✅ SAISIE LIBRE: SITEINFORMATION TOUJOURS DÉFINI AVEC STRINGS NON-UNDEFINED
     siteInformation: {
       // ✅ GARANTIE: Toutes les propriétés string sont définies (pas undefined)
       projectNumber: '',
@@ -789,7 +789,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
         certification: '',
         contact: ''
       },
-      // ✅ FIX: Valeurs par défaut pour toutes les propriétés utilisées
+      // ✅ Valeurs par défaut pour toutes les propriétés utilisées
       attendantPresent: false,
       entryAuthorized: false,
       emergencyProcedures: false,
@@ -840,7 +840,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-// =================== STORE ZUSTAND EN MODE VALIDATION SEULE ===================
+// =================== STORE ZUSTAND FONCTIONNEL AVEC SAISIE LIBRE ===================
 interface SafetyManagerState {
   // État principal
   currentPermit: ConfinedSpacePermit;
@@ -852,7 +852,7 @@ interface SafetyManagerState {
   lastSaved: string | null;
   autoSaveEnabled: boolean;
   
-  // ✅ FIX SAISIE: États pour éviter les conflits
+  // ✅ SAISIE LIBRE: États pour débounce intelligent
   isUpdating: boolean;
   lastUpdateTime: number;
   inputDebounceTimer: NodeJS.Timeout | null;
@@ -861,7 +861,7 @@ interface SafetyManagerState {
   activeAlerts: Alert[];
   notifications: Notification[];
   
-  // Actions principales - ✅ MODE VALIDATION SEULE: SYNCHRONISATION DÉSACTIVÉE
+  // Actions principales - ✅ SAISIE LIBRE: TOUTES FONCTIONNELLES
   updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
   updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@@ -874,7 +874,7 @@ interface SafetyManagerState {
   updateCompliance: (key: string, value: boolean) => void;
   recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
-  // ✅ FIX: ALIAS DE COMPATIBILITÉ
+  // ✅ ALIAS DE COMPATIBILITÉ
   updateSiteInfo: (data: any) => void;
   updateAtmosphericData: (data: any) => void;
   updateRegistryInfo: (data: any) => void;
@@ -916,9 +916,9 @@ export const useSafetyManager = create<SafetyManagerState>()(
       isSaving: false,
       isLoading: false,
       lastSaved: null,
-      autoSaveEnabled: false, // ✅ FIX: Désactivé par défaut pour éviter les conflits de saisie
+      autoSaveEnabled: true, // ✅ SAISIE LIBRE: Activé avec débounce intelligent
       
-      // ✅ FIX SAISIE: États pour débounce et anti-conflit
+      // ✅ SAISIE LIBRE: États pour débounce et anti-conflit
       isUpdating: false,
       lastUpdateTime: 0,
       inputDebounceTimer: null,
@@ -926,84 +926,298 @@ export const useSafetyManager = create<SafetyManagerState>()(
       activeAlerts: [],
       notifications: [],
 
-      // =================== ACTIONS EN MODE VALIDATION SEULE - SYNCHRONISATION DÉSACTIVÉE ===================
+      // =================== ACTIONS FONCTIONNELLES - SAISIE LIBRE ACTIVÉE ===================
       
       updateSiteInformation: (data) => {
-        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
-        console.log('🔇 SafetyManager: updateSiteInformation ignoré en mode validation seule', data);
-        return; // Sortir immédiatement sans rien faire
+        console.log('🔄 SafetyManager: updateSiteInformation appelé', data);
+        
+        const state = get();
+        
+        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE de l'état
+        const updatedSiteInfo = {
+          ...state.currentPermit.siteInformation,
+          ...data
+        };
+        
+        const updatedPermit = {
+          ...state.currentPermit,
+          siteInformation: updatedSiteInfo,
+          last_modified: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Mise à jour immédiate pour la saisie fluide
+        set({ 
+          currentPermit: updatedPermit,
+          lastUpdateTime: Date.now()
+        });
+        
+        // ✅ DÉBOUNCE INTELLIGENT: Auto-save avec délai
+        if (state.autoSaveEnabled) {
+          if (state.inputDebounceTimer) {
+            clearTimeout(state.inputDebounceTimer);
+          }
+          
+          const timer = setTimeout(() => {
+            console.log('💾 Auto-save déclenché après débounce');
+            get().saveToDatabase();
+          }, 2000); // Attendre 2 secondes après la dernière frappe
+          
+          set({ inputDebounceTimer: timer });
+        }
+        
+        // Créer un audit trail
+        const auditEntry = createAuditEntry(
+          'update_site_information', 
+          'siteInformation', 
+          data,
+          state.currentPermit.siteInformation
+        );
+        
+        set((prevState) => ({
+          currentPermit: {
+            ...prevState.currentPermit,
+            auditTrail: [...prevState.currentPermit.auditTrail, auditEntry]
+          }
+        }));
+        
+        console.log('✅ SafetyManager: siteInformation mis à jour avec succès');
       },
 
       updateAtmosphericTesting: (data) => {
-        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
-        console.log('🔇 SafetyManager: updateAtmosphericTesting ignoré en mode validation seule', data);
-        return; // Sortir immédiatement sans rien faire
+        console.log('🔄 SafetyManager: updateAtmosphericTesting appelé', data);
+        
+        const state = get();
+        
+        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        const updatedAtmosphericTesting = {
+          ...state.currentPermit.atmosphericTesting,
+          ...data,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        const updatedPermit = {
+          ...state.currentPermit,
+          atmosphericTesting: updatedAtmosphericTesting,
+          last_modified: new Date().toISOString()
+        };
+        
+        set({ 
+          currentPermit: updatedPermit,
+          lastUpdateTime: Date.now()
+        });
+        
+        // Vérifier les alertes de sécurité
+        if (data.readings && Array.isArray(data.readings)) {
+          const newAlerts = checkAtmosphericAlerts(data.readings);
+          if (newAlerts.length > 0) {
+            set((prevState) => ({
+              activeAlerts: [...prevState.activeAlerts, ...newAlerts]
+            }));
+          }
+        }
+        
+        // Auto-save avec débounce
+        if (state.autoSaveEnabled) {
+          if (state.inputDebounceTimer) {
+            clearTimeout(state.inputDebounceTimer);
+          }
+          
+          const timer = setTimeout(() => {
+            get().saveToDatabase();
+          }, 2000);
+          
+          set({ inputDebounceTimer: timer });
+        }
+        
+        console.log('✅ SafetyManager: atmosphericTesting mis à jour avec succès');
       },
 
       updateEntryRegistry: (data) => {
-        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
-        console.log('🔇 SafetyManager: updateEntryRegistry ignoré en mode validation seule', data);
-        return; // Sortir immédiatement sans rien faire
+        console.log('🔄 SafetyManager: updateEntryRegistry appelé', data);
+        
+        const state = get();
+        
+        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        const updatedEntryRegistry = {
+          ...state.currentPermit.entryRegistry,
+          ...data,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        const updatedPermit = {
+          ...state.currentPermit,
+          entryRegistry: updatedEntryRegistry,
+          last_modified: new Date().toISOString()
+        };
+        
+        set({ 
+          currentPermit: updatedPermit,
+          lastUpdateTime: Date.now()
+        });
+        
+        // Auto-save avec débounce
+        if (state.autoSaveEnabled) {
+          if (state.inputDebounceTimer) {
+            clearTimeout(state.inputDebounceTimer);
+          }
+          
+          const timer = setTimeout(() => {
+            get().saveToDatabase();
+          }, 2000);
+          
+          set({ inputDebounceTimer: timer });
+        }
+        
+        console.log('✅ SafetyManager: entryRegistry mis à jour avec succès');
       },
 
       updateRescuePlan: (data) => {
-        // ✅ MODE VALIDATION SEULE: Ignorer complètement la synchronisation
-        console.log('🔇 SafetyManager: updateRescuePlan ignoré en mode validation seule', data);
-        return; // Sortir immédiatement sans rien faire
+        console.log('🔄 SafetyManager: updateRescuePlan appelé', data);
+        
+        const state = get();
+        
+        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        const updatedRescuePlan = {
+          ...state.currentPermit.rescuePlan,
+          ...data,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        const updatedPermit = {
+          ...state.currentPermit,
+          rescuePlan: updatedRescuePlan,
+          last_modified: new Date().toISOString()
+        };
+        
+        set({ 
+          currentPermit: updatedPermit,
+          lastUpdateTime: Date.now()
+        });
+        
+        // Auto-save avec débounce
+        if (state.autoSaveEnabled) {
+          if (state.inputDebounceTimer) {
+            clearTimeout(state.inputDebounceTimer);
+          }
+          
+          const timer = setTimeout(() => {
+            get().saveToDatabase();
+          }, 2000);
+          
+          set({ inputDebounceTimer: timer });
+        }
+        
+        console.log('✅ SafetyManager: rescuePlan mis à jour avec succès');
       },
 
-      // =================== MÉTHODES POUR ENTRYREGISTRY - DÉSACTIVÉES ===================
+      // =================== MÉTHODES POUR ENTRYREGISTRY - FONCTIONNELLES ===================
       updateRegistryData: (data) => {
-        console.log('🔇 SafetyManager: updateRegistryData ignoré en mode validation seule', data);
-        return;
+        console.log('🔄 SafetyManager: updateRegistryData appelé', data);
+        get().updateEntryRegistry(data);
       },
 
       updatePersonnel: (person) => {
-        console.log('🔇 SafetyManager: updatePersonnel ignoré en mode validation seule', person);
-        return;
+        console.log('🔄 SafetyManager: updatePersonnel appelé', person);
+        
+        const state = get();
+        const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
+        
+        // Mettre à jour ou ajouter la personne
+        const existingIndex = currentPersonnel.findIndex(p => p.id === person.id);
+        let updatedPersonnel;
+        
+        if (existingIndex >= 0) {
+          updatedPersonnel = [...currentPersonnel];
+          updatedPersonnel[existingIndex] = person;
+        } else {
+          updatedPersonnel = [...currentPersonnel, person];
+        }
+        
+        get().updateEntryRegistry({ personnel: updatedPersonnel });
       },
 
       updateEquipment: (equipment) => {
-        console.log('🔇 SafetyManager: updateEquipment ignoré en mode validation seule', equipment);
-        return;
+        console.log('🔄 SafetyManager: updateEquipment appelé', equipment);
+        get().updateEntryRegistry({ equipment });
       },
 
       updateCompliance: (key: string, value: boolean) => {
-        console.log('🔇 SafetyManager: updateCompliance ignoré en mode validation seule', key, value);
-        return;
+        console.log('🔄 SafetyManager: updateCompliance appelé', key, value);
+        
+        const state = get();
+        const currentCompliance = state.currentPermit.entryRegistry.compliance || {};
+        
+        get().updateEntryRegistry({ 
+          compliance: {
+            ...currentCompliance,
+            [key]: value
+          }
+        });
       },
 
       recordEntryExit: (personId, action) => {
-        console.log('🔇 SafetyManager: recordEntryExit ignoré en mode validation seule', personId, action);
-        return;
+        console.log('🔄 SafetyManager: recordEntryExit appelé', personId, action);
+        
+        const state = get();
+        const entryLog = state.currentPermit.entryRegistry.entryLog || [];
+        const activeEntrants = [...(state.currentPermit.entryRegistry.activeEntrants || [])];
+        
+        // Créer une nouvelle entrée de log
+        const logEntry: EntryLogEntry = {
+          id: generateId(),
+          personnelId: personId,
+          action,
+          timestamp: new Date().toISOString(),
+          authorizedBy: 'current_user'
+        };
+        
+        // Mettre à jour la liste des entrants actifs
+        if (action === 'entry') {
+          if (!activeEntrants.includes(personId)) {
+            activeEntrants.push(personId);
+          }
+        } else if (action === 'exit' || action === 'emergency_exit') {
+          const index = activeEntrants.indexOf(personId);
+          if (index > -1) {
+            activeEntrants.splice(index, 1);
+          }
+        }
+        
+        get().updateEntryRegistry({
+          entryLog: [...entryLog, logEntry],
+          entryLogs: [...entryLog, logEntry], // Alias pour compatibilité
+          activeEntrants,
+          currentOccupancy: activeEntrants.length
+        });
       },
 
-      // ✅ FIX: ALIAS DE COMPATIBILITÉ - DÉSACTIVÉS EN MODE VALIDATION SEULE
+      // ✅ ALIAS DE COMPATIBILITÉ - FONCTIONNELS
       updateSiteInfo: (data: any) => {
-        console.log('🔇 SafetyManager: updateSiteInfo (alias) ignoré en mode validation seule', data);
-        return;
+        console.log('🔄 SafetyManager: updateSiteInfo (alias) appelé', data);
+        get().updateSiteInformation(data);
       },
 
       updateAtmosphericData: (data: any) => {
-        console.log('🔇 SafetyManager: updateAtmosphericData (alias) ignoré en mode validation seule', data);
-        return;
+        console.log('🔄 SafetyManager: updateAtmosphericData (alias) appelé', data);
+        get().updateAtmosphericTesting(data);
       },
 
       updateRegistryInfo: (data: any) => {
-        console.log('🔇 SafetyManager: updateRegistryInfo (alias) ignoré en mode validation seule', data);
-        return;
+        console.log('🔄 SafetyManager: updateRegistryInfo (alias) appelé', data);
+        get().updateEntryRegistry(data);
       },
 
       updateRescueData: (data: any) => {
-        console.log('🔇 SafetyManager: updateRescueData (alias) ignoré en mode validation seule', data);
-        return;
+        console.log('🔄 SafetyManager: updateRescueData (alias) appelé', data);
+        get().updateRescuePlan(data);
       },
 
       // =================== GESTION BASE DE DONNÉES ACTIVE ===================
       saveToDatabase: async () => {
         const state = get();
         
-        // ✅ FIX: Éviter les sauvegardes concurrentes
+        // ✅ Éviter les sauvegardes concurrentes
         if (state.isSaving) {
           console.log('🚫 Sauvegarde déjà en cours, ignorée');
           return null;
