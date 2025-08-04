@@ -883,9 +883,12 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             const rescueData = {
               emergencyContacts: [
                 {
+                  id: 'emergency-contact-1', // ✅ FIX: Ajout de la propriété id manquante
                   name: actualRegulations[selectedProvince]?.authority || 'Services d\'urgence',
                   phone: actualRegulations[selectedProvince]?.authority_phone || '911',
-                  role: 'Autorité provinciale'
+                  role: 'Autorité provinciale',
+                  email: '', // ✅ FIX: Propriété optionnelle
+                  isPrimary: true // ✅ FIX: Ajout de la propriété isPrimary manquante
                 }
               ],
               rescueTeam: [],
