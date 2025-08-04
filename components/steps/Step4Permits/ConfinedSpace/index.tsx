@@ -1,4 +1,4 @@
-// ConfinedSpace/index.tsx - PARTIE 1/2 - VERSION FINALE COMPLÈTE
+// ConfinedSpace/index.tsx - PARTIE 1/2 - VERSION FINALE COMPLÈTE Build Ready
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -17,7 +17,7 @@ import RescuePlan from './RescuePlan';
 import PermitManager from './PermitManager';
 
 // Import SafetyManager et styles - INTÉGRATION COMPLÈTE
-import { ConfinedSpaceComponentProps, useSafetyManager } from './SafetyManager';
+import { ConfinedSpaceComponentProps, useSafetyManager, ConfinedSpacePermit } from './SafetyManager';
 import { styles } from './styles';
 
 // =================== TYPES ET INTERFACES UNIVERSELLES ===================
@@ -63,22 +63,18 @@ interface ConfinedSpaceProps {
   theme?: 'dark' | 'light';
 }
 
+// ✅ CORRECTION BUILD CRITIQUE : Interface PermitData compatible avec ConfinedSpacePermit
 interface PermitData {
-  // Propriétés de base
-  id?: string;
-  permit_number?: string;
-  issue_date?: string;
-  created_at?: string;
-  updated_at?: string;
-  last_modified?: string;
-  status?: 'draft' | 'active' | 'completed' | 'cancelled';
+  // ✅ Propriétés OBLIGATOIRES pour ConfinedSpacePermit (pas undefined)
+  permit_number: string; // ✅ CORRECTION: string au lieu de string | undefined
+  province: ProvinceCode; // ✅ CORRECTION: ProvinceCode au lieu de ProvinceCode | undefined
+  updated_at: string; // ✅ CORRECTION: string au lieu de string | undefined
+  status: 'completed' | 'active' | 'draft' | 'cancelled'; // ✅ CORRECTION: union type strict
+  created_at: string; // ✅ CORRECTION: string au lieu de string | undefined
+  issue_date: string; // ✅ CORRECTION: string au lieu de string | undefined
   
-  // Province et réglementation
-  province?: ProvinceCode;
-  selected_province?: ProvinceCode;
-  
-  // Données de site (compatibilité avec SafetyManager)
-  siteInformation?: {
+  // ✅ Structures de données OBLIGATOIRES pour ConfinedSpacePermit
+  siteInformation: {
     projectNumber?: string;
     workLocation?: string;
     spaceDescription?: string;
@@ -98,8 +94,7 @@ interface PermitData {
     unitSystem?: string;
   };
   
-  // Tests atmosphériques (compatibilité avec SafetyManager)
-  atmosphericTesting?: {
+  atmosphericTesting: {
     readings?: any[];
     equipment?: any;
     continuousMonitoring?: boolean;
@@ -107,8 +102,7 @@ interface PermitData {
     testingFrequency?: number;
   };
   
-  // Plan de sauvetage (compatibilité avec SafetyManager)
-  rescuePlan?: {
+  rescuePlan: {
     emergencyContacts?: any[];
     rescueTeam?: any[];
     evacuationProcedure?: string;
@@ -120,8 +114,7 @@ interface PermitData {
     rescue_plan_type?: 'internal' | 'external' | 'hybrid';
   };
   
-  // Registre d'entrée (compatibilité avec SafetyManager)
-  entryRegistry?: {
+  entryRegistry: {
     personnel?: any[];
     entryLog?: any[];
     activeEntrants?: any[];
@@ -131,11 +124,9 @@ interface PermitData {
     supervisor?: any;
   };
   
-  // Conformité (compatibilité avec SafetyManager)
-  compliance?: Record<string, boolean>;
+  compliance: Record<string, boolean>;
   
-  // Validation (compatibilité avec SafetyManager)
-  validation?: {
+  validation: {
     isValid?: boolean;
     percentage?: number;
     completedSections?: string[];
@@ -144,47 +135,13 @@ interface PermitData {
     lastValidated?: string;
   };
   
-  // Audit Trail (compatibilité avec SafetyManager)
-  auditTrail?: {
-    created?: {
-      timestamp?: string;
-      user?: string;
-      action?: string;
-    };
-    modified?: Array<{
-      timestamp?: string;
-      user?: string;
-      action?: string;
-      field?: string;
-      oldValue?: any;
-      newValue?: any;
-    }>;
-    approved?: {
-      timestamp?: string;
-      user?: string;
-      signature?: string;
-    };
-    archived?: {
-      timestamp?: string;
-      user?: string;
-      reason?: string;
-    };
-  };
+  auditTrail: Array<any>;
+  attachments: Array<any>;
   
-  // Attachments (compatibilité avec SafetyManager)
-  attachments?: Array<{
-    id?: string;
-    name?: string;
-    type?: string;
-    size?: number;
-    url?: string;
-    uploadedAt?: string;
-    uploadedBy?: string;
-    category?: 'photo' | 'document' | 'certificate' | 'plan' | 'other';
-    description?: string;
-  }>;
-  
-  // Propriétés héritées pour compatibilité
+  // Propriétés optionnelles supplémentaires
+  id?: string;
+  last_modified?: string;
+  selected_province?: ProvinceCode;
   projectNumber?: string;
   workLocation?: string;
   spaceDescription?: string;
@@ -632,6 +589,38 @@ const getTexts = (language: 'fr' | 'en') => ({
   }
 })[language];
 
+// ✅ FONCTION UTILITAIRE pour créer un PermitData valide compatible ConfinedSpacePermit
+const createDefaultPermitData = (selectedProvince: ProvinceCode): PermitData => {
+  const now = new Date().toISOString();
+  const timestamp = now.slice(0, 10).replace(/-/g, '');
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  return {
+    // ✅ Propriétés OBLIGATOIRES non-undefined
+    permit_number: `CS-${selectedProvince}-${timestamp}-${random}`,
+    province: selectedProvince,
+    updated_at: now,
+    status: 'draft',
+    created_at: now,
+    issue_date: now.slice(0, 16),
+    
+    // ✅ Structures OBLIGATOIRES avec objets initialisés
+    siteInformation: {},
+    atmosphericTesting: { readings: [] },
+    rescuePlan: { emergencyContacts: [] },
+    entryRegistry: { personnel: [], entryLog: [], activeEntrants: [] },
+    compliance: {},
+    validation: { isValid: false, percentage: 0, completedSections: [], errors: [], warnings: [] },
+    auditTrail: [],
+    attachments: [],
+    
+    // Propriétés optionnelles pour compatibilité
+    last_modified: now,
+    selected_province: selectedProvince
+  };
+};
+// ConfinedSpace/index.tsx - PARTIE 2/2 - Composant Principal et Logique Complète
+
 // =================== COMPOSANT PRINCIPAL ===================
 const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // Props de base
@@ -691,14 +680,28 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
   const [selectedProvince, setSelectedProvince] = useState<ProvinceCode>(externalSelectedProvince || province);
-  const [permitData, setPermitData] = useState<PermitData>({
-    ...initialData,
-    ...(formData?.permitData || {}),
-    ...(externalPermitData || {}),
-    status: 'draft',
-    created_at: new Date().toISOString(),
-    last_modified: new Date().toISOString()
+  
+  // ✅ CORRECTION BUILD CRITIQUE : Initialisation avec createDefaultPermitData pour garantir la compatibilité
+  const [permitData, setPermitData] = useState<PermitData>(() => {
+    // Fusionner les données externes avec les valeurs par défaut
+    const defaultData = createDefaultPermitData(externalSelectedProvince || province);
+    
+    return {
+      ...defaultData,
+      ...initialData,
+      ...(formData?.permitData || {}),
+      ...(externalPermitData || {}),
+      // ✅ Assurer que les propriétés critiques sont toujours définies
+      permit_number: externalPermitData?.permit_number || initialData?.permit_number || defaultData.permit_number,
+      province: externalSelectedProvince || province || defaultData.province,
+      status: (externalPermitData?.status || initialData?.status || defaultData.status) as 'completed' | 'active' | 'draft' | 'cancelled',
+      created_at: externalPermitData?.created_at || initialData?.created_at || defaultData.created_at,
+      updated_at: externalPermitData?.updated_at || initialData?.updated_at || defaultData.updated_at,
+      issue_date: externalPermitData?.issue_date || initialData?.issue_date || defaultData.issue_date,
+      last_modified: new Date().toISOString()
+    };
   });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'autoSaving'>('idle');
   const [showManager, setShowManager] = useState(false);
@@ -714,30 +717,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const actualIsMobile = externalIsMobile !== undefined ? externalIsMobile : getIsMobile();
   const actualStyles = externalStyles || styles;
   const actualRegulations = externalRegulations || legacyRegulations || PROVINCIAL_REGULATIONS;
-  // =================== GÉNÉRATION AUTOMATIQUE NUMÉRO DE PERMIS ===================
-  useEffect(() => {
-    if (!permitData.permit_number) {
-      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-      
-      const newPermitData = { 
-        ...permitData,
-        permit_number: `CS-${selectedProvince}-${timestamp}-${random}`,
-        issue_date: new Date().toISOString().slice(0, 16),
-        selected_province: selectedProvince,
-        last_modified: new Date().toISOString()
-      };
-      
-      setPermitData(newPermitData);
-      
-      if (onDataChange) {
-        onDataChange('permitData', newPermitData);
-      }
-      if (externalUpdatePermitData) {
-        externalUpdatePermitData(newPermitData);
-      }
-    }
-  }, [selectedProvince, permitData.permit_number, onDataChange, externalUpdatePermitData]);
 
   // =================== SYNCHRONISATION SAFETYMANAGER ===================
   useEffect(() => {
@@ -825,7 +804,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     const newData = { 
       ...permitData, 
       ...updates, 
-      last_modified: new Date().toISOString()
+      last_modified: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     setPermitData(newData);
     
@@ -942,6 +922,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         currentSection,
         selectedProvince,
         last_modified: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         atmosphericReadings,
         sectionValidation,
         validationData
@@ -1008,46 +989,169 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU DES SECTIONS ===================
   const renderSectionContent = () => {
-    // Cast de type pour compatibilité ConfinedSpaceComponentProps
-    const compatiblePermitData = {
-      // Propriétés requises avec fallbacks garantis
-      permit_number: permitData.permit_number || '',
-      province: (permitData.province || permitData.selected_province || selectedProvince) as ProvinceCode,
-      updated_at: permitData.updated_at || permitData.last_modified || new Date().toISOString(),
-      status: (permitData.status || 'draft') as 'completed' | 'active' | 'draft' | 'cancelled',
-      created_at: permitData.created_at || new Date().toISOString(),
-      issue_date: permitData.issue_date || new Date().toISOString(),
+    // ✅ CORRECTION BUILD CRITIQUE : Cast compatible ConfinedSpacePermit avec propriétés garanties
+    const compatiblePermitData: ConfinedSpacePermit = {
+      // ✅ Propriétés requises ConfinedSpacePermit avec garanties non-undefined
+      permit_number: permitData.permit_number,
+      province: permitData.province,
+      updated_at: permitData.updated_at,
+      status: permitData.status,
+      created_at: permitData.created_at,
+      issue_date: permitData.issue_date,
       
-      // Structures de données avec fallbacks
-      siteInformation: permitData.siteInformation || {},
-      atmosphericTesting: permitData.atmosphericTesting || { readings: atmosphericReadings },
-      rescuePlan: permitData.rescuePlan || {},
-      entryRegistry: permitData.entryRegistry || {},
+      // ✅ Structures de données avec fallbacks garantis
+      siteInformation: {
+        projectNumber: permitData.siteInformation?.projectNumber || permitData.projectNumber || '',
+        workLocation: permitData.siteInformation?.workLocation || permitData.workLocation || '',
+        contractor: permitData.siteInformation?.contractor || permitData.supervisor_name || '',
+        supervisor: permitData.siteInformation?.supervisor || permitData.entry_supervisor || '',
+        entryDate: permitData.siteInformation?.permit_valid_from || permitData.permit_valid_from || '',
+        duration: permitData.siteInformation?.permit_valid_to || permitData.permit_valid_to || '',
+        workerCount: 1,
+        workDescription: permitData.siteInformation?.workDescription || permitData.workDescription || '',
+        spaceType: permitData.siteInformation?.spaceType || '',
+        csaClass: permitData.siteInformation?.csaClass || '',
+        entryMethod: '',
+        accessType: '',
+        spaceLocation: '',
+        spaceDescription: permitData.siteInformation?.spaceDescription || permitData.spaceDescription || '',
+        dimensions: permitData.siteInformation?.dimensions || {
+          length: 0,
+          width: 0,
+          height: 0,
+          diameter: 0,
+          volume: 0,
+          spaceShape: 'rectangular'
+        },
+        unitSystem: permitData.siteInformation?.unitSystem || 'metric',
+        entryPoints: [],
+        atmosphericHazards: permitData.siteInformation?.atmosphericHazards || [],
+        physicalHazards: permitData.siteInformation?.physicalHazards || [],
+        environmentalConditions: {
+          ventilationRequired: false,
+          ventilationType: '',
+          lightingConditions: '',
+          temperatureRange: '',
+          moistureLevel: '',
+          noiseLevel: '',
+          weatherConditions: ''
+        },
+        spaceContent: {
+          contents: '',
+          residues: '',
+          previousUse: '',
+          lastEntry: '',
+          cleaningStatus: ''
+        },
+        safetyMeasures: {
+          emergencyEgress: '',
+          communicationMethod: '',
+          monitoringEquipment: [],
+          ventilationEquipment: [],
+          emergencyEquipment: []
+        },
+        spacePhotos: permitData.siteInformation?.spacePhotos || []
+      },
+      
+      atmosphericTesting: {
+        equipment: permitData.atmosphericTesting?.equipment || {
+          deviceModel: '',
+          serialNumber: '',
+          calibrationDate: permitData.calibration_date || '',
+          nextCalibration: ''
+        },
+        readings: permitData.atmosphericTesting?.readings || atmosphericReadings || [],
+        continuousMonitoring: permitData.atmosphericTesting?.continuousMonitoring || false,
+        alarmSettings: {
+          oxygen: { min: 19.5, max: 23.5 },
+          combustibleGas: { max: 10 },
+          hydrogenSulfide: { max: 10 },
+          carbonMonoxide: { max: 35 }
+        },
+        testingFrequency: permitData.atmosphericTesting?.testingFrequency || 30,
+        lastUpdated: permitData.atmosphericTesting?.lastUpdated || new Date().toISOString()
+      },
+      
+      entryRegistry: {
+        personnel: permitData.entryRegistry?.personnel || [],
+        entryLog: permitData.entryRegistry?.entryLog || [],
+        entryLogs: permitData.entryRegistry?.entryLog || [],
+        activeEntrants: permitData.entryRegistry?.activeEntrants || [],
+        maxOccupancy: permitData.entryRegistry?.maxOccupancy || 1,
+        communicationProtocol: permitData.entryRegistry?.communicationProtocol || {
+          type: 'radio',
+          frequency: '',
+          checkInterval: 15
+        },
+        lastUpdated: permitData.entryRegistry?.lastUpdated || new Date().toISOString(),
+        equipment: [],
+        compliance: permitData.compliance || {},
+        supervisor: permitData.entryRegistry?.supervisor || {
+          name: permitData.supervisor_name || '',
+          certification: '',
+          contact: ''
+        },
+        attendantPresent: false,
+        entryAuthorized: false,
+        emergencyProcedures: false,
+        communicationEstablished: false,
+        communicationSystemActive: false,
+        rescueTeamNotified: false,
+        atmosphericTestingCurrent: false,
+        equipmentInspected: false,
+        safetyBriefingCompleted: false,
+        permitReviewed: false,
+        hazardsIdentified: false,
+        controlMeasuresImplemented: false,
+        emergencyEquipmentAvailable: false,
+        emergencyContactsNotified: false,
+        currentOccupancy: 0
+      },
+      
+      rescuePlan: {
+        emergencyContacts: permitData.rescuePlan?.emergencyContacts || [],
+        rescueTeam: permitData.rescuePlan?.rescueTeam || [],
+        evacuationProcedure: permitData.rescuePlan?.evacuationProcedure || '',
+        rescueEquipment: permitData.rescuePlan?.rescueEquipment || [],
+        hospitalInfo: permitData.rescuePlan?.hospitalInfo || {
+          name: '',
+          address: '',
+          phone: '',
+          distance: 0
+        },
+        communicationPlan: permitData.rescuePlan?.communicationPlan || '',
+        lastUpdated: permitData.rescuePlan?.lastUpdated || new Date().toISOString(),
+        responseTime: permitData.rescuePlan?.responseTime || 5
+      },
+      
       compliance: permitData.compliance || {},
-      validation: permitData.validation || { isValid: false, percentage: 0 },
-      auditTrail: permitData.auditTrail || {},
+      
+      validation: {
+        isComplete: permitData.validation?.isValid || false,
+        isValid: permitData.validation?.isValid || false,
+        percentage: permitData.validation?.percentage || 0,
+        completedSections: permitData.validation?.completedSections || [],
+        errors: permitData.validation?.errors || [],
+        warnings: permitData.validation?.warnings || [],
+        lastValidated: permitData.validation?.lastValidated || new Date().toISOString()
+      },
+      
+      auditTrail: permitData.auditTrail || [],
       attachments: permitData.attachments || [],
       
       // Propriétés optionnelles préservées
       id: permitData.id,
-      last_modified: permitData.last_modified || new Date().toISOString(),
-      selected_province: permitData.selected_province,
-      projectNumber: permitData.projectNumber,
-      workLocation: permitData.workLocation,
-      spaceDescription: permitData.spaceDescription,
-      workDescription: permitData.workDescription,
-      entry_supervisor: permitData.entry_supervisor,
-      rescue_plan_type: permitData.rescue_plan_type,
-      gas_detector_calibrated: permitData.gas_detector_calibrated,
-      calibration_date: permitData.calibration_date,
-      supervisor_name: permitData.supervisor_name,
-      permit_valid_from: permitData.permit_valid_from,
-      permit_valid_to: permitData.permit_valid_to
+      last_modified: permitData.last_modified || permitData.updated_at,
+      
+      // Propriétés pour compatibilité EntryRegistry
+      attendant_present: false,
+      communication_system_tested: false,
+      emergency_retrieval_ready: false
     };
 
     const commonProps: ConfinedSpaceComponentProps = {
       language,
-      permitData: compatiblePermitData as any, // Cast agressif pour compatibilité
+      permitData: compatiblePermitData,
       selectedProvince,
       regulations: actualRegulations,
       isMobile: actualIsMobile,
@@ -1155,7 +1259,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return (
       <PermitManager
         language={language}
-        permitData={permitData}
+        permitData={compatiblePermitData}
         selectedProvince={selectedProvince}
         regulations={actualRegulations}
         isMobile={actualIsMobile}
@@ -1186,10 +1290,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         
         {/* En-tête principal */}
         <div style={{
-          ...actualStyles.headerCard,
+          ...actualStyles.card,
           background: theme === 'dark' ? 
             'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))' :
-            'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.9))'
+            'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.9))',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
           <div style={{
             position: 'absolute',
@@ -1358,7 +1466,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   onClick={() => setExpandedView(!expandedView)}
                   style={{
                     ...actualStyles.button,
-                    ...actualStyles.buttonSecondary,
+                    background: 'rgba(75, 85, 99, 0.3)',
+                    border: '1px solid rgba(156, 163, 175, 0.3)',
+                    color: theme === 'dark' ? '#d1d5db' : '#374151',
                     width: 'auto',
                     padding: actualIsMobile ? '10px 16px' : '12px 20px'
                   }}
@@ -1371,7 +1481,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   onClick={() => setShowManager(true)}
                   style={{
                     ...actualStyles.button,
-                    ...actualStyles.buttonSecondary,
+                    background: 'rgba(75, 85, 99, 0.3)',
+                    border: '1px solid rgba(156, 163, 175, 0.3)',
+                    color: theme === 'dark' ? '#d1d5db' : '#374151',
                     width: 'auto',
                     padding: actualIsMobile ? '10px 16px' : '12px 20px'
                   }}
@@ -1385,7 +1497,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   disabled={isLoading || readOnly}
                   style={{
                     ...actualStyles.button,
-                    ...actualStyles.buttonSuccess,
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: 'white',
                     width: 'auto',
                     padding: actualIsMobile ? '10px 16px' : '12px 20px',
                     opacity: (isLoading || readOnly) ? 0.7 : 1
@@ -1473,7 +1587,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
         {/* Navigation des sections avec progression */}
         <div style={{
-          ...actualStyles.sectionCard,
+          ...actualStyles.card,
           backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(255, 255, 255, 0.8)'
         }}>
           <div style={{
@@ -1597,7 +1711,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
         {/* Contenu de la section active */}
         <div style={{
-          ...actualStyles.sectionCard,
+          ...actualStyles.card,
           backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(255, 255, 255, 0.8)',
           minHeight: '600px'
         }}>
@@ -1628,7 +1742,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
             disabled={currentSection === 'site' || readOnly}
             style={{
               ...actualStyles.button,
-              ...actualStyles.buttonSecondary,
+              background: 'rgba(75, 85, 99, 0.3)',
+              border: '1px solid rgba(156, 163, 175, 0.3)',
+              color: theme === 'dark' ? '#d1d5db' : '#374151',
               opacity: (currentSection === 'site' || readOnly) ? 0.5 : 1,
               cursor: (currentSection === 'site' || readOnly) ? 'not-allowed' : 'pointer',
               width: 'auto',
@@ -1669,7 +1785,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               disabled={isLoading || readOnly}
               style={{
                 ...actualStyles.button,
-                ...actualStyles.buttonSuccess,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: 'white',
                 width: 'auto',
                 padding: '12px 16px',
                 opacity: (isLoading || readOnly) ? 0.7 : 1
@@ -1684,7 +1802,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                 onClick={onCancel}
                 style={{
                   ...actualStyles.button,
-                  ...actualStyles.buttonSecondary,
+                  background: 'rgba(75, 85, 99, 0.3)',
+                  border: '1px solid rgba(156, 163, 175, 0.3)',
+                  color: theme === 'dark' ? '#d1d5db' : '#374151',
                   width: 'auto',
                   padding: '12px 16px'
                 }}
@@ -1707,7 +1827,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               disabled={readOnly}
               style={{
                 ...actualStyles.button,
-                ...actualStyles.buttonPrimary,
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: 'white',
                 opacity: readOnly ? 0.5 : 1,
                 cursor: readOnly ? 'not-allowed' : 'pointer',
                 width: 'auto',
