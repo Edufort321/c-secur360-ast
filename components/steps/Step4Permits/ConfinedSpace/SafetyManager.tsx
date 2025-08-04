@@ -1,4 +1,4 @@
-// SafetyManager.tsx - PARTIE 1/2 - Gestionnaire Centralisé Universel avec Compatibilité Maximale Build-Ready
+// SafetyManager.tsx - PARTIE 1/2 - Fix Saisie et Auto-save Build-Ready
 "use client";
 
 import { create } from 'zustand';
@@ -639,7 +639,7 @@ function createAuditEntry(action: string, section: string, changes: any, oldValu
     oldValues
   };
 }
-// SafetyManager.tsx - PARTIE 2/2 - Store Zustand et Fonctions Avancées
+// SafetyManager.tsx - PARTIE 2/2 - Complet avec Fix Auto-save
 
 // =================== FONCTION CREATEEMPTYPERMIT GARANTIE POUR PERMITMANAGER ===================
 function createEmptyPermit(): ConfinedSpacePermit {
@@ -828,7 +828,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-// =================== STORE ZUSTAND OPTIMISÉ UNIVERSELLEMENT ===================
+// =================== STORE ZUSTAND OPTIMISÉ POUR LA SAISIE ===================
 interface SafetyManagerState {
   // État principal
   currentPermit: ConfinedSpacePermit;
@@ -839,6 +839,10 @@ interface SafetyManagerState {
   isLoading: boolean;
   lastSaved: string | null;
   autoSaveEnabled: boolean;
+  
+  // ✅ FIX SAISIE: Debounce pour éviter les conflits
+  isUpdating: boolean;
+  lastUpdateTime: number;
   
   // Alertes et notifications
   activeAlerts: Alert[];
@@ -893,13 +897,27 @@ export const useSafetyManager = create<SafetyManagerState>()(
       isSaving: false,
       isLoading: false,
       lastSaved: null,
-      autoSaveEnabled: true,
+      autoSaveEnabled: false, // ✅ FIX: Désactivé par défaut pour éviter les conflits
+      
+      // ✅ FIX SAISIE: États pour debounce
+      isUpdating: false,
+      lastUpdateTime: 0,
+
       activeAlerts: [],
       notifications: [],
 
-      // =================== ACTIONS DE MISE À JOUR ===================
+      // =================== ACTIONS DE MISE À JOUR SÉCURISÉES ===================
       updateSiteInformation: (data) => {
         set((state) => {
+          // ✅ FIX SAISIE: Debounce pour éviter les mises à jour trop fréquentes
+          const now = Date.now();
+          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+            console.log('🚫 Update trop fréquent, ignoré');
+            return state;
+          }
+
+          console.log('🔄 SafetyManager: updateSiteInformation', data);
+          
           const updatedPermit = {
             ...state.currentPermit,
             siteInformation: {
@@ -914,17 +932,40 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_site_information', 'siteInformation', data, state.currentPermit.siteInformation)
           );
           
-          // Auto-save si activé
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save plus conservateur - DÉSACTIVÉ pendant la saisie
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateSiteInformation');
+                currentState.saveToDatabase();
+              }
+            }, 30000); // ✅ FIX: 30 secondes au lieu de 2
           }
           
-          return { currentPermit: updatedPermit };
+          return { 
+            currentPermit: updatedPermit,
+            isUpdating: true,
+            lastUpdateTime: now
+          };
         });
+
+        // ✅ FIX: Reset isUpdating après un délai
+        setTimeout(() => {
+          set({ isUpdating: false });
+        }, 2000); // ✅ 2 secondes de grace period
       },
 
       updateAtmosphericTesting: (data) => {
         set((state) => {
+          // ✅ FIX SAISIE: Debounce
+          const now = Date.now();
+          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+            return state;
+          }
+
+          console.log('🔄 SafetyManager: updateAtmosphericTesting', data);
+          
           const updatedPermit = {
             ...state.currentPermit,
             atmosphericTesting: {
@@ -945,19 +986,40 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_atmospheric_testing', 'atmosphericTesting', data, state.currentPermit.atmosphericTesting)
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save désactivé pendant la saisie
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateAtmosphericTesting');
+                currentState.saveToDatabase();
+              }
+            }, 30000);
           }
           
           return { 
             currentPermit: updatedPermit,
-            activeAlerts: [...state.activeAlerts, ...newAlerts]
+            activeAlerts: [...state.activeAlerts, ...newAlerts],
+            isUpdating: true,
+            lastUpdateTime: now
           };
         });
+
+        setTimeout(() => {
+          set({ isUpdating: false });
+        }, 2000);
       },
 
       updateEntryRegistry: (data) => {
         set((state) => {
+          // ✅ FIX SAISIE: Debounce
+          const now = Date.now();
+          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+            return state;
+          }
+
+          console.log('🔄 SafetyManager: updateEntryRegistry', data);
+          
           // Synchroniser entryLog et entryLogs pour compatibilité
           const updatedData = { ...data };
           if (data.entryLog && !data.entryLogs) {
@@ -980,16 +1042,39 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_entry_registry', 'entryRegistry', updatedData, state.currentPermit.entryRegistry)
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save désactivé pendant la saisie
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateEntryRegistry');
+                currentState.saveToDatabase();
+              }
+            }, 30000);
           }
           
-          return { currentPermit: updatedPermit };
+          return { 
+            currentPermit: updatedPermit,
+            isUpdating: true,
+            lastUpdateTime: now
+          };
         });
+
+        setTimeout(() => {
+          set({ isUpdating: false });
+        }, 2000);
       },
 
       updateRescuePlan: (data) => {
         set((state) => {
+          // ✅ FIX SAISIE: Debounce
+          const now = Date.now();
+          if (state.isUpdating && now - state.lastUpdateTime < 500) {
+            return state;
+          }
+
+          console.log('🔄 SafetyManager: updateRescuePlan', data);
+          
           const updatedPermit = {
             ...state.currentPermit,
             rescuePlan: {
@@ -1004,21 +1089,39 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_rescue_plan', 'rescuePlan', data, state.currentPermit.rescuePlan)
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save désactivé pendant la saisie
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateRescuePlan');
+                currentState.saveToDatabase();
+              }
+            }, 30000);
           }
           
-          return { currentPermit: updatedPermit };
+          return { 
+            currentPermit: updatedPermit,
+            isUpdating: true,
+            lastUpdateTime: now
+          };
         });
+
+        setTimeout(() => {
+          set({ isUpdating: false });
+        }, 2000);
       },
 
       // =================== MÉTHODES POUR ENTRYREGISTRY ===================
       updateRegistryData: (data) => {
+        console.log('🔄 SafetyManager: updateRegistryData', data);
         get().updateEntryRegistry(data);
       },
 
       updatePersonnel: (person) => {
         set((state) => {
+          console.log('🔄 SafetyManager: updatePersonnel', person);
+          
           const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
           const existingIndex = currentPersonnel.findIndex(p => p.id === person.id);
           
@@ -1044,8 +1147,15 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_personnel', 'entryRegistry', { person }, { existingPerson: currentPersonnel[existingIndex] || null })
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save seulement si activé et pas en cours de saisie
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updatePersonnel');
+                currentState.saveToDatabase();
+              }
+            }, 45000); // ✅ FIX: 45 secondes pour les actions manuelles
           }
           
           return { currentPermit: updatedPermit };
@@ -1054,6 +1164,8 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       updateEquipment: (equipment) => {
         set((state) => {
+          console.log('🔄 SafetyManager: updateEquipment', equipment);
+          
           const updatedPermit = {
             ...state.currentPermit,
             entryRegistry: {
@@ -1068,8 +1180,15 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_equipment', 'entryRegistry', { equipment }, { oldEquipment: state.currentPermit.entryRegistry.equipment })
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save conditionnel
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateEquipment');
+                currentState.saveToDatabase();
+              }
+            }, 45000);
           }
           
           return { currentPermit: updatedPermit };
@@ -1078,6 +1197,8 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       updateCompliance: (key: string, value: boolean) => {
         set((state) => {
+          console.log('🔄 SafetyManager: updateCompliance', key, value);
+          
           const currentCompliance = state.currentPermit.compliance || {};
           const currentRegistryCompliance = state.currentPermit.entryRegistry.compliance || {};
           
@@ -1102,8 +1223,15 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('update_compliance', 'compliance', { [key]: value }, { [key]: currentCompliance[key] })
           );
           
-          if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+          // ✅ FIX: Auto-save conditionnel
+          if (state.autoSaveEnabled && !state.isUpdating) {
+            setTimeout(() => {
+              const currentState = get();
+              if (!currentState.isUpdating) {
+                console.log('💾 Auto-save déclenché depuis updateCompliance');
+                currentState.saveToDatabase();
+              }
+            }, 45000);
           }
           
           return { currentPermit: updatedPermit };
@@ -1112,11 +1240,13 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       recordEntryExit: (personId, action) => {
         set((state) => {
+          console.log('🔄 SafetyManager: recordEntryExit', personId, action);
+          
           const entryLog = state.currentPermit.entryRegistry.entryLog || [];
           const newLogEntry: EntryLogEntry = {
             id: generateId(),
             personnelId: personId,
-            action: action as 'entry' | 'exit' | 'emergency_exit', // ✅ TYPE ASSERTION pour éviter l'erreur TypeScript
+            action: action as 'entry' | 'exit' | 'emergency_exit',
             timestamp: new Date().toISOString(),
             authorizedBy: 'current_user'
           };
@@ -1147,8 +1277,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
             createAuditEntry('record_entry_exit', 'entryRegistry', { personId, action }, null)
           );
           
+          // ✅ FIX: Auto-save immédiat pour les entrées/sorties (critique pour sécurité)
           if (state.autoSaveEnabled) {
-            setTimeout(() => get().saveToDatabase(), 2000);
+            setTimeout(() => {
+              console.log('💾 Auto-save IMMÉDIAT pour sécurité: recordEntryExit');
+              get().saveToDatabase();
+            }, 5000); // ✅ Plus rapide pour les actions critiques
           }
           
           return { currentPermit: updatedPermit };
@@ -1157,11 +1291,21 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       // =================== GESTION BASE DE DONNÉES ROBUSTE ===================
       saveToDatabase: async () => {
+        const state = get();
+        
+        // ✅ FIX: Éviter les sauvegardes concurrentes
+        if (state.isSaving) {
+          console.log('🚫 Sauvegarde déjà en cours, ignorée');
+          return null;
+        }
+
         set({ isSaving: true });
         
         try {
           const permit = get().currentPermit;
           const validation = get().validatePermitCompleteness();
+          
+          console.log('💾 Sauvegarde en cours...', permit.permit_number);
           
           // Mise à jour de la validation
           permit.validation = {
@@ -1195,15 +1339,16 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 });
                 
               if (error) throw error;
-              console.log('Permit sauvegardé dans Supabase');
+              console.log('✅ Permit sauvegardé dans Supabase');
             } catch (supabaseError) {
-              console.error('Erreur Supabase, fallback vers localStorage:', supabaseError);
+              console.error('❌ Erreur Supabase, fallback vers localStorage:', supabaseError);
               localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             }
           } else {
             // Fallback localStorage
             localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             localStorage.setItem('currentPermit', JSON.stringify(permit));
+            console.log('✅ Permit sauvegardé dans localStorage');
           }
           
           set({ 
@@ -1220,7 +1365,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           
           return permit.permit_number;
         } catch (error) {
-          console.error('Erreur sauvegarde:', error);
+          console.error('❌ Erreur sauvegarde:', error);
           set({ isSaving: false });
           
           get().addNotification({
@@ -1236,6 +1381,8 @@ export const useSafetyManager = create<SafetyManagerState>()(
         set({ isLoading: true });
         
         try {
+          console.log('📥 Chargement du permis:', permitNumber);
+          
           // Essayer Supabase d'abord
           if (supabaseEnabled && supabase) {
             try {
@@ -1259,7 +1406,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 return data.data;
               }
             } catch (supabaseError) {
-              console.error('Erreur chargement Supabase:', supabaseError);
+              console.error('❌ Erreur chargement Supabase:', supabaseError);
             }
           }
           
@@ -1289,7 +1436,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           
           return null;
         } catch (error) {
-          console.error('Erreur chargement:', error);
+          console.error('❌ Erreur chargement:', error);
           set({ isLoading: false });
           
           get().addNotification({
@@ -1318,7 +1465,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 permits = data.map((item: any) => item.data);
               }
             } catch (supabaseError) {
-              console.error('Erreur historique Supabase:', supabaseError);
+              console.error('❌ Erreur historique Supabase:', supabaseError);
             }
           }
           
@@ -1338,7 +1485,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                       permits.push(permit);
                     }
                   } catch (e) {
-                    console.warn('Erreur parsing permit:', key);
+                    console.warn('⚠️ Erreur parsing permit:', key);
                   }
                 }
               }
@@ -1348,7 +1495,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           set({ permits });
           return permits;
         } catch (error) {
-          console.error('Erreur historique:', error);
+          console.error('❌ Erreur historique:', error);
           return [];
         }
       },
