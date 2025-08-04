@@ -1,4 +1,4 @@
-// EntryRegistry.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
+// EntryRegistry.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -192,8 +192,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // Accès direct aux données depuis permitData
-  const entryRegistryData = permitData.entryRegistry || {
+  // ✅ CORRECTION CRASH : Accès sécurisé aux données depuis permitData
+  const entryRegistryData = permitData?.entryRegistry || {
     personnel: [],
     entryLogs: [],
     currentOccupancy: 0,
@@ -204,8 +204,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     lastUpdated: new Date().toISOString()
   };
 
-  const personnel = entryRegistryData.personnel || [];
-  const entryLogs = entryRegistryData.entryLogs || [];
+  const personnel = entryRegistryData?.personnel || [];
+  const entryLogs = entryRegistryData?.entryLogs || [];
   
   // États locaux pour l'interface
   const [showAddPersonForm, setShowAddPersonForm] = useState(false);
@@ -422,17 +422,19 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager]);
 
   // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
+  // ✅ CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
   const safeRegulations = regulations[selectedProvince] || {
     name: 'Réglementation provinciale',
     code: 'N/A',
     authority: 'Autorité compétente',
-    personnel_requirements: {
-      min_age: 18,
-      attendant_required: true,
-      max_work_period_hours: 8,
-      bidirectional_communication_required: true,
-      rescue_plan_required: true,
-      competent_person_required: true
+    permit_validity_hours: 8, // ✅ Utiliser permit_validity_hours au lieu de max_work_period_hours
+    atmosphere_testing_frequency: 30,
+    continuous_monitoring_required: true,
+    max_entrants: 2,
+    communication_check_interval: 15,
+    requirements: {
+      attendant: true,
+      min_age: 18
     }
   };
 
@@ -463,8 +465,9 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       person_id: newPersonnelEntry.id,
       current_status: 'outside',
       total_time_inside: 0,
-      max_allowed_time: safeRegulations.personnel_requirements?.max_work_period_hours ? 
-        safeRegulations.personnel_requirements.max_work_period_hours * 60 : 480, // 8h par défaut
+      // ✅ CORRECTION RUNTIME ERROR : Utiliser permit_validity_hours au lieu de max_work_period_hours
+      max_allowed_time: safeRegulations.permit_validity_hours ? 
+        safeRegulations.permit_validity_hours * 60 : 480, // 8h par défaut
       equipment_status: 'needs_check'
     };
 
@@ -847,7 +850,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏰ <strong>Durée maximale</strong> : {safeRegulations.personnel_requirements.max_work_period_hours}h consécutives maximum par personne dans l'espace clos.
+            ⏰ <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l'espace clos.
           </p>
         </div>
         
@@ -875,7 +878,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <input
               type="checkbox"
               id="attendant_present"
-              checked={ensureBoolean(entryRegistryData.attendantPresent)}
+              checked={ensureBoolean(entryRegistryData?.attendantPresent)}
               onChange={(e) => handleAttendantPresent(e.target.checked)}
               style={{
                 width: '24px',
@@ -911,7 +914,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <input
               type="checkbox"
               id="communication_system_tested"
-              checked={ensureBoolean(entryRegistryData.communicationSystemActive)}
+              checked={ensureBoolean(entryRegistryData?.communicationSystemActive)}
               onChange={(e) => handleCommunicationSystemTested(e.target.checked)}
               style={{
                 width: '24px',
@@ -1024,13 +1027,13 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
             <span style={{
               fontSize: isMobile ? '12px' : '14px',
-              backgroundColor: (entryRegistryData.currentOccupancy || 0) >= entryRegistryData.maxOccupancy ? '#ef4444' : '#10b981',
+              backgroundColor: (entryRegistryData?.currentOccupancy || 0) >= entryRegistryData?.maxOccupancy ? '#ef4444' : '#10b981',
               color: 'white',
               padding: '6px 12px',
               borderRadius: '16px',
               fontWeight: '700'
             }}>
-              👥 {entryRegistryData.currentOccupancy || 0}/{entryRegistryData.maxOccupancy}
+              👥 {entryRegistryData?.currentOccupancy || 0}/{entryRegistryData?.maxOccupancy}
             </span>
             <button
               onClick={initiateEmergencyEvacuation}
@@ -1042,7 +1045,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 fontSize: '14px',
                 minHeight: 'auto'
               }}
-              disabled={(entryRegistryData.currentOccupancy || 0) === 0}
+              disabled={(entryRegistryData?.currentOccupancy || 0) === 0}
             >
               <AlertTriangle style={{ width: '16px', height: '16px' }} />
               {t.emergencyEvacuation}
@@ -1061,19 +1064,19 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             <UserCheck style={{ 
               width: isMobile ? '32px' : '40px', 
               height: isMobile ? '32px' : '40px', 
-              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#f87171' : '#6b7280',
+              color: (entryRegistryData?.currentOccupancy || 0) > 0 ? '#f87171' : '#6b7280',
               margin: '0 auto 12px'
             }} />
             <div style={{ 
               fontSize: isMobile ? '24px' : '32px', 
               fontWeight: 'bold', 
-              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af',
+              color: (entryRegistryData?.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af',
               marginBottom: '8px'
             }}>
               {getCurrentPersonnelInside().length}
             </div>
             <div style={{ 
-              color: (entryRegistryData.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af', 
+              color: (entryRegistryData?.currentOccupancy || 0) > 0 ? '#fca5a5' : '#9ca3af', 
               fontSize: '14px',
               fontWeight: '600'
             }}>
@@ -1130,7 +1133,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               color: '#fde047',
               marginBottom: '8px'
             }}>
-              {entryRegistryData.maxOccupancy}
+              {entryRegistryData?.maxOccupancy}
             </div>
             <div style={{ 
               color: '#fde047', 
