@@ -1,4 +1,4 @@
-// SafetyManager.tsx - Gestionnaire Centralisé Universel avec Compatibilité Maximale Build-Ready
+// SafetyManager.tsx - PARTIE 1/2 - Gestionnaire Centralisé Universel avec Compatibilité Maximale Build-Ready
 "use client";
 
 import { create } from 'zustand';
@@ -183,7 +183,7 @@ export interface ConfinedSpacePermit {
   last_modified: string;
   issue_date?: string;
   
-  // Données des sections principales
+  // Données des sections principales - GARANTIES NON-UNDEFINED POUR PERMITMANAGER
   siteInformation: ConfinedSpaceDetails;
   atmosphericTesting: AtmosphericTestingData;
   entryRegistry: EntryRegistryData;
@@ -236,8 +236,9 @@ export interface ValidationData {
   lastValidated: string;
 }
 
+// ✅ INTERFACE CORRIGÉE POUR PERMITMANAGER - COMPATIBILITÉ BUILD ASSURÉE
 export interface ConfinedSpaceDetails {
-  // Informations principales
+  // Informations principales - TOUTES GARANTIES DÉFINIES POUR PERMITMANAGER
   projectNumber: string;
   workLocation: string;
   contractor: string;
@@ -564,6 +565,83 @@ export interface AttachmentData {
 }
 
 // =================== FONCTIONS UTILITAIRES UNIVERSELLES ===================
+export function generatePermitNumber(province: ProvinceCode): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
+  
+  return `CS-${province}-${year}${month}${day}-${time}`;
+}
+
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function checkAtmosphericAlerts(readings: AtmosphericReading[]): Alert[] {
+  const alerts: Alert[] = [];
+  
+  readings.forEach(reading => {
+    if (reading.readings.oxygen < 19.5 || reading.readings.oxygen > 23.5) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `Niveau d'oxygène dangereux: ${reading.readings.oxygen}%`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
+    }
+    
+    if (reading.readings.combustibleGas > 10) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `Gaz combustible détecté: ${reading.readings.combustibleGas}% LEL`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
+    }
+    
+    if (reading.readings.hydrogenSulfide > 10) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `H2S détecté: ${reading.readings.hydrogenSulfide} ppm`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
+    }
+    
+    if (reading.readings.carbonMonoxide > 35) {
+      alerts.push({
+        id: generateId(),
+        type: 'critical',
+        message: `CO détecté: ${reading.readings.carbonMonoxide} ppm`,
+        location: reading.location,
+        timestamp: reading.timestamp
+      });
+    }
+  });
+  
+  return alerts;
+}
+
+function createAuditEntry(action: string, section: string, changes: any, oldValues?: any): AuditEntry {
+  return {
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    action,
+    section,
+    userId: 'current_user',
+    userName: 'Utilisateur actuel',
+    changes,
+    oldValues
+  };
+}
+// SafetyManager.tsx - PARTIE 2/2 - Store Zustand et Fonctions Avancées
+
+// =================== FONCTION CREATEEMPTYPERMIT GARANTIE POUR PERMITMANAGER ===================
 function createEmptyPermit(): ConfinedSpacePermit {
   const now = new Date().toISOString();
   
@@ -581,12 +659,13 @@ function createEmptyPermit(): ConfinedSpacePermit {
     communication_system_tested: false,
     emergency_retrieval_ready: false, // ✅ AJOUTÉ
     
+    // ✅ GARANTIR QUE SITEINFORMATION EST TOUJOURS DÉFINI POUR PERMITMANAGER
     siteInformation: {
-      // Informations principales
-      projectNumber: '',
-      workLocation: '',
-      contractor: '',
-      supervisor: '',
+      // Informations principales - VALEURS PAR DÉFAUT GARANTIES NON-UNDEFINED
+      projectNumber: '', // ✅ Toujours string définie pour PermitManager
+      workLocation: '', // ✅ Toujours string définie pour PermitManager
+      contractor: '', // ✅ Toujours string définie  
+      supervisor: '', // ✅ Toujours string définie
       entryDate: '',
       duration: '',
       workerCount: 1,
@@ -746,81 +825,6 @@ function createEmptyPermit(): ConfinedSpacePermit {
     
     auditTrail: [],
     attachments: []
-  };
-}
-
-export function generatePermitNumber(province: ProvinceCode): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
-  
-  return `CS-${province}-${year}${month}${day}-${time}`;
-}
-
-export function generateId(): string {
-  return Math.random().toString(36).substr(2, 9);
-}
-
-function checkAtmosphericAlerts(readings: AtmosphericReading[]): Alert[] {
-  const alerts: Alert[] = [];
-  
-  readings.forEach(reading => {
-    if (reading.readings.oxygen < 19.5 || reading.readings.oxygen > 23.5) {
-      alerts.push({
-        id: generateId(),
-        type: 'critical',
-        message: `Niveau d'oxygène dangereux: ${reading.readings.oxygen}%`,
-        location: reading.location,
-        timestamp: reading.timestamp
-      });
-    }
-    
-    if (reading.readings.combustibleGas > 10) {
-      alerts.push({
-        id: generateId(),
-        type: 'critical',
-        message: `Gaz combustible détecté: ${reading.readings.combustibleGas}% LEL`,
-        location: reading.location,
-        timestamp: reading.timestamp
-      });
-    }
-    
-    if (reading.readings.hydrogenSulfide > 10) {
-      alerts.push({
-        id: generateId(),
-        type: 'critical',
-        message: `H2S détecté: ${reading.readings.hydrogenSulfide} ppm`,
-        location: reading.location,
-        timestamp: reading.timestamp
-      });
-    }
-    
-    if (reading.readings.carbonMonoxide > 35) {
-      alerts.push({
-        id: generateId(),
-        type: 'critical',
-        message: `CO détecté: ${reading.readings.carbonMonoxide} ppm`,
-        location: reading.location,
-        timestamp: reading.timestamp
-      });
-    }
-  });
-  
-  return alerts;
-}
-
-function createAuditEntry(action: string, section: string, changes: any, oldValues?: any): AuditEntry {
-  return {
-    id: generateId(),
-    timestamp: new Date().toISOString(),
-    action,
-    section,
-    userId: 'current_user',
-    userName: 'Utilisateur actuel',
-    changes,
-    oldValues
   };
 }
 
@@ -1356,7 +1360,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           throw new Error('Permit number required for QR code');
         }
         
-        const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+        const permitUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/permits/confined-space/${permit.permit_number}`;
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(permitUrl)}`;
         
         get().addNotification({
@@ -1439,23 +1443,25 @@ Document généré le ${new Date().toLocaleString('fr-CA')}
 
       sharePermit: async (method: 'email' | 'sms' | 'whatsapp') => {
         const permit = get().currentPermit;
-        const permitUrl = `${window.location.origin}/permits/confined-space/${permit.permit_number}`;
+        const permitUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/permits/confined-space/${permit.permit_number}`;
         
         const message = `Permis d'espace clos ${permit.permit_number}
 Lieu: ${permit.siteInformation.workLocation}
 Entrepreneur: ${permit.siteInformation.contractor}
 Accès: ${permitUrl}`;
         
-        switch (method) {
-          case 'email':
-            window.location.href = `mailto:?subject=Permis d'espace clos ${permit.permit_number}&body=${encodeURIComponent(message)}`;
-            break;
-          case 'sms':
-            window.location.href = `sms:?body=${encodeURIComponent(message)}`;
-            break;
-          case 'whatsapp':
-            window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
-            break;
+        if (typeof window !== 'undefined') {
+          switch (method) {
+            case 'email':
+              window.location.href = `mailto:?subject=Permis d'espace clos ${permit.permit_number}&body=${encodeURIComponent(message)}`;
+              break;
+            case 'sms':
+              window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+              break;
+            case 'whatsapp':
+              window.open(`https://wa.me/?text=${encodeURIComponent(message)}`);
+              break;
+          }
         }
         
         get().addNotification({
