@@ -1256,10 +1256,170 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== GESTION FULLSCREEN MANAGER ===================
   if (showManager) {
+    // ✅ CORRECTION : Créer compatiblePermitData pour PermitManager fullscreen
+    const compatiblePermitDataForManager: ConfinedSpacePermit = {
+      // ✅ Propriétés requises ConfinedSpacePermit avec garanties non-undefined
+      permit_number: permitData.permit_number,
+      province: permitData.province,
+      updated_at: permitData.updated_at,
+      status: permitData.status,
+      created_at: permitData.created_at,
+      issue_date: permitData.issue_date,
+      
+      // ✅ Structures de données avec fallbacks garantis
+      siteInformation: {
+        projectNumber: permitData.siteInformation?.projectNumber || permitData.projectNumber || '',
+        workLocation: permitData.siteInformation?.workLocation || permitData.workLocation || '',
+        contractor: permitData.siteInformation?.contractor || permitData.supervisor_name || '',
+        supervisor: permitData.siteInformation?.supervisor || permitData.entry_supervisor || '',
+        entryDate: permitData.siteInformation?.permit_valid_from || permitData.permit_valid_from || '',
+        duration: permitData.siteInformation?.permit_valid_to || permitData.permit_valid_to || '',
+        workerCount: 1,
+        workDescription: permitData.siteInformation?.workDescription || permitData.workDescription || '',
+        spaceType: permitData.siteInformation?.spaceType || '',
+        csaClass: permitData.siteInformation?.csaClass || '',
+        entryMethod: '',
+        accessType: '',
+        spaceLocation: '',
+        spaceDescription: permitData.siteInformation?.spaceDescription || permitData.spaceDescription || '',
+        dimensions: permitData.siteInformation?.dimensions || {
+          length: 0,
+          width: 0,
+          height: 0,
+          diameter: 0,
+          volume: 0,
+          spaceShape: 'rectangular'
+        },
+        unitSystem: (permitData.siteInformation?.unitSystem || 'metric') as 'metric' | 'imperial',
+        entryPoints: [],
+        atmosphericHazards: permitData.siteInformation?.atmosphericHazards || [],
+        physicalHazards: permitData.siteInformation?.physicalHazards || [],
+        environmentalConditions: {
+          ventilationRequired: false,
+          ventilationType: '',
+          lightingConditions: '',
+          temperatureRange: '',
+          moistureLevel: '',
+          noiseLevel: '',
+          weatherConditions: ''
+        },
+        spaceContent: {
+          contents: '',
+          residues: '',
+          previousUse: '',
+          lastEntry: '',
+          cleaningStatus: ''
+        },
+        safetyMeasures: {
+          emergencyEgress: '',
+          communicationMethod: '',
+          monitoringEquipment: [],
+          ventilationEquipment: [],
+          emergencyEquipment: []
+        },
+        spacePhotos: permitData.siteInformation?.spacePhotos || []
+      },
+      
+      atmosphericTesting: {
+        equipment: permitData.atmosphericTesting?.equipment || {
+          deviceModel: '',
+          serialNumber: '',
+          calibrationDate: permitData.calibration_date || '',
+          nextCalibration: ''
+        },
+        readings: permitData.atmosphericTesting?.readings || atmosphericReadings || [],
+        continuousMonitoring: permitData.atmosphericTesting?.continuousMonitoring || false,
+        alarmSettings: {
+          oxygen: { min: 19.5, max: 23.5 },
+          combustibleGas: { max: 10 },
+          hydrogenSulfide: { max: 10 },
+          carbonMonoxide: { max: 35 }
+        },
+        testingFrequency: permitData.atmosphericTesting?.testingFrequency || 30,
+        lastUpdated: permitData.atmosphericTesting?.lastUpdated || new Date().toISOString()
+      },
+      
+      entryRegistry: {
+        personnel: permitData.entryRegistry?.personnel || [],
+        entryLog: permitData.entryRegistry?.entryLog || [],
+        entryLogs: permitData.entryRegistry?.entryLog || [],
+        activeEntrants: permitData.entryRegistry?.activeEntrants || [],
+        maxOccupancy: permitData.entryRegistry?.maxOccupancy || 1,
+        communicationProtocol: permitData.entryRegistry?.communicationProtocol || {
+          type: 'radio',
+          frequency: '',
+          checkInterval: 15
+        },
+        lastUpdated: permitData.entryRegistry?.lastUpdated || new Date().toISOString(),
+        equipment: [],
+        compliance: permitData.compliance || {},
+        supervisor: permitData.entryRegistry?.supervisor || {
+          name: permitData.supervisor_name || '',
+          certification: '',
+          contact: ''
+        },
+        attendantPresent: false,
+        entryAuthorized: false,
+        emergencyProcedures: false,
+        communicationEstablished: false,
+        communicationSystemActive: false,
+        rescueTeamNotified: false,
+        atmosphericTestingCurrent: false,
+        equipmentInspected: false,
+        safetyBriefingCompleted: false,
+        permitReviewed: false,
+        hazardsIdentified: false,
+        controlMeasuresImplemented: false,
+        emergencyEquipmentAvailable: false,
+        emergencyContactsNotified: false,
+        currentOccupancy: 0
+      },
+      
+      rescuePlan: {
+        emergencyContacts: permitData.rescuePlan?.emergencyContacts || [],
+        rescueTeam: permitData.rescuePlan?.rescueTeam || [],
+        evacuationProcedure: permitData.rescuePlan?.evacuationProcedure || '',
+        rescueEquipment: permitData.rescuePlan?.rescueEquipment || [],
+        hospitalInfo: permitData.rescuePlan?.hospitalInfo || {
+          name: '',
+          address: '',
+          phone: '',
+          distance: 0
+        },
+        communicationPlan: permitData.rescuePlan?.communicationPlan || '',
+        lastUpdated: permitData.rescuePlan?.lastUpdated || new Date().toISOString(),
+        responseTime: permitData.rescuePlan?.responseTime || 5
+      },
+      
+      compliance: permitData.compliance || {},
+      
+      validation: {
+        isComplete: permitData.validation?.isValid || false,
+        isValid: permitData.validation?.isValid || false,
+        percentage: permitData.validation?.percentage || 0,
+        completedSections: permitData.validation?.completedSections || [],
+        errors: permitData.validation?.errors || [],
+        warnings: permitData.validation?.warnings || [],
+        lastValidated: permitData.validation?.lastValidated || new Date().toISOString()
+      },
+      
+      auditTrail: permitData.auditTrail || [],
+      attachments: permitData.attachments || [],
+      
+      // Propriétés optionnelles préservées
+      id: permitData.id,
+      last_modified: permitData.last_modified || permitData.updated_at,
+      
+      // Propriétés pour compatibilité EntryRegistry
+      attendant_present: false,
+      communication_system_tested: false,
+      emergency_retrieval_ready: false
+    };
+
     return (
       <PermitManager
         language={language}
-        permitData={compatiblePermitData}
+        permitData={compatiblePermitDataForManager}
         selectedProvince={selectedProvince}
         regulations={actualRegulations}
         isMobile={actualIsMobile}
