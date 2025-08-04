@@ -652,7 +652,7 @@ function createAuditEntry(action: string, section: string, changes: any, oldValu
     oldValues
   };
 }
-// SafetyManager.tsx - PARTIE 2/2 - Store FONCTIONNEL avec Saisie Libre
+// SafetyManager.tsx - PARTIE 2/2 - Store MODE PRODUCTION (Focus Safe)
 
 // =================== FONCTION CREATEEMPTYPERMIT AVEC VALEURS GARANTIES ===================
 function createEmptyPermit(): ConfinedSpacePermit {
@@ -840,7 +840,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
   };
 }
 
-// =================== STORE ZUSTAND FONCTIONNEL AVEC SAISIE LIBRE ===================
+// =================== STORE ZUSTAND MODE PRODUCTION (FOCUS SAFE) ===================
 interface SafetyManagerState {
   // État principal
   currentPermit: ConfinedSpacePermit;
@@ -852,16 +852,17 @@ interface SafetyManagerState {
   lastSaved: string | null;
   autoSaveEnabled: boolean;
   
-  // ✅ SAISIE LIBRE: États pour débounce intelligent
+  // ✅ MODE PRODUCTION: États pour débounce NON-INVASIF
   isUpdating: boolean;
   lastUpdateTime: number;
   inputDebounceTimer: NodeJS.Timeout | null;
+  pendingUpdates: Record<string, any>; // ✅ Buffer pour éviter les re-renders
   
   // Alertes et notifications
   activeAlerts: Alert[];
   notifications: Notification[];
   
-  // Actions principales - ✅ SAISIE LIBRE: TOUTES FONCTIONNELLES
+  // Actions principales - ✅ MODE PRODUCTION: NON-INVASIVES
   updateSiteInformation: (data: Partial<ConfinedSpaceDetails>) => void;
   updateAtmosphericTesting: (data: Partial<AtmosphericTestingData>) => void;
   updateEntryRegistry: (data: Partial<EntryRegistryData>) => void;
@@ -879,6 +880,10 @@ interface SafetyManagerState {
   updateAtmosphericData: (data: any) => void;
   updateRegistryInfo: (data: any) => void;
   updateRescueData: (data: any) => void;
+  
+  // ✅ MODE PRODUCTION: Méthodes d'optimisation
+  flushPendingUpdates: () => void;
+  silentSave: () => Promise<void>;
   
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
@@ -916,72 +921,60 @@ export const useSafetyManager = create<SafetyManagerState>()(
       isSaving: false,
       isLoading: false,
       lastSaved: null,
-      autoSaveEnabled: true, // ✅ SAISIE LIBRE: Activé avec débounce intelligent
+      autoSaveEnabled: true, // ✅ MODE PRODUCTION: Activé mais NON-INVASIF
       
-      // ✅ SAISIE LIBRE: États pour débounce et anti-conflit
+      // ✅ MODE PRODUCTION: États optimisés pour UX
       isUpdating: false,
       lastUpdateTime: 0,
       inputDebounceTimer: null,
+      pendingUpdates: {}, // ✅ Buffer pour éviter les re-renders
 
       activeAlerts: [],
       notifications: [],
 
-      // =================== ACTIONS FONCTIONNELLES - SAISIE LIBRE ACTIVÉE ===================
+      // =================== ACTIONS MODE PRODUCTION - NON-INVASIVES ===================
       
       updateSiteInformation: (data) => {
         console.log('🔄 SafetyManager: updateSiteInformation appelé', data);
         
         const state = get();
         
-        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE de l'état
+        // ✅ MODE PRODUCTION: MISE À JOUR SILENCIEUSE SANS RE-RENDER AGRESSIF
         const updatedSiteInfo = {
           ...state.currentPermit.siteInformation,
           ...data
         };
         
-        const updatedPermit = {
-          ...state.currentPermit,
-          siteInformation: updatedSiteInfo,
-          last_modified: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
+        // ✅ OPTIMISATION: Mise à jour directe de l'objet sans déclencher de re-render
+        state.currentPermit.siteInformation = updatedSiteInfo;
+        state.currentPermit.last_modified = new Date().toISOString();
+        state.currentPermit.updated_at = new Date().toISOString();
         
-        // Mise à jour immédiate pour la saisie fluide
+        // ✅ BUFFER: Stocker les updates pour le debounce
+        const pendingUpdates = { ...state.pendingUpdates };
+        pendingUpdates.siteInformation = { ...pendingUpdates.siteInformation, ...data };
+        
+        // ✅ MISE À JOUR MINIMALE (sans re-render complet)
         set({ 
-          currentPermit: updatedPermit,
-          lastUpdateTime: Date.now()
+          lastUpdateTime: Date.now(),
+          pendingUpdates
         });
         
-        // ✅ DÉBOUNCE INTELLIGENT: Auto-save avec délai
+        // ✅ DÉBOUNCE INTELLIGENT 5 SECONDES (plus long pour éviter les conflits)
         if (state.autoSaveEnabled) {
           if (state.inputDebounceTimer) {
             clearTimeout(state.inputDebounceTimer);
           }
           
           const timer = setTimeout(() => {
-            console.log('💾 Auto-save déclenché après débounce');
-            get().saveToDatabase();
-          }, 2000); // Attendre 2 secondes après la dernière frappe
+            console.log('💾 Auto-save silencieux déclenché après débounce');
+            get().silentSave(); // ✅ SILENCIEUX = pas de re-render
+          }, 5000); // ✅ 5 secondes pour laisser le temps de taper
           
           set({ inputDebounceTimer: timer });
         }
         
-        // Créer un audit trail
-        const auditEntry = createAuditEntry(
-          'update_site_information', 
-          'siteInformation', 
-          data,
-          state.currentPermit.siteInformation
-        );
-        
-        set((prevState) => ({
-          currentPermit: {
-            ...prevState.currentPermit,
-            auditTrail: [...prevState.currentPermit.auditTrail, auditEntry]
-          }
-        }));
-        
-        console.log('✅ SafetyManager: siteInformation mis à jour avec succès');
+        console.log('✅ SafetyManager: siteInformation mis à jour silencieusement');
       },
 
       updateAtmosphericTesting: (data) => {
@@ -989,25 +982,27 @@ export const useSafetyManager = create<SafetyManagerState>()(
         
         const state = get();
         
-        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        // ✅ MODE PRODUCTION: MISE À JOUR SILENCIEUSE
         const updatedAtmosphericTesting = {
           ...state.currentPermit.atmosphericTesting,
           ...data,
           lastUpdated: new Date().toISOString()
         };
         
-        const updatedPermit = {
-          ...state.currentPermit,
-          atmosphericTesting: updatedAtmosphericTesting,
-          last_modified: new Date().toISOString()
-        };
+        // ✅ OPTIMISATION: Mise à jour directe
+        state.currentPermit.atmosphericTesting = updatedAtmosphericTesting;
+        state.currentPermit.last_modified = new Date().toISOString();
+        
+        // ✅ BUFFER: Stocker les updates
+        const pendingUpdates = { ...state.pendingUpdates };
+        pendingUpdates.atmosphericTesting = { ...pendingUpdates.atmosphericTesting, ...data };
         
         set({ 
-          currentPermit: updatedPermit,
-          lastUpdateTime: Date.now()
+          lastUpdateTime: Date.now(),
+          pendingUpdates
         });
         
-        // Vérifier les alertes de sécurité
+        // Vérifier les alertes de sécurité (critique - pas de débounce)
         if (data.readings && Array.isArray(data.readings)) {
           const newAlerts = checkAtmosphericAlerts(data.readings);
           if (newAlerts.length > 0) {
@@ -1017,20 +1012,20 @@ export const useSafetyManager = create<SafetyManagerState>()(
           }
         }
         
-        // Auto-save avec débounce
+        // ✅ Auto-save silencieux avec débounce
         if (state.autoSaveEnabled) {
           if (state.inputDebounceTimer) {
             clearTimeout(state.inputDebounceTimer);
           }
           
           const timer = setTimeout(() => {
-            get().saveToDatabase();
-          }, 2000);
+            get().silentSave();
+          }, 5000);
           
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: atmosphericTesting mis à jour avec succès');
+        console.log('✅ SafetyManager: atmosphericTesting mis à jour silencieusement');
       },
 
       updateEntryRegistry: (data) => {
@@ -1038,38 +1033,40 @@ export const useSafetyManager = create<SafetyManagerState>()(
         
         const state = get();
         
-        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        // ✅ MODE PRODUCTION: MISE À JOUR SILENCIEUSE
         const updatedEntryRegistry = {
           ...state.currentPermit.entryRegistry,
           ...data,
           lastUpdated: new Date().toISOString()
         };
         
-        const updatedPermit = {
-          ...state.currentPermit,
-          entryRegistry: updatedEntryRegistry,
-          last_modified: new Date().toISOString()
-        };
+        // ✅ OPTIMISATION: Mise à jour directe
+        state.currentPermit.entryRegistry = updatedEntryRegistry;
+        state.currentPermit.last_modified = new Date().toISOString();
+        
+        // ✅ BUFFER: Stocker les updates
+        const pendingUpdates = { ...state.pendingUpdates };
+        pendingUpdates.entryRegistry = { ...pendingUpdates.entryRegistry, ...data };
         
         set({ 
-          currentPermit: updatedPermit,
-          lastUpdateTime: Date.now()
+          lastUpdateTime: Date.now(),
+          pendingUpdates
         });
         
-        // Auto-save avec débounce
+        // ✅ Auto-save silencieux avec débounce
         if (state.autoSaveEnabled) {
           if (state.inputDebounceTimer) {
             clearTimeout(state.inputDebounceTimer);
           }
           
           const timer = setTimeout(() => {
-            get().saveToDatabase();
-          }, 2000);
+            get().silentSave();
+          }, 5000);
           
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: entryRegistry mis à jour avec succès');
+        console.log('✅ SafetyManager: entryRegistry mis à jour silencieusement');
       },
 
       updateRescuePlan: (data) => {
@@ -1077,41 +1074,43 @@ export const useSafetyManager = create<SafetyManagerState>()(
         
         const state = get();
         
-        // ✅ SAISIE LIBRE: Mise à jour IMMÉDIATE
+        // ✅ MODE PRODUCTION: MISE À JOUR SILENCIEUSE
         const updatedRescuePlan = {
           ...state.currentPermit.rescuePlan,
           ...data,
           lastUpdated: new Date().toISOString()
         };
         
-        const updatedPermit = {
-          ...state.currentPermit,
-          rescuePlan: updatedRescuePlan,
-          last_modified: new Date().toISOString()
-        };
+        // ✅ OPTIMISATION: Mise à jour directe
+        state.currentPermit.rescuePlan = updatedRescuePlan;
+        state.currentPermit.last_modified = new Date().toISOString();
+        
+        // ✅ BUFFER: Stocker les updates
+        const pendingUpdates = { ...state.pendingUpdates };
+        pendingUpdates.rescuePlan = { ...pendingUpdates.rescuePlan, ...data };
         
         set({ 
-          currentPermit: updatedPermit,
-          lastUpdateTime: Date.now()
+          lastUpdateTime: Date.now(),
+          pendingUpdates
         });
         
-        // Auto-save avec débounce
+        // ✅ Auto-save silencieux avec débounce
         if (state.autoSaveEnabled) {
           if (state.inputDebounceTimer) {
             clearTimeout(state.inputDebounceTimer);
           }
           
           const timer = setTimeout(() => {
-            get().saveToDatabase();
-          }, 2000);
+            get().silentSave();
+          }, 5000);
           
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: rescuePlan mis à jour avec succès');
+        console.log('✅ SafetyManager: rescuePlan mis à jour silencieusement');
       },
 
-      // =================== MÉTHODES POUR ENTRYREGISTRY - FONCTIONNELLES ===================
+      // =================== MÉTHODES POUR ENTRYREGISTRY - OPTIMISÉES ===================
       updateRegistryData: (data) => {
         console.log('🔄 SafetyManager: updateRegistryData appelé', data);
         get().updateEntryRegistry(data);
@@ -1192,7 +1191,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
         });
       },
 
-      // ✅ ALIAS DE COMPATIBILITÉ - FONCTIONNELS
+      // ✅ ALIAS DE COMPATIBILITÉ - OPTIMISÉS
       updateSiteInfo: (data: any) => {
         console.log('🔄 SafetyManager: updateSiteInfo (alias) appelé', data);
         get().updateSiteInformation(data);
@@ -1213,7 +1212,89 @@ export const useSafetyManager = create<SafetyManagerState>()(
         get().updateRescuePlan(data);
       },
 
-      // =================== GESTION BASE DE DONNÉES ACTIVE ===================
+      // =================== MÉTHODES D'OPTIMISATION MODE PRODUCTION ===================
+      
+      flushPendingUpdates: () => {
+        const state = get();
+        if (Object.keys(state.pendingUpdates).length > 0) {
+          console.log('🔄 Flush des updates en attente:', state.pendingUpdates);
+          
+          // Appliquer tous les updates en une seule fois
+          const updatedPermit = { ...state.currentPermit };
+          
+          Object.keys(state.pendingUpdates).forEach(section => {
+            if (updatedPermit[section as keyof ConfinedSpacePermit]) {
+              (updatedPermit as any)[section] = {
+                ...(updatedPermit as any)[section],
+                ...state.pendingUpdates[section]
+              };
+            }
+          });
+          
+          set({ 
+            currentPermit: updatedPermit,
+            pendingUpdates: {}
+          });
+        }
+      },
+
+      silentSave: async () => {
+        const state = get();
+        
+        // ✅ SAUVEGARDE SILENCIEUSE: Pas de changement d'état UI
+        if (state.isSaving) {
+          console.log('🚫 Sauvegarde silencieuse déjà en cours');
+          return;
+        }
+
+        console.log('💾 Sauvegarde silencieuse en cours...');
+        
+        try {
+          // ✅ FLUSH: Appliquer les updates en attente
+          get().flushPendingUpdates();
+          
+          const permit = get().currentPermit;
+          
+          // Générer un numéro de permis si nécessaire
+          if (!permit.permit_number) {
+            permit.permit_number = generatePermitNumber(permit.province);
+          }
+          
+          // Mise à jour des timestamps
+          permit.updated_at = new Date().toISOString();
+          permit.last_modified = new Date().toISOString();
+          
+          // ✅ SAUVEGARDE SANS MODIFIER L'ÉTAT UI
+          if (supabaseEnabled && supabase) {
+            try {
+              await supabase
+                .from('confined_space_permits')
+                .upsert({
+                  permit_number: permit.permit_number,
+                  data: permit,
+                  updated_at: new Date().toISOString()
+                });
+              console.log('✅ Permit sauvegardé silencieusement dans Supabase');
+            } catch (supabaseError) {
+              console.error('❌ Erreur Supabase, fallback localStorage:', supabaseError);
+              localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+            }
+          } else {
+            // Fallback localStorage
+            localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
+            localStorage.setItem('currentPermit', JSON.stringify(permit));
+            console.log('✅ Permit sauvegardé silencieusement dans localStorage');
+          }
+          
+          // ✅ MISE À JOUR MINIMALE: Juste le timestamp, pas de re-render
+          set({ lastSaved: new Date().toISOString() });
+          
+        } catch (error) {
+          console.error('❌ Erreur sauvegarde silencieuse:', error);
+        }
+      },
+
+      // =================== GESTION BASE DE DONNÉES STANDARD ===================
       saveToDatabase: async () => {
         const state = get();
         
@@ -1229,7 +1310,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           const permit = get().currentPermit;
           const validation = get().validatePermitCompleteness();
           
-          console.log('💾 Sauvegarde en cours...', permit.permit_number || 'nouveau');
+          console.log('💾 Sauvegarde manuelle en cours...', permit.permit_number || 'nouveau');
           
           // Mise à jour de la validation
           permit.validation = {
