@@ -382,6 +382,7 @@ export interface EntryRegistryData {
   entryAuthorized?: boolean;
   emergencyProcedures?: boolean;
   communicationEstablished?: boolean;
+  communicationSystemActive?: boolean; // ✅ AJOUTÉ pour fix build
   rescueTeamNotified?: boolean;
   atmosphericTestingCurrent?: boolean;
   equipmentInspected?: boolean;
@@ -390,6 +391,7 @@ export interface EntryRegistryData {
   hazardsIdentified?: boolean;
   controlMeasuresImplemented?: boolean;
   emergencyEquipmentAvailable?: boolean;
+  emergencyContactsNotified?: boolean; // ✅ AJOUTÉ pour fix build
   
   // Autres propriétés potentielles
   entryDateTime?: string;
@@ -397,6 +399,7 @@ export interface EntryRegistryData {
   workDescription?: string;
   notes?: string;
   emergencyContacts?: EmergencyContact[];
+  currentOccupancy?: number; // ✅ AJOUTÉ pour fix build
 }
 
 export interface EntryLogEntry {
@@ -680,6 +683,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
       entryAuthorized: false,
       emergencyProcedures: false,
       communicationEstablished: false,
+      communicationSystemActive: false, // ✅ AJOUTÉ
       rescueTeamNotified: false,
       atmosphericTestingCurrent: false,
       equipmentInspected: false,
@@ -687,7 +691,9 @@ function createEmptyPermit(): ConfinedSpacePermit {
       permitReviewed: false,
       hazardsIdentified: false,
       controlMeasuresImplemented: false,
-      emergencyEquipmentAvailable: false
+      emergencyEquipmentAvailable: false,
+      emergencyContactsNotified: false, // ✅ AJOUTÉ
+      currentOccupancy: 0 // ✅ AJOUTÉ
     },
     
     rescuePlan: {
