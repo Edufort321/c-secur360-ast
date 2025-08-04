@@ -157,6 +157,12 @@ export interface SafetyManagerInstance {
   updateCompliance: (key: string, value: boolean) => void;
   recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
+  // ✅ FIX: ALIAS DE COMPATIBILITÉ POUR LES COMPOSANTS EXISTANTS
+  updateSiteInfo: (data: any) => void;
+  updateAtmosphericData: (data: any) => void;
+  updateRegistryInfo: (data: any) => void;
+  updateRescueData: (data: any) => void;
+  
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
   loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
@@ -868,6 +874,12 @@ interface SafetyManagerState {
   updateCompliance: (key: string, value: boolean) => void;
   recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void;
   
+  // ✅ FIX: ALIAS DE COMPATIBILITÉ
+  updateSiteInfo: (data: any) => void;
+  updateAtmosphericData: (data: any) => void;
+  updateRegistryInfo: (data: any) => void;
+  updateRescueData: (data: any) => void;
+  
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
   loadFromDatabase: (permitNumber: string) => Promise<ConfinedSpacePermit | null>;
@@ -1222,6 +1234,33 @@ export const useSafetyManager = create<SafetyManagerState>()(
       updateRegistryData: (data) => {
         console.log('🔄 SafetyManager: updateRegistryData disponible', data);
         get().updateEntryRegistry(data);
+      },
+
+      // ✅ FIX: ALIAS DE COMPATIBILITÉ POUR LES COMPOSANTS EXISTANTS
+      updateSiteInfo: (data: any) => {
+        console.log('🔄 SafetyManager: updateSiteInfo (alias) disponible', data);
+        // Mapper les champs individuels vers updateSiteInformation
+        if (typeof data === 'object' && data.field && data.value !== undefined) {
+          const mappedData = { [data.field]: data.value };
+          get().updateSiteInformation(mappedData);
+        } else {
+          get().updateSiteInformation(data);
+        }
+      },
+
+      updateAtmosphericData: (data: any) => {
+        console.log('🔄 SafetyManager: updateAtmosphericData (alias) disponible', data);
+        get().updateAtmosphericTesting(data);
+      },
+
+      updateRegistryInfo: (data: any) => {
+        console.log('🔄 SafetyManager: updateRegistryInfo (alias) disponible', data);
+        get().updateEntryRegistry(data);
+      },
+
+      updateRescueData: (data: any) => {
+        console.log('🔄 SafetyManager: updateRescueData (alias) disponible', data);
+        get().updateRescuePlan(data);
       },
 
       updatePersonnel: (person) => {
