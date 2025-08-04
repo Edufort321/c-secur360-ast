@@ -38,19 +38,19 @@ interface LegalRescueData {
 }
 
 // ✅ TYPE GUARD FUNCTIONS POUR CORRIGER L'ERREUR BUILD
-function isRescueEquipmentRecord(equipment: Record<string, boolean> | {}): equipment is Record<string, boolean> {
-  return equipment && typeof equipment === 'object' && Object.keys(equipment).length >= 0;
+function isRescueEquipmentRecord(equipment: Record<string, boolean> | {} | undefined): equipment is Record<string, boolean> {
+  return equipment != null && typeof equipment === 'object' && Object.keys(equipment).length >= 0;
 }
 
-function getRescueEquipmentValue(equipment: Record<string, boolean> | {}, key: string): boolean {
-  if (equipment && typeof equipment === 'object' && key in equipment) {
+function getRescueEquipmentValue(equipment: Record<string, boolean> | {} | undefined, key: string): boolean {
+  if (equipment != null && typeof equipment === 'object' && key in equipment) {
     return (equipment as Record<string, boolean>)[key] || false;
   }
   return false;
 }
 
-function getRescueTrainingValue(training: Record<string, boolean> | {}, key: string): boolean {
-  if (training && typeof training === 'object' && key in training) {
+function getRescueTrainingValue(training: Record<string, boolean> | {} | undefined, key: string): boolean {
+  if (training != null && typeof training === 'object' && key in training) {
     return (training as Record<string, boolean>)[key] || false;
   }
   return false;
@@ -408,8 +408,8 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                   checked={getRescueEquipmentValue(rescueData.rescue_equipment || {}, equipment.id)}
                   onChange={(e) => updatePermitData({ 
                     rescue_equipment: { 
-                      // ✅ LIGNES 389-391 CORRIGÉES - Type guard pour rescue_equipment
-                      ...(isRescueEquipmentRecord(rescueData.rescue_equipment) ? rescueData.rescue_equipment : {}),
+                      // ✅ LIGNE 412 CORRIGÉE - Gestion du cas undefined
+                      ...(isRescueEquipmentRecord(rescueData.rescue_equipment || {}) ? (rescueData.rescue_equipment || {}) : {}),
                       [equipment.id]: e.target.checked 
                     }
                   })}
@@ -1099,7 +1099,8 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                   checked={getRescueTrainingValue(rescueData.rescue_training || {}, training.id)}
                   onChange={(e) => updatePermitData({ 
                     rescue_training: { 
-                      ...(isRescueEquipmentRecord(rescueData.rescue_training) ? rescueData.rescue_training : {}),
+                      // ✅ CORRECTION PRÉVENTIVE - Gestion du cas undefined pour rescue_training
+                      ...(isRescueEquipmentRecord(rescueData.rescue_training || {}) ? (rescueData.rescue_training || {}) : {}),
                       [training.id]: e.target.checked 
                     }
                   })}
