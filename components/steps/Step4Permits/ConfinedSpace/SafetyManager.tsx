@@ -198,6 +198,11 @@ export interface ConfinedSpacePermit {
   test_results_signed?: boolean;
   qualified_tester_name?: string;
   
+  // Propriétés pour EntryRegistry (COMPATIBILITÉ BUILD)
+  attendant_present?: boolean;
+  communication_system_tested?: boolean;
+  emergency_retrieval_ready?: boolean; // ✅ AJOUTÉ pour fix build
+  
   // Conformité générale
   compliance?: Record<string, boolean>;
   
@@ -570,6 +575,11 @@ function createEmptyPermit(): ConfinedSpacePermit {
     updated_at: now,
     last_modified: now,
     issue_date: now,
+    
+    // Propriétés pour EntryRegistry (COMPATIBILITÉ BUILD)
+    attendant_present: false,
+    communication_system_tested: false,
+    emergency_retrieval_ready: false, // ✅ AJOUTÉ
     
     siteInformation: {
       // Informations principales
