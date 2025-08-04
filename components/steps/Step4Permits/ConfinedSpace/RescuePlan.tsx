@@ -1,4 +1,4 @@
-// RescuePlan.tsx - Version Complète Corrigée Compatible SafetyManager
+// RescuePlan.tsx - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
 import React from 'react';
@@ -35,6 +35,25 @@ interface LegalRescueData {
   last_effectiveness_test: string;
   regulatory_compliance_verified: boolean;
   response_time_verified: boolean;
+}
+
+// ✅ TYPE GUARD FUNCTIONS POUR CORRIGER L'ERREUR BUILD
+function isRescueEquipmentRecord(equipment: Record<string, boolean> | {}): equipment is Record<string, boolean> {
+  return equipment && typeof equipment === 'object' && Object.keys(equipment).length >= 0;
+}
+
+function getRescueEquipmentValue(equipment: Record<string, boolean> | {}, key: string): boolean {
+  if (equipment && typeof equipment === 'object' && key in equipment) {
+    return (equipment as Record<string, boolean>)[key] || false;
+  }
+  return false;
+}
+
+function getRescueTrainingValue(training: Record<string, boolean> | {}, key: string): boolean {
+  if (training && typeof training === 'object' && key in training) {
+    return (training as Record<string, boolean>)[key] || false;
+  }
+  return false;
 }
 
 // =================== COMPOSANT RESCUE PLAN ===================
@@ -385,10 +404,12 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                 <input
                   type="checkbox"
                   id={equipment.id}
-                  checked={rescueData.rescue_equipment?.[equipment.id] || false}
+                  // ✅ LIGNE 388 CORRIGÉE - Utilisation de getRescueEquipmentValue
+                  checked={getRescueEquipmentValue(rescueData.rescue_equipment || {}, equipment.id)}
                   onChange={(e) => updatePermitData({ 
                     rescue_equipment: { 
-                      ...rescueData.rescue_equipment, 
+                      // ✅ LIGNES 389-391 CORRIGÉES - Type guard pour rescue_equipment
+                      ...(isRescueEquipmentRecord(rescueData.rescue_equipment) ? rescueData.rescue_equipment : {}),
                       [equipment.id]: e.target.checked 
                     }
                   })}
@@ -1074,10 +1095,11 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                 <input
                   type="checkbox"
                   id={training.id}
-                  checked={rescueData.rescue_training?.[training.id] || false}
+                  // ✅ CORRECTION PRÉVENTIVE - Utilisation de getRescueTrainingValue
+                  checked={getRescueTrainingValue(rescueData.rescue_training || {}, training.id)}
                   onChange={(e) => updatePermitData({ 
                     rescue_training: { 
-                      ...rescueData.rescue_training, 
+                      ...(isRescueEquipmentRecord(rescueData.rescue_training) ? rescueData.rescue_training : {}),
                       [training.id]: e.target.checked 
                     }
                   })}
