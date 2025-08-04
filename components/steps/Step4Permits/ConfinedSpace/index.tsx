@@ -664,7 +664,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== FIX CRITIQUE SAFETYMANAGER DÉSACTIVÉ ===================
   // ✅ CORRECTION : Désactiver complètement le SafetyManager pour débloquer la saisie
-  const safetyManager = null; // ⚠️ TEMPORAIREMENT DÉSACTIVÉ
+  const safetyManager = undefined; // ⚠️ TEMPORAIREMENT DÉSACTIVÉ (undefined au lieu de null)
   const isSafetyManagerEnabled = false; // ⚠️ TEMPORAIREMENT DÉSACTIVÉ
   
   console.log('🔇 SafetyManager temporairement désactivé pour résoudre les conflits de saisie');
