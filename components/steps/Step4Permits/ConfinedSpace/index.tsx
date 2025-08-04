@@ -662,12 +662,12 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   theme = 'dark'
 }) => {
 
-  // =================== FIX CRITIQUE SAFETYMANAGER ===================
-  // ✅ CORRECTION : Hook appelé DIRECTEMENT dans le composant (pas dans useEffect)
-  const safetyManager = useSafetyManager();
-  const isSafetyManagerEnabled = true; // Toujours activé puisque le hook fonctionne
+  // =================== FIX CRITIQUE SAFETYMANAGER DÉSACTIVÉ ===================
+  // ✅ CORRECTION : Désactiver complètement le SafetyManager pour débloquer la saisie
+  const safetyManager = null; // ⚠️ TEMPORAIREMENT DÉSACTIVÉ
+  const isSafetyManagerEnabled = false; // ⚠️ TEMPORAIREMENT DÉSACTIVÉ
   
-  console.log('✅ SafetyManager connecté:', safetyManager);
+  console.log('🔇 SafetyManager temporairement désactivé pour résoudre les conflits de saisie');
 
   // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
@@ -878,9 +878,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     };
   }, [permitData, atmosphericReadings]);
 
-  // =================== SYNCHRONISATION SAFETYMANAGER OPTIMISÉE ===================
+  // =================== SYNCHRONISATION SAFETYMANAGER DÉSACTIVÉE ===================
   useEffect(() => {
-    if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
+    // ⚠️ COMPLÈTEMENT DÉSACTIVÉ pour permettre la saisie libre
+    console.log('🔇 Synchronisation SafetyManager complètement désactivée');
+    return; // Sortie immédiate
+    
+    // Le code ci-dessous est temporairement inactif
+    if (false && isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
       try {
         const validation = safetyManager.validatePermitCompleteness();
         setValidationData(validation);
@@ -888,18 +893,11 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         if (onValidationChange) {
           onValidationChange(validation);
         }
-        
-        // ✅ FIX SAISIE: Synchronisation moins agressive des readings
-        const currentPermit = safetyManager.currentPermit;
-        if (currentPermit?.atmosphericTesting?.readings && atmosphericReadings.length === 0) {
-          // Seulement si pas encore de readings locaux
-          setAtmosphericReadings(currentPermit.atmosphericTesting.readings);
-        }
       } catch (error) {
         console.log('Erreur SafetyManager:', error);
       }
     }
-  }, [permitData.permit_number, isSafetyManagerEnabled, safetyManager, onValidationChange]); // ✅ FIX: Supprimé permitData et currentSection
+  }, []); // ✅ FIX: Aucune dépendance pour éviter les re-renders
 
   // ✅ FIX CRITIQUE: AUTO-SAVE SÉCURISÉ POUR ÉVITER LES REDIRECTIONS
   useEffect(() => {
@@ -974,7 +972,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     validateCurrentSection();
   }, [permitData, currentSection, atmosphericReadings]);
 
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== FONCTIONS UTILITAIRES SANS SAFETYMANAGER ===================
   const updatePermitData = useCallback((updates: Partial<PermitData>) => {
     console.log('📝 updatePermitData appelé avec:', updates);
     
@@ -986,100 +984,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     };
     setPermitData(newData);
     
-    // ✅ FIX SAISIE: Synchronisation SafetyManager avec debounce
-    if (isSafetyManagerEnabled && safetyManager) {
-      // ✅ Utiliser un timeout pour éviter les mises à jour trop fréquentes
-      setTimeout(() => {
-        try {
-          switch (currentSection) {
-            case 'site':
-              const siteData = {
-                projectNumber: newData.projectNumber || '',
-                workLocation: newData.workLocation || '',
-                spaceDescription: newData.spaceDescription || '',
-                workDescription: newData.workDescription || '',
-                entry_supervisor: newData.entry_supervisor || '',
-                contractor: newData.supervisor_name || '',
-                permit_number: newData.permit_number || '',
-                issue_date: newData.issue_date || '',
-                selected_province: selectedProvince
-              };
-              safetyManager.updateSiteInformation(siteData);
-              break;
-              
-            case 'atmospheric':
-              const atmosphericData = {
-                readings: atmosphericReadings || [],
-                equipment: {
-                  deviceModel: newData.gas_detector_calibrated ? 'Détecteur 4-gaz' : '',
-                  calibrationDate: newData.calibration_date || '',
-                  serialNumber: `SN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-                  nextCalibration: newData.calibration_date ? 
-                    new Date(new Date(newData.calibration_date).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) : ''
-                },
-                continuousMonitoring: actualRegulations[selectedProvince]?.continuous_monitoring_required || true,
-                lastUpdated: new Date().toISOString(),
-                testingFrequency: actualRegulations[selectedProvince]?.atmosphere_testing_frequency || 30
-              };
-              safetyManager.updateAtmosphericTesting(atmosphericData);
-              break;
-              
-            case 'registry':
-              const registryData = {
-                personnel: [],
-                entryLog: [],
-                activeEntrants: [],
-                maxOccupancy: actualRegulations[selectedProvince]?.max_entrants || 2,
-                communicationProtocol: {
-                  type: 'radio' as const,
-                  frequency: '462.725 MHz',
-                  checkInterval: actualRegulations[selectedProvince]?.communication_check_interval || 15
-                },
-                lastUpdated: new Date().toISOString(),
-                supervisor: {
-                  name: newData.supervisor_name || '',
-                  certification: 'Superviseur d\'espace clos',
-                  contact: actualRegulations[selectedProvince]?.authority_phone || ''
-                }
-              };
-              safetyManager.updateEntryRegistry(registryData);
-              break;
-              
-            case 'rescue':
-              const rescueData = {
-                emergencyContacts: [
-                  {
-                    id: 'emergency-contact-1',
-                    name: actualRegulations[selectedProvince]?.authority || 'Services d\'urgence',
-                    phone: actualRegulations[selectedProvince]?.authority_phone || '911',
-                    role: 'Autorité provinciale',
-                    email: '',
-                    isPrimary: true
-                  }
-                ],
-                rescueTeam: [],
-                evacuationProcedure: newData.rescue_plan_type || 'external',
-                rescueEquipment: [],
-                hospitalInfo: {
-                  name: 'Hôpital le plus proche',
-                  address: 'À déterminer selon le lieu de travail',
-                  phone: '911',
-                  distance: 0
-                },
-                communicationPlan: `Plan de communication selon ${actualRegulations[selectedProvince]?.name}`,
-                lastUpdated: new Date().toISOString(),
-                responseTime: actualRegulations[selectedProvince]?.rescue_response_time_max || 5
-              };
-              safetyManager.updateRescuePlan(rescueData);
-              break;
-          }
-        } catch (error) {
-          console.log('Erreur mise à jour SafetyManager:', error);
-        }
-      }, 100); // ✅ Délai de 100ms pour laisser la saisie se terminer
-    }
+    // ⚠️ SAFETYMANAGER COMPLÈTEMENT DÉSACTIVÉ pour débloquer la saisie
+    console.log('🔇 SafetyManager désactivé - mise à jour locale seulement');
     
-    // Callbacks externes
+    // ✅ Garder seulement les callbacks externes
     if (onDataChange) {
       onDataChange('permitData', newData);
     }
@@ -1089,7 +997,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (updateParentData) {
       updateParentData(newData);
     }
-  }, [permitData, isSafetyManagerEnabled, safetyManager, currentSection, selectedProvince, actualRegulations, atmosphericReadings, onDataChange, externalUpdatePermitData, updateParentData]);
+  }, [permitData, onDataChange, externalUpdatePermitData, updateParentData]); // ✅ Supprimé toutes les dépendances SafetyManager
 
   // ✅ FIX BUILD: Fonction wrapper pour compatibilité updatePermitData
   const handleSectionDataChange = useCallback((field: string, value: any) => {
