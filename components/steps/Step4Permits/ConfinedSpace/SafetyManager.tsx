@@ -855,7 +855,7 @@ interface SafetyManagerState {
   updatePersonnel: (person: any) => void;
   updateEquipment: (equipment: any) => void;
   updateCompliance: (key: string, value: boolean) => void;
-  recordEntryExit: (personId: string, action: 'entry' | 'exit') => void;
+  recordEntryExit: (personId: string, action: 'entry' | 'exit' | 'emergency_exit') => void; // ✅ TYPE EXPLICITE
   
   // Gestion de base de données
   saveToDatabase: () => Promise<string | null>;
@@ -1116,7 +1116,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           const newLogEntry: EntryLogEntry = {
             id: generateId(),
             personnelId: personId,
-            action: action,
+            action: action as 'entry' | 'exit' | 'emergency_exit', // ✅ TYPE ASSERTION pour éviter l'erreur TypeScript
             timestamp: new Date().toISOString(),
             authorizedBy: 'current_user'
           };
