@@ -662,122 +662,12 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   theme = 'dark'
 }) => {
 
-  // =================== FIX CRITIQUE SAFETYMANAGER MOCK COMPLET ===================
-  // ✅ CORRECTION : Créer un SafetyManager mock complet pour TypeScript
-  const mockSafetyManager: any = {
-    // États principaux
-    currentPermit: createDefaultPermitData('QC'), // ✅ FIX: Valeur par défaut au lieu de selectedProvince
-    permits: [],
-    isSaving: false,
-    isLoading: false,
-    lastSaved: null,
-    autoSaveEnabled: false,
-    isUpdating: false,
-    lastUpdateTime: 0,
-    activeAlerts: [],
-    notifications: [],
-    
-    // Fonctions principales - toutes mockées pour ne rien faire
-    updateSiteInfo: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateSiteInfo ignoré', data);
-    },
-    updateSiteInformation: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateSiteInformation ignoré', data);
-    },
-    updateAtmosphericTesting: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateAtmosphericTesting ignoré', data);
-    },
-    updateEntryRegistry: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateEntryRegistry ignoré', data);
-    },
-    updateRescuePlan: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateRescuePlan ignoré', data);
-    },
-    updateRegistryData: (data: any) => {
-      console.log('🔇 Mock SafetyManager: updateRegistryData ignoré', data);
-    },
-    updatePersonnel: (person: any) => {
-      console.log('🔇 Mock SafetyManager: updatePersonnel ignoré', person);
-    },
-    updateEquipment: (equipment: any) => {
-      console.log('🔇 Mock SafetyManager: updateEquipment ignoré', equipment);
-    },
-    updateCompliance: (key: string, value: boolean) => {
-      console.log('🔇 Mock SafetyManager: updateCompliance ignoré', key, value);
-    },
-    recordEntryExit: (personId: string, action: string) => {
-      console.log('🔇 Mock SafetyManager: recordEntryExit ignoré', personId, action);
-    },
-    
-    // Fonctions async mockées
-    saveToDatabase: async () => {
-      console.log('🔇 Mock SafetyManager: saveToDatabase ignoré');
-      return null;
-    },
-    loadFromDatabase: async (permitNumber: string) => {
-      console.log('🔇 Mock SafetyManager: loadFromDatabase ignoré', permitNumber);
-      return null;
-    },
-    loadPermitHistory: async () => {
-      console.log('🔇 Mock SafetyManager: loadPermitHistory ignoré');
-      return [];
-    },
-    generateQRCode: async () => {
-      console.log('🔇 Mock SafetyManager: generateQRCode ignoré');
-      return '';
-    },
-    generatePDF: async () => {
-      console.log('🔇 Mock SafetyManager: generatePDF ignoré');
-      return new Blob();
-    },
-    sharePermit: async (method: string) => {
-      console.log('🔇 Mock SafetyManager: sharePermit ignoré', method);
-    },
-    
-    // Validation mockée
-    validatePermitCompleteness: () => {
-      console.log('🔇 Mock SafetyManager: validatePermitCompleteness ignoré');
-      return {
-        isValid: false,
-        percentage: 0,
-        errors: [],
-        warnings: [],
-        completedSections: 0,
-        totalSections: 4
-      };
-    },
-    validateSection: (section: string) => {
-      console.log('🔇 Mock SafetyManager: validateSection ignoré', section);
-      return {
-        isValid: false,
-        percentage: 0,
-        errors: [],
-        warnings: [],
-        completedSections: 0,
-        totalSections: 1
-      };
-    },
-    
-    // Utilitaires mockés
-    createNewPermit: (province: any) => {
-      console.log('🔇 Mock SafetyManager: createNewPermit ignoré', province);
-    },
-    resetPermit: () => {
-      console.log('🔇 Mock SafetyManager: resetPermit ignoré');
-    },
-    exportData: () => {
-      console.log('🔇 Mock SafetyManager: exportData ignoré');
-      return '{}';
-    },
-    importData: (jsonData: string) => {
-      console.log('🔇 Mock SafetyManager: importData ignoré', jsonData);
-    }
-  };
+  // =================== PHASE 2 : SAFETYMANAGER RÉEL AVEC VALIDATION SEULEMENT ===================
+  // ✅ SafetyManager réel pour progression et validation, SANS synchronisation agressive
+  const safetyManager = useSafetyManager();
+  const isSafetyManagerEnabled = true;
   
-  const safetyManager = mockSafetyManager; // ✅ Mock complet compatible TypeScript
-  const isSafetyManagerEnabled = true; // ✅ Activé pour éviter les erreurs mais ne fait rien
-  
-  console.log('🔇 SafetyManager mock complet activé pour éviter les erreurs des composants enfants');
+  console.log('🔄 SafetyManager réel activé - Mode validation seulement (pas de sync agressive)');
 
   // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
@@ -988,28 +878,31 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     };
   }, [permitData, atmosphericReadings]);
 
-  // =================== SYNCHRONISATION SAFETYMANAGER DÉSACTIVÉE ===================
+  // =================== SYNCHRONISATION SAFETYMANAGER VALIDATION SEULEMENT ===================
   useEffect(() => {
-    // ⚠️ COMPLÈTEMENT DÉSACTIVÉ pour permettre la saisie libre
-    console.log('🔇 Synchronisation SafetyManager complètement désactivée');
-    return; // Sortie immédiate
-    
-    // ✅ FIX BUILD: Code inactif mais syntaxiquement correct
-    /*
+    // ✅ PHASE 2: SEULEMENT validation pour progression et rapport final
     if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
       try {
+        console.log('🔄 SafetyManager: Validation en cours...');
         const validation = safetyManager.validatePermitCompleteness();
         setValidationData(validation);
         
         if (onValidationChange) {
           onValidationChange(validation);
         }
+        
+        console.log('✅ SafetyManager: Validation terminée', validation);
+        
+        // ⚠️ PAS de synchronisation des readings pour éviter les conflits
+        // const currentPermit = safetyManager.currentPermit;
+        // if (currentPermit?.atmosphericTesting?.readings && atmosphericReadings.length === 0) {
+        //   setAtmosphericReadings(currentPermit.atmosphericTesting.readings);
+        // }
       } catch (error) {
-        console.log('Erreur SafetyManager:', error);
+        console.log('❌ Erreur SafetyManager validation:', error);
       }
     }
-    */
-  }, []); // ✅ FIX: Aucune dépendance pour éviter les re-renders
+  }, [permitData.permit_number, isSafetyManagerEnabled, safetyManager, onValidationChange]); // ✅ Dépendances minimales
 
   // ✅ FIX CRITIQUE: AUTO-SAVE SÉCURISÉ POUR ÉVITER LES REDIRECTIONS
   useEffect(() => {
@@ -1084,7 +977,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     validateCurrentSection();
   }, [permitData, currentSection, atmosphericReadings]);
 
-  // =================== FONCTIONS UTILITAIRES SANS SAFETYMANAGER ===================
+  // =================== FONCTIONS UTILITAIRES AVEC VALIDATION SEULEMENT ===================
   const updatePermitData = useCallback((updates: Partial<PermitData>) => {
     console.log('📝 updatePermitData appelé avec:', updates);
     
@@ -1096,10 +989,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     };
     setPermitData(newData);
     
-    // ⚠️ SAFETYMANAGER COMPLÈTEMENT DÉSACTIVÉ pour débloquer la saisie
-    console.log('🔇 SafetyManager désactivé - mise à jour locale seulement');
+    // ✅ PHASE 2: SafetyManager RÉEL mais SANS synchronisation agressive
+    console.log('🔄 SafetyManager réel actif - mise à jour locale et validation');
     
-    // ✅ Garder seulement les callbacks externes
+    // ✅ Garder tous les callbacks externes pour que les composants fonctionnent
     if (onDataChange) {
       onDataChange('permitData', newData);
     }
@@ -1109,7 +1002,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     if (updateParentData) {
       updateParentData(newData);
     }
-  }, [permitData, onDataChange, externalUpdatePermitData, updateParentData]); // ✅ Supprimé toutes les dépendances SafetyManager
+  }, [permitData, onDataChange, externalUpdatePermitData, updateParentData]);
 
   // ✅ FIX BUILD: Fonction wrapper pour compatibilité updatePermitData
   const handleSectionDataChange = useCallback((field: string, value: any) => {
