@@ -884,8 +884,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     console.log('🔇 Synchronisation SafetyManager complètement désactivée');
     return; // Sortie immédiate
     
-    // Le code ci-dessous est temporairement inactif
-    if (false && isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
+    // ✅ FIX BUILD: Code inactif mais syntaxiquement correct
+    /*
+    if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
       try {
         const validation = safetyManager.validatePermitCompleteness();
         setValidationData(validation);
@@ -897,6 +898,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         console.log('Erreur SafetyManager:', error);
       }
     }
+    */
   }, []); // ✅ FIX: Aucune dépendance pour éviter les re-renders
 
   // ✅ FIX CRITIQUE: AUTO-SAVE SÉCURISÉ POUR ÉVITER LES REDIRECTIONS
