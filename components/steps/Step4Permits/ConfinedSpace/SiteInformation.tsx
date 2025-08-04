@@ -1630,8 +1630,8 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   key={key}
                   style={{
                     padding: '12px',
-                    background: (siteInfo.atmosphericHazards || []).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
-                    border: `2px solid ${(siteInfo.atmosphericHazards || []).includes(key) ? '#dc2626' : '#374151'}`,
+                    background: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
+                    border: `2px solid ${((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
                     borderRadius: '8px',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
@@ -1644,19 +1644,19 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   <div style={{
                     width: '20px',
                     height: '20px',
-                    border: `2px solid ${(siteInfo.atmosphericHazards || []).includes(key) ? '#dc2626' : '#374151'}`,
+                    border: `2px solid ${((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
                     borderRadius: '4px',
-                    background: (siteInfo.atmosphericHazards || []).includes(key) ? '#dc2626' : 'transparent',
+                    background: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: '2px'
                   }}>
-                    {(siteInfo.atmosphericHazards || []).includes(key) && <Check size={12} color="white" />}
+                    {((siteInfo.atmosphericHazards || []) as string[]).includes(key) && <Check size={12} color="white" />}
                   </div>
                   <span style={{ 
-                    color: (siteInfo.atmosphericHazards || []).includes(key) ? '#fecaca' : '#d1d5db', 
+                    color: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#fecaca' : '#d1d5db', 
                     fontSize: isMobile ? '13px' : '14px', 
                     fontWeight: '500',
                     lineHeight: 1.4
@@ -1679,8 +1679,8 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   key={key}
                   style={{
                     padding: '12px',
-                    background: (siteInfo.physicalHazards || []).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
-                    border: `2px solid ${(siteInfo.physicalHazards || []).includes(key) ? '#dc2626' : '#374151'}`,
+                    background: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
+                    border: `2px solid ${((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
                     borderRadius: '8px',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
@@ -1693,19 +1693,19 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   <div style={{
                     width: '20px',
                     height: '20px',
-                    border: `2px solid ${(siteInfo.physicalHazards || []).includes(key) ? '#dc2626' : '#374151'}`,
+                    border: `2px solid ${((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
                     borderRadius: '4px',
-                    background: (siteInfo.physicalHazards || []).includes(key) ? '#dc2626' : 'transparent',
+                    background: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: '2px'
                   }}>
-                    {(siteInfo.physicalHazards || []).includes(key) && <Check size={12} color="white" />}
+                    {((siteInfo.physicalHazards || []) as string[]).includes(key) && <Check size={12} color="white" />}
                   </div>
                   <span style={{ 
-                    color: (siteInfo.physicalHazards || []).includes(key) ? '#fecaca' : '#d1d5db', 
+                    color: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#fecaca' : '#d1d5db', 
                     fontSize: isMobile ? '13px' : '14px', 
                     fontWeight: '500',
                     lineHeight: 1.4
