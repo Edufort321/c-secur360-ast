@@ -997,22 +997,33 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
   // ✅ FIX ÉQUILIBRÉ : Handlers qui updatent SANS re-render excessif
   const handleStep1DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data }); // ← DEBUG LOG
+    
     setAstData(prev => {
+      console.log('🔥 ASTForm prev astData:', prev); // ← DEBUG LOG
+      
       if (section === 'astNumber') {
-        return { ...prev, astNumber: data };
+        const newState = { ...prev, astNumber: data };
+        console.log('🔥 ASTForm nouveau state (astNumber):', newState); // ← DEBUG LOG
+        return newState;
       }
       
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
-      return {
+      const newState = {
         ...prev,
         [section]: newSection
       };
+      
+      console.log('🔥 ASTForm nouveau state (section):', { section, newSection, newState }); // ← DEBUG LOG
+      return newState;
     });
   }, []); // ✅ Pas de deps
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep2DataChange appelé:', { section, data });
+    
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
@@ -1025,6 +1036,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep3DataChange appelé:', { section, data });
+    
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
@@ -1037,6 +1050,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep4DataChange appelé:', { section, data });
+    
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
@@ -1049,6 +1064,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   const handleStep5DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep5DataChange appelé:', { section, data });
+    
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
@@ -1061,6 +1078,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm handleStep6DataChange appelé:', { section, data });
+    
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
