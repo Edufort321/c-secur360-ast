@@ -995,61 +995,99 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX CRITIQUE : Handlers avec type assertion pour TypeScript
+  // ✅ FIX CRITIQUE : Handlers avec debounce et vérification de changement
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
-      // ✅ FIX : Cas spécial pour astNumber
+      // ✅ FIX : Vérifier si les données ont vraiment changé
       if (section === 'astNumber') {
+        if (prev.astNumber === data) return prev; // Pas de changement
         return { ...prev, astNumber: data };
       }
       
-      // ✅ FIX : Type assertion pour indexation dynamique
+      // ✅ FIX : Vérification profonde pour éviter re-renders inutiles
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      
+      if (!hasChanged) return prev; // Pas de changement, ne pas re-render
+      
       return {
         ...prev,
-        [section]: { ...(prev as any)[section], ...data }
+        [section]: { ...currentSection, ...data }
       };
     });
-    setHasUnsavedChanges(true);
-  }, []); // ✅ Dépendances vides = pas de stale closures !
+    
+    // ✅ FIX : Debounce setHasUnsavedChanges
+    setTimeout(() => setHasUnsavedChanges(true), 0);
+  }, []); // ✅ Dépendances vides stables
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: { ...(prev as any)[section], ...data }
-    }));
-    setHasUnsavedChanges(true);
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      if (!hasChanged) return prev;
+      
+      return {
+        ...prev,
+        [section]: { ...currentSection, ...data }
+      };
+    });
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []); // ✅ Dépendances vides
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: { ...(prev as any)[section], ...data }
-    }));
-    setHasUnsavedChanges(true);
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      if (!hasChanged) return prev;
+      
+      return {
+        ...prev,
+        [section]: { ...currentSection, ...data }
+      };
+    });
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []); // ✅ Dépendances vides
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: { ...(prev as any)[section], ...data }
-    }));
-    setHasUnsavedChanges(true);
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      if (!hasChanged) return prev;
+      
+      return {
+        ...prev,
+        [section]: { ...currentSection, ...data }
+      };
+    });
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []); // ✅ Dépendances vides
 
   const handleStep5DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: { ...(prev as any)[section], ...data }
-    }));
-    setHasUnsavedChanges(true);
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      if (!hasChanged) return prev;
+      
+      return {
+        ...prev,
+        [section]: { ...currentSection, ...data }
+      };
+    });
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []); // ✅ Dépendances vides
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      [section]: { ...(prev as any)[section], ...data }
-    }));
-    setHasUnsavedChanges(true);
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
+      if (!hasChanged) return prev;
+      
+      return {
+        ...prev,
+        [section]: { ...currentSection, ...data }
+      };
+    });
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []); // ✅ Dépendances vides
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
@@ -1103,25 +1141,25 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== EFFECTS CORRIGÉS ===================
-  // ✅ FIX CRITIQUE : useEffect sans astData dans les dépendances
+  // =================== EFFECTS CORRIGÉS AVEC DEBOUNCE ===================
+  // ✅ FIX CRITIQUE : useEffect sans astData ET avec debounce
   useEffect(() => {
     const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
     if (savedLanguage && savedLanguage !== currentLanguage) {
       setCurrentLanguage(savedLanguage);
     }
-  }, [currentLanguage]);
+  }, []); // ✅ Exécuter une seule fois
 
   useEffect(() => {
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
         console.log('🔄 Sauvegarde automatique...');
         setHasUnsavedChanges(false);
-      }, 2000);
+      }, 1000); // ✅ FIX : Debounce plus long
 
       return () => clearTimeout(saveTimer);
     }
-  }, [hasUnsavedChanges]); // ✅ RETIRER astData des dépendances !
+  }, [hasUnsavedChanges]); // ✅ SEULEMENT hasUnsavedChanges
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1131,10 +1169,10 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOffline);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, []); // ✅ Une seule fois
 
   // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
   const StepContent = useCallback(() => {
