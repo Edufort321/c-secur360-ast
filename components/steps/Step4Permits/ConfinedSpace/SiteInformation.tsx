@@ -608,7 +608,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       return;
     }
     
-    const updatedEntryPoints = currentEntryPoints.filter(entry => entry.id !== entryId);
+    const updatedEntryPoints = currentEntryPoints.filter((entry: any) => entry.id !== entryId);
     
     if (safetyManager) {
       try {
