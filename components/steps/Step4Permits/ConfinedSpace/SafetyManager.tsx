@@ -1,4 +1,4 @@
-// SafetyManager.tsx - VERSION FANTÔME COMPLÈTE (tous les exports nécessaires) - CORRIGÉE
+// SafetyManager.tsx - VERSION SILENCIEUSE COMPLÈTE (Stop Boucle Infinie)
 "use client";
 
 // =================== TYPES COMPLETS POUR COMPATIBILITÉ ===================
@@ -396,26 +396,23 @@ export interface ConfinedSpacePermit {
   [key: string]: any;
 }
 
-// =================== FONCTIONS UTILITAIRES FANTÔMES ===================
+// =================== FONCTIONS UTILITAIRES SILENCIEUSES ===================
+let idCounter = 0;
+
 export const generatePermitNumber = (province: ProvinceCode): string => {
-  console.log('👻 generatePermitNumber fantôme appelé', province);
   const timestamp = Date.now();
   return `CS-${province}-${timestamp}`;
 };
 
 export const generateId = (): string => {
-  console.log('👻 generateId fantôme appelé');
-  return Math.random().toString(36).substr(2, 9);
+  return `id_${++idCounter}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// ✅ AJOUT: generatePermitId demandé par les composants
 export const generatePermitId = (): string => {
-  console.log('👻 generatePermitId fantôme appelé');
   return generateId();
 };
 
 export const createConfinedSpacePermit = (province: ProvinceCode = 'QC'): ConfinedSpacePermit => {
-  console.log('👻 createConfinedSpacePermit fantôme appelé', province);
   const now = new Date().toISOString();
   return {
     permit_number: generatePermitNumber(province),
@@ -435,7 +432,6 @@ export const createConfinedSpacePermit = (province: ProvinceCode = 'QC'): Confin
 };
 
 export const validatePermitSection = (permit: ConfinedSpacePermit, section: any): ValidationResult => {
-  console.log('👻 validatePermitSection fantôme appelé', section);
   return {
     isValid: false,
     percentage: 0,
@@ -447,7 +443,6 @@ export const validatePermitSection = (permit: ConfinedSpacePermit, section: any)
 };
 
 export const createAuditTrailEntry = (action: string, section: string, changes: any, oldValues?: any): AuditEntry => {
-  console.log('👻 createAuditTrailEntry fantôme appelé', action, section);
   return {
     id: generateId(),
     timestamp: new Date().toISOString(),
@@ -460,16 +455,14 @@ export const createAuditTrailEntry = (action: string, section: string, changes: 
   };
 };
 
-// ✅ AJOUTS: Autres exports demandés
 export const generateNewPermitNumber = generatePermitNumber;
 export const usePermitValidation = (permit: ConfinedSpacePermit) => {
-  console.log('👻 usePermitValidation fantôme appelé');
   return { isValid: false, percentage: 0, errors: [], warnings: [], completedSections: 0, totalSections: 4 };
 };
 
-// =================== SAFETYMANAGER FANTÔME ===================
-const createGhostSafetyManager = () => ({
-  // État fantôme
+// =================== SAFETYMANAGER SILENCIEUX (Pas de console.log, pas de validation automatique) ===================
+const createSilentSafetyManager = () => ({
+  // État statique
   currentPermit: {} as ConfinedSpacePermit,
   permits: [] as ConfinedSpacePermit[],
   isSaving: false,
@@ -481,95 +474,91 @@ const createGhostSafetyManager = () => ({
   activeAlerts: [],
   notifications: [],
 
-  // 👻 FONCTIONS FANTÔMES - Ne font rien mais existent
+  // 🔇 FONCTIONS SILENCIEUSES - Ne font rien, pas de console.log
   updateSiteInformation: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateSiteInformation ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateAtmosphericTesting: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateAtmosphericTesting ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateEntryRegistry: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateEntryRegistry ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateRescuePlan: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateRescuePlan ignoré', data);
+    // Silencieux - aucune action
   },
   
-  // Méthodes pour EntryRegistry
   updateRegistryData: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateRegistryData ignoré', data);
+    // Silencieux - aucune action
   },
   
   updatePersonnel: (person: any) => {
-    console.log('👻 SafetyManager fantôme: updatePersonnel ignoré', person);
+    // Silencieux - aucune action
   },
   
   updateEquipment: (equipment: any) => {
-    console.log('👻 SafetyManager fantôme: updateEquipment ignoré', equipment);
+    // Silencieux - aucune action
   },
   
   updateCompliance: (key: string, value: boolean) => {
-    console.log('👻 SafetyManager fantôme: updateCompliance ignoré', key, value);
+    // Silencieux - aucune action
   },
   
   recordEntryExit: (personId: string, action: any) => {
-    console.log('👻 SafetyManager fantôme: recordEntryExit ignoré', personId, action);
+    // Silencieux - aucune action
   },
   
-  // Alias de compatibilité
   updateSiteInfo: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateSiteInfo ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateAtmosphericData: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateAtmosphericData ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateRegistryInfo: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateRegistryInfo ignoré', data);
+    // Silencieux - aucune action
   },
   
   updateRescueData: (data: any) => {
-    console.log('👻 SafetyManager fantôme: updateRescueData ignoré', data);
+    // Silencieux - aucune action
   },
   
-  // Base de données fantôme
   saveToDatabase: async () => {
-    console.log('👻 SafetyManager fantôme: saveToDatabase ignoré');
+    // Silencieux - pas de sauvegarde
     return null;
   },
   
   loadFromDatabase: async (permitNumber: string) => {
-    console.log('👻 SafetyManager fantôme: loadFromDatabase ignoré', permitNumber);
+    // Silencieux - pas de chargement
     return null;
   },
   
   loadPermitHistory: async () => {
-    console.log('👻 SafetyManager fantôme: loadPermitHistory ignoré');
+    // Silencieux - pas d'historique
     return [];
   },
   
-  // QR Code et partage fantôme
   generateQRCode: async () => {
-    console.log('👻 SafetyManager fantôme: generateQRCode ignoré');
+    // Silencieux - pas de QR code
     return '';
   },
   
   generatePDF: async () => {
-    console.log('👻 SafetyManager fantôme: generatePDF ignoré');
+    // Silencieux - pas de PDF
     return new Blob();
   },
   
   sharePermit: async (method: string) => {
-    console.log('👻 SafetyManager fantôme: sharePermit ignoré', method);
+    // Silencieux - pas de partage
   },
   
-  // Validation fantôme (retourne des valeurs par défaut)
+  // 🔇 VALIDATION SILENCIEUSE (retourne des valeurs par défaut SANS déclencher de re-renders)
   validatePermitCompleteness: (): ValidationResult => {
-    console.log('👻 SafetyManager fantôme: validatePermitCompleteness - retour valeurs par défaut');
+    // Validation statique silencieuse
     return {
       isValid: false,
       percentage: 0,
@@ -581,7 +570,7 @@ const createGhostSafetyManager = () => ({
   },
   
   validateSection: (section: any): ValidationResult => {
-    console.log('👻 SafetyManager fantôme: validateSection ignoré', section);
+    // Validation statique silencieuse
     return {
       isValid: false,
       percentage: 0,
@@ -592,50 +581,45 @@ const createGhostSafetyManager = () => ({
     };
   },
   
-  // Utilitaires fantômes
   createNewPermit: (province: ProvinceCode) => {
-    console.log('👻 SafetyManager fantôme: createNewPermit ignoré', province);
+    // Silencieux - pas de création
   },
   
   resetPermit: () => {
-    console.log('👻 SafetyManager fantôme: resetPermit ignoré');
+    // Silencieux - pas de reset
   },
   
   exportData: () => {
-    console.log('👻 SafetyManager fantôme: exportData ignoré');
+    // Silencieux - pas d'export
     return '{}';
   },
   
   importData: (jsonData: string) => {
-    console.log('👻 SafetyManager fantôme: importData ignoré', jsonData);
+    // Silencieux - pas d'import
   },
   
-  // Alertes fantômes
   addAlert: (alert: any) => {
-    console.log('👻 SafetyManager fantôme: addAlert ignoré', alert);
+    // Silencieux - pas d'alertes
   },
   
   removeAlert: (alertId: string) => {
-    console.log('👻 SafetyManager fantôme: removeAlert ignoré', alertId);
+    // Silencieux - pas de suppression d'alertes
   },
   
   addNotification: (notification: any) => {
-    console.log('👻 SafetyManager fantôme: addNotification ignoré', notification);
+    // Silencieux - pas de notifications
   },
   
   markNotificationAsRead: (notificationId: string) => {
-    console.log('👻 SafetyManager fantôme: markNotificationAsRead ignoré', notificationId);
+    // Silencieux - pas de marquage lu
   }
 });
 
-// =================== HOOK FANTÔME ===================
+// =================== HOOK SILENCIEUX ===================
 export const useSafetyManager = () => {
-  console.log('👻 useSafetyManager fantôme appelé - aucune interférence');
-  return createGhostSafetyManager();
+  // Pas de console.log, pas de re-renders
+  return createSilentSafetyManager();
 };
 
 // =================== EXPORT PAR DÉFAUT ===================
 export default useSafetyManager;
-
-// =================== CONSOLE INFO ===================
-console.log('👻 SafetyManager FANTÔME COMPLET CORRIGÉ chargé - Tous les exports disponibles pour SiteInformation!');
