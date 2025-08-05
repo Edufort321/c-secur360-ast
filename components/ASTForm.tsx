@@ -1177,6 +1177,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
 
   // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
   const StepContent = useCallback(() => {
+    console.log('🔥 StepContent render avec astData:', astData); // ← DEBUG LOG
+    
     switch (currentStep) {
       case 1:
         return (
@@ -1248,7 +1250,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return null;
     }
-  }, [currentStep, currentLanguage, tenant]); // ✅ FIX : Ajouter currentLanguage et tenant
+  }, [currentStep, currentLanguage, tenant, astData]); // ✅ FIX : Ajouter astData dans deps !
 // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
