@@ -310,7 +310,7 @@ export default function ASTForm({
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step1 - Handler:', { section, data });
     
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
@@ -323,7 +323,7 @@ export default function ASTForm({
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step2 - Handler:', { section, data });
     
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
@@ -336,7 +336,7 @@ export default function ASTForm({
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step3 - Handler:', { section, data });
     
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
@@ -349,7 +349,7 @@ export default function ASTForm({
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step4 - Handler:', { section, data });
     
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
@@ -362,7 +362,7 @@ export default function ASTForm({
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step5 - Handler:', { section, data });
     
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
@@ -376,7 +376,7 @@ export default function ASTForm({
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm Step6 - Handler DIRECT:', { section, data });
     
-    setAstData(prev => {
+    setAstData((prev: any) => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
@@ -406,7 +406,7 @@ export default function ASTForm({
   }, [astData.astNumber]);
 
   const changeStatus = useCallback((newStatus: any) => {
-    setAstData(prev => ({
+    setAstData((prev: any) => ({
       ...prev,
       status: newStatus,
       updatedAt: new Date().toISOString()
