@@ -1,4 +1,4 @@
-// SafetyManager.tsx - VERSION FANTÔME COMPLÈTE (tous les exports nécessaires)
+// SafetyManager.tsx - VERSION FANTÔME COMPLÈTE (tous les exports nécessaires) - CORRIGÉE
 "use client";
 
 // =================== TYPES COMPLETS POUR COMPATIBILITÉ ===================
@@ -8,6 +8,63 @@ export type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 export type UserRole = 'entrant' | 'attendant' | 'supervisor' | 'rescue' | 'admin';
 export type SafetyRole = UserRole;
 export type AlertType = 'info' | 'warning' | 'critical' | 'success';
+
+// =================== EXPORTS MANQUANTS POUR SITEINFORMATION ===================
+export interface Dimensions {
+  length: number;
+  width: number;
+  height: number;
+  diameter: number;
+  volume: number;
+  spaceShape: 'rectangular' | 'cylindrical' | 'spherical' | 'irregular';
+}
+
+export interface EntryPoint {
+  id: string;
+  type: string;
+  dimensions: string;
+  location: string;
+  condition: string;
+  accessibility: string;
+  photos: string[];
+}
+
+export interface SpacePhoto {
+  id: string;
+  url: string;
+  category: string;
+  caption: string;
+  timestamp: string;
+  location: string;
+  measurements?: string;
+  gpsCoords?: { lat: number; lng: number };
+}
+
+export interface EnvironmentalConditions {
+  ventilationRequired: boolean;
+  ventilationType: string;
+  lightingConditions: string;
+  temperatureRange: string;
+  moistureLevel: string;
+  noiseLevel: string;
+  weatherConditions: string;
+}
+
+export interface SpaceContent {
+  contents: string;
+  residues: string;
+  previousUse: string;
+  lastEntry: string;
+  cleaningStatus: string;
+}
+
+export interface SafetyMeasures {
+  emergencyEgress: string;
+  communicationMethod: string;
+  monitoringEquipment: string[];
+  ventilationEquipment: string[];
+  emergencyEquipment: string[];
+}
 
 // =================== TOUS LES TYPES DEMANDÉS PAR LES COMPOSANTS ===================
 export interface AtmosphericTestingData {
@@ -61,15 +118,15 @@ export interface ConfinedSpaceDetails {
   accessType?: string;
   spaceLocation?: string;
   spaceDescription?: string;
-  dimensions?: any;
+  dimensions?: Dimensions;
   unitSystem?: 'metric' | 'imperial';
-  entryPoints?: any[];
+  entryPoints?: EntryPoint[];
   atmosphericHazards?: string[];
   physicalHazards?: string[];
-  environmentalConditions?: any;
-  spaceContent?: any;
-  safetyMeasures?: any;
-  spacePhotos?: any[];
+  environmentalConditions?: EnvironmentalConditions;
+  spaceContent?: SpaceContent;
+  safetyMeasures?: SafetyMeasures;
+  spacePhotos?: SpacePhoto[];
   [key: string]: any;
 }
 
@@ -309,6 +366,9 @@ export interface ConfinedSpaceComponentProps {
   onCancel?: () => void;
   onSubmit?: (data: any) => void;
   readOnly?: boolean;
+  onUpdate?: (section: string, data: any) => void;
+  onSectionComplete?: (sectionData: any) => void;
+  onValidationChange?: (isValid: boolean, errors: string[]) => void;
   [key: string]: any; // Accepte toutes les autres props
 }
 
@@ -578,4 +638,4 @@ export const useSafetyManager = () => {
 export default useSafetyManager;
 
 // =================== CONSOLE INFO ===================
-console.log('👻 SafetyManager FANTÔME COMPLET chargé - Pas d\'interférence, tous les exports disponibles!');
+console.log('👻 SafetyManager FANTÔME COMPLET CORRIGÉ chargé - Tous les exports disponibles pour SiteInformation!');
