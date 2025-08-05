@@ -995,7 +995,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX RADICAL : Handlers ultra-simplifiés sans vérification
+  // ✅ FIX ÉQUILIBRÉ : Handlers qui updatent SANS re-render excessif
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       if (section === 'astNumber') {
@@ -1003,31 +1003,35 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       }
       
       const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
-    
-    // ✅ FIX : Pas de setHasUnsavedChanges immédiat
   }, []); // ✅ Pas de deps
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
   }, []);
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};  
+      const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
   }, []);
@@ -1035,9 +1039,11 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
   }, []);
@@ -1045,9 +1051,11 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
   }, []);
@@ -1055,9 +1063,11 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
       return {
         ...prev,
-        [section]: { ...currentSection, ...data }
+        [section]: newSection
       };
     });
   }, []);
@@ -1219,7 +1229,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return null;
     }
-  }, [currentStep]); // ✅ FIX RADICAL : SEULEMENT currentStep !
+  }, [currentStep, currentLanguage, tenant]); // ✅ FIX : Ajouter currentLanguage et tenant
 // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
