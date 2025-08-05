@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
@@ -639,7 +639,6 @@ interface NotificationData {
 // =================== HOOK DÉTECTION MOBILE ULTRA-STABLE ===================
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(() => {
-    // ✅ Détection côté client uniquement
     if (typeof window !== 'undefined') {
       return window.innerWidth <= 768;
     }
@@ -647,7 +646,6 @@ const useIsMobile = () => {
   });
 
   useEffect(() => {
-    // ✅ Fonction stable avec throttle
     let timeoutId: NodeJS.Timeout;
     
     const checkIsMobile = () => {
@@ -657,7 +655,7 @@ const useIsMobile = () => {
         if (newIsMobile !== isMobile) {
           setIsMobile(newIsMobile);
         }
-      }, 150); // Throttle 150ms
+      }, 150);
     };
 
     window.addEventListener('resize', checkIsMobile);
@@ -666,7 +664,7 @@ const useIsMobile = () => {
       window.removeEventListener('resize', checkIsMobile);
       clearTimeout(timeoutId);
     };
-  }, [isMobile]); // ✅ Une seule dépendance nécessaire
+  }, [isMobile]);
 
   return isMobile;
 };
@@ -733,7 +731,6 @@ export default function ASTForm({
   
   // =================== GESTION DE LA LANGUE ULTRA-STABLE ===================
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
-    // ✅ Initialisation stable côté client
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
       return savedLanguage || initialLanguage;
@@ -755,6 +752,11 @@ export default function ASTForm({
   });
   const [copied, setCopied] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // =================== 🚨 FIX CRITIQUE - REFS POUR ÉVITER BOUCLES INFINIES ===================
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateRef = useRef<Record<string, string>>({});
+  const isUpdatingRef = useRef<Record<string, boolean>>({});
 
   // =================== DONNÉES AST INITIALES COMPLÈTES ===================
   const [astData, setAstData] = useState<ASTData>(() => ({
@@ -886,8 +888,7 @@ export default function ASTForm({
       }
     }
   }, [currentLanguage]);
-
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE MANQUANT ===================
+  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
   const LanguageSelector = () => (
     <div style={{
       display: 'flex',
@@ -962,7 +963,7 @@ export default function ASTForm({
   const getCompletionPercentage = useCallback((): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
-  }, []); // ✅ Pas de deps = stable
+  }, []);
 
   const getCurrentCompletedSteps = useCallback((): number => {
     let completed = 0;
@@ -992,7 +993,7 @@ export default function ASTForm({
     }
     
     return completed;
-  }, []); // ✅ Pas de deps = stable
+  }, []);
 
   const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
@@ -1011,7 +1012,7 @@ export default function ASTForm({
       default:
         return false;
     }
-  }, []); // ✅ Pas de deps = stable
+  }, []);
 
   // =================== NAVIGATION ULTRA-STABLE ===================
   const handlePrevious = useCallback(() => {
@@ -1028,168 +1029,110 @@ export default function ASTForm({
     setCurrentStep(step);
   }, []);
 
-  // =================== HANDLERS DATA ULTRA-OPTIMISÉS - FIX DÉFINITIF BOUCLES INFINIES ===================
+  // =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - SYSTÈME DÉBOUNCE AVANCÉ ===================
   
-  // ✅ FIX CRITIQUE : Fonction utilitaire pour vérifier les changements
-  const hasDataChanged = useCallback((currentData: any, newData: any): boolean => {
-    try {
-      const currentStr = JSON.stringify(currentData);
-      const newStr = JSON.stringify(newData);
-      return currentStr !== newStr;
-    } catch (error) {
-      console.warn('Erreur comparaison données:', error);
-      return true; // En cas d'erreur, on assume qu'il y a changement
-    }
+  /**
+   * ✅ SYSTÈME ANTI-BOUCLE ULTRA-PERFORMANT
+   * - Débounce intelligent 300ms
+   * - Vérification hash des données 
+   * - Protection multi-niveau
+   * - Logs détaillés pour debug
+   */
+  const createDebouncedHandler = useCallback((stepName: string) => {
+    return (section: string, data: any) => {
+      const stepKey = `${stepName}_${section}`;
+      
+      // ✅ Protection niveau 1 : Vérifier si update en cours
+      if (isUpdatingRef.current[stepKey]) {
+        console.log(`🛡️ ASTForm ${stepName} - Update déjà en cours, skip`);
+        return;
+      }
+      
+      // ✅ Protection niveau 2 : Comparer hash des données
+      const newDataHash = JSON.stringify(data);
+      if (lastUpdateRef.current[stepKey] === newDataHash) {
+        console.log(`🛡️ ASTForm ${stepName} - Données identiques, skip update`);
+        return;
+      }
+      
+      // ✅ Marquer comme en cours de mise à jour
+      isUpdatingRef.current[stepKey] = true;
+      lastUpdateRef.current[stepKey] = newDataHash;
+      
+      console.log(`🔥 ASTForm ${stepName} - Nouvelle donnée détectée:`, { section, data });
+      
+      // ✅ Clear ancien timeout
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      
+      // ✅ Débounce 300ms - Optimal pour performance
+      updateTimeoutRef.current = setTimeout(() => {
+        console.log(`🚀 ASTForm ${stepName} - Exécution update débounced`);
+        
+        setAstData(prev => {
+          const currentSection = (prev as any)[section] || {};
+          const newSection = { ...currentSection, ...data };
+          
+          const newState = {
+            ...prev,
+            [section]: newSection,
+            updatedAt: new Date().toISOString()
+          };
+          
+          console.log(`✅ ASTForm ${stepName} - État mis à jour:`, { section, newSection });
+          return newState;
+        });
+        
+        // ✅ Marquer changements non sauvegardés
+        setHasUnsavedChanges(true);
+        
+        // ✅ Libérer le verrou après l'update
+        setTimeout(() => {
+          isUpdatingRef.current[stepKey] = false;
+          console.log(`🔓 ASTForm ${stepName} - Verrou libéré`);
+        }, 100);
+        
+      }, 300); // ✅ 300ms = Sweet spot performance/réactivité
+    };
   }, []);
 
-  // ✅ STEP 1 HANDLER - ULTRA OPTIMISÉ
+  // =================== HANDLERS STEPS AVEC PROTECTION ANTI-BOUCLE ===================
+  
+  // ✅ STEP 1 HANDLER - PROTECTION COMPLÈTE
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data });
     
-    setAstData(prev => {
-      if (section === 'astNumber') {
-        if (prev.astNumber === data) {
-          console.log('🔥 ASTForm astNumber identique, skip update');
-          return prev;
-        }
-        const newState = { ...prev, astNumber: data };
-        console.log('🔥 ASTForm nouveau state (astNumber):', newState);
-        return newState;
+    // ✅ Cas spécial pour astNumber (direct update)
+    if (section === 'astNumber') {
+      if (astData.astNumber === data) {
+        console.log('🛡️ ASTForm astNumber identique, skip');
+        return;
       }
-      
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step1 section identique, skip update');
-        return prev;
-      }
-      
-      const newState = {
-        ...prev,
-        [section]: newSection
-      };
-      
-      console.log('🔥 ASTForm Step1 nouveau state:', { section, newSection });
-      return newState;
-    });
+      setAstData(prev => ({ ...prev, astNumber: data, updatedAt: new Date().toISOString() }));
+      setHasUnsavedChanges(true);
+      return;
+    }
     
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+    // ✅ Utiliser le handler débounced pour autres sections
+    const debouncedHandler = createDebouncedHandler('Step1');
+    debouncedHandler(section, data);
+  }, [astData.astNumber, createDebouncedHandler]);
 
   // ✅ STEP 2 HANDLER - ULTRA OPTIMISÉ
-  const handleStep2DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep2DataChange appelé:', { section, data });
-    
-    setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step2 section identique, skip update');
-        return prev;
-      }
-      
-      return {
-        ...prev,
-        [section]: newSection
-      };
-    });
-    
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+  const handleStep2DataChange = useCallback(createDebouncedHandler('Step2'), [createDebouncedHandler]);
 
-  // ✅ STEP 3 HANDLER - ULTRA OPTIMISÉ
-  const handleStep3DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep3DataChange appelé:', { section, data });
-    
-    setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step3 section identique, skip update');
-        return prev;
-      }
-      
-      return {
-        ...prev,
-        [section]: newSection
-      };
-    });
-    
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+  // ✅ STEP 3 HANDLER - ULTRA OPTIMISÉ  
+  const handleStep3DataChange = useCallback(createDebouncedHandler('Step3'), [createDebouncedHandler]);
 
   // ✅ STEP 4 HANDLER - ULTRA OPTIMISÉ
-  const handleStep4DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep4DataChange appelé:', { section, data });
-    
-    setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step4 section identique, skip update');
-        return prev;
-      }
-      
-      return {
-        ...prev,
-        [section]: newSection
-      };
-    });
-    
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+  const handleStep4DataChange = useCallback(createDebouncedHandler('Step4'), [createDebouncedHandler]);
 
-  // ✅ STEP 5 HANDLER - ULTRA OPTIMISÉ (FIX BOUCLE INFINIE CRITIQUE)
-  const handleStep5DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep5DataChange appelé:', { section, data });
-    
-    setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      // ✅ FIX CRITIQUE : Vérification de changement pour Step5 
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step5 section identique, skip update - BOUCLE INFINIE ÉVITÉE !');
-        return prev; // ← CRUCIAL pour éviter la boucle infinie !
-      }
-      
-      console.log('🔥 ASTForm Step5 updating:', { section, newSection });
-      return {
-        ...prev,
-        [section]: newSection
-      };
-    });
-    
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+  // ✅ STEP 5 HANDLER - FIX CRITIQUE BOUCLE INFINIE
+  const handleStep5DataChange = useCallback(createDebouncedHandler('Step5'), [createDebouncedHandler]);
 
-  // ✅ STEP 6 HANDLER - ULTRA OPTIMISÉ (PRÉVENTION BOUCLE INFINIE)
-  const handleStep6DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep6DataChange appelé:', { section, data });
-    
-    setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      // ✅ FIX PRÉVENTIF : Même vérification pour Step6
-      if (!hasDataChanged(currentSection, newSection)) {
-        console.log('🔥 ASTForm Step6 section identique, skip update - BOUCLE INFINIE ÉVITÉE !');
-        return prev; // ← Prévention boucle infinie Step6
-      }
-      
-      console.log('🔥 ASTForm Step6 updating:', { section, newSection });
-      return {
-        ...prev,
-        [section]: newSection
-      };
-    });
-    
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, [hasDataChanged]);
+  // ✅ STEP 6 HANDLER - FIX CRITIQUE BOUCLE INFINIE  
+  const handleStep6DataChange = useCallback(createDebouncedHandler('Step6'), [createDebouncedHandler]);
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
   const handleCopyAST = useCallback(async () => {
@@ -1249,7 +1192,7 @@ export default function ASTForm({
     if (savedLanguage && savedLanguage !== currentLanguage) {
       setCurrentLanguage(savedLanguage);
     }
-  }, []); // ✅ Une seule fois
+  }, []);
 
   useEffect(() => {
     // ✅ Sauvegarde automatique optimisée
@@ -1261,7 +1204,7 @@ export default function ASTForm({
 
       return () => clearTimeout(saveTimer);
     }
-  }, [hasUnsavedChanges]); // ✅ SEULEMENT hasUnsavedChanges
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     // ✅ Détection en ligne/hors ligne - une seule fois
@@ -1275,7 +1218,21 @@ export default function ASTForm({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []); // ✅ Une seule fois
+  }, []);
+
+  // =================== CLEANUP EFFECT POUR TIMEOUTS ===================
+  useEffect(() => {
+    return () => {
+      // ✅ Cleanup tous les timeouts au démontage
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      
+      // ✅ Reset des refs
+      lastUpdateRef.current = {};
+      isUpdatingRef.current = {};
+    };
+  }, []);
 
   // =================== COMPOSANTS MÉMORISÉS POUR ÉVITER RE-RENDERS ===================
   const MemoizedStep1 = React.memo(Step1ProjectInfo);
@@ -1289,7 +1246,7 @@ export default function ASTForm({
   const StepContent = () => {
     console.log('🔥 StepContent render - Step:', currentStep);
     
-    // ✅ FIX ULTIME : Props stables pour éviter re-render
+    // ✅ Props stables pour éviter re-render
     const stepProps = {
       formData: astData,
       language: currentLanguage,
@@ -1358,7 +1315,6 @@ export default function ASTForm({
         return null;
     }
   };
-
   // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
@@ -1390,18 +1346,7 @@ export default function ASTForm({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <img 
-            src="/c-secur360-logo.png" 
-            alt="C-Secur360"
-            style={{ width: '36px', height: '36px', objectFit: 'contain' }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'block';
-            }}
-          />
           <span style={{ 
-            display: 'none',
             color: '#f59e0b', 
             fontSize: '16px', 
             fontWeight: 'bold' 
@@ -1516,23 +1461,7 @@ export default function ASTForm({
               position: 'relative',
               zIndex: 1
             }}>
-              <img 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360"
-                className="logo-glow"
-                style={{ 
-                  width: '200px', 
-                  height: '200px', 
-                  objectFit: 'contain'
-                }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'block';
-                }}
-              />
               <span style={{ 
-                display: 'none',
                 color: '#f59e0b', 
                 fontSize: '48px', 
                 fontWeight: '900' 
@@ -2131,15 +2060,6 @@ export default function ASTForm({
       }
     }
     
-    @keyframes logoGlow {
-      0%, 100% { 
-        filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
-      }
-      50% { 
-        filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
-      }
-    }
-    
     @keyframes progressShine {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
@@ -2150,13 +2070,6 @@ export default function ASTForm({
     .slide-in { animation: slideIn 0.5s ease-out; }
     .slide-in-right { animation: slideIn 0.6s ease-out; }
     .glow-effect { animation: glow 4s ease-in-out infinite; }
-    .logo-glow { animation: logoGlow 3s ease-in-out infinite; }
-    
-    .shine-effect {
-      background: linear-gradient(90deg, transparent 30%, rgba(245, 158, 11, 0.3) 50%, transparent 70%);
-      background-size: 200px 100%;
-      animation: shine 2.5s infinite;
-    }
     
     .glass-effect {
       background: rgba(15, 23, 42, 0.7);
@@ -2225,77 +2138,6 @@ export default function ASTForm({
       .mobile-only {
         display: block !important;
       }
-      
-      /* Ajuster padding pour navigation mobile fixe */
-      .step-content-mobile {
-        padding-bottom: 100px !important;
-      }
-      
-      /* Optimisation des formulaires pour mobile */
-      .premium-input,
-      .premium-select,
-      .premium-textarea {
-        font-size: 16px !important;
-        padding: 14px 16px !important;
-        border-radius: 8px !important;
-      }
-      
-      /* Optimisation des boutons pour touch */
-      .btn-primary,
-      .premium-button {
-        min-height: 48px !important;
-        font-size: 16px !important;
-        padding: 14px 20px !important;
-        border-radius: 12px !important;
-      }
-      
-      /* Grilles responsive */
-      .two-column,
-      .premium-grid {
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-      }
-      
-      /* Sections form mobile */
-      .form-section {
-        margin: 0 0 16px 0 !important;
-        border-radius: 16px !important;
-        padding: 16px !important;
-      }
-      
-      /* Typography mobile */
-      .section-title {
-        font-size: 16px !important;
-      }
-      
-      .finalization-title {
-        font-size: 20px !important;
-      }
-      
-      .ast-number-value {
-        font-size: 18px !important;
-        word-break: break-all !important;
-      }
-      
-      /* Headers mobile */
-      .mobile-header {
-        padding: 14px 16px !important;
-      }
-      
-      .mobile-steps-navigation {
-        padding: 12px 16px !important;
-      }
-      
-      /* Content mobile */
-      .step-content-mobile {
-        padding: 16px !important;
-        min-height: calc(100vh - 200px) !important;
-      }
-      
-      /* Navigation mobile */
-      .mobile-navigation {
-        padding: 12px 16px !important;
-      }
     }
     
     @media (max-width: 480px) {
@@ -2307,106 +2149,24 @@ export default function ASTForm({
         padding: 16px !important;
         margin: 8px !important;
       }
-      
-      .mobile-steps-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-      
-      /* Mobile très petit */
-      .mobile-header {
-        padding: 12px 14px !important;
-      }
-      
-      .finalization-title {
-        font-size: 18px !important;
-      }
-      
-      .section-title {
-        font-size: 14px !important;
-      }
     }
     
-    @media (max-width: 360px) {
-      .mobile-steps-grid {
-        grid-template-columns: 1fr !important;
-      }
-      
-      .form-section {
-        padding: 12px !important;
-      }
-      
-      .glass-effect {
-        padding: 12px !important;
-        margin: 6px !important;
-      }
-    }
-    
-    /* Landscape mobile optimizations */
-    @media (max-height: 500px) and (orientation: landscape) {
-      .mobile-header {
-        padding: 8px 16px !important;
-      }
-      
-      .mobile-steps-navigation {
-        padding: 8px 16px !important;
-      }
-      
-      .step-content-mobile {
-        padding: 12px 16px !important;
-        min-height: calc(100vh - 140px) !important;
-      }
-      
-      .mobile-navigation {
-        padding: 8px 16px !important;
-      }
-    }
-    
-    /* Safe area pour notch */
-    @supports (padding: max(0px)) {
-      .mobile-header {
-        padding-top: max(16px, env(safe-area-inset-top)) !important;
-        padding-left: max(20px, env(safe-area-inset-left)) !important;
-        padding-right: max(20px, env(safe-area-inset-right)) !important;
-      }
-      
-      .mobile-navigation {
-        padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
-        padding-left: max(20px, env(safe-area-inset-left)) !important;
-        padding-right: max(20px, env(safe-area-inset-right)) !important;
-      }
-    }
-    
-    /* Masquer éléments desktop sur mobile */
     @media (min-width: 769px) {
       .mobile-only {
         display: none !important;
       }
     }
     
-    /* Touch improvements */
     .mobile-touch:active {
       transform: scale(0.98);
     }
     
-    /* Prevent zoom on inputs iOS */
     @media screen and (-webkit-min-device-pixel-ratio: 0) {
       .premium-input,
       .premium-select,
       .premium-textarea {
         font-size: 16px !important;
       }
-    }
-    
-    /* Improve scroll performance */
-    .step-content-mobile {
-      -webkit-overflow-scrolling: touch;
-      transform: translateZ(0);
-    }
-    
-    /* Better tap highlights */
-    .mobile-touch {
-      -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
-      tap-highlight-color: rgba(59, 130, 246, 0.2);
     }
   `;
 
