@@ -330,7 +330,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   };
 
   const getPersonById = (personId: string): PersonnelEntry | undefined => {
-    return personnel.find(person => person.id === personId);
+    return personnel.find((person: any) => person.id === personId);
   };
 
   const getRoleColor = (role: SafetyRole): string => {
