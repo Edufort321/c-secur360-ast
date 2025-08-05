@@ -566,7 +566,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     );
 
     // Mise à jour personnel
-    const updatedPersonnel = personnel.map(p => 
+    const updatedPersonnel = personnel.map((p: any) =>
       p.id === personId 
         ? { ...p, entryTime: now, status: 'inside' as const }
         : p
