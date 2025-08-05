@@ -10,12 +10,12 @@ import {
 } from 'lucide-react';
 
 // =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 ===================
-import Step1ProjectInfo from './steps/Step1ProjectInfo';
-import Step2Equipment from './steps/Step2Equipment';
-import Step3Hazards from './steps/Step3Hazards';
-import Step4Permits from './steps/Step4Permits';
-import Step5Validation from './steps/Step5Validation';
-import Step6Finalization from './steps/Step6Finalization';
+import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
+import Step2Equipment from '@/components/steps/Step2Equipment';
+import Step3Hazards from '@/components/steps/Step3Hazards';
+import Step4Permits from '@/components/steps/Step4Permits';
+import Step5Validation from '@/components/steps/Step5Validation';
+import Step6Finalization from '@/components/steps/Step6Finalization';
 
 // =================== INTERFACES PRINCIPALES ===================
 interface ASTFormProps {
@@ -505,7 +505,10 @@ function ASTForm({
     errors.some(error => error.severity === 'error')
   );
   const isLastStep = astState.currentStep === STEPS_CONFIG.length - 1;
-  // =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - HANDLERS DIRECTS ===================
+
+  // =================== RENDU JSX PRINCIPAL (sera dans section 2) ===================
+  // Le JSX sera ajouté dans la section 2/2
+// =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - HANDLERS DIRECTS ===================
   
   /**
    * ✅ FIX CRITIQUE : HANDLERS DIRECTS SANS DÉBOUNCE POUR STEP6
@@ -1650,3 +1653,6 @@ function ASTForm({
     </div>
   );
 }
+
+// =================== ✅ EXPORT DEFAULT OBLIGATOIRE ===================
+export default ASTForm;
