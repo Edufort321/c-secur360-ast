@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
   Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
@@ -366,7 +366,7 @@ function Step6Finalization({
   // =================== TRADUCTIONS ===================
   const t = translations[language] || translations.fr;
   
-  // =================== ÉTAT PRINCIPAL ===================
+  // =================== ÉTAT PRINCIPAL STABLE ===================
   const [activeTab, setActiveTab] = useState('workers');
   const [showAddWorker, setShowAddWorker] = useState(false);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
@@ -381,7 +381,7 @@ function Step6Finalization({
     return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
   });
 
-  // ✅ FIX CRITIQUE : État travailleur stable
+  // ✅ FIX CRITIQUE : État travailleur stable SANS useEffect
   const [newWorker, setNewWorker] = useState<Partial<Worker>>(() => ({
     name: '',
     company: '',
@@ -389,7 +389,7 @@ function Step6Finalization({
     approbationStatus: 'pending'
   }));
 
-  // ✅ FIX CRITIQUE : État finalisation avec initialisation stable
+  // ✅ FIX CRITIQUE : État finalisation avec initialisation stable SANS BOUCLE
   const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
     workers: [],
     photos: [],
@@ -407,9 +407,206 @@ function Step6Finalization({
     completionPercentage: 85
   }));
 
-  // =================== EXTRACTION DONNÉES STEPS 1-5 POUR RAPPORT COMPLET ===================
+  // =================== 🚨 FIX CRITIQUE : CALLBACK DIRECT SANS BOUCLE ===================
   
-  // ✅ ACCÈS AUX DONNÉES DE TOUS LES STEPS VIA formData
+  /**
+   * ✅ FONCTION CRITIQUE - NOTIFICATION PARENT SANS BOUCLE INFINIE
+   * Au lieu d'un useEffect qui cause des boucles, on utilise des callbacks directs
+   */
+  const notifyParentChange = useCallback((newData: FinalizationData) => {
+    console.log('🔥 Step6 - Notification parent avec nouvelles données:', newData);
+    onDataChange('finalization', newData);
+  }, [onDataChange]);
+
+  // =================== HANDLERS PRINCIPAUX ULTRA-OPTIMISÉS ===================
+  
+  /**
+   * ✅ HANDLER AJOUT TRAVAILLEUR - FIX DÉFINITIF
+   * Mise à jour directe + notification parent immédiate
+   */
+  const addWorker = useCallback(() => {
+    if (!newWorker.name || !newWorker.company) {
+      alert(t.fillRequiredFields);
+      return;
+    }
+
+    const worker: Worker = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newWorker.name!,
+      position: 'Travailleur',
+      company: newWorker.company!,
+      hasConsented: false,
+      approbationStatus: 'pending'
+    };
+
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: [...finalizationData.workers, worker]
+    };
+
+    // ✅ Mise à jour locale immédiate
+    setFinalizationData(newFinalizationData);
+    
+    // ✅ Notification parent immédiate
+    notifyParentChange(newFinalizationData);
+
+    // ✅ Reset du formulaire
+    setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
+    setShowAddWorker(false);
+    
+    console.log('✅ Step6 - Travailleur ajouté avec succès:', worker);
+  }, [newWorker.name, newWorker.company, finalizationData, notifyParentChange, t.fillRequiredFields]);
+
+  /**
+   * ✅ HANDLER CONSENTEMENT - FIX DÉFINITIF
+   */
+  const toggleConsent = useCallback((workerId: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: finalizationData.workers.map(worker => 
+        worker.id === workerId 
+          ? { 
+              ...worker, 
+              hasConsented: !worker.hasConsented,
+              consentTimestamp: !worker.hasConsented ? new Date().toISOString() : undefined
+            }
+          : worker
+      )
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    console.log('✅ Step6 - Consentement mis à jour:', workerId);
+  }, [finalizationData, notifyParentChange]);
+
+  /**
+   * ✅ HANDLER APPROBATION - FIX DÉFINITIF
+   */
+  const updateApprobation = useCallback((workerId: string, status: ApprobationStatus, comments?: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: finalizationData.workers.map(worker => 
+        worker.id === workerId 
+          ? { 
+              ...worker, 
+              approbationStatus: status,
+              approbationTimestamp: new Date().toISOString(),
+              approbationComments: comments
+            }
+          : worker
+      )
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    console.log(`✅ Step6 - Approbation ${status} pour travailleur:`, workerId);
+  }, [finalizationData, notifyParentChange]);
+
+  // =================== HANDLERS PARTAGE OPTIMISÉS ===================
+  const shareViaEmail = useCallback(() => {
+    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
+    const body = encodeURIComponent(`Bonjour,
+
+Veuillez consulter l'Analyse Sécuritaire de Travail (AST) pour le projet "${formData.projectInfo?.projectName || 'Projet'}".
+
+🔗 Lien d'accès sécurisé:
+${shareLink}
+
+Cette AST doit être consultée et approuvée avant le début des travaux.
+
+Cordialement,
+${tenant} - Équipe Sécurité`);
+    
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+    console.log('📧 Partage par email initié');
+  }, [formData.projectInfo?.projectName, shareLink, tenant]);
+
+  const shareViaSMS = useCallback(() => {
+    const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
+    window.open(`sms:?body=${message}`);
+    console.log('📱 Partage par SMS initié');
+  }, [formData.projectInfo?.projectName, shareLink]);
+
+  const shareViaWhatsApp = useCallback(() => {
+    const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
+
+Lien d'accès: ${shareLink}`);
+    window.open(`https://wa.me/?text=${message}`);
+    console.log('💬 Partage WhatsApp initié');
+  }, [formData.projectInfo?.projectName, shareLink]);
+
+  const copyShareLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      console.log(t.linkCopied);
+    } catch (err) {
+      alert(t.copyError);
+    }
+  }, [shareLink, t.linkCopied, t.copyError]);
+
+  /**
+   * ✅ HANDLER VERROUILLAGE - FIX DÉFINITIF
+   */
+  const lockAST = useCallback((lockType: LockType) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      isLocked: true,
+      lockTimestamp: new Date().toISOString(),
+      lockReason: lockType
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    setShowLockConfirm(false);
+    console.log(`🔒 AST verrouillée (${lockType})`);
+    alert(`${t.astLocked} (${lockType})`);
+  }, [finalizationData, notifyParentChange, t.astLocked]);
+
+  /**
+   * ✅ HANDLER COMMENTAIRES - FIX DÉFINITIF
+   */
+  const updateComments = useCallback((comments: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      finalComments: comments
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+  }, [finalizationData, notifyParentChange]);
+
+  /**
+   * ✅ HANDLER OPTIONS DOCUMENT - FIX DÉFINITIF
+   */
+  const updateDocumentOption = useCallback((option: keyof DocumentGeneration, value: boolean) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      documentGeneration: {
+        ...finalizationData.documentGeneration,
+        [option]: value
+      }
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+  }, [finalizationData, notifyParentChange]);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getIndustryLabel = useCallback((industry: string) => {
+    const labels = {
+      'electrical': '⚡ Électrique',
+      'construction': '🏗️ Construction', 
+      'industrial': '🏭 Industriel',
+      'manufacturing': '⚙️ Manufacturier',
+      'office': '🏢 Bureau/Administratif',
+      'other': '🔧 Autre'
+    };
+    return labels[industry as keyof typeof labels] || industry || t.reportData.noSpecified;
+  }, [t.reportData.noSpecified]);
+
+  // =================== EXTRACTION DONNÉES STEPS 1-5 POUR RAPPORT COMPLET ===================
   const extractDataForReport = useCallback(() => {
     console.log('📊 Extraction données Steps 1-5 pour rapport:', formData);
     
@@ -458,199 +655,7 @@ function Step6Finalization({
       }
     };
   }, [formData, t.reportData.noSpecified]);
-
-  // =================== HANDLERS PRINCIPAUX ULTRA-OPTIMISÉS ===================
-  const addWorker = useCallback(() => {
-    if (!newWorker.name || !newWorker.company) {
-      alert(t.fillRequiredFields);
-      return;
-    }
-
-    const worker: Worker = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newWorker.name!,
-      position: 'Travailleur',
-      company: newWorker.company!,
-      hasConsented: false,
-      approbationStatus: 'pending'
-    };
-
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: [...prev.workers, worker]
-    }));
-
-    setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
-    setShowAddWorker(false);
-    console.log(t.workerAdded, worker);
-  }, [newWorker.name, newWorker.company, t.fillRequiredFields, t.workerAdded]);
-
-  const toggleConsent = useCallback((workerId: string) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: prev.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              hasConsented: !worker.hasConsented,
-              consentTimestamp: !worker.hasConsented ? new Date().toISOString() : undefined
-            }
-          : worker
-      )
-    }));
-    console.log(t.consentUpdated, workerId);
-  }, [t.consentUpdated]);
-
-  const updateApprobation = useCallback((workerId: string, status: ApprobationStatus, comments?: string) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      workers: prev.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              approbationStatus: status,
-              approbationTimestamp: new Date().toISOString(),
-              approbationComments: comments
-            }
-          : worker
-      )
-    }));
-    console.log(`✅ Approbation ${status} pour travailleur:`, workerId);
-  }, []);
-
-  // =================== HANDLERS PARTAGE OPTIMISÉS ===================
-  const shareViaEmail = useCallback(() => {
-    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
-    const body = encodeURIComponent(`Bonjour,
-
-Veuillez consulter l'Analyse Sécuritaire de Travail (AST) pour le projet "${formData.projectInfo?.projectName || 'Projet'}".
-
-🔗 Lien d'accès sécurisé:
-${shareLink}
-
-Cette AST doit être consultée et approuvée avant le début des travaux.
-
-Cordialement,
-${tenant} - Équipe Sécurité`);
-    
-    window.open(`mailto:?subject=${subject}&body=${body}`);
-    console.log('📧 Partage par email initié');
-  }, [formData.projectInfo?.projectName, shareLink, tenant]);
-
-  const shareViaSMS = useCallback(() => {
-    const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
-    window.open(`sms:?body=${message}`);
-    console.log('📱 Partage par SMS initié');
-  }, [formData.projectInfo?.projectName, shareLink]);
-
-  const shareViaWhatsApp = useCallback(() => {
-    const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
-
-Lien d'accès: ${shareLink}`);
-    window.open(`https://wa.me/?text=${message}`);
-    console.log('💬 Partage WhatsApp initié');
-  }, [formData.projectInfo?.projectName, shareLink]);
-
-  const copyShareLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-      console.log(t.linkCopied);
-    } catch (err) {
-      alert(t.copyError);
-    }
-  }, [shareLink, t.linkCopied, t.copyError]);
-
-  const lockAST = useCallback((lockType: LockType) => {
-    setFinalizationData(prev => ({
-      ...prev,
-      isLocked: true,
-      lockTimestamp: new Date().toISOString(),
-      lockReason: lockType
-    }));
-    setShowLockConfirm(false);
-    console.log(`🔒 AST verrouillée (${lockType})`);
-    alert(`${t.astLocked} (${lockType})`);
-  }, [t.astLocked]);
-
-  const getIndustryLabel = useCallback((industry: string) => {
-    const labels = {
-      'electrical': '⚡ Électrique',
-      'construction': '🏗️ Construction', 
-      'industrial': '🏭 Industriel',
-      'manufacturing': '⚙️ Manufacturier',
-      'office': '🏢 Bureau/Administratif',
-      'other': '🔧 Autre'
-    };
-    return labels[industry as keyof typeof labels] || industry || t.reportData.noSpecified;
-  }, [t.reportData.noSpecified]);
-
-  // =================== EFFECTS ULTRA-OPTIMISÉS POUR ÉVITER BOUCLES INFINIES ===================
-  
-  // ✅ FIX DÉFINITIF : Débounce pour éviter spam d'appels
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isUpdatingRef = useRef(false);
-  
-  const updateParentData = useCallback((data: FinalizationData) => {
-    if (isUpdatingRef.current) {
-      console.log('🔥 Step6 update BLOQUÉ - déjà en cours');
-      return;
-    }
-    
-    isUpdatingRef.current = true;
-    console.log('🔥 Step6 update parent AUTORISÉ');
-    onDataChange('finalization', data);
-    
-    setTimeout(() => {
-      isUpdatingRef.current = false;
-    }, 100);
-  }, [onDataChange]);
-
-  useEffect(() => {
-    // ✅ Clear timeout précédent
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    
-    // ✅ Débounce de 500ms pour éviter spam
-    debounceTimeoutRef.current = setTimeout(() => {
-      updateParentData(finalizationData);
-    }, 500);
-    
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [finalizationData, updateParentData]);
-
-  // ✅ FIX : Calcul de pourcentage optimisé avec useCallback et deps explicites
-  const calculateCompletionPercentage = useCallback(() => {
-    const totalSections = 6;
-    const completedSections = [
-      formData.projectInfo ? 1 : 0,
-      formData.equipment ? 1 : 0,
-      formData.hazards ? 1 : 0,
-      formData.permits ? 1 : 0,
-      formData.validation ? 1 : 0,
-      finalizationData.workers.length > 0 ? 1 : 0
-    ].reduce((sum, val) => sum + val, 0);
-    
-    return Math.round((completedSections / totalSections) * 100);
-  }, [formData.projectInfo, formData.equipment, formData.hazards, formData.permits, formData.validation, finalizationData.workers.length]);
-
-  useEffect(() => {
-    const newPercentage = calculateCompletionPercentage();
-    
-    if (newPercentage !== finalizationData.completionPercentage) {
-      setFinalizationData(prev => ({
-        ...prev,
-        completionPercentage: newPercentage
-      }));
-    }
-  }, [calculateCompletionPercentage, finalizationData.completionPercentage]);
-// =================== GÉNÉRATION RAPPORT AST COMPLET AVEC TOUTES LES DONNÉES STEPS 1-5 ===================
+  // =================== GÉNÉRATION RAPPORT AST COMPLET AVEC TOUTES LES DONNÉES STEPS 1-5 ===================
   const printAST = useCallback(() => {
     console.log('🖨️ Génération du rapport AST professionnel complet avec données Steps 1-5...');
     setIsLoading(true);
@@ -744,7 +749,11 @@ Lien d'accès: ${shareLink}`);
 </head>
 <body>
     <div class="header">
-        <div class="logo-container"><div class="logo-fallback">C🛡️</div></div>
+        <div class="logo-container">
+            <img src="/c-secur360-logo.png" alt="C-Secur360" style="width: 56px; height: 56px; object-fit: contain;" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div class="logo-fallback" style="display: none;">C🛡️</div>
+        </div>
         <h1>${language === 'en' ? '🛡️ JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)'}</h1>
         <div class="subtitle">${language === 'en' ? 'Complete Official Report' : 'Rapport Officiel Complet'} - ${tenant} | N° ${astNumber}</div>
     </div>
@@ -779,107 +788,6 @@ Lien d'accès: ${shareLink}`);
         </div>
     </div>
     
-    ${generateStep1Section(reportData)}
-    ${generateStep2Section(reportData)}
-    ${generateStep3Section(reportData)}
-    ${generateStep4Section(reportData)}
-    ${generateStep5Section(reportData)}
-    ${generateStep6Section()}
-    ${generateSignatureSection()}
-    
-    <div class="footer">
-        <p><strong>${language === 'en' ? 'This document was automatically generated by the C-Secur360 system' : 'Ce document a été généré automatiquement par le système C-Secur360'}</strong></p>
-        <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
-        <p>${language === 'en' ? 'Official document valid for safety committees, inspections and investigations' : 'Document officiel valide pour comités de sécurité, inspections et enquêtes'}</p>
-        <p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${shareLink}</p>
-    </div>
-</body>
-</html>`;
-  }, [formData, finalizationData, language, tenant, shareLink, getIndustryLabel, extractDataForReport, t]);
-
-  // =================== GÉNÉRATION SECTIONS INDIVIDUELLES AVEC DONNÉES STEPS 1-5 ===================
-  
-  const generateStep1Section = useCallback((reportData: any) => {
-    if (!reportData.projectInfo.lockoutPoints.length) return '';
-    
-    const lockoutRows = reportData.projectInfo.lockoutPoints.map((point: any) => `
-        <div class="data-item">🔒 ${point.equipmentName} - ${point.location} (${point.energyType})</div>
-    `).join('');
-    
-    return `
-    <div class="data-section">
-        <div class="data-title">🛡️ STEP 1: ${language === 'en' ? 'LOCKOUT POINTS' : 'POINTS DE VERROUILLAGE'}</div>
-        <div class="data-list">${lockoutRows || `<div class="data-item">${language === 'en' ? 'No lockout points identified' : 'Aucun point de verrouillage identifié'}</div>`}</div>
-    </div>`;
-  }, [language]);
-
-  const generateStep2Section = useCallback((reportData: any) => {
-    const equipmentRows = reportData.equipment.selected.map((item: any) => `
-        <div class="data-item">🔧 ${item.name} - ${item.category} ${item.required ? '(Requis)' : ''}</div>
-    `).join('');
-    
-    return `
-    <div class="data-section">
-        <div class="data-title">🔧 STEP 2: ${language === 'en' ? 'SELECTED EQUIPMENT' : 'ÉQUIPEMENTS SÉLECTIONNÉS'}</div>
-        <div class="data-list">${equipmentRows || `<div class="data-item">${language === 'en' ? 'No equipment selected' : 'Aucun équipement sélectionné'}</div>`}</div>
-    </div>`;
-  }, [language]);
-
-  const generateStep3Section = useCallback((reportData: any) => {
-    const hazardRows = reportData.hazards.selected.map((hazard: any) => `
-        <div class="data-item">⚠️ ${hazard.name} - ${language === 'en' ? 'Risk:' : 'Risque:'} ${hazard.riskLevel}</div>
-    `).join('');
-    
-    return `
-    <div class="data-section">
-        <div class="data-title">⚠️ STEP 3: ${language === 'en' ? 'IDENTIFIED HAZARDS' : 'DANGERS IDENTIFIÉS'}</div>
-        <div class="data-list">${hazardRows || `<div class="data-item">${language === 'en' ? 'No hazards identified' : 'Aucun danger identifié'}</div>`}</div>
-    </div>`;
-  }, [language]);
-
-  const generateStep4Section = useCallback((reportData: any) => {
-    const permitRows = reportData.permits.permits.map((permit: any) => `
-        <div class="data-item">📄 ${permit.type} - ${permit.number} (${permit.isRequired ? 'Requis' : 'Optionnel'})</div>
-    `).join('');
-    
-    return `
-    <div class="data-section">
-        <div class="data-title">📄 STEP 4: ${language === 'en' ? 'REQUIRED PERMITS' : 'PERMIS REQUIS'}</div>
-        <div class="data-list">${permitRows || `<div class="data-item">${language === 'en' ? 'No permits required' : 'Aucun permis requis'}</div>`}</div>
-    </div>`;
-  }, [language]);
-
-  const generateStep5Section = useCallback((reportData: any) => {
-    const reviewerRows = reportData.validation.reviewers.map((reviewer: any) => `
-        <div class="data-item">👤 ${reviewer.name} - ${reviewer.role} (${reviewer.status})</div>
-    `).join('');
-    
-    return `
-    <div class="data-section">
-        <div class="data-title">👥 STEP 5: ${language === 'en' ? 'TEAM VALIDATION' : 'VALIDATION ÉQUIPE'}</div>
-        <div class="data-list">${reviewerRows || `<div class="data-item">${language === 'en' ? 'No reviewers assigned' : 'Aucun réviseur assigné'}</div>`}</div>
-    </div>`;
-  }, [language]);
-
-  const generateStep6Section = useCallback(() => {
-    const workersRows = finalizationData.workers.map(worker => `
-        <tr>
-            <td>${worker.name}</td>
-            <td>${worker.company}</td>
-            <td>${worker.position}</td>
-            <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
-                ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
-            </td>
-            <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}</td>
-            <td class="status-${worker.approbationStatus}">
-                ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
-                  worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-            </td>
-            <td>${worker.approbationComments || '-'}</td>
-        </tr>
-    `).join('');
-    
-    return `
     <div class="section page-break">
         <div class="section-header">
             <div class="section-title">👷 STEP 6: ${t.reportData.teamConsents}</div>
@@ -898,14 +806,33 @@ Lien d'accès: ${shareLink}`);
                             <th>${language === 'en' ? 'Comments' : 'Commentaires'}</th>
                         </tr>
                     </thead>
-                    <tbody>${workersRows}</tbody>
+                    <tbody>
+                        ${finalizationData.workers.map(worker => `
+                            <tr>
+                                <td>${worker.name}</td>
+                                <td>${worker.company}</td>
+                                <td>${worker.position}</td>
+                                <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
+                                    ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
+                                </td>
+                                <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}</td>
+                                <td class="status-${worker.approbationStatus}">
+                                    ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
+                                      worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
+                                </td>
+                                <td>${worker.approbationComments || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
                 </table>
             ` : `<p style="text-align: center; color: #6b7280; font-style: italic;">${t.reportData.noWorkerAdded}</p>`}
+            
             ${finalizationData.finalComments ? `
                 <div style="margin-top: 20px; padding: 10px; background: #f9fafb; border-radius: 4px;">
                     <strong>💬 ${t.reportData.finalCommentsLabel}</strong><br>${finalizationData.finalComments}
                 </div>
             ` : ''}
+            
             <div style="margin-top: 20px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
                 <strong>📊 ${t.reportData.documentStatus}</strong> 
                 <span style="padding: 2px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; ${finalizationData.isLocked ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
@@ -915,11 +842,8 @@ Lien d'accès: ${shareLink}`);
                 ${finalizationData.lockTimestamp ? ` | ${t.reportData.lockedOn} ${new Date(finalizationData.lockTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}` : ''}
             </div>
         </div>
-    </div>`;
-  }, [finalizationData, language, t]);
-
-  const generateSignatureSection = useCallback(() => {
-    return `
+    </div>
+    
     <div class="signature-section">
         <div class="signature-box">
             <div class="signature-label">${t.reportData.safetyManager}</div>
@@ -945,9 +869,19 @@ Lien d'accès: ${shareLink}`);
                 ${t.reportData.date} ________________________
             </div>
         </div>
-    </div>`;
-  }, [t]);
-// =================== CSS MOBILE OPTIMISÉ THÈME SOMBRE ULTRA-COMPLET ===================
+    </div>
+    
+    <div class="footer">
+        <p><strong>${language === 'en' ? 'This document was automatically generated by the C-Secur360 system' : 'Ce document a été généré automatiquement par le système C-Secur360'}</strong></p>
+        <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
+        <p>${language === 'en' ? 'Official document valid for safety committees, inspections and investigations' : 'Document officiel valide pour comités de sécurité, inspections et enquêtes'}</p>
+        <p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${shareLink}</p>
+    </div>
+</body>
+</html>`;
+  }, [formData, finalizationData, language, tenant, shareLink, getIndustryLabel, extractDataForReport, t]);
+
+  // =================== CSS THÈME SOMBRE ULTRA-COMPLET ===================
   const darkThemeCSS = `
     .step6-container { padding: 0; background: transparent; min-height: 100vh; color: #ffffff !important; }
     .finalization-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); backdrop-filter: blur(10px); }
@@ -1027,7 +961,6 @@ Lien d'accès: ${shareLink}`);
       .share-buttons { grid-template-columns: 1fr; }
     }
   `;
-
   // =================== RENDU JSX COMPLET AVEC TRADUCTIONS ===================
   return (
     <>
@@ -1321,10 +1254,7 @@ Lien d'accès: ${shareLink}`);
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                 <div 
                   className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includePhotos: !prev.documentGeneration.includePhotos }
-                  }))}
+                  onClick={() => updateDocumentOption('includePhotos', !finalizationData.documentGeneration.includePhotos)}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
                   <span>{t.includePhotos}</span>
@@ -1332,10 +1262,7 @@ Lien d'accès: ${shareLink}`);
                 
                 <div 
                   className={`checkbox-field ${finalizationData.documentGeneration.includeSignatures ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeSignatures: !prev.documentGeneration.includeSignatures }
-                  }))}
+                  onClick={() => updateDocumentOption('includeSignatures', !finalizationData.documentGeneration.includeSignatures)}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
                   <span>{t.includeSignatures}</span>
@@ -1343,10 +1270,7 @@ Lien d'accès: ${shareLink}`);
                 
                 <div 
                   className={`checkbox-field ${finalizationData.documentGeneration.includeQRCode ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeQRCode: !prev.documentGeneration.includeQRCode }
-                  }))}
+                  onClick={() => updateDocumentOption('includeQRCode', !finalizationData.documentGeneration.includeQRCode)}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
                   <span>{t.includeQRCode}</span>
@@ -1354,10 +1278,7 @@ Lien d'accès: ${shareLink}`);
                 
                 <div 
                   className={`checkbox-field ${finalizationData.documentGeneration.includeBranding ? 'checked' : ''}`}
-                  onClick={() => setFinalizationData(prev => ({
-                    ...prev,
-                    documentGeneration: { ...prev.documentGeneration, includeBranding: !prev.documentGeneration.includeBranding }
-                  }))}
+                  onClick={() => updateDocumentOption('includeBranding', !finalizationData.documentGeneration.includeBranding)}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
                   <span>{t.includeBranding}</span>
@@ -1374,7 +1295,7 @@ Lien d'accès: ${shareLink}`);
               
               <textarea
                 value={finalizationData.finalComments}
-                onChange={(e) => setFinalizationData(prev => ({ ...prev, finalComments: e.target.value }))}
+                onChange={(e) => updateComments(e.target.value)}
                 placeholder={t.commentsPlaceholder}
                 className="form-input"
                 style={{ minHeight: '100px', resize: 'vertical' }}
