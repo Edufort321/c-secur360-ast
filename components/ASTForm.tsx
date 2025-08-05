@@ -995,17 +995,18 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX CRITIQUE : Handlers avec logique de section dynamique correcte
+  // ✅ FIX CRITIQUE : Handlers avec type assertion pour TypeScript
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
-      // ✅ FIX : Utiliser la section passée dynamiquement
+      // ✅ FIX : Cas spécial pour astNumber
       if (section === 'astNumber') {
         return { ...prev, astNumber: data };
       }
       
+      // ✅ FIX : Type assertion pour indexation dynamique
       return {
         ...prev,
-        [section]: { ...prev[section], ...data }
+        [section]: { ...(prev as any)[section], ...data }
       };
     });
     setHasUnsavedChanges(true);
@@ -1014,7 +1015,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      [section]: { ...(prev as any)[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1022,7 +1023,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      [section]: { ...(prev as any)[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1030,7 +1031,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      [section]: { ...(prev as any)[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1038,7 +1039,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      [section]: { ...(prev as any)[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1046,7 +1047,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      [section]: { ...prev[section], ...data }
+      [section]: { ...(prev as any)[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
