@@ -789,146 +789,11 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     approvals: [],
     notifications: []
   });
-  // =================== FONCTION DE CHANGEMENT DE LANGUE ===================
-  const handleLanguageChange = (newLanguage: 'fr' | 'en') => {
-    setCurrentLanguage(newLanguage);
-    localStorage.setItem('ast-language-preference', newLanguage);
-  };
-
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
-  const LanguageSelector = () => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      background: 'rgba(15, 23, 42, 0.8)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '8px 12px',
-      position: 'relative'
-    }}>
-      <span style={{
-        fontSize: '12px',
-        color: '#94a3b8',
-        fontWeight: '500'
-      }}>
-        {t.language}
-      </span>
-      
-      <div style={{
-        display: 'flex',
-        background: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '8px',
-        padding: '2px',
-        gap: '2px'
-      }}>
-        <button
-          onClick={() => handleLanguageChange('fr')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'fr' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          FR
-        </button>
-        
-        <button
-          onClick={() => handleLanguageChange('en')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'en' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          EN
-        </button>
-      </div>
-    </div>
-  );
-
-  // =================== CONFIGURATION STEPS AVEC TRADUCTIONS ===================
-  const steps = [
-    { 
-      id: 1, 
-      title: t.steps.projectInfo.title,
-      subtitle: t.steps.projectInfo.subtitle,
-      icon: FileText, 
-      color: '#3b82f6',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 2, 
-      title: t.steps.equipment.title,
-      subtitle: t.steps.equipment.subtitle,
-      icon: Shield, 
-      color: '#f59e0b',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 3, 
-      title: t.steps.hazards.title,
-      subtitle: t.steps.hazards.subtitle,
-      icon: AlertTriangle, 
-      color: '#ef4444',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 4, 
-      title: t.steps.permits.title,
-      subtitle: t.steps.permits.subtitle,
-      icon: FileText, 
-      color: '#10b981',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 5, 
-      title: t.steps.validation.title,
-      subtitle: t.steps.validation.subtitle,
-      icon: Users, 
-      color: '#06b6d4',
-      required: true,
-      mobileOptimized: true
-    },
-    { 
-      id: 6, 
-      title: t.steps.finalization.title,
-      subtitle: t.steps.finalization.subtitle,
-      icon: CheckCircle, 
-      color: '#059669',
-      required: true,
-      mobileOptimized: true
-    }
-  ];
-
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== FONCTIONS UTILITAIRES STABLES ===================
   const getCompletionPercentage = useCallback((): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
-  }, []);
+  }, []); // ✅ Pas de deps = stable
 
   const getCurrentCompletedSteps = useCallback((): number => {
     let completed = 0;
@@ -958,7 +823,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     }
     
     return completed;
-  }, []); // ✅ FIX : Pas de deps = pas de re-calcul
+  }, []); // ✅ Pas de deps = stable
 
   const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
@@ -977,9 +842,9 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return false;
     }
-  }, []); // ✅ FIX : Pas de deps = stable
+  }, []); // ✅ Pas de deps = stable
 
-  // =================== NAVIGATION ===================
+  // =================== NAVIGATION STABLE ===================
   const handlePrevious = useCallback(() => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   }, []);
@@ -994,32 +859,47 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     setCurrentStep(step);
   }, []);
 
-  // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX ÉQUILIBRÉ : Handlers qui updatent SANS re-render excessif
+  // =================== HANDLERS ULTRA-OPTIMISÉS - FIX DÉFINITIF ===================
+  // ✅ FIX CRITIQUE : Ajouter vérification de changement AVANT setAstData
   const handleStep1DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data }); // ← DEBUG LOG
+    console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data });
     
     setAstData(prev => {
-      console.log('🔥 ASTForm prev astData:', prev); // ← DEBUG LOG
-      
+      // ✅ FIX CRITIQUE : Vérifier si les données ont vraiment changé
       if (section === 'astNumber') {
+        if (prev.astNumber === data) {
+          console.log('🔥 ASTForm astNumber identique, skip update');
+          return prev; // ← Pas de changement = pas de re-render !
+        }
         const newState = { ...prev, astNumber: data };
-        console.log('🔥 ASTForm nouveau state (astNumber):', newState); // ← DEBUG LOG
+        console.log('🔥 ASTForm nouveau state (astNumber):', newState);
         return newState;
       }
       
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ FIX CRITIQUE : Comparer les sections
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        console.log('🔥 ASTForm section identique, skip update');
+        return prev; // ← Pas de changement = pas de re-render !
+      }
+      
       const newState = {
         ...prev,
         [section]: newSection
       };
       
-      console.log('🔥 ASTForm nouveau state (section):', { section, newSection, newState }); // ← DEBUG LOG
+      console.log('🔥 ASTForm nouveau state (section):', { section, newSection });
       return newState;
     });
-  }, []); // ✅ Pas de deps
+    
+    // ✅ FIX CRITIQUE : Debounce setHasUnsavedChanges
+    setTimeout(() => setHasUnsavedChanges(true), 0);
+  }, []);
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm handleStep2DataChange appelé:', { section, data });
@@ -1028,11 +908,21 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ Vérification de changement
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        return prev;
+      }
+      
       return {
         ...prev,
         [section]: newSection
       };
     });
+    
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []);
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
@@ -1042,11 +932,21 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ Vérification de changement
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        return prev;
+      }
+      
       return {
         ...prev,
         [section]: newSection
       };
     });
+    
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []);
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
@@ -1056,11 +956,21 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ Vérification de changement
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        return prev;
+      }
+      
       return {
         ...prev,
         [section]: newSection
       };
     });
+    
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []);
 
   const handleStep5DataChange = useCallback((section: string, data: any) => {
@@ -1070,11 +980,23 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ FIX CRITIQUE : Vérification de changement pour Step5
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        console.log('🔥 ASTForm Step5 section identique, skip update');
+        return prev; // ← CRUCIAL pour éviter la boucle infinie !
+      }
+      
+      console.log('🔥 ASTForm Step5 updating:', { section, newSection });
       return {
         ...prev,
         [section]: newSection
       };
     });
+    
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []);
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
@@ -1084,11 +1006,21 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
       
+      // ✅ Vérification de changement
+      const currentSectionStr = JSON.stringify(currentSection);
+      const newSectionStr = JSON.stringify(newSection);
+      
+      if (currentSectionStr === newSectionStr) {
+        return prev;
+      }
+      
       return {
         ...prev,
         [section]: newSection
       };
     });
+    
+    setTimeout(() => setHasUnsavedChanges(true), 0);
   }, []);
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
@@ -1142,21 +1074,20 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== EFFECTS CORRIGÉS AVEC DEBOUNCE ===================
-  // ✅ FIX CRITIQUE : useEffect sans astData ET avec debounce
+  // =================== EFFECTS ULTRA-OPTIMISÉS ===================
   useEffect(() => {
     const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
     if (savedLanguage && savedLanguage !== currentLanguage) {
       setCurrentLanguage(savedLanguage);
     }
-  }, []); // ✅ Exécuter une seule fois
+  }, []); // ✅ Une seule fois
 
   useEffect(() => {
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
         console.log('🔄 Sauvegarde automatique...');
         setHasUnsavedChanges(false);
-      }, 1000); // ✅ FIX : Debounce plus long
+      }, 1000);
 
       return () => clearTimeout(saveTimer);
     }
@@ -1176,7 +1107,6 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []); // ✅ Une seule fois
 
   // =================== COMPOSANTS MÉMORISÉS POUR ÉVITER RE-RENDERS ===================
-  // ✅ FIX ULTIME : Mémoriser Step1 avec React.memo
   const MemoizedStep1 = React.memo(Step1ProjectInfo);
   const MemoizedStep2 = React.memo(Step2Equipment);
   const MemoizedStep3 = React.memo(Step3Hazards);
@@ -1184,54 +1114,49 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const MemoizedStep5 = React.memo(Step5Validation);
   const MemoizedStep6 = React.memo(Step6Finalization);
 
-  // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
-  // ✅ FIX RADICAL : Composant direct sans useCallback
+  // =================== RENDU DU CONTENU DES STEPS - OPTIMISÉ FINAL ===================
   const StepContent = () => {
-    console.log('🔥 StepContent render DIRECT - Step:', currentStep); // ← DEBUG LOG minimal
+    console.log('🔥 StepContent render - Step:', currentStep);
+    
+    // ✅ FIX ULTIME : Props stables pour éviter re-render
+    const stepProps = {
+      formData: astData,
+      language: currentLanguage,
+      tenant: tenant,
+      errors: {}
+    };
     
     switch (currentStep) {
       case 1:
         return (
           <MemoizedStep1
-            key="step1" // ✅ FIX : Key stable pour éviter re-mount
-            formData={astData}
+            key="step1"
+            {...stepProps}
             onDataChange={handleStep1DataChange}
-            language={currentLanguage}
-            tenant={tenant}
-            errors={{}}
           />
         );
       case 2:
         return (
           <MemoizedStep2
             key="step2"
-            formData={astData}
+            {...stepProps}
             onDataChange={handleStep2DataChange}
-            language={currentLanguage}
-            tenant={tenant}
-            errors={{}}
           />
         );
       case 3:
         return (
           <MemoizedStep3
             key="step3"
-            formData={astData}
+            {...stepProps}
             onDataChange={handleStep3DataChange}
-            language={currentLanguage}
-            tenant={tenant}
-            errors={{}}
           />
         );
       case 4:
         return (
           <MemoizedStep4
             key="step4"
-            formData={astData}
+            {...stepProps}
             onDataChange={handleStep4DataChange}
-            language={currentLanguage}
-            tenant={tenant}
-            errors={{}}
             province={'QC'}
             userRole={'worker'}
             touchOptimized={true}
@@ -1246,21 +1171,16 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         return (
           <MemoizedStep5
             key="step5"
-            formData={astData}
+            {...stepProps}
             onDataChange={handleStep5DataChange}
-            language={currentLanguage}
-            tenant={tenant}
           />
         );
       case 6:
         return (
           <MemoizedStep6
             key="step6"
-            formData={astData}
+            {...stepProps}
             onDataChange={handleStep6DataChange}
-            language={currentLanguage}
-            tenant={tenant}
-            errors={{}}
           />
         );
       default:
