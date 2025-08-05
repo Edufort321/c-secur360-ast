@@ -455,12 +455,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== FONCTIONS UTILITAIRES CORRIGÉES ===================
   const updateProjectInfo = (field: string, value: any) => {
     onDataChange('projectInfo', { ...projectInfo, [field]: value });
   };
 
-  const copyASTNumber = async () => {
+  // ✅ FIX: Handler avec preventDefault
+  const copyASTNumber = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
       await navigator.clipboard.writeText(astNumber);
       setCopied(true);
@@ -470,14 +475,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     }
   };
 
-  const regenerateASTNumber = () => {
+  // ✅ FIX: Handler avec preventDefault
+  const regenerateASTNumber = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const newNumber = generateASTNumber();
     setAstNumber(newNumber);
     onDataChange('astNumber', newNumber);
   };
 
-  // =================== GESTION PHOTOS ===================
-  const handlePhotoCapture = async (category: string, lockoutPointId?: string) => {
+  // =================== GESTION PHOTOS CORRIGÉE ===================
+  // ✅ FIX: Handler avec preventDefault
+  const handlePhotoCapture = async (category: string, lockoutPointId?: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
       if (fileInputRef.current) {
         fileInputRef.current.accept = 'image/*';
@@ -524,7 +539,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     return t.categories[category as keyof typeof t.categories] || category;
   };
 
-  const deletePhoto = (photoId: string) => {
+  // ✅ FIX: Handler avec preventDefault
+  const deletePhoto = (photoId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
     const newProjectInfo = {
       ...projectInfo,
@@ -533,8 +553,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('projectInfo', newProjectInfo);
   };
 
-  // =================== GESTION POINTS DE VERROUILLAGE ===================
-  const addLockoutPoint = () => {
+  // =================== GESTION POINTS DE VERROUILLAGE CORRIGÉE ===================
+  // ✅ FIX: Handler avec preventDefault
+  const addLockoutPoint = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const newPoint: LockoutPoint = {
       id: `lockout_${Date.now()}`,
       energyType: 'electrical',
@@ -560,7 +585,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateProjectInfo('lockoutPoints', updatedPoints);
   };
 
-  const toggleProcedureComplete = (pointId: string, procedureIndex: number) => {
+  // ✅ FIX: Handler avec preventDefault
+  const toggleProcedureComplete = (pointId: string, procedureIndex: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
     if (!point) return;
 
@@ -582,7 +612,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     return { completed, total, percentage };
   };
 
-  const deleteLockoutPoint = (pointId: string) => {
+  // ✅ FIX: Handler avec preventDefault
+  const deleteLockoutPoint = (pointId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     
@@ -595,21 +630,40 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('projectInfo', newProjectInfo);
   };
 
-  // =================== FONCTIONS GESTION TEMPS ===================
-  const setTimeNow = (pointId: string) => {
+  // =================== FONCTIONS GESTION TEMPS CORRIGÉES ===================
+  // ✅ FIX: Handler avec preventDefault
+  const setTimeNow = (pointId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const now = new Date();
     const timeString = now.toTimeString().substring(0, 5);
     updateLockoutPoint(pointId, 'verificationTime', timeString);
   };
 
-  const setTimePlus = (pointId: string, minutes: number) => {
+  // ✅ FIX: Handler avec preventDefault
+  const setTimePlus = (pointId: string, minutes: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const now = new Date();
     now.setMinutes(now.getMinutes() + minutes);
     const timeString = now.toTimeString().substring(0, 5);
     updateLockoutPoint(pointId, 'verificationTime', timeString);
   };
 
-  // =================== CARROUSEL PHOTOS ===================
+  // ✅ FIX: Handler avec preventDefault pour sélection d'énergie
+  const selectEnergyType = (pointId: string, energyType: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    updateLockoutPoint(pointId, 'energyType', energyType);
+  };
+
+  // =================== CARROUSEL PHOTOS CORRIGÉ ===================
   const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
@@ -626,9 +680,30 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       }
     };
 
-    const nextSlide = () => setCurrentIndex((currentIndex + 1) % totalSlides);
-    const prevSlide = () => setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
-    const goToSlide = (index: number) => setCurrentIndex(index);
+    // ✅ FIX: Handlers avec preventDefault
+    const nextSlide = (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setCurrentIndex((currentIndex + 1) % totalSlides);
+    };
+
+    const prevSlide = (e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
+    };
+
+    const goToSlide = (index: number, e?: React.MouseEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setCurrentIndex(index);
+    };
 
     return (
       <div className="photo-carousel">
@@ -643,7 +718,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     <p>{new Date(photo.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</p>
                   </div>
                   <div className="photo-actions">
-                    <button className="photo-action-btn delete" onClick={() => deletePhoto(photo.id)} title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}>
+                    <button 
+                      type="button"
+                      className="photo-action-btn delete" 
+                      onClick={(e) => deletePhoto(photo.id, e)} 
+                      title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -662,10 +742,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           </div>
           {totalSlides > 1 && (
             <>
-              <button className="carousel-nav prev" onClick={prevSlide} disabled={totalSlides <= 1}>
+              <button 
+                type="button"
+                className="carousel-nav prev" 
+                onClick={prevSlide} 
+                disabled={totalSlides <= 1}
+              >
                 <ArrowLeft size={20} />
               </button>
-              <button className="carousel-nav next" onClick={nextSlide} disabled={totalSlides <= 1}>
+              <button 
+                type="button"
+                className="carousel-nav next" 
+                onClick={nextSlide} 
+                disabled={totalSlides <= 1}
+              >
                 <ArrowRight size={20} />
               </button>
             </>
@@ -673,7 +763,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           {totalSlides > 1 && (
             <div className="carousel-indicators">
               {Array.from({ length: totalSlides }).map((_, index) => (
-                <div key={index} className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`} onClick={() => goToSlide(index)} />
+                <div 
+                  key={index} 
+                  className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`} 
+                  onClick={(e) => goToSlide(index, e)} 
+                />
               ))}
             </div>
           )}
@@ -698,7 +792,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </select>
   );
 
-  // =================== COMPOSANT VIDE POUR PHOTOS ===================
+  // =================== COMPOSANT VIDE POUR PHOTOS CORRIGÉ ===================
   const EmptyPhotoPlaceholder = ({ 
     onClick, 
     title, 
@@ -1588,10 +1682,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               {t.astNumberTitle}
             </div>
             <div className="ast-actions">
-              <button className={`btn-icon ${copied ? 'copied' : ''}`} onClick={copyASTNumber} title={t.copyNumber}>
+              <button 
+                type="button"
+                className={`btn-icon ${copied ? 'copied' : ''}`} 
+                onClick={copyASTNumber} 
+                title={t.copyNumber}
+              >
                 {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
               </button>
-              <button className="btn-icon" onClick={regenerateASTNumber} title={t.generateNew}>
+              <button 
+                type="button"
+                className="btn-icon" 
+                onClick={regenerateASTNumber} 
+                title={t.generateNew}
+              >
                 <FileText style={{ width: '16px', height: '16px' }} />
               </button>
             </div>
@@ -1613,29 +1717,49 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <Building style={{ width: '18px', height: '18px' }} />
                 {t.clientName}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder={t.clientNamePlaceholder}
-                value={projectInfo.client || ''} onChange={(e) => updateProjectInfo('client', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.clientNamePlaceholder}
+                value={projectInfo.client || ''} 
+                onChange={(e) => updateProjectInfo('client', e.target.value)} 
+              />
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Phone style={{ width: '18px', height: '18px' }} />{t.clientPhone}
               </label>
-              <input type="tel" className="premium-input" placeholder={t.clientPhonePlaceholder}
-                value={projectInfo.clientPhone || ''} onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} />
+              <input 
+                type="tel" 
+                className="premium-input" 
+                placeholder={t.clientPhonePlaceholder}
+                value={projectInfo.clientPhone || ''} 
+                onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} 
+              />
             </div>
             <div className="form-field">
               <label className="field-label">
                 <User style={{ width: '18px', height: '18px' }} />{t.clientRepresentative}
               </label>
-              <input type="text" className="premium-input" placeholder={t.clientRepPlaceholder}
-                value={projectInfo.clientRepresentative || ''} onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.clientRepPlaceholder}
+                value={projectInfo.clientRepresentative || ''} 
+                onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} 
+              />
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Phone style={{ width: '18px', height: '18px' }} />{t.repPhone}
               </label>
-              <input type="tel" className="premium-input" placeholder={t.repPhonePlaceholder}
-                value={projectInfo.clientRepresentativePhone || ''} onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} />
+              <input 
+                type="tel" 
+                className="premium-input" 
+                placeholder={t.repPhonePlaceholder}
+                value={projectInfo.clientRepresentativePhone || ''} 
+                onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} 
+              />
             </div>
           </div>
 
@@ -1650,15 +1774,25 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <Briefcase style={{ width: '18px', height: '18px' }} />
                 {t.projectNumber}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder={t.projectNumberPlaceholder}
-                value={projectInfo.projectNumber || ''} onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.projectNumberPlaceholder}
+                value={projectInfo.projectNumber || ''} 
+                onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} 
+              />
             </div>
             <div className="form-field">
               <label className="field-label">
                 <FileText style={{ width: '18px', height: '18px' }} />{t.astClientNumber}
               </label>
-              <input type="text" className="premium-input" placeholder={t.astClientPlaceholder}
-                value={projectInfo.astClientNumber || ''} onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.astClientPlaceholder}
+                value={projectInfo.astClientNumber || ''} 
+                onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} 
+              />
               <div className="field-help">{t.astClientHelp}</div>
             </div>
             <div className="two-column">
@@ -1666,17 +1800,23 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <label className="field-label">
                   <Calendar style={{ width: '18px', height: '18px' }} />{t.date}
                 </label>
-                <input type="date" className="premium-input"
+                <input 
+                  type="date" 
+                  className="premium-input"
                   value={projectInfo.date || new Date().toISOString().split('T')[0]}
-                  onChange={(e) => updateProjectInfo('date', e.target.value)} />
+                  onChange={(e) => updateProjectInfo('date', e.target.value)} 
+                />
               </div>
               <div className="form-field">
                 <label className="field-label">
                   <Clock style={{ width: '18px', height: '18px' }} />{t.time}
                 </label>
-                <input type="time" className="premium-input"
+                <input 
+                  type="time" 
+                  className="premium-input"
                   value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
-                  onChange={(e) => updateProjectInfo('time', e.target.value)} />
+                  onChange={(e) => updateProjectInfo('time', e.target.value)} 
+                />
               </div>
             </div>
           </div>
@@ -1692,8 +1832,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <MapPin style={{ width: '18px', height: '18px' }} />
                 {t.workLocation}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="text" className="premium-input" placeholder={t.workLocationPlaceholder}
-                value={projectInfo.workLocation || ''} onChange={(e) => updateProjectInfo('workLocation', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.workLocationPlaceholder}
+                value={projectInfo.workLocation || ''} 
+                onChange={(e) => updateProjectInfo('workLocation', e.target.value)} 
+              />
             </div>
             <div className="form-field">
               <label className="field-label">
@@ -1714,16 +1859,28 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <Users style={{ width: '18px', height: '18px' }} />
                 {t.workerCount}<span className="required-indicator">{t.required}</span>
               </label>
-              <input type="number" min="1" max="100" className="premium-input" placeholder={t.workerCountPlaceholder}
-                value={projectInfo.workerCount || 1} onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} />
+              <input 
+                type="number" 
+                min="1" 
+                max="100" 
+                className="premium-input" 
+                placeholder={t.workerCountPlaceholder}
+                value={projectInfo.workerCount || 1} 
+                onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} 
+              />
               <div className="field-help">{t.workerCountHelp}</div>
             </div>
             <div className="form-field">
               <label className="field-label">
                 <Clock style={{ width: '18px', height: '18px' }} />{t.estimatedDuration}
               </label>
-              <input type="text" className="premium-input" placeholder={t.durationPlaceholder}
-                value={projectInfo.estimatedDuration || ''} onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} />
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder={t.durationPlaceholder}
+                value={projectInfo.estimatedDuration || ''} 
+                onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} 
+              />
             </div>
           </div>
 
@@ -1738,15 +1895,25 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <label className="field-label">
                   <AlertTriangle style={{ width: '18px', height: '18px' }} />{t.emergencyContact}
                 </label>
-                <input type="text" className="premium-input" placeholder={t.emergencyContactPlaceholder}
-                  value={projectInfo.emergencyContact || ''} onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} />
+                <input 
+                  type="text" 
+                  className="premium-input" 
+                  placeholder={t.emergencyContactPlaceholder}
+                  value={projectInfo.emergencyContact || ''} 
+                  onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} 
+                />
               </div>
               <div className="form-field">
                 <label className="field-label">
                   <Phone style={{ width: '18px', height: '18px' }} />{t.emergencyPhone}
                 </label>
-                <input type="tel" className="premium-input" placeholder={t.emergencyPhonePlaceholder}
-                  value={projectInfo.emergencyPhone || ''} onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} />
+                <input 
+                  type="tel" 
+                  className="premium-input" 
+                  placeholder={t.emergencyPhonePlaceholder}
+                  value={projectInfo.emergencyPhone || ''} 
+                  onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} 
+                />
               </div>
             </div>
           </div>
@@ -1762,9 +1929,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <FileText style={{ width: '18px', height: '18px' }} />
                 {t.workDescriptionLabel}<span className="required-indicator">{t.required}</span>
               </label>
-              <textarea className="premium-textarea" style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
+              <textarea 
+                className="premium-textarea" 
+                style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
-                value={projectInfo.workDescription || ''} onChange={(e) => updateProjectInfo('workDescription', e.target.value)} />
+                value={projectInfo.workDescription || ''} 
+                onChange={(e) => updateProjectInfo('workDescription', e.target.value)} 
+              />
               <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
           </div>
@@ -1786,13 +1957,25 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               <Camera style={{ width: '18px', height: '18px' }} />{t.generalPhotos}
             </label>
             <div className="photo-capture-buttons">
-              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('before_lockout')}>
+              <button 
+                type="button"
+                className="photo-capture-btn" 
+                onClick={(e) => handlePhotoCapture('before_lockout', undefined, e)}
+              >
                 <Camera size={14} />{t.beforeLockout}
               </button>
-              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('client_form')}>
+              <button 
+                type="button"
+                className="photo-capture-btn" 
+                onClick={(e) => handlePhotoCapture('client_form', undefined, e)}
+              >
                 <FileText size={14} />{t.clientForm}
               </button>
-              <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification')}>
+              <button 
+                type="button"
+                className="photo-capture-btn" 
+                onClick={(e) => handlePhotoCapture('verification', undefined, e)}
+              >
                 <Eye size={14} />{t.verification}
               </button>
             </div>
@@ -1819,13 +2002,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   {t.lockoutPoint}{index + 1}
                 </h4>
                 <button 
-                  className="btn-danger" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    deleteLockoutPoint(point.id);
-                  }}
                   type="button"
+                  className="btn-danger" 
+                  onClick={(e) => deleteLockoutPoint(point.id, e)}
                 >
                   <Trash2 size={14} />
                   {t.delete}
@@ -1839,12 +2018,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   {Object.entries(ENERGY_TYPES).map(([key, type]) => {
                     const IconComponent = type.icon;
                     return (
-                      <div key={key} className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
-                        onClick={() => updateLockoutPoint(point.id, 'energyType', key)}
+                      <div 
+                        key={key} 
+                        className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
+                        onClick={(e) => selectEnergyType(point.id, key, e)}
                         style={{ 
                           borderColor: point.energyType === key ? type.color : undefined,
                           backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
-                        }}>
+                        }}
+                      >
                         <IconComponent size={20} color={type.color} />
                         <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
                       </div>
@@ -1860,8 +2042,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                       {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
                         const isCompleted = (point.completedProcedures || []).includes(idx);
                         return (
-                          <li key={idx} className={`procedure-item ${isCompleted ? 'completed' : ''}`}
-                            onClick={() => toggleProcedureComplete(point.id, idx)}>
+                          <li 
+                            key={idx} 
+                            className={`procedure-item ${isCompleted ? 'completed' : ''}`}
+                            onClick={(e) => toggleProcedureComplete(point.id, idx, e)}
+                          >
                             <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
                               {isCompleted && <Check size={12} />}
                             </div>
@@ -1887,50 +2072,91 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
-                  <input type="text" className="premium-input" placeholder={t.equipmentPlaceholder}
-                    value={point.equipmentName} onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} />
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={t.equipmentPlaceholder}
+                    value={point.equipmentName} 
+                    onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} 
+                  />
                 </div>
                 <div className="form-field">
                   <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />{t.locationLabel}</label>
-                  <input type="text" className="premium-input" placeholder={t.locationPlaceholder}
-                    value={point.location} onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} />
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={t.locationPlaceholder}
+                    value={point.location} 
+                    onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} 
+                  />
                 </div>
               </div>
 
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />{t.lockType}</label>
-                  <input type="text" className="premium-input" placeholder={t.lockTypePlaceholder}
-                    value={point.lockType} onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} />
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={t.lockTypePlaceholder}
+                    value={point.lockType} 
+                    onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} 
+                  />
                 </div>
                 <div className="form-field">
                   <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.tagNumber}</label>
-                  <input type="text" className="premium-input" placeholder={t.tagPlaceholder}
-                    value={point.tagNumber} onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} />
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={t.tagPlaceholder}
+                    value={point.tagNumber} 
+                    onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} 
+                  />
                 </div>
               </div>
 
-              {/* Status et vérification AVEC BOUTONS HORLOGE */}
+              {/* Status et vérification AVEC BOUTONS HORLOGE CORRIGÉS */}
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
-                  <input type="text" className="premium-input" placeholder={t.verifiedByPlaceholder}
-                    value={point.verifiedBy} onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} />
+                  <input 
+                    type="text" 
+                    className="premium-input" 
+                    placeholder={t.verifiedByPlaceholder}
+                    value={point.verifiedBy} 
+                    onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} 
+                  />
                 </div>
                 <div className="form-field">
                   <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />{t.verificationTime}</label>
-                  <input type="time" className="premium-input" value={point.verificationTime}
-                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} />
+                  <input 
+                    type="time" 
+                    className="premium-input" 
+                    value={point.verificationTime}
+                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} 
+                  />
                   
-                  {/* Boutons de sélection rapide */}
+                  {/* ✅ BOUTONS DE SÉLECTION RAPIDE CORRIGÉS */}
                   <div className="time-quick-select">
-                    <button className="time-btn now" onClick={() => setTimeNow(point.id)}>
+                    <button 
+                      type="button"
+                      className="time-btn now" 
+                      onClick={(e) => setTimeNow(point.id, e)}
+                    >
                       <Clock size={12} />{t.now}
                     </button>
-                    <button className="time-btn plus5" onClick={() => setTimePlus(point.id, 5)}>
+                    <button 
+                      type="button"
+                      className="time-btn plus5" 
+                      onClick={(e) => setTimePlus(point.id, 5, e)}
+                    >
                       +5min
                     </button>
-                    <button className="time-btn plus15" onClick={() => setTimePlus(point.id, 15)}>
+                    <button 
+                      type="button"
+                      className="time-btn plus15" 
+                      onClick={(e) => setTimePlus(point.id, 15, e)}
+                    >
                       +15min
                     </button>
                   </div>
@@ -1940,24 +2166,40 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               {/* Notes */}
               <div className="form-field">
                 <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.notes}</label>
-                <textarea className="premium-textarea" style={{ minHeight: '80px' }}
+                <textarea 
+                  className="premium-textarea" 
+                  style={{ minHeight: '80px' }}
                   placeholder={t.notesPlaceholder}
-                  value={point.notes} onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} />
+                  value={point.notes} 
+                  onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} 
+                />
               </div>
 
               {/* Photos spécifiques à ce point */}
               <div className="form-field">
                 <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
                 
-                {/* Boutons de capture photo pour ce point */}
+                {/* ✅ BOUTONS DE CAPTURE PHOTO CORRIGÉS */}
                 <div className="photo-capture-buttons">
-                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
+                  <button 
+                    type="button"
+                    className="photo-capture-btn" 
+                    onClick={(e) => handlePhotoCapture('during_lockout', point.id, e)}
+                  >
                     <Camera size={14} />{t.duringLockout}
                   </button>
-                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
+                  <button 
+                    type="button"
+                    className="photo-capture-btn" 
+                    onClick={(e) => handlePhotoCapture('lockout_device', point.id, e)}
+                  >
                     <Lock size={14} />{t.lockoutDevice}
                   </button>
-                  <button className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
+                  <button 
+                    type="button"
+                    className="photo-capture-btn" 
+                    onClick={(e) => handlePhotoCapture('verification', point.id, e)}
+                  >
                     <Eye size={14} />{t.verification}
                   </button>
                 </div>
@@ -1980,9 +2222,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           ))}
 
-          {/* Bouton ajouter point de verrouillage */}
+          {/* ✅ BOUTON AJOUTER POINT DE VERROUILLAGE CORRIGÉ */}
           <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
-            <button className="btn-primary" onClick={addLockoutPoint}>
+            <button 
+              type="button"
+              className="btn-primary" 
+              onClick={addLockoutPoint}
+            >
               <Plus size={20} />{t.addLockoutPoint}
             </button>
           </div>
