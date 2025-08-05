@@ -995,19 +995,26 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX CRITIQUE : Handlers sans dépendances instables
+  // ✅ FIX CRITIQUE : Handlers avec logique de section dynamique correcte
   const handleStep1DataChange = useCallback((section: string, data: any) => {
-    setAstData(prev => ({
-      ...prev,
-      projectInfo: { ...prev.projectInfo, ...data }
-    }));
+    setAstData(prev => {
+      // ✅ FIX : Utiliser la section passée dynamiquement
+      if (section === 'astNumber') {
+        return { ...prev, astNumber: data };
+      }
+      
+      return {
+        ...prev,
+        [section]: { ...prev[section], ...data }
+      };
+    });
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides = pas de stale closures !
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      equipment: { ...prev.equipment, ...data }
+      [section]: { ...prev[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1015,7 +1022,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      hazards: { ...prev.hazards, ...data }
+      [section]: { ...prev[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1023,7 +1030,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      permits: { ...prev.permits, ...data }
+      [section]: { ...prev[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1031,7 +1038,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      validation: { ...prev.validation, ...data }
+      [section]: { ...prev[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1039,7 +1046,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
-      finalization: { ...prev.finalization, ...data }
+      [section]: { ...prev[section], ...data }
     }));
     setHasUnsavedChanges(true);
   }, []); // ✅ Dépendances vides
@@ -1123,7 +1130,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('online', handleOffline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
