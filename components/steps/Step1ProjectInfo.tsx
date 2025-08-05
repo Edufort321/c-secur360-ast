@@ -439,28 +439,59 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
+
 function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
   const ENERGY_TYPES = getEnergyTypes(language);
   
-  // =================== ÉTATS ===================
-  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
-  const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  // =================== ÉTATS LOCAUX (SOLUTION ANTI-ÉJECTION) ===================
   const projectInfo = formData?.projectInfo || {};
   const lockoutPoints = projectInfo?.lockoutPoints || [];
   const lockoutPhotos = projectInfo?.lockoutPhotos || [];
+  
+  // 🔥 ÉTAT LOCAL POUR ÉVITER LES RE-RENDERS - TOUS LES CHAMPS PRINCIPAUX
+  const [localState, setLocalState] = useState({
+    client: projectInfo.client || '',
+    clientPhone: projectInfo.clientPhone || '',
+    clientRepresentative: projectInfo.clientRepresentative || '',
+    clientRepresentativePhone: projectInfo.clientRepresentativePhone || '',
+    projectNumber: projectInfo.projectNumber || '',
+    astClientNumber: projectInfo.astClientNumber || '',
+    date: projectInfo.date || new Date().toISOString().split('T')[0],
+    time: projectInfo.time || new Date().toTimeString().substring(0, 5),
+    workLocation: projectInfo.workLocation || '',
+    industry: projectInfo.industry || 'electrical',
+    workerCount: projectInfo.workerCount || 1,
+    estimatedDuration: projectInfo.estimatedDuration || '',
+    emergencyContact: projectInfo.emergencyContact || '',
+    emergencyPhone: projectInfo.emergencyPhone || '',
+    workDescription: projectInfo.workDescription || ''
+  });
+
+  // États pour AST et photos
+  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
 
-  // =================== FONCTIONS UTILITAIRES CORRIGÉES ===================
-  const updateProjectInfo = (field: string, value: any) => {
+  // =================== HANDLERS ÉTAT LOCAL (SAISIE FLUIDE) ===================
+  const updateLocalState = (field: string, value: any) => {
+    setLocalState(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Sync vers ASTForm (onBlur uniquement pour éviter re-renders)
+  const syncToParent = (field: string, value: any) => {
     onDataChange('projectInfo', { ...projectInfo, [field]: value });
   };
 
-  // ✅ FIX: Handler avec preventDefault
+  // Sync complet (pour les cas où on a besoin de tout synchroniser)
+  const syncAllToParent = () => {
+    onDataChange('projectInfo', { ...projectInfo, ...localState });
+  };
+
+  // =================== HANDLERS AST ET UTILITAIRES ===================
   const copyASTNumber = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -475,7 +506,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     }
   };
 
-  // ✅ FIX: Handler avec preventDefault
   const regenerateASTNumber = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -486,8 +516,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('astNumber', newNumber);
   };
 
-  // =================== GESTION PHOTOS CORRIGÉE ===================
-  // ✅ FIX: Handler avec preventDefault
+  // =================== GESTION PHOTOS ===================
   const handlePhotoCapture = async (category: string, lockoutPointId?: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -524,12 +553,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       };
       
       const updatedPhotos = [...lockoutPhotos, newPhoto];
-      const newProjectInfo = {
+      onDataChange('projectInfo', {
         ...projectInfo,
+        ...localState, // Sync état local
         lockoutPhotos: updatedPhotos
-      };
-      
-      onDataChange('projectInfo', newProjectInfo);
+      });
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
@@ -539,22 +567,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     return t.categories[category as keyof typeof t.categories] || category;
   };
 
-  // ✅ FIX: Handler avec preventDefault
   const deletePhoto = (photoId: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
-    const newProjectInfo = {
+    onDataChange('projectInfo', {
       ...projectInfo,
+      ...localState, // Sync état local
       lockoutPhotos: updatedPhotos
-    };
-    onDataChange('projectInfo', newProjectInfo);
+    });
   };
-
-  // =================== GESTION POINTS DE VERROUILLAGE CORRIGÉE ===================
-  // ✅ FIX: Handler avec preventDefault
+  // =================== GESTION POINTS DE VERROUILLAGE ===================
   const addLockoutPoint = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -575,17 +600,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       completedProcedures: []
     };
     const updatedPoints = [...lockoutPoints, newPoint];
-    updateProjectInfo('lockoutPoints', updatedPoints);
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState, // Sync état local
+      lockoutPoints: updatedPoints
+    });
   };
 
   const updateLockoutPoint = (pointId: string, field: string, value: any) => {
     const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
-    updateProjectInfo('lockoutPoints', updatedPoints);
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState, // Sync état local
+      lockoutPoints: updatedPoints
+    });
   };
 
-  // ✅ FIX: Handler avec preventDefault
   const toggleProcedureComplete = (pointId: string, procedureIndex: number, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -612,7 +644,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     return { completed, total, percentage };
   };
 
-  // ✅ FIX: Handler avec preventDefault
   const deleteLockoutPoint = (pointId: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -621,17 +652,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     
-    const newProjectInfo = {
+    onDataChange('projectInfo', {
       ...projectInfo,
+      ...localState, // Sync état local
       lockoutPoints: updatedPoints,
       lockoutPhotos: updatedPhotos
-    };
-    
-    onDataChange('projectInfo', newProjectInfo);
+    });
   };
 
-  // =================== FONCTIONS GESTION TEMPS CORRIGÉES ===================
-  // ✅ FIX: Handler avec preventDefault
+  // =================== FONCTIONS GESTION TEMPS ===================
   const setTimeNow = (pointId: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -642,7 +671,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateLockoutPoint(pointId, 'verificationTime', timeString);
   };
 
-  // ✅ FIX: Handler avec preventDefault
   const setTimePlus = (pointId: string, minutes: number, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -654,7 +682,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateLockoutPoint(pointId, 'verificationTime', timeString);
   };
 
-  // ✅ FIX: Handler avec preventDefault pour sélection d'énergie
   const selectEnergyType = (pointId: string, energyType: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -663,7 +690,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateLockoutPoint(pointId, 'energyType', energyType);
   };
 
-  // =================== CARROUSEL PHOTOS CORRIGÉ ===================
+  // =================== CARROUSEL PHOTOS ===================
   const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
@@ -680,7 +707,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       }
     };
 
-    // ✅ FIX: Handlers avec preventDefault
     const nextSlide = (e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
@@ -780,8 +806,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   const IndustrySelector = () => (
     <select 
       className="premium-select" 
-      value={projectInfo.industry || 'electrical'}
-      onChange={(e) => updateProjectInfo('industry', e.target.value)}
+      value={localState.industry}
+      onChange={(e) => updateLocalState('industry', e.target.value)}
+      onBlur={(e) => syncToParent('industry', e.target.value)}
     >
       <option value="electrical">{t.electrical}</option>
       <option value="construction">{t.construction}</option>
@@ -792,7 +819,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </select>
   );
 
-  // =================== COMPOSANT VIDE POUR PHOTOS CORRIGÉ ===================
+  // =================== COMPOSANT VIDE POUR PHOTOS ===================
   const EmptyPhotoPlaceholder = ({ 
     onClick, 
     title, 
@@ -831,7 +858,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   );
   return (
     <>
-      {/* CSS Optimisé et Corrigé pour Step 1 */}
+      {/* CSS Optimisé Complet */}
       <style dangerouslySetInnerHTML={{
         __html: `
           /* =================== CONTAINER PRINCIPAL =================== */
@@ -1706,7 +1733,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
 
         {/* Grille Premium des Sections */}
         <div className="premium-grid">
-          {/* Section Client */}
+          {/* Section Client avec ÉTAT LOCAL + onBlur */}
           <div className="form-section">
             <div className="section-header">
               <Building className="section-icon" />
@@ -1721,8 +1748,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientNamePlaceholder}
-                value={projectInfo.client || ''} 
-                onChange={(e) => updateProjectInfo('client', e.target.value)} 
+                value={localState.client} 
+                onChange={(e) => updateLocalState('client', e.target.value)}
+                onBlur={(e) => syncToParent('client', e.target.value)}
               />
             </div>
             <div className="form-field">
@@ -1733,8 +1761,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.clientPhonePlaceholder}
-                value={projectInfo.clientPhone || ''} 
-                onChange={(e) => updateProjectInfo('clientPhone', e.target.value)} 
+                value={localState.clientPhone} 
+                onChange={(e) => updateLocalState('clientPhone', e.target.value)}
+                onBlur={(e) => syncToParent('clientPhone', e.target.value)}
               />
             </div>
             <div className="form-field">
@@ -1745,8 +1774,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientRepPlaceholder}
-                value={projectInfo.clientRepresentative || ''} 
-                onChange={(e) => updateProjectInfo('clientRepresentative', e.target.value)} 
+                value={localState.clientRepresentative} 
+                onChange={(e) => updateLocalState('clientRepresentative', e.target.value)}
+                onBlur={(e) => syncToParent('clientRepresentative', e.target.value)}
               />
             </div>
             <div className="form-field">
@@ -1757,8 +1787,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.repPhonePlaceholder}
-                value={projectInfo.clientRepresentativePhone || ''} 
-                onChange={(e) => updateProjectInfo('clientRepresentativePhone', e.target.value)} 
+                value={localState.clientRepresentativePhone} 
+                onChange={(e) => updateLocalState('clientRepresentativePhone', e.target.value)}
+                onBlur={(e) => syncToParent('clientRepresentativePhone', e.target.value)}
               />
             </div>
           </div>
@@ -1778,8 +1809,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.projectNumberPlaceholder}
-                value={projectInfo.projectNumber || ''} 
-                onChange={(e) => updateProjectInfo('projectNumber', e.target.value)} 
+                value={localState.projectNumber} 
+                onChange={(e) => updateLocalState('projectNumber', e.target.value)}
+                onBlur={(e) => syncToParent('projectNumber', e.target.value)}
               />
             </div>
             <div className="form-field">
@@ -1790,8 +1822,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.astClientPlaceholder}
-                value={projectInfo.astClientNumber || ''} 
-                onChange={(e) => updateProjectInfo('astClientNumber', e.target.value)} 
+                value={localState.astClientNumber} 
+                onChange={(e) => updateLocalState('astClientNumber', e.target.value)}
+                onBlur={(e) => syncToParent('astClientNumber', e.target.value)}
               />
               <div className="field-help">{t.astClientHelp}</div>
             </div>
@@ -1803,8 +1836,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <input 
                   type="date" 
                   className="premium-input"
-                  value={projectInfo.date || new Date().toISOString().split('T')[0]}
-                  onChange={(e) => updateProjectInfo('date', e.target.value)} 
+                  value={localState.date}
+                  onChange={(e) => updateLocalState('date', e.target.value)}
+                  onBlur={(e) => syncToParent('date', e.target.value)}
                 />
               </div>
               <div className="form-field">
@@ -1814,8 +1848,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <input 
                   type="time" 
                   className="premium-input"
-                  value={projectInfo.time || new Date().toTimeString().substring(0, 5)}
-                  onChange={(e) => updateProjectInfo('time', e.target.value)} 
+                  value={localState.time}
+                  onChange={(e) => updateLocalState('time', e.target.value)}
+                  onBlur={(e) => syncToParent('time', e.target.value)}
                 />
               </div>
             </div>
@@ -1836,8 +1871,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.workLocationPlaceholder}
-                value={projectInfo.workLocation || ''} 
-                onChange={(e) => updateProjectInfo('workLocation', e.target.value)} 
+                value={localState.workLocation} 
+                onChange={(e) => updateLocalState('workLocation', e.target.value)}
+                onBlur={(e) => syncToParent('workLocation', e.target.value)}
               />
             </div>
             <div className="form-field">
@@ -1865,8 +1901,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 max="100" 
                 className="premium-input" 
                 placeholder={t.workerCountPlaceholder}
-                value={projectInfo.workerCount || 1} 
-                onChange={(e) => updateProjectInfo('workerCount', parseInt(e.target.value) || 1)} 
+                value={localState.workerCount} 
+                onChange={(e) => updateLocalState('workerCount', parseInt(e.target.value) || 1)}
+                onBlur={(e) => syncToParent('workerCount', parseInt(e.target.value) || 1)}
               />
               <div className="field-help">{t.workerCountHelp}</div>
             </div>
@@ -1878,8 +1915,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="text" 
                 className="premium-input" 
                 placeholder={t.durationPlaceholder}
-                value={projectInfo.estimatedDuration || ''} 
-                onChange={(e) => updateProjectInfo('estimatedDuration', e.target.value)} 
+                value={localState.estimatedDuration} 
+                onChange={(e) => updateLocalState('estimatedDuration', e.target.value)}
+                onBlur={(e) => syncToParent('estimatedDuration', e.target.value)}
               />
             </div>
           </div>
@@ -1899,8 +1937,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   type="text" 
                   className="premium-input" 
                   placeholder={t.emergencyContactPlaceholder}
-                  value={projectInfo.emergencyContact || ''} 
-                  onChange={(e) => updateProjectInfo('emergencyContact', e.target.value)} 
+                  value={localState.emergencyContact} 
+                  onChange={(e) => updateLocalState('emergencyContact', e.target.value)}
+                  onBlur={(e) => syncToParent('emergencyContact', e.target.value)}
                 />
               </div>
               <div className="form-field">
@@ -1911,14 +1950,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   type="tel" 
                   className="premium-input" 
                   placeholder={t.emergencyPhonePlaceholder}
-                  value={projectInfo.emergencyPhone || ''} 
-                  onChange={(e) => updateProjectInfo('emergencyPhone', e.target.value)} 
+                  value={localState.emergencyPhone} 
+                  onChange={(e) => updateLocalState('emergencyPhone', e.target.value)}
+                  onBlur={(e) => syncToParent('emergencyPhone', e.target.value)}
                 />
               </div>
             </div>
           </div>
 
-          {/* Section Description */}
+          {/* Section Description AVEC TEXTAREA */}
           <div className="form-section full-width-section">
             <div className="section-header">
               <FileText className="section-icon" />
@@ -1933,15 +1973,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-textarea" 
                 style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
-                value={projectInfo.workDescription || ''} 
-                onChange={(e) => updateProjectInfo('workDescription', e.target.value)} 
+                value={localState.workDescription} 
+                onChange={(e) => updateLocalState('workDescription', e.target.value)}
+                onBlur={(e) => syncToParent('workDescription', e.target.value)}
               />
               <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
           </div>
         </div>
 
-        {/* =================== SECTION VERROUILLAGE/CADENASSAGE =================== */}
+        {/* SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE */}
         <div className="form-section lockout-section">
           <div className="section-header">
             <Lock className="section-icon lockout-icon" />
@@ -1994,7 +2035,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             )}
           </div>
 
-          {/* Liste des points de verrouillage */}
+          {/* POINTS DE VERROUILLAGE DYNAMIQUES */}
           {lockoutPoints.map((point: LockoutPoint, index: number) => (
             <div key={point.id} className="lockout-point">
               <div className="lockout-point-header">
@@ -2011,7 +2052,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </button>
               </div>
 
-              {/* Type d'énergie */}
+              {/* Type d'énergie avec procédures */}
               <div className="form-field">
                 <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
                 <div className="energy-type-selector">
@@ -2068,7 +2109,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 )}
               </div>
 
-              {/* Détails du point */}
+              {/* Détails équipement */}
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
@@ -2115,7 +2156,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </div>
               </div>
 
-              {/* Status et vérification AVEC BOUTONS HORLOGE CORRIGÉS */}
+              {/* Vérification avec boutons temps */}
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
@@ -2136,7 +2177,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} 
                   />
                   
-                  {/* ✅ BOUTONS DE SÉLECTION RAPIDE CORRIGÉS */}
+                  {/* Boutons sélection rapide temps */}
                   <div className="time-quick-select">
                     <button 
                       type="button"
@@ -2175,11 +2216,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 />
               </div>
 
-              {/* Photos spécifiques à ce point */}
+              {/* Photos spécifiques au point */}
               <div className="form-field">
                 <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
                 
-                {/* ✅ BOUTONS DE CAPTURE PHOTO CORRIGÉS */}
                 <div className="photo-capture-buttons">
                   <button 
                     type="button"
@@ -2222,7 +2262,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           ))}
 
-          {/* ✅ BOUTON AJOUTER POINT DE VERROUILLAGE CORRIGÉ */}
+          {/* Bouton ajouter point */}
           <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
             <button 
               type="button"
