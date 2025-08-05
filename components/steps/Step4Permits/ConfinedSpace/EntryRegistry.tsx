@@ -504,8 +504,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     }
 
     if (person && confirm(`Supprimer ${person.name} du registre ?`)) {
-      const updatedPersonnel = personnel.filter(p => p.id !== personId);
-      const updatedStatuses = personnelStatuses.filter(s => s.person_id !== personId);
+      const updatedPersonnel = personnel.filter((p: any) => p.id !== personId);
+      const updatedStatuses = personnelStatuses.filter((s: any) => s.person_id !== personId);
       
       updatePersonnel(updatedPersonnel);
       setPersonnelStatuses(updatedStatuses);
