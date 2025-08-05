@@ -1,511 +1,334 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
-  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
-  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
-  Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
-  Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
-  Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
+  Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
+  Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
+  Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
+  Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
 } from 'lucide-react';
-
-// Import des composants Steps - ✅ TOUS PRÉSENTS
-import Step1ProjectInfo from './steps/Step1ProjectInfo';
-import Step2Equipment from './steps/Step2Equipment';
-import Step3Hazards from './steps/Step3Hazards';
-import Step4Permits from './steps/Step4Permits';
-import Step5Validation from './steps/Step5Validation';
-import Step6Finalization from './steps/Step6Finalization';
 
 // =================== SYSTÈME DE TRADUCTIONS BILINGUE COMPLET ===================
 const translations = {
   fr: {
-    // Header
-    title: "🛡️ C-Secur360",
-    subtitle: "Analyse Sécuritaire de Travail",
-    systemOperational: "Système opérationnel",
-    astStep: "AST • Étape",
-    astNumber: "NUMÉRO AST",
-    online: "En ligne",
-    offline: "Hors ligne",
-    submit: "Soumettre",
-    approve: "Approuver",
+    // Titre principal
+    title: "🛡️ Finalisation AST",
+    subtitle: "Équipe, Partage et Validation Finale",
     
-    // Status
+    // Onglets
+    tabs: {
+      workers: "👷 Équipe",
+      sharing: "📤 Partage", 
+      finalization: "✅ Final"
+    },
+    
+    // Stats équipe
+    stats: {
+      workers: "👷 Travailleurs",
+      consents: "✅ Consentements",
+      approvals: "👍 Approbations",
+      readingRate: "📊 Taux Lecture"
+    },
+    
+    // Équipe
+    teamManagement: "Gestion de l'Équipe",
+    addWorker: "➕ Ajouter",
+    addWorkerModal: "👷 Ajouter un Travailleur",
+    fullName: "Nom complet *",
+    company: "Entreprise *",
+    namePlaceholder: "Jean Tremblay",
+    companyPlaceholder: "Construction ABC Inc.",
+    consentText: "✋ Je consens avoir lu et compris cette AST",
+    consentGiven: "📅 Consentement donné le",
+    approve: "👍 Approuver",
+    reject: "👎 Rejeter",
+    noWorkers: "Aucun travailleur ajouté. Cliquez sur \"Ajouter\" pour commencer.",
+    
+    // Statuts
     status: {
-      draft: "Brouillon",
-      pending_verification: "En attente",
-      approved: "Approuvé",
-      auto_approved: "Auto-approuvé",
-      rejected: "Rejeté"
+      approved: "✅ Approuvé",
+      rejected: "❌ Rejeté", 
+      pending: "⏳ En attente"
     },
     
-    // Steps
-    steps: {
-      projectInfo: {
-        title: "Informations Projet",
-        subtitle: "Identification & Verrouillage"
-      },
-      equipment: {
-        title: "Équipements",
-        subtitle: "EPI et équipements sécurité"
-      },
-      hazards: {
-        title: "Dangers & Contrôles",
-        subtitle: "Risques + Moyens contrôle"
-      },
-      permits: {
-        title: "Permis & Autorisations",
-        subtitle: "Conformité réglementaire"
-      },
-      validation: {
-        title: "Validation Équipe",
-        subtitle: "Signatures & Approbations"
-      },
-      finalization: {
-        title: "Finalisation",
-        subtitle: "Consentement & Archive"
-      }
+    // Partage
+    sharing: "📤 Partage de l'AST",
+    secureLink: "🔗 Lien de partage sécurisé:",
+    copy: "📋 Copier",
+    copied: "✅ Copié!",
+    shareInstructions: "📋 Instructions de partage:",
+    shareList: [
+      "Partagez ce lien avec votre équipe pour consultation",
+      "Chaque membre peut consulter l'AST et donner son approbation", 
+      "Le lien reste actif même si l'AST est verrouillée"
+    ],
+    
+    // Finalisation
+    completionStatus: "📊 État de Complétion",
+    completed: "Complété",
+    sectionStatus: {
+      projectInfo: "✅ Informations projet",
+      hazards: "✅ Dangers identifiés",
+      equipment: "✅ Équipements sélectionnés",
+      teamValidation: "⏳ Validation équipe"
     },
     
-    // Progress
-    progress: "Progression AST",
-    completed: "complété",
-    stepOf: "sur",
+    // Options rapport
+    reportOptions: "📄 Options Rapport",
+    includePhotos: "📸 Photos",
+    includeSignatures: "✍️ Signatures",
+    includeQRCode: "📱 QR Code",
+    includeBranding: "🏢 Branding",
     
-    // Navigation
-    previous: "Précédent",
-    next: "Suivant",
-    finished: "Terminé ✓",
-    autoSave: "Sauvegarde auto",
-    saving: "Modification...",
-    saved: "Sauvegardé",
-    active: "Actif",
+    // Commentaires
+    finalComments: "💬 Commentaires Finaux",
+    commentsPlaceholder: "Ajoutez des commentaires finaux, notes importantes ou instructions spéciales...",
+    documentLocked: "🔒 Document verrouillé - Modification impossible",
     
-    // Language selector
-    language: "Langue",
-    french: "Français",
-    english: "English"
+    // Actions finales
+    finalActions: "🎯 Actions Finales",
+    print: "🖨️ Imprimer",
+    save: "💾 Sauvegarder",
+    archive: "📁 Archiver",
+    lock: "🔒 Verrouiller",
+    locked: "🔒 Verrouillé",
+    
+    // Verrouillage
+    confirmLock: "🔒 Confirmer le Verrouillage",
+    lockWarning: "ATTENTION: Cette action est irréversible !",
+    autoChecks: "📊 Vérifications automatiques:",
+    sectionsCompleted: "✅ Sections complétées:",
+    lockPermanently: "🔒 Verrouiller Définitivement",
+    lockDescription: "Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe via le lien de partage.",
+    
+    // Boutons génériques
+    add: "Ajouter",
+    cancel: "Annuler",
+    close: "Fermer",
+    
+    // Messages
+    fillRequiredFields: "❌ Veuillez remplir le nom et la compagnie",
+    workerAdded: "✅ Travailleur ajouté:",
+    consentUpdated: "✅ Consentement mis à jour pour travailleur:",
+    astLocked: "✅ AST verrouillée avec succès",
+    astSaved: "✅ AST sauvegardée!",
+    astArchived: "✅ AST archivée!",
+    linkCopied: "✅ Lien copié dans le presse-papiers",
+    copyError: "❌ Erreur lors de la copie du lien",
+    printError: "❌ Erreur : Impossible d'ouvrir la fenêtre d'impression. Vérifiez les paramètres de pop-up.",
+    
+    // Données des autres steps pour rapport
+    reportData: {
+      hazards: "⚠️ Dangers",
+      equipment: "🔧 Équipements", 
+      permits: "📄 Permis",
+      lockoutPoints: "🔒 Points LOTO",
+      executiveSummary: "RÉSUMÉ EXÉCUTIF",
+      clientProjectInfo: "🏢 INFORMATIONS CLIENT & PROJET",
+      teamContacts: "👥 ÉQUIPE & CONTACTS",
+      client: "Client:",
+      projectNumber: "Projet #:",
+      location: "Lieu:",
+      dateTime: "Date/Heure:",
+      industry: "Industrie:",
+      workerCount: "Nb Travailleurs:",
+      estimatedDuration: "Durée estimée:",
+      clientContact: "Contact client:",
+      emergency: "Urgence:",
+      teamConsents: "ÉQUIPE ET CONSENTEMENTS",
+      finalCommentsLabel: "Commentaires Finaux:",
+      documentStatus: "Statut du Document:",
+      locked: "🔒 VERROUILLÉ",
+      inProgress: "🔓 EN COURS",
+      completion: "Complétion:",
+      lockedOn: "Verrouillé le:",
+      safetyManager: "RESPONSABLE SÉCURITÉ",
+      supervisor: "SUPERVISEUR", 
+      manager: "GESTIONNAIRE",
+      name: "Nom:",
+      signature: "Signature:",
+      date: "Date:",
+      noSpecified: "Non spécifié",
+      noWorkerAdded: "Aucun travailleur ajouté à l'équipe"
+    }
   },
   
   en: {
-    // Header
-    title: "🛡️ C-Secur360",
-    subtitle: "Job Safety Analysis",
-    systemOperational: "System operational",
-    astStep: "JSA • Step",
-    astNumber: "JSA NUMBER",
-    online: "Online",
-    offline: "Offline",
-    submit: "Submit",
-    approve: "Approve",
+    // Main title
+    title: "🛡️ JSA Finalization",
+    subtitle: "Team, Sharing and Final Validation",
+    
+    // Tabs
+    tabs: {
+      workers: "👷 Team",
+      sharing: "📤 Share",
+      finalization: "✅ Final"
+    },
+    
+    // Team stats
+    stats: {
+      workers: "👷 Workers",
+      consents: "✅ Consents",
+      approvals: "👍 Approvals", 
+      readingRate: "📊 Reading Rate"
+    },
+    
+    // Team
+    teamManagement: "Team Management",
+    addWorker: "➕ Add Worker",
+    addWorkerModal: "👷 Add Worker",
+    fullName: "Full Name *",
+    company: "Company *",
+    namePlaceholder: "John Smith",
+    companyPlaceholder: "ABC Construction Inc.",
+    consentText: "✋ I consent to having read and understood this JSA",
+    consentGiven: "📅 Consent given on",
+    approve: "👍 Approve",
+    reject: "👎 Reject",
+    noWorkers: "No workers added. Click \"Add Worker\" to start.",
     
     // Status
     status: {
-      draft: "Draft",
-      pending_verification: "Pending",
-      approved: "Approved",
-      auto_approved: "Auto-approved",
-      rejected: "Rejected"
+      approved: "✅ Approved",
+      rejected: "❌ Rejected",
+      pending: "⏳ Pending"
     },
     
-    // Steps
-    steps: {
-      projectInfo: {
-        title: "Project Information",
-        subtitle: "Identification & Lockout"
-      },
-      equipment: {
-        title: "Equipment",
-        subtitle: "PPE and safety equipment"
-      },
-      hazards: {
-        title: "Hazards & Controls",
-        subtitle: "Risks + Control measures"
-      },
-      permits: {
-        title: "Permits & Authorizations",
-        subtitle: "Regulatory compliance"
-      },
-      validation: {
-        title: "Team Validation",
-        subtitle: "Signatures & Approvals"
-      },
-      finalization: {
-        title: "Finalization",
-        subtitle: "Consent & Archive"
-      }
+    // Sharing
+    sharing: "📤 JSA Sharing",
+    secureLink: "🔗 Secure sharing link:",
+    copy: "📋 Copy",
+    copied: "✅ Copied!",
+    shareInstructions: "📋 Sharing instructions:",
+    shareList: [
+      "Share this link with your team for consultation",
+      "Each member can review the JSA and give their approval",
+      "The link remains active even if the JSA is locked"
+    ],
+    
+    // Finalization
+    completionStatus: "📊 Completion Status",
+    completed: "Completed",
+    sectionStatus: {
+      projectInfo: "✅ Project information",
+      hazards: "✅ Hazards identified",
+      equipment: "✅ Equipment selected", 
+      teamValidation: "⏳ Team validation"
     },
     
-    // Progress
-    progress: "JSA Progress",
-    completed: "completed",
-    stepOf: "of",
+    // Report options
+    reportOptions: "📄 Report Options",
+    includePhotos: "📸 Photos",
+    includeSignatures: "✍️ Signatures",
+    includeQRCode: "📱 QR Code",
+    includeBranding: "🏢 Branding",
     
-    // Navigation
-    previous: "Previous",
-    next: "Next",
-    finished: "Finished ✓",
-    autoSave: "Auto save",
-    saving: "Saving...",
-    saved: "Saved",
-    active: "Active",
+    // Comments
+    finalComments: "💬 Final Comments",
+    commentsPlaceholder: "Add final comments, important notes or special instructions...",
+    documentLocked: "🔒 Document locked - Cannot modify",
     
-    // Language selector
-    language: "Language",
-    french: "Français",
-    english: "English"
+    // Final actions
+    finalActions: "🎯 Final Actions",
+    print: "🖨️ Print",
+    save: "💾 Save",
+    archive: "📁 Archive",
+    lock: "🔒 Lock",
+    locked: "🔒 Locked",
+    
+    // Locking
+    confirmLock: "🔒 Confirm Lock",
+    lockWarning: "WARNING: This action is irreversible!",
+    autoChecks: "📊 Automatic checks:",
+    sectionsCompleted: "✅ Sections completed:",
+    lockPermanently: "🔒 Lock Permanently",
+    lockDescription: "Once locked, the JSA cannot be modified but will remain viewable by the team via the sharing link.",
+    
+    // Generic buttons
+    add: "Add",
+    cancel: "Cancel", 
+    close: "Close",
+    
+    // Messages
+    fillRequiredFields: "❌ Please fill in name and company",
+    workerAdded: "✅ Worker added:",
+    consentUpdated: "✅ Consent updated for worker:",
+    astLocked: "✅ JSA locked successfully",
+    astSaved: "✅ JSA saved!",
+    astArchived: "✅ JSA archived!",
+    linkCopied: "✅ Link copied to clipboard",
+    copyError: "❌ Error copying link",
+    printError: "❌ Error: Cannot open print window. Check pop-up settings.",
+    
+    // Report data from other steps
+    reportData: {
+      hazards: "⚠️ Hazards",
+      equipment: "🔧 Equipment",
+      permits: "📄 Permits", 
+      lockoutPoints: "🔒 LOTO Points",
+      executiveSummary: "EXECUTIVE SUMMARY",
+      clientProjectInfo: "🏢 CLIENT & PROJECT INFORMATION",
+      teamContacts: "👥 TEAM & CONTACTS",
+      client: "Client:",
+      projectNumber: "Project #:",
+      location: "Location:",
+      dateTime: "Date/Time:",
+      industry: "Industry:",
+      workerCount: "Worker Count:",
+      estimatedDuration: "Estimated Duration:",
+      clientContact: "Client Contact:",
+      emergency: "Emergency:",
+      teamConsents: "TEAM AND CONSENTS",
+      finalCommentsLabel: "Final Comments:",
+      documentStatus: "Document Status:",
+      locked: "🔒 LOCKED",
+      inProgress: "🔓 IN PROGRESS",
+      completion: "Completion:",
+      lockedOn: "Locked on:",
+      safetyManager: "SAFETY MANAGER",
+      supervisor: "SUPERVISOR",
+      manager: "MANAGER", 
+      name: "Name:",
+      signature: "Signature:",
+      date: "Date:",
+      noSpecified: "Not specified",
+      noWorkerAdded: "No workers added to the team"
+    }
   }
 };
 
-// =================== INTERFACES TYPESCRIPT COMPLÈTES ===================
-interface ASTFormProps {
-  tenant: string;
-  language: 'fr' | 'en';
-  userId?: string;
-  userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
-}
-
-interface ASTData {
+// =================== INTERFACES PRINCIPALES ===================
+interface Worker {
   id: string;
-  astNumber: string;
-  tenant: string;
-  status: 'draft' | 'pending_verification' | 'approved' | 'auto_approved' | 'rejected';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  verificationDeadline?: string;
-  projectInfo: ProjectInfo;
-  equipment: EquipmentData;
-  hazards: HazardData;
-  permits: PermitData;
-  validation: ValidationData;
-  finalization: FinalizationData;
-  signatures: Signature[];
-  approvals: Approval[];
-  notifications: NotificationData[];
+  name: string;
+  position: string;
+  company: string;
+  employeeNumber?: string;
+  email?: string;
+  hasConsented: boolean;
+  consentTimestamp?: string;
+  approbationStatus: 'pending' | 'approved' | 'rejected';
+  approbationTimestamp?: string;
+  approbationComments?: string;
+  consultationTime?: number;
 }
 
-interface ProjectInfo {
-  client: string;
-  clientPhone?: string;
-  clientRepresentative?: string;
-  clientRepresentativePhone?: string;
-  workLocation: string;
-  gpsCoordinates?: string;
-  industry: string;
-  projectNumber: string;
-  astClientNumber?: string;
-  date: string;
-  time: string;
-  workDescription: string;
-  workerCount: number;
-  estimatedDuration?: string;
-  emergencyContact?: string;
-  emergencyPhone?: string;
-  lockoutPoints?: LockoutPoint[];
-  lockoutPhotos?: LockoutPhoto[];
-}
-
-interface LockoutPoint {
-  id: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
-  equipmentName: string;
-  location: string;
-  lockType: string;
-  tagNumber: string;
-  isLocked: boolean;
-  verifiedBy: string;
-  verificationTime: string;
-  photos: string[];
-  notes: string;
-  completedProcedures: number[];
-}
-
-interface LockoutPhoto {
+interface Photo {
   id: string;
   url: string;
-  caption: string;
-  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
+  description: string;
   timestamp: string;
-  lockoutPointId?: string;
+  category: 'hazard' | 'equipment' | 'site' | 'other';
 }
 
-interface EquipmentData {
-  list: Equipment[];
-  selected: Equipment[];
-  totalCost: number;
-  inspectionStatus: {
-    total: number;
-    verified: number;
-    available: number;
-    verificationRate: number;
-    availabilityRate: number;
-  };
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  required: boolean;
-  available: boolean;
-  verified: boolean;
-  notes?: string;
-  certification?: string;
-  inspectionDate?: string;
-  inspectedBy?: string;
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
-  cost?: number;
-  supplier?: string;
-  photos?: EquipmentPhoto[];
-  priority?: 'high' | 'medium' | 'low';
-  mandatoryFor?: string[];
-}
-
-interface EquipmentPhoto {
-  id: string;
-  url: string;
-  caption: string;
-  timestamp: string;
-  category: 'inspection' | 'condition' | 'certification' | 'use';
-}
-
-interface HazardData {
-  list: Hazard[];
-  selected: Hazard[];
-  stats: {
-    totalHazards: number;
-    categories: Record<string, number>;
-  };
-}
-
-interface Hazard {
-  id: string;
-  category: string;
-  name: string;
-  description: string;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  legislation: string;
-  icon: string;
-  selected: boolean;
-  controlMeasures: ControlMeasure[];
-}
-
-interface ControlMeasure {
-  id: string;
-  name: string;
-  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  description: string;
-  priority: number;
-  implemented: boolean;
-  responsible?: string;
-  deadline?: string;
-  notes?: string;
-}
-
-interface PermitData {
-  permits: WorkPermit[];
-  authorities: Authority[];
-  generalRequirements: GeneralRequirement[];
-  timeline: TimelineItem[];
-  notifications: NotificationItem[];
-  hotWorkPermit?: HotWorkPermit;
-  confinedSpacePermit?: ConfinedSpacePermit;
-  heightWorkPermit?: HeightWorkPermit;
-  electricalPermit?: ElectricalPermit;
-  regulatory: RegulatoryCompliance;
-}
-
-interface Authority {
-  id: string;
-  name: string;
-  type: string;
-  contactInfo: string;
-  jurisdiction: string;
-  requirements: string[];
-  isRequired: boolean;
-}
-
-interface GeneralRequirement {
-  id: string;
-  category: string;
-  description: string;
-  isRequired: boolean;
-  deadline?: string;
-  responsible?: string;
-  status: 'pending' | 'in_progress' | 'completed';
-}
-
-interface TimelineItem {
-  id: string;
-  date: string;
-  activity: string;
-  responsible: string;
-  status: 'pending' | 'completed' | 'overdue';
-  dependencies?: string[];
-}
-
-interface NotificationItem {
-  id: string;
-  recipient: string;
-  type: string;
-  message: string;
-  scheduledDate: string;
-  sent: boolean;
-  acknowledged: boolean;
-}
-
-interface WorkPermit {
-  id: string;
-  type: string;
-  number: string;
-  issuedBy: string;
-  validFrom: string;
-  validTo: string;
-  conditions: string[];
-  isRequired: boolean;
-  isObtained: boolean;
-  documents?: PermitDocument[];
-}
-
-interface PermitDocument {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  timestamp: string;
-}
-
-interface HotWorkPermit {
-  fireWatchRequired: boolean;
-  fireWatchName?: string;
-  extinguisherLocation: string;
-  hotWorkType: string[];
-  precautions: string[];
-  validityHours: number;
-}
-
-interface ConfinedSpacePermit {
-  spaceType: string;
-  entryProcedure: string[];
-  gasMonitoring: boolean;
-  attendantName?: string;
-  ventilationRequired: boolean;
-  emergencyProcedures: string[];
-}
-
-interface HeightWorkPermit {
-  workHeight: number;
-  fallProtectionType: string[];
-  anchoragePoints: string[];
-  weatherRestrictions: string[];
-  rescuePlan: string;
-}
-
-interface ElectricalPermit {
-  voltageLevel: string;
-  lockoutRequired: boolean;
-  qualifiedPersonnel: string[];
-  testingRequired: boolean;
-  isolationVerified: boolean;
-}
-
-interface RegulatoryCompliance {
-  rsst: boolean;
-  cnesst: boolean;
-  municipalPermits: string[];
-  environmentalConsiderations: string[];
-  specialConditions: string[];
-}
-
-interface ValidationData {
-  reviewers: TeamMember[];
-  approvalRequired: boolean;
-  minimumReviewers: number;
-  reviewDeadline?: string;
-  validationCriteria: {
-    hazardIdentification: boolean;
-    controlMeasures: boolean;
-    equipmentSelection: boolean;
-    procedural: boolean;
-    regulatory: boolean;
-  };
-  finalApproval?: {
-    approvedBy: string;
-    approvedAt: string;
-    signature: string;
-    conditions?: string;
-  };
-  teamMembers?: TeamMember[];
-  discussionPoints?: DiscussionPoint[];
-  meetingMinutes?: MeetingMinutes;
-  approvals?: TeamApproval[];
-  concerns?: string[];
-  improvements?: string[];
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  department: string;
-  experience?: string;
-  certifications?: string[];
-  phoneNumber?: string;
-  hasParticipated?: boolean;
-  signature?: string;
-  signatureDate?: string;
-  feedback?: string;
-  certification?: string;
-  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
-  comments?: string;
-  rating?: number;
-  validatedAt?: string;
-}
-
-interface DiscussionPoint {
-  id: string;
-  category: 'safety' | 'procedure' | 'equipment' | 'environment' | 'emergency';
-  title: string;
-  description: string;
-  raisedBy: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  resolution?: string;
-  isResolved: boolean;
-  timestamp: string;
-}
-
-interface MeetingMinutes {
-  date: string;
-  duration: number;
-  location: string;
-  facilitator: string;
-  participants: string[];
-  keyPoints: string[];
-  decisions: string[];
-  actionItems: ActionItem[];
-}
-
-interface ActionItem {
-  id: string;
-  description: string;
-  assignedTo: string;
-  deadline: string;
-  status: 'open' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-}
-
-interface TeamApproval {
-  memberId: string;
-  memberName: string;
-  role: string;
-  approved: boolean;
-  signature?: string;
-  timestamp?: string;
-  conditions?: string;
-  digitalSignature?: string;
+interface DocumentGeneration {
+  includePhotos: boolean;
+  includeSignatures: boolean;
+  includeQRCode: boolean;
+  includeBranding: boolean;
+  includeTimestamps: boolean;
+  includeComments: boolean;
+  format: 'pdf' | 'word' | 'html';
 }
 
 interface FinalizationData {
@@ -513,1745 +336,1254 @@ interface FinalizationData {
   photos: Photo[];
   finalComments: string;
   documentGeneration: DocumentGeneration;
-  distribution: Distribution;
-  completionStatus: {
-    projectInfo: boolean;
-    equipment: boolean;
-    hazards: boolean;
-    permits: boolean;
-    validation: boolean;
-  };
-  supervisorSignature?: {
-    signedBy: string;
-    signedAt: string;
-    signature: string;
-    title: string;
-  };
-  metadata: {
-    createdAt: string;
-    completedAt?: string;
-    version: string;
-    lastModified: string;
-    totalDuration?: number;
-  };
-  shareLink?: string;
-  qrCode?: string;
+  isLocked: boolean;
+  lockTimestamp?: string;
+  lockReason?: string;
+  completionPercentage: number;
 }
 
-interface Worker {
-  id: string;
-  name: string;
-  position: string;
-  employeeId?: string;
-  company: string;
-  phone?: string;
-  email?: string;
-  certifications: string[];
-  experience: string;
-  hasConsented: boolean;
-  consentDate?: string;
-  consentTime?: string;
-  signature?: string;
-  digitalSignature?: boolean;
+interface FinalizationStepProps {
+  formData: any; // ✅ ACCÈS À TOUTES LES DONNÉES DES STEPS 1-5
+  onDataChange: (section: string, data: FinalizationData) => void;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: any;
 }
 
-interface Photo {
-  id: string;
-  url: string;
-  caption: string;
-  type: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'general';
-  timestamp: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-  tags: string[];
-}
+// =================== TYPES DE SÉCURITÉ ===================
+type ApprobationStatus = 'pending' | 'approved' | 'rejected';
+type LockType = 'temporary' | 'permanent' | 'review';
+type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
 
-interface DocumentGeneration {
-  format: 'pdf' | 'word' | 'excel' | 'html';
-  template: 'standard' | 'detailed' | 'summary' | 'regulatory';
-  language: 'fr' | 'en' | 'both';
-  includePhotos: boolean;
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  branding: boolean;
-  watermark: boolean;
-}
-
-interface Distribution {
-  email: {
-    enabled: boolean;
-    recipients: string[];
-    subject: string;
-    message: string;
-  };
-  portal: {
-    enabled: boolean;
-    publish: boolean;
-    category: string;
-  };
-  archive: {
-    enabled: boolean;
-    retention: number;
-    location: 'local' | 'cloud' | 'both';
-  };
-  compliance: {
-    enabled: boolean;
-    authorities: string[];
-    submissionDate?: string;
-  };
-}
-
-interface Signature {
-  id: string;
-  signerId: string;
-  signerName: string;
-  signerRole: string;
-  signatureData: string;
-  timestamp: string;
-  ipAddress?: string;
-  deviceInfo?: string;
-}
-
-interface Approval {
-  id: string;
-  approverId: string;
-  approverName: string;
-  approverRole: string;
-  approved: boolean;
-  comments?: string;
-  timestamp: string;
-  conditions?: string[];
-}
-
-interface NotificationData {
-  id: string;
-  recipientId: string;
-  recipientName: string;
-  type: 'signature_request' | 'approval_request' | 'status_change' | 'reminder';
-  message: string;
-  sent: boolean;
-  sentAt?: string;
-  readAt?: string;
-}
-
-// =================== HOOK DÉTECTION MOBILE ULTRA-STABLE ===================
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth <= 768;
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    const checkIsMobile = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const newIsMobile = window.innerWidth <= 768;
-        if (newIsMobile !== isMobile) {
-          setIsMobile(newIsMobile);
-        }
-      }, 150);
-    };
-
-    window.addEventListener('resize', checkIsMobile);
-    
-    return () => {
-      window.removeEventListener('resize', checkIsMobile);
-      clearTimeout(timeoutId);
-    };
-  }, [isMobile]);
-
-  return isMobile;
-};
-
-// =================== CONFIGURATION STEPS AVEC TRADUCTIONS ===================
-const steps = [
-  {
-    id: 1,
-    title: 'Informations Projet',
-    subtitle: 'Identification & Verrouillage',
-    icon: FileText,
-    color: '#3b82f6',
-    required: true
-  },
-  {
-    id: 2,
-    title: 'Équipements',
-    subtitle: 'EPI et équipements sécurité',
-    icon: Shield,
-    color: '#10b981',
-    required: true
-  },
-  {
-    id: 3,
-    title: 'Dangers & Contrôles',
-    subtitle: 'Risques + Moyens contrôle',
-    icon: AlertTriangle,
-    color: '#f59e0b',
-    required: true
-  },
-  {
-    id: 4,
-    title: 'Permis & Autorisations',
-    subtitle: 'Conformité réglementaire',
-    icon: Edit,
-    color: '#8b5cf6',
-    required: false
-  },
-  {
-    id: 5,
-    title: 'Validation Équipe',
-    subtitle: 'Signatures & Approbations',
-    icon: Users,
-    color: '#06b6d4',
-    required: false
-  },
-  {
-    id: 6,
-    title: 'Finalisation',
-    subtitle: 'Consentement & Archive',
-    icon: CheckCircle,
-    color: '#10b981',
-    required: false
-  }
-];
-
-// =================== COMPOSANT PRINCIPAL AVEC ÉTATS OPTIMISÉS ===================
-export default function ASTForm({ 
-  tenant, 
-  language: initialLanguage = 'fr', 
-  userId, 
-  userRole = 'worker' 
-}: ASTFormProps) {
+function Step6Finalization({ 
+  formData, // ✅ CONTIENT TOUTES LES DONNÉES : projectInfo, equipment, hazards, permits, validation
+  onDataChange, 
+  language = 'fr',
+  tenant 
+}: FinalizationStepProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // =================== GESTION DE LA LANGUE ULTRA-STABLE ===================
-  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
-      return savedLanguage || initialLanguage;
-    }
-    return initialLanguage;
-  });
-  const t = translations[currentLanguage];
+  // =================== TRADUCTIONS ===================
+  const t = translations[language] || translations.fr;
   
-  // =================== DÉTECTION MOBILE STABLE ===================
-  const isMobile = useIsMobile();
-
-  // =================== ÉTATS PRINCIPAUX ULTRA-OPTIMISÉS ===================
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isOnline, setIsOnline] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return navigator.onLine;
-    }
-    return true;
+  // =================== ÉTAT PRINCIPAL STABLE ===================
+  const [activeTab, setActiveTab] = useState('workers');
+  const [showAddWorker, setShowAddWorker] = useState(false);
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Générer le lien de partage immédiatement
+  const [shareLink, setShareLink] = useState(() => {
+    const baseUrl = `https://${tenant}.csecur360.com`;
+    const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
+    const secureToken = Math.random().toString(36).substr(2, 16);
+    return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
   });
-  const [copied, setCopied] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // =================== 🚨 FIX CRITIQUE - REFS POUR ÉVITER BOUCLES INFINIES ===================
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<Record<string, string>>({});
-  const isUpdatingRef = useRef<Record<string, boolean>>({});
-
-  // =================== DONNÉES AST INITIALES COMPLÈTES ===================
-  const [astData, setAstData] = useState<ASTData>(() => ({
-    id: `ast_${Date.now()}`,
-    astNumber: `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
-    tenant,
-    status: 'draft',
-    createdBy: userId || 'user_anonymous',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    projectInfo: {
-      client: '',
-      workLocation: '',
-      industry: '',
-      projectNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
-      workDescription: '',
-      workerCount: 1,
-      lockoutPoints: [],
-      lockoutPhotos: []
-    },
-    equipment: {
-      list: [],
-      selected: [],
-      totalCost: 0,
-      inspectionStatus: {
-        total: 0,
-        verified: 0,
-        available: 0,
-        verificationRate: 0,
-        availabilityRate: 0
-      }
-    },
-    hazards: {
-      list: [],
-      selected: [],
-      stats: {
-        totalHazards: 0,
-        categories: {}
-      }
-    },
-    permits: {
-      permits: [],
-      authorities: [],
-      generalRequirements: [],
-      timeline: [],
-      notifications: [],
-      regulatory: {
-        rsst: false,
-        cnesst: false,
-        municipalPermits: [],
-        environmentalConsiderations: [],
-        specialConditions: []
-      }
-    },
-    validation: {
-      reviewers: [],
-      approvalRequired: false,
-      minimumReviewers: 1,
-      validationCriteria: {
-        hazardIdentification: false,
-        controlMeasures: false,
-        equipmentSelection: false,
-        procedural: false,
-        regulatory: false
-      }
-    },
-    finalization: {
-      workers: [],
-      photos: [],
-      finalComments: '',
-      documentGeneration: {
-        format: 'pdf',
-        template: 'standard',
-        language: 'fr',
-        includePhotos: true,
-        includeSignatures: true,
-        includeQRCode: true,
-        branding: true,
-        watermark: false
-      },
-      distribution: {
-        email: {
-          enabled: false,
-          recipients: [],
-          subject: '',
-          message: ''
-        },
-        portal: {
-          enabled: false,
-          publish: false,
-          category: ''
-        },
-        archive: {
-          enabled: true,
-          retention: 7,
-          location: 'cloud'
-        },
-        compliance: {
-          enabled: false,
-          authorities: []
-        }
-      },
-      completionStatus: {
-        projectInfo: false,
-        equipment: false,
-        hazards: false,
-        permits: false,
-        validation: false
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        version: '1.0',
-        lastModified: new Date().toISOString()
-      }
-    },
-    signatures: [],
-    approvals: [],
-    notifications: []
+  // ✅ FIX CRITIQUE : État travailleur stable SANS useEffect
+  const [newWorker, setNewWorker] = useState<Partial<Worker>>(() => ({
+    name: '',
+    company: '',
+    hasConsented: false,
+    approbationStatus: 'pending'
   }));
 
-  // =================== FONCTION DE CHANGEMENT DE LANGUE STABLE ===================
-  const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
-    if (newLanguage !== currentLanguage) {
-      setCurrentLanguage(newLanguage);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ast-language-preference', newLanguage);
-      }
-    }
-  }, [currentLanguage]);
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
-  const LanguageSelector = () => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      background: 'rgba(15, 23, 42, 0.8)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '8px 12px',
-      position: 'relative'
-    }}>
-      <span style={{
-        fontSize: '12px',
-        color: '#94a3b8',
-        fontWeight: '500'
-      }}>
-        {t.language}
-      </span>
-      
-      <div style={{
-        display: 'flex',
-        background: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '8px',
-        padding: '2px',
-        gap: '2px'
-      }}>
-        <button
-          onClick={() => handleLanguageChange('fr')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'fr' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          FR
-        </button>
-        
-        <button
-          onClick={() => handleLanguageChange('en')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'en' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          EN
-        </button>
-      </div>
-    </div>
-  );
+  // ✅ FIX CRITIQUE : État finalisation avec initialisation stable SANS BOUCLE
+  const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
+    workers: [],
+    photos: [],
+    finalComments: '',
+    documentGeneration: {
+      includePhotos: true,
+      includeSignatures: true,
+      includeQRCode: true,
+      includeBranding: true,
+      includeTimestamps: true,
+      includeComments: true,
+      format: 'pdf'
+    },
+    isLocked: false,
+    completionPercentage: 85
+  }));
 
-  // =================== FONCTIONS UTILITAIRES ULTRA-STABLES ===================
-  const getCompletionPercentage = useCallback((): number => {
-    const completedSteps = getCurrentCompletedSteps();
-    return Math.round((completedSteps / 6) * 100);
-  }, []);
-
-  const getCurrentCompletedSteps = useCallback((): number => {
-    let completed = 0;
-    
-    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
-      completed++;
-    }
-    
-    if (astData.equipment?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.hazards?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.permits?.permits?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.validation?.reviewers?.length > 0) {
-      completed++;
-    }
-    
-    if (currentStep >= 6) {
-      completed++;
-    }
-    
-    return completed;
-  }, []);
-
-  const canNavigateToNext = useCallback((): boolean => {
-    switch (currentStep) {
-      case 1:
-        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
-      case 2:
-        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
-      case 3:
-        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
-      case 4:
-        return true;
-      case 5:
-        return true;
-      case 6:
-        return false;
-      default:
-        return false;
-    }
-  }, []);
-
-  // =================== NAVIGATION ULTRA-STABLE ===================
-  const handlePrevious = useCallback(() => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
-  }, []);
-
-  const handleNext = useCallback(() => {
-    if (canNavigateToNext() && currentStep < 6) {
-      setCurrentStep(prev => prev + 1);
-    }
-  }, [canNavigateToNext, currentStep]);
-
-  const handleStepClick = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
-
-  // =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - SYSTÈME DÉBOUNCE AVANCÉ ===================
+  // =================== 🚨 FIX CRITIQUE : CALLBACK DIRECT SANS BOUCLE ===================
   
   /**
-   * ✅ SYSTÈME ANTI-BOUCLE ULTRA-PERFORMANT
-   * - Débounce intelligent 300ms
-   * - Vérification hash des données 
-   * - Protection multi-niveau
-   * - Logs détaillés pour debug
+   * ✅ FONCTION CRITIQUE - NOTIFICATION PARENT SANS BOUCLE INFINIE
+   * Au lieu d'un useEffect qui cause des boucles, on utilise des callbacks directs
    */
-  const createDebouncedHandler = useCallback((stepName: string) => {
-    return (section: string, data: any) => {
-      const stepKey = `${stepName}_${section}`;
-      
-      // ✅ Protection niveau 1 : Vérifier si update en cours
-      if (isUpdatingRef.current[stepKey]) {
-        console.log(`🛡️ ASTForm ${stepName} - Update déjà en cours, skip`);
-        return;
-      }
-      
-      // ✅ Protection niveau 2 : Comparer hash des données
-      const newDataHash = JSON.stringify(data);
-      if (lastUpdateRef.current[stepKey] === newDataHash) {
-        console.log(`🛡️ ASTForm ${stepName} - Données identiques, skip update`);
-        return;
-      }
-      
-      // ✅ Marquer comme en cours de mise à jour
-      isUpdatingRef.current[stepKey] = true;
-      lastUpdateRef.current[stepKey] = newDataHash;
-      
-      console.log(`🔥 ASTForm ${stepName} - Nouvelle donnée détectée:`, { section, data });
-      
-      // ✅ Clear ancien timeout
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-      
-      // ✅ Débounce 300ms - Optimal pour performance
-      updateTimeoutRef.current = setTimeout(() => {
-        console.log(`🚀 ASTForm ${stepName} - Exécution update débounced`);
-        
-        setAstData(prev => {
-          const currentSection = (prev as any)[section] || {};
-          const newSection = { ...currentSection, ...data };
-          
-          const newState = {
-            ...prev,
-            [section]: newSection,
-            updatedAt: new Date().toISOString()
-          };
-          
-          console.log(`✅ ASTForm ${stepName} - État mis à jour:`, { section, newSection });
-          return newState;
-        });
-        
-        // ✅ Marquer changements non sauvegardés
-        setHasUnsavedChanges(true);
-        
-        // ✅ Libérer le verrou après l'update
-        setTimeout(() => {
-          isUpdatingRef.current[stepKey] = false;
-          console.log(`🔓 ASTForm ${stepName} - Verrou libéré`);
-        }, 100);
-        
-      }, 300); // ✅ 300ms = Sweet spot performance/réactivité
-    };
-  }, []);
+  const notifyParentChange = useCallback((newData: FinalizationData) => {
+    console.log('🔥 Step6 - Notification parent avec nouvelles données:', newData);
+    onDataChange('finalization', newData);
+  }, [onDataChange]);
 
-  // =================== HANDLERS STEPS AVEC PROTECTION ANTI-BOUCLE ===================
+  // =================== HANDLERS PRINCIPAUX ULTRA-OPTIMISÉS ===================
   
-  // ✅ STEP 1 HANDLER - PROTECTION COMPLÈTE
-  const handleStep1DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data });
-    
-    // ✅ Cas spécial pour astNumber (direct update)
-    if (section === 'astNumber') {
-      if (astData.astNumber === data) {
-        console.log('🛡️ ASTForm astNumber identique, skip');
-        return;
-      }
-      setAstData(prev => ({ ...prev, astNumber: data, updatedAt: new Date().toISOString() }));
-      setHasUnsavedChanges(true);
+  /**
+   * ✅ HANDLER AJOUT TRAVAILLEUR - FIX DÉFINITIF
+   * Mise à jour directe + notification parent immédiate
+   */
+  const addWorker = useCallback(() => {
+    if (!newWorker.name || !newWorker.company) {
+      alert(t.fillRequiredFields);
       return;
     }
+
+    const worker: Worker = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newWorker.name!,
+      position: 'Travailleur',
+      company: newWorker.company!,
+      hasConsented: false,
+      approbationStatus: 'pending'
+    };
+
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: [...finalizationData.workers, worker]
+    };
+
+    // ✅ Mise à jour locale immédiate
+    setFinalizationData(newFinalizationData);
     
-    // ✅ Utiliser le handler débounced pour autres sections
-    const debouncedHandler = createDebouncedHandler('Step1');
-    debouncedHandler(section, data);
-  }, [astData.astNumber, createDebouncedHandler]);
+    // ✅ Notification parent immédiate
+    notifyParentChange(newFinalizationData);
 
-  // ✅ STEP 2 HANDLER - ULTRA OPTIMISÉ
-  const handleStep2DataChange = useCallback(createDebouncedHandler('Step2'), [createDebouncedHandler]);
+    // ✅ Reset du formulaire
+    setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
+    setShowAddWorker(false);
+    
+    console.log('✅ Step6 - Travailleur ajouté avec succès:', worker);
+  }, [newWorker.name, newWorker.company, finalizationData, notifyParentChange, t.fillRequiredFields]);
 
-  // ✅ STEP 3 HANDLER - ULTRA OPTIMISÉ  
-  const handleStep3DataChange = useCallback(createDebouncedHandler('Step3'), [createDebouncedHandler]);
+  /**
+   * ✅ HANDLER CONSENTEMENT - FIX DÉFINITIF
+   */
+  const toggleConsent = useCallback((workerId: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: finalizationData.workers.map(worker => 
+        worker.id === workerId 
+          ? { 
+              ...worker, 
+              hasConsented: !worker.hasConsented,
+              consentTimestamp: !worker.hasConsented ? new Date().toISOString() : undefined
+            }
+          : worker
+      )
+    };
 
-  // ✅ STEP 4 HANDLER - ULTRA OPTIMISÉ
-  const handleStep4DataChange = useCallback(createDebouncedHandler('Step4'), [createDebouncedHandler]);
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    console.log('✅ Step6 - Consentement mis à jour:', workerId);
+  }, [finalizationData, notifyParentChange]);
 
-  // ✅ STEP 5 HANDLER - FIX CRITIQUE BOUCLE INFINIE
-  const handleStep5DataChange = useCallback(createDebouncedHandler('Step5'), [createDebouncedHandler]);
+  /**
+   * ✅ HANDLER APPROBATION - FIX DÉFINITIF
+   */
+  const updateApprobation = useCallback((workerId: string, status: ApprobationStatus, comments?: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      workers: finalizationData.workers.map(worker => 
+        worker.id === workerId 
+          ? { 
+              ...worker, 
+              approbationStatus: status,
+              approbationTimestamp: new Date().toISOString(),
+              approbationComments: comments
+            }
+          : worker
+      )
+    };
 
-  // ✅ STEP 6 HANDLER - FIX CRITIQUE BOUCLE INFINIE  
-  const handleStep6DataChange = useCallback(createDebouncedHandler('Step6'), [createDebouncedHandler]);
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    console.log(`✅ Step6 - Approbation ${status} pour travailleur:`, workerId);
+  }, [finalizationData, notifyParentChange]);
 
-  // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
-  const handleCopyAST = useCallback(async () => {
+  // =================== HANDLERS PARTAGE OPTIMISÉS ===================
+  const shareViaEmail = useCallback(() => {
+    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
+    const body = encodeURIComponent(`Bonjour,
+
+Veuillez consulter l'Analyse Sécuritaire de Travail (AST) pour le projet "${formData.projectInfo?.projectName || 'Projet'}".
+
+🔗 Lien d'accès sécurisé:
+${shareLink}
+
+Cette AST doit être consultée et approuvée avant le début des travaux.
+
+Cordialement,
+${tenant} - Équipe Sécurité`);
+    
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+    console.log('📧 Partage par email initié');
+  }, [formData.projectInfo?.projectName, shareLink, tenant]);
+
+  const shareViaSMS = useCallback(() => {
+    const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
+    window.open(`sms:?body=${message}`);
+    console.log('📱 Partage par SMS initié');
+  }, [formData.projectInfo?.projectName, shareLink]);
+
+  const shareViaWhatsApp = useCallback(() => {
+    const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
+
+Lien d'accès: ${shareLink}`);
+    window.open(`https://wa.me/?text=${message}`);
+    console.log('💬 Partage WhatsApp initié');
+  }, [formData.projectInfo?.projectName, shareLink]);
+
+  const copyShareLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(astData.astNumber);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(shareLink);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      console.log(t.linkCopied);
     } catch (err) {
-      console.error('Erreur lors de la copie:', err);
+      alert(t.copyError);
     }
-  }, [astData.astNumber]);
+  }, [shareLink, t.linkCopied, t.copyError]);
 
-  const changeStatus = useCallback((newStatus: ASTData['status']) => {
-    setAstData(prev => ({
-      ...prev,
-      status: newStatus,
-      updatedAt: new Date().toISOString()
-    }));
-  }, []);
-
-  // =================== STATUS BADGE AVEC TRADUCTIONS ===================
-  const getStatusBadge = useCallback(() => {
-    const statusConfig = {
-      'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
-      'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
-      'approved': { color: '#10b981', text: t.status.approved, icon: CheckCircle },
-      'auto_approved': { color: '#059669', text: t.status.auto_approved, icon: CheckCircle },
-      'rejected': { color: '#ef4444', text: t.status.rejected, icon: AlertTriangle }
+  /**
+   * ✅ HANDLER VERROUILLAGE - FIX DÉFINITIF
+   */
+  const lockAST = useCallback((lockType: LockType) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      isLocked: true,
+      lockTimestamp: new Date().toISOString(),
+      lockReason: lockType
     };
 
-    const config = statusConfig[astData.status];
-    const Icon = config.icon;
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+    setShowLockConfirm(false);
+    console.log(`🔒 AST verrouillée (${lockType})`);
+    alert(`${t.astLocked} (${lockType})`);
+  }, [finalizationData, notifyParentChange, t.astLocked]);
 
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: isMobile ? '6px 12px' : '8px 16px',
-        background: `${config.color}20`,
-        border: `1px solid ${config.color}40`,
-        borderRadius: '20px',
-        color: config.color,
-        fontSize: isMobile ? '12px' : '14px',
-        fontWeight: '500'
-      }}>
-        <Icon size={isMobile ? 14 : 16} />
-        {config.text}
-      </div>
-    );
-  }, [astData.status, t.status, isMobile]);
-
-  // =================== EFFECTS ULTRA-OPTIMISÉS ===================
-  useEffect(() => {
-    // ✅ Langue sauvegardée - une seule fois
-    const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
-    if (savedLanguage && savedLanguage !== currentLanguage) {
-      setCurrentLanguage(savedLanguage);
-    }
-  }, []);
-
-  useEffect(() => {
-    // ✅ Sauvegarde automatique optimisée
-    if (hasUnsavedChanges) {
-      const saveTimer = setTimeout(() => {
-        console.log('🔄 Sauvegarde automatique...');
-        setHasUnsavedChanges(false);
-      }, 1000);
-
-      return () => clearTimeout(saveTimer);
-    }
-  }, [hasUnsavedChanges]);
-
-  useEffect(() => {
-    // ✅ Détection en ligne/hors ligne - une seule fois
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+  /**
+   * ✅ HANDLER COMMENTAIRES - FIX DÉFINITIF
+   */
+  const updateComments = useCallback((comments: string) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      finalComments: comments
     };
-  }, []);
 
-  // =================== CLEANUP EFFECT POUR TIMEOUTS ===================
-  useEffect(() => {
-    return () => {
-      // ✅ Cleanup tous les timeouts au démontage
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+  }, [finalizationData, notifyParentChange]);
+
+  /**
+   * ✅ HANDLER OPTIONS DOCUMENT - FIX DÉFINITIF
+   */
+  const updateDocumentOption = useCallback((option: keyof DocumentGeneration, value: boolean) => {
+    const newFinalizationData = {
+      ...finalizationData,
+      documentGeneration: {
+        ...finalizationData.documentGeneration,
+        [option]: value
       }
+    };
+
+    setFinalizationData(newFinalizationData);
+    notifyParentChange(newFinalizationData);
+  }, [finalizationData, notifyParentChange]);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getIndustryLabel = useCallback((industry: string) => {
+    const labels = {
+      'electrical': '⚡ Électrique',
+      'construction': '🏗️ Construction', 
+      'industrial': '🏭 Industriel',
+      'manufacturing': '⚙️ Manufacturier',
+      'office': '🏢 Bureau/Administratif',
+      'other': '🔧 Autre'
+    };
+    return labels[industry as keyof typeof labels] || industry || t.reportData.noSpecified;
+  }, [t.reportData.noSpecified]);
+
+  // =================== EXTRACTION DONNÉES STEPS 1-5 POUR RAPPORT COMPLET ===================
+  const extractDataForReport = useCallback(() => {
+    console.log('📊 Extraction données Steps 1-5 pour rapport:', formData);
+    
+    return {
+      // Step 1 - Informations projet
+      projectInfo: {
+        client: formData.projectInfo?.client || t.reportData.noSpecified,
+        projectNumber: formData.projectInfo?.projectNumber || t.reportData.noSpecified,
+        workLocation: formData.projectInfo?.workLocation || t.reportData.noSpecified,
+        date: formData.projectInfo?.date || new Date().toISOString().split('T')[0],
+        time: formData.projectInfo?.time || new Date().toTimeString().slice(0, 5),
+        industry: formData.projectInfo?.industry || 'other',
+        workerCount: formData.projectInfo?.workerCount || 'Non spécifié',
+        estimatedDuration: formData.projectInfo?.estimatedDuration || t.reportData.noSpecified,
+        clientRepresentative: formData.projectInfo?.clientRepresentative || t.reportData.noSpecified,
+        emergencyContact: formData.projectInfo?.emergencyContact || t.reportData.noSpecified,
+        lockoutPoints: formData.projectInfo?.lockoutPoints || []
+      },
       
-      // ✅ Reset des refs
-      lastUpdateRef.current = {};
-      isUpdatingRef.current = {};
+      // Step 2 - Équipements  
+      equipment: {
+        selected: formData.equipment?.selected || [],
+        list: formData.equipment?.list || [],
+        totalCost: formData.equipment?.totalCost || 0
+      },
+      
+      // Step 3 - Dangers
+      hazards: {
+        selected: formData.hazards?.selected || [],
+        identifiedHazards: formData.hazards?.identifiedHazards || [],
+        list: formData.hazards?.list || []
+      },
+      
+      // Step 4 - Permis
+      permits: {
+        permits: formData.permits?.permits || [],
+        requiredPermits: formData.permits?.requiredPermits || [],
+        authorities: formData.permits?.authorities || []
+      },
+      
+      // Step 5 - Validation
+      validation: {
+        reviewers: formData.validation?.reviewers || [],
+        approvals: formData.validation?.approvals || [],
+        teamMembers: formData.validation?.teamMembers || []
+      }
     };
-  }, []);
-
-  // =================== COMPOSANTS MÉMORISÉS POUR ÉVITER RE-RENDERS ===================
-  const MemoizedStep1 = React.memo(Step1ProjectInfo);
-  const MemoizedStep2 = React.memo(Step2Equipment);
-  const MemoizedStep3 = React.memo(Step3Hazards);
-  const MemoizedStep4 = React.memo(Step4Permits);
-  const MemoizedStep5 = React.memo(Step5Validation);
-  const MemoizedStep6 = React.memo(Step6Finalization);
-
-  // =================== RENDU DU CONTENU DES STEPS - OPTIMISÉ FINAL ===================
-  const StepContent = () => {
-    console.log('🔥 StepContent render - Step:', currentStep);
+  }, [formData, t.reportData.noSpecified]);
+  // =================== GÉNÉRATION RAPPORT AST COMPLET AVEC TOUTES LES DONNÉES STEPS 1-5 ===================
+  const printAST = useCallback(() => {
+    console.log('🖨️ Génération du rapport AST professionnel complet avec données Steps 1-5...');
+    setIsLoading(true);
     
-    // ✅ Props stables pour éviter re-render
-    const stepProps = {
-      formData: astData,
-      language: currentLanguage,
-      tenant: tenant,
-      errors: {}
-    };
+    setTimeout(() => {
+      const printContent = generateCompleteAST();
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      
+      if (printWindow) {
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+          printWindow.focus();
+          printWindow.print();
+          setIsLoading(false);
+        };
+        
+        console.log('✅ Rapport AST complet généré avec succès avec données de tous les steps');
+      } else {
+        alert(t.printError);
+        setIsLoading(false);
+      }
+    }, 500);
+  }, [t.printError]);
+
+  const generateCompleteAST = useCallback(() => {
+    const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
+    const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
+    const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
     
-    switch (currentStep) {
-      case 1:
-        return (
-          <MemoizedStep1
-            key="step1"
-            {...stepProps}
-            onDataChange={handleStep1DataChange}
-          />
-        );
-      case 2:
-        return (
-          <MemoizedStep2
-            key="step2"
-            {...stepProps}
-            onDataChange={handleStep2DataChange}
-          />
-        );
-      case 3:
-        return (
-          <MemoizedStep3
-            key="step3"
-            {...stepProps}
-            onDataChange={handleStep3DataChange}
-          />
-        );
-      case 4:
-        return (
-          <MemoizedStep4
-            key="step4"
-            {...stepProps}
-            onDataChange={handleStep4DataChange}
-            province={'QC'}
-            userRole={'worker'}
-            touchOptimized={true}
-            compactMode={false}
-            onPermitChange={(permits) => {
-              handleStep4DataChange('permits', permits);
-            }}
-            initialPermits={[]}
-          />
-        );
-      case 5:
-        return (
-          <MemoizedStep5
-            key="step5"
-            {...stepProps}
-            onDataChange={handleStep5DataChange}
-          />
-        );
-      case 6:
-        return (
-          <MemoizedStep6
-            key="step6"
-            {...stepProps}
-            onDataChange={handleStep6DataChange}
-          />
-        );
-      default:
-        return null;
+    // ✅ EXTRACTION COMPLÈTE DES DONNÉES DE TOUS LES STEPS
+    const reportData = extractDataForReport();
+    
+    const totalWorkers = finalizationData.workers.length;
+    const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
+    const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
+    
+    // ✅ DONNÉES STEPS 1-5 POUR STATISTIQUES
+    const totalHazards = reportData.hazards.selected.length + reportData.hazards.identifiedHazards.length;
+    const totalEquipment = reportData.equipment.selected.length;
+    const totalPermits = reportData.permits.permits.length + reportData.permits.requiredPermits.length;
+    const lockoutPoints = reportData.projectInfo.lockoutPoints.length;
+    
+    return `
+<!DOCTYPE html>
+<html lang="${language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${language === 'en' ? 'Complete JSA Report' : 'Rapport AST Complet'} - ${reportData.projectInfo.client}</title>
+    <style>
+        @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } .no-print { display: none; } }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #1f2937; background: white; font-size: 11px; }
+        .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 20px; text-align: center; margin-bottom: 20px; border-radius: 8px; position: relative; }
+        .logo-container { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: #000; border: 2px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .logo-fallback { color: #f59e0b; font-size: 18px; font-weight: bold; }
+        .header h1 { font-size: 24px; margin-bottom: 8px; font-weight: bold; }
+        .header .subtitle { font-size: 14px; opacity: 0.9; }
+        .stats-summary { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-top: 10px; }
+        .stat-item { text-align: center; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 6px; }
+        .stat-number { font-size: 20px; font-weight: bold; }
+        .stat-label { font-size: 10px; opacity: 0.9; margin-top: 4px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .info-box { border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; background: #f8fafc; }
+        .info-box h3 { font-size: 12px; color: #374151; margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid #d1d5db; padding-bottom: 5px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; padding: 4px 0; }
+        .info-label { font-weight: 600; color: #4b5563; min-width: 120px; }
+        .info-value { color: #1f2937; font-weight: 500; flex: 1; text-align: right; }
+        .section { margin-bottom: 25px; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+        .section-header { background: #f3f4f6; padding: 12px 15px; border-bottom: 1px solid #d1d5db; }
+        .section-title { font-size: 14px; font-weight: bold; color: #1f2937; }
+        .section-content { padding: 15px; }
+        .workers-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .workers-table th, .workers-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 9px; }
+        .workers-table th { background: #f3f4f6; font-weight: bold; }
+        .status-approved { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .footer { margin-top: 30px; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 9px; color: #6b7280; }
+        .signature-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 40px; }
+        .signature-box { border-top: 2px solid #374151; padding-top: 10px; text-align: center; }
+        .signature-label { font-size: 10px; color: #4b5563; font-weight: 600; }
+        .data-section { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
+        .data-title { font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 10px; }
+        .data-list { font-size: 10px; color: #4b5563; }
+        .data-item { margin-bottom: 4px; padding: 2px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="/c-secur360-logo.png" alt="C-Secur360" style="width: 56px; height: 56px; object-fit: contain;" 
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div class="logo-fallback" style="display: none;">C🛡️</div>
+        </div>
+        <h1>${language === 'en' ? '🛡️ JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)'}</h1>
+        <div class="subtitle">${language === 'en' ? 'Complete Official Report' : 'Rapport Officiel Complet'} - ${tenant} | N° ${astNumber}</div>
+    </div>
+    
+    <div class="stats-summary">
+        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 ${t.reportData.executiveSummary}</h3>
+        <div class="stats-grid">
+            <div class="stat-item"><div class="stat-number">${totalHazards}</div><div class="stat-label">${t.reportData.hazards}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalEquipment}</div><div class="stat-label">${t.reportData.equipment}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalPermits}</div><div class="stat-label">${t.reportData.permits}</div></div>
+            <div class="stat-item"><div class="stat-number">${lockoutPoints}</div><div class="stat-label">${t.reportData.lockoutPoints}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalWorkers}</div><div class="stat-label">${t.stats.workers}</div></div>
+            <div class="stat-item"><div class="stat-number">${consentedWorkers}/${totalWorkers}</div><div class="stat-label">${t.stats.consents}</div></div>
+        </div>
+    </div>
+    
+    <div class="info-grid">
+        <div class="info-box">
+            <h3>${t.reportData.clientProjectInfo}</h3>
+            <div class="info-row"><span class="info-label">${t.reportData.client}</span><span class="info-value">${reportData.projectInfo.client}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.projectNumber}</span><span class="info-value">${reportData.projectInfo.projectNumber}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.location}</span><span class="info-value">${reportData.projectInfo.workLocation}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.dateTime}</span><span class="info-value">${reportData.projectInfo.date} ${reportData.projectInfo.time}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.industry}</span><span class="info-value">${getIndustryLabel(reportData.projectInfo.industry)}</span></div>
+        </div>
+        <div class="info-box">
+            <h3>${t.reportData.teamContacts}</h3>
+            <div class="info-row"><span class="info-label">${t.reportData.workerCount}</span><span class="info-value">${reportData.projectInfo.workerCount}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.estimatedDuration}</span><span class="info-value">${reportData.projectInfo.estimatedDuration}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.clientContact}</span><span class="info-value">${reportData.projectInfo.clientRepresentative}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.emergency}</span><span class="info-value">${reportData.projectInfo.emergencyContact}</span></div>
+        </div>
+    </div>
+    
+    <div class="section page-break">
+        <div class="section-header">
+            <div class="section-title">👷 STEP 6: ${t.reportData.teamConsents}</div>
+        </div>
+        <div class="section-content">
+            ${finalizationData.workers.length > 0 ? `
+                <table class="workers-table">
+                    <thead>
+                        <tr>
+                            <th>${t.reportData.name.replace(':', '')}</th>
+                            <th>${language === 'en' ? 'Company' : 'Entreprise'}</th>
+                            <th>${language === 'en' ? 'Position' : 'Poste'}</th>
+                            <th>${language === 'en' ? 'Consent' : 'Consentement'}</th>
+                            <th>${t.reportData.dateTime.replace(':', '')}</th>
+                            <th>${language === 'en' ? 'Status' : 'Statut'}</th>
+                            <th>${language === 'en' ? 'Comments' : 'Commentaires'}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${finalizationData.workers.map(worker => `
+                            <tr>
+                                <td>${worker.name}</td>
+                                <td>${worker.company}</td>
+                                <td>${worker.position}</td>
+                                <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
+                                    ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
+                                </td>
+                                <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}</td>
+                                <td class="status-${worker.approbationStatus}">
+                                    ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
+                                      worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
+                                </td>
+                                <td>${worker.approbationComments || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            ` : `<p style="text-align: center; color: #6b7280; font-style: italic;">${t.reportData.noWorkerAdded}</p>`}
+            
+            ${finalizationData.finalComments ? `
+                <div style="margin-top: 20px; padding: 10px; background: #f9fafb; border-radius: 4px;">
+                    <strong>💬 ${t.reportData.finalCommentsLabel}</strong><br>${finalizationData.finalComments}
+                </div>
+            ` : ''}
+            
+            <div style="margin-top: 20px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <strong>📊 ${t.reportData.documentStatus}</strong> 
+                <span style="padding: 2px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; ${finalizationData.isLocked ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
+                    ${finalizationData.isLocked ? t.reportData.locked : t.reportData.inProgress}
+                </span>
+                | ${t.reportData.completion} ${finalizationData.completionPercentage}%
+                ${finalizationData.lockTimestamp ? ` | ${t.reportData.lockedOn} ${new Date(finalizationData.lockTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}` : ''}
+            </div>
+        </div>
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-label">${t.reportData.safetyManager}</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
+            </div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">${t.reportData.supervisor}</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
+            </div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-label">${t.reportData.manager}</div>
+            <div style="margin-top: 30px; font-size: 8px;">
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><strong>${language === 'en' ? 'This document was automatically generated by the C-Secur360 system' : 'Ce document a été généré automatiquement par le système C-Secur360'}</strong></p>
+        <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
+        <p>${language === 'en' ? 'Official document valid for safety committees, inspections and investigations' : 'Document officiel valide pour comités de sécurité, inspections et enquêtes'}</p>
+        <p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${shareLink}</p>
+    </div>
+</body>
+</html>`;
+  }, [formData, finalizationData, language, tenant, shareLink, getIndustryLabel, extractDataForReport, t]);
+
+  // =================== CSS THÈME SOMBRE ULTRA-COMPLET ===================
+  const darkThemeCSS = `
+    .step6-container { padding: 0; background: transparent; min-height: 100vh; color: #ffffff !important; }
+    .finalization-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); backdrop-filter: blur(10px); }
+    .finalization-title { font-size: 24px; margin-bottom: 8px; font-weight: bold; color: #ffffff !important; }
+    .finalization-subtitle { font-size: 14px; opacity: 0.9; color: #e2e8f0 !important; }
+    .tabs-container { display: flex; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 6px; margin-bottom: 20px; backdrop-filter: blur(10px); }
+    .tab-button { flex: 1; padding: 12px 16px; border: none; background: transparent; color: #94a3b8; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; }
+    .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transform: translateY(-1px); }
+    .tab-button:hover:not(.active) { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .finalization-section { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px; backdrop-filter: blur(10px); }
+    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #ffffff !important; display: flex; align-items: center; gap: 8px; }
+    .workers-grid { display: grid; gap: 16px; }
+    .worker-card { border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 16px; background: rgba(30, 41, 59, 0.6); transition: all 0.3s ease; backdrop-filter: blur(5px); }
+    .worker-card:hover { border-color: #3b82f6; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15); transform: translateY(-2px); }
+    .worker-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .worker-name { font-size: 16px; font-weight: bold; color: #ffffff !important; }
+    .worker-company { color: #94a3b8 !important; font-size: 14px; }
+    .consent-section { background: rgba(51, 65, 85, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 16px; margin-top: 12px; backdrop-filter: blur(5px); }
+    .consent-checkbox { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.3s ease; }
+    .consent-checkbox:hover { background: rgba(59, 130, 246, 0.1); }
+    .consent-checkbox input { width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6; }
+    .consent-text { font-weight: 500; color: #e2e8f0 !important; flex: 1; }
+    .consent-timestamp { font-size: 12px; color: #94a3b8 !important; font-style: italic; }
+    .approbation-section { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .approbation-btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; min-height: 44px; flex: 1; min-width: 120px; }
+    .approbation-approve { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .approbation-approve:hover { background: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
+    .approbation-reject { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .approbation-reject:hover { background: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
+    .premium-button { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 14px; }
+    .premium-button:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
+    .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .share-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+    .share-btn { padding: 16px 12px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; background: rgba(30, 41, 59, 0.6); cursor: pointer; text-align: center; transition: all 0.3s ease; backdrop-filter: blur(5px); min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+    .share-btn:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-2px); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+    .modal-content { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); color: #ffffff !important; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: #e2e8f0 !important; }
+    .form-input { width: 100%; padding: 14px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease; background: rgba(51, 65, 85, 0.6) !important; color: #ffffff !important; backdrop-filter: blur(5px); }
+    .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .form-input::placeholder { color: #94a3b8 !important; }
+    .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; background: rgba(30, 41, 59, 0.6) !important; backdrop-filter: blur(5px); }
+    .checkbox-field:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1) !important; }
+    .checkbox-field.checked { border-color: #10b981; background: rgba(16, 185, 129, 0.1) !important; }
+    .checkbox-field span { color: #e2e8f0 !important; font-weight: 500 !important; }
+    .progress-bar { width: 100%; height: 8px; background: rgba(55, 65, 81, 0.6); border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .stat-number { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+    .stat-label { font-size: 11px; opacity: 0.9; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spinning { animation: spin 1s linear infinite; }
+    @media (max-width: 768px) {
+      .finalization-header { padding: 16px; margin-bottom: 16px; }
+      .finalization-title { font-size: 20px; }
+      .tabs-container { flex-direction: column; gap: 4px; }
+      .tab-button { padding: 14px 16px; font-size: 16px; min-height: 52px; }
+      .finalization-section { padding: 16px; margin-bottom: 12px; }
+      .section-title { font-size: 16px; margin-bottom: 12px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .stat-card { padding: 12px; }
+      .stat-number { font-size: 18px; }
+      .worker-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .approbation-section { flex-direction: column; gap: 6px; }
+      .approbation-btn { min-width: 100%; }
+      .share-buttons { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .share-btn { padding: 12px 8px; min-height: 70px; font-size: 13px; }
+      .modal-content { padding: 20px; margin: 16px; width: calc(100% - 32px); }
+      .form-input { padding: 16px; font-size: 16px; }
     }
-  };
-  // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
-  const MobileHeader = () => (
-    <header style={{
-      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
-      backdropFilter: 'blur(20px)',
-      padding: '16px 20px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        maxWidth: '100%',
-        marginBottom: '12px'
-      }}>
-        {/* Logo mobile */}
-        <div style={{
-          width: '48px',
-          height: '48px',
-          background: 'linear-gradient(135deg, #000 0%, #1e293b 100%)',
-          border: '2px solid #f59e0b',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <span style={{ 
-            color: '#f59e0b', 
-            fontSize: '16px', 
-            fontWeight: 'bold' 
-          }}>
-            C🛡️
-          </span>
-        </div>
-        
-        {/* Titre mobile */}
-        <div style={{ flex: 1, marginLeft: '12px' }}>
-          <h1 style={{
-            color: '#ffffff',
-            fontSize: '18px',
-            fontWeight: '700',
-            margin: 0,
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}>
-            {t.title}
-          </h1>
-          <div style={{
-            color: '#94a3b8',
-            fontSize: '12px',
-            margin: '2px 0 0 0',
-            fontWeight: '400'
-          }}>
-            AST #{astData.astNumber.slice(-6)} • {tenant}
-          </div>
-        </div>
-        
-        {/* Sélecteur de langue mobile */}
-        <LanguageSelector />
-      </div>
+    @media (max-width: 480px) {
+      .tabs-container { padding: 4px; }
+      .tab-button { padding: 12px 8px; font-size: 14px; flex-direction: column; gap: 4px; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .share-buttons { grid-template-columns: 1fr; }
+    }
+  `;
+  // =================== RENDU JSX COMPLET AVEC TRADUCTIONS ===================
+  return (
+    <>
+      {/* Injection CSS thème sombre optimisé */}
+      <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
       
-      {/* Status mobile */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          padding: '6px 10px',
-          borderRadius: '16px'
-        }}>
-          <div style={{
-            width: '12px',
-            height: '12px',
-            background: '#22c55e',
-            borderRadius: '50%',
-            animation: 'pulse 2s infinite'
-          }} />
-          <span style={{
-            color: '#22c55e',
-            fontSize: '11px',
-            fontWeight: '600'
-          }}>
-            {t.active}
-          </span>
+      <div className="step6-container">
+        {/* Header avec traductions */}
+        <div className="finalization-header">
+          <h2 className="finalization-title">{t.title}</h2>
+          <p className="finalization-subtitle">{t.subtitle}</p>
         </div>
-        
-        {getStatusBadge()}
-      </div>
-    </header>
-  );
 
-  // =================== HEADER DESKTOP AVEC SÉLECTEUR DE LANGUE ===================
-  const DesktopHeader = () => (
-    <header style={{
-      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
-      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
-      padding: '24px 20px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50
-    }}>
-      <div style={{ 
-        maxWidth: '1400px', 
-        margin: '0 auto', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        flexWrap: 'wrap', 
-        gap: '20px' 
-      }}>
-        
-        {/* Logo Premium Desktop */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          <div 
-            className="float-animation glow-effect"
-            style={{
-              background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-              padding: '32px',
-              borderRadius: '32px',
-              border: '4px solid #f59e0b',
-              boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
+        {/* Navigation onglets avec traductions */}
+        <div className="tabs-container">
+          <button 
+            className={`tab-button ${activeTab === 'workers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('workers')}
           >
-            <div style={{
-              width: '96px',
-              height: '96px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <img 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360"
-                className="logo-glow"
-                style={{ 
-                  width: '200px', 
-                  height: '200px', 
-                  objectFit: 'contain',
-                  filter: 'brightness(1.2) contrast(1.1)'
-                }}
-                onError={(e) => {
-                  console.log('❌ Erreur chargement logo:', e);
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <div style={{ 
-                display: 'none',
-                color: '#f59e0b', 
-                fontSize: '48px', 
-                fontWeight: '900',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                C🛡️
-              </div>
-            </div>
-            
-            {/* Effets animés */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: '-100%',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-              animation: 'shine 2.5s ease-in-out infinite'
-            }} />
-            
-            <div style={{
-              position: 'absolute',
-              inset: '-10px',
-              border: '2px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '40px',
-              animation: 'pulse 3s ease-in-out infinite'
-            }} />
-          </div>
-          
-          {/* Titre Desktop traduit */}
-          <div className="slide-in-right">
-            <h1 className="text-gradient" style={{
-              fontSize: '40px',
-              margin: 0,
-              lineHeight: 1.2,
-              fontWeight: '900',
-              letterSpacing: '-0.025em'
-            }}>
-              {t.title}
-            </h1>
-            <p style={{
-              color: 'rgba(251, 191, 36, 0.9)',
-              fontSize: '20px',
-              margin: 0,
-              fontWeight: '600'
-            }}>
-              {t.subtitle} • {tenant}
-            </p>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginTop: '12px'
-            }}>
-              <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: '#22c55e'
-              }} className="pulse-animation" />
-              <span style={{
-                color: '#22c55e',
-                fontSize: '16px',
-                fontWeight: '600'
-              }}>
-                {t.systemOperational}
-              </span>
-              <p style={{ 
-                fontSize: '14px', 
-                color: '#94a3b8', 
-                margin: 0,
-                fontWeight: '500'
-              }}>
-                {t.astStep} {currentStep} {t.stepOf} {steps.length}
-              </p>
-              {getStatusBadge()}
-            </div>
-          </div>
+            <Users size={18} />
+            {t.tabs.workers}
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sharing')}
+          >
+            <Share2 size={18} />
+            {t.tabs.sharing}
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'finalization' ? 'active' : ''}`}
+            onClick={() => setActiveTab('finalization')}
+          >
+            <FileText size={18} />
+            {t.tabs.finalization}
+          </button>
         </div>
 
-        {/* Actions Desktop avec sélecteur de langue */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          
-          {/* Sélecteur de langue desktop */}
-          <LanguageSelector />
-          
-          {/* Numéro AST */}
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.8)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Shield size={16} color="#3b82f6" />
-            <div>
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>
-                {t.astNumber}
+        {/* ONGLET 1: ÉQUIPE CHANTIER */}
+        {activeTab === 'workers' && (
+          <div>
+            {/* Stats équipe avec traductions */}
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-number">{finalizationData.workers.length}</div>
+                <div className="stat-label">{t.stats.workers}</div>
               </div>
+              <div className="stat-card">
+                <div className="stat-number">{finalizationData.workers.filter(w => w.hasConsented).length}</div>
+                <div className="stat-label">{t.stats.consents}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}</div>
+                <div className="stat-label">{t.stats.approvals}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{Math.round((finalizationData.workers.filter(w => w.hasConsented).length / Math.max(finalizationData.workers.length, 1)) * 100)}%</div>
+                <div className="stat-label">{t.stats.readingRate}</div>
+              </div>
+            </div>
+
+            {/* Gestion équipe avec traductions */}
+            <div className="finalization-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <h3 className="section-title">
+                  <Users size={24} />
+                  {t.teamManagement}
+                </h3>
+                <button 
+                  className="premium-button"
+                  onClick={() => setShowAddWorker(true)}
+                >
+                  <Plus size={18} />
+                  {t.addWorker}
+                </button>
+              </div>
+
+              {/* Liste des travailleurs */}
+              <div className="workers-grid">
+                {finalizationData.workers.map(worker => (
+                  <div key={worker.id} className="worker-card">
+                    <div className="worker-header">
+                      <div>
+                        <div className="worker-name">{worker.name}</div>
+                        <div className="worker-company">{worker.company}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          background: worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.2)' : 
+                                     worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          color: worker.approbationStatus === 'approved' ? '#10b981' : 
+                                 worker.approbationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
+                          border: `1px solid ${worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.3)' : 
+                                                worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                        }}>
+                          {t.status[worker.approbationStatus]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Section consentement avec traductions */}
+                    <div className="consent-section">
+                      <div 
+                        className="consent-checkbox"
+                        onClick={() => toggleConsent(worker.id)}
+                      >
+                        <input 
+                          type="checkbox" 
+                          checked={worker.hasConsented}
+                          onChange={() => {}}
+                        />
+                        <span className="consent-text">
+                          {t.consentText}
+                        </span>
+                      </div>
+                      {worker.hasConsented && worker.consentTimestamp && (
+                        <div className="consent-timestamp">
+                          {t.consentGiven} {new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Boutons approbation avec traductions */}
+                    <div className="approbation-section">
+                      <button 
+                        className="approbation-btn approbation-approve"
+                        onClick={() => updateApprobation(worker.id, 'approved', 'Approuvé par le superviseur')}
+                      >
+                        {t.approve}
+                      </button>
+                      <button 
+                        className="approbation-btn approbation-reject"
+                        onClick={() => updateApprobation(worker.id, 'rejected', 'Formation supplémentaire requise')}
+                      >
+                        {t.reject}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {finalizationData.workers.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                    <Users size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                    <p>{t.noWorkers}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET 2: PARTAGE SIMPLE AVEC TRADUCTIONS */}
+        {activeTab === 'sharing' && (
+          <div>
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Share2 size={24} />
+                {t.sharing}
+              </h3>
+              
+              {/* Lien de partage avec traductions */}
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label">
+                  {t.secureLink}
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input 
+                    type="text" 
+                    value={shareLink}
+                    readOnly
+                    className="form-input"
+                    style={{ flex: 1, minWidth: '200px' }}
+                  />
+                  <button 
+                    onClick={copyShareLink}
+                    className="premium-button"
+                    style={{ minWidth: '120px' }}
+                  >
+                    {copySuccess ? <Check size={18} /> : <Copy size={18} />}
+                    {copySuccess ? t.copied : t.copy}
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions avec traductions */}
               <div style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#ffffff',
-                fontFamily: 'monospace',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
+                background: 'rgba(59, 130, 246, 0.1)', 
+                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                borderRadius: '8px', 
+                padding: '16px', 
+                marginBottom: '20px' 
               }}>
-                {astData.astNumber}
-                <button
-                  onClick={handleCopyAST}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: copied ? '#10b981' : '#94a3b8',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    borderRadius: '4px',
-                    transition: 'color 0.2s'
+                <h4 style={{ margin: '0 0 8px 0', color: '#3b82f6', fontSize: '14px', fontWeight: '600' }}>
+                  {t.shareInstructions}
+                </h4>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: '#94a3b8', fontSize: '13px' }}>
+                  {t.shareList.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Boutons de partage */}
+              <div className="share-buttons">
+                <div className="share-btn" onClick={shareViaEmail}>
+                  <Mail size={24} style={{ color: '#dc2626', marginBottom: '4px' }} />
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📧 Email</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Courriel' : 'Email'}
+                  </div>
+                </div>
+                
+                <div className="share-btn" onClick={shareViaSMS}>
+                  <Smartphone size={24} style={{ color: '#059669', marginBottom: '4px' }} />
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📱 SMS</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Texto' : 'Text'}
+                  </div>
+                </div>
+                
+                <div className="share-btn" onClick={shareViaWhatsApp}>
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>💬</div>
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>WhatsApp</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Messenger</div>
+                </div>
+                
+                <div className="share-btn" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`)}>
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>📘</div>
+                  <div style={{ fontWeight: '600', color: '#ffffff' }}>Facebook</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Réseau social' : 'Social network'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ONGLET 3: FINALISATION AVEC TRADUCTIONS */}
+        {activeTab === 'finalization' && (
+          <div>
+            {/* État de complétion */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <BarChart3 size={24} />
+                {t.completionStatus}
+              </h3>
+              
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${finalizationData.completionPercentage}%` }}
+                ></div>
+              </div>
+              <p style={{ textAlign: 'center', fontWeight: '600', color: '#10b981', marginBottom: '16px' }}>
+                {finalizationData.completionPercentage}% {t.completed}
+              </p>
+
+              {/* Statuts des sections */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.projectInfo}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.hazards}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
+                  <CheckCircle size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.equipment}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px' }}>
+                  <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.teamValidation}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Options de génération */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <FileText size={24} />
+                {t.reportOptions}
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
+                  onClick={() => updateDocumentOption('includePhotos', !finalizationData.documentGeneration.includePhotos)}
+                >
+                  <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
+                  <span>{t.includePhotos}</span>
+                </div>
+                
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeSignatures ? 'checked' : ''}`}
+                  onClick={() => updateDocumentOption('includeSignatures', !finalizationData.documentGeneration.includeSignatures)}
+                >
+                  <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
+                  <span>{t.includeSignatures}</span>
+                </div>
+                
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeQRCode ? 'checked' : ''}`}
+                  onClick={() => updateDocumentOption('includeQRCode', !finalizationData.documentGeneration.includeQRCode)}
+                >
+                  <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
+                  <span>{t.includeQRCode}</span>
+                </div>
+                
+                <div 
+                  className={`checkbox-field ${finalizationData.documentGeneration.includeBranding ? 'checked' : ''}`}
+                  onClick={() => updateDocumentOption('includeBranding', !finalizationData.documentGeneration.includeBranding)}
+                >
+                  <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
+                  <span>{t.includeBranding}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Commentaires finaux */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <MessageSquare size={24} />
+                {t.finalComments}
+              </h3>
+              
+              <textarea
+                value={finalizationData.finalComments}
+                onChange={(e) => updateComments(e.target.value)}
+                placeholder={t.commentsPlaceholder}
+                className="form-input"
+                style={{ minHeight: '100px', resize: 'vertical' }}
+                disabled={finalizationData.isLocked}
+              />
+              
+              {finalizationData.isLocked && (
+                <p style={{ marginTop: '8px', color: '#ef4444', fontSize: '14px', fontStyle: 'italic' }}>
+                  {t.documentLocked}
+                </p>
+              )}
+            </div>
+
+            {/* Actions finales */}
+            <div className="finalization-section">
+              <h3 className="section-title">
+                <Target size={24} />
+                {t.finalActions}
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <button 
+                  onClick={printAST}
+                  className="premium-button"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <RefreshCw size={18} className="spinning" /> : <Printer size={18} />}
+                  {t.print}
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    console.log('💾 Sauvegarde AST...');
+                    alert(t.astSaved);
+                  }}
+                  className="premium-button"
+                >
+                  <Save size={18} />
+                  {t.save}
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    console.log('📁 Archivage AST...');
+                    alert(t.astArchived);
+                  }}
+                  className="premium-button"
+                >
+                  <Archive size={18} />
+                  {t.archive}
+                </button>
+                
+                <button 
+                  onClick={() => setShowLockConfirm(true)}
+                  className="premium-button"
+                  disabled={finalizationData.isLocked}
+                  style={{ 
+                    background: finalizationData.isLocked ? 
+                      'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' : 
+                      'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
                   }}
                 >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {finalizationData.isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                  {finalizationData.isLocked ? t.locked : t.lock}
                 </button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Indicateur en ligne */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
-            <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
-              {isOnline ? t.online : t.offline}
-            </span>
-          </div>
-
-          {/* Actions superviseur avec traductions */}
-          {(userRole === 'supervisor' || userRole === 'manager') && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => changeStatus('pending_verification')}
-                disabled={astData.status !== 'draft'}
-                className="btn-premium"
-                style={{
-                  opacity: astData.status === 'draft' ? 1 : 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 12px',
-                  fontSize: '12px'
-                }}
-              >
-                <Bell size={12} />
-                {t.submit}
-              </button>
+        {/* MODAL AJOUT TRAVAILLEUR AVEC TRADUCTIONS */}
+        {showAddWorker && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
+                  {t.addWorkerModal}
+                </h4>
+                <button
+                  onClick={() => setShowAddWorker(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ef4444'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#94a3b8'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
               
-              <button
-                onClick={() => changeStatus('approved')}
-                disabled={astData.status !== 'pending_verification'}
-                className="btn-premium"
-                style={{
-                  opacity: astData.status === 'pending_verification' ? 1 : 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '8px 12px',
-                  fontSize: '12px',
-                  background: 'linear-gradient(135deg, #10b981, #059669)'
-                }}
-              >
-                <CheckCircle size={12} />
-                {t.approve}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+              <div className="form-group">
+                <label className="form-label">{t.fullName}</label>
+                <input
+                  type="text"
+                  value={newWorker.name || ''}
+                  onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
+                  className="form-input"
+                  placeholder={t.namePlaceholder}
+                  autoFocus
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">{t.company}</label>
+                <input
+                  type="text"
+                  value={newWorker.company || ''}
+                  onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
+                  className="form-input"
+                  placeholder={t.companyPlaceholder}
+                />
+              </div>
 
-  // =================== NAVIGATION STEPS MOBILE AVEC TRADUCTIONS ===================
-  const MobileStepsNavigation = () => (
-    <div style={{
-      padding: '16px 20px',
-      background: 'rgba(15, 23, 42, 0.8)',
-      backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(100, 116, 139, 0.2)'
-    }}>
-      {/* Grid des steps */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '8px',
-        marginBottom: '12px'
-      }}>
-        {steps.map((step) => (
-          <div
-            key={step.id}
-            style={{
-              background: currentStep === step.id 
-                ? 'rgba(59, 130, 246, 0.2)' 
-                : 'rgba(30, 41, 59, 0.6)',
-              border: currentStep === step.id 
-                ? '1px solid #3b82f6' 
-                : '1px solid rgba(100, 116, 139, 0.3)',
-              borderRadius: '12px',
-              padding: '12px 8px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              transform: currentStep === step.id ? 'translateY(-2px)' : 'none',
-              boxShadow: currentStep === step.id ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
-            }}
-            onClick={() => handleStepClick(step.id)}
-          >
-            <div style={{
-              width: '32px',
-              height: '32px',
-              margin: '0 auto 6px',
-              background: currentStep === step.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: currentStep === step.id ? '#3b82f6' : '#60a5fa',
-              fontSize: '14px'
-            }}>
-              {getCurrentCompletedSteps() > step.id - 1 ? '✓' : 
-               currentStep === step.id ? <step.icon size={16} /> : 
-               <step.icon size={14} />}
-            </div>
-            <div style={{
-              color: currentStep === step.id ? '#ffffff' : '#e2e8f0',
-              fontSize: '11px',
-              fontWeight: '600',
-              margin: 0,
-              lineHeight: '1.2'
-            }}>
-              {step.title}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  onClick={addWorker}
+                  className="premium-button"
+                  style={{ flex: 1 }}
+                  disabled={!newWorker.name || !newWorker.company}
+                >
+                  <Plus size={18} />
+                  {t.add}
+                </button>
+                <button
+                  onClick={() => setShowAddWorker(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 20px',
+                    border: '2px solid rgba(148, 163, 184, 0.3)',
+                    borderRadius: '8px',
+                    background: 'rgba(51, 65, 85, 0.6)',
+                    color: '#e2e8f0',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.target as HTMLButtonElement).style.borderColor = '#ef4444';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                    (e.target as HTMLButtonElement).style.background = 'rgba(51, 65, 85, 0.6)';
+                  }}
+                >
+                  <X size={18} />
+                  {t.cancel}
+                </button>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-      
-      {/* Barre de progression avec traductions */}
-      <div style={{ marginTop: '12px' }}>
-        <div style={{
-          width: '100%',
-          height: '6px',
-          background: 'rgba(30, 41, 59, 0.8)',
-          borderRadius: '3px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            height: '100%',
-            background: 'linear-gradient(90deg, #3b82f6, #1d4ed8)',
-            borderRadius: '3px',
-            transition: 'width 0.5s ease',
-            width: `${getCompletionPercentage()}%`,
-            position: 'relative'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-              animation: 'progressShine 2s ease-in-out infinite'
-            }} />
-          </div>
-        </div>
-        <div style={{
-          textAlign: 'center',
-          color: '#94a3b8',
-          fontSize: '11px',
-          marginTop: '6px',
-          fontWeight: '500'
-        }}>
-          {t.astStep.replace('AST •', '').replace('JSA •', '')} {currentStep}/6 • {Math.round(getCompletionPercentage())}% {t.completed}
-        </div>
-      </div>
-    </div>
-  );
+        )}
 
-  // =================== NAVIGATION DESKTOP AVEC TRADUCTIONS ===================
-  const DesktopStepsNavigation = () => (
-    <div className="glass-effect slide-in desktop-only" style={{ 
-      padding: '24px', 
-      marginBottom: '24px',
-      maxWidth: '1200px',
-      margin: '20px auto 24px'
-    }}>
-      
-      {/* Barre de progression Desktop */}
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
-            {t.progress}
-          </h2>
-          <span style={{ fontSize: '14px', color: '#94a3b8' }}>
-            {Math.round((currentStep / steps.length) * 100)}% {t.completed}
-          </span>
-        </div>
-        
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.5)',
-          borderRadius: '12px',
-          height: '8px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            background: `linear-gradient(90deg, ${steps[0]?.color || '#3b82f6'}, ${steps[Math.min(currentStep - 1, steps.length - 1)]?.color || '#10b981'})`,
-            height: '100%',
-            width: `${(currentStep / steps.length) * 100}%`,
-            transition: 'width 0.5s ease',
-            borderRadius: '12px'
-          }} />
-        </div>
-      </div>
-
-      {/* Navigation steps Desktop */}
-      <div className="step-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: '16px'
-      }}>
-        {steps.map((step) => (
-          <div
-            key={step.id}
-            onClick={() => setCurrentStep(step.id)}
-            style={{
-              background: currentStep === step.id 
-                ? `linear-gradient(135deg, ${step.color}25, ${step.color}15)`
-                : 'rgba(30, 41, 59, 0.5)',
-              border: currentStep === step.id 
-                ? `2px solid ${step.color}` 
-                : '1px solid rgba(148, 163, 184, 0.2)',
-              borderRadius: '16px',
-              padding: '16px 12px',
-              cursor: 'pointer',
-              textAlign: 'center',
-              position: 'relative',
-              transition: 'all 0.3s ease',
-              minHeight: '120px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-            className="mobile-touch"
-          >
-            {step.required && (
-              <div style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                width: '6px',
-                height: '6px',
-                background: '#ef4444',
-                borderRadius: '50%'
-              }} />
-            )}
-            
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: currentStep === step.id ? step.color : 'rgba(148, 163, 184, 0.2)',
-              borderRadius: '12px',
-              margin: '0 auto 8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+        {/* MODAL CONFIRMATION VERROUILLAGE AVEC TRADUCTIONS */}
+        {showLockConfirm && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ 
+              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+              border: '2px solid rgba(239, 68, 68, 0.3)'
             }}>
-              <step.icon size={20} color={currentStep === step.id ? '#ffffff' : '#94a3b8'} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
+                  {t.confirmLock}
+                </h4>
+                <button
+                  onClick={() => setShowLockConfirm(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#fca5a5',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ffffff'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#fca5a5'}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div style={{ marginBottom: '20px', color: '#fef2f2' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  marginBottom: '12px',
+                  padding: '12px',
+                  background: 'rgba(254, 242, 242, 0.1)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(252, 165, 165, 0.2)'
+                }}>
+                  <AlertTriangle size={20} style={{ color: '#fbbf24' }} />
+                  <strong>{t.lockWarning}</strong>
+                </div>
+                
+                <div style={{ 
+                  background: 'rgba(254, 242, 242, 0.1)', 
+                  padding: '16px', 
+                  borderRadius: '8px', 
+                  marginBottom: '16px',
+                  border: '1px solid rgba(252, 165, 165, 0.2)'
+                }}>
+                  <h5 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>
+                    {t.autoChecks}
+                  </h5>
+                  <div style={{ fontSize: '13px', color: '#fef2f2', lineHeight: '1.4' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>{t.sectionsCompleted}</span>
+                      <strong>{finalizationData.completionPercentage}%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>{t.stats.consents}:</span>
+                      <strong>{finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{t.stats.approvals}:</span>
+                      <strong>{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}</strong>
+                    </div>
+                  </div>
+                </div>
+                
+                <p style={{ fontSize: '13px', lineHeight: '1.4', opacity: 0.9 }}>
+                  {t.lockDescription}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => lockAST('permanent')}
+                  className="premium-button"
+                  style={{ 
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                    borderColor: 'rgba(220, 38, 38, 0.3)'
+                  }}
+                >
+                  <Lock size={18} />
+                  {t.lockPermanently}
+                </button>
+                <button
+                  onClick={() => setShowLockConfirm(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 20px',
+                    border: '2px solid rgba(252, 165, 165, 0.3)',
+                    borderRadius: '8px',
+                    background: 'rgba(254, 242, 242, 0.1)',
+                    color: '#fef2f2',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.2)';
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.1)';
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.3)';
+                  }}
+                >
+                  <X size={18} />
+                  {t.cancel}
+                </button>
+              </div>
             </div>
-            
-            <h3 style={{
-              fontSize: '13px',
-              fontWeight: '600',
-              color: currentStep === step.id ? '#ffffff' : '#94a3b8',
-              margin: '0 0 4px',
-              lineHeight: '1.2'
-            }}>
-              {step.title}
-            </h3>
-            
-            <p style={{
-              fontSize: '11px',
-              color: '#64748b',
-              margin: 0,
-              lineHeight: '1.3'
-            }}>
-              {step.subtitle}
-            </p>
           </div>
-        ))}
+        )}
       </div>
-    </div>
-  );
-
-  // =================== NAVIGATION MOBILE FIXE AVEC TRADUCTIONS ===================
-  const MobileNavigation = () => (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      background: 'rgba(15, 23, 42, 0.95)',
-      backdropFilter: 'blur(20px)',
-      borderTop: '1px solid rgba(100, 116, 139, 0.3)',
-      padding: '16px 20px',
-      zIndex: 50
-    }}>
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        maxWidth: '500px',
-        margin: '0 auto'
-      }}>
-        <button
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
-          style={{
-            flex: 1,
-            padding: '14px 20px',
-            borderRadius: '12px',
-            fontWeight: '600',
-            fontSize: '14px',
-            border: 'none',
-            cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            minHeight: '48px',
-            background: currentStep === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-            color: currentStep === 1 ? '#94a3b8' : '#94a3b8',
-            opacity: currentStep === 1 ? 0.5 : 1
-          }}
-        >
-          <ArrowLeft size={16} />
-          {t.previous}
-        </button>
-        
-        <button
-          onClick={handleNext}
-          disabled={currentStep === 6 || !canNavigateToNext()}
-          style={{
-            flex: 1,
-            padding: '14px 20px',
-            borderRadius: '12px',
-            fontWeight: '600',
-            fontSize: '14px',
-            border: 'none',
-            cursor: (currentStep === 6 || !canNavigateToNext()) ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            minHeight: '48px',
-            background: (currentStep === 6 || !canNavigateToNext()) 
-              ? 'rgba(100, 116, 139, 0.3)' 
-              : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            color: '#ffffff',
-            opacity: (currentStep === 6 || !canNavigateToNext()) ? 0.5 : 1
-          }}
-        >
-          {currentStep === 6 ? t.finished : t.next}
-          {currentStep !== 6 && <ArrowRight size={16} />}
-        </button>
-      </div>
-    </div>
-  );
-
-  // =================== NAVIGATION FOOTER DESKTOP AVEC TRADUCTIONS ===================
-  const DesktopFooterNavigation = () => (
-    <div className="glass-effect desktop-only" style={{ 
-      padding: '20px 24px', 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
-      position: 'sticky',
-      bottom: '16px',
-      flexWrap: 'wrap',
-      gap: '16px',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    }}>
-      <button
-        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-        disabled={currentStep === 1}
-        className="mobile-touch"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '14px 20px',
-          background: currentStep === 1 ? 'rgba(75, 85, 99, 0.3)' : 'rgba(59, 130, 246, 0.2)',
-          border: currentStep === 1 ? '1px solid rgba(75, 85, 99, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
-          borderRadius: '12px',
-          color: currentStep === 1 ? '#9ca3af' : '#ffffff',
-          fontSize: '16px',
-          fontWeight: '500',
-          cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s'
-        }}
-      >
-        <ArrowLeft size={18} />
-        {t.previous}
-      </button>
-
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        color: '#94a3b8',
-        fontSize: '14px',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Save size={14} />
-          <span>{t.autoSave}</span>
-        </div>
-        <div style={{
-          width: '6px',
-          height: '6px',
-          background: hasUnsavedChanges ? '#f59e0b' : '#10b981',
-          borderRadius: '50%',
-          animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none'
-        }} />
-        <span style={{ fontSize: '12px', color: hasUnsavedChanges ? '#f59e0b' : '#10b981' }}>
-          {hasUnsavedChanges ? t.saving : t.saved}
-        </span>
-      </div>
-
-      <button
-        onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
-        disabled={currentStep === steps.length}
-        className="mobile-touch"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '14px 20px',
-          background: currentStep === steps.length 
-            ? 'rgba(75, 85, 99, 0.3)' 
-            : `linear-gradient(135deg, ${steps[currentStep]?.color || '#10b981'}, ${steps[currentStep]?.color || '#059669'}CC)`,
-          border: `1px solid ${steps[currentStep]?.color || '#10b981'}80`,
-          borderRadius: '12px',
-          color: '#ffffff',
-          fontSize: '16px',
-          fontWeight: '500',
-          cursor: currentStep === steps.length ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s'
-        }}
-      >
-        {t.next}
-        <ArrowRight size={18} />
-      </button>
-    </div>
-  );
-
-  // =================== CSS MOBILE OPTIMISÉ ULTRA-COMPLET ===================
-  const mobileOptimizedCSS = `
-    @keyframes float {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      50% { transform: translateY(-10px) rotate(1deg); }
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.05); }
-    }
-    
-    @keyframes shine {
-      0% { background-position: -200px 0; }
-      100% { background-position: 200px 0; }
-    }
-    
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes glow {
-      0%, 100% { 
-        box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
-      }
-      50% { 
-        box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
-      }
-    }
-    
-    @keyframes progressShine {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-    
-    .float-animation { animation: float 6s ease-in-out infinite; }
-    .pulse-animation { animation: pulse 4s ease-in-out infinite; }
-    .slide-in { animation: slideIn 0.5s ease-out; }
-    .slide-in-right { animation: slideIn 0.6s ease-out; }
-    .glow-effect { animation: glow 4s ease-in-out infinite; }
-    
-    .glass-effect {
-      background: rgba(15, 23, 42, 0.7);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 20px;
-    }
-    
-    .mobile-touch {
-      min-height: 44px;
-      padding: 12px 16px;
-      font-size: 16px;
-    }
-    
-    .text-gradient {
-      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .btn-premium {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
-      background-size: 200% 200%;
-      border: none;
-      border-radius: 16px;
-      padding: 14px 28px;
-      color: white;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
-    }
-    
-    .btn-premium:hover {
-      transform: translateY(-2px);
-      background-position: 100% 0;
-      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
-    }
-    
-    /* =================== MOBILE RESPONSIVE ULTRA-OPTIMISÉ =================== */
-    @media (max-width: 768px) {
-      .step-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 12px !important;
-      }
-      
-      .glass-effect {
-        padding: 20px !important;
-        margin: 12px !important;
-        border-radius: 16px !important;
-      }
-      
-      .mobile-touch {
-        min-height: 48px !important;
-        font-size: 16px !important;
-      }
-      
-      .desktop-only {
-        display: none !important;
-      }
-      
-      .mobile-only {
-        display: block !important;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .step-grid {
-        grid-template-columns: 1fr !important;
-      }
-      
-      .glass-effect {
-        padding: 16px !important;
-        margin: 8px !important;
-      }
-    }
-    
-    @media (min-width: 769px) {
-      .mobile-only {
-        display: none !important;
-      }
-    }
-    
-    .mobile-touch:active {
-      transform: scale(0.98);
-    }
-    
-    @media screen and (-webkit-min-device-pixel-ratio: 0) {
-      .premium-input,
-      .premium-select,
-      .premium-textarea {
-        font-size: 16px !important;
-      }
-    }
-  `;
-
-  // =================== RENDU PRINCIPAL ULTRA-OPTIMISÉ ===================
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
-      color: '#ffffff',
-      position: 'relative'
-    }}>
-      
-      {/* =================== INJECTION CSS MOBILE OPTIMISÉ =================== */}
-      <style jsx>{mobileOptimizedCSS}</style>
-
-      {/* =================== HEADER CONDITIONNEL =================== */}
-      {isMobile ? <MobileHeader /> : <DesktopHeader />}
-      
-      {/* =================== NAVIGATION STEPS CONDITIONNELLE =================== */}
-      {isMobile ? <MobileStepsNavigation /> : <DesktopStepsNavigation />}
-
-      {/* =================== CONTENU PRINCIPAL =================== */}
-      <main style={{ 
-        padding: isMobile ? '0' : '20px 16px', 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        paddingBottom: isMobile ? '100px' : '20px'
-      }}>
-        
-        {/* Contenu de l'étape */}
-        <div className={`glass-effect slide-in ${isMobile ? 'mobile-content' : ''}`} style={{ 
-          padding: isMobile ? '20px 16px' : '32px 24px', 
-          marginBottom: isMobile ? '16px' : '24px',
-          borderRadius: isMobile ? '16px' : '20px',
-          margin: isMobile ? '16px' : '0 auto 24px'
-        }}>
-          
-          {!isMobile && (
-            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-              <h2 style={{ 
-                fontSize: '28px', 
-                fontWeight: '700', 
-                color: '#ffffff',
-                marginBottom: '8px',
-                background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                {steps[currentStep - 1]?.title}
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-                {steps[currentStep - 1]?.subtitle}
-              </p>
-            </div>
-          )}
-
-          {/* =================== CONTENU DES ÉTAPES AVEC LANGUE =================== */}
-          <div style={{ minHeight: isMobile ? '300px' : '400px' }}>
-            <StepContent />
-          </div>
-        </div>
-      </main>
-
-      {/* =================== NAVIGATION FOOTER CONDITIONNELLE =================== */}
-      {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
-    </div>
+    </>
   );
 }
+
+// =================== EXPORT DU COMPOSANT ===================
+export default Step6Finalization;
