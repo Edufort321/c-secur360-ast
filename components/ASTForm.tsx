@@ -1176,13 +1176,15 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []); // ✅ Une seule fois
 
   // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
-  const StepContent = useCallback(() => {
-    console.log('🔥 StepContent render avec astData:', astData); // ← DEBUG LOG
+  // ✅ FIX RADICAL : Composant direct sans useCallback
+  const StepContent = () => {
+    console.log('🔥 StepContent render DIRECT avec astData:', astData.projectInfo?.client); // ← DEBUG LOG simplifié
     
     switch (currentStep) {
       case 1:
         return (
           <Step1ProjectInfo
+            key="step1" // ✅ FIX : Key stable pour éviter re-mount
             formData={astData}
             onDataChange={handleStep1DataChange}
             language={currentLanguage}
@@ -1193,6 +1195,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 2:
         return (
           <Step2Equipment
+            key="step2"
             formData={astData}
             onDataChange={handleStep2DataChange}
             language={currentLanguage}
@@ -1203,6 +1206,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 3:
         return (
           <Step3Hazards
+            key="step3"
             formData={astData}
             onDataChange={handleStep3DataChange}
             language={currentLanguage}
@@ -1213,6 +1217,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 4:
         return (
           <Step4Permits
+            key="step4"
             formData={astData}
             onDataChange={handleStep4DataChange}
             language={currentLanguage}
@@ -1231,6 +1236,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 5:
         return (
           <Step5Validation
+            key="step5"
             formData={astData}
             onDataChange={handleStep5DataChange}
             language={currentLanguage}
@@ -1240,6 +1246,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       case 6:
         return (
           <Step6Finalization
+            key="step6"
             formData={astData}
             onDataChange={handleStep6DataChange}
             language={currentLanguage}
@@ -1250,8 +1257,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return null;
     }
-  }, [currentStep, currentLanguage, tenant, astData]); // ✅ FIX : Ajouter astData dans deps !
-// =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
+  };
+  // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
