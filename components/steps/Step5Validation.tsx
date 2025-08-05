@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -253,13 +253,18 @@ export default function Step5Validation({
     certification: ''
   });
 
-  // =================== EFFECTS ===================
-  useEffect(() => {
-    onDataChange('validation', validationData);
-  }, [validationData, onDataChange]);
+  // =================== FIX CRITIQUE - useCallback STABLE ===================
+  const updateParentData = useCallback((data: ValidationData) => {
+    onDataChange('validation', data);
+  }, []); // ← Dépendances vides = fonction stable
 
-  // =================== HANDLERS ===================
-  const addReviewer = () => {
+  // =================== FIX CRITIQUE - useEffect OPTIMISÉ ===================
+  useEffect(() => {
+    updateParentData(validationData);
+  }, [validationData]); // ← Plus onDataChange dans les deps !
+
+  // =================== HANDLERS OPTIMISÉS ===================
+  const addReviewer = useCallback(() => {
     if (!newReviewer.name.trim() || !newReviewer.email.trim() || !newReviewer.role.trim()) {
       return;
     }
@@ -287,16 +292,16 @@ export default function Step5Validation({
       certification: ''
     });
     setShowAddReviewer(false);
-  };
+  }, [newReviewer]);
 
-  const removeReviewer = (reviewerId: string) => {
+  const removeReviewer = useCallback((reviewerId: string) => {
     setValidationData(prev => ({
       ...prev,
       reviewers: prev.reviewers.filter(r => r.id !== reviewerId)
     }));
-  };
+  }, []);
 
-  const updateReviewerStatus = (reviewerId: string, status: 'approved' | 'rejected', comment?: string, rating?: number) => {
+  const updateReviewerStatus = useCallback((reviewerId: string, status: 'approved' | 'rejected', comment?: string, rating?: number) => {
     setValidationData(prev => ({
       ...prev,
       reviewers: prev.reviewers.map(reviewer => 
@@ -312,9 +317,9 @@ export default function Step5Validation({
           : reviewer
       )
     }));
-  };
+  }, [language]);
 
-  const updateCriteria = (criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
+  const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
     setValidationData(prev => ({
       ...prev,
       validationCriteria: {
@@ -322,9 +327,9 @@ export default function Step5Validation({
         [criteria]: value
       }
     }));
-  };
+  }, []);
 
-  const finalizeApproval = () => {
+  const finalizeApproval = useCallback(() => {
     setValidationData(prev => ({
       ...prev,
       finalApproval: {
@@ -333,7 +338,7 @@ export default function Step5Validation({
         signature: 'Signature électronique - ' + new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')
       }
     }));
-  };
+  }, [language]);
 
   // =================== UTILS ===================
   const getStatusColor = (status: string) => {
