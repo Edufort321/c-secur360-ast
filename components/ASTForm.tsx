@@ -958,7 +958,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     }
     
     return completed;
-  }, [astData, currentStep]);
+  }, []); // ✅ FIX : Pas de deps = pas de re-calcul
 
   const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
@@ -977,7 +977,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return false;
     }
-  }, [currentStep, astData]);
+  }, []); // ✅ FIX : Pas de deps = stable
 
   // =================== NAVIGATION ===================
   const handlePrevious = useCallback(() => {
@@ -995,100 +995,72 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   }, []);
 
   // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
-  // ✅ FIX CRITIQUE : Handlers avec debounce et vérification de changement
+  // ✅ FIX RADICAL : Handlers ultra-simplifiés sans vérification
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
-      // ✅ FIX : Vérifier si les données ont vraiment changé
       if (section === 'astNumber') {
-        if (prev.astNumber === data) return prev; // Pas de changement
         return { ...prev, astNumber: data };
       }
       
-      // ✅ FIX : Vérification profonde pour éviter re-renders inutiles
       const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      
-      if (!hasChanged) return prev; // Pas de changement, ne pas re-render
-      
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
     
-    // ✅ FIX : Debounce setHasUnsavedChanges
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides stables
+    // ✅ FIX : Pas de setHasUnsavedChanges immédiat
+  }, []); // ✅ Pas de deps
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      if (!hasChanged) return prev;
-      
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides
+  }, []);
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
-      const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      if (!hasChanged) return prev;
-      
+      const currentSection = (prev as any)[section] || {};  
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides
+  }, []);
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      if (!hasChanged) return prev;
-      
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides
+  }, []);
 
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      if (!hasChanged) return prev;
-      
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides
+  }, []);
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => {
       const currentSection = (prev as any)[section] || {};
-      const hasChanged = Object.keys(data).some(key => currentSection[key] !== data[key]);
-      if (!hasChanged) return prev;
-      
       return {
         ...prev,
         [section]: { ...currentSection, ...data }
       };
     });
-    setTimeout(() => setHasUnsavedChanges(true), 0);
-  }, []); // ✅ Dépendances vides
+  }, []);
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
   const handleCopyAST = useCallback(async () => {
@@ -1247,10 +1219,8 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return null;
     }
-  }, [currentStep, astData, currentLanguage, tenant, 
-      handleStep1DataChange, handleStep2DataChange, handleStep3DataChange, 
-      handleStep4DataChange, handleStep5DataChange, handleStep6DataChange]);
-  // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
+  }, [currentStep]); // ✅ FIX RADICAL : SEULEMENT currentStep !
+// =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
