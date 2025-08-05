@@ -1466,8 +1466,8 @@ export default function ASTForm({
                 alt="C-Secur360"
                 className="logo-glow"
                 style={{ 
-                  width: '96px', 
-                  height: '96px', 
+                  width: '200px', 
+                  height: '200px', 
                   objectFit: 'contain',
                   filter: 'brightness(1.2) contrast(1.1)'
                 }}
