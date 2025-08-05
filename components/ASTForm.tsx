@@ -1175,15 +1175,24 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     };
   }, []); // ✅ Une seule fois
 
+  // =================== COMPOSANTS MÉMORISÉS POUR ÉVITER RE-RENDERS ===================
+  // ✅ FIX ULTIME : Mémoriser Step1 avec React.memo
+  const MemoizedStep1 = React.memo(Step1ProjectInfo);
+  const MemoizedStep2 = React.memo(Step2Equipment);
+  const MemoizedStep3 = React.memo(Step3Hazards);
+  const MemoizedStep4 = React.memo(Step4Permits);
+  const MemoizedStep5 = React.memo(Step5Validation);
+  const MemoizedStep6 = React.memo(Step6Finalization);
+
   // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
   // ✅ FIX RADICAL : Composant direct sans useCallback
   const StepContent = () => {
-    console.log('🔥 StepContent render DIRECT avec astData:', astData.projectInfo?.client); // ← DEBUG LOG simplifié
+    console.log('🔥 StepContent render DIRECT - Step:', currentStep); // ← DEBUG LOG minimal
     
     switch (currentStep) {
       case 1:
         return (
-          <Step1ProjectInfo
+          <MemoizedStep1
             key="step1" // ✅ FIX : Key stable pour éviter re-mount
             formData={astData}
             onDataChange={handleStep1DataChange}
@@ -1194,7 +1203,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         );
       case 2:
         return (
-          <Step2Equipment
+          <MemoizedStep2
             key="step2"
             formData={astData}
             onDataChange={handleStep2DataChange}
@@ -1205,7 +1214,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         );
       case 3:
         return (
-          <Step3Hazards
+          <MemoizedStep3
             key="step3"
             formData={astData}
             onDataChange={handleStep3DataChange}
@@ -1216,7 +1225,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         );
       case 4:
         return (
-          <Step4Permits
+          <MemoizedStep4
             key="step4"
             formData={astData}
             onDataChange={handleStep4DataChange}
@@ -1235,7 +1244,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         );
       case 5:
         return (
-          <Step5Validation
+          <MemoizedStep5
             key="step5"
             formData={astData}
             onDataChange={handleStep5DataChange}
@@ -1245,7 +1254,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         );
       case 6:
         return (
-          <Step6Finalization
+          <MemoizedStep6
             key="step6"
             formData={astData}
             onDataChange={handleStep6DataChange}
