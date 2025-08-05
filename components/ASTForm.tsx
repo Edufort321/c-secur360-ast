@@ -1461,13 +1461,33 @@ export default function ASTForm({
               position: 'relative',
               zIndex: 1
             }}>
-              <span style={{ 
+              <img 
+                src="/c-secur360-logo.png" 
+                alt="C-Secur360"
+                className="logo-glow"
+                style={{ 
+                  width: '96px', 
+                  height: '96px', 
+                  objectFit: 'contain',
+                  filter: 'brightness(1.2) contrast(1.1)'
+                }}
+                onError={(e) => {
+                  console.log('❌ Erreur chargement logo:', e);
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+              <div style={{ 
+                display: 'none',
                 color: '#f59e0b', 
                 fontSize: '48px', 
-                fontWeight: '900' 
+                fontWeight: '900',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
                 C🛡️
-              </span>
+              </div>
             </div>
             
             {/* Effets animés */}
