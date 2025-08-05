@@ -9,7 +9,7 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
-// Import des composants Steps - ✅ TOUS PRÉSENTS
+// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 ===================
 import Step1ProjectInfo from './steps/Step1ProjectInfo';
 import Step2Equipment from './steps/Step2Equipment';
 import Step3Hazards from './steps/Step3Hazards';
@@ -17,1093 +17,506 @@ import Step4Permits from './steps/Step4Permits';
 import Step5Validation from './steps/Step5Validation';
 import Step6Finalization from './steps/Step6Finalization';
 
-// =================== SYSTÈME DE TRADUCTIONS BILINGUE COMPLET ===================
-const translations = {
-  fr: {
-    // Header
-    title: "🛡️ C-Secur360",
-    subtitle: "Analyse Sécuritaire de Travail",
-    systemOperational: "Système opérationnel",
-    astStep: "AST • Étape",
-    astNumber: "NUMÉRO AST",
-    online: "En ligne",
-    offline: "Hors ligne",
-    submit: "Soumettre",
-    approve: "Approuver",
-    
-    // Status
-    status: {
-      draft: "Brouillon",
-      pending_verification: "En attente",
-      approved: "Approuvé",
-      auto_approved: "Auto-approuvé",
-      rejected: "Rejeté"
-    },
-    
-    // Steps
-    steps: {
-      projectInfo: {
-        title: "Informations Projet",
-        subtitle: "Identification & Verrouillage"
-      },
-      equipment: {
-        title: "Équipements",
-        subtitle: "EPI et équipements sécurité"
-      },
-      hazards: {
-        title: "Dangers & Contrôles",
-        subtitle: "Risques + Moyens contrôle"
-      },
-      permits: {
-        title: "Permis & Autorisations",
-        subtitle: "Conformité réglementaire"
-      },
-      validation: {
-        title: "Validation Équipe",
-        subtitle: "Signatures & Approbations"
-      },
-      finalization: {
-        title: "Finalisation",
-        subtitle: "Consentement & Archive"
-      }
-    },
-    
-    // Progress
-    progress: "Progression AST",
-    completed: "complété",
-    stepOf: "sur",
-    
-    // Navigation
-    previous: "Précédent",
-    next: "Suivant",
-    finished: "Terminé ✓",
-    autoSave: "Sauvegarde auto",
-    saving: "Modification...",
-    saved: "Sauvegardé",
-    active: "Actif",
-    
-    // Language selector
-    language: "Langue",
-    french: "Français",
-    english: "English"
-  },
-  
-  en: {
-    // Header
-    title: "🛡️ C-Secur360",
-    subtitle: "Job Safety Analysis",
-    systemOperational: "System operational",
-    astStep: "JSA • Step",
-    astNumber: "JSA NUMBER",
-    online: "Online",
-    offline: "Offline",
-    submit: "Submit",
-    approve: "Approve",
-    
-    // Status
-    status: {
-      draft: "Draft",
-      pending_verification: "Pending",
-      approved: "Approved",
-      auto_approved: "Auto-approved",
-      rejected: "Rejected"
-    },
-    
-    // Steps
-    steps: {
-      projectInfo: {
-        title: "Project Information",
-        subtitle: "Identification & Lockout"
-      },
-      equipment: {
-        title: "Equipment",
-        subtitle: "PPE and safety equipment"
-      },
-      hazards: {
-        title: "Hazards & Controls",
-        subtitle: "Risks + Control measures"
-      },
-      permits: {
-        title: "Permits & Authorizations",
-        subtitle: "Regulatory compliance"
-      },
-      validation: {
-        title: "Team Validation",
-        subtitle: "Signatures & Approvals"
-      },
-      finalization: {
-        title: "Finalization",
-        subtitle: "Consent & Archive"
-      }
-    },
-    
-    // Progress
-    progress: "JSA Progress",
-    completed: "completed",
-    stepOf: "of",
-    
-    // Navigation
-    previous: "Previous",
-    next: "Next",
-    finished: "Finished ✓",
-    autoSave: "Auto save",
-    saving: "Saving...",
-    saved: "Saved",
-    active: "Active",
-    
-    // Language selector
-    language: "Language",
-    french: "Français",
-    english: "English"
-  }
-};
-
-// =================== INTERFACES TYPESCRIPT COMPLÈTES ===================
+// =================== INTERFACES PRINCIPALES ===================
 interface ASTFormProps {
   tenant: string;
   language: 'fr' | 'en';
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
 }
 
-interface ASTData {
+interface StepConfig {
   id: string;
-  astNumber: string;
-  tenant: string;
-  status: 'draft' | 'pending_verification' | 'approved' | 'auto_approved' | 'rejected';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  verificationDeadline?: string;
-  projectInfo: ProjectInfo;
-  equipment: EquipmentData;
-  hazards: HazardData;
-  permits: PermitData;
-  validation: ValidationData;
-  finalization: FinalizationData;
-  signatures: Signature[];
-  approvals: Approval[];
-  notifications: NotificationData[];
-}
-
-interface ProjectInfo {
-  client: string;
-  clientPhone?: string;
-  clientRepresentative?: string;
-  clientRepresentativePhone?: string;
-  workLocation: string;
-  gpsCoordinates?: string;
-  industry: string;
-  projectNumber: string;
-  astClientNumber?: string;
-  date: string;
-  time: string;
-  workDescription: string;
-  workerCount: number;
-  estimatedDuration?: string;
-  emergencyContact?: string;
-  emergencyPhone?: string;
-  lockoutPoints?: LockoutPoint[];
-  lockoutPhotos?: LockoutPhoto[];
-}
-
-interface LockoutPoint {
-  id: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
-  equipmentName: string;
-  location: string;
-  lockType: string;
-  tagNumber: string;
-  isLocked: boolean;
-  verifiedBy: string;
-  verificationTime: string;
-  photos: string[];
-  notes: string;
-  completedProcedures: number[];
-}
-
-interface LockoutPhoto {
-  id: string;
-  url: string;
-  caption: string;
-  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
-  timestamp: string;
-  lockoutPointId?: string;
-}
-
-interface EquipmentData {
-  list: Equipment[];
-  selected: Equipment[];
-  totalCost: number;
-  inspectionStatus: {
-    total: number;
-    verified: number;
-    available: number;
-    verificationRate: number;
-    availabilityRate: number;
-  };
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  required: boolean;
-  available: boolean;
-  verified: boolean;
-  notes?: string;
-  certification?: string;
-  inspectionDate?: string;
-  inspectedBy?: string;
-  condition?: 'excellent' | 'good' | 'fair' | 'poor';
-  cost?: number;
-  supplier?: string;
-  photos?: EquipmentPhoto[];
-  priority?: 'high' | 'medium' | 'low';
-  mandatoryFor?: string[];
-}
-
-interface EquipmentPhoto {
-  id: string;
-  url: string;
-  caption: string;
-  timestamp: string;
-  category: 'inspection' | 'condition' | 'certification' | 'use';
-}
-
-interface HazardData {
-  list: Hazard[];
-  selected: Hazard[];
-  stats: {
-    totalHazards: number;
-    categories: Record<string, number>;
-  };
-}
-
-interface Hazard {
-  id: string;
-  category: string;
-  name: string;
-  description: string;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  legislation: string;
-  icon: string;
-  selected: boolean;
-  controlMeasures: ControlMeasure[];
-}
-
-interface ControlMeasure {
-  id: string;
-  name: string;
-  category: 'elimination' | 'substitution' | 'engineering' | 'administrative' | 'ppe';
-  description: string;
-  priority: number;
-  implemented: boolean;
-  responsible?: string;
-  deadline?: string;
-  notes?: string;
-}
-
-interface PermitData {
-  permits: WorkPermit[];
-  authorities: Authority[];
-  generalRequirements: GeneralRequirement[];
-  timeline: TimelineItem[];
-  notifications: NotificationItem[];
-  hotWorkPermit?: HotWorkPermit;
-  confinedSpacePermit?: ConfinedSpacePermit;
-  heightWorkPermit?: HeightWorkPermit;
-  electricalPermit?: ElectricalPermit;
-  regulatory: RegulatoryCompliance;
-}
-
-interface Authority {
-  id: string;
-  name: string;
-  type: string;
-  contactInfo: string;
-  jurisdiction: string;
-  requirements: string[];
+  title: { fr: string; en: string };
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  component: React.ComponentType<any>;
   isRequired: boolean;
+  minCompletionTime: number; // en secondes
 }
 
-interface GeneralRequirement {
-  id: string;
-  category: string;
-  description: string;
-  isRequired: boolean;
-  deadline?: string;
-  responsible?: string;
-  status: 'pending' | 'in_progress' | 'completed';
+interface ValidationError {
+  field: string;
+  message: { fr: string; en: string };
+  severity: 'error' | 'warning' | 'info';
 }
 
-interface TimelineItem {
-  id: string;
-  date: string;
-  activity: string;
-  responsible: string;
-  status: 'pending' | 'completed' | 'overdue';
-  dependencies?: string[];
+interface ASTState {
+  currentStep: number;
+  isNavigating: boolean;
+  hasChanges: boolean;
+  lastSaved: Date | null;
+  errors: { [stepId: string]: ValidationError[] };
+  completedSteps: number[];
+  stepStartTimes: { [stepId: string]: Date };
+  networkStatus: 'online' | 'offline';
+  autoSaveEnabled: boolean;
 }
 
-interface NotificationItem {
-  id: string;
-  recipient: string;
-  type: string;
-  message: string;
-  scheduledDate: string;
-  sent: boolean;
-  acknowledged: boolean;
-}
-
-interface WorkPermit {
-  id: string;
-  type: string;
-  number: string;
-  issuedBy: string;
-  validFrom: string;
-  validTo: string;
-  conditions: string[];
-  isRequired: boolean;
-  isObtained: boolean;
-  documents?: PermitDocument[];
-}
-
-interface PermitDocument {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  timestamp: string;
-}
-
-interface HotWorkPermit {
-  fireWatchRequired: boolean;
-  fireWatchName?: string;
-  extinguisherLocation: string;
-  hotWorkType: string[];
-  precautions: string[];
-  validityHours: number;
-}
-
-interface ConfinedSpacePermit {
-  spaceType: string;
-  entryProcedure: string[];
-  gasMonitoring: boolean;
-  attendantName?: string;
-  ventilationRequired: boolean;
-  emergencyProcedures: string[];
-}
-
-interface HeightWorkPermit {
-  workHeight: number;
-  fallProtectionType: string[];
-  anchoragePoints: string[];
-  weatherRestrictions: string[];
-  rescuePlan: string;
-}
-
-interface ElectricalPermit {
-  voltageLevel: string;
-  lockoutRequired: boolean;
-  qualifiedPersonnel: string[];
-  testingRequired: boolean;
-  isolationVerified: boolean;
-}
-
-interface RegulatoryCompliance {
-  rsst: boolean;
-  cnesst: boolean;
-  municipalPermits: string[];
-  environmentalConsiderations: string[];
-  specialConditions: string[];
-}
-
-interface ValidationData {
-  reviewers: TeamMember[];
-  approvalRequired: boolean;
-  minimumReviewers: number;
-  reviewDeadline?: string;
-  validationCriteria: {
-    hazardIdentification: boolean;
-    controlMeasures: boolean;
-    equipmentSelection: boolean;
-    procedural: boolean;
-    regulatory: boolean;
-  };
-  finalApproval?: {
-    approvedBy: string;
-    approvedAt: string;
-    signature: string;
-    conditions?: string;
-  };
-  teamMembers?: TeamMember[];
-  discussionPoints?: DiscussionPoint[];
-  meetingMinutes?: MeetingMinutes;
-  approvals?: TeamApproval[];
-  concerns?: string[];
-  improvements?: string[];
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  department: string;
-  experience?: string;
-  certifications?: string[];
-  phoneNumber?: string;
-  hasParticipated?: boolean;
-  signature?: string;
-  signatureDate?: string;
-  feedback?: string;
-  certification?: string;
-  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
-  comments?: string;
-  rating?: number;
-  validatedAt?: string;
-}
-
-interface DiscussionPoint {
-  id: string;
-  category: 'safety' | 'procedure' | 'equipment' | 'environment' | 'emergency';
-  title: string;
-  description: string;
-  raisedBy: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  resolution?: string;
-  isResolved: boolean;
-  timestamp: string;
-}
-
-interface MeetingMinutes {
-  date: string;
-  duration: number;
-  location: string;
-  facilitator: string;
-  participants: string[];
-  keyPoints: string[];
-  decisions: string[];
-  actionItems: ActionItem[];
-}
-
-interface ActionItem {
-  id: string;
-  description: string;
-  assignedTo: string;
-  deadline: string;
-  status: 'open' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-}
-
-interface TeamApproval {
-  memberId: string;
-  memberName: string;
-  role: string;
-  approved: boolean;
-  signature?: string;
-  timestamp?: string;
-  conditions?: string;
-  digitalSignature?: string;
-}
-
-interface FinalizationData {
-  workers: Worker[];
-  photos: Photo[];
-  finalComments: string;
-  documentGeneration: DocumentGeneration;
-  distribution: Distribution;
-  completionStatus: {
-    projectInfo: boolean;
-    equipment: boolean;
-    hazards: boolean;
-    permits: boolean;
-    validation: boolean;
-  };
-  supervisorSignature?: {
-    signedBy: string;
-    signedAt: string;
-    signature: string;
-    title: string;
-  };
-  metadata: {
-    createdAt: string;
-    completedAt?: string;
-    version: string;
-    lastModified: string;
-    totalDuration?: number;
-  };
-  shareLink?: string;
-  qrCode?: string;
-}
-
-interface Worker {
-  id: string;
-  name: string;
-  position: string;
-  employeeId?: string;
-  company: string;
-  phone?: string;
-  email?: string;
-  certifications: string[];
-  experience: string;
-  hasConsented: boolean;
-  consentDate?: string;
-  consentTime?: string;
-  signature?: string;
-  digitalSignature?: boolean;
-}
-
-interface Photo {
-  id: string;
-  url: string;
-  caption: string;
-  type: 'before' | 'during' | 'after' | 'equipment' | 'hazard' | 'general';
-  timestamp: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-  tags: string[];
-}
-
-interface DocumentGeneration {
-  format: 'pdf' | 'word' | 'excel' | 'html';
-  template: 'standard' | 'detailed' | 'summary' | 'regulatory';
-  language: 'fr' | 'en' | 'both';
-  includePhotos: boolean;
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  branding: boolean;
-  watermark: boolean;
-}
-
-interface Distribution {
-  email: {
-    enabled: boolean;
-    recipients: string[];
-    subject: string;
-    message: string;
-  };
-  portal: {
-    enabled: boolean;
-    publish: boolean;
-    category: string;
-  };
-  archive: {
-    enabled: boolean;
-    retention: number;
-    location: 'local' | 'cloud' | 'both';
-  };
-  compliance: {
-    enabled: boolean;
-    authorities: string[];
-    submissionDate?: string;
-  };
-}
-
-interface Signature {
-  id: string;
-  signerId: string;
-  signerName: string;
-  signerRole: string;
-  signatureData: string;
-  timestamp: string;
-  ipAddress?: string;
-  deviceInfo?: string;
-}
-
-interface Approval {
-  id: string;
-  approverId: string;
-  approverName: string;
-  approverRole: string;
-  approved: boolean;
-  comments?: string;
-  timestamp: string;
-  conditions?: string[];
-}
-
-interface NotificationData {
-  id: string;
-  recipientId: string;
-  recipientName: string;
-  type: 'signature_request' | 'approval_request' | 'status_change' | 'reminder';
-  message: string;
-  sent: boolean;
-  sentAt?: string;
-  readAt?: string;
-}
-
-// =================== HOOK DÉTECTION MOBILE ULTRA-STABLE ===================
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth <= 768;
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    const checkIsMobile = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const newIsMobile = window.innerWidth <= 768;
-        if (newIsMobile !== isMobile) {
-          setIsMobile(newIsMobile);
-        }
-      }, 150);
-    };
-
-    window.addEventListener('resize', checkIsMobile);
-    
-    return () => {
-      window.removeEventListener('resize', checkIsMobile);
-      clearTimeout(timeoutId);
-    };
-  }, [isMobile]);
-
-  return isMobile;
-};
-
-// =================== CONFIGURATION STEPS AVEC TRADUCTIONS ===================
-const steps = [
+// =================== CONFIGURATION DES STEPS ===================
+const STEPS_CONFIG: StepConfig[] = [
   {
-    id: 1,
-    title: 'Informations Projet',
-    subtitle: 'Identification & Verrouillage',
-    icon: FileText,
-    color: '#3b82f6',
-    required: true
+    id: 'projectInfo',
+    title: { 
+      fr: '📋 Informations Projet', 
+      en: '📋 Project Information' 
+    },
+    icon: Building,
+    component: Step1ProjectInfo,
+    isRequired: true,
+    minCompletionTime: 120
   },
   {
-    id: 2,
-    title: 'Équipements',
-    subtitle: 'EPI et équipements sécurité',
-    icon: Shield,
-    color: '#10b981',
-    required: true
+    id: 'equipment',
+    title: { 
+      fr: '🔧 Équipements & Outils', 
+      en: '🔧 Equipment & Tools' 
+    },
+    icon: Wrench,
+    component: Step2Equipment,
+    isRequired: true,
+    minCompletionTime: 180
   },
   {
-    id: 3,
-    title: 'Dangers & Contrôles',
-    subtitle: 'Risques + Moyens contrôle',
+    id: 'hazards',
+    title: { 
+      fr: '⚠️ Identification Dangers', 
+      en: '⚠️ Hazard Identification' 
+    },
     icon: AlertTriangle,
-    color: '#f59e0b',
-    required: true
+    component: Step3Hazards,
+    isRequired: true,
+    minCompletionTime: 240
   },
   {
-    id: 4,
-    title: 'Permis & Autorisations',
-    subtitle: 'Conformité réglementaire',
-    icon: Edit,
-    color: '#8b5cf6',
-    required: false
+    id: 'permits',
+    title: { 
+      fr: '📄 Permis & Autorisations', 
+      en: '📄 Permits & Authorizations' 
+    },
+    icon: FileText,
+    component: Step4Permits,
+    isRequired: true,
+    minCompletionTime: 150
   },
   {
-    id: 5,
-    title: 'Validation Équipe',
-    subtitle: 'Signatures & Approbations',
-    icon: Users,
-    color: '#06b6d4',
-    required: false
-  },
-  {
-    id: 6,
-    title: 'Finalisation',
-    subtitle: 'Consentement & Archive',
+    id: 'validation',
+    title: { 
+      fr: '✅ Validation & Révision', 
+      en: '✅ Validation & Review' 
+    },
     icon: CheckCircle,
-    color: '#10b981',
-    required: false
+    component: Step5Validation,
+    isRequired: true,
+    minCompletionTime: 180
+  },
+  {
+    id: 'finalization',
+    title: { 
+      fr: '🛡️ Finalisation & Équipe', 
+      en: '🛡️ Finalization & Team' 
+    },
+    icon: Shield,
+    component: Step6Finalization,
+    isRequired: false,
+    minCompletionTime: 300
   }
 ];
 
-// =================== COMPOSANT PRINCIPAL AVEC ÉTATS OPTIMISÉS ===================
-export default function ASTForm({ 
-  tenant, 
-  language: initialLanguage = 'fr', 
-  userId, 
-  userRole = 'worker' 
-}: ASTFormProps) {
-  
-  // =================== GESTION DE LA LANGUE ULTRA-STABLE ===================
-  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
-      return savedLanguage || initialLanguage;
-    }
-    return initialLanguage;
-  });
-  const t = translations[currentLanguage];
-  
-  // =================== DÉTECTION MOBILE STABLE ===================
-  const isMobile = useIsMobile();
-
-  // =================== ÉTATS PRINCIPAUX ULTRA-OPTIMISÉS ===================
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isOnline, setIsOnline] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return navigator.onLine;
-    }
-    return true;
-  });
-  const [copied, setCopied] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-  // =================== 🚨 FIX CRITIQUE - REFS POUR ÉVITER BOUCLES INFINIES ===================
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<Record<string, string>>({});
-  const isUpdatingRef = useRef<Record<string, boolean>>({});
-
-  // =================== DONNÉES AST INITIALES COMPLÈTES ===================
-  const [astData, setAstData] = useState<ASTData>(() => ({
-    id: `ast_${Date.now()}`,
-    astNumber: `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
-    tenant,
-    status: 'draft',
-    createdBy: userId || 'user_anonymous',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    projectInfo: {
-      client: '',
-      workLocation: '',
-      industry: '',
-      projectNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
-      workDescription: '',
-      workerCount: 1,
-      lockoutPoints: [],
-      lockoutPhotos: []
+// =================== TRADUCTIONS PRINCIPALES ===================
+const translations = {
+  fr: {
+    title: "🛡️ Nouvelle Analyse Sécuritaire de Travail (AST)",
+    subtitle: "Création d'une analyse complète en 6 étapes",
+    navigation: {
+      previous: "← Précédent",
+      next: "Suivant →",
+      finish: "Terminer",
+      save: "💾 Sauvegarder",
+      preview: "👁️ Aperçu",
+      export: "📤 Exporter"
     },
-    equipment: {
-      list: [],
-      selected: [],
-      totalCost: 0,
-      inspectionStatus: {
-        total: 0,
-        verified: 0,
-        available: 0,
-        verificationRate: 0,
-        availabilityRate: 0
-      }
+    status: {
+      draft: "🔄 Brouillon",
+      inProgress: "⏳ En cours",
+      completed: "✅ Complétée",
+      validated: "🛡️ Validée",
+      archived: "📁 Archivée"
     },
-    hazards: {
-      list: [],
-      selected: [],
-      stats: {
-        totalHazards: 0,
-        categories: {}
-      }
-    },
-    permits: {
-      permits: [],
-      authorities: [],
-      generalRequirements: [],
-      timeline: [],
-      notifications: [],
-      regulatory: {
-        rsst: false,
-        cnesst: false,
-        municipalPermits: [],
-        environmentalConsiderations: [],
-        specialConditions: []
-      }
+    progress: {
+      stepOf: "Étape {current} sur {total}",
+      completion: "Complétion: {percent}%",
+      timeSpent: "Temps passé: {time}",
+      estimatedTime: "Temps estimé: {time}"
     },
     validation: {
-      reviewers: [],
-      approvalRequired: false,
-      minimumReviewers: 1,
-      validationCriteria: {
-        hazardIdentification: false,
-        controlMeasures: false,
-        equipmentSelection: false,
-        procedural: false,
-        regulatory: false
-      }
+      requiredField: "Ce champ est obligatoire",
+      invalidFormat: "Format invalide",
+      minimumTime: "Temps minimum requis: {time} secondes",
+      unsavedChanges: "Vous avez des modifications non sauvegardées"
     },
-    finalization: {
-      workers: [],
-      photos: [],
-      finalComments: '',
-      documentGeneration: {
-        format: 'pdf',
-        template: 'standard',
-        language: 'fr',
-        includePhotos: true,
-        includeSignatures: true,
-        includeQRCode: true,
-        branding: true,
-        watermark: false
-      },
-      distribution: {
-        email: {
-          enabled: false,
-          recipients: [],
-          subject: '',
-          message: ''
-        },
-        portal: {
-          enabled: false,
-          publish: false,
-          category: ''
-        },
-        archive: {
-          enabled: true,
-          retention: 7,
-          location: 'cloud'
-        },
-        compliance: {
-          enabled: false,
-          authorities: []
-        }
-      },
-      completionStatus: {
-        projectInfo: false,
-        equipment: false,
-        hazards: false,
-        permits: false,
-        validation: false
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        version: '1.0',
-        lastModified: new Date().toISOString()
-      }
+    messages: {
+      autoSaved: "✅ Sauvegarde automatique",
+      saveError: "❌ Erreur de sauvegarde",
+      offline: "📡 Mode hors ligne",
+      online: "🌐 Connecté",
+      dataLoaded: "✅ Données chargées",
+      validationComplete: "✅ Validation terminée"
+    }
+  },
+  en: {
+    title: "🛡️ New Job Safety Analysis (JSA)",
+    subtitle: "Creating a complete analysis in 6 steps",
+    navigation: {
+      previous: "← Previous",
+      next: "Next →",
+      finish: "Finish",
+      save: "💾 Save",
+      preview: "👁️ Preview",
+      export: "📤 Export"
     },
-    signatures: [],
-    approvals: [],
-    notifications: []
+    status: {
+      draft: "🔄 Draft",
+      inProgress: "⏳ In Progress",
+      completed: "✅ Completed",
+      validated: "🛡️ Validated",
+      archived: "📁 Archived"
+    },
+    progress: {
+      stepOf: "Step {current} of {total}",
+      completion: "Completion: {percent}%",
+      timeSpent: "Time spent: {time}",
+      estimatedTime: "Estimated time: {time}"
+    },
+    validation: {
+      requiredField: "This field is required",
+      invalidFormat: "Invalid format",
+      minimumTime: "Minimum time required: {time} seconds",
+      unsavedChanges: "You have unsaved changes"
+    },
+    messages: {
+      autoSaved: "✅ Auto-saved",
+      saveError: "❌ Save error",
+      offline: "📡 Offline mode",
+      online: "🌐 Connected",
+      dataLoaded: "✅ Data loaded",
+      validationComplete: "✅ Validation complete"
+    }
+  }
+};
+
+// =================== FONCTION PRINCIPALE ASTFORM ===================
+function ASTForm({ 
+  tenant, 
+  language = 'fr', 
+  userId, 
+  userRole = 'worker',
+  formData,
+  onDataChange
+}: ASTFormProps) {
+  
+  // =================== TRADUCTIONS ===================
+  const t = translations[language] || translations.fr;
+  
+  // =================== ÉTAT PRINCIPAL OPTIMISÉ ===================
+  const [astState, setAstState] = useState<ASTState>(() => ({
+    currentStep: 0,
+    isNavigating: false,
+    hasChanges: false,
+    lastSaved: null,
+    errors: {},
+    completedSteps: [],
+    stepStartTimes: { 'projectInfo': new Date() },
+    networkStatus: 'online',
+    autoSaveEnabled: true
   }));
 
-  // =================== FONCTION DE CHANGEMENT DE LANGUE STABLE ===================
-  const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
-    if (newLanguage !== currentLanguage) {
-      setCurrentLanguage(newLanguage);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ast-language-preference', newLanguage);
-      }
-    }
-  }, [currentLanguage]);
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
-  const LanguageSelector = () => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      background: 'rgba(15, 23, 42, 0.8)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '8px 12px',
-      position: 'relative'
-    }}>
-      <span style={{
-        fontSize: '12px',
-        color: '#94a3b8',
-        fontWeight: '500'
-      }}>
-        {t.language}
-      </span>
-      
-      <div style={{
-        display: 'flex',
-        background: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '8px',
-        padding: '2px',
-        gap: '2px'
-      }}>
-        <button
-          onClick={() => handleLanguageChange('fr')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'fr' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          FR
-        </button>
-        
-        <button
-          onClick={() => handleLanguageChange('en')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'en' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          EN
-        </button>
-      </div>
-    </div>
-  );
+  // =================== REFS POUR PERFORMANCE ===================
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stepTimeTrackingRef = useRef<{ [stepId: string]: number }>({});
 
-  // =================== FONCTIONS UTILITAIRES ULTRA-STABLES ===================
-  const getCompletionPercentage = useCallback((): number => {
-    const completedSteps = getCurrentCompletedSteps();
-    return Math.round((completedSteps / 6) * 100);
+  // =================== ÉTAT DONNÉES AST ===================
+  const [localFormData, setLocalFormData] = useState(() => ({
+    ...formData,
+    id: formData.id || `ast_${Date.now()}`,
+    astNumber: formData.astNumber || `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy: userId || 'anonymous',
+    tenant,
+    language
+  }));
+
+  // =================== UTILITAIRES TEMPS ===================
+  const formatDuration = useCallback((seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  const getCurrentCompletedSteps = useCallback((): number => {
-    let completed = 0;
+  const getCurrentStepTime = useCallback((): number => {
+    const stepId = STEPS_CONFIG[astState.currentStep]?.id;
+    if (!stepId || !astState.stepStartTimes[stepId]) return 0;
     
-    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
-      completed++;
-    }
-    
-    if (astData.equipment?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.hazards?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.permits?.permits?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.validation?.reviewers?.length > 0) {
-      completed++;
-    }
-    
-    if (currentStep >= 6) {
-      completed++;
-    }
-    
-    return completed;
-  }, []);
+    return Math.floor((Date.now() - astState.stepStartTimes[stepId].getTime()) / 1000);
+  }, [astState.currentStep, astState.stepStartTimes]);
 
-  const canNavigateToNext = useCallback((): boolean => {
-    switch (currentStep) {
-      case 1:
-        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
-      case 2:
-        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
-      case 3:
-        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
-      case 4:
-        return true;
-      case 5:
-        return true;
-      case 6:
-        return false;
-      default:
-        return false;
-    }
-  }, []);
-
-  // =================== NAVIGATION ULTRA-STABLE ===================
-  const handlePrevious = useCallback(() => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
-  }, []);
-
-  const handleNext = useCallback(() => {
-    if (canNavigateToNext() && currentStep < 6) {
-      setCurrentStep(prev => prev + 1);
-    }
-  }, [canNavigateToNext, currentStep]);
-
-  const handleStepClick = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
-
-  // =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - SYSTÈME DÉBOUNCE AVANCÉ ===================
+  // =================== GESTIONNAIRES DONNÉES OPTIMISÉS ===================
   
   /**
-   * ✅ SYSTÈME ANTI-BOUCLE ULTRA-PERFORMANT
-   * - Débounce intelligent 300ms
-   * - Vérification hash des données 
-   * - Protection multi-niveau
-   * - Logs détaillés pour debug
+   * ✅ HANDLER PRINCIPAL - CHANGEMENT DE DONNÉES SECTION
+   * Gère les updates de chaque step avec validation et sauvegarde
    */
-  const createDebouncedHandler = useCallback((stepName: string) => {
-    return (section: string, data: any) => {
-      const stepKey = `${stepName}_${section}`;
-      
-      // ✅ Protection niveau 1 : Vérifier si update en cours
-      if (isUpdatingRef.current[stepKey]) {
-        console.log(`🛡️ ASTForm ${stepName} - Update déjà en cours, skip`);
-        return;
+  const handleDataChange = useCallback((section: string, newData: any) => {
+    console.log(`📝 ASTForm - Mise à jour section ${section}:`, newData);
+    
+    // Mise à jour des données locales
+    const updatedFormData = {
+      ...localFormData,
+      [section]: newData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setLocalFormData(updatedFormData);
+    
+    // Notification parent
+    onDataChange(section, newData);
+    
+    // Marquer comme modifié
+    setAstState(prev => ({ 
+      ...prev, 
+      hasChanges: true 
+    }));
+    
+    // Auto-sauvegarde avec délai
+    if (astState.autoSaveEnabled) {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
       
-      // ✅ Protection niveau 2 : Comparer hash des données
-      const newDataHash = JSON.stringify(data);
-      if (lastUpdateRef.current[stepKey] === newDataHash) {
-        console.log(`🛡️ ASTForm ${stepName} - Données identiques, skip update`);
-        return;
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        handleAutoSave();
+      }, 2000); // 2 secondes de délai
+    }
+  }, [localFormData, onDataChange, astState.autoSaveEnabled]);
+
+  /**
+   * ✅ HANDLER NAVIGATION - CHANGEMENT D'ÉTAPE
+   */
+  const handleStepChange = useCallback((stepIndex: number) => {
+    if (stepIndex < 0 || stepIndex >= STEPS_CONFIG.length) return;
+    if (astState.isNavigating) return;
+    
+    console.log(`🚀 Navigation vers step ${stepIndex + 1}`);
+    
+    setAstState(prev => ({ ...prev, isNavigating: true }));
+    
+    // Enregistrer le temps passé sur l'étape actuelle
+    const currentStepId = STEPS_CONFIG[astState.currentStep]?.id;
+    if (currentStepId) {
+      stepTimeTrackingRef.current[currentStepId] = getCurrentStepTime();
+    }
+    
+    // Délai de navigation pour smooth UX
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+    
+    navigationTimeoutRef.current = setTimeout(() => {
+      const newStepId = STEPS_CONFIG[stepIndex]?.id;
+      
+      setAstState(prev => ({
+        ...prev,
+        currentStep: stepIndex,
+        isNavigating: false,
+        stepStartTimes: {
+          ...prev.stepStartTimes,
+          [newStepId]: new Date()
+        }
+      }));
+    }, 300);
+  }, [astState.currentStep, astState.isNavigating, getCurrentStepTime]);
+
+  /**
+   * ✅ HANDLER SAUVEGARDE AUTOMATIQUE
+   */
+  const handleAutoSave = useCallback(async () => {
+    try {
+      console.log('💾 Auto-sauvegarde en cours...');
+      
+      // Simulation sauvegarde (remplacer par API réelle)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setAstState(prev => ({
+        ...prev,
+        hasChanges: false,
+        lastSaved: new Date()
+      }));
+      
+      console.log('✅ Auto-sauvegarde réussie');
+    } catch (error) {
+      console.error('❌ Erreur auto-sauvegarde:', error);
+    }
+  }, []);
+
+  /**
+   * ✅ HANDLER VALIDATION ÉTAPE
+   */
+  const validateCurrentStep = useCallback((): boolean => {
+    const currentStepConfig = STEPS_CONFIG[astState.currentStep];
+    if (!currentStepConfig) return true;
+    
+    const stepData = localFormData[currentStepConfig.id];
+    const errors: ValidationError[] = [];
+    
+    // Validation temps minimum
+    const timeSpent = getCurrentStepTime();
+    if (timeSpent < currentStepConfig.minCompletionTime && currentStepConfig.isRequired) {
+      errors.push({
+        field: 'time',
+        message: {
+          fr: `Temps minimum requis: ${currentStepConfig.minCompletionTime} secondes`,
+          en: `Minimum time required: ${currentStepConfig.minCompletionTime} seconds`
+        },
+        severity: 'warning'
+      });
+    }
+    
+    // Validation données requises (basique)
+    if (currentStepConfig.isRequired && (!stepData || Object.keys(stepData).length === 0)) {
+      errors.push({
+        field: 'data',
+        message: {
+          fr: 'Cette étape est obligatoire',
+          en: 'This step is required'
+        },
+        severity: 'error'
+      });
+    }
+    
+    // Mise à jour des erreurs
+    setAstState(prev => ({
+      ...prev,
+      errors: {
+        ...prev.errors,
+        [currentStepConfig.id]: errors
       }
-      
-      // ✅ Marquer comme en cours de mise à jour
-      isUpdatingRef.current[stepKey] = true;
-      lastUpdateRef.current[stepKey] = newDataHash;
-      
-      console.log(`🔥 ASTForm ${stepName} - Nouvelle donnée détectée:`, { section, data });
-      
-      // ✅ Clear ancien timeout
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-      
-      // ✅ Débounce 300ms - Optimal pour performance
-      updateTimeoutRef.current = setTimeout(() => {
-        console.log(`🚀 ASTForm ${stepName} - Exécution update débounced`);
-        
-        setAstData(prev => {
-          const currentSection = (prev as any)[section] || {};
-          const newSection = { ...currentSection, ...data };
-          
-          const newState = {
-            ...prev,
-            [section]: newSection,
-            updatedAt: new Date().toISOString()
-          };
-          
-          console.log(`✅ ASTForm ${stepName} - État mis à jour:`, { section, newSection });
-          return newState;
-        });
-        
-        // ✅ Marquer changements non sauvegardés
-        setHasUnsavedChanges(true);
-        
-        // ✅ Libérer le verrou après l'update
-        setTimeout(() => {
-          isUpdatingRef.current[stepKey] = false;
-          console.log(`🔓 ASTForm ${stepName} - Verrou libéré`);
-        }, 100);
-        
-      }, 300); // ✅ 300ms = Sweet spot performance/réactivité
+    }));
+    
+    return errors.filter(e => e.severity === 'error').length === 0;
+  }, [astState.currentStep, localFormData, getCurrentStepTime]);
+
+  // =================== CALCUL PROGRESSION ===================
+  const getCompletionPercentage = useCallback((): number => {
+    const totalSteps = STEPS_CONFIG.length;
+    const completedSteps = astState.completedSteps.length;
+    const currentProgress = (astState.currentStep + 0.5) / totalSteps;
+    
+    return Math.min(Math.round((completedSteps + currentProgress) / totalSteps * 100), 100);
+  }, [astState.completedSteps.length, astState.currentStep]);
+
+  // =================== EFFETS DE CYCLE DE VIE ===================
+  
+  /**
+   * ✅ EFFET DÉTECTION RÉSEAU
+   */
+  useEffect(() => {
+    const handleOnline = () => setAstState(prev => ({ ...prev, networkStatus: 'online' }));
+    const handleOffline = () => setAstState(prev => ({ ...prev, networkStatus: 'offline' }));
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // =================== HANDLERS STEPS AVEC PROTECTION ANTI-BOUCLE ===================
+  /**
+   * ✅ EFFET NETTOYAGE TIMEOUTS
+   */
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  /**
+   * ✅ EFFET AVERTISSEMENT FERMETURE PAGE
+   */
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (astState.hasChanges) {
+        e.preventDefault();
+        e.returnValue = t.validation.unsavedChanges;
+        return t.validation.unsavedChanges;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [astState.hasChanges, t.validation.unsavedChanges]);
+
+  // =================== GESTIONNAIRES NAVIGATION ===================
+  const handlePrevious = useCallback(() => {
+    if (astState.currentStep > 0) {
+      handleStepChange(astState.currentStep - 1);
+    }
+  }, [astState.currentStep, handleStepChange]);
+
+  const handleNext = useCallback(() => {
+    if (validateCurrentStep()) {
+      if (astState.currentStep < STEPS_CONFIG.length - 1) {
+        handleStepChange(astState.currentStep + 1);
+      }
+    }
+  }, [astState.currentStep, validateCurrentStep, handleStepChange]);
+
+  const handleFinish = useCallback(async () => {
+    if (validateCurrentStep()) {
+      console.log('🏁 Finalisation AST...');
+      await handleAutoSave();
+      
+      setLocalFormData(prev => ({
+        ...prev,
+        status: 'completed',
+        completedAt: new Date().toISOString()
+      }));
+      
+      console.log('✅ AST finalisée avec succès');
+    }
+  }, [validateCurrentStep, handleAutoSave]);
+
+  // =================== VARIABLES CALCULÉES ===================
+  const currentStepConfig = STEPS_CONFIG[astState.currentStep];
+  const CurrentStepComponent = currentStepConfig?.component;
+  const completionPercentage = getCompletionPercentage();
+  const currentStepTime = getCurrentStepTime();
+  const hasErrors = Object.values(astState.errors).some(errors => 
+    errors.some(error => error.severity === 'error')
+  );
+  const isLastStep = astState.currentStep === STEPS_CONFIG.length - 1;
+  // =================== 🚨 FIX DÉFINITIF BOUCLE INFINIE - HANDLERS DIRECTS ===================
   
-  // ✅ STEP 1 HANDLER - PROTECTION COMPLÈTE
+  /**
+   * ✅ FIX CRITIQUE : HANDLERS DIRECTS SANS DÉBOUNCE POUR STEP6
+   * Le problème venait du système de débounce qui créait des boucles infinies
+   * Solution : Handler direct pour Step6, débounce pour les autres steps
+   */
+  
+  // ✅ STEP 1 HANDLER - INCHANGÉ (fonctionne bien)
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     console.log('🔥 ASTForm handleStep1DataChange appelé:', { section, data });
     
-    // ✅ Cas spécial pour astNumber (direct update)
     if (section === 'astNumber') {
       if (astData.astNumber === data) {
         console.log('🛡️ ASTForm astNumber identique, skip');
@@ -1114,25 +527,37 @@ export default function ASTForm({
       return;
     }
     
-    // ✅ Utiliser le handler débounced pour autres sections
     const debouncedHandler = createDebouncedHandler('Step1');
     debouncedHandler(section, data);
   }, [astData.astNumber, createDebouncedHandler]);
 
-  // ✅ STEP 2 HANDLER - ULTRA OPTIMISÉ
+  // ✅ STEP 2-5 HANDLERS - INCHANGÉS (fonctionnent bien)
   const handleStep2DataChange = useCallback(createDebouncedHandler('Step2'), [createDebouncedHandler]);
-
-  // ✅ STEP 3 HANDLER - ULTRA OPTIMISÉ  
   const handleStep3DataChange = useCallback(createDebouncedHandler('Step3'), [createDebouncedHandler]);
-
-  // ✅ STEP 4 HANDLER - ULTRA OPTIMISÉ
   const handleStep4DataChange = useCallback(createDebouncedHandler('Step4'), [createDebouncedHandler]);
-
-  // ✅ STEP 5 HANDLER - FIX CRITIQUE BOUCLE INFINIE
   const handleStep5DataChange = useCallback(createDebouncedHandler('Step5'), [createDebouncedHandler]);
 
-  // ✅ STEP 6 HANDLER - FIX CRITIQUE BOUCLE INFINIE  
-  const handleStep6DataChange = useCallback(createDebouncedHandler('Step6'), [createDebouncedHandler]);
+  // ✅ STEP 6 HANDLER - FIX CRITIQUE : HANDLER DIRECT SANS DÉBOUNCE
+  const handleStep6DataChange = useCallback((section: string, data: any) => {
+    console.log('🔥 ASTForm Step6 - Handler DIRECT appelé:', { section, data });
+    
+    // ✅ Handler direct immédiat pour éviter les boucles infinies
+    setAstData(prev => {
+      const currentSection = (prev as any)[section] || {};
+      const newSection = { ...currentSection, ...data };
+      
+      const newState = {
+        ...prev,
+        [section]: newSection,
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('✅ ASTForm Step6 - Mise à jour DIRECTE réussie:', { section, newSection });
+      return newState;
+    });
+    
+    setHasUnsavedChanges(true);
+  }, []);
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
   const handleCopyAST = useCallback(async () => {
@@ -1187,7 +612,6 @@ export default function ASTForm({
 
   // =================== EFFECTS ULTRA-OPTIMISÉS ===================
   useEffect(() => {
-    // ✅ Langue sauvegardée - une seule fois
     const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
     if (savedLanguage && savedLanguage !== currentLanguage) {
       setCurrentLanguage(savedLanguage);
@@ -1195,7 +619,6 @@ export default function ASTForm({
   }, []);
 
   useEffect(() => {
-    // ✅ Sauvegarde automatique optimisée
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
         console.log('🔄 Sauvegarde automatique...');
@@ -1207,7 +630,6 @@ export default function ASTForm({
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
-    // ✅ Détection en ligne/hors ligne - une seule fois
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -1220,15 +642,11 @@ export default function ASTForm({
     };
   }, []);
 
-  // =================== CLEANUP EFFECT POUR TIMEOUTS ===================
   useEffect(() => {
     return () => {
-      // ✅ Cleanup tous les timeouts au démontage
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-      
-      // ✅ Reset des refs
       lastUpdateRef.current = {};
       isUpdatingRef.current = {};
     };
@@ -1243,7 +661,7 @@ export default function ASTForm({
   const MemoizedStep6 = React.memo(Step6Finalization);
 
   // =================== RENDU DU CONTENU DES STEPS - OPTIMISÉ FINAL ===================
-  const StepContent = () => {
+  const StepContent = React.memo(() => {
     console.log('🔥 StepContent render - Step:', currentStep);
     
     // ✅ Props stables pour éviter re-render
@@ -1314,7 +732,8 @@ export default function ASTForm({
       default:
         return null;
     }
-  };
+  });
+
   // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
@@ -1333,7 +752,6 @@ export default function ASTForm({
         maxWidth: '100%',
         marginBottom: '12px'
       }}>
-        {/* Logo mobile */}
         <div style={{
           width: '48px',
           height: '48px',
@@ -1355,7 +773,6 @@ export default function ASTForm({
           </span>
         </div>
         
-        {/* Titre mobile */}
         <div style={{ flex: 1, marginLeft: '12px' }}>
           <h1 style={{
             color: '#ffffff',
@@ -1376,11 +793,9 @@ export default function ASTForm({
           </div>
         </div>
         
-        {/* Sélecteur de langue mobile */}
         <LanguageSelector />
       </div>
       
-      {/* Status mobile */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -1438,7 +853,6 @@ export default function ASTForm({
         gap: '20px' 
       }}>
         
-        {/* Logo Premium Desktop */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <div 
             className="float-animation glow-effect"
@@ -1490,7 +904,6 @@ export default function ASTForm({
               </div>
             </div>
             
-            {/* Effets animés */}
             <div style={{
               position: 'absolute',
               top: 0,
@@ -1510,7 +923,6 @@ export default function ASTForm({
             }} />
           </div>
           
-          {/* Titre Desktop traduit */}
           <div className="slide-in-right">
             <h1 className="text-gradient" style={{
               fontSize: '40px',
@@ -1561,13 +973,10 @@ export default function ASTForm({
           </div>
         </div>
 
-        {/* Actions Desktop avec sélecteur de langue */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           
-          {/* Sélecteur de langue desktop */}
           <LanguageSelector />
           
-          {/* Numéro AST */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.8)',
             backdropFilter: 'blur(10px)',
@@ -1611,7 +1020,6 @@ export default function ASTForm({
             </div>
           </div>
 
-          {/* Indicateur en ligne */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
             <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
@@ -1619,7 +1027,6 @@ export default function ASTForm({
             </span>
           </div>
 
-          {/* Actions superviseur avec traductions */}
           {(userRole === 'supervisor' || userRole === 'manager') && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -1671,7 +1078,6 @@ export default function ASTForm({
       backdropFilter: 'blur(10px)',
       borderBottom: '1px solid rgba(100, 116, 139, 0.2)'
     }}>
-      {/* Grid des steps */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
@@ -1727,7 +1133,6 @@ export default function ASTForm({
         ))}
       </div>
       
-      {/* Barre de progression avec traductions */}
       <div style={{ marginTop: '12px' }}>
         <div style={{
           width: '100%',
@@ -1777,7 +1182,6 @@ export default function ASTForm({
       margin: '20px auto 24px'
     }}>
       
-      {/* Barre de progression Desktop */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
@@ -1804,7 +1208,6 @@ export default function ASTForm({
         </div>
       </div>
 
-      {/* Navigation steps Desktop */}
       <div className="step-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -2122,7 +1525,7 @@ export default function ASTForm({
       font-size: 14px;
       cursor: pointer;
       transition: all 0.3s ease;
-      position: relative;
+      position: 'relative';
       overflow: hidden;
       box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
     }
@@ -2133,7 +1536,6 @@ export default function ASTForm({
       box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
     }
     
-    /* =================== MOBILE RESPONSIVE ULTRA-OPTIMISÉ =================== */
     @media (max-width: 768px) {
       .step-grid {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -2199,16 +1601,12 @@ export default function ASTForm({
       position: 'relative'
     }}>
       
-      {/* =================== INJECTION CSS MOBILE OPTIMISÉ =================== */}
       <style jsx>{mobileOptimizedCSS}</style>
 
-      {/* =================== HEADER CONDITIONNEL =================== */}
       {isMobile ? <MobileHeader /> : <DesktopHeader />}
       
-      {/* =================== NAVIGATION STEPS CONDITIONNELLE =================== */}
       {isMobile ? <MobileStepsNavigation /> : <DesktopStepsNavigation />}
 
-      {/* =================== CONTENU PRINCIPAL =================== */}
       <main style={{ 
         padding: isMobile ? '0' : '20px 16px', 
         maxWidth: '1200px', 
@@ -2216,7 +1614,6 @@ export default function ASTForm({
         paddingBottom: isMobile ? '100px' : '20px'
       }}>
         
-        {/* Contenu de l'étape */}
         <div className={`glass-effect slide-in ${isMobile ? 'mobile-content' : ''}`} style={{ 
           padding: isMobile ? '20px 16px' : '32px 24px', 
           marginBottom: isMobile ? '16px' : '24px',
@@ -2243,14 +1640,12 @@ export default function ASTForm({
             </div>
           )}
 
-          {/* =================== CONTENU DES ÉTAPES AVEC LANGUE =================== */}
           <div style={{ minHeight: isMobile ? '300px' : '400px' }}>
             <StepContent />
           </div>
         </div>
       </main>
 
-      {/* =================== NAVIGATION FOOTER CONDITIONNELLE =================== */}
       {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
     </div>
   );
