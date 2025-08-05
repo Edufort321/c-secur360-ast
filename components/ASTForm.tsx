@@ -158,7 +158,7 @@ const translations = {
   }
 };
 
-// =================== INTERFACES EXISTANTES (gardez vos interfaces) ===================
+// =================== INTERFACES EXISTANTES ===================
 interface ASTFormProps {
   tenant: string;
   language: 'fr' | 'en';
@@ -653,7 +653,8 @@ const useIsMobile = () => {
 
   return isMobile;
 };
-// =================== COMPOSANT PRINCIPAL AVEC GESTION BILINGUE ===================
+
+// =================== COMPOSANT PRINCIPAL AVEC HANDLERS CORRIGÉS ===================
 export default function ASTForm({ tenant, language: initialLanguage = 'fr', userId, userRole = 'worker' }: ASTFormProps) {
   // =================== GESTION DE LA LANGUE ===================
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(initialLanguage);
@@ -788,7 +789,6 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     approvals: [],
     notifications: []
   });
-
   // =================== FONCTION DE CHANGEMENT DE LANGUE ===================
   const handleLanguageChange = (newLanguage: 'fr' | 'en') => {
     setCurrentLanguage(newLanguage);
@@ -925,12 +925,12 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
   ];
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const getCompletionPercentage = (): number => {
+  const getCompletionPercentage = useCallback((): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
-  };
+  }, []);
 
-  const getCurrentCompletedSteps = (): number => {
+  const getCurrentCompletedSteps = useCallback((): number => {
     let completed = 0;
     
     if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
@@ -958,9 +958,9 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     }
     
     return completed;
-  };
+  }, [astData, currentStep]);
 
-  const canNavigateToNext = (): boolean => {
+  const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
       case 1:
         return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
@@ -977,31 +977,32 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       default:
         return false;
     }
-  };
+  }, [currentStep, astData]);
 
   // =================== NAVIGATION ===================
-  const handlePrevious = () => {
-    setCurrentStep(Math.max(1, currentStep - 1));
-  };
+  const handlePrevious = useCallback(() => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  }, []);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (canNavigateToNext() && currentStep < 6) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(prev => prev + 1);
     }
-  };
+  }, [canNavigateToNext, currentStep]);
 
-  const handleStepClick = (step: number) => {
+  const handleStepClick = useCallback((step: number) => {
     setCurrentStep(step);
-  };
+  }, []);
 
-  // =================== HANDLERS POUR CHAQUE STEP ===================
+  // =================== HANDLERS CORRIGÉS POUR CHAQUE STEP ===================
+  // ✅ FIX CRITIQUE : Handlers sans dépendances instables
   const handleStep1DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
       ...prev,
       projectInfo: { ...prev.projectInfo, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides = pas de stale closures !
 
   const handleStep2DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
@@ -1009,7 +1010,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       equipment: { ...prev.equipment, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides
 
   const handleStep3DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
@@ -1017,7 +1018,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       hazards: { ...prev.hazards, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides
 
   const handleStep4DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
@@ -1025,7 +1026,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       permits: { ...prev.permits, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides
 
   const handleStep5DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
@@ -1033,7 +1034,7 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       validation: { ...prev.validation, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides
 
   const handleStep6DataChange = useCallback((section: string, data: any) => {
     setAstData(prev => ({
@@ -1041,10 +1042,10 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       finalization: { ...prev.finalization, ...data }
     }));
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // ✅ Dépendances vides
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const handleCopyAST = async () => {
+  // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
+  const handleCopyAST = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(astData.astNumber);
       setCopied(true);
@@ -1052,18 +1053,18 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
     } catch (err) {
       console.error('Erreur lors de la copie:', err);
     }
-  };
+  }, [astData.astNumber]);
 
-  const changeStatus = (newStatus: ASTData['status']) => {
+  const changeStatus = useCallback((newStatus: ASTData['status']) => {
     setAstData(prev => ({
       ...prev,
       status: newStatus,
       updatedAt: new Date().toISOString()
     }));
-  };
+  }, []);
 
   // =================== STATUS BADGE AVEC TRADUCTIONS ===================
-  const getStatusBadge = () => {
+  const getStatusBadge = useCallback(() => {
     const statusConfig = {
       'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
       'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
@@ -1092,26 +1093,27 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
         {config.text}
       </div>
     );
-  };
+  }, [astData.status, t.status, isMobile]);
 
-  // =================== EFFECTS ===================
+  // =================== EFFECTS CORRIGÉS ===================
+  // ✅ FIX CRITIQUE : useEffect sans astData dans les dépendances
   useEffect(() => {
     const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
     if (savedLanguage && savedLanguage !== currentLanguage) {
       setCurrentLanguage(savedLanguage);
     }
-  }, []);
+  }, [currentLanguage]);
 
   useEffect(() => {
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
-        console.log('🔄 Sauvegarde automatique...', astData);
+        console.log('🔄 Sauvegarde automatique...');
         setHasUnsavedChanges(false);
       }, 2000);
 
       return () => clearTimeout(saveTimer);
     }
-  }, [hasUnsavedChanges, astData]);
+  }, [hasUnsavedChanges]); // ✅ RETIRER astData des dépendances !
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1125,6 +1127,83 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
+  const StepContent = useCallback(() => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Step1ProjectInfo
+            formData={astData}
+            onDataChange={handleStep1DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+            errors={{}}
+          />
+        );
+      case 2:
+        return (
+          <Step2Equipment
+            formData={astData}
+            onDataChange={handleStep2DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+            errors={{}}
+          />
+        );
+      case 3:
+        return (
+          <Step3Hazards
+            formData={astData}
+            onDataChange={handleStep3DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+            errors={{}}
+          />
+        );
+      case 4:
+        return (
+          <Step4Permits
+            formData={astData}
+            onDataChange={handleStep4DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+            errors={{}}
+            province={'QC'}
+            userRole={'worker'}
+            touchOptimized={true}
+            compactMode={false}
+            onPermitChange={(permits) => {
+              handleStep4DataChange('permits', permits);
+            }}
+            initialPermits={[]}
+          />
+        );
+      case 5:
+        return (
+          <Step5Validation
+            formData={astData}
+            onDataChange={handleStep5DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+          />
+        );
+      case 6:
+        return (
+          <Step6Finalization
+            formData={astData}
+            onDataChange={handleStep6DataChange}
+            language={currentLanguage}
+            tenant={tenant}
+            errors={{}}
+          />
+        );
+      default:
+        return null;
+    }
+  }, [currentStep, astData, currentLanguage, tenant, 
+      handleStep1DataChange, handleStep2DataChange, handleStep3DataChange, 
+      handleStep4DataChange, handleStep5DataChange, handleStep6DataChange]);
   // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
     <header style={{
@@ -1776,80 +1855,6 @@ export default function ASTForm({ tenant, language: initialLanguage = 'fr', user
       </div>
     </div>
   );
-  // =================== RENDU DU CONTENU DES STEPS AVEC LANGUE ===================
-  const StepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <Step1ProjectInfo
-            formData={astData}
-            onDataChange={handleStep1DataChange}
-            language={currentLanguage} // Passe la langue courante
-            tenant={tenant}
-            errors={{}}
-          />
-        );
-      case 2:
-        return (
-          <Step2Equipment
-            formData={astData}
-            onDataChange={handleStep2DataChange}
-            language={currentLanguage} // Passe la langue courante
-            tenant={tenant}
-            errors={{}}
-          />
-        );
-      case 3:
-        return (
-          <Step3Hazards
-            formData={astData}
-            onDataChange={handleStep3DataChange}
-            language={currentLanguage} // Passe la langue courante
-            tenant={tenant}
-            errors={{}}
-          />
-        );
-      case 4:
-  return (
-    <Step4Permits
-      formData={astData}
-      onDataChange={handleStep4DataChange}
-      language={currentLanguage}
-      tenant={tenant}
-      errors={{}}
-      province={'QC'}
-      userRole={'worker'}
-      touchOptimized={true}
-      compactMode={false}
-      onPermitChange={(permits) => {
-        handleStep4DataChange('permits', permits);
-      }}
-      initialPermits={[]}
-    />
-  );
-      case 5:
-        return (
-          <Step5Validation
-            formData={astData}
-            onDataChange={handleStep5DataChange}
-            language={currentLanguage} // Passe la langue courante
-            tenant={tenant}
-          />
-        );
-      case 6:
-        return (
-          <Step6Finalization
-            formData={astData}
-            onDataChange={handleStep6DataChange}
-            language={currentLanguage} // Passe la langue courante
-            tenant={tenant}
-            errors={{}}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   // =================== NAVIGATION FOOTER DESKTOP AVEC TRADUCTIONS ===================
   const DesktopFooterNavigation = () => (
