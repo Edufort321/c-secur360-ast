@@ -588,26 +588,41 @@ Lien d'accès: ${shareLink}`);
 
   // =================== EFFECTS ULTRA-OPTIMISÉS POUR ÉVITER BOUCLES INFINIES ===================
   
-  // ✅ FIX CRITIQUE : useCallback stable pour updateParentData
-  const updateParentData = useCallback((data: FinalizationData) => {
-    onDataChange('finalization', data);
-  }, []); // ✅ Pas de dépendances = fonction stable
-
-  // ✅ FIX CRITIQUE : Comparaison de données pour éviter boucle infinie
-  const prevFinalizationDataRef = useRef<FinalizationData | null>(null);
+  // ✅ FIX DÉFINITIF : Débounce pour éviter spam d'appels
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUpdatingRef = useRef(false);
   
-  useEffect(() => {
-    // ✅ Vérifier si les données ont vraiment changé
-    const hasChanged = !prevFinalizationDataRef.current || 
-      JSON.stringify(prevFinalizationDataRef.current) !== JSON.stringify(finalizationData);
-    
-    if (hasChanged) {
-      console.log('🔥 Step6 données changées, mise à jour parent');
-      prevFinalizationDataRef.current = finalizationData;
-      updateParentData(finalizationData);
-    } else {
-      console.log('🔥 Step6 données identiques, skip update - BOUCLE INFINIE ÉVITÉE !');
+  const updateParentData = useCallback((data: FinalizationData) => {
+    if (isUpdatingRef.current) {
+      console.log('🔥 Step6 update BLOQUÉ - déjà en cours');
+      return;
     }
+    
+    isUpdatingRef.current = true;
+    console.log('🔥 Step6 update parent AUTORISÉ');
+    onDataChange('finalization', data);
+    
+    setTimeout(() => {
+      isUpdatingRef.current = false;
+    }, 100);
+  }, [onDataChange]);
+
+  useEffect(() => {
+    // ✅ Clear timeout précédent
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // ✅ Débounce de 500ms pour éviter spam
+    debounceTimeoutRef.current = setTimeout(() => {
+      updateParentData(finalizationData);
+    }, 500);
+    
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, [finalizationData, updateParentData]);
 
   // ✅ FIX : Calcul de pourcentage optimisé avec useCallback et deps explicites
@@ -1651,5 +1666,3 @@ Lien d'accès: ${shareLink}`);
 
 // =================== EXPORT DU COMPOSANT ===================
 export default Step6Finalization;
-
-  
