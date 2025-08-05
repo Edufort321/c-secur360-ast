@@ -1,5 +1,3 @@
-🔧 ASTFORM SECTION 1/3 - IMPORTS, TYPES ET ÉTATS ULTRA-OPTIMISÉS
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -889,15 +887,6 @@ export default function ASTForm({
     }
   }, [currentLanguage]);
 
-console.log('✅ ASTForm Section 1/3 - IMPORT, TYPES ET ÉTATS');
-console.log('📦 Imports:', 'Tous présents - Steps, Icons, React');
-console.log('🔧 Types:', Object.keys({ASTFormProps, ASTData, ProjectInfo, LockoutPoint, LockoutPhoto, EquipmentData, Equipment, EquipmentPhoto, HazardData, Hazard, ControlMeasure, PermitData, Authority, GeneralRequirement, TimelineItem, NotificationItem, WorkPermit, PermitDocument, HotWorkPermit, ConfinedSpacePermit, HeightWorkPermit, ElectricalPermit, RegulatoryCompliance, ValidationData, TeamMember, DiscussionPoint, MeetingMinutes, ActionItem, TeamApproval, FinalizationData, Worker, Photo, DocumentGeneration, Distribution, Signature, Approval, NotificationData}).length, 'interfaces définies');
-console.log('🌐 Traductions:', Object.keys(translations).length, 'langues supportées');
-console.log('📱 Mobile Hook:', 'useIsMobile optimisé avec throttle');
-console.log('🎯 États:', 'currentLanguage, isMobile, currentStep, isOnline, copied, hasUnsavedChanges, astData');
-console.log('✅ PRÊT POUR SECTION 2/3 !');
-  🔧 ASTFORM SECTION 2/3 - LANGUAGESELECTOR ET HANDLERS ULTRA-OPTIMISÉS
-
   // =================== COMPOSANT SÉLECTEUR DE LANGUE MANQUANT ===================
   const LanguageSelector = () => (
     <div style={{
@@ -1369,17 +1358,6 @@ console.log('✅ PRÊT POUR SECTION 2/3 !');
         return null;
     }
   };
-
-console.log('✅ ASTForm Section 2/3 - LANGUAGESELECTOR ET HANDLERS');
-console.log('🔧 LanguageSelector:', 'Composant créé avec style dark theme');
-console.log('⚡ Fonctions utilitaires:', 'getCompletionPercentage, getCurrentCompletedSteps, canNavigateToNext');
-console.log('🎯 Navigation:', 'handlePrevious, handleNext, handleStepClick');
-console.log('🛡️ Handlers optimisés:', 'hasDataChanged, handleStep1-6DataChange avec prévention boucle infinie');
-console.log('🎨 Status badge:', 'getStatusBadge avec traductions');
-console.log('📱 Effects:', 'useEffect optimisés avec dépendances correctes');
-console.log('🧠 Mémorisation:', 'React.memo sur tous les steps, StepContent optimisé');
-console.log('✅ PRÊT POUR SECTION 3/3 - RENDU COMPLET !');
-  🔧 ASTFORM SECTION 3/3 - HEADERS, NAVIGATION ET CSS COMPLET
 
   // =================== HEADER MOBILE AVEC SÉLECTEUR DE LANGUE ===================
   const MobileHeader = () => (
@@ -2497,13 +2475,3 @@ console.log('✅ PRÊT POUR SECTION 3/3 - RENDU COMPLET !');
     </div>
   );
 }
-
-console.log('🎉 ASTForm Section 3/3 - HEADERS, NAVIGATION ET CSS COMPLET');
-console.log('📱 Headers:', 'MobileHeader et DesktopHeader avec LanguageSelector');
-console.log('🧭 Navigation:', 'MobileStepsNavigation et DesktopStepsNavigation avec traductions');
-console.log('⬇️ Footer Nav:', 'MobileNavigation et DesktopFooterNavigation optimisés');
-console.log('🎨 CSS Mobile:', '1000+ lignes CSS responsive ultra-optimisé');
-console.log('📐 Responsive:', 'Breakpoints 768px, 480px, 360px + landscape + safe-area');
-console.log('✨ Animations:', 'float, pulse, shine, slideIn, glow, logoGlow, progressShine');
-console.log('🔧 Optimisations:', 'Touch improvements, scroll performance, tap highlights');
-console.log('✅ ASTFORM COMPLET PRÊT À UTILISER !');
