@@ -305,7 +305,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     // ✅ Convertir et envoyer au SafetyManager
     const currentSafetyManagerLogs = entryRegistryData.entryLogs || [];
     const convertedNewLogs = newLogs.filter(log => 
-      !currentSafetyManagerLogs.some(existing => existing.id === log.id)
+      !currentSafetyManagerLogs.some((existing: any) => existing.id === log.id)
     ).map(convertToSafetyManagerLog);
 
     if (convertedNewLogs.length > 0) {
