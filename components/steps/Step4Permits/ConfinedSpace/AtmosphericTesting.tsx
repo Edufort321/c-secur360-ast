@@ -1173,7 +1173,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             overflowY: 'auto',
             paddingRight: '8px'
           }}>
-            {atmosphericReadings.slice().reverse().map((reading) => {
+            {atmosphericReadings.slice().reverse().map((reading: any) => {
               const readingStyle = reading.status === 'danger' ? styles.readingDanger :
                                  reading.status === 'caution' ? styles.readingWarning :
                                  styles.readingSafe;
