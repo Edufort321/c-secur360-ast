@@ -8,6 +8,13 @@ import {
   Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
 } from 'lucide-react';
 
+import Step1ProjectInfo from './steps/Step1ProjectInfo';
+import Step2Equipment from './steps/Step2Equipment';
+import Step3Hazards from './steps/Step3Hazards';
+import Step4Permits from './steps/Step4Permits';
+import Step5Validation from './steps/Step5Validation';
+import Step6Finalization from './steps/Step6Finalization';
+
 // =================== SYSTÈME DE TRADUCTIONS BILINGUE COMPLET ===================
 const translations = {
   fr: {
