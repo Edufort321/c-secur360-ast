@@ -1,12 +1,301 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
   Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
   Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
   Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
 } from 'lucide-react';
+
+// =================== SYSTÈME DE TRADUCTIONS BILINGUE COMPLET ===================
+const translations = {
+  fr: {
+    // Titre principal
+    title: "🛡️ Finalisation AST",
+    subtitle: "Équipe, Partage et Validation Finale",
+    
+    // Onglets
+    tabs: {
+      workers: "👷 Équipe",
+      sharing: "📤 Partage", 
+      finalization: "✅ Final"
+    },
+    
+    // Stats équipe
+    stats: {
+      workers: "👷 Travailleurs",
+      consents: "✅ Consentements",
+      approvals: "👍 Approbations",
+      readingRate: "📊 Taux Lecture"
+    },
+    
+    // Équipe
+    teamManagement: "Gestion de l'Équipe",
+    addWorker: "➕ Ajouter",
+    addWorkerModal: "👷 Ajouter un Travailleur",
+    fullName: "Nom complet *",
+    company: "Entreprise *",
+    namePlaceholder: "Jean Tremblay",
+    companyPlaceholder: "Construction ABC Inc.",
+    consentText: "✋ Je consens avoir lu et compris cette AST",
+    consentGiven: "📅 Consentement donné le",
+    approve: "👍 Approuver",
+    reject: "👎 Rejeter",
+    noWorkers: "Aucun travailleur ajouté. Cliquez sur \"Ajouter\" pour commencer.",
+    
+    // Statuts
+    status: {
+      approved: "✅ Approuvé",
+      rejected: "❌ Rejeté", 
+      pending: "⏳ En attente"
+    },
+    
+    // Partage
+    sharing: "📤 Partage de l'AST",
+    secureLink: "🔗 Lien de partage sécurisé:",
+    copy: "📋 Copier",
+    copied: "✅ Copié!",
+    shareInstructions: "📋 Instructions de partage:",
+    shareList: [
+      "Partagez ce lien avec votre équipe pour consultation",
+      "Chaque membre peut consulter l'AST et donner son approbation", 
+      "Le lien reste actif même si l'AST est verrouillée"
+    ],
+    
+    // Finalisation
+    completionStatus: "📊 État de Complétion",
+    completed: "Complété",
+    sectionStatus: {
+      projectInfo: "✅ Informations projet",
+      hazards: "✅ Dangers identifiés",
+      equipment: "✅ Équipements sélectionnés",
+      teamValidation: "⏳ Validation équipe"
+    },
+    
+    // Options rapport
+    reportOptions: "📄 Options Rapport",
+    includePhotos: "📸 Photos",
+    includeSignatures: "✍️ Signatures",
+    includeQRCode: "📱 QR Code",
+    includeBranding: "🏢 Branding",
+    
+    // Commentaires
+    finalComments: "💬 Commentaires Finaux",
+    commentsPlaceholder: "Ajoutez des commentaires finaux, notes importantes ou instructions spéciales...",
+    documentLocked: "🔒 Document verrouillé - Modification impossible",
+    
+    // Actions finales
+    finalActions: "🎯 Actions Finales",
+    print: "🖨️ Imprimer",
+    save: "💾 Sauvegarder",
+    archive: "📁 Archiver",
+    lock: "🔒 Verrouiller",
+    locked: "🔒 Verrouillé",
+    
+    // Verrouillage
+    confirmLock: "🔒 Confirmer le Verrouillage",
+    lockWarning: "ATTENTION: Cette action est irréversible !",
+    autoChecks: "📊 Vérifications automatiques:",
+    sectionsCompleted: "✅ Sections complétées:",
+    lockPermanently: "🔒 Verrouiller Définitivement",
+    lockDescription: "Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe via le lien de partage.",
+    
+    // Boutons génériques
+    add: "Ajouter",
+    cancel: "Annuler",
+    close: "Fermer",
+    
+    // Messages
+    fillRequiredFields: "❌ Veuillez remplir le nom et la compagnie",
+    workerAdded: "✅ Travailleur ajouté:",
+    consentUpdated: "✅ Consentement mis à jour pour travailleur:",
+    astLocked: "✅ AST verrouillée avec succès",
+    astSaved: "✅ AST sauvegardée!",
+    astArchived: "✅ AST archivée!",
+    linkCopied: "✅ Lien copié dans le presse-papiers",
+    copyError: "❌ Erreur lors de la copie du lien",
+    printError: "❌ Erreur : Impossible d'ouvrir la fenêtre d'impression. Vérifiez les paramètres de pop-up.",
+    
+    // Données des autres steps pour rapport
+    reportData: {
+      hazards: "⚠️ Dangers",
+      equipment: "🔧 Équipements", 
+      permits: "📄 Permis",
+      lockoutPoints: "🔒 Points LOTO",
+      executiveSummary: "RÉSUMÉ EXÉCUTIF",
+      clientProjectInfo: "🏢 INFORMATIONS CLIENT & PROJET",
+      teamContacts: "👥 ÉQUIPE & CONTACTS",
+      client: "Client:",
+      projectNumber: "Projet #:",
+      location: "Lieu:",
+      dateTime: "Date/Heure:",
+      industry: "Industrie:",
+      workerCount: "Nb Travailleurs:",
+      estimatedDuration: "Durée estimée:",
+      clientContact: "Contact client:",
+      emergency: "Urgence:",
+      teamConsents: "ÉQUIPE ET CONSENTEMENTS",
+      finalCommentsLabel: "Commentaires Finaux:",
+      documentStatus: "Statut du Document:",
+      locked: "🔒 VERROUILLÉ",
+      inProgress: "🔓 EN COURS",
+      completion: "Complétion:",
+      lockedOn: "Verrouillé le:",
+      safetyManager: "RESPONSABLE SÉCURITÉ",
+      supervisor: "SUPERVISEUR", 
+      manager: "GESTIONNAIRE",
+      name: "Nom:",
+      signature: "Signature:",
+      date: "Date:",
+      noSpecified: "Non spécifié",
+      noWorkerAdded: "Aucun travailleur ajouté à l'équipe"
+    }
+  },
+  
+  en: {
+    // Main title
+    title: "🛡️ JSA Finalization",
+    subtitle: "Team, Sharing and Final Validation",
+    
+    // Tabs
+    tabs: {
+      workers: "👷 Team",
+      sharing: "📤 Share",
+      finalization: "✅ Final"
+    },
+    
+    // Team stats
+    stats: {
+      workers: "👷 Workers",
+      consents: "✅ Consents",
+      approvals: "👍 Approvals", 
+      readingRate: "📊 Reading Rate"
+    },
+    
+    // Team
+    teamManagement: "Team Management",
+    addWorker: "➕ Add Worker",
+    addWorkerModal: "👷 Add Worker",
+    fullName: "Full Name *",
+    company: "Company *",
+    namePlaceholder: "John Smith",
+    companyPlaceholder: "ABC Construction Inc.",
+    consentText: "✋ I consent to having read and understood this JSA",
+    consentGiven: "📅 Consent given on",
+    approve: "👍 Approve",
+    reject: "👎 Reject",
+    noWorkers: "No workers added. Click \"Add Worker\" to start.",
+    
+    // Status
+    status: {
+      approved: "✅ Approved",
+      rejected: "❌ Rejected",
+      pending: "⏳ Pending"
+    },
+    
+    // Sharing
+    sharing: "📤 JSA Sharing",
+    secureLink: "🔗 Secure sharing link:",
+    copy: "📋 Copy",
+    copied: "✅ Copied!",
+    shareInstructions: "📋 Sharing instructions:",
+    shareList: [
+      "Share this link with your team for consultation",
+      "Each member can review the JSA and give their approval",
+      "The link remains active even if the JSA is locked"
+    ],
+    
+    // Finalization
+    completionStatus: "📊 Completion Status",
+    completed: "Completed",
+    sectionStatus: {
+      projectInfo: "✅ Project information",
+      hazards: "✅ Hazards identified",
+      equipment: "✅ Equipment selected", 
+      teamValidation: "⏳ Team validation"
+    },
+    
+    // Report options
+    reportOptions: "📄 Report Options",
+    includePhotos: "📸 Photos",
+    includeSignatures: "✍️ Signatures",
+    includeQRCode: "📱 QR Code",
+    includeBranding: "🏢 Branding",
+    
+    // Comments
+    finalComments: "💬 Final Comments",
+    commentsPlaceholder: "Add final comments, important notes or special instructions...",
+    documentLocked: "🔒 Document locked - Cannot modify",
+    
+    // Final actions
+    finalActions: "🎯 Final Actions",
+    print: "🖨️ Print",
+    save: "💾 Save",
+    archive: "📁 Archive",
+    lock: "🔒 Lock",
+    locked: "🔒 Locked",
+    
+    // Locking
+    confirmLock: "🔒 Confirm Lock",
+    lockWarning: "WARNING: This action is irreversible!",
+    autoChecks: "📊 Automatic checks:",
+    sectionsCompleted: "✅ Sections completed:",
+    lockPermanently: "🔒 Lock Permanently",
+    lockDescription: "Once locked, the JSA cannot be modified but will remain viewable by the team via the sharing link.",
+    
+    // Generic buttons
+    add: "Add",
+    cancel: "Cancel", 
+    close: "Close",
+    
+    // Messages
+    fillRequiredFields: "❌ Please fill in name and company",
+    workerAdded: "✅ Worker added:",
+    consentUpdated: "✅ Consent updated for worker:",
+    astLocked: "✅ JSA locked successfully",
+    astSaved: "✅ JSA saved!",
+    astArchived: "✅ JSA archived!",
+    linkCopied: "✅ Link copied to clipboard",
+    copyError: "❌ Error copying link",
+    printError: "❌ Error: Cannot open print window. Check pop-up settings.",
+    
+    // Report data from other steps
+    reportData: {
+      hazards: "⚠️ Hazards",
+      equipment: "🔧 Equipment",
+      permits: "📄 Permits", 
+      lockoutPoints: "🔒 LOTO Points",
+      executiveSummary: "EXECUTIVE SUMMARY",
+      clientProjectInfo: "🏢 CLIENT & PROJECT INFORMATION",
+      teamContacts: "👥 TEAM & CONTACTS",
+      client: "Client:",
+      projectNumber: "Project #:",
+      location: "Location:",
+      dateTime: "Date/Time:",
+      industry: "Industry:",
+      workerCount: "Worker Count:",
+      estimatedDuration: "Estimated Duration:",
+      clientContact: "Client Contact:",
+      emergency: "Emergency:",
+      teamConsents: "TEAM AND CONSENTS",
+      finalCommentsLabel: "Final Comments:",
+      documentStatus: "Document Status:",
+      locked: "🔒 LOCKED",
+      inProgress: "🔓 IN PROGRESS",
+      completion: "Completion:",
+      lockedOn: "Locked on:",
+      safetyManager: "SAFETY MANAGER",
+      supervisor: "SUPERVISOR",
+      manager: "MANAGER", 
+      name: "Name:",
+      signature: "Signature:",
+      date: "Date:",
+      noSpecified: "Not specified",
+      noWorkerAdded: "No workers added to the team"
+    }
+  }
+};
 
 // =================== INTERFACES PRINCIPALES ===================
 interface Worker {
@@ -54,9 +343,9 @@ interface FinalizationData {
 }
 
 interface FinalizationStepProps {
-  formData: any;
+  formData: any; // ✅ ACCÈS À TOUTES LES DONNÉES DES STEPS 1-5
   onDataChange: (section: string, data: FinalizationData) => void;
-  language: string;
+  language: 'fr' | 'en';
   tenant: string;
   errors?: any;
 }
@@ -67,12 +356,15 @@ type LockType = 'temporary' | 'permanent' | 'review';
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
 
 function Step6Finalization({ 
-  formData, 
+  formData, // ✅ CONTIENT TOUTES LES DONNÉES : projectInfo, equipment, hazards, permits, validation
   onDataChange, 
-  language,
+  language = 'fr',
   tenant 
 }: FinalizationStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // =================== TRADUCTIONS ===================
+  const t = translations[language] || translations.fr;
   
   // =================== ÉTAT PRINCIPAL ===================
   const [activeTab, setActiveTab] = useState('workers');
@@ -89,16 +381,16 @@ function Step6Finalization({
     return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
   });
 
-  // État travailleur simple
-  const [newWorker, setNewWorker] = useState<Partial<Worker>>({
+  // ✅ FIX CRITIQUE : État travailleur stable
+  const [newWorker, setNewWorker] = useState<Partial<Worker>>(() => ({
     name: '',
     company: '',
     hasConsented: false,
     approbationStatus: 'pending'
-  });
+  }));
 
-  // État finalisation avec thème sombre
-  const [finalizationData, setFinalizationData] = useState<FinalizationData>({
+  // ✅ FIX CRITIQUE : État finalisation avec initialisation stable
+  const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
     workers: [],
     photos: [],
     finalComments: '',
@@ -113,12 +405,64 @@ function Step6Finalization({
     },
     isLocked: false,
     completionPercentage: 85
-  });
+  }));
 
-  // =================== HANDLERS PRINCIPAUX ===================
-  const addWorker = () => {
+  // =================== EXTRACTION DONNÉES STEPS 1-5 POUR RAPPORT COMPLET ===================
+  
+  // ✅ ACCÈS AUX DONNÉES DE TOUS LES STEPS VIA formData
+  const extractDataForReport = useCallback(() => {
+    console.log('📊 Extraction données Steps 1-5 pour rapport:', formData);
+    
+    return {
+      // Step 1 - Informations projet
+      projectInfo: {
+        client: formData.projectInfo?.client || t.reportData.noSpecified,
+        projectNumber: formData.projectInfo?.projectNumber || t.reportData.noSpecified,
+        workLocation: formData.projectInfo?.workLocation || t.reportData.noSpecified,
+        date: formData.projectInfo?.date || new Date().toISOString().split('T')[0],
+        time: formData.projectInfo?.time || new Date().toTimeString().slice(0, 5),
+        industry: formData.projectInfo?.industry || 'other',
+        workerCount: formData.projectInfo?.workerCount || 'Non spécifié',
+        estimatedDuration: formData.projectInfo?.estimatedDuration || t.reportData.noSpecified,
+        clientRepresentative: formData.projectInfo?.clientRepresentative || t.reportData.noSpecified,
+        emergencyContact: formData.projectInfo?.emergencyContact || t.reportData.noSpecified,
+        lockoutPoints: formData.projectInfo?.lockoutPoints || []
+      },
+      
+      // Step 2 - Équipements  
+      equipment: {
+        selected: formData.equipment?.selected || [],
+        list: formData.equipment?.list || [],
+        totalCost: formData.equipment?.totalCost || 0
+      },
+      
+      // Step 3 - Dangers
+      hazards: {
+        selected: formData.hazards?.selected || [],
+        identifiedHazards: formData.hazards?.identifiedHazards || [],
+        list: formData.hazards?.list || []
+      },
+      
+      // Step 4 - Permis
+      permits: {
+        permits: formData.permits?.permits || [],
+        requiredPermits: formData.permits?.requiredPermits || [],
+        authorities: formData.permits?.authorities || []
+      },
+      
+      // Step 5 - Validation
+      validation: {
+        reviewers: formData.validation?.reviewers || [],
+        approvals: formData.validation?.approvals || [],
+        teamMembers: formData.validation?.teamMembers || []
+      }
+    };
+  }, [formData, t.reportData.noSpecified]);
+
+  // =================== HANDLERS PRINCIPAUX ULTRA-OPTIMISÉS ===================
+  const addWorker = useCallback(() => {
     if (!newWorker.name || !newWorker.company) {
-      alert('❌ Veuillez remplir le nom et la compagnie');
+      alert(t.fillRequiredFields);
       return;
     }
 
@@ -138,10 +482,10 @@ function Step6Finalization({
 
     setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
     setShowAddWorker(false);
-    console.log('✅ Travailleur ajouté:', worker);
-  };
+    console.log(t.workerAdded, worker);
+  }, [newWorker.name, newWorker.company, t.fillRequiredFields, t.workerAdded]);
 
-  const toggleConsent = (workerId: string) => {
+  const toggleConsent = useCallback((workerId: string) => {
     setFinalizationData(prev => ({
       ...prev,
       workers: prev.workers.map(worker => 
@@ -154,10 +498,10 @@ function Step6Finalization({
           : worker
       )
     }));
-    console.log('✅ Consentement mis à jour pour travailleur:', workerId);
-  };
+    console.log(t.consentUpdated, workerId);
+  }, [t.consentUpdated]);
 
-  const updateApprobation = (workerId: string, status: ApprobationStatus, comments?: string) => {
+  const updateApprobation = useCallback((workerId: string, status: ApprobationStatus, comments?: string) => {
     setFinalizationData(prev => ({
       ...prev,
       workers: prev.workers.map(worker => 
@@ -172,10 +516,10 @@ function Step6Finalization({
       )
     }));
     console.log(`✅ Approbation ${status} pour travailleur:`, workerId);
-  };
+  }, []);
 
-  // =================== HANDLERS PARTAGE ===================
-  const shareViaEmail = () => {
+  // =================== HANDLERS PARTAGE OPTIMISÉS ===================
+  const shareViaEmail = useCallback(() => {
     const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
     const body = encodeURIComponent(`Bonjour,
 
@@ -191,34 +535,34 @@ ${tenant} - Équipe Sécurité`);
     
     window.open(`mailto:?subject=${subject}&body=${body}`);
     console.log('📧 Partage par email initié');
-  };
+  }, [formData.projectInfo?.projectName, shareLink, tenant]);
 
-  const shareViaSMS = () => {
+  const shareViaSMS = useCallback(() => {
     const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
     window.open(`sms:?body=${message}`);
     console.log('📱 Partage par SMS initié');
-  };
+  }, [formData.projectInfo?.projectName, shareLink]);
 
-  const shareViaWhatsApp = () => {
+  const shareViaWhatsApp = useCallback(() => {
     const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
 
 Lien d'accès: ${shareLink}`);
     window.open(`https://wa.me/?text=${message}`);
     console.log('💬 Partage WhatsApp initié');
-  };
+  }, [formData.projectInfo?.projectName, shareLink]);
 
-  const copyShareLink = async () => {
+  const copyShareLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(shareLink);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
-      console.log('✅ Lien copié dans le presse-papiers');
+      console.log(t.linkCopied);
     } catch (err) {
-      alert('❌ Erreur lors de la copie du lien');
+      alert(t.copyError);
     }
-  };
+  }, [shareLink, t.linkCopied, t.copyError]);
 
-  const lockAST = (lockType: LockType) => {
+  const lockAST = useCallback((lockType: LockType) => {
     setFinalizationData(prev => ({
       ...prev,
       isLocked: true,
@@ -227,10 +571,10 @@ Lien d'accès: ${shareLink}`);
     }));
     setShowLockConfirm(false);
     console.log(`🔒 AST verrouillée (${lockType})`);
-    alert(`✅ AST verrouillée avec succès (${lockType})`);
-  };
+    alert(`${t.astLocked} (${lockType})`);
+  }, [t.astLocked]);
 
-  const getIndustryLabel = (industry: string) => {
+  const getIndustryLabel = useCallback((industry: string) => {
     const labels = {
       'electrical': '⚡ Électrique',
       'construction': '🏗️ Construction', 
@@ -239,11 +583,61 @@ Lien d'accès: ${shareLink}`);
       'office': '🏢 Bureau/Administratif',
       'other': '🔧 Autre'
     };
-    return labels[industry as keyof typeof labels] || industry || 'Non spécifié';
-  };
+    return labels[industry as keyof typeof labels] || industry || t.reportData.noSpecified;
+  }, [t.reportData.noSpecified]);
 
-  const printAST = () => {
-    console.log('🖨️ Génération du rapport AST professionnel complet...');
+  // =================== EFFECTS ULTRA-OPTIMISÉS POUR ÉVITER BOUCLES INFINIES ===================
+  
+  // ✅ FIX CRITIQUE : useCallback stable pour updateParentData
+  const updateParentData = useCallback((data: FinalizationData) => {
+    onDataChange('finalization', data);
+  }, []); // ✅ Pas de dépendances = fonction stable
+
+  // ✅ FIX CRITIQUE : Comparaison de données pour éviter boucle infinie
+  const prevFinalizationDataRef = useRef<FinalizationData | null>(null);
+  
+  useEffect(() => {
+    // ✅ Vérifier si les données ont vraiment changé
+    const hasChanged = !prevFinalizationDataRef.current || 
+      JSON.stringify(prevFinalizationDataRef.current) !== JSON.stringify(finalizationData);
+    
+    if (hasChanged) {
+      console.log('🔥 Step6 données changées, mise à jour parent');
+      prevFinalizationDataRef.current = finalizationData;
+      updateParentData(finalizationData);
+    } else {
+      console.log('🔥 Step6 données identiques, skip update - BOUCLE INFINIE ÉVITÉE !');
+    }
+  }, [finalizationData, updateParentData]);
+
+  // ✅ FIX : Calcul de pourcentage optimisé avec useCallback et deps explicites
+  const calculateCompletionPercentage = useCallback(() => {
+    const totalSections = 6;
+    const completedSections = [
+      formData.projectInfo ? 1 : 0,
+      formData.equipment ? 1 : 0,
+      formData.hazards ? 1 : 0,
+      formData.permits ? 1 : 0,
+      formData.validation ? 1 : 0,
+      finalizationData.workers.length > 0 ? 1 : 0
+    ].reduce((sum, val) => sum + val, 0);
+    
+    return Math.round((completedSections / totalSections) * 100);
+  }, [formData.projectInfo, formData.equipment, formData.hazards, formData.permits, formData.validation, finalizationData.workers.length]);
+
+  useEffect(() => {
+    const newPercentage = calculateCompletionPercentage();
+    
+    if (newPercentage !== finalizationData.completionPercentage) {
+      setFinalizationData(prev => ({
+        ...prev,
+        completionPercentage: newPercentage
+      }));
+    }
+  }, [calculateCompletionPercentage, finalizationData.completionPercentage]);
+// =================== GÉNÉRATION RAPPORT AST COMPLET AVEC TOUTES LES DONNÉES STEPS 1-5 ===================
+  const printAST = useCallback(() => {
+    console.log('🖨️ Génération du rapport AST professionnel complet avec données Steps 1-5...');
     setIsLoading(true);
     
     setTimeout(() => {
@@ -260,34 +654,39 @@ Lien d'accès: ${shareLink}`);
           setIsLoading(false);
         };
         
-        console.log('✅ Rapport AST complet généré avec succès');
+        console.log('✅ Rapport AST complet généré avec succès avec données de tous les steps');
       } else {
-        alert('❌ Erreur : Impossible d\'ouvrir la fenêtre d\'impression. Vérifiez les paramètres de pop-up.');
+        alert(t.printError);
         setIsLoading(false);
       }
     }, 500);
-  };
-  // =================== GÉNÉRATION RAPPORT AST COMPLET ===================
-  const generateCompleteAST = () => {
-    const currentDate = new Date().toLocaleDateString('fr-CA');
-    const currentTime = new Date().toLocaleTimeString('fr-CA');
+  }, [t.printError]);
+
+  const generateCompleteAST = useCallback(() => {
+    const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
+    const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
     const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
+    
+    // ✅ EXTRACTION COMPLÈTE DES DONNÉES DE TOUS LES STEPS
+    const reportData = extractDataForReport();
     
     const totalWorkers = finalizationData.workers.length;
     const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
     const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
-    const totalHazards = formData.hazards?.identifiedHazards?.length || 0;
-    const totalEquipment = formData.equipment?.selectedEquipment?.length || 0;
-    const totalPermits = formData.permits?.requiredPermits?.length || 0;
-    const lockoutPoints = formData.projectInfo?.lockoutPoints?.length || 0;
+    
+    // ✅ DONNÉES STEPS 1-5 POUR STATISTIQUES
+    const totalHazards = reportData.hazards.selected.length + reportData.hazards.identifiedHazards.length;
+    const totalEquipment = reportData.equipment.selected.length;
+    const totalPermits = reportData.permits.permits.length + reportData.permits.requiredPermits.length;
+    const lockoutPoints = reportData.projectInfo.lockoutPoints.length;
     
     return `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="${language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rapport AST Complet - ${formData.projectInfo?.client || 'Client'}</title>
+    <title>${language === 'en' ? 'Complete JSA Report' : 'Rapport AST Complet'} - ${reportData.projectInfo.client}</title>
     <style>
         @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } .no-print { display: none; } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -322,55 +721,132 @@ Lien d'accès: ${shareLink}`);
         .signature-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 40px; }
         .signature-box { border-top: 2px solid #374151; padding-top: 10px; text-align: center; }
         .signature-label { font-size: 10px; color: #4b5563; font-weight: 600; }
+        .data-section { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
+        .data-title { font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 10px; }
+        .data-list { font-size: 10px; color: #4b5563; }
+        .data-item { margin-bottom: 4px; padding: 2px 0; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo-container"><div class="logo-fallback">C🛡️</div></div>
-        <h1>🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)</h1>
-        <div class="subtitle">Rapport Officiel Complet - ${tenant} | N° ${astNumber}</div>
+        <h1>${language === 'en' ? '🛡️ JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)'}</h1>
+        <div class="subtitle">${language === 'en' ? 'Complete Official Report' : 'Rapport Officiel Complet'} - ${tenant} | N° ${astNumber}</div>
     </div>
+    
     <div class="stats-summary">
-        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 RÉSUMÉ EXÉCUTIF</h3>
+        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 ${t.reportData.executiveSummary}</h3>
         <div class="stats-grid">
-            <div class="stat-item"><div class="stat-number">${totalHazards}</div><div class="stat-label">⚠️ Dangers</div></div>
-            <div class="stat-item"><div class="stat-number">${totalEquipment}</div><div class="stat-label">🔧 Équipements</div></div>
-            <div class="stat-item"><div class="stat-number">${totalPermits}</div><div class="stat-label">📄 Permis</div></div>
-            <div class="stat-item"><div class="stat-number">${lockoutPoints}</div><div class="stat-label">🔒 Points LOTO</div></div>
-            <div class="stat-item"><div class="stat-number">${totalWorkers}</div><div class="stat-label">👷 Travailleurs</div></div>
-            <div class="stat-item"><div class="stat-number">${consentedWorkers}/${totalWorkers}</div><div class="stat-label">✅ Consentements</div></div>
+            <div class="stat-item"><div class="stat-number">${totalHazards}</div><div class="stat-label">${t.reportData.hazards}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalEquipment}</div><div class="stat-label">${t.reportData.equipment}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalPermits}</div><div class="stat-label">${t.reportData.permits}</div></div>
+            <div class="stat-item"><div class="stat-number">${lockoutPoints}</div><div class="stat-label">${t.reportData.lockoutPoints}</div></div>
+            <div class="stat-item"><div class="stat-number">${totalWorkers}</div><div class="stat-label">${t.stats.workers}</div></div>
+            <div class="stat-item"><div class="stat-number">${consentedWorkers}/${totalWorkers}</div><div class="stat-label">${t.stats.consents}</div></div>
         </div>
     </div>
+    
     <div class="info-grid">
         <div class="info-box">
-            <h3>🏢 INFORMATIONS CLIENT & PROJET</h3>
-            <div class="info-row"><span class="info-label">Client:</span><span class="info-value">${formData.projectInfo?.client || 'Non spécifié'}</span></div>
-            <div class="info-row"><span class="info-label">Projet #:</span><span class="info-value">${formData.projectInfo?.projectNumber || 'Non spécifié'}</span></div>
-            <div class="info-row"><span class="info-label">Lieu:</span><span class="info-value">${formData.projectInfo?.workLocation || 'Non spécifié'}</span></div>
-            <div class="info-row"><span class="info-label">Date/Heure:</span><span class="info-value">${formData.projectInfo?.date || currentDate} ${formData.projectInfo?.time || currentTime}</span></div>
-            <div class="info-row"><span class="info-label">Industrie:</span><span class="info-value">${getIndustryLabel(formData.projectInfo?.industry)}</span></div>
+            <h3>${t.reportData.clientProjectInfo}</h3>
+            <div class="info-row"><span class="info-label">${t.reportData.client}</span><span class="info-value">${reportData.projectInfo.client}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.projectNumber}</span><span class="info-value">${reportData.projectInfo.projectNumber}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.location}</span><span class="info-value">${reportData.projectInfo.workLocation}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.dateTime}</span><span class="info-value">${reportData.projectInfo.date} ${reportData.projectInfo.time}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.industry}</span><span class="info-value">${getIndustryLabel(reportData.projectInfo.industry)}</span></div>
         </div>
         <div class="info-box">
-            <h3>👥 ÉQUIPE & CONTACTS</h3>
-            <div class="info-row"><span class="info-label">Nb Travailleurs:</span><span class="info-value">${formData.projectInfo?.workerCount || 'Non spécifié'}</span></div>
-            <div class="info-row"><span class="info-label">Durée estimée:</span><span class="info-value">${formData.projectInfo?.estimatedDuration || 'Non spécifiée'}</span></div>
-            <div class="info-row"><span class="info-label">Contact client:</span><span class="info-value">${formData.projectInfo?.clientRepresentative || 'Non spécifié'}</span></div>
-            <div class="info-row"><span class="info-label">Urgence:</span><span class="info-value">${formData.projectInfo?.emergencyContact || 'Non spécifié'}</span></div>
+            <h3>${t.reportData.teamContacts}</h3>
+            <div class="info-row"><span class="info-label">${t.reportData.workerCount}</span><span class="info-value">${reportData.projectInfo.workerCount}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.estimatedDuration}</span><span class="info-value">${reportData.projectInfo.estimatedDuration}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.clientContact}</span><span class="info-value">${reportData.projectInfo.clientRepresentative}</span></div>
+            <div class="info-row"><span class="info-label">${t.reportData.emergency}</span><span class="info-value">${reportData.projectInfo.emergencyContact}</span></div>
         </div>
     </div>
+    
+    ${generateStep1Section(reportData)}
+    ${generateStep2Section(reportData)}
+    ${generateStep3Section(reportData)}
+    ${generateStep4Section(reportData)}
+    ${generateStep5Section(reportData)}
     ${generateStep6Section()}
     ${generateSignatureSection()}
+    
     <div class="footer">
-        <p><strong>Ce document a été généré automatiquement par le système C-Secur360</strong></p>
-        <p>Conforme aux normes de santé et sécurité au travail du Canada | Généré le ${currentDate} à ${currentTime}</p>
-        <p>Document officiel valide pour comités de sécurité, inspections et enquêtes</p>
-        <p>🔗 Lien d'accès: ${shareLink}</p>
+        <p><strong>${language === 'en' ? 'This document was automatically generated by the C-Secur360 system' : 'Ce document a été généré automatiquement par le système C-Secur360'}</strong></p>
+        <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
+        <p>${language === 'en' ? 'Official document valid for safety committees, inspections and investigations' : 'Document officiel valide pour comités de sécurité, inspections et enquêtes'}</p>
+        <p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${shareLink}</p>
     </div>
 </body>
 </html>`;
-  };
+  }, [formData, finalizationData, language, tenant, shareLink, getIndustryLabel, extractDataForReport, t]);
 
-  const generateStep6Section = () => {
+  // =================== GÉNÉRATION SECTIONS INDIVIDUELLES AVEC DONNÉES STEPS 1-5 ===================
+  
+  const generateStep1Section = useCallback((reportData: any) => {
+    if (!reportData.projectInfo.lockoutPoints.length) return '';
+    
+    const lockoutRows = reportData.projectInfo.lockoutPoints.map((point: any) => `
+        <div class="data-item">🔒 ${point.equipmentName} - ${point.location} (${point.energyType})</div>
+    `).join('');
+    
+    return `
+    <div class="data-section">
+        <div class="data-title">🛡️ STEP 1: ${language === 'en' ? 'LOCKOUT POINTS' : 'POINTS DE VERROUILLAGE'}</div>
+        <div class="data-list">${lockoutRows || `<div class="data-item">${language === 'en' ? 'No lockout points identified' : 'Aucun point de verrouillage identifié'}</div>`}</div>
+    </div>`;
+  }, [language]);
+
+  const generateStep2Section = useCallback((reportData: any) => {
+    const equipmentRows = reportData.equipment.selected.map((item: any) => `
+        <div class="data-item">🔧 ${item.name} - ${item.category} ${item.required ? '(Requis)' : ''}</div>
+    `).join('');
+    
+    return `
+    <div class="data-section">
+        <div class="data-title">🔧 STEP 2: ${language === 'en' ? 'SELECTED EQUIPMENT' : 'ÉQUIPEMENTS SÉLECTIONNÉS'}</div>
+        <div class="data-list">${equipmentRows || `<div class="data-item">${language === 'en' ? 'No equipment selected' : 'Aucun équipement sélectionné'}</div>`}</div>
+    </div>`;
+  }, [language]);
+
+  const generateStep3Section = useCallback((reportData: any) => {
+    const hazardRows = reportData.hazards.selected.map((hazard: any) => `
+        <div class="data-item">⚠️ ${hazard.name} - ${language === 'en' ? 'Risk:' : 'Risque:'} ${hazard.riskLevel}</div>
+    `).join('');
+    
+    return `
+    <div class="data-section">
+        <div class="data-title">⚠️ STEP 3: ${language === 'en' ? 'IDENTIFIED HAZARDS' : 'DANGERS IDENTIFIÉS'}</div>
+        <div class="data-list">${hazardRows || `<div class="data-item">${language === 'en' ? 'No hazards identified' : 'Aucun danger identifié'}</div>`}</div>
+    </div>`;
+  }, [language]);
+
+  const generateStep4Section = useCallback((reportData: any) => {
+    const permitRows = reportData.permits.permits.map((permit: any) => `
+        <div class="data-item">📄 ${permit.type} - ${permit.number} (${permit.isRequired ? 'Requis' : 'Optionnel'})</div>
+    `).join('');
+    
+    return `
+    <div class="data-section">
+        <div class="data-title">📄 STEP 4: ${language === 'en' ? 'REQUIRED PERMITS' : 'PERMIS REQUIS'}</div>
+        <div class="data-list">${permitRows || `<div class="data-item">${language === 'en' ? 'No permits required' : 'Aucun permis requis'}</div>`}</div>
+    </div>`;
+  }, [language]);
+
+  const generateStep5Section = useCallback((reportData: any) => {
+    const reviewerRows = reportData.validation.reviewers.map((reviewer: any) => `
+        <div class="data-item">👤 ${reviewer.name} - ${reviewer.role} (${reviewer.status})</div>
+    `).join('');
+    
+    return `
+    <div class="data-section">
+        <div class="data-title">👥 STEP 5: ${language === 'en' ? 'TEAM VALIDATION' : 'VALIDATION ÉQUIPE'}</div>
+        <div class="data-list">${reviewerRows || `<div class="data-item">${language === 'en' ? 'No reviewers assigned' : 'Aucun réviseur assigné'}</div>`}</div>
+    </div>`;
+  }, [language]);
+
+  const generateStep6Section = useCallback(() => {
     const workersRows = finalizationData.workers.map(worker => `
         <tr>
             <td>${worker.name}</td>
@@ -379,7 +855,7 @@ Lien d'accès: ${shareLink}`);
             <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
                 ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
             </td>
-            <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString('fr-CA') : '-'}</td>
+            <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}</td>
             <td class="status-${worker.approbationStatus}">
                 ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
                   worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
@@ -391,92 +867,72 @@ Lien d'accès: ${shareLink}`);
     return `
     <div class="section page-break">
         <div class="section-header">
-            <div class="section-title">👷 STEP 6: ÉQUIPE ET CONSENTEMENTS</div>
+            <div class="section-title">👷 STEP 6: ${t.reportData.teamConsents}</div>
         </div>
         <div class="section-content">
             ${finalizationData.workers.length > 0 ? `
                 <table class="workers-table">
                     <thead>
                         <tr>
-                            <th>Nom</th><th>Entreprise</th><th>Poste</th><th>Consentement</th><th>Date/Heure</th><th>Statut</th><th>Commentaires</th>
+                            <th>${t.reportData.name.replace(':', '')}</th>
+                            <th>${language === 'en' ? 'Company' : 'Entreprise'}</th>
+                            <th>${language === 'en' ? 'Position' : 'Poste'}</th>
+                            <th>${language === 'en' ? 'Consent' : 'Consentement'}</th>
+                            <th>${t.reportData.dateTime.replace(':', '')}</th>
+                            <th>${language === 'en' ? 'Status' : 'Statut'}</th>
+                            <th>${language === 'en' ? 'Comments' : 'Commentaires'}</th>
                         </tr>
                     </thead>
                     <tbody>${workersRows}</tbody>
                 </table>
-            ` : '<p style="text-align: center; color: #6b7280; font-style: italic;">Aucun travailleur ajouté à l\'équipe</p>'}
+            ` : `<p style="text-align: center; color: #6b7280; font-style: italic;">${t.reportData.noWorkerAdded}</p>`}
             ${finalizationData.finalComments ? `
                 <div style="margin-top: 20px; padding: 10px; background: #f9fafb; border-radius: 4px;">
-                    <strong>💬 Commentaires Finaux:</strong><br>${finalizationData.finalComments}
+                    <strong>💬 ${t.reportData.finalCommentsLabel}</strong><br>${finalizationData.finalComments}
                 </div>
             ` : ''}
             <div style="margin-top: 20px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                <strong>📊 Statut du Document:</strong> 
+                <strong>📊 ${t.reportData.documentStatus}</strong> 
                 <span style="padding: 2px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; ${finalizationData.isLocked ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
-                    ${finalizationData.isLocked ? '🔒 VERROUILLÉ' : '🔓 EN COURS'}
+                    ${finalizationData.isLocked ? t.reportData.locked : t.reportData.inProgress}
                 </span>
-                | Complétion: ${finalizationData.completionPercentage}%
-                ${finalizationData.lockTimestamp ? ` | Verrouillé le: ${new Date(finalizationData.lockTimestamp).toLocaleString('fr-CA')}` : ''}
+                | ${t.reportData.completion} ${finalizationData.completionPercentage}%
+                ${finalizationData.lockTimestamp ? ` | ${t.reportData.lockedOn} ${new Date(finalizationData.lockTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}` : ''}
             </div>
         </div>
     </div>`;
-  };
+  }, [finalizationData, language, t]);
 
-  const generateSignatureSection = () => {
+  const generateSignatureSection = useCallback(() => {
     return `
     <div class="signature-section">
         <div class="signature-box">
-            <div class="signature-label">RESPONSABLE SÉCURITÉ</div>
+            <div class="signature-label">${t.reportData.safetyManager}</div>
             <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
             </div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">SUPERVISEUR</div>
+            <div class="signature-label">${t.reportData.supervisor}</div>
             <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
             </div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">GESTIONNAIRE</div>
+            <div class="signature-label">${t.reportData.manager}</div>
             <div style="margin-top: 30px; font-size: 8px;">
-                Nom: _________________________<br><br>
-                Signature: ____________________<br><br>
-                Date: ________________________
+                ${t.reportData.name} _________________________<br><br>
+                ${t.reportData.signature} ____________________<br><br>
+                ${t.reportData.date} ________________________
             </div>
         </div>
     </div>`;
-  };
-
-  useEffect(() => {
-    onDataChange('finalization', finalizationData);
-  }, [finalizationData, onDataChange]);
-
-  useEffect(() => {
-    const totalSections = 6;
-    const completedSections = [
-      formData.projectInfo ? 1 : 0,
-      formData.equipment ? 1 : 0,
-      formData.hazards ? 1 : 0,
-      formData.permits ? 1 : 0,
-      formData.validation ? 1 : 0,
-      finalizationData.workers.length > 0 ? 1 : 0
-    ].reduce((sum, val) => sum + val, 0);
-    
-    const newPercentage = Math.round((completedSections / totalSections) * 100);
-    
-    if (newPercentage !== finalizationData.completionPercentage) {
-      setFinalizationData(prev => ({
-        ...prev,
-        completionPercentage: newPercentage
-      }));
-    }
-  }, [formData, finalizationData.workers.length]);
-
-  // =================== CSS MOBILE OPTIMISÉ THÈME SOMBRE ===================
+  }, [t]);
+// =================== CSS MOBILE OPTIMISÉ THÈME SOMBRE ULTRA-COMPLET ===================
   const darkThemeCSS = `
     .step6-container { padding: 0; background: transparent; min-height: 100vh; color: #ffffff !important; }
     .finalization-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); backdrop-filter: blur(10px); }
@@ -556,79 +1012,81 @@ Lien d'accès: ${shareLink}`);
       .share-buttons { grid-template-columns: 1fr; }
     }
   `;
+
+  // =================== RENDU JSX COMPLET AVEC TRADUCTIONS ===================
   return (
     <>
       {/* Injection CSS thème sombre optimisé */}
       <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
       
       <div className="step6-container">
-        {/* Header avec logo */}
+        {/* Header avec traductions */}
         <div className="finalization-header">
-          <h2 className="finalization-title">🛡️ Finalisation AST</h2>
-          <p className="finalization-subtitle">Équipe, Partage et Validation Finale</p>
+          <h2 className="finalization-title">{t.title}</h2>
+          <p className="finalization-subtitle">{t.subtitle}</p>
         </div>
 
-        {/* Navigation onglets */}
+        {/* Navigation onglets avec traductions */}
         <div className="tabs-container">
           <button 
             className={`tab-button ${activeTab === 'workers' ? 'active' : ''}`}
             onClick={() => setActiveTab('workers')}
           >
             <Users size={18} />
-            👷 Équipe
+            {t.tabs.workers}
           </button>
           <button 
             className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
             onClick={() => setActiveTab('sharing')}
           >
             <Share2 size={18} />
-            📤 Partage
+            {t.tabs.sharing}
           </button>
           <button 
             className={`tab-button ${activeTab === 'finalization' ? 'active' : ''}`}
             onClick={() => setActiveTab('finalization')}
           >
             <FileText size={18} />
-            ✅ Final
+            {t.tabs.finalization}
           </button>
         </div>
 
         {/* ONGLET 1: ÉQUIPE CHANTIER */}
         {activeTab === 'workers' && (
           <div>
-            {/* Stats équipe */}
+            {/* Stats équipe avec traductions */}
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-number">{finalizationData.workers.length}</div>
-                <div className="stat-label">👷 Travailleurs</div>
+                <div className="stat-label">{t.stats.workers}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">{finalizationData.workers.filter(w => w.hasConsented).length}</div>
-                <div className="stat-label">✅ Consentements</div>
+                <div className="stat-label">{t.stats.consents}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}</div>
-                <div className="stat-label">👍 Approbations</div>
+                <div className="stat-label">{t.stats.approvals}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-number">{Math.round((finalizationData.workers.filter(w => w.hasConsented).length / Math.max(finalizationData.workers.length, 1)) * 100)}%</div>
-                <div className="stat-label">📊 Taux Lecture</div>
+                <div className="stat-label">{t.stats.readingRate}</div>
               </div>
             </div>
 
-            {/* Gestion équipe */}
+            {/* Gestion équipe avec traductions */}
             <div className="finalization-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <h3 className="section-title">
                   <Users size={24} />
-                  Gestion de l'Équipe
+                  {t.teamManagement}
                 </h3>
                 <button 
                   className="premium-button"
                   onClick={() => setShowAddWorker(true)}
                 >
                   <Plus size={18} />
-                  ➕ Ajouter
+                  {t.addWorker}
                 </button>
               </div>
 
@@ -654,13 +1112,12 @@ Lien d'accès: ${shareLink}`);
                           border: `1px solid ${worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.3)' : 
                                                 worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
                         }}>
-                          {worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
-                           worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
+                          {t.status[worker.approbationStatus]}
                         </span>
                       </div>
                     </div>
 
-                    {/* Section consentement */}
+                    {/* Section consentement avec traductions */}
                     <div className="consent-section">
                       <div 
                         className="consent-checkbox"
@@ -672,29 +1129,29 @@ Lien d'accès: ${shareLink}`);
                           onChange={() => {}}
                         />
                         <span className="consent-text">
-                          ✋ Je consens avoir lu et compris cette AST
+                          {t.consentText}
                         </span>
                       </div>
                       {worker.hasConsented && worker.consentTimestamp && (
                         <div className="consent-timestamp">
-                          📅 Consentement donné le {new Date(worker.consentTimestamp).toLocaleString('fr-CA')}
+                          {t.consentGiven} {new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                         </div>
                       )}
                     </div>
 
-                    {/* Boutons approbation */}
+                    {/* Boutons approbation avec traductions */}
                     <div className="approbation-section">
                       <button 
                         className="approbation-btn approbation-approve"
                         onClick={() => updateApprobation(worker.id, 'approved', 'Approuvé par le superviseur')}
                       >
-                        👍 Approuver
+                        {t.approve}
                       </button>
                       <button 
                         className="approbation-btn approbation-reject"
                         onClick={() => updateApprobation(worker.id, 'rejected', 'Formation supplémentaire requise')}
                       >
-                        👎 Rejeter
+                        {t.reject}
                       </button>
                     </div>
                   </div>
@@ -703,7 +1160,7 @@ Lien d'accès: ${shareLink}`);
                 {finalizationData.workers.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                     <Users size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>Aucun travailleur ajouté. Cliquez sur "Ajouter" pour commencer.</p>
+                    <p>{t.noWorkers}</p>
                   </div>
                 )}
               </div>
@@ -711,19 +1168,19 @@ Lien d'accès: ${shareLink}`);
           </div>
         )}
 
-        {/* ONGLET 2: PARTAGE SIMPLE */}
+        {/* ONGLET 2: PARTAGE SIMPLE AVEC TRADUCTIONS */}
         {activeTab === 'sharing' && (
           <div>
             <div className="finalization-section">
               <h3 className="section-title">
                 <Share2 size={24} />
-                📤 Partage de l'AST
+                {t.sharing}
               </h3>
               
-              {/* Lien de partage */}
+              {/* Lien de partage avec traductions */}
               <div style={{ marginBottom: '20px' }}>
                 <label className="form-label">
-                  🔗 Lien de partage sécurisé:
+                  {t.secureLink}
                 </label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <input 
@@ -739,12 +1196,12 @@ Lien d'accès: ${shareLink}`);
                     style={{ minWidth: '120px' }}
                   >
                     {copySuccess ? <Check size={18} /> : <Copy size={18} />}
-                    {copySuccess ? '✅ Copié!' : '📋 Copier'}
+                    {copySuccess ? t.copied : t.copy}
                   </button>
                 </div>
               </div>
 
-              {/* Instructions */}
+              {/* Instructions avec traductions */}
               <div style={{ 
                 background: 'rgba(59, 130, 246, 0.1)', 
                 border: '1px solid rgba(59, 130, 246, 0.2)', 
@@ -753,12 +1210,12 @@ Lien d'accès: ${shareLink}`);
                 marginBottom: '20px' 
               }}>
                 <h4 style={{ margin: '0 0 8px 0', color: '#3b82f6', fontSize: '14px', fontWeight: '600' }}>
-                  📋 Instructions de partage:
+                  {t.shareInstructions}
                 </h4>
                 <ul style={{ margin: 0, paddingLeft: '20px', color: '#94a3b8', fontSize: '13px' }}>
-                  <li>Partagez ce lien avec votre équipe pour consultation</li>
-                  <li>Chaque membre peut consulter l'AST et donner son approbation</li>
-                  <li>Le lien reste actif même si l'AST est verrouillée</li>
+                  {t.shareList.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
                 </ul>
               </div>
 
@@ -767,13 +1224,17 @@ Lien d'accès: ${shareLink}`);
                 <div className="share-btn" onClick={shareViaEmail}>
                   <Mail size={24} style={{ color: '#dc2626', marginBottom: '4px' }} />
                   <div style={{ fontWeight: '600', color: '#ffffff' }}>📧 Email</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Courriel</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Courriel' : 'Email'}
+                  </div>
                 </div>
                 
                 <div className="share-btn" onClick={shareViaSMS}>
                   <Smartphone size={24} style={{ color: '#059669', marginBottom: '4px' }} />
                   <div style={{ fontWeight: '600', color: '#ffffff' }}>📱 SMS</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Texto</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Texto' : 'Text'}
+                  </div>
                 </div>
                 
                 <div className="share-btn" onClick={shareViaWhatsApp}>
@@ -785,21 +1246,23 @@ Lien d'accès: ${shareLink}`);
                 <div className="share-btn" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`)}>
                   <div style={{ fontSize: '24px', marginBottom: '4px' }}>📘</div>
                   <div style={{ fontWeight: '600', color: '#ffffff' }}>Facebook</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Réseau social</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {language === 'fr' ? 'Réseau social' : 'Social network'}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ONGLET 3: FINALISATION */}
+        {/* ONGLET 3: FINALISATION AVEC TRADUCTIONS */}
         {activeTab === 'finalization' && (
           <div>
             {/* État de complétion */}
             <div className="finalization-section">
               <h3 className="section-title">
                 <BarChart3 size={24} />
-                📊 État de Complétion
+                {t.completionStatus}
               </h3>
               
               <div className="progress-bar">
@@ -809,26 +1272,26 @@ Lien d'accès: ${shareLink}`);
                 ></div>
               </div>
               <p style={{ textAlign: 'center', fontWeight: '600', color: '#10b981', marginBottom: '16px' }}>
-                {finalizationData.completionPercentage}% Complété
+                {finalizationData.completionPercentage}% {t.completed}
               </p>
 
               {/* Statuts des sections */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
                   <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Informations projet</span>
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.projectInfo}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
                   <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Dangers identifiés</span>
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.hazards}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
                   <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>✅ Équipements sélectionnés</span>
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.equipment}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px' }}>
                   <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>⏳ Validation équipe</span>
+                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.teamValidation}</span>
                 </div>
               </div>
             </div>
@@ -837,7 +1300,7 @@ Lien d'accès: ${shareLink}`);
             <div className="finalization-section">
               <h3 className="section-title">
                 <FileText size={24} />
-                📄 Options Rapport
+                {t.reportOptions}
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
@@ -849,7 +1312,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
-                  <span>📸 Photos</span>
+                  <span>{t.includePhotos}</span>
                 </div>
                 
                 <div 
@@ -860,7 +1323,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
-                  <span>✍️ Signatures</span>
+                  <span>{t.includeSignatures}</span>
                 </div>
                 
                 <div 
@@ -871,7 +1334,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
-                  <span>📱 QR Code</span>
+                  <span>{t.includeQRCode}</span>
                 </div>
                 
                 <div 
@@ -882,7 +1345,7 @@ Lien d'accès: ${shareLink}`);
                   }))}
                 >
                   <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
-                  <span>🏢 Branding</span>
+                  <span>{t.includeBranding}</span>
                 </div>
               </div>
             </div>
@@ -891,13 +1354,13 @@ Lien d'accès: ${shareLink}`);
             <div className="finalization-section">
               <h3 className="section-title">
                 <MessageSquare size={24} />
-                💬 Commentaires Finaux
+                {t.finalComments}
               </h3>
               
               <textarea
                 value={finalizationData.finalComments}
                 onChange={(e) => setFinalizationData(prev => ({ ...prev, finalComments: e.target.value }))}
-                placeholder="Ajoutez des commentaires finaux, notes importantes ou instructions spéciales..."
+                placeholder={t.commentsPlaceholder}
                 className="form-input"
                 style={{ minHeight: '100px', resize: 'vertical' }}
                 disabled={finalizationData.isLocked}
@@ -905,7 +1368,7 @@ Lien d'accès: ${shareLink}`);
               
               {finalizationData.isLocked && (
                 <p style={{ marginTop: '8px', color: '#ef4444', fontSize: '14px', fontStyle: 'italic' }}>
-                  🔒 Document verrouillé - Modification impossible
+                  {t.documentLocked}
                 </p>
               )}
             </div>
@@ -914,7 +1377,7 @@ Lien d'accès: ${shareLink}`);
             <div className="finalization-section">
               <h3 className="section-title">
                 <Target size={24} />
-                🎯 Actions Finales
+                {t.finalActions}
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
@@ -924,29 +1387,29 @@ Lien d'accès: ${shareLink}`);
                   disabled={isLoading}
                 >
                   {isLoading ? <RefreshCw size={18} className="spinning" /> : <Printer size={18} />}
-                  🖨️ Imprimer
+                  {t.print}
                 </button>
                 
                 <button 
                   onClick={() => {
                     console.log('💾 Sauvegarde AST...');
-                    alert('✅ AST sauvegardée!');
+                    alert(t.astSaved);
                   }}
                   className="premium-button"
                 >
                   <Save size={18} />
-                  💾 Sauvegarder
+                  {t.save}
                 </button>
                 
                 <button 
                   onClick={() => {
                     console.log('📁 Archivage AST...');
-                    alert('✅ AST archivée!');
+                    alert(t.astArchived);
                   }}
                   className="premium-button"
                 >
                   <Archive size={18} />
-                  📁 Archiver
+                  {t.archive}
                 </button>
                 
                 <button 
@@ -960,20 +1423,20 @@ Lien d'accès: ${shareLink}`);
                   }}
                 >
                   {finalizationData.isLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                  {finalizationData.isLocked ? '🔒 Verrouillé' : '🔒 Verrouiller'}
+                  {finalizationData.isLocked ? t.locked : t.lock}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* MODAL AJOUT TRAVAILLEUR OPTIMISÉ */}
+        {/* MODAL AJOUT TRAVAILLEUR AVEC TRADUCTIONS */}
         {showAddWorker && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
-                  👷 Ajouter un Travailleur
+                  {t.addWorkerModal}
                 </h4>
                 <button
                   onClick={() => setShowAddWorker(false)}
@@ -994,25 +1457,25 @@ Lien d'accès: ${shareLink}`);
               </div>
               
               <div className="form-group">
-                <label className="form-label">Nom complet *</label>
+                <label className="form-label">{t.fullName}</label>
                 <input
                   type="text"
                   value={newWorker.name || ''}
                   onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
                   className="form-input"
-                  placeholder="Jean Tremblay"
+                  placeholder={t.namePlaceholder}
                   autoFocus
                 />
               </div>
               
               <div className="form-group">
-                <label className="form-label">Entreprise *</label>
+                <label className="form-label">{t.company}</label>
                 <input
                   type="text"
                   value={newWorker.company || ''}
                   onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
                   className="form-input"
-                  placeholder="Construction ABC Inc."
+                  placeholder={t.companyPlaceholder}
                 />
               </div>
 
@@ -1024,7 +1487,7 @@ Lien d'accès: ${shareLink}`);
                   disabled={!newWorker.name || !newWorker.company}
                 >
                   <Plus size={18} />
-                  ➕ Ajouter
+                  {t.add}
                 </button>
                 <button
                   onClick={() => setShowAddWorker(false)}
@@ -1053,14 +1516,14 @@ Lien d'accès: ${shareLink}`);
                   }}
                 >
                   <X size={18} />
-                  Annuler
+                  {t.cancel}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* MODAL CONFIRMATION VERROUILLAGE SÉCURISÉ */}
+        {/* MODAL CONFIRMATION VERROUILLAGE AVEC TRADUCTIONS */}
         {showLockConfirm && (
           <div className="modal-overlay">
             <div className="modal-content" style={{ 
@@ -1069,7 +1532,7 @@ Lien d'accès: ${shareLink}`);
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
-                  🔒 Confirmer le Verrouillage
+                  {t.confirmLock}
                 </h4>
                 <button
                   onClick={() => setShowLockConfirm(false)}
@@ -1101,7 +1564,7 @@ Lien d'accès: ${shareLink}`);
                   border: '1px solid rgba(252, 165, 165, 0.2)'
                 }}>
                   <AlertTriangle size={20} style={{ color: '#fbbf24' }} />
-                  <strong>ATTENTION: Cette action est irréversible !</strong>
+                  <strong>{t.lockWarning}</strong>
                 </div>
                 
                 <div style={{ 
@@ -1112,26 +1575,26 @@ Lien d'accès: ${shareLink}`);
                   border: '1px solid rgba(252, 165, 165, 0.2)'
                 }}>
                   <h5 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>
-                    📊 Vérifications automatiques:
+                    {t.autoChecks}
                   </h5>
                   <div style={{ fontSize: '13px', color: '#fef2f2', lineHeight: '1.4' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span>✅ Sections complétées:</span>
+                      <span>{t.sectionsCompleted}</span>
                       <strong>{finalizationData.completionPercentage}%</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span>✅ Consentements:</span>
+                      <span>{t.stats.consents}:</span>
                       <strong>{finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>✅ Approbations:</span>
+                      <span>{t.stats.approvals}:</span>
                       <strong>{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}</strong>
                     </div>
                   </div>
                 </div>
                 
                 <p style={{ fontSize: '13px', lineHeight: '1.4', opacity: 0.9 }}>
-                  Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe via le lien de partage.
+                  {t.lockDescription}
                 </p>
               </div>
 
@@ -1146,7 +1609,7 @@ Lien d'accès: ${shareLink}`);
                   }}
                 >
                   <Lock size={18} />
-                  🔒 Verrouiller Définitivement
+                  {t.lockPermanently}
                 </button>
                 <button
                   onClick={() => setShowLockConfirm(false)}
@@ -1175,7 +1638,7 @@ Lien d'accès: ${shareLink}`);
                   }}
                 >
                   <X size={18} />
-                  Annuler
+                  {t.cancel}
                 </button>
               </div>
             </div>
@@ -1188,3 +1651,5 @@ Lien d'accès: ${shareLink}`);
 
 // =================== EXPORT DU COMPOSANT ===================
 export default Step6Finalization;
+
+  
