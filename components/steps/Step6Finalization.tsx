@@ -2758,7 +2758,16 @@ function Step6Finalization({
                           result.status === 'completed' ? 'status-success' : 
                           result.status === 'active' ? 'status-warning' : 'status-error'
                         }`}>
-                          {t[result.status as keyof typeof t] || result.status}
+                          {(() => {
+                            const statusTranslations = {
+                              draft: language === 'fr' ? 'Brouillon' : 'Draft',
+                              active: language === 'fr' ? 'Actif' : 'Active',
+                              completed: language === 'fr' ? 'Complété' : 'Completed',
+                              locked: language === 'fr' ? 'Verrouillé' : 'Locked',
+                              archived: language === 'fr' ? 'Archivé' : 'Archived'
+                            };
+                            return statusTranslations[result.status as keyof typeof statusTranslations] || result.status;
+                          })()}
                         </span>
                         <span style={{ 
                           fontSize: isMobile ? '10px' : '12px', 
