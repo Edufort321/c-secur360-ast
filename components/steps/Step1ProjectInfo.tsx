@@ -4,7 +4,8 @@ import React, { useState, useRef } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
-  Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight
+  Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
+  TrendingUp, Activity, Shield
 } from 'lucide-react';
 
 interface Step1ProjectInfoProps {
@@ -13,6 +14,36 @@ interface Step1ProjectInfoProps {
   language: 'fr' | 'en';
   tenant: string;
   errors: any;
+}
+
+// =================== NOUVELLES INTERFACES EMPLACEMENTS ===================
+interface WorkLocation {
+  id: string;
+  name: string;
+  description: string;
+  zone: string;
+  building?: string;
+  floor?: string;
+  capacity: number;
+  currentWorkers: number;
+  lockoutPoints: number;
+  isActive: boolean;
+  createdAt: string;
+  notes?: string;
+}
+
+interface LocationStats {
+  totalWorkers: number;
+  totalLocations: number;
+  activeLockouts: number;
+  capacityUtilization: number;
+  locationBreakdown: {
+    locationId: string;
+    name: string;
+    workers: number;
+    lockouts: number;
+    utilization: number;
+  }[];
 }
 
 interface LockoutPoint {
@@ -28,6 +59,7 @@ interface LockoutPoint {
   photos: string[];
   notes: string;
   completedProcedures: number[];
+  assignedLocation?: string; // ✅ NOUVEAU - Lien avec emplacement
 }
 
 interface LockoutPhoto {
@@ -39,7 +71,7 @@ interface LockoutPhoto {
   lockoutPointId?: string;
 }
 
-// =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
+// =================== SYSTÈME DE TRADUCTIONS ÉTENDU ===================
 const translations = {
   fr: {
     // Générateur AST
@@ -52,6 +84,8 @@ const translations = {
     clientInfo: "🏢 Informations Client",
     projectDetails: "📋 Détails du Projet",
     location: "📍 Localisation",
+    workLocations: "🏗️ Emplacements de Travail", // ✅ NOUVEAU
+    locationStats: "📊 Statistiques Temps Réel", // ✅ NOUVEAU
     team: "👥 Équipe de Travail",
     emergency: "🚨 Contacts d'Urgence",
     workDescription: "📝 Description Détaillée des Travaux",
@@ -81,6 +115,34 @@ const translations = {
     workLocationPlaceholder: "Adresse complète du site de travail",
     industryType: "Type d'Industrie",
     
+    // ✅ NOUVEAUX - Emplacements multiples
+    addLocation: "Ajouter Emplacement",
+    locationName: "Nom de l'Emplacement",
+    locationNamePlaceholder: "Ex: Bâtiment A - Étage 2",
+    locationDescription: "Description",
+    locationDescriptionPlaceholder: "Ex: Zone des équipements électriques",
+    zone: "Zone",
+    zonePlaceholder: "Ex: Production, Bureau, Maintenance",
+    building: "Bâtiment",
+    buildingPlaceholder: "Ex: Bâtiment A",
+    floor: "Étage",
+    floorPlaceholder: "Ex: Sous-sol, RDC, Étage 2",
+    capacity: "Capacité Max",
+    capacityPlaceholder: "Ex: 10",
+    removeLocation: "Supprimer cet emplacement",
+    noLocations: "Aucun emplacement défini",
+    noLocationsDescription: "Ajoutez des emplacements pour organiser vos équipes",
+    
+    // ✅ NOUVEAUX - Statistiques
+    totalWorkers: "Total Travailleurs",
+    totalLocations: "Emplacements Actifs",
+    totalLockouts: "Cadenas Apposés",
+    utilizationRate: "Taux d'Utilisation",
+    locationBreakdown: "Répartition par Emplacement",
+    workers: "travailleurs",
+    lockouts: "cadenas",
+    capacity: "capacité",
+    
     // Industries
     electrical: "⚡ Électrique",
     construction: "🏗️ Construction",
@@ -92,7 +154,7 @@ const translations = {
     // Équipe
     workerCount: "Nombre de Personnes",
     workerCountPlaceholder: "Ex: 5",
-    workerCountHelp: "Ce nombre sera comparé aux approbations d'équipe",
+    workerCountHelp: "Ce nombre sera comparé aux approbations d'équipe et emplacements",
     estimatedDuration: "Durée Estimée",
     durationPlaceholder: "Ex: 4 heures, 2 jours, 1 semaine",
     
@@ -153,6 +215,12 @@ const translations = {
     // Messages d'erreur
     required: "*",
     
+    // Boutons
+    add: "Ajouter",
+    cancel: "Annuler",
+    save: "Sauvegarder",
+    edit: "Modifier",
+    
     // Catégories photo
     categories: {
       before_lockout: "Avant verrouillage",
@@ -174,6 +242,8 @@ const translations = {
     clientInfo: "🏢 Client Information",
     projectDetails: "📋 Project Details",
     location: "📍 Location",
+    workLocations: "🏗️ Work Locations", // ✅ NEW
+    locationStats: "📊 Real-Time Statistics", // ✅ NEW
     team: "👥 Work Team",
     emergency: "🚨 Emergency Contacts",
     workDescription: "📝 Detailed Work Description",
@@ -203,6 +273,34 @@ const translations = {
     workLocationPlaceholder: "Complete address of work site",
     industryType: "Industry Type",
     
+    // ✅ NEW - Multiple locations
+    addLocation: "Add Location",
+    locationName: "Location Name",
+    locationNamePlaceholder: "Ex: Building A - Floor 2",
+    locationDescription: "Description",
+    locationDescriptionPlaceholder: "Ex: Electrical equipment zone",
+    zone: "Zone",
+    zonePlaceholder: "Ex: Production, Office, Maintenance",
+    building: "Building",
+    buildingPlaceholder: "Ex: Building A",
+    floor: "Floor",
+    floorPlaceholder: "Ex: Basement, Ground, Floor 2",
+    capacity: "Max Capacity",
+    capacityPlaceholder: "Ex: 10",
+    removeLocation: "Remove this location",
+    noLocations: "No locations defined",
+    noLocationsDescription: "Add locations to organize your teams",
+    
+    // ✅ NEW - Statistics
+    totalWorkers: "Total Workers",
+    totalLocations: "Active Locations",
+    totalLockouts: "Applied Locks",
+    utilizationRate: "Utilization Rate",
+    locationBreakdown: "Breakdown by Location",
+    workers: "workers",
+    lockouts: "locks",
+    capacity: "capacity",
+    
     // Industries
     electrical: "⚡ Electrical",
     construction: "🏗️ Construction",
@@ -214,7 +312,7 @@ const translations = {
     // Team
     workerCount: "Number of People",
     workerCountPlaceholder: "Ex: 5",
-    workerCountHelp: "This number will be compared to team approvals",
+    workerCountHelp: "This number will be compared to team approvals and locations",
     estimatedDuration: "Estimated Duration",
     durationPlaceholder: "Ex: 4 hours, 2 days, 1 week",
     
@@ -274,6 +372,12 @@ const translations = {
     
     // Error messages
     required: "*",
+    
+    // Buttons
+    add: "Add",
+    cancel: "Cancel",
+    save: "Save",
+    edit: "Edit",
     
     // Photo categories
     categories: {
@@ -439,18 +543,18 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-
 function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
   const ENERGY_TYPES = getEnergyTypes(language);
   
-  // =================== ÉTATS LOCAUX (SOLUTION ANTI-ÉJECTION) ===================
+  // =================== EXTRACTION DONNÉES EXISTANTES ===================
   const projectInfo = formData?.projectInfo || {};
   const lockoutPoints = projectInfo?.lockoutPoints || [];
   const lockoutPhotos = projectInfo?.lockoutPhotos || [];
+  const workLocations = projectInfo?.workLocations || []; // ✅ NOUVEAU
   
-  // 🔥 ÉTAT LOCAL POUR ÉVITER LES RE-RENDERS - TOUS LES CHAMPS PRINCIPAUX
+  // ✅ FIX CRITIQUE - ÉTAT LOCAL STABLE AVEC DEBOUNCE POUR ÉVITER ÉJECTION
   const [localState, setLocalState] = useState({
     client: projectInfo.client || '',
     clientPhone: projectInfo.clientPhone || '',
@@ -469,26 +573,107 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     workDescription: projectInfo.workDescription || ''
   });
 
-  // États pour AST et photos
+  // États pour AST et interactions
   const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
+  
+  // ✅ NOUVEAUX ÉTATS - Gestion emplacements
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<string | null>(null);
+  const [newLocation, setNewLocation] = useState({
+    name: '',
+    description: '',
+    zone: '',
+    building: '',
+    floor: '',
+    capacity: 10
+  });
 
-  // =================== HANDLERS ÉTAT LOCAL (SAISIE FLUIDE) ===================
+  // ✅ FIX CRITIQUE - DEBOUNCE TIMER POUR ÉVITER DOUBLE ÉJECTION
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // =================== HANDLERS ÉTAT LOCAL AVEC DEBOUNCE ===================
   const updateLocalState = (field: string, value: any) => {
     setLocalState(prev => ({ ...prev, [field]: value }));
+    
+    // ✅ FIX: Débouncer la sauvegarde pour éviter éjection multiple
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      syncToParent(field, value);
+    }, 300); // 300ms de délai
   };
 
-  // Sync vers ASTForm (onBlur uniquement pour éviter re-renders)
+  // Sync vers ASTForm avec protection anti-éjection
   const syncToParent = (field: string, value: any) => {
-    onDataChange('projectInfo', { ...projectInfo, [field]: value });
+    if (isSaving) return; // Éviter multiple sync simultané
+    
+    setIsSaving(true);
+    try {
+      onDataChange('projectInfo', { ...projectInfo, [field]: value });
+    } catch (error) {
+      console.error('Erreur sync parent:', error);
+    } finally {
+      setTimeout(() => setIsSaving(false), 100);
+    }
   };
 
-  // Sync complet (pour les cas où on a besoin de tout synchroniser)
+  // Sync complet optimisé
   const syncAllToParent = () => {
-    onDataChange('projectInfo', { ...projectInfo, ...localState });
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      onDataChange('projectInfo', { 
+        ...projectInfo, 
+        ...localState,
+        workLocations // Inclure les emplacements
+      });
+    } catch (error) {
+      console.error('Erreur sync complet:', error);
+    } finally {
+      setTimeout(() => setIsSaving(false), 100);
+    }
+  };
+
+  // =================== FONCTIONS STATISTIQUES TEMPS RÉEL ===================
+  const calculateLocationStats = (): LocationStats => {
+    const totalLocations = workLocations.filter((loc: WorkLocation) => loc.isActive).length;
+    const totalWorkers = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
+    const activeLockouts = lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
+    
+    const totalCapacity = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.capacity, 0);
+    const capacityUtilization = totalCapacity > 0 ? Math.round((totalWorkers / totalCapacity) * 100) : 0;
+    
+    const locationBreakdown = workLocations.map((loc: WorkLocation) => {
+      const locationLockouts = lockoutPoints.filter((point: LockoutPoint) => 
+        point.assignedLocation === loc.id && point.isLocked
+      ).length;
+      
+      const utilization = loc.capacity > 0 ? Math.round((loc.currentWorkers / loc.capacity) * 100) : 0;
+      
+      return {
+        locationId: loc.id,
+        name: loc.name,
+        workers: loc.currentWorkers,
+        lockouts: locationLockouts,
+        utilization
+      };
+    });
+
+    return {
+      totalWorkers,
+      totalLocations,
+      activeLockouts,
+      capacityUtilization,
+      locationBreakdown
+    };
   };
 
   // =================== HANDLERS AST ET UTILITAIRES ===================
@@ -516,7 +701,86 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('astNumber', newNumber);
   };
 
-  // =================== GESTION PHOTOS ===================
+  // =================== GESTION EMPLACEMENTS (NOUVEAUX HANDLERS) ===================
+  const addWorkLocation = () => {
+    if (!newLocation.name.trim() || !newLocation.zone.trim()) {
+      return;
+    }
+
+    const location: WorkLocation = {
+      id: `location_${Date.now()}`,
+      name: newLocation.name.trim(),
+      description: newLocation.description.trim(),
+      zone: newLocation.zone.trim(),
+      building: newLocation.building.trim() || undefined,
+      floor: newLocation.floor.trim() || undefined,
+      capacity: newLocation.capacity || 10,
+      currentWorkers: 0,
+      lockoutPoints: 0,
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedLocations = [...workLocations, location];
+    
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState,
+      workLocations: updatedLocations
+    });
+
+    // Reset formulaire
+    setNewLocation({
+      name: '',
+      description: '',
+      zone: '',
+      building: '',
+      floor: '',
+      capacity: 10
+    });
+    setShowAddLocation(false);
+    
+    console.log('✅ Emplacement ajouté:', location.name);
+  };
+
+  const removeWorkLocation = (locationId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    const updatedLocations = workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
+    
+    // Aussi retirer l'assignation des lockout points
+    const updatedLockouts = lockoutPoints.map((point: LockoutPoint) => 
+      point.assignedLocation === locationId 
+        ? { ...point, assignedLocation: undefined }
+        : point
+    );
+    
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState,
+      workLocations: updatedLocations,
+      lockoutPoints: updatedLockouts
+    });
+    
+    console.log('✅ Emplacement supprimé:', locationId);
+  };
+
+  const updateWorkLocation = (locationId: string, field: string, value: any) => {
+    const updatedLocations = workLocations.map((loc: WorkLocation) => 
+      loc.id === locationId ? { ...loc, [field]: value } : loc
+    );
+    
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState,
+      workLocations: updatedLocations
+    });
+  };
+
+  // =================== GESTION PHOTOS (CONSERVÉ) ===================
   const handlePhotoCapture = async (category: string, lockoutPointId?: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -555,7 +819,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       const updatedPhotos = [...lockoutPhotos, newPhoto];
       onDataChange('projectInfo', {
         ...projectInfo,
-        ...localState, // Sync état local
+        ...localState,
         lockoutPhotos: updatedPhotos
       });
     } catch (error) {
@@ -575,11 +839,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
     onDataChange('projectInfo', {
       ...projectInfo,
-      ...localState, // Sync état local
+      ...localState,
       lockoutPhotos: updatedPhotos
     });
   };
-  // =================== GESTION POINTS DE VERROUILLAGE ===================
+
+  // =================== GESTION POINTS DE VERROUILLAGE (CONSERVÉ + AMÉLIORÉ) ===================
   const addLockoutPoint = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -597,12 +862,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       verificationTime: '',
       photos: [],
       notes: '',
-      completedProcedures: []
+      completedProcedures: [],
+      assignedLocation: workLocations.length > 0 ? workLocations[0].id : undefined // ✅ Auto-assign première location
     };
     const updatedPoints = [...lockoutPoints, newPoint];
     onDataChange('projectInfo', {
       ...projectInfo,
-      ...localState, // Sync état local
+      ...localState,
       lockoutPoints: updatedPoints
     });
   };
@@ -611,9 +877,34 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
+    
+    // ✅ NOUVEAU: Mettre à jour les stats location si lockout status change
+    if (field === 'isLocked') {
+      const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+      if (point?.assignedLocation) {
+        const updatedLocations = workLocations.map((loc: WorkLocation) => {
+          if (loc.id === point.assignedLocation) {
+            const locationLockouts = updatedPoints.filter((p: LockoutPoint) => 
+              p.assignedLocation === loc.id && p.isLocked
+            ).length;
+            return { ...loc, lockoutPoints: locationLockouts };
+          }
+          return loc;
+        });
+        
+        onDataChange('projectInfo', {
+          ...projectInfo,
+          ...localState,
+          lockoutPoints: updatedPoints,
+          workLocations: updatedLocations
+        });
+        return;
+      }
+    }
+    
     onDataChange('projectInfo', {
       ...projectInfo,
-      ...localState, // Sync état local
+      ...localState,
       lockoutPoints: updatedPoints
     });
   };
@@ -654,13 +945,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     
     onDataChange('projectInfo', {
       ...projectInfo,
-      ...localState, // Sync état local
+      ...localState,
       lockoutPoints: updatedPoints,
       lockoutPhotos: updatedPhotos
     });
   };
 
-  // =================== FONCTIONS GESTION TEMPS ===================
+  // =================== FONCTIONS GESTION TEMPS (CONSERVÉ) ===================
   const setTimeNow = (pointId: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -690,7 +981,18 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateLockoutPoint(pointId, 'energyType', energyType);
   };
 
-  // =================== CARROUSEL PHOTOS ===================
+  // ✅ CLEANUP DEBOUNCE TIMER
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // =================== CALCUL STATISTIQUES EN TEMPS RÉEL ===================
+  const locationStats = calculateLocationStats();
+  // =================== CARROUSEL PHOTOS (CONSERVÉ INTÉGRALEMENT) ===================
   const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
@@ -802,7 +1104,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     );
   };
 
-  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE ===================
+  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE (CONSERVÉ) ===================
   const IndustrySelector = () => (
     <select 
       className="premium-select" 
@@ -819,7 +1121,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </select>
   );
 
-  // =================== COMPOSANT VIDE POUR PHOTOS ===================
+  // =================== COMPOSANT VIDE POUR PHOTOS (CONSERVÉ) ===================
   const EmptyPhotoPlaceholder = ({ 
     onClick, 
     title, 
@@ -856,9 +1158,327 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       </p>
     </div>
   );
+
+  // ✅ NOUVEAU COMPOSANT - DASHBOARD STATISTIQUES TEMPS RÉEL
+  const LocationStatsCard = () => (
+    <div className="location-stats-card">
+      <div className="stats-header">
+        <BarChart3 size={20} />
+        <h3>{t.locationStats}</h3>
+      </div>
+      
+      <div className="stats-grid">
+        <div className="stat-item">
+          <div className="stat-icon total-workers">
+            <Users size={18} />
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{locationStats.totalWorkers}</div>
+            <div className="stat-label">{t.totalWorkers}</div>
+          </div>
+        </div>
+        
+        <div className="stat-item">
+          <div className="stat-icon total-locations">
+            <Building size={18} />
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{locationStats.totalLocations}</div>
+            <div className="stat-label">{t.totalLocations}</div>
+          </div>
+        </div>
+        
+        <div className="stat-item">
+          <div className="stat-icon total-lockouts">
+            <Lock size={18} />
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{locationStats.activeLockouts}</div>
+            <div className="stat-label">{t.totalLockouts}</div>
+          </div>
+        </div>
+        
+        <div className="stat-item">
+          <div className="stat-icon utilization-rate">
+            <TrendingUp size={18} />
+          </div>
+          <div className="stat-content">
+            <div className="stat-value">{locationStats.capacityUtilization}%</div>
+            <div className="stat-label">{t.utilizationRate}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Détail par emplacement */}
+      {locationStats.locationBreakdown.length > 0 && (
+        <div className="location-breakdown">
+          <h4 className="breakdown-title">{t.locationBreakdown}</h4>
+          <div className="breakdown-list">
+            {locationStats.locationBreakdown.map((loc) => (
+              <div key={loc.locationId} className="breakdown-item">
+                <div className="breakdown-info">
+                  <span className="location-name">{loc.name}</span>
+                  <span className="location-details">
+                    {loc.workers} {t.workers} • {loc.lockouts} {t.lockouts}
+                  </span>
+                </div>
+                <div className="breakdown-utilization">
+                  <div className="utilization-bar">
+                    <div 
+                      className="utilization-fill" 
+                      style={{ 
+                        width: `${Math.min(loc.utilization, 100)}%`,
+                        backgroundColor: loc.utilization > 90 ? '#ef4444' : loc.utilization > 70 ? '#f59e0b' : '#10b981'
+                      }} 
+                    />
+                  </div>
+                  <span className="utilization-text">{loc.utilization}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ✅ NOUVEAU COMPOSANT - GESTION EMPLACEMENTS
+  const WorkLocationManager = () => (
+    <div className="work-locations-section">
+      <div className="locations-header">
+        <div className="section-header">
+          <MapPin className="section-icon" />
+          <h3 className="section-title">{t.workLocations}</h3>
+        </div>
+        <button 
+          type="button"
+          className="btn-primary" 
+          onClick={() => setShowAddLocation(true)}
+        >
+          <Plus size={16} />
+          {t.addLocation}
+        </button>
+      </div>
+
+      {/* Liste des emplacements */}
+      {workLocations.length > 0 ? (
+        <div className="locations-list">
+          {workLocations.map((location: WorkLocation) => (
+            <div key={location.id} className="location-item">
+              <div className="location-main">
+                <div className="location-info">
+                  <h4 className="location-name">{location.name}</h4>
+                  <p className="location-description">{location.description}</p>
+                  <div className="location-metadata">
+                    <span className="location-zone">🏢 {location.zone}</span>
+                    {location.building && <span className="location-building">🏗️ {location.building}</span>}
+                    {location.floor && <span className="location-floor">🏢 {location.floor}</span>}
+                  </div>
+                </div>
+                <div className="location-stats">
+                  <div className="location-stat">
+                    <Users size={14} />
+                    <span>{location.currentWorkers}/{location.capacity}</span>
+                  </div>
+                  <div className="location-stat">
+                    <Lock size={14} />
+                    <span>{location.lockoutPoints}</span>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  className="location-remove" 
+                  onClick={(e) => removeWorkLocation(location.id, e)}
+                  title={t.removeLocation}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              
+              {/* Barre de capacité */}
+              <div className="location-capacity-bar">
+                <div 
+                  className="capacity-fill" 
+                  style={{ 
+                    width: `${Math.min((location.currentWorkers / location.capacity) * 100, 100)}%`,
+                    backgroundColor: location.currentWorkers > location.capacity 
+                      ? '#ef4444' 
+                      : location.currentWorkers > location.capacity * 0.8 
+                        ? '#f59e0b' 
+                        : '#10b981'
+                  }} 
+                />
+              </div>
+              <div className="capacity-text">
+                {Math.round((location.currentWorkers / location.capacity) * 100)}% {t.capacity}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-locations">
+          <MapPin size={40} style={{ marginBottom: '12px', color: '#64748b' }} />
+          <h4 style={{ margin: '0 0 8px', color: '#94a3b8' }}>{t.noLocations}</h4>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+            {t.noLocationsDescription}
+          </p>
+        </div>
+      )}
+
+      {/* Modal Ajout Emplacement */}
+      {showAddLocation && (
+        <div className="modal-overlay" onClick={() => setShowAddLocation(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{t.addLocation}</h3>
+              <button 
+                type="button"
+                className="modal-close" 
+                onClick={() => setShowAddLocation(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Building size={16} />
+                    {t.locationName} <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder={t.locationNamePlaceholder}
+                    value={newLocation.name}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-field">
+                  <label className="field-label">
+                    <FileText size={16} />
+                    {t.locationDescription}
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder={t.locationDescriptionPlaceholder}
+                    value={newLocation.description}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <label className="field-label">
+                    <MapPin size={16} />
+                    {t.zone} <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder={t.zonePlaceholder}
+                    value={newLocation.zone}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, zone: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">
+                    <Users size={16} />
+                    {t.capacity}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    className="premium-input"
+                    placeholder={t.capacityPlaceholder}
+                    value={newLocation.capacity}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, capacity: parseInt(e.target.value) || 10 }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Building size={16} />
+                    {t.building}
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder={t.buildingPlaceholder}
+                    value={newLocation.building}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, building: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">
+                    <Activity size={16} />
+                    {t.floor}
+                  </label>
+                  <input
+                    type="text"
+                    className="premium-input"
+                    placeholder={t.floorPlaceholder}
+                    value={newLocation.floor}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, floor: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                type="button"
+                className="btn-secondary" 
+                onClick={() => setShowAddLocation(false)}
+              >
+                {t.cancel}
+              </button>
+              <button 
+                type="button"
+                className="btn-primary" 
+                onClick={addWorkLocation}
+                disabled={!newLocation.name.trim() || !newLocation.zone.trim()}
+              >
+                <Plus size={16} />
+                {t.add}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ✅ NOUVEAU COMPOSANT - SÉLECTEUR EMPLACEMENT POUR LOCKOUT POINTS
+  const LocationSelector = ({ currentLocationId, onLocationChange }: {
+    currentLocationId?: string;
+    onLocationChange: (locationId: string) => void;
+  }) => (
+    <select 
+      className="premium-select location-selector" 
+      value={currentLocationId || ''}
+      onChange={(e) => onLocationChange(e.target.value)}
+    >
+      <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
+      {workLocations.map((location: WorkLocation) => (
+        <option key={location.id} value={location.id}>
+          {location.name} - {location.zone}
+        </option>
+      ))}
+    </select>
+  );
   return (
     <>
-      {/* CSS Optimisé Complet */}
+      {/* =================== CSS OPTIMISÉ COMPLET AVEC NOUVEAUX STYLES =================== */}
       <style dangerouslySetInnerHTML={{
         __html: `
           /* =================== CONTAINER PRINCIPAL =================== */
@@ -878,7 +1498,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: start;
           }
 
-          /* =================== SECTIONS =================== */
+          /* =================== SECTIONS DE BASE =================== */
           .form-section { 
             background: rgba(30, 41, 59, 0.6); 
             backdrop-filter: blur(20px); 
@@ -914,7 +1534,424 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             grid-column: 1 / -1;
           }
 
-          /* =================== HEADERS DE SECTION =================== */
+          /* ✅ NOUVEAUX STYLES - DASHBOARD STATISTIQUES */
+          .location-stats-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .location-stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+            animation: shine 3s ease-in-out infinite;
+          }
+
+          .stats-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #10b981;
+            font-size: 18px;
+            font-weight: 700;
+          }
+
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+
+          .stat-item {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            min-height: 70px;
+          }
+
+          .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          }
+
+          .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+
+          .stat-icon.total-workers { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+          .stat-icon.total-locations { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+          .stat-icon.total-lockouts { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+          .stat-icon.utilization-rate { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+          .stat-content {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1;
+            margin-bottom: 4px;
+          }
+
+          .stat-label {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .location-breakdown {
+            border-top: 1px solid rgba(100, 116, 139, 0.2);
+            padding-top: 16px;
+          }
+
+          .breakdown-title {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 12px;
+          }
+
+          .breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .breakdown-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 8px;
+            gap: 16px;
+          }
+
+          .breakdown-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .location-name {
+            display: block;
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 13px;
+            margin-bottom: 2px;
+          }
+
+          .location-details {
+            display: block;
+            font-size: 11px;
+            color: #94a3b8;
+          }
+
+          .breakdown-utilization {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+          }
+
+          .utilization-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+          }
+
+          .utilization-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 3px;
+          }
+
+          .utilization-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: #e2e8f0;
+            min-width: 32px;
+            text-align: right;
+          }
+
+          /* ✅ NOUVEAUX STYLES - GESTION EMPLACEMENTS */
+          .work-locations-section {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+          }
+
+          .locations-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+          }
+
+          .locations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .location-item {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+          }
+
+          .location-item:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+          }
+
+          .location-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 12px;
+          }
+
+          .location-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .location-name {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 4px;
+          }
+
+          .location-description {
+            color: #94a3b8;
+            font-size: 13px;
+            margin: 0 0 8px;
+            line-height: 1.4;
+          }
+
+          .location-metadata {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+          }
+
+          .location-zone, .location-building, .location-floor {
+            font-size: 11px;
+            color: #64748b;
+            background: rgba(100, 116, 139, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+
+          .location-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+          }
+
+          .location-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 500;
+          }
+
+          .location-remove {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            min-width: 36px;
+            min-height: 36px;
+          }
+
+          .location-remove:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
+          }
+
+          .location-capacity-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 4px;
+          }
+
+          .capacity-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 3px;
+          }
+
+          .capacity-text {
+            font-size: 11px;
+            color: #94a3b8;
+            text-align: center;
+          }
+
+          .empty-locations {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+          }
+
+          /* ✅ NOUVEAUX STYLES - MODAL */
+          .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+          }
+
+          .modal-content {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+          }
+
+          .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 24px 0;
+            margin-bottom: 20px;
+          }
+
+          .modal-header h3 {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+          }
+
+          .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+          }
+
+          .modal-close:hover {
+            background: rgba(100, 116, 139, 0.2);
+            color: #ffffff;
+          }
+
+          .modal-body {
+            padding: 0 24px;
+          }
+
+          .modal-footer {
+            display: flex;
+            gap: 12px;
+            padding: 20px 24px 24px;
+            justify-content: flex-end;
+          }
+
+          .form-row {
+            margin-bottom: 20px;
+          }
+
+          .form-row.two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+          }
+
+          .btn-secondary {
+            background: rgba(100, 116, 139, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            min-height: 40px;
+          }
+
+          .btn-secondary:hover {
+            background: rgba(100, 116, 139, 0.8);
+            transform: translateY(-1px);
+          }
+
+          .location-selector {
+            margin-top: 8px;
+          }
+
+          /* =================== STYLES EXISTANTS CONSERVÉS =================== */
           .section-header { 
             display: flex; 
             align-items: center; 
@@ -948,7 +1985,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             flex-grow: 1;
           }
 
-          /* =================== CHAMPS DE FORMULAIRE =================== */
           .form-field { 
             margin-bottom: 20px; 
             display: flex;
@@ -1020,7 +2056,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             font-style: italic; 
           }
 
-          /* =================== GRILLES =================== */
           .two-column { 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
@@ -1028,7 +2063,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: start;
           }
 
-          /* =================== CARTE AST =================== */
           .ast-number-card { 
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); 
             border: 2px solid #22c55e; 
@@ -1089,7 +2123,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: center;
           }
 
-          /* =================== BOUTONS =================== */
           .btn-icon { 
             background: rgba(34, 197, 94, 0.1); 
             border: 1px solid #22c55e; 
@@ -1136,6 +2169,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); 
           }
 
+          .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+          }
+
           .btn-danger { 
             background: linear-gradient(135deg, #ef4444, #dc2626); 
             border: none; 
@@ -1157,461 +2196,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); 
           }
 
-          /* =================== SÉLECTEUR TYPE D'ÉNERGIE =================== */
-          .energy-type-selector { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-            gap: 12px; 
-            margin-bottom: 16px;
-          }
-
-          .energy-type-option { 
-            padding: 12px; 
-            background: rgba(15, 23, 42, 0.8); 
-            border: 2px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 12px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            text-align: center; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 8px;
-            min-height: 80px;
-            justify-content: center;
-          }
-
-          .energy-type-option.selected { 
-            border-color: #ef4444; 
-            background: rgba(239, 68, 68, 0.1); 
-          }
-
-          .energy-type-option:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
-          }
-
-          /* =================== POINTS DE VERROUILLAGE =================== */
-          .lockout-point { 
-            background: rgba(15, 23, 42, 0.8); 
-            border: 1px solid rgba(239, 68, 68, 0.3); 
-            border-radius: 16px; 
-            padding: 20px; 
-            margin-bottom: 20px; 
-            position: relative;
-          }
-
-          .lockout-point:last-child {
-            margin-bottom: 0;
-          }
-
-          .lockout-point-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 16px; 
-            padding-bottom: 12px; 
-            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
-            min-height: 40px;
-          }
-
-          /* =================== PROCÉDURES =================== */
-          .procedures-list { 
-            background: rgba(15, 23, 42, 0.6); 
-            border: 1px solid rgba(100, 116, 139, 0.2); 
-            border-radius: 12px; 
-            padding: 16px; 
-            margin-top: 12px; 
-          }
-
-          .procedures-list h4 { 
-            color: #e2e8f0; 
-            font-size: 14px; 
-            font-weight: 600; 
-            margin: 0 0 12px 0; 
-          }
-
-          .procedures-checklist { 
-            margin: 0; 
-            padding: 0; 
-            list-style: none; 
-          }
-
-          .procedure-item { 
-            display: flex; 
-            align-items: flex-start; 
-            gap: 12px; 
-            margin-bottom: 12px; 
-            padding: 8px; 
-            border-radius: 8px; 
-            transition: all 0.3s ease; 
-            cursor: pointer; 
-          }
-
-          .procedure-item:hover { 
-            background: rgba(59, 130, 246, 0.1); 
-          }
-
-          .procedure-item.completed { 
-            background: rgba(34, 197, 94, 0.1); 
-            border: 1px solid rgba(34, 197, 94, 0.3); 
-          }
-
-          .procedure-checkbox { 
-            width: 18px; 
-            height: 18px; 
-            border: 2px solid rgba(100, 116, 139, 0.5); 
-            border-radius: 4px; 
-            background: rgba(15, 23, 42, 0.8); 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.3s ease; 
-            flex-shrink: 0; 
-            margin-top: 2px; 
-          }
-
-          .procedure-checkbox.checked { 
-            background: #22c55e; 
-            border-color: #22c55e; 
-            color: white; 
-          }
-
-          .procedure-checkbox:hover { 
-            border-color: #3b82f6; 
-            transform: scale(1.05); 
-          }
-
-          .procedure-text { 
-            color: #94a3b8; 
-            font-size: 13px; 
-            line-height: 1.5; 
-            flex: 1; 
-          }
-
-          .procedure-item.completed .procedure-text { 
-            color: #a7f3d0; 
-          }
-
-          /* =================== BARRE DE PROGRESSION =================== */
-          .procedures-progress { 
-            margin-top: 12px; 
-            padding-top: 12px; 
-            border-top: 1px solid rgba(100, 116, 139, 0.2); 
-          }
-
-          .progress-bar { 
-            background: rgba(15, 23, 42, 0.8); 
-            border-radius: 8px; 
-            height: 6px; 
-            overflow: hidden; 
-            margin-bottom: 8px; 
-          }
-
-          .progress-fill { 
-            height: 100%; 
-            background: linear-gradient(90deg, #22c55e, #16a34a); 
-            transition: width 0.5s ease; 
-            border-radius: 8px; 
-          }
-
-          .progress-text { 
-            font-size: 12px; 
-            color: #64748b; 
-            text-align: center; 
-          }
-
-          /* =================== BOUTONS TEMPS =================== */
-          .time-quick-select { 
-            display: flex; 
-            gap: 6px; 
-            margin-top: 8px; 
-          }
-
-          .time-btn { 
-            background: rgba(59, 130, 246, 0.1); 
-            border: 1px solid rgba(59, 130, 246, 0.3); 
-            color: #60a5fa; 
-            padding: 6px 10px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 4px; 
-            font-size: 11px; 
-            font-weight: 500; 
-            flex: 1; 
-            justify-content: center;
-            min-height: 32px;
-          }
-
-          .time-btn:hover { 
-            background: rgba(59, 130, 246, 0.2); 
-            border-color: rgba(59, 130, 246, 0.5); 
-            transform: translateY(-1px); 
-          }
-
-          .time-btn.now { 
-            background: rgba(34, 197, 94, 0.1); 
-            border-color: rgba(34, 197, 94, 0.3); 
-            color: #4ade80; 
-          }
-
-          .time-btn.now:hover { 
-            background: rgba(34, 197, 94, 0.2); 
-            border-color: rgba(34, 197, 94, 0.5); 
-          }
-
-          .time-btn.plus5 { 
-            background: rgba(245, 158, 11, 0.1); 
-            border-color: rgba(245, 158, 11, 0.3); 
-            color: #fbbf24; 
-          }
-
-          .time-btn.plus5:hover { 
-            background: rgba(245, 158, 11, 0.2); 
-            border-color: rgba(245, 158, 11, 0.5); 
-          }
-
-          .time-btn.plus15 { 
-            background: rgba(139, 92, 246, 0.1); 
-            border-color: rgba(139, 92, 246, 0.3); 
-            color: #a78bfa; 
-          }
-
-          .time-btn.plus15:hover { 
-            background: rgba(139, 92, 246, 0.2); 
-            border-color: rgba(139, 92, 246, 0.5); 
-          }
-
-          /* =================== BOUTONS PHOTO =================== */
-          .photo-capture-buttons { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 8px; 
-            margin-top: 12px; 
-          }
-
-          .photo-capture-btn { 
-            background: rgba(59, 130, 246, 0.1); 
-            border: 1px solid rgba(59, 130, 246, 0.3); 
-            color: #60a5fa; 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            font-size: 12px; 
-            font-weight: 500;
-            min-height: 36px;
-          }
-
-          .photo-capture-btn:hover { 
-            background: rgba(59, 130, 246, 0.2); 
-            transform: translateY(-1px); 
-          }
-
-          /* =================== CARROUSEL PHOTOS =================== */
-          .photo-carousel { 
-            position: relative; 
-            margin-top: 16px; 
-            background: rgba(15, 23, 42, 0.8); 
-            border: 1px solid rgba(100, 116, 139, 0.3); 
-            border-radius: 16px; 
-            overflow: hidden; 
-          }
-
-          .carousel-container { 
-            position: relative; 
-            width: 100%; 
-            height: 300px; 
-            overflow: hidden; 
-          }
-
-          .carousel-track { 
-            display: flex; 
-            transition: transform 0.3s ease; 
-            height: 100%; 
-          }
-
-          .carousel-slide { 
-            min-width: 100%; 
-            height: 100%; 
-            position: relative; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-          }
-
-          .carousel-slide img { 
-            max-width: 100%; 
-            max-height: 100%; 
-            object-fit: contain; 
-            border-radius: 8px; 
-          }
-
-          .carousel-slide.add-photo { 
-            background: rgba(59, 130, 246, 0.1); 
-            border: 2px dashed rgba(59, 130, 246, 0.3); 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            flex-direction: column; 
-            gap: 16px; 
-          }
-
-          .carousel-slide.add-photo:hover { 
-            background: rgba(59, 130, 246, 0.2); 
-            border-color: rgba(59, 130, 246, 0.5); 
-          }
-
-          .add-photo-content { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 12px; 
-            color: #60a5fa; 
-          }
-
-          .add-photo-icon { 
-            width: 48px; 
-            height: 48px; 
-            background: rgba(59, 130, 246, 0.2); 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.3s ease; 
-          }
-
-          .carousel-slide.add-photo:hover .add-photo-icon { 
-            transform: scale(1.1); 
-            background: rgba(59, 130, 246, 0.3); 
-          }
-
-          .carousel-nav { 
-            position: absolute; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            background: rgba(0, 0, 0, 0.7); 
-            border: none; 
-            color: white; 
-            width: 40px; 
-            height: 40px; 
-            border-radius: 50%; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: all 0.3s ease; 
-            z-index: 10; 
-          }
-
-          .carousel-nav:hover { 
-            background: rgba(0, 0, 0, 0.9); 
-            transform: translateY(-50%) scale(1.1); 
-          }
-
-          .carousel-nav:disabled { 
-            opacity: 0.3; 
-            cursor: not-allowed; 
-          }
-
-          .carousel-nav.prev { 
-            left: 16px; 
-          }
-
-          .carousel-nav.next { 
-            right: 16px; 
-          }
-
-          .carousel-indicators { 
-            position: absolute; 
-            bottom: 16px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            display: flex; 
-            gap: 8px; 
-            z-index: 10; 
-          }
-
-          .carousel-indicator { 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            background: rgba(255, 255, 255, 0.4); 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-          }
-
-          .carousel-indicator.active { 
-            background: rgba(255, 255, 255, 0.9); 
-            transform: scale(1.2); 
-          }
-
-          .photo-info { 
-            position: absolute; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
-            color: white; 
-            padding: 20px 16px 16px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-end; 
-          }
-
-          .photo-caption { 
-            flex: 1; 
-            margin-right: 12px; 
-          }
-
-          .photo-caption h4 { 
-            margin: 0 0 4px; 
-            font-size: 14px; 
-            font-weight: 600; 
-          }
-
-          .photo-caption p { 
-            margin: 0; 
-            font-size: 12px; 
-            opacity: 0.8; 
-          }
-
-          .photo-actions { 
-            display: flex; 
-            gap: 8px; 
-          }
-
-          .photo-action-btn { 
-            background: rgba(255, 255, 255, 0.2); 
-            border: 1px solid rgba(255, 255, 255, 0.3); 
-            color: white; 
-            padding: 6px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            transition: all 0.3s ease; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            min-width: 28px;
-            min-height: 28px;
-          }
-
-          .photo-action-btn:hover { 
-            background: rgba(255, 255, 255, 0.3); 
-          }
-
-          .photo-action-btn.delete:hover { 
-            background: rgba(239, 68, 68, 0.8); 
-            border-color: #ef4444; 
-          }
-
-          /* =================== RESPONSIVE =================== */
+          /* =================== RESPONSIVE PARTIEL =================== */
           @media (max-width: 768px) {
             .premium-grid { 
               grid-template-columns: 1fr; 
@@ -1622,38 +2207,30 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               padding: 16px; 
             }
             
-            .two-column { 
+            .two-column, .form-row.two-columns { 
               grid-template-columns: 1fr; 
               gap: 12px; 
             }
             
-            .ast-number-value { 
-              font-size: 18px; 
+            .stats-grid {
+              grid-template-columns: repeat(2, 1fr);
+              gap: 12px;
             }
             
-            .section-title { 
-              font-size: 16px; 
+            .locations-header {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 16px;
             }
             
-            .premium-input, .premium-select, .premium-textarea { 
-              font-size: 16px; 
+            .location-main {
+              flex-direction: column;
+              gap: 12px;
             }
             
-            .energy-type-selector { 
-              grid-template-columns: repeat(2, 1fr); 
-            }
-            
-            .photo-capture-buttons { 
-              flex-direction: column; 
-            }
-            
-            .time-quick-select { 
-              flex-direction: column; 
-              gap: 4px; 
-            }
-            
-            .time-btn { 
-              flex: none; 
+            .location-stats {
+              flex-direction: row;
+              justify-content: space-between;
             }
           }
 
@@ -1662,36 +2239,22 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               padding: 12px; 
             }
             
-            .ast-number-card { 
-              padding: 16px; 
-            }
-            
-            .ast-actions { 
-              flex-direction: column; 
-              gap: 8px;
-            }
-            
-            .energy-type-selector { 
-              grid-template-columns: 1fr; 
+            .stats-grid {
+              grid-template-columns: 1fr;
             }
 
-            .lockout-point-header {
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 12px;
+            .stat-item {
+              padding: 12px;
             }
 
-            .carousel-nav {
-              width: 36px;
-              height: 36px;
+            .modal-content {
+              margin: 8px;
+              max-height: calc(100vh - 16px);
             }
 
-            .carousel-nav.prev {
-              left: 8px;
-            }
-
-            .carousel-nav.next {
-              right: 8px;
+            .modal-header, .modal-body, .modal-footer {
+              padding-left: 16px;
+              padding-right: 16px;
             }
           }
         `
@@ -1731,7 +2294,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="field-help">{t.astNumberGenerated}</div>
         </div>
 
-        {/* Grille Premium des Sections */}
+        {/* ✅ NOUVEAU - Dashboard Statistiques Temps Réel */}
+        {workLocations.length > 0 && <LocationStatsCard />}
+
+        {/* ✅ NOUVEAU - Gestion Emplacements de Travail */}
+        <WorkLocationManager />
+
+        {/* Grille Premium des Sections EXISTANTES */}
         <div className="premium-grid">
           {/* Section Client avec ÉTAT LOCAL + onBlur */}
           <div className="form-section">
@@ -1981,8 +2550,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           </div>
         </div>
-
-        {/* SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE */}
+        {/* SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE AVEC ASSIGNATION EMPLACEMENTS */}
         <div className="form-section lockout-section">
           <div className="section-header">
             <Lock className="section-icon lockout-icon" />
@@ -2035,7 +2603,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             )}
           </div>
 
-          {/* POINTS DE VERROUILLAGE DYNAMIQUES */}
+          {/* POINTS DE VERROUILLAGE DYNAMIQUES AVEC ASSIGNATION EMPLACEMENT */}
           {lockoutPoints.map((point: LockoutPoint, index: number) => (
             <div key={point.id} className="lockout-point">
               <div className="lockout-point-header">
@@ -2052,7 +2620,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </button>
               </div>
 
-              {/* Type d'énergie avec procédures */}
+              {/* ✅ NOUVEAU - Assignation Emplacement */}
+              {workLocations.length > 0 && (
+                <div className="form-field">
+                  <label className="field-label">
+                    <MapPin style={{ width: '18px', height: '18px' }} />
+                    {language === 'fr' ? 'Emplacement Assigné' : 'Assigned Location'}
+                  </label>
+                  <LocationSelector 
+                    currentLocationId={point.assignedLocation}
+                    onLocationChange={(locationId) => updateLockoutPoint(point.id, 'assignedLocation', locationId)}
+                  />
+                </div>
+              )}
+
+              {/* Type d'énergie avec procédures (CONSERVÉ INTÉGRALEMENT) */}
               <div className="form-field">
                 <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
                 <div className="energy-type-selector">
@@ -2109,7 +2691,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 )}
               </div>
 
-              {/* Détails équipement */}
+              {/* Détails équipement (CONSERVÉ) */}
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
@@ -2156,7 +2738,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </div>
               </div>
 
-              {/* Vérification avec boutons temps */}
+              {/* Vérification avec boutons temps (CONSERVÉ) */}
               <div className="two-column">
                 <div className="form-field">
                   <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
@@ -2204,7 +2786,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </div>
               </div>
 
-              {/* Notes */}
+              {/* Notes (CONSERVÉ) */}
               <div className="form-field">
                 <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.notes}</label>
                 <textarea 
@@ -2216,7 +2798,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 />
               </div>
 
-              {/* Photos spécifiques au point */}
+              {/* Photos spécifiques au point (CONSERVÉ) */}
               <div className="form-field">
                 <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
                 
@@ -2287,6 +2869,504 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           )}
         </div>
+
+        {/* ✅ AJOUT CSS MANQUANT POUR STYLES LOCKOUT CONSERVÉS */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* =================== STYLES LOCKOUT CONSERVÉS =================== */
+            .energy-type-selector { 
+              display: grid; 
+              grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+              gap: 12px; 
+              margin-bottom: 16px;
+            }
+
+            .energy-type-option { 
+              padding: 12px; 
+              background: rgba(15, 23, 42, 0.8); 
+              border: 2px solid rgba(100, 116, 139, 0.3); 
+              border-radius: 12px; 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+              text-align: center; 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              gap: 8px;
+              min-height: 80px;
+              justify-content: center;
+            }
+
+            .energy-type-option.selected { 
+              border-color: #ef4444; 
+              background: rgba(239, 68, 68, 0.1); 
+            }
+
+            .energy-type-option:hover { 
+              transform: translateY(-2px); 
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+            }
+
+            .lockout-point { 
+              background: rgba(15, 23, 42, 0.8); 
+              border: 1px solid rgba(239, 68, 68, 0.3); 
+              border-radius: 16px; 
+              padding: 20px; 
+              margin-bottom: 20px; 
+              position: relative;
+            }
+
+            .lockout-point:last-child {
+              margin-bottom: 0;
+            }
+
+            .lockout-point-header { 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: center; 
+              margin-bottom: 16px; 
+              padding-bottom: 12px; 
+              border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+              min-height: 40px;
+            }
+
+            .procedures-list { 
+              background: rgba(15, 23, 42, 0.6); 
+              border: 1px solid rgba(100, 116, 139, 0.2); 
+              border-radius: 12px; 
+              padding: 16px; 
+              margin-top: 12px; 
+            }
+
+            .procedures-list h4 { 
+              color: #e2e8f0; 
+              font-size: 14px; 
+              font-weight: 600; 
+              margin: 0 0 12px 0; 
+            }
+
+            .procedures-checklist { 
+              margin: 0; 
+              padding: 0; 
+              list-style: none; 
+            }
+
+            .procedure-item { 
+              display: flex; 
+              align-items: flex-start; 
+              gap: 12px; 
+              margin-bottom: 12px; 
+              padding: 8px; 
+              border-radius: 8px; 
+              transition: all 0.3s ease; 
+              cursor: pointer; 
+            }
+
+            .procedure-item:hover { 
+              background: rgba(59, 130, 246, 0.1); 
+            }
+
+            .procedure-item.completed { 
+              background: rgba(34, 197, 94, 0.1); 
+              border: 1px solid rgba(34, 197, 94, 0.3); 
+            }
+
+            .procedure-checkbox { 
+              width: 18px; 
+              height: 18px; 
+              border: 2px solid rgba(100, 116, 139, 0.5); 
+              border-radius: 4px; 
+              background: rgba(15, 23, 42, 0.8); 
+              cursor: pointer; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              transition: all 0.3s ease; 
+              flex-shrink: 0; 
+              margin-top: 2px; 
+            }
+
+            .procedure-checkbox.checked { 
+              background: #22c55e; 
+              border-color: #22c55e; 
+              color: white; 
+            }
+
+            .procedure-checkbox:hover { 
+              border-color: #3b82f6; 
+              transform: scale(1.05); 
+            }
+
+            .procedure-text { 
+              color: #94a3b8; 
+              font-size: 13px; 
+              line-height: 1.5; 
+              flex: 1; 
+            }
+
+            .procedure-item.completed .procedure-text { 
+              color: #a7f3d0; 
+            }
+
+            .procedures-progress { 
+              margin-top: 12px; 
+              padding-top: 12px; 
+              border-top: 1px solid rgba(100, 116, 139, 0.2); 
+            }
+
+            .progress-bar { 
+              background: rgba(15, 23, 42, 0.8); 
+              border-radius: 8px; 
+              height: 6px; 
+              overflow: hidden; 
+              margin-bottom: 8px; 
+            }
+
+            .progress-fill { 
+              height: 100%; 
+              background: linear-gradient(90deg, #22c55e, #16a34a); 
+              transition: width 0.5s ease; 
+              border-radius: 8px; 
+            }
+
+            .progress-text { 
+              font-size: 12px; 
+              color: #64748b; 
+              text-align: center; 
+            }
+
+            .time-quick-select { 
+              display: flex; 
+              gap: 6px; 
+              margin-top: 8px; 
+            }
+
+            .time-btn { 
+              background: rgba(59, 130, 246, 0.1); 
+              border: 1px solid rgba(59, 130, 246, 0.3); 
+              color: #60a5fa; 
+              padding: 6px 10px; 
+              border-radius: 6px; 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+              display: flex; 
+              align-items: center; 
+              gap: 4px; 
+              font-size: 11px; 
+              font-weight: 500; 
+              flex: 1; 
+              justify-content: center;
+              min-height: 32px;
+            }
+
+            .time-btn:hover { 
+              background: rgba(59, 130, 246, 0.2); 
+              border-color: rgba(59, 130, 246, 0.5); 
+              transform: translateY(-1px); 
+            }
+
+            .time-btn.now { 
+              background: rgba(34, 197, 94, 0.1); 
+              border-color: rgba(34, 197, 94, 0.3); 
+              color: #4ade80; 
+            }
+
+            .time-btn.now:hover { 
+              background: rgba(34, 197, 94, 0.2); 
+              border-color: rgba(34, 197, 94, 0.5); 
+            }
+
+            .time-btn.plus5 { 
+              background: rgba(245, 158, 11, 0.1); 
+              border-color: rgba(245, 158, 11, 0.3); 
+              color: #fbbf24; 
+            }
+
+            .time-btn.plus5:hover { 
+              background: rgba(245, 158, 11, 0.2); 
+              border-color: rgba(245, 158, 11, 0.5); 
+            }
+
+            .time-btn.plus15 { 
+              background: rgba(139, 92, 246, 0.1); 
+              border-color: rgba(139, 92, 246, 0.3); 
+              color: #a78bfa; 
+            }
+
+            .time-btn.plus15:hover { 
+              background: rgba(139, 92, 246, 0.2); 
+              border-color: rgba(139, 92, 246, 0.5); 
+            }
+
+            .photo-capture-buttons { 
+              display: flex; 
+              flex-wrap: wrap; 
+              gap: 8px; 
+              margin-top: 12px; 
+            }
+
+            .photo-capture-btn { 
+              background: rgba(59, 130, 246, 0.1); 
+              border: 1px solid rgba(59, 130, 246, 0.3); 
+              color: #60a5fa; 
+              padding: 8px 12px; 
+              border-radius: 8px; 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+              display: flex; 
+              align-items: center; 
+              gap: 6px; 
+              font-size: 12px; 
+              font-weight: 500;
+              min-height: 36px;
+            }
+
+            .photo-capture-btn:hover { 
+              background: rgba(59, 130, 246, 0.2); 
+              transform: translateY(-1px); 
+            }
+
+            .photo-carousel { 
+              position: relative; 
+              margin-top: 16px; 
+              background: rgba(15, 23, 42, 0.8); 
+              border: 1px solid rgba(100, 116, 139, 0.3); 
+              border-radius: 16px; 
+              overflow: hidden; 
+            }
+
+            .carousel-container { 
+              position: relative; 
+              width: 100%; 
+              height: 300px; 
+              overflow: hidden; 
+            }
+
+            .carousel-track { 
+              display: flex; 
+              transition: transform 0.3s ease; 
+              height: 100%; 
+            }
+
+            .carousel-slide { 
+              min-width: 100%; 
+              height: 100%; 
+              position: relative; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+            }
+
+            .carousel-slide img { 
+              max-width: 100%; 
+              max-height: 100%; 
+              object-fit: contain; 
+              border-radius: 8px; 
+            }
+
+            .carousel-slide.add-photo { 
+              background: rgba(59, 130, 246, 0.1); 
+              border: 2px dashed rgba(59, 130, 246, 0.3); 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+              flex-direction: column; 
+              gap: 16px; 
+            }
+
+            .carousel-slide.add-photo:hover { 
+              background: rgba(59, 130, 246, 0.2); 
+              border-color: rgba(59, 130, 246, 0.5); 
+            }
+
+            .add-photo-content { 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              gap: 12px; 
+              color: #60a5fa; 
+            }
+
+            .add-photo-icon { 
+              width: 48px; 
+              height: 48px; 
+              background: rgba(59, 130, 246, 0.2); 
+              border-radius: 50%; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              transition: all 0.3s ease; 
+            }
+
+            .carousel-slide.add-photo:hover .add-photo-icon { 
+              transform: scale(1.1); 
+              background: rgba(59, 130, 246, 0.3); 
+            }
+
+            .carousel-nav { 
+              position: absolute; 
+              top: 50%; 
+              transform: translateY(-50%); 
+              background: rgba(0, 0, 0, 0.7); 
+              border: none; 
+              color: white; 
+              width: 40px; 
+              height: 40px; 
+              border-radius: 50%; 
+              cursor: pointer; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              transition: all 0.3s ease; 
+              z-index: 10; 
+            }
+
+            .carousel-nav:hover { 
+              background: rgba(0, 0, 0, 0.9); 
+              transform: translateY(-50%) scale(1.1); 
+            }
+
+            .carousel-nav:disabled { 
+              opacity: 0.3; 
+              cursor: not-allowed; 
+            }
+
+            .carousel-nav.prev { 
+              left: 16px; 
+            }
+
+            .carousel-nav.next { 
+              right: 16px; 
+            }
+
+            .carousel-indicators { 
+              position: absolute; 
+              bottom: 16px; 
+              left: 50%; 
+              transform: translateX(-50%); 
+              display: flex; 
+              gap: 8px; 
+              z-index: 10; 
+            }
+
+            .carousel-indicator { 
+              width: 8px; 
+              height: 8px; 
+              border-radius: 50%; 
+              background: rgba(255, 255, 255, 0.4); 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+            }
+
+            .carousel-indicator.active { 
+              background: rgba(255, 255, 255, 0.9); 
+              transform: scale(1.2); 
+            }
+
+            .photo-info { 
+              position: absolute; 
+              bottom: 0; 
+              left: 0; 
+              right: 0; 
+              background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
+              color: white; 
+              padding: 20px 16px 16px; 
+              display: flex; 
+              justify-content: space-between; 
+              align-items: flex-end; 
+            }
+
+            .photo-caption { 
+              flex: 1; 
+              margin-right: 12px; 
+            }
+
+            .photo-caption h4 { 
+              margin: 0 0 4px; 
+              font-size: 14px; 
+              font-weight: 600; 
+            }
+
+            .photo-caption p { 
+              margin: 0; 
+              font-size: 12px; 
+              opacity: 0.8; 
+            }
+
+            .photo-actions { 
+              display: flex; 
+              gap: 8px; 
+            }
+
+            .photo-action-btn { 
+              background: rgba(255, 255, 255, 0.2); 
+              border: 1px solid rgba(255, 255, 255, 0.3); 
+              color: white; 
+              padding: 6px; 
+              border-radius: 6px; 
+              cursor: pointer; 
+              transition: all 0.3s ease; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center;
+              min-width: 28px;
+              min-height: 28px;
+            }
+
+            .photo-action-btn:hover { 
+              background: rgba(255, 255, 255, 0.3); 
+            }
+
+            .photo-action-btn.delete:hover { 
+              background: rgba(239, 68, 68, 0.8); 
+              border-color: #ef4444; 
+            }
+
+            /* =================== RESPONSIVE COMPLET FINAL =================== */
+            @media (max-width: 768px) {
+              .energy-type-selector { 
+                grid-template-columns: repeat(2, 1fr); 
+              }
+              
+              .photo-capture-buttons { 
+                flex-direction: column; 
+              }
+              
+              .time-quick-select { 
+                flex-direction: column; 
+                gap: 4px; 
+              }
+              
+              .time-btn { 
+                flex: none; 
+              }
+            }
+
+            @media (max-width: 480px) {
+              .energy-type-selector { 
+                grid-template-columns: 1fr; 
+              }
+
+              .lockout-point-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+              }
+
+              .carousel-nav {
+                width: 36px;
+                height: 36px;
+              }
+
+              .carousel-nav.prev {
+                left: 8px;
+              }
+
+              .carousel-nav.next {
+                right: 8px;
+              }
+            }
+          `
+        }} />
       </div>
     </>
   );
