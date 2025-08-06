@@ -597,7 +597,7 @@ function Step6Finalization({
   const [notificationType, setNotificationType] = useState<NotificationType>('success');
   
   // ✅ État finalisation AST STABLE (comme PermitManager)
-  const [finalizationData, setFinalizationData] = useState(() => ({
+  const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
     photos: [],
     finalComments: '',
     documentGeneration: {
@@ -3195,7 +3195,7 @@ function Step6Finalization({
                   ) : (
                     <FileText size={20} />
                   )}
-                  {language === 'fr' ? 'Rapport Standard' : 'Standard Report'}
+                  {t.generateStandardReport}
                 </button>
 
                 <button
@@ -3208,7 +3208,7 @@ function Step6Finalization({
                   ) : (
                     <Award size={20} />
                   )}
-                  {language === 'fr' ? 'Résumé Exécutif' : 'Executive Summary'}
+                  {t.generateExecutiveReport}
                 </button>
 
                 <button
@@ -3221,7 +3221,7 @@ function Step6Finalization({
                   ) : (
                     <Cog size={20} />
                   )}
-                  {language === 'fr' ? 'Rapport Technique' : 'Technical Report'}
+                  {t.generateTechnicalReport}
                 </button>
 
                 <button
@@ -3230,7 +3230,7 @@ function Step6Finalization({
                   className={`ast-button button-secondary ${isGeneratingPDF ? 'button-disabled' : ''}`}
                 >
                   <Smartphone size={20} />
-                  {language === 'fr' ? 'Version Compacte' : 'Compact Version'}
+                  {t.generateCompactReport}
                 </button>
               </div>
 
