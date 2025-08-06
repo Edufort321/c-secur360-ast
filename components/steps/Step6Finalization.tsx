@@ -2423,6 +2423,33 @@ function Step6Finalization({
       100% { transform: rotate(360deg); }
     }
     
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideInUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
     .spinning {
       animation: spin 1s linear infinite;
     }
@@ -2600,7 +2627,6 @@ function Step6Finalization({
       </>
     );
   }
-
   // =================== RENDU PRINCIPAL AST ===================
   const validation = getASTValidation;
   const stats = getASTStatistics();
@@ -3158,3 +3184,365 @@ function Step6Finalization({
               </div>
 
               {/* Boutons génération rapports */}
+              <div className="buttons-grid">
+                <button
+                  onClick={() => handleGeneratePDF('standard')}
+                  disabled={isGeneratingPDF}
+                  className={`ast-button button-primary ${isGeneratingPDF ? 'button-disabled' : ''}`}
+                >
+                  {isGeneratingPDF ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <FileText size={20} />
+                  )}
+                  {t.generateStandardReport}
+                </button>
+
+                <button
+                  onClick={() => handleGeneratePDF('executive')}
+                  disabled={isGeneratingPDF}
+                  className={`ast-button button-warning ${isGeneratingPDF ? 'button-disabled' : ''}`}
+                >
+                  {isGeneratingPDF ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <Award size={20} />
+                  )}
+                  {t.generateExecutiveReport}
+                </button>
+
+                <button
+                  onClick={() => handleGeneratePDF('technical')}
+                  disabled={isGeneratingPDF}
+                  className={`ast-button button-success ${isGeneratingPDF ? 'button-disabled' : ''}`}
+                >
+                  {isGeneratingPDF ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <Cog size={20} />
+                  )}
+                  {t.generateTechnicalReport}
+                </button>
+
+                <button
+                  onClick={() => handleGeneratePDF('compact')}
+                  disabled={isGeneratingPDF}
+                  className={`ast-button button-secondary ${isGeneratingPDF ? 'button-disabled' : ''}`}
+                >
+                  <Smartphone size={20} />
+                  {t.generateCompactReport}
+                </button>
+              </div>
+
+              {/* Aperçu format */}
+              <div style={{ 
+                marginTop: isMobile ? '16px' : '20px',
+                background: 'rgba(100, 116, 139, 0.1)', 
+                border: '1px solid rgba(148, 163, 184, 0.2)', 
+                borderRadius: isMobile ? '8px' : '12px', 
+                padding: isMobile ? '12px' : '16px'
+              }}>
+                <h4 style={{
+                  margin: '0 0 8px 0',
+                  color: '#94a3b8',
+                  fontSize: isMobile ? '12px' : '14px',
+                  fontWeight: '700'
+                }}>
+                  📋 {language === 'fr' ? 'Aperçu du format sélectionné:' : 'Selected format preview:'}
+                </h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: isMobile ? '8px' : '12px',
+                  fontSize: isMobile ? '11px' : '13px',
+                  color: '#d1d5db'
+                }}>
+                  <div>📄 {language === 'fr' ? 'Pages estimées:' : 'Estimated pages:'} <strong>8-12</strong></div>
+                  <div>📊 {language === 'fr' ? 'Graphiques:' : 'Charts:'} <strong>{finalizationData.documentGeneration.includeStatistics ? '✅' : '❌'}</strong></div>
+                  <div>📷 {language === 'fr' ? 'Photos:' : 'Photos:'} <strong>{finalizationData.documentGeneration.includePhotos ? `✅ ${stats.photosCount}` : '❌'}</strong></div>
+                  <div>🔗 {language === 'fr' ? 'Code QR:' : 'QR Code:'} <strong>{finalizationData.documentGeneration.includeQRCode ? '✅' : '❌'}</strong></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Historique des rapports générés */}
+            <div className="ast-section">
+              <h2 className="section-title">
+                <Clock size={24} />
+                {language === 'fr' ? '📋 Historique des Rapports' : '📋 Report History'}
+              </h2>
+              
+              {finalizationData.generatedReports.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px' }}>
+                  {finalizationData.generatedReports.map((report, index) => (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: isMobile ? '10px' : '12px',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        borderRadius: isMobile ? '6px' : '8px',
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ 
+                          fontSize: isMobile ? '12px' : '14px', 
+                          fontWeight: '600', 
+                          color: '#60a5fa',
+                          marginBottom: '2px'
+                        }}>
+                          📄 {report.type.charAt(0).toUpperCase() + report.type.slice(1)} Report
+                        </div>
+                        <div style={{ 
+                          fontSize: isMobile ? '10px' : '12px', 
+                          color: '#9ca3af' 
+                        }}>
+                          🕒 {new Date(report.generatedAt).toLocaleDateString()} {new Date(report.generatedAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px' }}>
+                        <button
+                          onClick={() => window.open(report.url, '_blank')}
+                          className="ast-button button-secondary"
+                          style={{ 
+                            padding: isMobile ? '6px 10px' : '8px 12px',
+                            fontSize: isMobile ? '11px' : '12px',
+                            minHeight: 'auto'
+                          }}
+                        >
+                          <Eye size={14} />
+                          {language === 'fr' ? 'Voir' : 'View'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = report.url;
+                            link.download = `AST-${stats.astNumber}-${report.type}-${new Date(report.generatedAt).toISOString().split('T')[0]}.pdf`;
+                            link.click();
+                          }}
+                          className="ast-button button-primary"
+                          style={{ 
+                            padding: isMobile ? '6px 10px' : '8px 12px',
+                            fontSize: isMobile ? '11px' : '12px',
+                            minHeight: 'auto'
+                          }}
+                        >
+                          <Download size={14} />
+                          {language === 'fr' ? 'Télécharger' : 'Download'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: isMobile ? '24px' : '32px', 
+                  color: '#9ca3af' 
+                }}>
+                  <FileText size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <p style={{ margin: 0, fontSize: isMobile ? '12px' : '14px' }}>
+                    {language === 'fr' ? 
+                      'Aucun rapport généré pour le moment. Utilisez les boutons ci-dessus pour créer votre premier rapport.' :
+                      'No reports generated yet. Use the buttons above to create your first report.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =================== MODALES ET CONFIRMATIONS =================== */}
+
+        {/* Modal confirmation verrouillage */}
+        {showLockConfirm && (
+          <div className="modal-overlay" onClick={() => setShowLockConfirm(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div style={{ textAlign: 'center', marginBottom: isMobile ? '20px' : '24px' }}>
+                <div style={{
+                  width: isMobile ? '48px' : '56px',
+                  height: isMobile ? '48px' : '56px',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}>
+                  <Lock size={isMobile ? 20 : 24} color="white" />
+                </div>
+                <h3 style={{ 
+                  color: '#ffffff', 
+                  margin: '0 0 8px 0', 
+                  fontSize: isMobile ? '16px' : '20px',
+                  fontWeight: '700'
+                }}>
+                  ⚠️ {t.confirmLock}
+                </h3>
+                <p style={{ 
+                  color: '#d1d5db', 
+                  margin: 0, 
+                  fontSize: isMobile ? '12px' : '14px',
+                  lineHeight: 1.5
+                }}>
+                  {language === 'fr' ?
+                    'Cette action est irréversible. Une fois verrouillée, l\'AST ne pourra plus être modifiée.' :
+                    'This action is irreversible. Once locked, the JSA cannot be modified anymore.'
+                  }
+                </p>
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? '8px' : '12px',
+                flexDirection: isMobile ? 'column' : 'row'
+              }}>
+                <button
+                  onClick={() => setShowLockConfirm(false)}
+                  className="ast-button button-secondary"
+                  style={{ flex: 1 }}
+                >
+                  <X size={18} />
+                  {t.cancel}
+                </button>
+                <button
+                  onClick={() => {
+                    handleLockDocument();
+                    setShowLockConfirm(false);
+                  }}
+                  className="ast-button button-danger"
+                  style={{ flex: 1 }}
+                >
+                  <Lock size={18} />
+                  {t.confirmLock}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Toast */}
+        {showNotification && (
+          <div style={{
+            position: 'fixed',
+            top: isMobile ? '16px' : '24px',
+            right: isMobile ? '16px' : '24px',
+            background: notificationType === 'success' ? 
+              'linear-gradient(135deg, #10b981 0%, #059669 100%)' :
+              notificationType === 'error' ?
+              'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
+              'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: 'white',
+            padding: isMobile ? '12px 16px' : '16px 20px',
+            borderRadius: isMobile ? '8px' : '12px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            zIndex: 1001,
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '8px' : '12px',
+            maxWidth: isMobile ? '280px' : '400px',
+            fontSize: isMobile ? '13px' : '15px',
+            fontWeight: '600',
+            animation: 'slideInRight 0.3s ease-out',
+            border: `1px solid ${
+              notificationType === 'success' ? 'rgba(16, 185, 129, 0.5)' :
+              notificationType === 'error' ? 'rgba(239, 68, 68, 0.5)' :
+              'rgba(245, 158, 11, 0.5)'
+            }`,
+            backdropFilter: 'blur(10px)'
+          }}>
+            {notificationType === 'success' ? <CheckCircle size={20} /> :
+             notificationType === 'error' ? <AlertTriangle size={20} /> :
+             <Clock size={20} />}
+            <span style={{ flex: 1 }}>{notificationMessage}</span>
+            <button
+              onClick={() => setShowNotification(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '2px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.8,
+                transition: 'opacity 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Progress Loader pour actions asynchrones */}
+        {(isSaving || isGeneratingPDF || isGeneratingQR) && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1002,
+            backdropFilter: 'blur(5px)'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+              border: '1px solid rgba(148, 163, 184, 0.3)',
+              borderRadius: isMobile ? '12px' : '16px',
+              padding: isMobile ? '24px' : '32px',
+              textAlign: 'center',
+              color: 'white',
+              minWidth: isMobile ? '280px' : '320px',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)'
+            }}>
+              <div style={{
+                width: isMobile ? '48px' : '56px',
+                height: isMobile ? '48px' : '56px',
+                border: '4px solid rgba(59, 130, 246, 0.3)',
+                borderTop: '4px solid #3b82f6',
+                borderRadius: '50%',
+                margin: '0 auto 16px',
+                animation: 'spin 1s linear infinite'
+              }} />
+              <h3 style={{
+                margin: '0 0 8px 0',
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                color: '#ffffff'
+              }}>
+                {isSaving ? t.saving :
+                 isGeneratingPDF ? (language === 'fr' ? 'Génération PDF...' : 'Generating PDF...') :
+                 (language === 'fr' ? 'Génération QR Code...' : 'Generating QR Code...')
+                }
+              </h3>
+              <p style={{
+                margin: 0,
+                fontSize: isMobile ? '12px' : '14px',
+                color: '#94a3b8'
+              }}>
+                {language === 'fr' ? 'Veuillez patienter...' : 'Please wait...'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
+export default Step6Finalization;
