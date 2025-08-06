@@ -93,6 +93,20 @@ interface ASTData {
   };
 }
 
+interface FinalizationData {
+  photos: Photo[];
+  finalComments: string;
+  documentGeneration: DocumentGeneration;
+  isLocked: boolean;
+  lockTimestamp?: string;
+  lockReason?: string;
+  completionPercentage: number;
+  qrCodeUrl?: string;
+  shareableLink?: string;
+  lastSaved?: string;
+  generatedReports: GeneratedReport[];
+}
+
 interface Photo {
   id: string;
   url: string;
@@ -3195,7 +3209,7 @@ function Step6Finalization({
                   ) : (
                     <FileText size={20} />
                   )}
-                  {t.generateStandardReport}
+                  {language === 'fr' ? 'Rapport Standard' : 'Standard Report'}
                 </button>
 
                 <button
@@ -3208,7 +3222,7 @@ function Step6Finalization({
                   ) : (
                     <Award size={20} />
                   )}
-                  {t.generateExecutiveReport}
+                  {language === 'fr' ? 'Résumé Exécutif' : 'Executive Summary'}
                 </button>
 
                 <button
@@ -3221,7 +3235,7 @@ function Step6Finalization({
                   ) : (
                     <Cog size={20} />
                   )}
-                  {t.generateTechnicalReport}
+                  {language === 'fr' ? 'Rapport Technique' : 'Technical Report'}
                 </button>
 
                 <button
@@ -3230,7 +3244,7 @@ function Step6Finalization({
                   className={`ast-button button-secondary ${isGeneratingPDF ? 'button-disabled' : ''}`}
                 >
                   <Smartphone size={20} />
-                  {t.generateCompactReport}
+                  {language === 'fr' ? 'Version Compacte' : 'Compact Version'}
                 </button>
               </div>
 
