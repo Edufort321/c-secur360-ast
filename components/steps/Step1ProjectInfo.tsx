@@ -824,7 +824,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       workLocations: updatedLocations
     });
     
-    console.log(`✅ Emplacement ${locationId} - Travailleurs: ${newWorkerCount}, Max atteint: ${Math.max(workLocations.find(l => l.id === locationId)?.maxWorkersReached || 0, newWorkerCount)}`);
+    console.log(`✅ Emplacement ${locationId} - Travailleurs: ${newWorkerCount}, Max atteint: ${Math.max(workLocations.find((loc: WorkLocation) => loc.id === locationId)?.maxWorkersReached || 0, newWorkerCount)}`);
   };
 
   // =================== GESTION PHOTOS (CONSERVÉ) ===================
