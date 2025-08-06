@@ -360,93 +360,43 @@ export default function ASTForm({
     setCurrentStep(step);
   }, []);
 
-  // =================== HANDLERS OPTIMISÉS ANTI-ÉJECTION ===================
+  // =================== HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
   
-  // ✅ HANDLER DIRECT STEP1 - AUCUN useCallback POUR ÉVITER RE-RENDER
-  const handleStep1DataChange = (section: string, data: any) => {
-    console.log('🔥 ASTForm Step1 - Handler DIRECT:', { section, data });
-    
-    // Mise à jour immédiate sans callback
-    setAstData((prev: any) => {
-      const newData = {
+  // ✅ HANDLER STABLE GLOBAL - UNE SEULE FONCTION POUR TOUS LES STEPS
+  const handleStepDataChangeRef = useRef<(section: string, data: any) => void>();
+  
+  // Initialisation une seule fois
+  if (!handleStepDataChangeRef.current) {
+    handleStepDataChangeRef.current = (section: string, data: any) => {
+      console.log('🔥 ASTForm - Handler STABLE:', { section, data });
+      
+      // Mise à jour directe sans re-render du handler
+      setAstData((prev: any) => ({
         ...prev,
         [section]: data,
         updatedAt: new Date().toISOString()
-      };
+      }));
       
-      // Sync vers parent avec requestAnimationFrame pour éviter conflits
-      requestAnimationFrame(() => {
+      // Sync parent avec délai pour éviter conflits
+      setTimeout(() => {
         try {
           onDataChange(section, data);
         } catch (error) {
-          console.error('Erreur sync Step1:', error);
+          console.error('Erreur sync:', error);
         }
-      });
+      }, 0);
       
-      return newData;
-    });
-    
-    setHasUnsavedChanges(true);
-  };
+      setHasUnsavedChanges(true);
+    };
+  }
 
-  // ✅ HANDLERS DIRECTS POUR TOUS LES AUTRES STEPS
-  const handleStep2DataChange = (section: string, data: any) => {
-    setAstData((prev: any) => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleStep3DataChange = (section: string, data: any) => {
-    setAstData((prev: any) => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleStep4DataChange = (section: string, data: any) => {
-    setAstData((prev: any) => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleStep5DataChange = (section: string, data: any) => {
-    setAstData((prev: any) => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleStep6DataChange = (section: string, data: any) => {
-    setAstData((prev: any) => {
-      const currentSection = (prev as any)[section] || {};
-      const newSection = { ...currentSection, ...data };
-      
-      const newState = {
-        ...prev,
-        [section]: newSection,
-        updatedAt: new Date().toISOString()
-      };
-      
-      return newState;
-    });
-    
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  };
+  // ✅ RÉFÉRENCES STABLES - JAMAIS DE RE-CRÉATION
+  const stableHandlerStep1 = handleStepDataChangeRef.current;
+  const stableHandlerStep2 = handleStepDataChangeRef.current;
+  const stableHandlerStep3 = handleStepDataChangeRef.current;
+  const stableHandlerStep4 = handleStepDataChangeRef.current;
+  const stableHandlerStep5 = handleStepDataChangeRef.current;
+  const stableHandlerStep6 = handleStepDataChangeRef.current;
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
   const handleCopyAST = useCallback(async () => {
@@ -1218,11 +1168,11 @@ export default function ASTForm({
   const MemoizedStep5 = React.memo(Step5Validation);
   const MemoizedStep6 = React.memo(Step6Finalization);
 
-  // =================== RENDU DU CONTENU DES STEPS OPTIMISÉ ===================
+  // =================== RENDU DU CONTENU DES STEPS ULTRA-STABLE ===================
   const StepContent = React.memo(() => {
     console.log('🔥 StepContent render - Step:', currentStep);
     
-    // ✅ PROPS STABLES SANS RE-CRÉATION À CHAQUE RENDER
+    // ✅ PROPS ULTRA-STABLES - RÉFÉRENCES FIGÉES
     const stepProps = {
       formData: stableFormDataRef.current,
       language: currentLanguage,
@@ -1236,7 +1186,7 @@ export default function ASTForm({
           <MemoizedStep1
             key="step1"
             {...stepProps}
-            onDataChange={handleStep1DataChange}
+            onDataChange={stableHandlerStep1}
           />
         );
       case 2:
@@ -1244,7 +1194,7 @@ export default function ASTForm({
           <MemoizedStep2
             key="step2"
             {...stepProps}
-            onDataChange={handleStep2DataChange}
+            onDataChange={stableHandlerStep2}
           />
         );
       case 3:
@@ -1252,7 +1202,7 @@ export default function ASTForm({
           <MemoizedStep3
             key="step3"
             {...stepProps}
-            onDataChange={handleStep3DataChange}
+            onDataChange={stableHandlerStep3}
           />
         );
       case 4:
@@ -1260,13 +1210,13 @@ export default function ASTForm({
           <MemoizedStep4
             key="step4"
             {...stepProps}
-            onDataChange={handleStep4DataChange}
+            onDataChange={stableHandlerStep4}
             province={'QC'}
             userRole={'worker'}
             touchOptimized={true}
             compactMode={false}
             onPermitChange={(permits) => {
-              handleStep4DataChange('permits', permits);
+              stableHandlerStep4('permits', permits);
             }}
             initialPermits={[]}
           />
@@ -1276,7 +1226,7 @@ export default function ASTForm({
           <MemoizedStep5
             key="step5"
             {...stepProps}
-            onDataChange={handleStep5DataChange}
+            onDataChange={stableHandlerStep5}
           />
         );
       case 6:
@@ -1284,7 +1234,7 @@ export default function ASTForm({
           <MemoizedStep6
             key="step6"
             {...stepProps}
-            onDataChange={handleStep6DataChange}
+            onDataChange={stableHandlerStep6}
           />
         );
       default:
