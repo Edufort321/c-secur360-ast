@@ -13,7 +13,7 @@ interface Step1ProjectInfoProps {
   onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors: any;
+  errors?: any; // ✅ RENDU OPTIONNEL POUR ÉVITER ERREUR TYPESCRIPT
 }
 
 // =================== INTERFACES OPTIMISÉES POUR EMPLACEMENTS ===================
@@ -540,7 +540,7 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
+function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {} }: Step1ProjectInfoProps) {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
   const ENERGY_TYPES = getEnergyTypes(language);
