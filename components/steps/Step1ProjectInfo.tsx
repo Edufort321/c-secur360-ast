@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -13,7 +13,7 @@ interface Step1ProjectInfoProps {
   onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors: any;
+  errors?: any; // ✅ RENDU OPTIONNEL POUR ÉVITER ERREUR TYPESCRIPT
 }
 
 // =================== INTERFACES OPTIMISÉES POUR EMPLACEMENTS ===================
@@ -540,7 +540,7 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: Step1ProjectInfoProps) {
+function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {} }: Step1ProjectInfoProps) {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
   const ENERGY_TYPES = getEnergyTypes(language);
@@ -595,55 +595,43 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   const [isSaving, setIsSaving] = useState(false);
   const [isModalSaving, setIsModalSaving] = useState(false);
 
-  // =================== HANDLERS ÉTAT LOCAL AVEC DEBOUNCE OPTIMISÉ ===================
-  const updateLocalState = (field: string, value: any) => {
-    if (isSaving) return; // Protection supplémentaire
-    
-    setLocalState(prev => ({ ...prev, [field]: value }));
-    
-    // Debounce optimisé pour éviter éjection multiple
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    debounceTimerRef.current = setTimeout(() => {
-      syncToParent(field, value);
-    }, 300); // 300ms de délai optimal
-  };
+  // =================== HANDLERS ISOLÉS POUR ÉVITER CONFLIT ASTFORM ===================
+  const updateLocalState = useCallback((field: string, value: any) => {
+    // MISE À JOUR IMMÉDIATE SANS DEBOUNCE POUR ÉVITER ÉJECTION
+    setLocalState(prev => {
+      const newState = { ...prev, [field]: value };
+      
+      // Sync immédiat mais protégé
+      requestAnimationFrame(() => {
+        if (!isSaving) {
+          try {
+            onDataChange('projectInfo', { ...projectInfo, [field]: value });
+          } catch (error) {
+            console.error('Erreur sync:', error);
+          }
+        }
+      });
+      
+      return newState;
+    });
+  }, [projectInfo, onDataChange, isSaving]);
 
-  // =================== SYNC VERS PARENT AVEC PROTECTION ===================
-  const syncToParent = (field: string, value: any) => {
-    if (isSaving) return;
+  // =================== HANDLERS LOCKOUT POINTS ISOLÉS ===================
+  const updateLockoutPointDirect = useCallback((pointId: string, field: string, value: any) => {
+    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
     
-    setIsSaving(true);
+    // Sync immédiat sans débounce
     try {
-      onDataChange('projectInfo', { ...projectInfo, [field]: value });
-    } catch (error) {
-      console.error('Erreur sync parent:', error);
-    } finally {
-      setTimeout(() => setIsSaving(false), 100);
-    }
-  };
-
-  // =================== SYNC COMPLET OPTIMISÉ ===================
-  const syncAllToParent = () => {
-    if (isSaving) return;
-    
-    setIsSaving(true);
-    try {
-      onDataChange('projectInfo', { 
-        ...projectInfo, 
-        ...localState,
-        workLocations,
-        lockoutPoints,
-        lockoutPhotos
+      onDataChange('projectInfo', {
+        ...projectInfo,
+        lockoutPoints: updatedPoints
       });
     } catch (error) {
-      console.error('Erreur sync complet:', error);
-    } finally {
-      setTimeout(() => setIsSaving(false), 100);
+      console.error('Erreur update lockout:', error);
     }
-  };
+  }, [lockoutPoints, projectInfo, onDataChange]);
 
   // =================== HANDLER MODAL ISOLÉ (SANS DEBOUNCE) ===================
   const updateModalField = (field: string, value: string) => {
@@ -924,41 +912,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     });
   };
 
-  const updateLockoutPoint = (pointId: string, field: string, value: any) => {
+  const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
     const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
     
-    // Mettre à jour les stats location si lockout status change
-    if (field === 'isLocked') {
-      const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
-      if (point?.assignedLocation) {
-        const updatedLocations = workLocations.map((loc: WorkLocation) => {
-          if (loc.id === point.assignedLocation) {
-            const locationLockouts = updatedPoints.filter((p: LockoutPoint) => 
-              p.assignedLocation === loc.id && p.isLocked
-            ).length;
-            return { ...loc, lockoutPoints: locationLockouts };
-          }
-          return loc;
-        });
-        
-        onDataChange('projectInfo', {
-          ...projectInfo,
-          ...localState,
-          lockoutPoints: updatedPoints,
-          workLocations: updatedLocations
-        });
-        return;
-      }
+    // Sync direct sans état local pour éviter conflit ASTForm
+    try {
+      onDataChange('projectInfo', {
+        ...projectInfo,
+        lockoutPoints: updatedPoints
+      });
+    } catch (error) {
+      console.error('Erreur update lockout:', error);
     }
-    
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      lockoutPoints: updatedPoints
-    });
-  };
+  }, [lockoutPoints, projectInfo, onDataChange]);
 
   const toggleProcedureComplete = (pointId: string, procedureIndex: number, e?: React.MouseEvent) => {
     if (e) {
@@ -1163,8 +1131,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     <select 
       className="premium-select" 
       value={localState.industry}
-      onChange={(e) => updateLocalState('industry', e.target.value)}
-      onBlur={(e) => syncToParent('industry', e.target.value)}
+      onChange={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateLocalState('industry', e.target.value);
+      }}
     >
       <option value="electrical">{t.electrical}</option>
       <option value="construction">{t.construction}</option>
@@ -2472,8 +2443,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.clientNamePlaceholder}
                 value={localState.client} 
-                onChange={(e) => updateLocalState('client', e.target.value)}
-                onBlur={(e) => syncToParent('client', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('client', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2485,8 +2459,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.clientPhonePlaceholder}
                 value={localState.clientPhone} 
-                onChange={(e) => updateLocalState('clientPhone', e.target.value)}
-                onBlur={(e) => syncToParent('clientPhone', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('clientPhone', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2498,8 +2475,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.clientRepPlaceholder}
                 value={localState.clientRepresentative} 
-                onChange={(e) => updateLocalState('clientRepresentative', e.target.value)}
-                onBlur={(e) => syncToParent('clientRepresentative', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('clientRepresentative', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2511,8 +2491,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.repPhonePlaceholder}
                 value={localState.clientRepresentativePhone} 
-                onChange={(e) => updateLocalState('clientRepresentativePhone', e.target.value)}
-                onBlur={(e) => syncToParent('clientRepresentativePhone', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('clientRepresentativePhone', e.target.value);
+                }}
               />
             </div>
           </div>
@@ -2533,8 +2516,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.projectNumberPlaceholder}
                 value={localState.projectNumber} 
-                onChange={(e) => updateLocalState('projectNumber', e.target.value)}
-                onBlur={(e) => syncToParent('projectNumber', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('projectNumber', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2546,8 +2532,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.astClientPlaceholder}
                 value={localState.astClientNumber} 
-                onChange={(e) => updateLocalState('astClientNumber', e.target.value)}
-                onBlur={(e) => syncToParent('astClientNumber', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('astClientNumber', e.target.value);
+                }}
               />
               <div className="field-help">{t.astClientHelp}</div>
             </div>
@@ -2560,8 +2549,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   type="date" 
                   className="premium-input"
                   value={localState.date}
-                  onChange={(e) => updateLocalState('date', e.target.value)}
-                  onBlur={(e) => syncToParent('date', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('date', e.target.value);
+                  }}
                 />
               </div>
               <div className="form-field">
@@ -2572,8 +2564,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   type="time" 
                   className="premium-input"
                   value={localState.time}
-                  onChange={(e) => updateLocalState('time', e.target.value)}
-                  onBlur={(e) => syncToParent('time', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('time', e.target.value);
+                  }}
                 />
               </div>
             </div>
@@ -2595,8 +2590,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 className="premium-input" 
                 placeholder={t.workLocationPlaceholder}
                 value={localState.workLocation} 
-                onChange={(e) => updateLocalState('workLocation', e.target.value)}
-                onBlur={(e) => syncToParent('workLocation', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('workLocation', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2623,8 +2621,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   className="premium-input" 
                   placeholder={t.emergencyContactPlaceholder}
                   value={localState.emergencyContact} 
-                  onChange={(e) => updateLocalState('emergencyContact', e.target.value)}
-                  onBlur={(e) => syncToParent('emergencyContact', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('emergencyContact', e.target.value);
+                  }}
                 />
               </div>
               <div className="form-field">
@@ -2636,8 +2637,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   className="premium-input" 
                   placeholder={t.emergencyPhonePlaceholder}
                   value={localState.emergencyPhone} 
-                  onChange={(e) => updateLocalState('emergencyPhone', e.target.value)}
-                  onBlur={(e) => syncToParent('emergencyPhone', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('emergencyPhone', e.target.value);
+                  }}
                 />
               </div>
             </div>
@@ -2659,8 +2663,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
                 value={localState.workDescription} 
-                onChange={(e) => updateLocalState('workDescription', e.target.value)}
-                onBlur={(e) => syncToParent('workDescription', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('workDescription', e.target.value);
+                }}
               />
               <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
@@ -2816,7 +2823,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     className="premium-input" 
                     placeholder={t.equipmentPlaceholder}
                     value={point.equipmentName} 
-                    onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)} 
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateLockoutPoint(point.id, 'equipmentName', e.target.value);
+                    }} 
                   />
                 </div>
                 <div className="form-field">
@@ -2826,7 +2837,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     className="premium-input" 
                     placeholder={t.locationPlaceholder}
                     value={point.location} 
-                    onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)} 
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateLockoutPoint(point.id, 'location', e.target.value);
+                    }} 
                   />
                 </div>
               </div>
@@ -2839,7 +2854,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     className="premium-input" 
                     placeholder={t.lockTypePlaceholder}
                     value={point.lockType} 
-                    onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)} 
+                    onChange={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateLockoutPoint(point.id, 'lockType', e.target.value);
+                    }} 
                   />
                 </div>
                 <div className="form-field">
