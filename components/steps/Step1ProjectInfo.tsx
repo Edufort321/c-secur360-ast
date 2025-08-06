@@ -24,25 +24,30 @@ interface WorkLocation {
   zone: string;
   building?: string;
   floor?: string;
-  capacity: number;
+  maxWorkersReached: number; // ✅ NOUVEAU - Max atteint durant la journée
   currentWorkers: number;
   lockoutPoints: number;
   isActive: boolean;
   createdAt: string;
   notes?: string;
+  estimatedDuration: string; // ✅ NOUVEAU - Durée des travaux
+  startTime?: string;
+  endTime?: string;
 }
 
 interface LocationStats {
   totalWorkers: number;
   totalLocations: number;
   activeLockouts: number;
-  capacityUtilization: number;
+  peakUtilization: number; // ✅ CHANGÉ - Pic d'utilisation basé sur max atteint
   locationBreakdown: {
     locationId: string;
     name: string;
-    workers: number;
+    currentWorkers: number;
+    maxReached: number; // ✅ NOUVEAU - Max atteint
     lockouts: number;
-    utilization: number;
+    utilizationCurrent: number; // ✅ NOUVEAU - Utilisation actuelle
+    estimatedDuration: string;
   }[];
 }
 
@@ -127,8 +132,10 @@ const translations = {
     buildingPlaceholder: "Ex: Bâtiment A",
     floor: "Étage",
     floorPlaceholder: "Ex: Sous-sol, RDC, Étage 2",
-    capacity: "Capacité Max",
-    capacityPlaceholder: "Ex: 10",
+    workDuration: "Durée des Travaux",
+    workDurationPlaceholder: "Ex: 8 heures, 2 jours",
+    startTime: "Heure Début",
+    endTime: "Heure Fin",
     removeLocation: "Supprimer cet emplacement",
     noLocations: "Aucun emplacement défini",
     noLocationsDescription: "Ajoutez des emplacements pour organiser vos équipes",
@@ -137,11 +144,12 @@ const translations = {
     totalWorkers: "Total Travailleurs",
     totalLocations: "Emplacements Actifs",
     totalLockouts: "Cadenas Apposés",
-    utilizationRate: "Taux d'Utilisation",
+    peakUtilization: "Pic d'Utilisation",
     locationBreakdown: "Répartition par Emplacement",
     workersCount: "travailleurs",
     lockoutsCount: "cadenas",
-    capacityLabel: "capacité",
+    currentWorkers: "actuels",
+    maxReached: "max atteint",
     
     // Industries
     electrical: "⚡ Électrique",
@@ -285,8 +293,10 @@ const translations = {
     buildingPlaceholder: "Ex: Building A",
     floor: "Floor",
     floorPlaceholder: "Ex: Basement, Ground, Floor 2",
-    capacity: "Max Capacity",
-    capacityPlaceholder: "Ex: 10",
+    workDuration: "Work Duration",
+    workDurationPlaceholder: "Ex: 8 hours, 2 days",
+    startTime: "Start Time",
+    endTime: "End Time",
     removeLocation: "Remove this location",
     noLocations: "No locations defined",
     noLocationsDescription: "Add locations to organize your teams",
@@ -295,11 +305,12 @@ const translations = {
     totalWorkers: "Total Workers",
     totalLocations: "Active Locations",
     totalLockouts: "Applied Locks",
-    utilizationRate: "Utilization Rate",
+    peakUtilization: "Peak Utilization",
     locationBreakdown: "Breakdown by Location",
     workersCount: "workers",
     lockoutsCount: "locks",
-    capacityLabel: "capacity",
+    currentWorkers: "current",
+    maxReached: "max reached",
     
     // Industries
     electrical: "⚡ Electrical",
@@ -589,7 +600,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     zone: '',
     building: '',
     floor: '',
-    capacity: 10
+    estimatedDuration: '',
+    startTime: '',
+    endTime: ''
   });
 
   // ✅ FIX CRITIQUE - DEBOUNCE TIMER POUR ÉVITER DOUBLE ÉJECTION
@@ -648,22 +661,28 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     const totalWorkers = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
     const activeLockouts = lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
     
-    const totalCapacity = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.capacity, 0);
-    const capacityUtilization = totalCapacity > 0 ? Math.round((totalWorkers / totalCapacity) * 100) : 0;
+    // ✅ NOUVEAU - Pic d'utilisation basé sur max atteint durant la journée
+    const totalMaxReached = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
+    const peakUtilization = totalMaxReached > 0 ? Math.round((totalWorkers / totalMaxReached) * 100) : 0;
     
     const locationBreakdown = workLocations.map((loc: WorkLocation) => {
       const locationLockouts = lockoutPoints.filter((point: LockoutPoint) => 
         point.assignedLocation === loc.id && point.isLocked
       ).length;
       
-      const utilization = loc.capacity > 0 ? Math.round((loc.currentWorkers / loc.capacity) * 100) : 0;
+      // ✅ NOUVEAU - Utilisation actuelle basée sur max atteint
+      const utilizationCurrent = loc.maxWorkersReached > 0 
+        ? Math.round((loc.currentWorkers / loc.maxWorkersReached) * 100) 
+        : 0;
       
       return {
         locationId: loc.id,
         name: loc.name,
-        workers: loc.currentWorkers,
+        currentWorkers: loc.currentWorkers,
+        maxReached: loc.maxWorkersReached,
         lockouts: locationLockouts,
-        utilization
+        utilizationCurrent,
+        estimatedDuration: loc.estimatedDuration
       };
     });
 
@@ -671,7 +690,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       totalWorkers,
       totalLocations,
       activeLockouts,
-      capacityUtilization,
+      peakUtilization,
       locationBreakdown
     };
   };
@@ -714,11 +733,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       zone: newLocation.zone.trim(),
       building: newLocation.building.trim() || undefined,
       floor: newLocation.floor.trim() || undefined,
-      capacity: newLocation.capacity || 10,
+      maxWorkersReached: 0, // ✅ NOUVEAU - Commence à 0, sera mis à jour par Step5
       currentWorkers: 0,
       lockoutPoints: 0,
       isActive: true,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      estimatedDuration: newLocation.estimatedDuration.trim() || '8 heures',
+      startTime: newLocation.startTime || '08:00',
+      endTime: newLocation.endTime || '16:00'
     };
 
     const updatedLocations = [...workLocations, location];
@@ -736,7 +758,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       zone: '',
       building: '',
       floor: '',
-      capacity: 10
+      estimatedDuration: '',
+      startTime: '',
+      endTime: ''
     });
     setShowAddLocation(false);
     
@@ -778,6 +802,29 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       ...localState,
       workLocations: updatedLocations
     });
+  };
+
+  // ✅ NOUVELLE FONCTION - Mise à jour du max atteint (appelée depuis Step5)
+  const updateLocationWorkerCount = (locationId: string, newWorkerCount: number) => {
+    const updatedLocations = workLocations.map((loc: WorkLocation) => {
+      if (loc.id === locationId) {
+        const updatedMaxReached = Math.max(loc.maxWorkersReached, newWorkerCount);
+        return { 
+          ...loc, 
+          currentWorkers: newWorkerCount,
+          maxWorkersReached: updatedMaxReached
+        };
+      }
+      return loc;
+    });
+    
+    onDataChange('projectInfo', {
+      ...projectInfo,
+      ...localState,
+      workLocations: updatedLocations
+    });
+    
+    console.log(`✅ Emplacement ${locationId} - Travailleurs: ${newWorkerCount}, Max atteint: ${Math.max(workLocations.find(l => l.id === locationId)?.maxWorkersReached || 0, newWorkerCount)}`);
   };
 
   // =================== GESTION PHOTOS (CONSERVÉ) ===================
@@ -1203,8 +1250,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             <TrendingUp size={18} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{locationStats.capacityUtilization}%</div>
-            <div className="stat-label">{t.utilizationRate}</div>
+            <div className="stat-value">{locationStats.peakUtilization}%</div>
+            <div className="stat-label">{t.peakUtilization}</div>
           </div>
         </div>
       </div>
@@ -1219,7 +1266,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <div className="breakdown-info">
                   <span className="location-name">{loc.name}</span>
                   <span className="location-details">
-                    {loc.workers} {t.workersCount} • {loc.lockouts} {t.lockoutsCount}
+                    {loc.currentWorkers}/{loc.maxReached} {t.workersCount} • {loc.lockouts} {t.lockoutsCount}
                   </span>
                 </div>
                 <div className="breakdown-utilization">
@@ -1227,12 +1274,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                     <div 
                       className="utilization-fill" 
                       style={{ 
-                        width: `${Math.min(loc.utilization, 100)}%`,
-                        backgroundColor: loc.utilization > 90 ? '#ef4444' : loc.utilization > 70 ? '#f59e0b' : '#10b981'
+                        width: `${Math.min(loc.utilizationCurrent, 100)}%`,
+                        backgroundColor: loc.utilizationCurrent > 90 ? '#ef4444' : loc.utilizationCurrent > 70 ? '#f59e0b' : '#10b981'
                       }} 
                     />
                   </div>
-                  <span className="utilization-text">{loc.utilization}%</span>
+                  <span className="utilization-text">{loc.utilizationCurrent}%</span>
                 </div>
               </div>
             ))}
@@ -1278,11 +1325,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <div className="location-stats">
                   <div className="location-stat">
                     <Users size={14} />
-                    <span>{location.currentWorkers}/{location.capacity}</span>
+                    <span>{location.currentWorkers}/{location.maxWorkersReached}</span>
                   </div>
                   <div className="location-stat">
                     <Lock size={14} />
                     <span>{location.lockoutPoints}</span>
+                  </div>
+                  <div className="location-stat">
+                    <Clock size={14} />
+                    <span>{location.estimatedDuration}</span>
                   </div>
                 </div>
                 <button 
@@ -1300,17 +1351,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <div 
                   className="capacity-fill" 
                   style={{ 
-                    width: `${Math.min((location.currentWorkers / location.capacity) * 100, 100)}%`,
-                    backgroundColor: location.currentWorkers > location.capacity 
+                    width: `${location.maxWorkersReached > 0 ? Math.min((location.currentWorkers / location.maxWorkersReached) * 100, 100) : 0}%`,
+                    backgroundColor: location.currentWorkers > location.maxWorkersReached * 0.9
                       ? '#ef4444' 
-                      : location.currentWorkers > location.capacity * 0.8 
+                      : location.currentWorkers > location.maxWorkersReached * 0.7 
                         ? '#f59e0b' 
                         : '#10b981'
                   }} 
                 />
               </div>
               <div className="capacity-text">
-                {Math.round((location.currentWorkers / location.capacity) * 100)}% {t.capacityLabel}
+                {location.maxWorkersReached > 0 ? Math.round((location.currentWorkers / location.maxWorkersReached) * 100) : 0}% {t.currentWorkers}
               </div>
             </div>
           ))}
@@ -1856,11 +1907,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 9999;
             padding: 16px;
           }
 
@@ -2453,43 +2504,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           </div>
 
-          {/* Section Équipe */}
-          <div className="form-section">
-            <div className="section-header">
-              <Users className="section-icon" />
-              <h3 className="section-title">{t.team}</h3>
-            </div>
-            <div className="form-field">
-              <label className="field-label">
-                <Users style={{ width: '18px', height: '18px' }} />
-                {t.workerCount}<span className="required-indicator">{t.required}</span>
-              </label>
-              <input 
-                type="number" 
-                min="1" 
-                max="100" 
-                className="premium-input" 
-                placeholder={t.workerCountPlaceholder}
-                value={localState.workerCount} 
-                onChange={(e) => updateLocalState('workerCount', parseInt(e.target.value) || 1)}
-                onBlur={(e) => syncToParent('workerCount', parseInt(e.target.value) || 1)}
-              />
-              <div className="field-help">{t.workerCountHelp}</div>
-            </div>
-            <div className="form-field">
-              <label className="field-label">
-                <Clock style={{ width: '18px', height: '18px' }} />{t.estimatedDuration}
-              </label>
-              <input 
-                type="text" 
-                className="premium-input" 
-                placeholder={t.durationPlaceholder}
-                value={localState.estimatedDuration} 
-                onChange={(e) => updateLocalState('estimatedDuration', e.target.value)}
-                onBlur={(e) => syncToParent('estimatedDuration', e.target.value)}
-              />
-            </div>
-          </div>
+          {/* Section Équipe SUPPRIMÉE - Remplacée par durée dans emplacements */}
 
           {/* Section Contacts d'Urgence */}
           <div className="form-section">
