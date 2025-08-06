@@ -1360,12 +1360,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <div 
           className="modal-overlay-critical" 
           onClick={() => setShowAddLocation(false)}
-          style={{ zIndex: 99999 }}
+          style={{ zIndex: 2147483647 }} /* ✅ Z-INDEX MAXIMUM INLINE AUSSI */
         >
           <div 
             className="modal-content-critical" 
             onClick={(e) => e.stopPropagation()}
-            style={{ zIndex: 100000 }}
+            style={{ zIndex: 2147483647 }} /* ✅ Z-INDEX MAXIMUM INLINE AUSSI */
           >
             <div className="modal-header">
               <h3>{t.addLocation}</h3>
@@ -1925,50 +1925,50 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             color: #64748b;
           }
 
-          /* =================== MODAL CRITIQUE AVEC Z-INDEX MAXIMUM =================== */
+          /* =================== MODAL CRITIQUE AVEC Z-INDEX ABSOLU MAXIMUM =================== */
           .modal-overlay-critical {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            background: rgba(0, 0, 0, 0.95) !important;
+            background: rgba(0, 0, 0, 0.98) !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            z-index: 99999 !important;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
             padding: 16px;
-            backdrop-filter: blur(10px) !important;
+            backdrop-filter: blur(15px) !important;
             pointer-events: all !important;
           }
 
           .modal-content-critical {
-            background: rgba(15, 23, 42, 0.98) !important;
-            backdrop-filter: blur(25px) !important;
-            border: 2px solid rgba(59, 130, 246, 0.5) !important;
+            background: rgba(15, 23, 42, 1) !important;
+            backdrop-filter: blur(30px) !important;
+            border: 3px solid rgba(59, 130, 246, 0.8) !important;
             border-radius: 20px;
             max-width: 700px;
             width: 100%;
             max-height: calc(100vh - 32px);
             overflow-y: auto;
-            z-index: 100000 !important;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
             position: relative !important;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8) !important;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.95) !important;
             pointer-events: all !important;
           }
 
-          .modal-input {
-            background: rgba(15, 23, 42, 0.95) !important;
-            border: 2px solid rgba(100, 116, 139, 0.4) !important;
+          .modal-input-critical, .modal-input {
+            background: rgba(15, 23, 42, 1) !important;
+            border: 2px solid rgba(100, 116, 139, 0.5) !important;
             position: relative !important;
-            z-index: 100001 !important;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
           }
 
-          .modal-input:focus {
+          .modal-input-critical:focus, .modal-input:focus {
             background: rgba(15, 23, 42, 1) !important;
             border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
-            z-index: 100002 !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
             outline: none !important;
           }
 
@@ -1979,7 +1979,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             padding: 24px 24px 0;
             margin-bottom: 20px;
             position: relative;
-            z-index: 100001;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
           }
 
           .modal-header h3 {
@@ -2001,7 +2001,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100002;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
           }
 
           .modal-close:hover {
@@ -2012,7 +2012,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           .modal-body {
             padding: 0 24px;
             position: relative;
-            z-index: 100001;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
           }
 
           .modal-footer {
@@ -2021,7 +2021,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             padding: 20px 24px 24px;
             justify-content: flex-end;
             position: relative;
-            z-index: 100001;
+            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
           }
 
           .form-row {
