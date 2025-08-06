@@ -874,22 +874,35 @@ function Step6Finalization({
   }, [finalizationData, onDataChange]);
 
   /**
-   * ✅ HANDLER TOGGLE OPTIONS DOCUMENT GÉNÉRATION
+   * ✅ HANDLER TOGGLE OPTIONS DOCUMENT GÉNÉRATION (SÉCURISÉ)
    */
   const toggleDocumentOption = useCallback((option: keyof DocumentGeneration) => {
-    const currentValue = finalizationData.documentGeneration[option];
-    const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
-    
-    const updatedData = {
-      ...finalizationData,
-      documentGeneration: {
-        ...finalizationData.documentGeneration,
-        [option]: newValue
+    try {
+      console.log('🔧 Step6 AST - Toggle option:', option);
+      
+      const currentValue = finalizationData.documentGeneration[option];
+      let newValue: any = currentValue;
+      
+      // Seulement toggle les booléens, pas les strings/objects
+      if (typeof currentValue === 'boolean') {
+        newValue = !currentValue;
       }
-    };
+      
+      const updatedData = {
+        ...finalizationData,
+        documentGeneration: {
+          ...finalizationData.documentGeneration,
+          [option]: newValue
+        }
+      };
 
-    setFinalizationData(updatedData);
-    onDataChange('finalization', updatedData);
+      setFinalizationData(updatedData);
+      onDataChange('finalization', updatedData);
+      
+      console.log('✅ Step6 AST - Option mise à jour:', option, '=', newValue);
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur toggle option:', error);
+    }
   }, [finalizationData, onDataChange]);
 
   /**
@@ -1094,7 +1107,7 @@ function Step6Finalization({
       const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
       const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
       
-      // ✅ GÉNÉRATION HTML PROFESSIONNEL AVEC LOGO OFFICIEL C-SECUR360
+      // ✅ GÉNÉRATION HTML PROFESSIONNEL OPTIMISÉ POUR 8.5x11
       const pdfContent = `
 <!DOCTYPE html>
 <html lang="${language}">
@@ -1103,65 +1116,310 @@ function Step6Finalization({
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${language === 'en' ? 'Complete JSA Report' : 'Rapport AST Complet'} - ${stats.client}</title>
     <style>
-        @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } }
+        @media print { 
+          @page { 
+            margin: 12mm; 
+            size: 8.5in 11in; 
+          } 
+          body { 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+          } 
+          .page-break { 
+            page-break-before: always; 
+          } 
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #1f2937; background: white; font-size: 11px; }
+        body { 
+          font-family: 'Arial', sans-serif; 
+          line-height: 1.3; 
+          color: #1f2937; 
+          background: white; 
+          font-size: 10px; 
+          max-width: 8.5in;
+          margin: 0 auto;
+        }
         
-        /* ✅ HEADER AVEC LOGO OFFICIEL C-SECUR360 */
+        /* ✅ HEADER OPTIMISÉ POUR 8.5x11 */
         .header { 
           background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
           color: white; 
-          padding: 25px; 
+          padding: 15px 20px; 
           text-align: center; 
-          margin-bottom: 25px; 
-          border-radius: 8px; 
+          margin-bottom: 20px; 
+          border-radius: 6px; 
           position: relative; 
           overflow: hidden;
+          height: auto;
+          min-height: 80px;
         }
         .logo-container { 
           position: absolute; 
-          left: 25px; 
+          left: 15px; 
           top: 50%; 
           transform: translateY(-50%); 
-          width: 90px; 
-          height: 90px; 
+          width: 60px; 
+          height: 60px; 
           background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-          border: 4px solid #f59e0b; 
-          border-radius: 16px; 
+          border: 2px solid #f59e0b; 
+          border-radius: 8px; 
           display: flex; 
           align-items: center; 
           justifyContent: center;
-          box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
+          box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
         }
         .logo-image { 
-          width: 72px; 
-          height: 72px; 
+          width: 48px; 
+          height: 48px; 
           object-fit: contain;
-          filter: brightness(1.3) contrast(1.2);
+          filter: brightness(1.2) contrast(1.1);
         }
         .logo-fallback { 
           color: #f59e0b; 
-          font-size: 28px; 
+          font-size: 20px; 
           font-weight: bold; 
           display: none;
         }
-        .header h1 { font-size: 32px; margin-bottom: 12px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .header .subtitle { font-size: 18px; opacity: 0.95; font-weight: 500; }
+        .header-content {
+          margin-left: 80px;
+          text-align: left;
+        }
+        .header h1 { 
+          font-size: 18px; 
+          margin-bottom: 6px; 
+          font-weight: bold; 
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3); 
+          line-height: 1.2;
+        }
+        .header .subtitle { 
+          font-size: 12px; 
+          opacity: 0.9; 
+          font-weight: 500; 
+          line-height: 1.2;
+        }
         
-        /* ✅ WATERMARK LOGO EN ARRIÈRE-PLAN */
+        /* ✅ WATERMARK DISCRET */
         .watermark {
           position: fixed;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%) rotate(-45deg);
-          opacity: 0.03;
-          font-size: 150px;
+          opacity: 0.02;
+          font-size: 120px;
           font-weight: bold;
           color: #f59e0b;
           z-index: -1;
           pointer-events: none;
-          font-family: Arial, sans-serif;
         }
+        
+        .stats-summary { 
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+          color: white; 
+          padding: 15px; 
+          border-radius: 8px; 
+          margin-bottom: 20px;
+          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+        }
+        .stats-grid { 
+          display: grid; 
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); 
+          gap: 12px; 
+          margin-top: 10px; 
+        }
+        .stat-item { 
+          text-align: center; 
+          background: rgba(255, 255, 255, 0.15); 
+          padding: 10px; 
+          border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-number { font-size: 16px; font-weight: bold; margin-bottom: 3px; }
+        .stat-label { font-size: 9px; opacity: 0.9; font-weight: 500; }
+        
+        .info-grid { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 15px; 
+          margin-bottom: 20px; 
+        }
+        .info-box { 
+          border: 1px solid #e5e7eb; 
+          padding: 12px; 
+          border-radius: 8px; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        .info-box h3 { 
+          font-size: 11px; 
+          color: #374151; 
+          margin-bottom: 10px; 
+          font-weight: bold; 
+          border-bottom: 1px solid #3b82f6; 
+          padding-bottom: 5px;
+        }
+        .info-row { 
+          display: flex; 
+          justify-content: space-between; 
+          margin-bottom: 5px; 
+          padding: 3px 0; 
+          align-items: center;
+        }
+        .info-label { 
+          font-weight: 600; 
+          color: #4b5563; 
+          min-width: 100px; 
+          font-size: 9px;
+        }
+        .info-value { 
+          color: #1f2937; 
+          font-weight: 500; 
+          flex: 1; 
+          text-align: right; 
+          font-size: 9px;
+          word-break: break-word;
+        }
+        
+        .section { 
+          margin-bottom: 20px; 
+          border: 1px solid #e5e7eb; 
+          border-radius: 8px; 
+          overflow: hidden; 
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); 
+          page-break-inside: avoid;
+        }
+        .section-header { 
+          background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+          padding: 10px 15px; 
+          border-bottom: 1px solid #d1d5db;
+        }
+        .section-title { font-size: 12px; font-weight: bold; color: #1f2937; }
+        .section-content { padding: 12px; }
+        
+        .validation-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-top: 10px; 
+        }
+        .validation-table th, .validation-table td { 
+          border: 1px solid #d1d5db; 
+          padding: 8px; 
+          text-align: left; 
+          font-size: 9px; 
+        }
+        .validation-table th { 
+          background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+          font-weight: bold; 
+          color: #374151;
+        }
+        .status-complete { background: #dcfce7; color: #166534; font-weight: 600; }
+        .status-incomplete { background: #fef3c7; color: #92400e; font-weight: 600; }
+        
+        .step-section { 
+          margin-bottom: 15px; 
+          padding: 12px; 
+          border: 1px solid #e5e7eb; 
+          border-radius: 6px; 
+          background: #fafafa;
+        }
+        .step-title { 
+          font-size: 11px; 
+          font-weight: bold; 
+          margin-bottom: 8px; 
+          color: #1f2937;
+        }
+        .step-content { font-size: 9px; line-height: 1.4; color: #4b5563; }
+        .step-list { padding-left: 15px; margin-top: 5px; }
+        .step-list li { margin-bottom: 3px; font-size: 9px; }
+        
+        .footer { 
+          margin-top: 25px; 
+          padding: 12px; 
+          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
+          border: 1px solid #e5e7eb; 
+          border-radius: 8px; 
+          text-align: center; 
+          font-size: 8px; 
+          color: #6b7280;
+          position: relative;
+          page-break-inside: avoid;
+        }
+        .footer-logo {
+          position: absolute;
+          right: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 35px;
+          height: 35px;
+          background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+          border: 2px solid #f59e0b;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+        }
+        
+        .signature-section { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr 1fr; 
+          gap: 25px; 
+          margin-top: 30px; 
+          page-break-inside: avoid;
+        }
+        .signature-box { 
+          border-top: 2px solid #374151; 
+          padding-top: 10px; 
+          text-align: center;
+          min-height: 60px;
+        }
+        .signature-label { 
+          font-size: 9px; 
+          color: #4b5563; 
+          font-weight: 700; 
+          text-transform: uppercase; 
+          letter-spacing: 0.3px; 
+        }
+        
+        .qr-section { 
+          text-align: center; 
+          margin: 20px 0; 
+          page-break-inside: avoid; 
+        }
+        .qr-code { 
+          border: 3px solid #f59e0b; 
+          border-radius: 10px; 
+          padding: 10px; 
+          background: white; 
+          display: inline-block;
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+        }
+        
+        /* ✅ RESPONSIVE POUR DIFFÉRENTES TAILLES */
+        @media screen and (max-width: 8.5in) {
+          body { padding: 10px; }
+          .header { padding: 12px 15px; }
+          .logo-container { width: 50px; height: 50px; }
+          .logo-image { width: 40px; height: 40px; }
+          .header h1 { font-size: 16px; }
+          .header .subtitle { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ✅ WATERMARK DISCRET -->
+    <div class="watermark">C-SECUR360</div>
+    
+    <div class="header">
+        <div class="logo-container">
+            <img src="/c-secur360-logo.png" alt="C-Secur360" class="logo-image"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div class="logo-fallback">C🛡️</div>
+        </div>
+        <div class="header-content">
+            <h1>${language === 'en' ? '🛡️ COMPLETE JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
+            <div class="subtitle">${language === 'en' ? 'Professional Safety Report' : 'Rapport de Sécurité Professionnel'} - ${tenant} | N° ${stats.astNumber}</div>
+        </div>
+    </div>
         
         .stats-summary { 
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
