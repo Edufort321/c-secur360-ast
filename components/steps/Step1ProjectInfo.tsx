@@ -1440,17 +1440,42 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </div>
                 <div className="form-field">
                   <label className="field-label">
-                    <Users size={16} />
-                    {t.capacity}
+                    <Clock size={16} />
+                    {t.workDuration}
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    max="100"
+                    type="text"
                     className="premium-input"
-                    placeholder={t.capacityPlaceholder}
-                    value={newLocation.capacity}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, capacity: parseInt(e.target.value) || 10 }))}
+                    placeholder={t.workDurationPlaceholder}
+                    value={newLocation.estimatedDuration}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row two-columns">
+                <div className="form-field">
+                  <label className="field-label">
+                    <Clock size={16} />
+                    {t.startTime}
+                  </label>
+                  <input
+                    type="time"
+                    className="premium-input"
+                    value={newLocation.startTime}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, startTime: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="field-label">
+                    <Clock size={16} />
+                    {t.endTime}
+                  </label>
+                  <input
+                    type="time"
+                    className="premium-input"
+                    value={newLocation.endTime}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, endTime: e.target.value }))}
                   />
                 </div>
               </div>
