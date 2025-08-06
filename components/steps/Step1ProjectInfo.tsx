@@ -139,9 +139,9 @@ const translations = {
     totalLockouts: "Cadenas Apposés",
     utilizationRate: "Taux d'Utilisation",
     locationBreakdown: "Répartition par Emplacement",
-    workers: "travailleurs",
-    lockouts: "cadenas",
-    capacity: "capacité",
+    workersCount: "travailleurs",
+    lockoutsCount: "cadenas",
+    capacityLabel: "capacité",
     
     // Industries
     electrical: "⚡ Électrique",
@@ -297,9 +297,9 @@ const translations = {
     totalLockouts: "Applied Locks",
     utilizationRate: "Utilization Rate",
     locationBreakdown: "Breakdown by Location",
-    workers: "workers",
-    lockouts: "locks",
-    capacity: "capacity",
+    workersCount: "workers",
+    lockoutsCount: "locks",
+    capacityLabel: "capacity",
     
     // Industries
     electrical: "⚡ Electrical",
@@ -1219,7 +1219,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 <div className="breakdown-info">
                   <span className="location-name">{loc.name}</span>
                   <span className="location-details">
-                    {loc.workers} {t.workers} • {loc.lockouts} {t.lockouts}
+                    {loc.workers} {t.workersCount} • {loc.lockouts} {t.lockoutsCount}
                   </span>
                 </div>
                 <div className="breakdown-utilization">
@@ -1310,7 +1310,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 />
               </div>
               <div className="capacity-text">
-                {Math.round((location.currentWorkers / location.capacity) * 100)}% {t.capacity}
+                {Math.round((location.currentWorkers / location.capacity) * 100)}% {t.capacityLabel}
               </div>
             </div>
           ))}
