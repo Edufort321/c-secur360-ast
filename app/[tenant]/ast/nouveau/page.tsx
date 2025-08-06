@@ -1,75 +1,95 @@
+// app/[tenant]/ast/nouveau/page.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import ASTForm from '@/components/ASTForm';
-import { useState } from 'react';
+import { DEFAULT_TENANT_CONFIGS } from '@/components/ASTContext';
 
-export default function NouveauASTPage({ params }: { params: { tenant: string } }) {
-  // ✅ État pour les données AST
+interface PageProps {
+  params: {
+    tenant: string;
+  };
+}
+
+export default function NouvellePage({ params }: PageProps) {
   const [astData, setAstData] = useState({
-    id: `ast_${Date.now()}`,
-    astNumber: `AST-${params.tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    id: '',
+    astNumber: '',
     projectInfo: {
       client: '',
       workLocation: '',
       industry: '',
       projectNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
+      date: '',
+      time: '',
       workDescription: '',
       workerCount: 1,
       lockoutPoints: []
     },
     equipment: {
-      list: [],
       selected: [],
-      totalCost: 0
+      custom: []
     },
     hazards: {
-      list: [],
-      selected: []
+      selected: [],
+      controls: []
     },
     permits: {
-      permits: [],
-      authorities: []
+      permits: []
     },
     validation: {
-      reviewers: [],
-      approvalRequired: false
+      reviewers: []
     },
     finalization: {
-      workers: [],
-      photos: [],
-      finalComments: '',
-      documentGeneration: {
-        includePhotos: true,
-        includeSignatures: true,
-        includeQRCode: true,
-        includeBranding: true,
-        includeTimestamps: true,
-        includeComments: true,
-        format: 'pdf'
-      },
-      isLocked: false,
-      completionPercentage: 0
+      consent: false,
+      signatures: []
     }
   });
 
-  // ✅ Handler pour les changements de données
-  const handleDataChange = (section: string, data: any) => {
-    console.log(`📝 Page - Mise à jour section ${section}:`, data);
+  const [userId, setUserId] = useState<string>('');
+  const [userRole, setUserRole] = useState<'worker' | 'supervisor' | 'manager' | 'admin'>('worker');
+
+  // ✅ GÉNÉRATION ID UNIQUE AU MONTAGE
+  useEffect(() => {
+    const generateId = () => {
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      return `ast_${timestamp}_${randomId}`;
+    };
+
+    const generateASTNumber = () => {
+      const tenantCode = params.tenant.toUpperCase().slice(0, 3);
+      const year = new Date().getFullYear();
+      const sequence = String(Date.now()).slice(-6);
+      return `AST-${tenantCode}-${year}-${sequence}`;
+    };
+
     setAstData(prev => ({
       ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
+      id: generateId(),
+      astNumber: generateASTNumber(),
+      createdAt: new Date().toISOString(),
+      tenantId: params.tenant
     }));
-  };
+
+    // Simulation récupération user depuis session/auth
+    setUserId(`user_${Date.now()}`);
+    setUserRole('worker'); // À adapter selon votre système d'auth
+  }, [params.tenant]);
+
+  // ✅ VALIDATION TENANT
+  const tenantConfig = DEFAULT_TENANT_CONFIGS[params.tenant] || DEFAULT_TENANT_CONFIGS.demo;
 
   return (
-    <ASTForm 
-      tenant={params.tenant} 
-      language="fr"
-      formData={astData}
-      onDataChange={handleDataChange}
-    />
+    <div style={{ minHeight: '100vh' }}>
+      {/* ✅ NOUVELLE INTERFACE SIMPLIFIÉE */}
+      <ASTForm
+        tenant={tenantConfig}
+        language="fr"
+        initialData={astData}
+        userId={userId}
+        userRole={userRole}
+      />
+    </div>
   );
 }
