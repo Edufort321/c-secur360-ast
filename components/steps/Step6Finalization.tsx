@@ -1723,7 +1723,7 @@ function Step6Finalization({
           workLocation: 'Site Construction ABC',
           client: 'Client Test 1',
           industry: 'construction',
-          status: 'completed',
+          status: 'completed' as const,
           createdAt: '2024-01-15T10:00:00Z',
           lastModified: '2024-01-15T16:30:00Z',
           hazardCount: 5,
@@ -1741,7 +1741,7 @@ function Step6Finalization({
           workLocation: 'Usine Manufacturière XYZ',
           client: 'Client Test 2',
           industry: 'manufacturing',
-          status: 'active',
+          status: 'active' as const,
           createdAt: '2024-02-01T09:00:00Z',
           lastModified: '2024-02-05T14:20:00Z',
           hazardCount: 8,
@@ -1750,6 +1750,23 @@ function Step6Finalization({
           photoCount: 22,
           permitCount: 5,
           completionPercentage: 85
+        },
+        {
+          id: '3',
+          astNumber: `AST-${tenant}-2024-003`,
+          projectNumber: 'PRJ-2024-003',
+          workLocation: 'Chantier Électrique DEF',
+          client: 'Client Test 3',
+          industry: 'electrical',
+          status: 'draft' as const,
+          createdAt: '2024-03-10T08:00:00Z',
+          lastModified: '2024-03-12T11:45:00Z',
+          hazardCount: 3,
+          equipmentCount: 7,
+          workerCount: 4,
+          photoCount: 8,
+          permitCount: 2,
+          completionPercentage: 60
         }
       ].filter(item => 
         item.astNumber.toLowerCase().includes(query.toLowerCase()) ||
