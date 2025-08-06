@@ -59,7 +59,7 @@ const translations = {
     language: "Langue",
     french: "Français",
     english: "English",
-    // ✅ TRADUCTIONS STEPS MANQUANTES
+    // ✅ TRADUCTIONS STEPS COMPLÈTES
     steps: {
       step1: {
         title: "Informations Projet",
@@ -193,7 +193,7 @@ const steps = [
   }
 ];
 
-// =================== HOOK DÉTECTION MOBILE ===================
+// =================== HOOK DÉTECTION MOBILE OPTIMISÉ ===================
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -236,7 +236,7 @@ export default function ASTForm({
   onDataChange
 }: ASTFormProps) {
   
-  // =================== GESTION DE LA LANGUE ===================
+  // =================== GESTION DE LA LANGUE OPTIMISÉE ===================
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
@@ -249,7 +249,7 @@ export default function ASTForm({
   // =================== DÉTECTION MOBILE ===================
   const isMobile = useIsMobile();
 
-  // =================== ÉTATS PRINCIPAUX ===================
+  // =================== ÉTATS PRINCIPAUX STABLES ===================
   const [currentStep, setCurrentStep] = useState(1);
   const [isOnline, setIsOnline] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -260,7 +260,7 @@ export default function ASTForm({
   const [copied, setCopied] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // =================== DONNÉES AST ===================
+  // =================== DONNÉES AST STABLES ===================
   const [astData, setAstData] = useState(() => ({
     ...formData,
     id: formData.id || `ast_${Date.now()}`,
@@ -273,7 +273,15 @@ export default function ASTForm({
     language: currentLanguage
   }));
 
-  // =================== FONCTIONS UTILITAIRES ===================
+  // =================== RÉFÉRENCE POUR ÉVITER RE-RENDERS ===================
+  const stableFormDataRef = useRef(astData);
+  
+  // Mise à jour de la ref seulement quand nécessaire
+  useEffect(() => {
+    stableFormDataRef.current = astData;
+  }, [astData]);
+
+  // =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
   const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
     if (newLanguage !== currentLanguage) {
       setCurrentLanguage(newLanguage);
@@ -337,7 +345,7 @@ export default function ASTForm({
     }
   }, [astData, currentStep]);
 
-  // =================== NAVIGATION ===================
+  // =================== NAVIGATION OPTIMISÉE ===================
   const handlePrevious = useCallback(() => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   }, []);
@@ -352,78 +360,77 @@ export default function ASTForm({
     setCurrentStep(step);
   }, []);
 
-  // =================== HANDLERS DE DONNÉES ===================
+  // =================== HANDLERS OPTIMISÉS ANTI-ÉJECTION ===================
   
-  // ✅ HANDLERS DIRECTS POUR ÉVITER LES BOUCLES INFINIES
-  const handleStep1DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step1 - Handler:', { section, data });
+  // ✅ HANDLER DIRECT STEP1 - AUCUN useCallback POUR ÉVITER RE-RENDER
+  const handleStep1DataChange = (section: string, data: any) => {
+    console.log('🔥 ASTForm Step1 - Handler DIRECT:', { section, data });
     
+    // Mise à jour immédiate sans callback
+    setAstData((prev: any) => {
+      const newData = {
+        ...prev,
+        [section]: data,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Sync vers parent avec requestAnimationFrame pour éviter conflits
+      requestAnimationFrame(() => {
+        try {
+          onDataChange(section, data);
+        } catch (error) {
+          console.error('Erreur sync Step1:', error);
+        }
+      });
+      
+      return newData;
+    });
+    
+    setHasUnsavedChanges(true);
+  };
+
+  // ✅ HANDLERS DIRECTS POUR TOUS LES AUTRES STEPS
+  const handleStep2DataChange = (section: string, data: any) => {
     setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
     }));
-    
     onDataChange(section, data);
     setHasUnsavedChanges(true);
-  }, [onDataChange]);
+  };
 
-  const handleStep2DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step2 - Handler:', { section, data });
-    
+  const handleStep3DataChange = (section: string, data: any) => {
     setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
     }));
-    
     onDataChange(section, data);
     setHasUnsavedChanges(true);
-  }, [onDataChange]);
+  };
 
-  const handleStep3DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step3 - Handler:', { section, data });
-    
+  const handleStep4DataChange = (section: string, data: any) => {
     setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
     }));
-    
     onDataChange(section, data);
     setHasUnsavedChanges(true);
-  }, [onDataChange]);
+  };
 
-  const handleStep4DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step4 - Handler:', { section, data });
-    
+  const handleStep5DataChange = (section: string, data: any) => {
     setAstData((prev: any) => ({
       ...prev,
       [section]: data,
       updatedAt: new Date().toISOString()
     }));
-    
     onDataChange(section, data);
     setHasUnsavedChanges(true);
-  }, [onDataChange]);
+  };
 
-  const handleStep5DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step5 - Handler:', { section, data });
-    
-    setAstData((prev: any) => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString()
-    }));
-    
-    onDataChange(section, data);
-    setHasUnsavedChanges(true);
-  }, [onDataChange]);
-
-  // ✅ STEP 6 HANDLER - FIX CRITIQUE : HANDLER DIRECT SANS DÉBOUNCE
-  const handleStep6DataChange = useCallback((section: string, data: any) => {
-    console.log('🔥 ASTForm Step6 - Handler DIRECT:', { section, data });
-    
+  const handleStep6DataChange = (section: string, data: any) => {
     setAstData((prev: any) => {
       const currentSection = (prev as any)[section] || {};
       const newSection = { ...currentSection, ...data };
@@ -434,13 +441,12 @@ export default function ASTForm({
         updatedAt: new Date().toISOString()
       };
       
-      console.log('✅ ASTForm Step6 - Mise à jour DIRECTE réussie:', { section, newSection });
       return newState;
     });
     
     onDataChange(section, data);
     setHasUnsavedChanges(true);
-  }, [onDataChange]);
+  };
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
   const handleCopyAST = useCallback(async () => {
@@ -461,7 +467,7 @@ export default function ASTForm({
     }));
   }, []);
 
-  // =================== STATUS BADGE ===================
+  // =================== STATUS BADGE OPTIMISÉ ===================
   const getStatusBadge = useCallback(() => {
     const statusConfig = {
       'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
@@ -492,189 +498,6 @@ export default function ASTForm({
       </div>
     );
   }, [astData.status, t.status, isMobile]);
-
-  // =================== EFFETS ===================
-  useEffect(() => {
-    const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
-    if (savedLanguage && savedLanguage !== currentLanguage) {
-      setCurrentLanguage(savedLanguage);
-    }
-  }, [currentLanguage]);
-
-  useEffect(() => {
-    if (hasUnsavedChanges) {
-      const saveTimer = setTimeout(() => {
-        console.log('🔄 Sauvegarde automatique...');
-        setHasUnsavedChanges(false);
-      }, 1000);
-
-      return () => clearTimeout(saveTimer);
-    }
-  }, [hasUnsavedChanges]);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // =================== COMPOSANTS MÉMORISÉS ===================
-  const MemoizedStep1 = React.memo(Step1ProjectInfo);
-  const MemoizedStep2 = React.memo(Step2Equipment);
-  const MemoizedStep3 = React.memo(Step3Hazards);
-  const MemoizedStep4 = React.memo(Step4Permits);
-  const MemoizedStep5 = React.memo(Step5Validation);
-  const MemoizedStep6 = React.memo(Step6Finalization);
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
-  const LanguageSelector = () => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      background: 'rgba(15, 23, 42, 0.8)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(100, 116, 139, 0.3)',
-      borderRadius: '12px',
-      padding: '8px 12px',
-      position: 'relative'
-    }}>
-      <span style={{
-        fontSize: '12px',
-        color: '#94a3b8',
-        fontWeight: '500'
-      }}>
-        {t.language}
-      </span>
-      
-      <div style={{
-        display: 'flex',
-        background: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '8px',
-        padding: '2px',
-        gap: '2px'
-      }}>
-        <button
-          onClick={() => handleLanguageChange('fr')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'fr' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          FR
-        </button>
-        
-        <button
-          onClick={() => handleLanguageChange('en')}
-          style={{
-            padding: '6px 10px',
-            borderRadius: '6px',
-            border: 'none',
-            background: currentLanguage === 'en' 
-              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-              : 'transparent',
-            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
-            fontSize: '11px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            minWidth: '30px'
-          }}
-        >
-          EN
-        </button>
-      </div>
-    </div>
-  );
-
-  // =================== RENDU DU CONTENU DES STEPS ===================
-  const StepContent = React.memo(() => {
-    console.log('🔥 StepContent render - Step:', currentStep);
-    
-    const stepProps = {
-      formData: astData,
-      language: currentLanguage,
-      tenant: tenant,
-      errors: {}
-    };
-    
-    switch (currentStep) {
-      case 1:
-        return (
-          <MemoizedStep1
-            key="step1"
-            {...stepProps}
-            onDataChange={handleStep1DataChange}
-          />
-        );
-      case 2:
-        return (
-          <MemoizedStep2
-            key="step2"
-            {...stepProps}
-            onDataChange={handleStep2DataChange}
-          />
-        );
-      case 3:
-        return (
-          <MemoizedStep3
-            key="step3"
-            {...stepProps}
-            onDataChange={handleStep3DataChange}
-          />
-        );
-      case 4:
-        return (
-          <MemoizedStep4
-            key="step4"
-            {...stepProps}
-            onDataChange={handleStep4DataChange}
-            province={'QC'}
-            userRole={'worker'}
-            touchOptimized={true}
-            compactMode={false}
-            onPermitChange={(permits) => {
-              handleStep4DataChange('permits', permits);
-            }}
-            initialPermits={[]}
-          />
-        );
-      case 5:
-        return (
-          <MemoizedStep5
-            key="step5"
-            {...stepProps}
-            onDataChange={handleStep5DataChange}
-          />
-        );
-      case 6:
-        return (
-          <MemoizedStep6
-            key="step6"
-            {...stepProps}
-            onDataChange={handleStep6DataChange}
-          />
-        );
-      default:
-        return null;
-    }
-  });
 
   // =================== HEADER MOBILE ULTRA-RESPONSIVE ===================
   const MobileHeader = () => (
@@ -854,7 +677,7 @@ export default function ASTForm({
     </header>
   );
 
-  // =================== HEADER DESKTOP ===================
+  // =================== HEADER DESKTOP PREMIUM ===================
   const DesktopHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
@@ -903,8 +726,8 @@ export default function ASTForm({
                 alt="C-Secur360"
                 className="logo-glow"
                 style={{ 
-                  width: '200px', 
-                  height: '200px', 
+                  width: '80px', 
+                  height: '80px', 
                   objectFit: 'contain',
                   filter: 'brightness(1.2) contrast(1.1)'
                 }}
@@ -1091,6 +914,77 @@ export default function ASTForm({
         </div>
       </div>
     </header>
+  );
+
+  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
+  const LanguageSelector = () => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: 'rgba(15, 23, 42, 0.8)',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(100, 116, 139, 0.3)',
+      borderRadius: '12px',
+      padding: '8px 12px',
+      position: 'relative'
+    }}>
+      <span style={{
+        fontSize: '12px',
+        color: '#94a3b8',
+        fontWeight: '500'
+      }}>
+        {t.language}
+      </span>
+      
+      <div style={{
+        display: 'flex',
+        background: 'rgba(30, 41, 59, 0.8)',
+        borderRadius: '8px',
+        padding: '2px',
+        gap: '2px'
+      }}>
+        <button
+          onClick={() => handleLanguageChange('fr')}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: 'none',
+            background: currentLanguage === 'fr' 
+              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+              : 'transparent',
+            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
+            fontSize: '11px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '30px'
+          }}
+        >
+          FR
+        </button>
+        
+        <button
+          onClick={() => handleLanguageChange('en')}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: 'none',
+            background: currentLanguage === 'en' 
+              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+              : 'transparent',
+            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
+            fontSize: '11px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '30px'
+          }}
+        >
+          EN
+        </button>
+      </div>
+    </div>
   );
 
   // =================== NAVIGATION STEPS MOBILE AVEC TRADUCTIONS DYNAMIQUES ===================
@@ -1316,6 +1210,88 @@ export default function ASTForm({
     </div>
   );
 
+  // =================== COMPOSANTS MÉMORISÉS POUR PERFORMANCE ===================
+  const MemoizedStep1 = React.memo(Step1ProjectInfo);
+  const MemoizedStep2 = React.memo(Step2Equipment);
+  const MemoizedStep3 = React.memo(Step3Hazards);
+  const MemoizedStep4 = React.memo(Step4Permits);
+  const MemoizedStep5 = React.memo(Step5Validation);
+  const MemoizedStep6 = React.memo(Step6Finalization);
+
+  // =================== RENDU DU CONTENU DES STEPS OPTIMISÉ ===================
+  const StepContent = React.memo(() => {
+    console.log('🔥 StepContent render - Step:', currentStep);
+    
+    // ✅ PROPS STABLES SANS RE-CRÉATION À CHAQUE RENDER
+    const stepProps = {
+      formData: stableFormDataRef.current,
+      language: currentLanguage,
+      tenant: tenant,
+      errors: {}
+    };
+    
+    switch (currentStep) {
+      case 1:
+        return (
+          <MemoizedStep1
+            key="step1"
+            {...stepProps}
+            onDataChange={handleStep1DataChange}
+          />
+        );
+      case 2:
+        return (
+          <MemoizedStep2
+            key="step2"
+            {...stepProps}
+            onDataChange={handleStep2DataChange}
+          />
+        );
+      case 3:
+        return (
+          <MemoizedStep3
+            key="step3"
+            {...stepProps}
+            onDataChange={handleStep3DataChange}
+          />
+        );
+      case 4:
+        return (
+          <MemoizedStep4
+            key="step4"
+            {...stepProps}
+            onDataChange={handleStep4DataChange}
+            province={'QC'}
+            userRole={'worker'}
+            touchOptimized={true}
+            compactMode={false}
+            onPermitChange={(permits) => {
+              handleStep4DataChange('permits', permits);
+            }}
+            initialPermits={[]}
+          />
+        );
+      case 5:
+        return (
+          <MemoizedStep5
+            key="step5"
+            {...stepProps}
+            onDataChange={handleStep5DataChange}
+          />
+        );
+      case 6:
+        return (
+          <MemoizedStep6
+            key="step6"
+            {...stepProps}
+            onDataChange={handleStep6DataChange}
+          />
+        );
+      default:
+        return null;
+    }
+  });
+
   // =================== NAVIGATION MOBILE FIXE ===================
   const MobileNavigation = () => (
     <div style={{
@@ -1481,7 +1457,39 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== CSS MOBILE OPTIMISÉ ===================
+  // =================== EFFETS ET CLEANUP ===================
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
+    if (savedLanguage && savedLanguage !== currentLanguage) {
+      setCurrentLanguage(savedLanguage);
+    }
+  }, [currentLanguage]);
+
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      const saveTimer = setTimeout(() => {
+        console.log('🔄 Sauvegarde automatique...');
+        setHasUnsavedChanges(false);
+      }, 1000);
+
+      return () => clearTimeout(saveTimer);
+    }
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // =================== CSS MOBILE OPTIMISÉ COMPLET ===================
   const mobileOptimizedCSS = `
     @keyframes float {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -1494,8 +1502,9 @@ export default function ASTForm({
     }
     
     @keyframes shine {
-      0% { background-position: -200px 0; }
-      100% { background-position: 200px 0; }
+      0% { left: -100%; }
+      50% { left: 100%; }
+      100% { left: 100%; }
     }
     
     @keyframes slideIn {
@@ -1522,6 +1531,9 @@ export default function ASTForm({
     .slide-in { animation: slideIn 0.5s ease-out; }
     .slide-in-right { animation: slideIn 0.6s ease-out; }
     .glow-effect { animation: glow 4s ease-in-out infinite; }
+    .logo-glow { 
+      filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5)); 
+    }
     
     .glass-effect {
       background: rgba(15, 23, 42, 0.7);
@@ -1565,6 +1577,13 @@ export default function ASTForm({
       box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
     }
     
+    .btn-premium:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    /* =================== RESPONSIVE OPTIMISÉ =================== */
     @media (max-width: 768px) {
       .step-grid {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -1589,6 +1608,19 @@ export default function ASTForm({
       .mobile-only {
         display: block !important;
       }
+
+      .text-gradient {
+        font-size: 28px !important;
+      }
+
+      .float-animation {
+        padding: 20px !important;
+      }
+
+      .logo-glow {
+        width: 60px !important;
+        height: 60px !important;
+      }
     }
     
     @media (max-width: 480px) {
@@ -1599,6 +1631,19 @@ export default function ASTForm({
       .glass-effect {
         padding: 16px !important;
         margin: 8px !important;
+      }
+
+      .text-gradient {
+        font-size: 24px !important;
+      }
+
+      .float-animation {
+        padding: 16px !important;
+      }
+
+      .logo-glow {
+        width: 48px !important;
+        height: 48px !important;
       }
     }
     
@@ -1612,11 +1657,55 @@ export default function ASTForm({
       transform: scale(0.98);
     }
     
+    /* =================== FIX iOS ZOOM =================== */
     @media screen and (-webkit-min-device-pixel-ratio: 0) {
-      .premium-input,
-      .premium-select,
-      .premium-textarea {
+      input, select, textarea {
         font-size: 16px !important;
+      }
+    }
+
+    /* =================== DARK THEME FIXES =================== */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea, [contenteditable] {
+      -webkit-user-select: text !important;
+      -khtml-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* =================== SCROLL OPTIMIZATIONS =================== */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+    /* =================== PRINT STYLES =================== */
+    @media print {
+      .desktop-only, .mobile-only {
+        display: block !important;
+      }
+      
+      .glass-effect {
+        background: white !important;
+        border: 1px solid #ccc !important;
+      }
+      
+      .text-gradient {
+        color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
       }
     }
   `;
