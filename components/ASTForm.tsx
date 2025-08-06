@@ -1131,8 +1131,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     <select 
       className="premium-select" 
       value={localState.industry}
-      onChange={(e) => updateLocalState('industry', e.target.value)}
-      onBlur={(e) => syncToParent('industry', e.target.value)}
+      onChange={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        updateLocalState('industry', e.target.value);
+      }}
     >
       <option value="electrical">{t.electrical}</option>
       <option value="construction">{t.construction}</option>
