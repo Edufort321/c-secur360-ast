@@ -1156,7 +1156,7 @@ export default function ASTForm({
               lineHeight: '1.2',
               textAlign: 'center'
             }}>
-              {t.steps[step.titleKey]?.title}
+              {(t.steps as any)[step.titleKey]?.title}
             </div>
           </div>
         ))}
@@ -1299,7 +1299,7 @@ export default function ASTForm({
               margin: '0 0 4px',
               lineHeight: '1.2'
             }}>
-              {t.steps[step.titleKey]?.title}
+              {(t.steps as any)[step.titleKey]?.title}
             </h3>
             
             <p style={{
@@ -1308,7 +1308,7 @@ export default function ASTForm({
               margin: 0,
               lineHeight: '1.3'
             }}>
-              {t.steps[step.titleKey]?.subtitle}
+              {(t.steps as any)[step.titleKey]?.subtitle}
             </p>
           </div>
         ))}
@@ -1661,10 +1661,10 @@ export default function ASTForm({
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                {t.steps[steps[currentStep - 1]?.titleKey]?.title}
+                {(t.steps as any)[steps[currentStep - 1]?.titleKey]?.title}
               </h2>
               <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
-                {t.steps[steps[currentStep - 1]?.titleKey]?.subtitle}
+                {(t.steps as any)[steps[currentStep - 1]?.titleKey]?.subtitle}
               </p>
             </div>
           )}
