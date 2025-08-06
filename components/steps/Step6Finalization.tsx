@@ -117,7 +117,7 @@ interface DocumentGeneration {
   includeHazards: boolean;
   includeEquipment: boolean;
   format: 'pdf' | 'word' | 'html';
-  template: 'standard' | 'detailed' | 'executive' | 'mobile';
+  template: 'standard' | 'executive' | 'technical' | 'compact';
 }
 
 interface GeneratedReport {
@@ -298,7 +298,7 @@ const translations = {
     generateStandardReport: "📄 Rapport Standard",
     generateExecutiveReport: "👔 Résumé Exécutif",
     generateTechnicalReport: "🔧 Rapport Technique",
-    generateCompactReport: "📱 Version Mobile",
+    generateCompactReport: "📱 Version Compacte",
     
     // Partage et distribution
     sharing: "Partage AST",
@@ -460,7 +460,7 @@ const translations = {
     generateStandardReport: "📄 Standard Report",
     generateExecutiveReport: "👔 Executive Summary",
     generateTechnicalReport: "🔧 Technical Report", 
-    generateCompactReport: "📱 Mobile Version",
+    generateCompactReport: "📱 Compact Version",
     
     // Sharing and distribution
     sharing: "JSA Sharing",
@@ -613,7 +613,7 @@ function Step6Finalization({
       includeHazards: true,
       includeEquipment: true,
       format: 'pdf' as const,
-      template: 'detailed' as const
+      template: 'standard' as const
     },
     isLocked: false,
     completionPercentage: 0,
@@ -1468,7 +1468,7 @@ function Step6Finalization({
     </div>
     
     <!-- Détail par steps -->
-    ${reportType === 'detailed' || reportType === 'technical' ? `
+    ${reportType === 'standard' || reportType === 'technical' ? `
     <div class="section">
         <div class="section-header">
             <div class="section-title">📋 ${language === 'en' ? 'DETAILED BREAKDOWN BY STEPS' : 'DÉTAIL PAR ÉTAPES'}</div>
@@ -3195,7 +3195,7 @@ function Step6Finalization({
                   ) : (
                     <FileText size={20} />
                   )}
-                  {t.generateStandardReport}
+                  {language === 'fr' ? 'Rapport Standard' : 'Standard Report'}
                 </button>
 
                 <button
@@ -3208,7 +3208,7 @@ function Step6Finalization({
                   ) : (
                     <Award size={20} />
                   )}
-                  {t.generateExecutiveReport}
+                  {language === 'fr' ? 'Résumé Exécutif' : 'Executive Summary'}
                 </button>
 
                 <button
@@ -3221,7 +3221,7 @@ function Step6Finalization({
                   ) : (
                     <Cog size={20} />
                   )}
-                  {t.generateTechnicalReport}
+                  {language === 'fr' ? 'Rapport Technique' : 'Technical Report'}
                 </button>
 
                 <button
@@ -3230,7 +3230,7 @@ function Step6Finalization({
                   className={`ast-button button-secondary ${isGeneratingPDF ? 'button-disabled' : ''}`}
                 >
                   <Smartphone size={20} />
-                  {t.generateCompactReport}
+                  {language === 'fr' ? 'Version Compacte' : 'Compact Version'}
                 </button>
               </div>
 
