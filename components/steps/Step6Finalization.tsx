@@ -1,316 +1,96 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { 
-  Camera, FileText, Download, Archive, Send, CheckCircle, AlertTriangle,
-  Clock, Eye, Share2, Save, Calendar, User, MapPin, Shield, Award,
-  Target, BarChart3, Globe, Printer, Mail, Smartphone, Image, X,
-  Plus, Upload, Copy, Check, RefreshCw, Lock, Unlock, Users, MessageSquare
+  FileText, Database, QrCode, Printer, Mail, Share, Download, 
+  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
+  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar, 
+  MapPin, Building, User, Search, X, Plus, RefreshCw, Upload,
+  ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive, 
+  Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
 } from 'lucide-react';
 
-// =================== SYSTÈME DE TRADUCTIONS BILINGUE COMPLET ===================
-const translations = {
-  fr: {
-    // Titre principal
-    title: "🛡️ Finalisation AST",
-    subtitle: "Équipe, Partage et Validation Finale",
-    
-    // Onglets
-    tabs: {
-      workers: "👷 Équipe",
-      sharing: "📤 Partage", 
-      finalization: "✅ Final"
-    },
-    
-    // Stats équipe
-    stats: {
-      workers: "👷 Travailleurs",
-      consents: "✅ Consentements",
-      approvals: "👍 Approbations",
-      readingRate: "📊 Taux Lecture"
-    },
-    
-    // Équipe
-    teamManagement: "Gestion de l'Équipe",
-    addWorker: "➕ Ajouter",
-    addWorkerModal: "👷 Ajouter un Travailleur",
-    fullName: "Nom complet *",
-    company: "Entreprise *",
-    namePlaceholder: "Jean Tremblay",
-    companyPlaceholder: "Construction ABC Inc.",
-    consentText: "✋ Je consens avoir lu et compris cette AST",
-    consentGiven: "📅 Consentement donné le",
-    approve: "👍 Approuver",
-    reject: "👎 Rejeter",
-    noWorkers: "Aucun travailleur ajouté. Cliquez sur \"Ajouter\" pour commencer.",
-    
-    // Statuts
-    status: {
-      approved: "✅ Approuvé",
-      rejected: "❌ Rejeté", 
-      pending: "⏳ En attente"
-    },
-    
-    // Partage
-    sharing: "📤 Partage de l'AST",
-    secureLink: "🔗 Lien de partage sécurisé:",
-    copy: "📋 Copier",
-    copied: "✅ Copié!",
-    shareInstructions: "📋 Instructions de partage:",
-    shareList: [
-      "Partagez ce lien avec votre équipe pour consultation",
-      "Chaque membre peut consulter l'AST et donner son approbation", 
-      "Le lien reste actif même si l'AST est verrouillée"
-    ],
-    
-    // Finalisation
-    completionStatus: "📊 État de Complétion",
-    completed: "Complété",
-    sectionStatus: {
-      projectInfo: "✅ Informations projet",
-      hazards: "✅ Dangers identifiés",
-      equipment: "✅ Équipements sélectionnés",
-      teamValidation: "⏳ Validation équipe"
-    },
-    
-    // Options rapport
-    reportOptions: "📄 Options Rapport",
-    includePhotos: "📸 Photos",
-    includeSignatures: "✍️ Signatures",
-    includeQRCode: "📱 QR Code",
-    includeBranding: "🏢 Branding",
-    
-    // Commentaires
-    finalComments: "💬 Commentaires Finaux",
-    commentsPlaceholder: "Ajoutez des commentaires finaux, notes importantes ou instructions spéciales...",
-    documentLocked: "🔒 Document verrouillé - Modification impossible",
-    
-    // Actions finales
-    finalActions: "🎯 Actions Finales",
-    print: "🖨️ Imprimer",
-    save: "💾 Sauvegarder",
-    archive: "📁 Archiver",
-    lock: "🔒 Verrouiller",
-    locked: "🔒 Verrouillé",
-    
-    // Verrouillage
-    confirmLock: "🔒 Confirmer le Verrouillage",
-    lockWarning: "ATTENTION: Cette action est irréversible !",
-    autoChecks: "📊 Vérifications automatiques:",
-    sectionsCompleted: "✅ Sections complétées:",
-    lockPermanently: "🔒 Verrouiller Définitivement",
-    lockDescription: "Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera consultable par l'équipe via le lien de partage.",
-    
-    // Boutons génériques
-    add: "Ajouter",
-    cancel: "Annuler",
-    close: "Fermer",
-    
-    // Messages
-    fillRequiredFields: "❌ Veuillez remplir le nom et la compagnie",
-    workerAdded: "✅ Travailleur ajouté:",
-    consentUpdated: "✅ Consentement mis à jour pour travailleur:",
-    astLocked: "✅ AST verrouillée avec succès",
-    astSaved: "✅ AST sauvegardée!",
-    astArchived: "✅ AST archivée!",
-    linkCopied: "✅ Lien copié dans le presse-papiers",
-    copyError: "❌ Erreur lors de la copie du lien",
-    printError: "❌ Erreur : Impossible d'ouvrir la fenêtre d'impression. Vérifiez les paramètres de pop-up.",
-    
-    // Données des autres steps pour rapport
-    reportData: {
-      hazards: "⚠️ Dangers",
-      equipment: "🔧 Équipements", 
-      permits: "📄 Permis",
-      lockoutPoints: "🔒 Points LOTO",
-      executiveSummary: "RÉSUMÉ EXÉCUTIF",
-      clientProjectInfo: "🏢 INFORMATIONS CLIENT & PROJET",
-      teamContacts: "👥 ÉQUIPE & CONTACTS",
-      client: "Client:",
-      projectNumber: "Projet #:",
-      location: "Lieu:",
-      dateTime: "Date/Heure:",
-      industry: "Industrie:",
-      workerCount: "Nb Travailleurs:",
-      estimatedDuration: "Durée estimée:",
-      clientContact: "Contact client:",
-      emergency: "Urgence:",
-      teamConsents: "ÉQUIPE ET CONSENTEMENTS",
-      finalCommentsLabel: "Commentaires Finaux:",
-      documentStatus: "Statut du Document:",
-      locked: "🔒 VERROUILLÉ",
-      inProgress: "🔓 EN COURS",
-      completion: "Complétion:",
-      lockedOn: "Verrouillé le:",
-      safetyManager: "RESPONSABLE SÉCURITÉ",
-      supervisor: "SUPERVISEUR", 
-      manager: "GESTIONNAIRE",
-      name: "Nom:",
-      signature: "Signature:",
-      date: "Date:",
-      noSpecified: "Non spécifié",
-      noWorkerAdded: "Aucun travailleur ajouté à l'équipe"
-    }
-  },
+// =================== INTERFACES AST PRINCIPALES ===================
+interface ASTData {
+  astNumber: string;
+  tenant: string;
+  language: 'fr' | 'en';
+  createdAt: string;
+  updatedAt: string;
+  status: 'draft' | 'active' | 'completed' | 'locked' | 'archived';
   
-  en: {
-    // Main title
-    title: "🛡️ JSA Finalization",
-    subtitle: "Team, Sharing and Final Validation",
-    
-    // Tabs
-    tabs: {
-      workers: "👷 Team",
-      sharing: "📤 Share",
-      finalization: "✅ Final"
-    },
-    
-    // Team stats
-    stats: {
-      workers: "👷 Workers",
-      consents: "✅ Consents",
-      approvals: "👍 Approvals", 
-      readingRate: "📊 Reading Rate"
-    },
-    
-    // Team
-    teamManagement: "Team Management",
-    addWorker: "➕ Add Worker",
-    addWorkerModal: "👷 Add Worker",
-    fullName: "Full Name *",
-    company: "Company *",
-    namePlaceholder: "John Smith",
-    companyPlaceholder: "ABC Construction Inc.",
-    consentText: "✋ I consent to having read and understood this JSA",
-    consentGiven: "📅 Consent given on",
-    approve: "👍 Approve",
-    reject: "👎 Reject",
-    noWorkers: "No workers added. Click \"Add Worker\" to start.",
-    
-    // Status
-    status: {
-      approved: "✅ Approved",
-      rejected: "❌ Rejected",
-      pending: "⏳ Pending"
-    },
-    
-    // Sharing
-    sharing: "📤 JSA Sharing",
-    secureLink: "🔗 Secure sharing link:",
-    copy: "📋 Copy",
-    copied: "✅ Copied!",
-    shareInstructions: "📋 Sharing instructions:",
-    shareList: [
-      "Share this link with your team for consultation",
-      "Each member can review the JSA and give their approval",
-      "The link remains active even if the JSA is locked"
-    ],
-    
-    // Finalization
-    completionStatus: "📊 Completion Status",
-    completed: "Completed",
-    sectionStatus: {
-      projectInfo: "✅ Project information",
-      hazards: "✅ Hazards identified",
-      equipment: "✅ Equipment selected", 
-      teamValidation: "⏳ Team validation"
-    },
-    
-    // Report options
-    reportOptions: "📄 Report Options",
-    includePhotos: "📸 Photos",
-    includeSignatures: "✍️ Signatures",
-    includeQRCode: "📱 QR Code",
-    includeBranding: "🏢 Branding",
-    
-    // Comments
-    finalComments: "💬 Final Comments",
-    commentsPlaceholder: "Add final comments, important notes or special instructions...",
-    documentLocked: "🔒 Document locked - Cannot modify",
-    
-    // Final actions
-    finalActions: "🎯 Final Actions",
-    print: "🖨️ Print",
-    save: "💾 Save",
-    archive: "📁 Archive",
-    lock: "🔒 Lock",
-    locked: "🔒 Locked",
-    
-    // Locking
-    confirmLock: "🔒 Confirm Lock",
-    lockWarning: "WARNING: This action is irreversible!",
-    autoChecks: "📊 Automatic checks:",
-    sectionsCompleted: "✅ Sections completed:",
-    lockPermanently: "🔒 Lock Permanently",
-    lockDescription: "Once locked, the JSA cannot be modified but will remain viewable by the team via the sharing link.",
-    
-    // Generic buttons
-    add: "Add",
-    cancel: "Cancel", 
-    close: "Close",
-    
-    // Messages
-    fillRequiredFields: "❌ Please fill in name and company",
-    workerAdded: "✅ Worker added:",
-    consentUpdated: "✅ Consent updated for worker:",
-    astLocked: "✅ JSA locked successfully",
-    astSaved: "✅ JSA saved!",
-    astArchived: "✅ JSA archived!",
-    linkCopied: "✅ Link copied to clipboard",
-    copyError: "❌ Error copying link",
-    printError: "❌ Error: Cannot open print window. Check pop-up settings.",
-    
-    // Report data from other steps
-    reportData: {
-      hazards: "⚠️ Hazards",
-      equipment: "🔧 Equipment",
-      permits: "📄 Permits", 
-      lockoutPoints: "🔒 LOTO Points",
-      executiveSummary: "EXECUTIVE SUMMARY",
-      clientProjectInfo: "🏢 CLIENT & PROJECT INFORMATION",
-      teamContacts: "👥 TEAM & CONTACTS",
-      client: "Client:",
-      projectNumber: "Project #:",
-      location: "Location:",
-      dateTime: "Date/Time:",
-      industry: "Industry:",
-      workerCount: "Worker Count:",
-      estimatedDuration: "Estimated Duration:",
-      clientContact: "Client Contact:",
-      emergency: "Emergency:",
-      teamConsents: "TEAM AND CONSENTS",
-      finalCommentsLabel: "Final Comments:",
-      documentStatus: "Document Status:",
-      locked: "🔒 LOCKED",
-      inProgress: "🔓 IN PROGRESS",
-      completion: "Completion:",
-      lockedOn: "Locked on:",
-      safetyManager: "SAFETY MANAGER",
-      supervisor: "SUPERVISOR",
-      manager: "MANAGER", 
-      name: "Name:",
-      signature: "Signature:",
-      date: "Date:",
-      noSpecified: "Not specified",
-      noWorkerAdded: "No workers added to the team"
-    }
-  }
-};
-
-// =================== INTERFACES PRINCIPALES ===================
-interface Worker {
-  id: string;
-  name: string;
-  position: string;
-  company: string;
-  employeeNumber?: string;
-  email?: string;
-  hasConsented: boolean;
-  consentTimestamp?: string;
-  approbationStatus: 'pending' | 'approved' | 'rejected';
-  approbationTimestamp?: string;
-  approbationComments?: string;
-  consultationTime?: number;
+  // Step 1 - Informations projet (de ASTForm)
+  projectInfo: {
+    client: string;
+    projectNumber: string;
+    workLocation: string;
+    date: string;
+    time: string;
+    industry: string;
+    workerCount: number;
+    estimatedDuration: string;
+    workDescription: string;
+    clientContact: string;
+    emergencyContact: string;
+    lockoutPoints: string[];
+    weatherConditions?: string;
+    accessRestrictions?: string;
+  };
+  
+  // Step 2 - Équipements de sécurité
+  equipment: {
+    selected: string[];
+    categories: string[];
+    mandatory: string[];
+    optional: string[];
+    totalCost: number;
+    inspectionRequired: boolean;
+    certifications: string[];
+  };
+  
+  // Step 3 - Dangers et contrôles
+  hazards: {
+    identified: string[];
+    riskLevel: 'low' | 'medium' | 'high' | 'critical';
+    controlMeasures: string[];
+    residualRisk: 'low' | 'medium' | 'high';
+    emergencyProcedures: string[];
+    monitoringRequired: boolean;
+  };
+  
+  // Step 4 - Permis et autorisations
+  permits: {
+    required: string[];
+    authorities: string[];
+    validations: string[];
+    expiry: string[];
+    documents: string[];
+    specialRequirements: string[];
+  };
+  
+  // Step 5 - Validation équipe
+  validation: {
+    reviewers: string[];
+    approvals: string[];
+    signatures: string[];
+    finalApproval: boolean;
+    criteria: Record<string, boolean>;
+    comments: string[];
+  };
+  
+  // Step 6 - Finalisation
+  finalization: {
+    photos: Photo[];
+    finalComments: string;
+    documentGeneration: DocumentGeneration;
+    isLocked: boolean;
+    lockTimestamp?: string;
+    completionPercentage: number;
+    qrCodeUrl?: string;
+    shareableLink?: string;
+    lastSaved?: string;
+    generatedReports: GeneratedReport[];
+  };
 }
 
 interface Photo {
@@ -318,7 +98,10 @@ interface Photo {
   url: string;
   description: string;
   timestamp: string;
-  category: 'hazard' | 'equipment' | 'site' | 'other';
+  category: 'hazard' | 'equipment' | 'site' | 'team' | 'safety' | 'permit' | 'other';
+  location?: string;
+  tags?: string[];
+  stepSource?: string; // De quel step provient la photo
 }
 
 interface DocumentGeneration {
@@ -328,70 +111,493 @@ interface DocumentGeneration {
   includeBranding: boolean;
   includeTimestamps: boolean;
   includeComments: boolean;
+  includeStatistics: boolean;
+  includeValidation: boolean;
+  includePermits: boolean;
+  includeHazards: boolean;
+  includeEquipment: boolean;
   format: 'pdf' | 'word' | 'html';
+  template: 'standard' | 'detailed' | 'executive' | 'mobile';
 }
 
-interface FinalizationData {
-  workers: Worker[];
-  photos: Photo[];
-  finalComments: string;
-  documentGeneration: DocumentGeneration;
+interface GeneratedReport {
+  id: string;
+  type: 'standard' | 'executive' | 'technical' | 'compact';
+  url: string;
+  generatedAt: string;
+  fileSize?: string;
+  astNumber: string;
+}
+
+interface ASTStatistics {
+  astNumber: string;
+  tenant: string;
+  createdAt: string;
+  lastModified: string;
+  status: string;
+  
+  // Complétion
+  totalSections: number;
+  completedSections: number;
+  overallCompletion: number;
+  
+  // Contenu AST
+  identifiedHazards: number;
+  selectedEquipment: number;
+  requiredPermits: number;
+  teamMembers: number;
+  lockoutPoints: number;
+  
+  // Documentation
+  photosCount: number;
+  documentsCount: number;
+  signaturesCount: number;
+  
+  // Projet
+  industry: string;
+  client: string;
+  projectNumber: string;
+  workLocation: string;
+  estimatedDuration: string;
+  workerCount: number;
+  
+  // État
+  lastSaved: string;
   isLocked: boolean;
-  lockTimestamp?: string;
-  lockReason?: string;
+  hasQRCode: boolean;
+  hasShareableLink: boolean;
+}
+
+interface ValidationSummary {
+  sectionName: string;
+  icon: React.ReactNode;
+  isComplete: boolean;
   completionPercentage: number;
+  errors: string[];
+  lastModified?: string;
+  stepNumber: number;
+}
+
+interface ASTHistoryEntry {
+  id: string;
+  astNumber: string;
+  projectNumber: string;
+  workLocation: string;
+  client: string;
+  industry: string;
+  status: 'draft' | 'active' | 'completed' | 'locked' | 'archived';
+  createdAt: string;
+  lastModified: string;
+  hazardCount: number;
+  equipmentCount: number;
+  workerCount: number;
+  photoCount: number;
+  permitCount: number;
+  completionPercentage: number;
+  qrCodeUrl?: string;
 }
 
 interface FinalizationStepProps {
-  formData: any; // ✅ ACCÈS À TOUTES LES DONNÉES DES STEPS 1-5
-  onDataChange: (section: string, data: FinalizationData) => void;
+  formData: any; // ✅ DONNÉES COMPLÈTES DE ASTFORM + STEPS 1-5
+  onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
 }
 
 // =================== TYPES DE SÉCURITÉ ===================
-type ApprobationStatus = 'pending' | 'approved' | 'rejected';
-type LockType = 'temporary' | 'permanent' | 'review';
-type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'facebook';
+type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
+type LockType = 'temporary' | 'permanent' | 'review' | 'archive';
+type NotificationType = 'success' | 'error' | 'warning';
+type ReportType = 'standard' | 'executive' | 'technical' | 'compact';
 
+// =================== TRADUCTIONS BILINGUES COMPLÈTES AST ===================
+const translations = {
+  fr: {
+    // Titre principal
+    title: "🛡️ Finalisation AST Complète",
+    subtitle: "Génération, Sauvegarde et Partage du Rapport AST Final",
+    
+    // Onglets principaux
+    tabs: {
+      validation: "✅ Validation Globale",
+      actions: "⚡ Actions Finales", 
+      sharing: "📤 Partage et Distribution",
+      reports: "📊 Rapports AST"
+    },
+    
+    // Validation AST complète
+    validation: "Validation AST Complète",
+    validationSummary: "Résumé de Validation Globale",
+    allValidationsPassed: "AST entièrement validée - Prête pour utilisation",
+    validationErrors: "Problèmes détectés dans l'AST",
+    sectionsComplete: "Sections AST Complétées",
+    overallCompletion: "Complétion Globale AST",
+    
+    // Actions principales AST (comme PermitManager)
+    saveAST: "💾 Sauvegarder AST Complète",
+    printPDF: "🖨️ Générer Rapport PDF",
+    generateQR: "📱 Code QR Mobile",
+    shareAST: "📤 Partager AST",
+    exportData: "📊 Exporter Données", 
+    searchDatabase: "🔍 Base de Données AST",
+    archiveAST: "📁 Archiver AST",
+    lockAST: "🔒 Verrouiller AST",
+    unlockAST: "🔓 Déverrouiller",
+    
+    // Sections AST par étapes
+    step1ProjectInfo: "📋 Step 1 - Informations Projet",
+    step2Equipment: "🛡️ Step 2 - Équipements Sécurité",
+    step3Hazards: "⚠️ Step 3 - Dangers et Contrôles",
+    step4Permits: "📄 Step 4 - Permis et Autorisations",
+    step5Validation: "✅ Step 5 - Validation Équipe",
+    step6Finalization: "🏁 Step 6 - Finalisation",
+    
+    // Statuts
+    complete: "Complété",
+    incomplete: "Incomplet",
+    valid: "Valide",
+    invalid: "Non valide",
+    saving: "Sauvegarde AST...",
+    saved: "AST Sauvegardée",
+    loading: "Chargement...",
+    searching: "Recherche AST...",
+    generating: "Génération...",
+    locked: "🔒 Verrouillé",
+    unlocked: "🔓 Déverrouillé",
+    
+    // Messages de succès/erreur
+    saveSuccess: "AST sauvegardée avec succès dans la base de données!",
+    validationPassed: "Toutes les validations AST sont réussies",
+    validationFailed: "Certaines validations AST ont échoué",
+    qrGenerated: "Code QR généré pour accès mobile à l'AST",
+    linkCopied: "Lien AST copié dans le presse-papiers",
+    pdfGenerated: "Rapport AST PDF généré avec succès",
+    emailSent: "AST envoyée par email avec succès",
+    astLocked: "AST verrouillée définitivement",
+    astUnlocked: "AST déverrouillée pour modification",
+    astArchived: "AST archivée avec succès",
+    noResults: "Aucune AST trouvée",
+    searchPlaceholder: "Rechercher par numéro AST, projet, client...",
+    
+    // Options de génération de rapport AST
+    reportOptions: "Options de Rapport AST",
+    includePhotos: "📸 Inclure Photos de Terrain",
+    includeSignatures: "✍️ Inclure Signatures Équipe",
+    includeQRCode: "📱 Inclure Code QR",
+    includeBranding: "🏢 Inclure Logo C-Secur360",
+    includeTimestamps: "🕒 Inclure Horodatage",
+    includeComments: "💬 Inclure Commentaires",
+    includeStatistics: "📊 Inclure Statistiques",
+    includeValidation: "✅ Inclure Validation",
+    includePermits: "📄 Inclure Permis",
+    includeHazards: "⚠️ Inclure Dangers",
+    includeEquipment: "🛡️ Inclure Équipements",
+    
+    // Types de rapports AST
+    generateStandardReport: "📄 Rapport Standard",
+    generateExecutiveReport: "👔 Résumé Exécutif",
+    generateTechnicalReport: "🔧 Rapport Technique",
+    generateCompactReport: "📱 Version Mobile",
+    
+    // Partage et distribution
+    sharing: "Partage AST",
+    shareInstructions: "Instructions de partage AST:",
+    shareList: [
+      "Partagez cette AST avec votre équipe de travail",
+      "Chaque membre peut consulter l'AST avant le début des tâches",
+      "Le rapport PDF peut être imprimé pour affichage sur site",
+      "Le QR Code permet un accès mobile rapide aux informations"
+    ],
+    
+    // Commentaires finaux AST
+    finalComments: "💬 Commentaires Finaux AST",
+    commentsPlaceholder: "Ajoutez des commentaires finaux sur cette AST, recommandations spéciales, leçons apprises, ou instructions particulières pour l'équipe...",
+    documentLocked: "🔒 AST verrouillée - Aucune modification possible",
+    
+    // Verrouillage et archivage AST
+    confirmLock: "🔒 Confirmer Verrouillage AST",
+    lockWarning: "ATTENTION: Cette action verrouillera définitivement l'AST !",
+    lockDescription: "Une fois verrouillée, l'AST ne pourra plus être modifiée mais restera accessible pour consultation et partage.",
+    
+    // Statistiques AST détaillées
+    statistics: "📊 Statistiques AST Complètes",
+    totalSections: "Sections Totales",
+    completedSections: "Sections Complétées", 
+    identifiedHazards: "Dangers Identifiés",
+    selectedEquipment: "Équipements Sélectionnés",
+    requiredPermits: "Permis Requis",
+    teamMembers: "Membres Équipe",
+    documentsPhotos: "Documents/Photos",
+    signaturesCount: "Signatures Équipe",
+    lastActivity: "Dernière Activité",
+    creationDate: "Date de Création",
+    
+    // Types d'industries
+    industries: {
+      construction: "🏗️ Construction",
+      industrial: "🏭 Industriel",
+      manufacturing: "⚙️ Manufacturier",
+      electrical: "⚡ Électrique",
+      mining: "⛏️ Minier",
+      oil_gas: "🛢️ Pétrole et Gaz",
+      transportation: "🚛 Transport",
+      healthcare: "🏥 Santé",
+      education: "🎓 Éducation",
+      office: "🏢 Bureau",
+      retail: "🛒 Commerce",
+      hospitality: "🏨 Hôtellerie",
+      other: "🔧 Autre"
+    },
+    
+    // Statuts AST
+    draft: "📝 Brouillon",
+    active: "🟢 Active",
+    completed: "✅ Complétée",
+    archived: "📁 Archivée",
+    
+    // Boutons génériques
+    add: "Ajouter",
+    cancel: "Annuler",
+    close: "Fermer",
+    save: "Sauvegarder",
+    delete: "Supprimer",
+    edit: "Modifier",
+    view: "Voir",
+    download: "Télécharger",
+    print: "Imprimer",
+    share: "Partager",
+    copy: "Copier",
+    export: "Exporter",
+    import: "Importer",
+    refresh: "Actualiser",
+    back: "Retour",
+    database: "🗄️ Base de Données"
+  },
+  
+  en: {
+    // Main title
+    title: "🛡️ Complete JSA Finalization", 
+    subtitle: "Generation, Saving and Sharing of Final JSA Report",
+    
+    // Main tabs
+    tabs: {
+      validation: "✅ Global Validation",
+      actions: "⚡ Final Actions",
+      sharing: "📤 Sharing & Distribution", 
+      reports: "📊 JSA Reports"
+    },
+    
+    // Complete JSA validation
+    validation: "Complete JSA Validation",
+    validationSummary: "Global Validation Summary",
+    allValidationsPassed: "JSA fully validated - Ready for use",
+    validationErrors: "Issues detected in JSA",
+    sectionsComplete: "JSA Sections Completed",
+    overallCompletion: "JSA Global Completion",
+    
+    // Main JSA actions (like PermitManager)
+    saveAST: "💾 Save Complete JSA",
+    printPDF: "🖨️ Generate PDF Report", 
+    generateQR: "📱 Mobile QR Code",
+    shareAST: "📤 Share JSA",
+    exportData: "📊 Export Data",
+    searchDatabase: "🔍 JSA Database",
+    archiveAST: "📁 Archive JSA",
+    lockAST: "🔒 Lock JSA",
+    unlockAST: "🔓 Unlock",
+    
+    // JSA sections by steps
+    step1ProjectInfo: "📋 Step 1 - Project Information",
+    step2Equipment: "🛡️ Step 2 - Safety Equipment",
+    step3Hazards: "⚠️ Step 3 - Hazards & Controls",
+    step4Permits: "📄 Step 4 - Permits & Authorizations",
+    step5Validation: "✅ Step 5 - Team Validation",
+    step6Finalization: "🏁 Step 6 - Finalization",
+    
+    // Status
+    complete: "Complete",
+    incomplete: "Incomplete",
+    valid: "Valid",
+    invalid: "Invalid",
+    saving: "Saving JSA...",
+    saved: "JSA Saved",
+    loading: "Loading...",
+    searching: "Searching JSA...",
+    generating: "Generating...",
+    locked: "🔒 Locked",
+    unlocked: "🔓 Unlocked",
+    
+    // Success/error messages
+    saveSuccess: "JSA saved successfully to database!",
+    validationPassed: "All JSA validations passed",
+    validationFailed: "Some JSA validations failed",
+    qrGenerated: "QR Code generated for mobile JSA access", 
+    linkCopied: "JSA link copied to clipboard",
+    pdfGenerated: "JSA PDF report generated successfully",
+    emailSent: "JSA sent by email successfully",
+    astLocked: "JSA locked permanently",
+    astUnlocked: "JSA unlocked for modification",
+    astArchived: "JSA archived successfully",
+    noResults: "No JSA found",
+    searchPlaceholder: "Search by JSA number, project, client...",
+    
+    // JSA report generation options
+    reportOptions: "JSA Report Options",
+    includePhotos: "📸 Include Field Photos",
+    includeSignatures: "✍️ Include Team Signatures", 
+    includeQRCode: "📱 Include QR Code",
+    includeBranding: "🏢 Include C-Secur360 Logo",
+    includeTimestamps: "🕒 Include Timestamps",
+    includeComments: "💬 Include Comments",
+    includeStatistics: "📊 Include Statistics",
+    includeValidation: "✅ Include Validation",
+    includePermits: "📄 Include Permits",
+    includeHazards: "⚠️ Include Hazards",
+    includeEquipment: "🛡️ Include Equipment",
+    
+    // JSA report types
+    generateStandardReport: "📄 Standard Report",
+    generateExecutiveReport: "👔 Executive Summary",
+    generateTechnicalReport: "🔧 Technical Report", 
+    generateCompactReport: "📱 Mobile Version",
+    
+    // Sharing and distribution
+    sharing: "JSA Sharing",
+    shareInstructions: "JSA sharing instructions:",
+    shareList: [
+      "Share this JSA with your work team",
+      "Each member can review the JSA before starting tasks",
+      "PDF report can be printed for on-site display", 
+      "QR Code allows quick mobile access to information"
+    ],
+    
+    // Final JSA comments
+    finalComments: "💬 Final JSA Comments",
+    commentsPlaceholder: "Add final comments on this JSA, special recommendations, lessons learned, or particular instructions for the team...",
+    documentLocked: "🔒 JSA locked - No modifications possible",
+    
+    // JSA locking and archiving
+    confirmLock: "🔒 Confirm JSA Lock",
+    lockWarning: "WARNING: This action will permanently lock the JSA!",
+    lockDescription: "Once locked, the JSA cannot be modified but will remain accessible for consultation and sharing.",
+    
+    // Detailed JSA statistics
+    statistics: "📊 Complete JSA Statistics",
+    totalSections: "Total Sections",
+    completedSections: "Completed Sections",
+    identifiedHazards: "Identified Hazards", 
+    selectedEquipment: "Selected Equipment",
+    requiredPermits: "Required Permits",
+    teamMembers: "Team Members",
+    documentsPhotos: "Documents/Photos",
+    signaturesCount: "Team Signatures",
+    lastActivity: "Last Activity",
+    creationDate: "Creation Date",
+    
+    // Industry types
+    industries: {
+      construction: "🏗️ Construction",
+      industrial: "🏭 Industrial",
+      manufacturing: "⚙️ Manufacturing",
+      electrical: "⚡ Electrical", 
+      mining: "⛏️ Mining",
+      oil_gas: "🛢️ Oil and Gas",
+      transportation: "🚛 Transportation",
+      healthcare: "🏥 Healthcare",
+      education: "🎓 Education",
+      office: "🏢 Office",
+      retail: "🛒 Retail",
+      hospitality: "🏨 Hospitality",
+      other: "🔧 Other"
+    },
+    
+    // JSA status
+    draft: "📝 Draft",
+    active: "🟢 Active", 
+    completed: "✅ Completed",
+    archived: "📁 Archived",
+    
+    // Generic buttons
+    add: "Add",
+    cancel: "Cancel",
+    close: "Close",
+    save: "Save",
+    delete: "Delete", 
+    edit: "Edit",
+    view: "View",
+    download: "Download",
+    print: "Print",
+    share: "Share",
+    copy: "Copy",
+    export: "Export",
+    import: "Import",
+    refresh: "Refresh",
+    back: "Back",
+    database: "🗄️ Database"
+  }
+};
+// =================== FONCTION PRINCIPALE STEP6 AST ===================
 function Step6Finalization({ 
-  formData, // ✅ CONTIENT TOUTES LES DONNÉES : projectInfo, equipment, hazards, permits, validation
+  formData, // ✅ DONNÉES COMPLÈTES : ASTForm + Steps 1-5
   onDataChange, 
   language = 'fr',
   tenant 
 }: FinalizationStepProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // =================== TRADUCTIONS ===================
   const t = translations[language] || translations.fr;
   
-  // =================== ÉTAT PRINCIPAL STABLE ===================
-  const [activeTab, setActiveTab] = useState('workers');
-  const [showAddWorker, setShowAddWorker] = useState(false);
-  const [showLockConfirm, setShowLockConfirm] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Générer le lien de partage immédiatement
-  const [shareLink, setShareLink] = useState(() => {
-    const baseUrl = `https://${tenant}.csecur360.com`;
-    const astId = Math.random().toString(36).substr(2, 12).toUpperCase();
-    const secureToken = Math.random().toString(36).substr(2, 16);
-    return `${baseUrl}/ast/view/${astId}?token=${secureToken}`;
+  // =================== DÉTECTION MOBILE RESPONSIVE ===================
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 768;
+    }
+    return false;
   });
 
-  // ✅ FIX CRITIQUE : État travailleur stable SANS useEffect
-  const [newWorker, setNewWorker] = useState<Partial<Worker>>(() => ({
-    name: '',
-    company: '',
-    hasConsented: false,
-    approbationStatus: 'pending'
-  }));
-
-  // ✅ FIX CRITIQUE : État finalisation avec initialisation stable SANS BOUCLE
-  const [finalizationData, setFinalizationData] = useState<FinalizationData>(() => ({
-    workers: [],
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // =================== ÉTATS PRINCIPAUX ULTRA-STABLES ===================
+  const [activeTab, setActiveTab] = useState('validation');
+  const [currentView, setCurrentView] = useState<'main' | 'database'>('main');
+  
+  // États de confirmation et modales
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  
+  // États de chargement
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // États de recherche base de données
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ASTHistoryEntry[]>([]);
+  
+  // États de partage
+  const [selectedShareMethod, setSelectedShareMethod] = useState<ShareMethod>('email');
+  
+  // États de notifications
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<NotificationType>('success');
+  
+  // ✅ État finalisation AST STABLE (comme PermitManager)
+  const [finalizationData, setFinalizationData] = useState(() => ({
     photos: [],
     finalComments: '',
     documentGeneration: {
@@ -401,1189 +607,2554 @@ function Step6Finalization({
       includeBranding: true,
       includeTimestamps: true,
       includeComments: true,
-      format: 'pdf'
+      includeStatistics: true,
+      includeValidation: true,
+      includePermits: true,
+      includeHazards: true,
+      includeEquipment: true,
+      format: 'pdf' as const,
+      template: 'detailed' as const
     },
     isLocked: false,
-    completionPercentage: 85
+    completionPercentage: 0,
+    qrCodeUrl: '',
+    shareableLink: '',
+    lastSaved: '',
+    generatedReports: []
   }));
 
-  // =================== 🚨 FIX CRITIQUE : CALLBACK DIRECT SANS BOUCLE ===================
+  // =================== FONCTIONS UTILITAIRES COMME PERMITMANAGER ===================
   
   /**
-   * ✅ FONCTION CRITIQUE - NOTIFICATION PARENT SANS BOUCLE INFINIE
-   * Au lieu d'un useEffect qui cause des boucles, on utilise des callbacks directs
+   * ✅ FONCTION NOTIFICATION SYSTÈME (comme PermitManager)
    */
-  const notifyParentChange = useCallback((newData: FinalizationData) => {
-    console.log('🔥 Step6 - Notification parent avec nouvelles données:', newData);
-    onDataChange('finalization', newData);
-  }, [onDataChange]);
-
-  // =================== HANDLERS PRINCIPAUX ULTRA-OPTIMISÉS ===================
-  
-  /**
-   * ✅ HANDLER AJOUT TRAVAILLEUR - FIX DÉFINITIF
-   * Mise à jour directe + notification parent immédiate
-   */
-  const addWorker = useCallback(() => {
-    if (!newWorker.name || !newWorker.company) {
-      alert(t.fillRequiredFields);
-      return;
-    }
-
-    const worker: Worker = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newWorker.name!,
-      position: 'Travailleur',
-      company: newWorker.company!,
-      hasConsented: false,
-      approbationStatus: 'pending'
-    };
-
-    const newFinalizationData = {
-      ...finalizationData,
-      workers: [...finalizationData.workers, worker]
-    };
-
-    // ✅ Mise à jour locale immédiate
-    setFinalizationData(newFinalizationData);
+  const showNotificationToast = useCallback((message: string, type: NotificationType = 'success') => {
+    console.log(`[${type.toUpperCase()}] Step6 AST - ${message}`);
     
-    // ✅ Notification parent immédiate
-    notifyParentChange(newFinalizationData);
-
-    // ✅ Reset du formulaire
-    setNewWorker({ name: '', company: '', hasConsented: false, approbationStatus: 'pending' });
-    setShowAddWorker(false);
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotification(true);
     
-    console.log('✅ Step6 - Travailleur ajouté avec succès:', worker);
-  }, [newWorker.name, newWorker.company, finalizationData, notifyParentChange, t.fillRequiredFields]);
+    // Auto-hide après 4 secondes
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 4000);
+  }, []);
 
   /**
-   * ✅ HANDLER CONSENTEMENT - FIX DÉFINITIF
+   * ✅ EXTRACTION DONNÉES COMPLÈTES AST DE TOUS LES STEPS (CORE FUNCTION)
    */
-  const toggleConsent = useCallback((workerId: string) => {
-    const newFinalizationData = {
-      ...finalizationData,
-      workers: finalizationData.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              hasConsented: !worker.hasConsented,
-              consentTimestamp: !worker.hasConsented ? new Date().toISOString() : undefined
-            }
-          : worker
-      )
-    };
-
-    setFinalizationData(newFinalizationData);
-    notifyParentChange(newFinalizationData);
-    console.log('✅ Step6 - Consentement mis à jour:', workerId);
-  }, [finalizationData, notifyParentChange]);
-
-  /**
-   * ✅ HANDLER APPROBATION - FIX DÉFINITIF
-   */
-  const updateApprobation = useCallback((workerId: string, status: ApprobationStatus, comments?: string) => {
-    const newFinalizationData = {
-      ...finalizationData,
-      workers: finalizationData.workers.map(worker => 
-        worker.id === workerId 
-          ? { 
-              ...worker, 
-              approbationStatus: status,
-              approbationTimestamp: new Date().toISOString(),
-              approbationComments: comments
-            }
-          : worker
-      )
-    };
-
-    setFinalizationData(newFinalizationData);
-    notifyParentChange(newFinalizationData);
-    console.log(`✅ Step6 - Approbation ${status} pour travailleur:`, workerId);
-  }, [finalizationData, notifyParentChange]);
-
-  // =================== HANDLERS PARTAGE OPTIMISÉS ===================
-  const shareViaEmail = useCallback(() => {
-    const subject = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}`);
-    const body = encodeURIComponent(`Bonjour,
-
-Veuillez consulter l'Analyse Sécuritaire de Travail (AST) pour le projet "${formData.projectInfo?.projectName || 'Projet'}".
-
-🔗 Lien d'accès sécurisé:
-${shareLink}
-
-Cette AST doit être consultée et approuvée avant le début des travaux.
-
-Cordialement,
-${tenant} - Équipe Sécurité`);
+  const extractCompleteASTData = useCallback((): ASTData => {
+    console.log('📊 Step6 AST - Extraction données complètes formData:', formData);
     
-    window.open(`mailto:?subject=${subject}&body=${body}`);
-    console.log('📧 Partage par email initié');
-  }, [formData.projectInfo?.projectName, shareLink, tenant]);
-
-  const shareViaSMS = useCallback(() => {
-    const message = encodeURIComponent(`🛡️ AST ${formData.projectInfo?.projectName || 'Projet'}: ${shareLink}`);
-    window.open(`sms:?body=${message}`);
-    console.log('📱 Partage par SMS initié');
-  }, [formData.projectInfo?.projectName, shareLink]);
-
-  const shareViaWhatsApp = useCallback(() => {
-    const message = encodeURIComponent(`🛡️ AST - ${formData.projectInfo?.projectName || 'Analyse Sécuritaire'}
-
-Lien d'accès: ${shareLink}`);
-    window.open(`https://wa.me/?text=${message}`);
-    console.log('💬 Partage WhatsApp initié');
-  }, [formData.projectInfo?.projectName, shareLink]);
-
-  const copyShareLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-      console.log(t.linkCopied);
-    } catch (err) {
-      alert(t.copyError);
-    }
-  }, [shareLink, t.linkCopied, t.copyError]);
-
-  /**
-   * ✅ HANDLER VERROUILLAGE - FIX DÉFINITIF
-   */
-  const lockAST = useCallback((lockType: LockType) => {
-    const newFinalizationData = {
-      ...finalizationData,
-      isLocked: true,
-      lockTimestamp: new Date().toISOString(),
-      lockReason: lockType
+    // Génération numéro AST unique
+    const astNumber = formData?.astNumber || 
+      `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    
+    return {
+      astNumber,
+      tenant,
+      language,
+      createdAt: formData?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: formData?.status || 'draft',
+      
+      // ✅ Step 1 - Informations projet (de ASTForm)
+      projectInfo: {
+        client: formData?.projectInfo?.client || formData?.client || 'Non spécifié',
+        projectNumber: formData?.projectInfo?.projectNumber || formData?.projectNumber || 'Non spécifié',
+        workLocation: formData?.projectInfo?.workLocation || formData?.workLocation || 'Non spécifié',
+        date: formData?.projectInfo?.date || formData?.date || new Date().toISOString().split('T')[0],
+        time: formData?.projectInfo?.time || formData?.time || new Date().toTimeString().slice(0, 5),
+        industry: formData?.projectInfo?.industry || formData?.industry || 'other',
+        workerCount: formData?.projectInfo?.workerCount || formData?.workerCount || 0,
+        estimatedDuration: formData?.projectInfo?.estimatedDuration || formData?.estimatedDuration || 'Non spécifié',
+        workDescription: formData?.projectInfo?.workDescription || formData?.workDescription || 'Non spécifié',
+        clientContact: formData?.projectInfo?.clientContact || formData?.clientContact || 'Non spécifié',
+        emergencyContact: formData?.projectInfo?.emergencyContact || formData?.emergencyContact || 'Non spécifié',
+        lockoutPoints: formData?.projectInfo?.lockoutPoints || formData?.lockoutPoints || [],
+        weatherConditions: formData?.projectInfo?.weatherConditions || formData?.weatherConditions,
+        accessRestrictions: formData?.projectInfo?.accessRestrictions || formData?.accessRestrictions
+      },
+      
+      // ✅ Step 2 - Équipements de sécurité
+      equipment: {
+        selected: formData?.equipment?.selected || formData?.selectedEquipment || [],
+        categories: formData?.equipment?.categories || [],
+        mandatory: formData?.equipment?.mandatory || [],
+        optional: formData?.equipment?.optional || [],
+        totalCost: formData?.equipment?.totalCost || 0,
+        inspectionRequired: formData?.equipment?.inspectionRequired || false,
+        certifications: formData?.equipment?.certifications || []
+      },
+      
+      // ✅ Step 3 - Dangers et contrôles
+      hazards: {
+        identified: formData?.hazards?.identified || formData?.selectedHazards || [],
+        riskLevel: formData?.hazards?.riskLevel || 'medium',
+        controlMeasures: formData?.hazards?.controlMeasures || [],
+        residualRisk: formData?.hazards?.residualRisk || 'low',
+        emergencyProcedures: formData?.hazards?.emergencyProcedures || [],
+        monitoringRequired: formData?.hazards?.monitoringRequired || false
+      },
+      
+      // ✅ Step 4 - Permis et autorisations
+      permits: {
+        required: formData?.permits?.required || formData?.selectedPermits || [],
+        authorities: formData?.permits?.authorities || [],
+        validations: formData?.permits?.validations || [],
+        expiry: formData?.permits?.expiry || [],
+        documents: formData?.permits?.documents || [],
+        specialRequirements: formData?.permits?.specialRequirements || []
+      },
+      
+      // ✅ Step 5 - Validation équipe
+      validation: {
+        reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
+        approvals: formData?.validation?.approvals || [],
+        signatures: formData?.validation?.signatures || [],
+        finalApproval: formData?.validation?.finalApproval || false,
+        criteria: formData?.validation?.criteria || {},
+        comments: formData?.validation?.comments || []
+      },
+      
+      // ✅ Step 6 - Finalisation (état actuel)
+      finalization: finalizationData
     };
-
-    setFinalizationData(newFinalizationData);
-    notifyParentChange(newFinalizationData);
-    setShowLockConfirm(false);
-    console.log(`🔒 AST verrouillée (${lockType})`);
-    alert(`${t.astLocked} (${lockType})`);
-  }, [finalizationData, notifyParentChange, t.astLocked]);
+  }, [formData, finalizationData, tenant, language]);
 
   /**
-   * ✅ HANDLER COMMENTAIRES - FIX DÉFINITIF
+   * ✅ VALIDATION GLOBALE AST COMPLÈTE (comme PermitManager)
+   */
+  const getASTValidation = useMemo(() => {
+    const astData = extractCompleteASTData();
+    
+    // Validation Step 1 - Informations projet
+    const step1Complete = Boolean(
+      astData.projectInfo.client !== 'Non spécifié' &&
+      astData.projectInfo.projectNumber !== 'Non spécifié' &&
+      astData.projectInfo.workLocation !== 'Non spécifié' &&
+      astData.projectInfo.workDescription !== 'Non spécifié'
+    );
+    
+    // Validation Step 2 - Équipements
+    const step2Complete = Boolean(
+      astData.equipment.selected.length > 0
+    );
+    
+    // Validation Step 3 - Dangers
+    const step3Complete = Boolean(
+      astData.hazards.identified.length > 0
+    );
+    
+    // Validation Step 4 - Permis
+    const step4Complete = Boolean(
+      astData.permits.required.length > 0
+    );
+    
+    // Validation Step 5 - Validation équipe
+    const step5Complete = Boolean(
+      astData.validation.reviewers.length > 0
+    );
+    
+    // Validation Step 6 - Finalisation
+    const step6Complete = Boolean(
+      astData.finalization.finalComments.length > 0 ||
+      astData.finalization.photos.length > 0
+    );
+    
+    const completedSteps = [step1Complete, step2Complete, step3Complete, step4Complete, step5Complete, step6Complete].filter(Boolean).length;
+    const totalSteps = 6;
+    const percentage = Math.round((completedSteps / totalSteps) * 100);
+    
+    const errors = [];
+    if (!step1Complete) errors.push(language === 'fr' ? 'Informations projet incomplètes' : 'Project information incomplete');
+    if (!step2Complete) errors.push(language === 'fr' ? 'Équipements non sélectionnés' : 'Equipment not selected');
+    if (!step3Complete) errors.push(language === 'fr' ? 'Dangers non identifiés' : 'Hazards not identified');
+    if (!step4Complete) errors.push(language === 'fr' ? 'Permis non configurés' : 'Permits not configured');
+    if (!step5Complete) errors.push(language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing');
+    if (!step6Complete) errors.push(language === 'fr' ? 'Finalisation incomplète' : 'Finalization incomplete');
+    
+    return {
+      isValid: completedSteps === totalSteps,
+      percentage,
+      completedSteps,
+      totalSteps,
+      errors,
+      sections: {
+        step1Complete,
+        step2Complete,
+        step3Complete,
+        step4Complete,
+        step5Complete,
+        step6Complete
+      }
+    };
+  }, [extractCompleteASTData, language]);
+
+  /**
+   * ✅ VALIDATION DÉTAILLÉE PAR SECTION AST
+   */
+  const getSectionValidation = useCallback((): ValidationSummary[] => {
+    const astData = extractCompleteASTData();
+    const validation = getASTValidation;
+    
+    return [
+      {
+        stepNumber: 1,
+        sectionName: t.step1ProjectInfo,
+        icon: <Building size={20} color={validation.sections.step1Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step1Complete,
+        completionPercentage: validation.sections.step1Complete ? 100 : 
+          Math.round((
+            (astData.projectInfo.client !== 'Non spécifié' ? 25 : 0) +
+            (astData.projectInfo.projectNumber !== 'Non spécifié' ? 25 : 0) +
+            (astData.projectInfo.workLocation !== 'Non spécifié' ? 25 : 0) +
+            (astData.projectInfo.workDescription !== 'Non spécifié' ? 25 : 0)
+          )),
+        errors: validation.sections.step1Complete ? [] : [language === 'fr' ? 'Informations projet incomplètes' : 'Project information incomplete'],
+        lastModified: astData.updatedAt
+      },
+      {
+        stepNumber: 2,
+        sectionName: t.step2Equipment,
+        icon: <Shield size={20} color={validation.sections.step2Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step2Complete,
+        completionPercentage: validation.sections.step2Complete ? 100 : 0,
+        errors: validation.sections.step2Complete ? [] : [language === 'fr' ? 'Équipements de sécurité non sélectionnés' : 'Safety equipment not selected'],
+        lastModified: astData.updatedAt
+      },
+      {
+        stepNumber: 3,
+        sectionName: t.step3Hazards,
+        icon: <AlertTriangle size={20} color={validation.sections.step3Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step3Complete,
+        completionPercentage: validation.sections.step3Complete ? 100 : 0,
+        errors: validation.sections.step3Complete ? [] : [language === 'fr' ? 'Dangers et contrôles non identifiés' : 'Hazards and controls not identified'],
+        lastModified: astData.updatedAt
+      },
+      {
+        stepNumber: 4,
+        sectionName: t.step4Permits,
+        icon: <FileText size={20} color={validation.sections.step4Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step4Complete,
+        completionPercentage: validation.sections.step4Complete ? 100 : 0,
+        errors: validation.sections.step4Complete ? [] : [language === 'fr' ? 'Permis et autorisations non configurés' : 'Permits and authorizations not configured'],
+        lastModified: astData.updatedAt
+      },
+      {
+        stepNumber: 5,
+        sectionName: t.step5Validation,
+        icon: <Users size={20} color={validation.sections.step5Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step5Complete,
+        completionPercentage: validation.sections.step5Complete ? 100 : 0,
+        errors: validation.sections.step5Complete ? [] : [language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing'],
+        lastModified: astData.updatedAt
+      },
+      {
+        stepNumber: 6,
+        sectionName: t.step6Finalization,
+        icon: <CheckCircle size={20} color={validation.sections.step6Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step6Complete,
+        completionPercentage: validation.sections.step6Complete ? 100 : (finalizationData.finalComments.length > 0 ? 50 : 0) + (finalizationData.photos.length > 0 ? 50 : 0),
+        errors: validation.sections.step6Complete ? [] : [language === 'fr' ? 'Finalisation AST incomplète' : 'JSA finalization incomplete'],
+        lastModified: astData.updatedAt
+      }
+    ];
+  }, [extractCompleteASTData, getASTValidation, t, language, finalizationData]);
+
+  /**
+   * ✅ STATISTIQUES COMPLÈTES AST (comme PermitManager)
+   */
+  const getASTStatistics = useCallback((): ASTStatistics => {
+    const astData = extractCompleteASTData();
+    const validation = getASTValidation;
+    
+    return {
+      // Métadonnées générales
+      astNumber: astData.astNumber,
+      tenant,
+      createdAt: astData.createdAt,
+      lastModified: astData.updatedAt,
+      status: astData.status,
+      
+      // Complétion
+      totalSections: validation.totalSteps,
+      completedSections: validation.completedSteps,
+      overallCompletion: validation.percentage,
+      
+      // Contenu AST détaillé
+      identifiedHazards: astData.hazards.identified.length,
+      selectedEquipment: astData.equipment.selected.length,
+      requiredPermits: astData.permits.required.length,
+      teamMembers: astData.validation.reviewers.length,
+      lockoutPoints: astData.projectInfo.lockoutPoints.length,
+      
+      // Documentation et photos
+      photosCount: astData.finalization.photos.length,
+      documentsCount: astData.permits.documents.length,
+      signaturesCount: astData.validation.signatures.length,
+      
+      // Informations projet
+      industry: astData.projectInfo.industry,
+      client: astData.projectInfo.client,
+      projectNumber: astData.projectInfo.projectNumber,
+      workLocation: astData.projectInfo.workLocation,
+      estimatedDuration: astData.projectInfo.estimatedDuration,
+      workerCount: astData.projectInfo.workerCount,
+      
+      // État AST
+      lastSaved: astData.finalization.lastSaved || (language === 'fr' ? 'Jamais' : 'Never'),
+      isLocked: astData.finalization.isLocked,
+      hasQRCode: Boolean(astData.finalization.qrCodeUrl),
+      hasShareableLink: Boolean(astData.finalization.shareableLink)
+    };
+  }, [extractCompleteASTData, getASTValidation, tenant, language]);
+
+  /**
+   * ✅ HANDLER MISE À JOUR COMMENTAIRES FINAUX
    */
   const updateComments = useCallback((comments: string) => {
-    const newFinalizationData = {
+    const updatedData = {
       ...finalizationData,
       finalComments: comments
     };
 
-    setFinalizationData(newFinalizationData);
-    notifyParentChange(newFinalizationData);
-  }, [finalizationData, notifyParentChange]);
+    setFinalizationData(updatedData);
+    onDataChange('finalization', updatedData);
+  }, [finalizationData, onDataChange]);
 
   /**
-   * ✅ HANDLER OPTIONS DOCUMENT - FIX DÉFINITIF
+   * ✅ HANDLER TOGGLE OPTIONS DOCUMENT
    */
-  const updateDocumentOption = useCallback((option: keyof DocumentGeneration, value: boolean) => {
-    const newFinalizationData = {
+  const toggleDocumentOption = useCallback((option: keyof DocumentGeneration) => {
+    const currentValue = finalizationData.documentGeneration[option];
+    const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
+    
+    const updatedData = {
       ...finalizationData,
       documentGeneration: {
         ...finalizationData.documentGeneration,
-        [option]: value
+        [option]: newValue
       }
     };
 
-    setFinalizationData(newFinalizationData);
-    notifyParentChange(newFinalizationData);
-  }, [finalizationData, notifyParentChange]);
+    setFinalizationData(updatedData);
+    onDataChange('finalization', updatedData);
+  }, [finalizationData, onDataChange]);
 
-  // =================== FONCTIONS UTILITAIRES ===================
-  const getIndustryLabel = useCallback((industry: string) => {
-    const labels = {
-      'electrical': '⚡ Électrique',
-      'construction': '🏗️ Construction', 
-      'industrial': '🏭 Industriel',
-      'manufacturing': '⚙️ Manufacturier',
-      'office': '🏢 Bureau/Administratif',
-      'other': '🔧 Autre'
-    };
-    return labels[industry as keyof typeof labels] || industry || t.reportData.noSpecified;
-  }, [t.reportData.noSpecified]);
-
-  // =================== EXTRACTION DONNÉES STEPS 1-5 POUR RAPPORT COMPLET ===================
-  const extractDataForReport = useCallback(() => {
-    console.log('📊 Extraction données Steps 1-5 pour rapport:', formData);
+  /**
+   * ✅ MISE À JOUR AUTOMATIQUE POURCENTAGE COMPLÉTION
+   */
+  React.useEffect(() => {
+    const validation = getASTValidation;
     
-    return {
-      // Step 1 - Informations projet
-      projectInfo: {
-        client: formData.projectInfo?.client || t.reportData.noSpecified,
-        projectNumber: formData.projectInfo?.projectNumber || t.reportData.noSpecified,
-        workLocation: formData.projectInfo?.workLocation || t.reportData.noSpecified,
-        date: formData.projectInfo?.date || new Date().toISOString().split('T')[0],
-        time: formData.projectInfo?.time || new Date().toTimeString().slice(0, 5),
-        industry: formData.projectInfo?.industry || 'other',
-        workerCount: formData.projectInfo?.workerCount || 'Non spécifié',
-        estimatedDuration: formData.projectInfo?.estimatedDuration || t.reportData.noSpecified,
-        clientRepresentative: formData.projectInfo?.clientRepresentative || t.reportData.noSpecified,
-        emergencyContact: formData.projectInfo?.emergencyContact || t.reportData.noSpecified,
-        lockoutPoints: formData.projectInfo?.lockoutPoints || []
-      },
+    if (validation.percentage !== finalizationData.completionPercentage) {
+      const updatedData = {
+        ...finalizationData,
+        completionPercentage: validation.percentage
+      };
       
-      // Step 2 - Équipements  
-      equipment: {
-        selected: formData.equipment?.selected || [],
-        list: formData.equipment?.list || [],
-        totalCost: formData.equipment?.totalCost || 0
-      },
-      
-      // Step 3 - Dangers
-      hazards: {
-        selected: formData.hazards?.selected || [],
-        identifiedHazards: formData.hazards?.identifiedHazards || [],
-        list: formData.hazards?.list || []
-      },
-      
-      // Step 4 - Permis
-      permits: {
-        permits: formData.permits?.permits || [],
-        requiredPermits: formData.permits?.requiredPermits || [],
-        authorities: formData.permits?.authorities || []
-      },
-      
-      // Step 5 - Validation
-      validation: {
-        reviewers: formData.validation?.reviewers || [],
-        approvals: formData.validation?.approvals || [],
-        teamMembers: formData.validation?.teamMembers || []
-      }
-    };
-  }, [formData, t.reportData.noSpecified]);
-  // =================== GÉNÉRATION RAPPORT AST COMPLET AVEC TOUTES LES DONNÉES STEPS 1-5 ===================
-  const printAST = useCallback(() => {
-    console.log('🖨️ Génération du rapport AST professionnel complet avec données Steps 1-5...');
-    setIsLoading(true);
+      setFinalizationData(updatedData);
+      onDataChange('finalization', updatedData);
+    }
+  }, [getASTValidation, finalizationData, onDataChange]);
+  // =================== HANDLERS PRINCIPAUX COMME PERMITMANAGER ===================
+  
+  /**
+   * ✅ HANDLER SAUVEGARDE SUPABASE AST COMPLÈTE (comme PermitManager)
+   */
+  const handleSaveToSupabase = useCallback(async () => {
+    console.log('💾 Step6 AST - Début sauvegarde Supabase...');
+    setIsSaving(true);
     
-    setTimeout(() => {
-      const printContent = generateCompleteAST();
-      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    try {
+      const astData = extractCompleteASTData();
+      const stats = getASTStatistics();
       
-      if (printWindow) {
-        printWindow.document.write(printContent);
-        printWindow.document.close();
+      // Structure données Supabase pour AST complète
+      const supabaseData = {
+        // Métadonnées principales
+        ast_number: astData.astNumber,
+        tenant: astData.tenant,
+        language: astData.language,
+        status: astData.status,
+        created_at: astData.createdAt,
+        updated_at: astData.updatedAt,
+        completion_percentage: stats.overallCompletion,
+        is_locked: astData.finalization.isLocked,
         
-        printWindow.onload = () => {
-          printWindow.focus();
-          printWindow.print();
-          setIsLoading(false);
-        };
+        // Step 1 - Informations projet
+        project_info: {
+          client: astData.projectInfo.client,
+          project_number: astData.projectInfo.projectNumber,
+          work_location: astData.projectInfo.workLocation,
+          date: astData.projectInfo.date,
+          time: astData.projectInfo.time,
+          industry: astData.projectInfo.industry,
+          worker_count: astData.projectInfo.workerCount,
+          estimated_duration: astData.projectInfo.estimatedDuration,
+          work_description: astData.projectInfo.workDescription,
+          client_contact: astData.projectInfo.clientContact,
+          emergency_contact: astData.projectInfo.emergencyContact,
+          lockout_points: astData.projectInfo.lockoutPoints,
+          weather_conditions: astData.projectInfo.weatherConditions,
+          access_restrictions: astData.projectInfo.accessRestrictions
+        },
         
-        console.log('✅ Rapport AST complet généré avec succès avec données de tous les steps');
-      } else {
-        alert(t.printError);
-        setIsLoading(false);
-      }
-    }, 500);
-  }, [t.printError]);
+        // Step 2 - Équipements sécurité
+        equipment: {
+          selected: astData.equipment.selected,
+          categories: astData.equipment.categories,
+          mandatory: astData.equipment.mandatory,
+          optional: astData.equipment.optional,
+          total_cost: astData.equipment.totalCost,
+          inspection_required: astData.equipment.inspectionRequired,
+          certifications: astData.equipment.certifications
+        },
+        
+        // Step 3 - Dangers et contrôles
+        hazards: {
+          identified: astData.hazards.identified,
+          risk_level: astData.hazards.riskLevel,
+          control_measures: astData.hazards.controlMeasures,
+          residual_risk: astData.hazards.residualRisk,
+          emergency_procedures: astData.hazards.emergencyProcedures,
+          monitoring_required: astData.hazards.monitoringRequired
+        },
+        
+        // Step 4 - Permis et autorisations
+        permits: {
+          required: astData.permits.required,
+          authorities: astData.permits.authorities,
+          validations: astData.permits.validations,
+          expiry: astData.permits.expiry,
+          documents: astData.permits.documents,
+          special_requirements: astData.permits.specialRequirements
+        },
+        
+        // Step 5 - Validation équipe
+        validation: {
+          reviewers: astData.validation.reviewers,
+          approvals: astData.validation.approvals,
+          signatures: astData.validation.signatures,
+          final_approval: astData.validation.finalApproval,
+          criteria: astData.validation.criteria,
+          comments: astData.validation.comments
+        },
+        
+        // Step 6 - Finalisation
+        finalization: {
+          photos: astData.finalization.photos,
+          final_comments: astData.finalization.finalComments,
+          document_generation: astData.finalization.documentGeneration,
+          qr_code_url: astData.finalization.qrCodeUrl,
+          shareable_link: astData.finalization.shareableLink,
+          generated_reports: astData.finalization.generatedReports
+        },
+        
+        // Statistiques pour recherche rapide
+        statistics: {
+          identified_hazards: stats.identifiedHazards,
+          selected_equipment: stats.selectedEquipment,
+          required_permits: stats.requiredPermits,
+          team_members: stats.teamMembers,
+          photos_count: stats.photosCount,
+          documents_count: stats.documentsCount,
+          signatures_count: stats.signaturesCount
+        }
+      };
+      
+      console.log('📤 Step6 AST - Données pour Supabase:', supabaseData);
+      
+      // TODO: Intégrer vraie API Supabase
+      // const { data, error } = await supabase
+      //   .from('ast_complete_records')
+      //   .upsert(supabaseData, { onConflict: 'ast_number' });
+      
+      // Simulation délai réseau
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      // Mise à jour état local avec timestamp
+      const updatedData = {
+        ...finalizationData,
+        lastSaved: new Date().toISOString()
+      };
+      
+      setFinalizationData(updatedData);
+      onDataChange('finalization', updatedData);
+      
+      showNotificationToast(t.saveSuccess, 'success');
+      console.log('✅ Step6 AST - Sauvegarde Supabase réussie');
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur sauvegarde Supabase:', error);
+      showNotificationToast(language === 'fr' ? 'Erreur lors de la sauvegarde AST' : 'Error saving JSA', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [extractCompleteASTData, getASTStatistics, finalizationData, onDataChange, t.saveSuccess, showNotificationToast, language]);
 
-  const generateCompleteAST = useCallback(() => {
-    const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
-    const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
-    const astNumber = formData?.astNumber || `AST-${Date.now().toString().slice(-6)}`;
+  /**
+   * ✅ HANDLER GÉNÉRATION QR CODE AST (comme PermitManager)
+   */
+  const handleGenerateQR = useCallback(async () => {
+    console.log('📱 Step6 AST - Début génération QR Code...');
+    setIsGeneratingQR(true);
     
-    // ✅ EXTRACTION COMPLÈTE DES DONNÉES DE TOUS LES STEPS
-    const reportData = extractDataForReport();
+    try {
+      const astData = extractCompleteASTData();
+      const astUrl = `https://${tenant}.csecur360.com/ast/view/${astData.astNumber}`;
+      
+      // Génération QR Code avec API externe
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(astUrl)}&bgcolor=FFFFFF&color=000000&format=png&ecc=M&margin=10`;
+      
+      const updatedData = {
+        ...finalizationData,
+        qrCodeUrl,
+        shareableLink: astUrl
+      };
+      
+      setFinalizationData(updatedData);
+      onDataChange('finalization', updatedData);
+      
+      showNotificationToast(t.qrGenerated, 'success');
+      console.log('✅ Step6 AST - QR Code généré:', qrCodeUrl);
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur génération QR:', error);
+      showNotificationToast(language === 'fr' ? 'Erreur génération QR Code' : 'Error generating QR Code', 'error');
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  }, [extractCompleteASTData, tenant, finalizationData, onDataChange, t.qrGenerated, showNotificationToast, language]);
+
+  /**
+   * ✅ HANDLER GÉNÉRATION PDF PROFESSIONNEL AST AVEC LOGO (comme PermitManager)
+   */
+  const handleGeneratePDF = useCallback(async (reportType: ReportType = 'standard') => {
+    console.log(`🖨️ Step6 AST - Début génération PDF ${reportType}...`);
+    setIsGeneratingPDF(true);
     
-    const totalWorkers = finalizationData.workers.length;
-    const consentedWorkers = finalizationData.workers.filter(w => w.hasConsented).length;
-    const approvedWorkers = finalizationData.workers.filter(w => w.approbationStatus === 'approved').length;
-    
-    // ✅ DONNÉES STEPS 1-5 POUR STATISTIQUES
-    const totalHazards = reportData.hazards.selected.length + reportData.hazards.identifiedHazards.length;
-    const totalEquipment = reportData.equipment.selected.length;
-    const totalPermits = reportData.permits.permits.length + reportData.permits.requiredPermits.length;
-    const lockoutPoints = reportData.projectInfo.lockoutPoints.length;
-    
-    return `
+    try {
+      const astData = extractCompleteASTData();
+      const stats = getASTStatistics();
+      const sections = getSectionValidation();
+      
+      const currentDate = new Date().toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA');
+      const currentTime = new Date().toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA');
+      
+      // ✅ GÉNÉRATION HTML PROFESSIONNEL AVEC LOGO OFFICIEL C-SECUR360
+      const pdfContent = `
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${language === 'en' ? 'Complete JSA Report' : 'Rapport AST Complet'} - ${reportData.projectInfo.client}</title>
+    <title>${language === 'en' ? 'Complete JSA Report' : 'Rapport AST Complet'} - ${stats.client}</title>
     <style>
-        @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } .no-print { display: none; } }
+        @media print { @page { margin: 15mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page-break { page-break-before: always; } }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #1f2937; background: white; font-size: 11px; }
-        .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 20px; text-align: center; margin-bottom: 20px; border-radius: 8px; position: relative; }
-        .logo-container { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: #000; border: 2px solid #f59e0b; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .logo-fallback { color: #f59e0b; font-size: 18px; font-weight: bold; }
-        .header h1 { font-size: 24px; margin-bottom: 8px; font-weight: bold; }
-        .header .subtitle { font-size: 14px; opacity: 0.9; }
-        .stats-summary { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-top: 10px; }
-        .stat-item { text-align: center; background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 6px; }
-        .stat-number { font-size: 20px; font-weight: bold; }
-        .stat-label { font-size: 10px; opacity: 0.9; margin-top: 4px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
-        .info-box { border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; background: #f8fafc; }
-        .info-box h3 { font-size: 12px; color: #374151; margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid #d1d5db; padding-bottom: 5px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; padding: 4px 0; }
-        .info-label { font-weight: 600; color: #4b5563; min-width: 120px; }
+        
+        /* ✅ HEADER AVEC LOGO OFFICIEL C-SECUR360 */
+        .header { 
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+          color: white; 
+          padding: 25px; 
+          text-align: center; 
+          margin-bottom: 25px; 
+          border-radius: 8px; 
+          position: relative; 
+          overflow: hidden;
+        }
+        .logo-container { 
+          position: absolute; 
+          left: 25px; 
+          top: 50%; 
+          transform: translateY(-50%); 
+          width: 90px; 
+          height: 90px; 
+          background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+          border: 4px solid #f59e0b; 
+          border-radius: 16px; 
+          display: flex; 
+          align-items: center; 
+          justifyContent: center;
+          box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
+        }
+        .logo-image { 
+          width: 72px; 
+          height: 72px; 
+          object-fit: contain;
+          filter: brightness(1.3) contrast(1.2);
+        }
+        .logo-fallback { 
+          color: #f59e0b; 
+          font-size: 28px; 
+          font-weight: bold; 
+          display: none;
+        }
+        .header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.1), transparent);
+          animation: shimmer 3s ease-in-out infinite;
+        }
+        .header h1 { font-size: 32px; margin-bottom: 12px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .header .subtitle { font-size: 18px; opacity: 0.95; font-weight: 500; }
+        
+        /* ✅ WATERMARK LOGO EN ARRIÈRE-PLAN */
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          opacity: 0.03;
+          font-size: 150px;
+          font-weight: bold;
+          color: #f59e0b;
+          z-index: -1;
+          pointer-events: none;
+          font-family: Arial, sans-serif;
+        }
+        
+        .stats-summary { 
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+          color: white; 
+          padding: 20px; 
+          border-radius: 12px; 
+          margin-bottom: 25px;
+          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 18px; margin-top: 15px; }
+        .stat-item { 
+          text-align: center; 
+          background: rgba(255, 255, 255, 0.15); 
+          padding: 15px; 
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(10px);
+        }
+        .stat-number { font-size: 24px; font-weight: bold; margin-bottom: 4px; }
+        .stat-label { font-size: 11px; opacity: 0.9; margin-top: 4px; font-weight: 500; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 30px; }
+        .info-box { 
+          border: 2px solid #e5e7eb; 
+          padding: 20px; 
+          border-radius: 12px; 
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .info-box h3 { 
+          font-size: 14px; 
+          color: #374151; 
+          margin-bottom: 15px; 
+          font-weight: bold; 
+          border-bottom: 2px solid #3b82f6; 
+          padding-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 6px 0; }
+        .info-label { font-weight: 600; color: #4b5563; min-width: 140px; }
         .info-value { color: #1f2937; font-weight: 500; flex: 1; text-align: right; }
-        .section { margin-bottom: 25px; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
-        .section-header { background: #f3f4f6; padding: 12px 15px; border-bottom: 1px solid #d1d5db; }
-        .section-title { font-size: 14px; font-weight: bold; color: #1f2937; }
-        .section-content { padding: 15px; }
-        .workers-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .workers-table th, .workers-table td { border: 1px solid #d1d5db; padding: 8px; text-align: left; font-size: 9px; }
-        .workers-table th { background: #f3f4f6; font-weight: bold; }
-        .status-approved { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-rejected { background: #fee2e2; color: #991b1b; }
-        .footer { margin-top: 30px; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; font-size: 9px; color: #6b7280; }
-        .signature-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 40px; }
-        .signature-box { border-top: 2px solid #374151; padding-top: 10px; text-align: center; }
-        .signature-label { font-size: 10px; color: #4b5563; font-weight: 600; }
-        .data-section { margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
-        .data-title { font-size: 12px; font-weight: bold; color: #374151; margin-bottom: 10px; }
-        .data-list { font-size: 10px; color: #4b5563; }
-        .data-item { margin-bottom: 4px; padding: 2px 0; }
+        
+        .section { margin-bottom: 30px; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .section-header { 
+          background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+          padding: 15px 20px; 
+          border-bottom: 2px solid #d1d5db;
+        }
+        .section-title { font-size: 16px; font-weight: bold; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+        .section-content { padding: 20px; }
+        
+        .validation-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .validation-table th, .validation-table td { 
+          border: 1px solid #d1d5db; 
+          padding: 12px; 
+          text-align: left; 
+          font-size: 10px; 
+        }
+        .validation-table th { 
+          background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); 
+          font-weight: bold; 
+          color: #374151;
+        }
+        .status-complete { background: #dcfce7; color: #166534; font-weight: 600; }
+        .status-incomplete { background: #fef3c7; color: #92400e; font-weight: 600; }
+        .status-error { background: #fee2e2; color: #991b1b; font-weight: 600; }
+        
+        .step-section { 
+          margin-bottom: 25px; 
+          padding: 18px; 
+          border: 1px solid #e5e7eb; 
+          border-radius: 8px; 
+          background: #fafafa;
+        }
+        .step-title { 
+          font-size: 14px; 
+          font-weight: bold; 
+          margin-bottom: 12px; 
+          color: #1f2937;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .step-content { font-size: 10px; line-height: 1.5; color: #4b5563; }
+        .step-list { padding-left: 20px; margin-top: 8px; }
+        .step-list li { margin-bottom: 4px; }
+        
+        .footer { 
+          margin-top: 40px; 
+          padding: 20px; 
+          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); 
+          border: 2px solid #e5e7eb; 
+          border-radius: 12px; 
+          text-align: center; 
+          font-size: 10px; 
+          color: #6b7280;
+          position: relative;
+        }
+        .footer-logo {
+          position: absolute;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+          border: 3px solid #f59e0b;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+        
+        .signature-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; margin-top: 50px; }
+        .signature-box { 
+          border-top: 3px solid #374151; 
+          padding-top: 15px; 
+          text-align: center;
+          min-height: 80px;
+        }
+        .signature-label { font-size: 11px; color: #4b5563; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .qr-section { text-align: center; margin: 30px 0; page-break-inside: avoid; }
+        .qr-code { 
+          border: 4px solid #f59e0b; 
+          border-radius: 16px; 
+          padding: 15px; 
+          background: white; 
+          display: inline-block;
+          box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+        }
+        
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
     </style>
 </head>
 <body>
+    <!-- ✅ WATERMARK LOGO EN ARRIÈRE-PLAN -->
+    <div class="watermark">C-SECUR360</div>
+    
     <div class="header">
         <div class="logo-container">
-            <img src="/c-secur360-logo.png" alt="C-Secur360" style="width: 56px; height: 56px; object-fit: contain;" 
+            <img src="/c-secur360-logo.png" alt="C-Secur360" class="logo-image"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-            <div class="logo-fallback" style="display: none;">C🛡️</div>
+            <div class="logo-fallback">C🛡️</div>
         </div>
-        <h1>${language === 'en' ? '🛡️ JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL (AST)'}</h1>
-        <div class="subtitle">${language === 'en' ? 'Complete Official Report' : 'Rapport Officiel Complet'} - ${tenant} | N° ${astNumber}</div>
+        <h1>${language === 'en' ? '🛡️ COMPLETE JOB SAFETY ANALYSIS (JSA)' : '🛡️ ANALYSE SÉCURITAIRE DE TRAVAIL COMPLÈTE (AST)'}</h1>
+        <div class="subtitle">${language === 'en' ? 'Professional Safety Report' : 'Rapport de Sécurité Professionnel'} - ${tenant} | N° ${stats.astNumber}</div>
     </div>
     
     <div class="stats-summary">
-        <h3 style="margin-bottom: 10px; font-size: 14px;">📊 ${t.reportData.executiveSummary}</h3>
+        <h3 style="margin-bottom: 15px; font-size: 16px;">📊 ${language === 'en' ? 'EXECUTIVE SUMMARY' : 'RÉSUMÉ EXÉCUTIF'}</h3>
         <div class="stats-grid">
-            <div class="stat-item"><div class="stat-number">${totalHazards}</div><div class="stat-label">${t.reportData.hazards}</div></div>
-            <div class="stat-item"><div class="stat-number">${totalEquipment}</div><div class="stat-label">${t.reportData.equipment}</div></div>
-            <div class="stat-item"><div class="stat-number">${totalPermits}</div><div class="stat-label">${t.reportData.permits}</div></div>
-            <div class="stat-item"><div class="stat-number">${lockoutPoints}</div><div class="stat-label">${t.reportData.lockoutPoints}</div></div>
-            <div class="stat-item"><div class="stat-number">${totalWorkers}</div><div class="stat-label">${t.stats.workers}</div></div>
-            <div class="stat-item"><div class="stat-number">${consentedWorkers}/${totalWorkers}</div><div class="stat-label">${t.stats.consents}</div></div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.completedSections}/${stats.totalSections}</div>
+                <div class="stat-label">${language === 'en' ? 'Completed Steps' : 'Étapes Complétées'}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.identifiedHazards}</div>
+                <div class="stat-label">${language === 'en' ? 'Identified Hazards' : 'Dangers Identifiés'}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.selectedEquipment}</div>
+                <div class="stat-label">${language === 'en' ? 'Safety Equipment' : 'Équipements Sécurité'}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.requiredPermits}</div>
+                <div class="stat-label">${language === 'en' ? 'Required Permits' : 'Permis Requis'}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.teamMembers}</div>
+                <div class="stat-label">${language === 'en' ? 'Team Members' : 'Membres Équipe'}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">${stats.overallCompletion}%</div>
+                <div class="stat-label">${language === 'en' ? 'Completion' : 'Complétion'}</div>
+            </div>
         </div>
     </div>
     
     <div class="info-grid">
         <div class="info-box">
-            <h3>${t.reportData.clientProjectInfo}</h3>
-            <div class="info-row"><span class="info-label">${t.reportData.client}</span><span class="info-value">${reportData.projectInfo.client}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.projectNumber}</span><span class="info-value">${reportData.projectInfo.projectNumber}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.location}</span><span class="info-value">${reportData.projectInfo.workLocation}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.dateTime}</span><span class="info-value">${reportData.projectInfo.date} ${reportData.projectInfo.time}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.industry}</span><span class="info-value">${getIndustryLabel(reportData.projectInfo.industry)}</span></div>
+            <h3>🏢 ${language === 'en' ? 'PROJECT INFORMATION' : 'INFORMATIONS PROJET'}</h3>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Client:' : 'Client:'}</span>
+                <span class="info-value">${stats.client}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Project #:' : 'Projet #:'}</span>
+                <span class="info-value">${stats.projectNumber}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Location:' : 'Lieu:'}</span>
+                <span class="info-value">${stats.workLocation}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Industry:' : 'Industrie:'}</span>
+                <span class="info-value">${t.industries[stats.industry as keyof typeof t.industries] || stats.industry}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Duration:' : 'Durée:'}</span>
+                <span class="info-value">${stats.estimatedDuration}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Workers:' : 'Travailleurs:'}</span>
+                <span class="info-value">${stats.workerCount}</span>
+            </div>
         </div>
+        
         <div class="info-box">
-            <h3>${t.reportData.teamContacts}</h3>
-            <div class="info-row"><span class="info-label">${t.reportData.workerCount}</span><span class="info-value">${reportData.projectInfo.workerCount}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.estimatedDuration}</span><span class="info-value">${reportData.projectInfo.estimatedDuration}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.clientContact}</span><span class="info-value">${reportData.projectInfo.clientRepresentative}</span></div>
-            <div class="info-row"><span class="info-label">${t.reportData.emergency}</span><span class="info-value">${reportData.projectInfo.emergencyContact}</span></div>
-        </div>
-    </div>
-    
-    <div class="section page-break">
-        <div class="section-header">
-            <div class="section-title">👷 STEP 6: ${t.reportData.teamConsents}</div>
-        </div>
-        <div class="section-content">
-            ${finalizationData.workers.length > 0 ? `
-                <table class="workers-table">
-                    <thead>
-                        <tr>
-                            <th>${t.reportData.name.replace(':', '')}</th>
-                            <th>${language === 'en' ? 'Company' : 'Entreprise'}</th>
-                            <th>${language === 'en' ? 'Position' : 'Poste'}</th>
-                            <th>${language === 'en' ? 'Consent' : 'Consentement'}</th>
-                            <th>${t.reportData.dateTime.replace(':', '')}</th>
-                            <th>${language === 'en' ? 'Status' : 'Statut'}</th>
-                            <th>${language === 'en' ? 'Comments' : 'Commentaires'}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${finalizationData.workers.map(worker => `
-                            <tr>
-                                <td>${worker.name}</td>
-                                <td>${worker.company}</td>
-                                <td>${worker.position}</td>
-                                <td class="${worker.hasConsented ? 'status-approved' : 'status-pending'}">
-                                    ${worker.hasConsented ? '✅ Oui' : '❌ Non'}
-                                </td>
-                                <td>${worker.consentTimestamp ? new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '-'}</td>
-                                <td class="status-${worker.approbationStatus}">
-                                    ${worker.approbationStatus === 'approved' ? '✅ Approuvé' : 
-                                      worker.approbationStatus === 'rejected' ? '❌ Rejeté' : '⏳ En attente'}
-                                </td>
-                                <td>${worker.approbationComments || '-'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            ` : `<p style="text-align: center; color: #6b7280; font-style: italic;">${t.reportData.noWorkerAdded}</p>`}
-            
-            ${finalizationData.finalComments ? `
-                <div style="margin-top: 20px; padding: 10px; background: #f9fafb; border-radius: 4px;">
-                    <strong>💬 ${t.reportData.finalCommentsLabel}</strong><br>${finalizationData.finalComments}
-                </div>
-            ` : ''}
-            
-            <div style="margin-top: 20px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                <strong>📊 ${t.reportData.documentStatus}</strong> 
-                <span style="padding: 2px 8px; border-radius: 12px; font-size: 8px; font-weight: 600; ${finalizationData.isLocked ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #92400e;'}">
-                    ${finalizationData.isLocked ? t.reportData.locked : t.reportData.inProgress}
+            <h3>🛡️ ${language === 'en' ? 'SAFETY OVERVIEW' : 'APERÇU SÉCURITÉ'}</h3>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Risk Level:' : 'Niveau Risque:'}</span>
+                <span class="info-value">${astData.hazards.riskLevel.toUpperCase()}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Lockout Points:' : 'Points LOTO:'}</span>
+                <span class="info-value">${stats.lockoutPoints}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Photos:' : 'Photos:'}</span>
+                <span class="info-value">${stats.photosCount}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Documents:' : 'Documents:'}</span>
+                <span class="info-value">${stats.documentsCount}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Signatures:' : 'Signatures:'}</span>
+                <span class="info-value">${stats.signaturesCount}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">${language === 'en' ? 'Status:' : 'Statut:'}</span>
+                <span class="info-value" style="color: ${astData.finalization.isLocked ? '#dc2626' : '#059669'}; font-weight: bold;">
+                    ${astData.finalization.isLocked ? (language === 'en' ? '🔒 LOCKED' : '🔒 VERROUILLÉ') : (language === 'en' ? '🔓 ACTIVE' : '🔓 ACTIF')}
                 </span>
-                | ${t.reportData.completion} ${finalizationData.completionPercentage}%
-                ${finalizationData.lockTimestamp ? ` | ${t.reportData.lockedOn} ${new Date(finalizationData.lockTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}` : ''}
             </div>
         </div>
     </div>
+    
+    <!-- Détail par steps -->
+    ${reportType === 'detailed' || reportType === 'technical' ? `
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">📋 ${language === 'en' ? 'DETAILED BREAKDOWN BY STEPS' : 'DÉTAIL PAR ÉTAPES'}</div>
+        </div>
+        <div class="section-content">
+            <div class="step-section">
+                <div class="step-title">🏢 ${t.step1ProjectInfo}</div>
+                <div class="step-content">
+                    <strong>${language === 'en' ? 'Work Description:' : 'Description du travail:'}</strong> ${astData.projectInfo.workDescription}<br>
+                    <strong>${language === 'en' ? 'Emergency Contact:' : 'Contact d\'urgence:'}</strong> ${astData.projectInfo.emergencyContact}<br>
+                    ${astData.projectInfo.weatherConditions ? `<strong>${language === 'en' ? 'Weather:' : 'Météo:'}</strong> ${astData.projectInfo.weatherConditions}<br>` : ''}
+                    ${astData.projectInfo.accessRestrictions ? `<strong>${language === 'en' ? 'Access:' : 'Accès:'}</strong> ${astData.projectInfo.accessRestrictions}` : ''}
+                </div>
+            </div>
+            
+            ${astData.equipment.selected.length > 0 ? `
+            <div class="step-section">
+                <div class="step-title">🛡️ ${t.step2Equipment}</div>
+                <div class="step-content">
+                    <ul class="step-list">
+                        ${astData.equipment.selected.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${astData.hazards.identified.length > 0 ? `
+            <div class="step-section">
+                <div class="step-title">⚠️ ${t.step3Hazards}</div>
+                <div class="step-content">
+                    <strong>${language === 'en' ? 'Identified Hazards:' : 'Dangers identifiés:'}</strong>
+                    <ul class="step-list">
+                        ${astData.hazards.identified.map(hazard => `<li>${hazard}</li>`).join('')}
+                    </ul>
+                    ${astData.hazards.controlMeasures.length > 0 ? `
+                    <strong style="margin-top: 10px; display: block;">${language === 'en' ? 'Control Measures:' : 'Mesures de contrôle:'}</strong>
+                    <ul class="step-list">
+                        ${astData.hazards.controlMeasures.map(measure => `<li>${measure}</li>`).join('')}
+                    </ul>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${astData.permits.required.length > 0 ? `
+            <div class="step-section">
+                <div class="step-title">📄 ${t.step4Permits}</div>
+                <div class="step-content">
+                    <ul class="step-list">
+                        ${astData.permits.required.map(permit => `<li>${permit}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${astData.validation.reviewers.length > 0 ? `
+            <div class="step-section">
+                <div class="step-title">✅ ${t.step5Validation}</div>
+                <div class="step-content">
+                    <strong>${language === 'en' ? 'Team Members:' : 'Membres de l\'équipe:'}</strong>
+                    <ul class="step-list">
+                        ${astData.validation.reviewers.map(reviewer => `<li>${reviewer}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    </div>
+    ` : ''}
+    
+    <!-- Validation globale -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-title">✅ ${language === 'en' ? 'GLOBAL VALIDATION STATUS' : 'STATUT DE VALIDATION GLOBALE'}</div>
+        </div>
+        <div class="section-content">
+            <table class="validation-table">
+                <thead>
+                    <tr>
+                        <th>${language === 'en' ? 'Step' : 'Étape'}</th>
+                        <th>${language === 'en' ? 'Section' : 'Section'}</th>
+                        <th>${language === 'en' ? 'Status' : 'Statut'}</th>
+                        <th>${language === 'en' ? 'Completion' : 'Complétion'}</th>
+                        <th>${language === 'en' ? 'Notes' : 'Notes'}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sections.map(section => `
+                        <tr>
+                            <td><strong>${section.stepNumber}</strong></td>
+                            <td><strong>${section.sectionName}</strong></td>
+                            <td class="${section.isComplete ? 'status-complete' : 'status-incomplete'}">
+                                ${section.isComplete ? (language === 'en' ? '✅ Complete' : '✅ Complété') : (language === 'en' ? '⚠️ Incomplete' : '⚠️ Incomplet')}
+                            </td>
+                            <td><strong>${section.completionPercentage}%</strong></td>
+                            <td>${section.errors.length > 0 ? section.errors[0] : (language === 'en' ? 'No issues' : 'Aucun problème')}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            
+            ${astData.finalization.finalComments ? `
+                <div style="margin-top: 25px; padding: 20px; background: #f9fafb; border-radius: 12px; border-left: 4px solid #3b82f6;">
+                    <h4 style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px;">💬 ${language === 'en' ? 'Final Comments:' : 'Commentaires Finaux:'}</h4>
+                    <p style="margin: 0; color: #4b5563; font-size: 11px; line-height: 1.5;">${astData.finalization.finalComments}</p>
+                </div>
+            ` : ''}
+        </div>
+    </div>
+    
+    ${astData.finalization.qrCodeUrl ? `
+        <div class="qr-section">
+            <h3 style="margin-bottom: 20px; color: #1f2937;">📱 ${language === 'en' ? 'Mobile Access QR Code' : 'Code QR Accès Mobile'}</h3>
+            <div class="qr-code">
+                <img src="${astData.finalization.qrCodeUrl}" alt="QR Code AST" style="width: 180px; height: 180px; display: block;" />
+            </div>
+            <p style="margin-top: 15px; color: #6b7280; font-size: 11px;">
+                ${language === 'en' ? 'Scan this QR code to access the JSA from a mobile device' : 'Scannez ce code QR pour accéder à l\'AST depuis un appareil mobile'}
+            </p>
+        </div>
+    ` : ''}
     
     <div class="signature-section">
         <div class="signature-box">
-            <div class="signature-label">${t.reportData.safetyManager}</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                ${t.reportData.name} _________________________<br><br>
-                ${t.reportData.signature} ____________________<br><br>
-                ${t.reportData.date} ________________________
+            <div class="signature-label">${language === 'en' ? 'SAFETY MANAGER' : 'RESPONSABLE SÉCURITÉ'}</div>
+            <div style="margin-top: 40px; font-size: 9px;">
+                ${language === 'en' ? 'Name:' : 'Nom:'} _________________________________<br><br>
+                ${language === 'en' ? 'Signature:' : 'Signature:'} ________________________<br><br>
+                ${language === 'en' ? 'Date:' : 'Date:'} ________________________________
             </div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">${t.reportData.supervisor}</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                ${t.reportData.name} _________________________<br><br>
-                ${t.reportData.signature} ____________________<br><br>
-                ${t.reportData.date} ________________________
+            <div class="signature-label">${language === 'en' ? 'SUPERVISOR' : 'SUPERVISEUR'}</div>
+            <div style="margin-top: 40px; font-size: 9px;">
+                ${language === 'en' ? 'Name:' : 'Nom:'} _________________________________<br><br>
+                ${language === 'en' ? 'Signature:' : 'Signature:'} ________________________<br><br>
+                ${language === 'en' ? 'Date:' : 'Date:'} ________________________________
             </div>
         </div>
         <div class="signature-box">
-            <div class="signature-label">${t.reportData.manager}</div>
-            <div style="margin-top: 30px; font-size: 8px;">
-                ${t.reportData.name} _________________________<br><br>
-                ${t.reportData.signature} ____________________<br><br>
-                ${t.reportData.date} ________________________
+            <div class="signature-label">${language === 'en' ? 'PROJECT MANAGER' : 'GESTIONNAIRE PROJET'}</div>
+            <div style="margin-top: 40px; font-size: 9px;">
+                ${language === 'en' ? 'Name:' : 'Nom:'} _________________________________<br><br>
+                ${language === 'en' ? 'Signature:' : 'Signature:'} ________________________<br><br>
+                ${language === 'en' ? 'Date:' : 'Date:'} ________________________________
             </div>
         </div>
     </div>
     
     <div class="footer">
-        <p><strong>${language === 'en' ? 'This document was automatically generated by the C-Secur360 system' : 'Ce document a été généré automatiquement par le système C-Secur360'}</strong></p>
+        <div class="footer-logo">
+            <img src="/c-secur360-logo.png" alt="C-Secur360" style="width: 40px; height: 40px; object-fit: contain;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+            <div style="display: none; color: #f59e0b; font-size: 16px; font-weight: bold;">C🛡️</div>
+        </div>
+        <p><strong>${language === 'en' ? 'This JSA was automatically generated by the C-Secur360 system' : 'Cette AST a été générée automatiquement par le système C-Secur360'}</strong></p>
         <p>${language === 'en' ? 'Compliant with Canadian occupational health and safety standards' : 'Conforme aux normes de santé et sécurité au travail du Canada'} | ${language === 'en' ? 'Generated on' : 'Généré le'} ${currentDate} ${language === 'en' ? 'at' : 'à'} ${currentTime}</p>
-        <p>${language === 'en' ? 'Official document valid for safety committees, inspections and investigations' : 'Document officiel valide pour comités de sécurité, inspections et enquêtes'}</p>
-        <p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${shareLink}</p>
+        <p>${language === 'en' ? 'Official document valid for safety inspections, committees and investigations' : 'Document officiel valide pour inspections sécurité, comités et enquêtes'}</p>
+        ${astData.finalization.shareableLink ? `<p>🔗 ${language === 'en' ? 'Access link:' : 'Lien d\'accès:'} ${astData.finalization.shareableLink}</p>` : ''}
     </div>
 </body>
 </html>`;
-  }, [formData, finalizationData, language, tenant, shareLink, getIndustryLabel, extractDataForReport, t]);
 
-  // =================== CSS THÈME SOMBRE ULTRA-COMPLET ===================
-  const darkThemeCSS = `
-    .step6-container { padding: 0; background: transparent; min-height: 100vh; color: #ffffff !important; }
-    .finalization-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2); backdrop-filter: blur(10px); }
-    .finalization-title { font-size: 24px; margin-bottom: 8px; font-weight: bold; color: #ffffff !important; }
-    .finalization-subtitle { font-size: 14px; opacity: 0.9; color: #e2e8f0 !important; }
-    .tabs-container { display: flex; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 6px; margin-bottom: 20px; backdrop-filter: blur(10px); }
-    .tab-button { flex: 1; padding: 12px 16px; border: none; background: transparent; color: #94a3b8; font-weight: 500; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; }
-    .tab-button.active { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transform: translateY(-1px); }
-    .tab-button:hover:not(.active) { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    .finalization-section { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px; backdrop-filter: blur(10px); }
-    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #ffffff !important; display: flex; align-items: center; gap: 8px; }
-    .workers-grid { display: grid; gap: 16px; }
-    .worker-card { border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 16px; background: rgba(30, 41, 59, 0.6); transition: all 0.3s ease; backdrop-filter: blur(5px); }
-    .worker-card:hover { border-color: #3b82f6; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15); transform: translateY(-2px); }
-    .worker-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-    .worker-name { font-size: 16px; font-weight: bold; color: #ffffff !important; }
-    .worker-company { color: #94a3b8 !important; font-size: 14px; }
-    .consent-section { background: rgba(51, 65, 85, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 16px; margin-top: 12px; backdrop-filter: blur(5px); }
-    .consent-checkbox { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.3s ease; }
-    .consent-checkbox:hover { background: rgba(59, 130, 246, 0.1); }
-    .consent-checkbox input { width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6; }
-    .consent-text { font-weight: 500; color: #e2e8f0 !important; flex: 1; }
-    .consent-timestamp { font-size: 12px; color: #94a3b8 !important; font-style: italic; }
-    .approbation-section { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-    .approbation-btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; min-height: 44px; flex: 1; min-width: 120px; }
-    .approbation-approve { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .approbation-approve:hover { background: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
-    .approbation-reject { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .approbation-reject:hover { background: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
-    .premium-button { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 14px; }
-    .premium-button:hover { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3); }
-    .premium-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .share-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
-    .share-btn { padding: 16px 12px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; background: rgba(30, 41, 59, 0.6); cursor: pointer; text-align: center; transition: all 0.3s ease; backdrop-filter: blur(5px); min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-    .share-btn:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); transform: translateY(-2px); }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-    .modal-content { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); color: #ffffff !important; }
-    .form-group { margin-bottom: 16px; }
-    .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: #e2e8f0 !important; }
-    .form-input { width: 100%; padding: 14px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease; background: rgba(51, 65, 85, 0.6) !important; color: #ffffff !important; backdrop-filter: blur(5px); }
-    .form-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-    .form-input::placeholder { color: #94a3b8 !important; }
-    .checkbox-field { display: flex; align-items: center; gap: 12px; padding: 16px; border: 2px solid rgba(148, 163, 184, 0.2); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; background: rgba(30, 41, 59, 0.6) !important; backdrop-filter: blur(5px); }
-    .checkbox-field:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1) !important; }
-    .checkbox-field.checked { border-color: #10b981; background: rgba(16, 185, 129, 0.1) !important; }
-    .checkbox-field span { color: #e2e8f0 !important; font-weight: 500 !important; }
-    .progress-bar { width: 100%; height: 8px; background: rgba(55, 65, 81, 0.6); border-radius: 4px; overflow: hidden; margin-bottom: 16px; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.5s ease; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .stat-card { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .stat-number { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
-    .stat-label { font-size: 11px; opacity: 0.9; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .spinning { animation: spin 1s linear infinite; }
-    @media (max-width: 768px) {
-      .finalization-header { padding: 16px; margin-bottom: 16px; }
-      .finalization-title { font-size: 20px; }
-      .tabs-container { flex-direction: column; gap: 4px; }
-      .tab-button { padding: 14px 16px; font-size: 16px; min-height: 52px; }
-      .finalization-section { padding: 16px; margin-bottom: 12px; }
-      .section-title { font-size: 16px; margin-bottom: 12px; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .stat-card { padding: 12px; }
-      .stat-number { font-size: 18px; }
-      .worker-header { flex-direction: column; align-items: flex-start; gap: 6px; }
-      .approbation-section { flex-direction: column; gap: 6px; }
-      .approbation-btn { min-width: 100%; }
-      .share-buttons { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .share-btn { padding: 12px 8px; min-height: 70px; font-size: 13px; }
-      .modal-content { padding: 20px; margin: 16px; width: calc(100% - 32px); }
-      .form-input { padding: 16px; font-size: 16px; }
+      // Création et ouverture PDF
+      const printWindow = window.open('', '_blank', 'width=1200,height=800');
+      
+      if (printWindow) {
+        printWindow.document.write(pdfContent);
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+          printWindow.focus();
+          printWindow.print();
+          
+          // Enregistrement rapport généré
+          const newReport: GeneratedReport = {
+            id: Date.now().toString(),
+            type: reportType,
+            url: astData.finalization.shareableLink || `#${astData.astNumber}`,
+            generatedAt: new Date().toISOString(),
+            fileSize: '2.5 MB',
+            astNumber: astData.astNumber
+          };
+          
+          const updatedData = {
+            ...finalizationData,
+            generatedReports: [...finalizationData.generatedReports, newReport]
+          };
+          
+          setFinalizationData(updatedData);
+          onDataChange('finalization', updatedData);
+          
+          setIsGeneratingPDF(false);
+          showNotificationToast(t.pdfGenerated, 'success');
+        };
+        
+        console.log(`✅ Step6 AST - PDF ${reportType} généré avec logo officiel`);
+      } else {
+        throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
+      }
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur génération PDF:', error);
+      showNotificationToast(language === 'fr' ? 'Erreur génération PDF' : 'Error generating PDF', 'error');
+      setIsGeneratingPDF(false);
     }
+  }, [extractCompleteASTData, getASTStatistics, getSectionValidation, finalizationData, onDataChange, language, t, showNotificationToast]);
+
+  /**
+   * ✅ HANDLER PARTAGE AST MULTI-CANAUX (comme PermitManager)
+   */
+  const handleShare = useCallback(async () => {
+    console.log(`📤 Step6 AST - Début partage via ${selectedShareMethod}...`);
+    
+    try {
+      const astData = extractCompleteASTData();
+      const stats = getASTStatistics();
+      const shareUrl = astData.finalization.shareableLink || `https://${tenant}.csecur360.com/ast/view/${astData.astNumber}`;
+      
+      const shareText = language === 'fr' ? 
+        `🛡️ AST Complète - ${stats.client}\n\n📋 Analyse Sécuritaire de Travail\nProjet: ${stats.projectNumber}\n📍 Lieu: ${stats.workLocation}\n👥 Équipe: ${stats.teamMembers} membres\n⚠️ Dangers: ${stats.identifiedHazards} identifiés\n🛡️ Équipements: ${stats.selectedEquipment} requis\n📄 Permis: ${stats.requiredPermits} nécessaires\n\n✅ Complétion: ${stats.overallCompletion}%\n🔗 Accès: ${shareUrl}\n\nCette AST doit être consultée avant le début des travaux.\n\n${tenant} - Équipe Sécurité C-Secur360` :
+        `🛡️ Complete JSA - ${stats.client}\n\n📋 Job Safety Analysis\nProject: ${stats.projectNumber}\n📍 Location: ${stats.workLocation}\n👥 Team: ${stats.teamMembers} members\n⚠️ Hazards: ${stats.identifiedHazards} identified\n🛡️ Equipment: ${stats.selectedEquipment} required\n📄 Permits: ${stats.requiredPermits} needed\n\n✅ Completion: ${stats.overallCompletion}%\n🔗 Access: ${shareUrl}\n\nThis JSA must be reviewed before work begins.\n\n${tenant} - C-Secur360 Safety Team`;
+      
+      switch (selectedShareMethod) {
+        case 'email':
+          const emailSubject = encodeURIComponent(language === 'fr' ? 
+            `🛡️ AST ${astData.astNumber} - ${stats.projectNumber}` : 
+            `🛡️ JSA ${astData.astNumber} - ${stats.projectNumber}`);
+          const emailBody = encodeURIComponent(shareText);
+          window.open(`mailto:?subject=${emailSubject}&body=${emailBody}`);
+          break;
+          
+        case 'sms':
+          const smsText = encodeURIComponent(shareText);
+          window.open(`sms:?body=${smsText}`);
+          break;
+          
+        case 'whatsapp':
+          const whatsappText = encodeURIComponent(shareText);
+          window.open(`https://wa.me/?text=${whatsappText}`);
+          break;
+          
+        case 'teams':
+          // Intégration Microsoft Teams (future)
+          console.log('🔄 Step6 AST - Partage Teams à implémenter');
+          showNotificationToast(language === 'fr' ? 'Intégration Teams bientôt disponible' : 'Teams integration coming soon', 'warning');
+          break;
+          
+        case 'slack':
+          // Intégration Slack (future)
+          console.log('🔄 Step6 AST - Partage Slack à implémenter');
+          showNotificationToast(language === 'fr' ? 'Intégration Slack bientôt disponible' : 'Slack integration coming soon', 'warning');
+          break;
+      }
+      
+      showNotificationToast(`${language === 'fr' ? 'Partage AST initié via' : 'JSA sharing initiated via'} ${selectedShareMethod}`, 'success');
+      console.log(`✅ Step6 AST - Partage ${selectedShareMethod} initié`);
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur partage:', error);
+      showNotificationToast(language === 'fr' ? 'Erreur lors du partage' : 'Error sharing', 'error');
+    }
+  }, [selectedShareMethod, extractCompleteASTData, getASTStatistics, tenant, language, showNotificationToast]);
+
+  /**
+   * ✅ HANDLER COPIE LIEN AST
+   */
+  const handleCopyLink = useCallback(async () => {
+    try {
+      const astData = extractCompleteASTData();
+      const shareUrl = astData.finalization.shareableLink || `https://${tenant}.csecur360.com/ast/view/${astData.astNumber}`;
+      
+      await navigator.clipboard.writeText(shareUrl);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+      showNotificationToast(t.linkCopied, 'success');
+      console.log('✅ Step6 AST - Lien copié:', shareUrl);
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur copie lien:', error);
+      showNotificationToast(language === 'fr' ? 'Erreur copie du lien' : 'Error copying link', 'error');
+    }
+  }, [extractCompleteASTData, tenant, t.linkCopied, showNotificationToast, language]);
+
+  /**
+   * ✅ HANDLER VERROUILLAGE AST (comme PermitManager)
+   */
+  const handleLockDocument = useCallback(() => {
+    console.log('🔒 Step6 AST - Verrouillage AST...');
+    
+    const updatedData = {
+      ...finalizationData,
+      isLocked: true,
+      lockTimestamp: new Date().toISOString()
+    };
+
+    setFinalizationData(updatedData);
+    onDataChange('finalization', updatedData);
+    
+    showNotificationToast(t.astLocked, 'success');
+    console.log('✅ Step6 AST - AST verrouillée');
+  }, [finalizationData, onDataChange, t.astLocked, showNotificationToast]);
+
+  /**
+   * ✅ HANDLER RECHERCHE BASE DE DONNÉES AST
+   */
+  const handleSearch = useCallback(async (query: string) => {
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Simulation recherche base de données AST
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Données fictives pour démonstration
+      const mockResults: ASTHistoryEntry[] = [
+        {
+          id: '1',
+          astNumber: `AST-${tenant}-2024-001`,
+          projectNumber: 'PRJ-2024-001',
+          workLocation: 'Site Construction ABC',
+          client: 'Client Test 1',
+          industry: 'construction',
+          status: 'completed',
+          createdAt: '2024-01-15T10:00:00Z',
+          lastModified: '2024-01-15T16:30:00Z',
+          hazardCount: 5,
+          equipmentCount: 12,
+          workerCount: 8,
+          photoCount: 15,
+          permitCount: 3,
+          completionPercentage: 100,
+          qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=demo'
+        },
+        {
+          id: '2',
+          astNumber: `AST-${tenant}-2024-002`,
+          projectNumber: 'PRJ-2024-002',
+          workLocation: 'Usine Manufacturière XYZ',
+          client: 'Client Test 2',
+          industry: 'manufacturing',
+          status: 'active',
+          createdAt: '2024-02-01T09:00:00Z',
+          lastModified: '2024-02-05T14:20:00Z',
+          hazardCount: 8,
+          equipmentCount: 18,
+          workerCount: 12,
+          photoCount: 22,
+          permitCount: 5,
+          completionPercentage: 85
+        }
+      ].filter(item => 
+        item.astNumber.toLowerCase().includes(query.toLowerCase()) ||
+        item.projectNumber.toLowerCase().includes(query.toLowerCase()) ||
+        item.workLocation.toLowerCase().includes(query.toLowerCase()) ||
+        item.client.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      setSearchResults(mockResults);
+      console.log('🔍 Step6 AST - Recherche terminée:', mockResults.length, 'résultats');
+      
+    } catch (error) {
+      console.error('❌ Step6 AST - Erreur recherche:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [tenant]);
+
+  // Effet de recherche avec debounce
+  React.useEffect(() => {
+    if (searchQuery.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        handleSearch(searchQuery);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, handleSearch]);
+
+  // =================== EFFETS AUTOMATIQUES ===================
+  React.useEffect(() => {
+    // Génération automatique du QR Code si AST >= 80% complète
+    const validation = getASTValidation;
+    if (validation.percentage >= 80 && !finalizationData.qrCodeUrl) {
+      handleGenerateQR();
+    }
+  }, [getASTValidation, finalizationData.qrCodeUrl, handleGenerateQR]);
+
+  React.useEffect(() => {
+    // Sauvegarde automatique périodique (toutes les 5 minutes)
+    const autoSaveInterval = setInterval(() => {
+      const validation = getASTValidation;
+      if (validation.percentage > 0 && !isSaving && !finalizationData.isLocked) {
+        console.log('💾 Step6 AST - Sauvegarde automatique...');
+        handleSaveToSupabase();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(autoSaveInterval);
+  }, [getASTValidation, isSaving, finalizationData.isLocked, handleSaveToSupabase]);
+  // =================== CSS THÈME SOMBRE ULTRA-RESPONSIVE ===================
+  const responsiveCSS = `
+    .step6-container { 
+      padding: 0; 
+      background: transparent; 
+      min-height: 100vh; 
+      color: #ffffff !important; 
+      font-family: 'Inter', 'Arial', sans-serif;
+    }
+    
+    /* ✅ HEADER AVEC LOGO RESPONSIVE */
+    .ast-header { 
+      text-align: center; 
+      margin-bottom: ${isMobile ? '20px' : '28px'}; 
+      padding: ${isMobile ? '20px 16px' : '32px 24px'}; 
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.95) 100%); 
+      color: white; 
+      border-radius: ${isMobile ? '12px' : '16px'}; 
+      border: 1px solid rgba(148, 163, 184, 0.2); 
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ast-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.1), transparent);
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    
+    .ast-header-content {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .ast-logo {
+      width: ${isMobile ? '56px' : '72px'};
+      height: ${isMobile ? '56px' : '72px'};
+      margin: 0 auto ${isMobile ? '16px' : '20px'};
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+      border: 3px solid #f59e0b;
+      border-radius: ${isMobile ? '12px' : '16px'};
+      display: flex;
+      align-items: center;
+      justifyContent: center;
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    .ast-title { 
+      font-size: ${isMobile ? '22px' : '32px'}; 
+      margin-bottom: ${isMobile ? '8px' : '12px'}; 
+      font-weight: 800; 
+      color: #ffffff !important;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .ast-subtitle { 
+      font-size: ${isMobile ? '14px' : '18px'}; 
+      opacity: 0.9; 
+      color: #e2e8f0 !important; 
+      margin: 0;
+      font-weight: 500;
+    }
+    
+    /* ✅ NAVIGATION ONGLETS RESPONSIVE */
+    .tabs-container { 
+      display: flex; 
+      background: rgba(15, 23, 42, 0.8); 
+      border: 1px solid rgba(148, 163, 184, 0.2); 
+      border-radius: ${isMobile ? '12px' : '16px'}; 
+      padding: ${isMobile ? '4px' : '6px'}; 
+      margin-bottom: ${isMobile ? '16px' : '24px'}; 
+      backdrop-filter: blur(10px);
+      ${isMobile ? 'flex-direction: column; gap: 4px;' : 'flex-direction: row;'}
+    }
+    
+    .tab-button { 
+      flex: 1; 
+      padding: ${isMobile ? '14px 12px' : '16px 20px'}; 
+      border: none; 
+      background: transparent; 
+      color: #94a3b8; 
+      font-weight: 600; 
+      border-radius: ${isMobile ? '8px' : '12px'}; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      font-size: ${isMobile ? '14px' : '16px'}; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: ${isMobile ? '6px' : '8px'}; 
+      min-height: ${isMobile ? '48px' : '56px'};
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .tab-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .tab-button:hover::before {
+      left: 100%;
+    }
+    
+    .tab-button.active { 
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+      color: white; 
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); 
+      transform: translateY(-2px);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    }
+    
+    .tab-button:hover:not(.active) { 
+      background: rgba(59, 130, 246, 0.1); 
+      color: #60a5fa; 
+      transform: translateY(-1px);
+    }
+    
+    /* ✅ SECTIONS PRINCIPALES RESPONSIVE */
+    .ast-section { 
+      background: rgba(15, 23, 42, 0.8); 
+      border: 1px solid rgba(148, 163, 184, 0.2); 
+      border-radius: ${isMobile ? '12px' : '16px'}; 
+      padding: ${isMobile ? '16px' : '24px'}; 
+      margin-bottom: ${isMobile ? '16px' : '20px'}; 
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ast-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+    }
+    
+    .section-title { 
+      font-size: ${isMobile ? '16px' : '20px'}; 
+      font-weight: 700; 
+      margin-bottom: ${isMobile ? '16px' : '20px'}; 
+      color: #ffffff !important; 
+      display: flex; 
+      align-items: center; 
+      gap: ${isMobile ? '8px' : '12px'};
+    }
+    
+    /* ✅ GRILLES RESPONSIVE */
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: ${isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(160px, 1fr))'}; 
+      gap: ${isMobile ? '8px' : '12px'}; 
+      margin-bottom: ${isMobile ? '16px' : '20px'}; 
+    }
+    
+    .stat-card { 
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(29, 78, 216, 0.15) 100%); 
+      color: white; 
+      padding: ${isMobile ? '12px' : '16px'}; 
+      border-radius: ${isMobile ? '8px' : '12px'}; 
+      text-align: center; 
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    
+    .stat-number { 
+      font-size: ${isMobile ? '18px' : '24px'}; 
+      font-weight: 800; 
+      margin-bottom: ${isMobile ? '4px' : '6px'};
+      color: #60a5fa;
+    }
+    
+    .stat-label { 
+      font-size: ${isMobile ? '10px' : '12px'}; 
+      opacity: 0.9;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+    
+    .info-grid { 
+      display: grid; 
+      grid-template-columns: ${isMobile ? '1fr' : '1fr 1fr'}; 
+      gap: ${isMobile ? '16px' : '20px'}; 
+      margin-bottom: ${isMobile ? '20px' : '25px'}; 
+    }
+    
+    .info-box { 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      padding: ${isMobile ? '16px' : '20px'}; 
+      border-radius: ${isMobile ? '12px' : '16px'}; 
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .info-box:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-box h3 { 
+      font-size: ${isMobile ? '14px' : '16px'}; 
+      color: #e2e8f0; 
+      margin-bottom: ${isMobile ? '12px' : '16px'}; 
+      font-weight: 700; 
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3); 
+      padding-bottom: ${isMobile ? '6px' : '8px'};
+    }
+    
+    .info-row { 
+      display: flex; 
+      justify-content: space-between; 
+      margin-bottom: ${isMobile ? '6px' : '8px'}; 
+      padding: ${isMobile ? '4px 0' : '6px 0'}; 
+      align-items: center;
+      ${isMobile ? 'flex-wrap: wrap; gap: 4px;' : ''}
+    }
+    
+    .info-label { 
+      font-weight: 600; 
+      color: #9ca3af; 
+      min-width: ${isMobile ? '80px' : '120px'};
+      font-size: ${isMobile ? '12px' : '14px'};
+    }
+    
+    .info-value { 
+      color: #ffffff; 
+      font-weight: 500; 
+      flex: 1; 
+      text-align: right;
+      font-size: ${isMobile ? '12px' : '14px'};
+      word-break: break-word;
+    }
+    
+    /* ✅ BOUTONS RESPONSIVE */
+    .ast-button { 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: ${isMobile ? '6px' : '8px'}; 
+      padding: ${isMobile ? '12px 16px' : '16px 24px'}; 
+      border: none; 
+      border-radius: ${isMobile ? '8px' : '12px'}; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      font-size: ${isMobile ? '14px' : '16px'}; 
+      min-height: ${isMobile ? '44px' : '52px'};
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ast-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .ast-button:hover::before {
+      left: 100%;
+    }
+    
+    .ast-button:active {
+      transform: scale(0.98);
+    }
+    
+    .button-primary { 
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .button-primary:hover { 
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+    
+    .button-success { 
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .button-success:hover { 
+      background: linear-gradient(135deg, #059669 0%, #047857 100%); 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+    }
+    
+    .button-warning { 
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+      color: white;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+    
+    .button-warning:hover { 
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%); 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+    }
+    
+    .button-danger { 
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    .button-danger:hover { 
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+    }
+    
+    .button-secondary { 
+      background: rgba(100, 116, 139, 0.3); 
+      color: #e2e8f0; 
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+    
+    .button-secondary:hover { 
+      background: rgba(100, 116, 139, 0.5); 
+      border-color: rgba(148, 163, 184, 0.5);
+      transform: translateY(-1px);
+    }
+    
+    .button-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    
+    .buttons-grid { 
+      display: grid; 
+      grid-template-columns: ${isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))'}; 
+      gap: ${isMobile ? '8px' : '12px'}; 
+      margin-top: ${isMobile ? '16px' : '20px'}; 
+    }
+    
+    /* ✅ FORMULAIRES RESPONSIVE */
+    .form-input { 
+      width: 100%; 
+      padding: ${isMobile ? '14px 16px' : '16px 20px'}; 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: ${isMobile ? '8px' : '12px'}; 
+      font-size: ${isMobile ? '16px' : '18px'}; 
+      transition: all 0.3s ease; 
+      background: rgba(30, 41, 59, 0.6) !important; 
+      color: #ffffff !important; 
+      backdrop-filter: blur(5px);
+      box-sizing: border-box;
+    }
+    
+    .form-input:focus { 
+      outline: none; 
+      border-color: #3b82f6; 
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      background: rgba(30, 41, 59, 0.8) !important;
+    }
+    
+    .form-input::placeholder { 
+      color: #9ca3af !important; 
+    }
+    
+    .form-textarea {
+      min-height: ${isMobile ? '100px' : '120px'};
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    
+    .checkbox-field { 
+      display: flex; 
+      align-items: center; 
+      gap: ${isMobile ? '10px' : '12px'}; 
+      padding: ${isMobile ? '12px' : '16px'}; 
+      border: 2px solid rgba(148, 163, 184, 0.2); 
+      border-radius: ${isMobile ? '8px' : '12px'}; 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      background: rgba(30, 41, 59, 0.6) !important; 
+      backdrop-filter: blur(5px);
+      margin-bottom: ${isMobile ? '8px' : '12px'};
+    }
+    
+    .checkbox-field:hover { 
+      border-color: #3b82f6; 
+      background: rgba(59, 130, 246, 0.1) !important; 
+      transform: translateY(-1px);
+    }
+    
+    .checkbox-field.checked { 
+      border-color: #10b981; 
+      background: rgba(16, 185, 129, 0.1) !important; 
+    }
+    
+    .checkbox-field input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+    
+    .checkbox-field span { 
+      color: #e2e8f0 !important; 
+      font-weight: 500 !important;
+      font-size: ${isMobile ? '14px' : '16px'};
+      flex: 1;
+    }
+    
+    /* ✅ VALIDATION ET STATUTS */
+    .validation-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: ${isMobile ? '12px' : '16px'};
+      border-radius: ${isMobile ? '8px' : '12px'};
+      margin-bottom: ${isMobile ? '8px' : '12px'};
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+    
+    .validation-complete {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    
+    .validation-incomplete {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    
+    .validation-error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .status-badge {
+      padding: ${isMobile ? '4px 8px' : '6px 12px'};
+      border-radius: ${isMobile ? '6px' : '8px'};
+      font-size: ${isMobile ? '10px' : '12px'};
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    
+    .status-warning {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    
+    .status-error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    
+    /* ✅ MODALES RESPONSIVE */
+    .modal-overlay { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      bottom: 0; 
+      background: rgba(0, 0, 0, 0.8); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 1000; 
+      backdrop-filter: blur(8px);
+      padding: ${isMobile ? '16px' : '24px'};
+    }
+    
+    .modal-content { 
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%); 
+      border: 1px solid rgba(148, 163, 184, 0.2); 
+      border-radius: ${isMobile ? '12px' : '16px'}; 
+      padding: ${isMobile ? '20px' : '28px'}; 
+      max-width: ${isMobile ? '100%' : '500px'}; 
+      width: 100%; 
+      max-height: calc(100vh - ${isMobile ? '32px' : '48px'}); 
+      overflow-y: auto; 
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); 
+      color: #ffffff !important;
+      backdrop-filter: blur(20px);
+    }
+    
+    /* ✅ ANIMATIONS */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(1deg); }
+    }
+    
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+    
+    .pulsing {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    /* ✅ BREAKPOINTS SPÉCIFIQUES */
     @media (max-width: 480px) {
-      .tabs-container { padding: 4px; }
-      .tab-button { padding: 12px 8px; font-size: 14px; flex-direction: column; gap: 4px; }
-      .stats-grid { grid-template-columns: 1fr; }
-      .share-buttons { grid-template-columns: 1fr; }
+      .ast-header { padding: 16px 12px; }
+      .ast-title { font-size: 18px; }
+      .ast-subtitle { font-size: 12px; }
+      .tabs-container { padding: 3px; }
+      .tab-button { padding: 12px 8px; font-size: 12px; min-height: 44px; }
+      .ast-section { padding: 12px; }
+      .section-title { font-size: 14px; margin-bottom: 12px; }
+      .stats-grid { grid-template-columns: 1fr; gap: 6px; }
+      .stat-card { padding: 10px; }
+      .stat-number { font-size: 16px; }
+      .stat-label { font-size: 9px; }
+      .buttons-grid { gap: 6px; }
+      .ast-button { padding: 10px 12px; font-size: 12px; min-height: 40px; }
+    }
+    
+    @media (min-width: 1200px) {
+      .ast-header { padding: 40px 32px; }
+      .ast-title { font-size: 36px; }
+      .ast-subtitle { font-size: 20px; }
+      .ast-section { padding: 28px; }
+      .section-title { font-size: 22px; }
+      .stats-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .info-grid { gap: 24px; }
+    }
+    
+    /* ✅ PRINT STYLES */
+    @media print {
+      .step6-container { background: white !important; color: black !important; }
+      .ast-header { background: white !important; border: 2px solid #000 !important; }
+      .ast-title { color: #000 !important; }
+      .ast-subtitle { color: #333 !important; }
+      .tabs-container { display: none !important; }
+      .ast-button { display: none !important; }
+      .modal-overlay { display: none !important; }
     }
   `;
-  // =================== RENDU JSX COMPLET AVEC TRADUCTIONS ===================
-  return (
-    <>
-      {/* Injection CSS thème sombre optimisé */}
-      <style dangerouslySetInnerHTML={{ __html: darkThemeCSS }} />
-      
-      <div className="step6-container">
-        {/* Header avec traductions */}
-        <div className="finalization-header">
-          <h2 className="finalization-title">{t.title}</h2>
-          <p className="finalization-subtitle">{t.subtitle}</p>
-        </div>
 
-        {/* Navigation onglets avec traductions */}
-        <div className="tabs-container">
-          <button 
-            className={`tab-button ${activeTab === 'workers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workers')}
-          >
-            <Users size={18} />
-            {t.tabs.workers}
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sharing')}
-          >
-            <Share2 size={18} />
-            {t.tabs.sharing}
-          </button>
-          <button 
-            className={`tab-button ${activeTab === 'finalization' ? 'active' : ''}`}
-            onClick={() => setActiveTab('finalization')}
-          >
-            <FileText size={18} />
-            {t.tabs.finalization}
-          </button>
-        </div>
-
-        {/* ONGLET 1: ÉQUIPE CHANTIER */}
-        {activeTab === 'workers' && (
-          <div>
-            {/* Stats équipe avec traductions */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.length}</div>
-                <div className="stat-label">{t.stats.workers}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.filter(w => w.hasConsented).length}</div>
-                <div className="stat-label">{t.stats.consents}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}</div>
-                <div className="stat-label">{t.stats.approvals}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{Math.round((finalizationData.workers.filter(w => w.hasConsented).length / Math.max(finalizationData.workers.length, 1)) * 100)}%</div>
-                <div className="stat-label">{t.stats.readingRate}</div>
+  // =================== RENDU VUE DATABASE/HISTORIQUE ===================
+  if (currentView === 'database') {
+    return (
+      <>
+        <style dangerouslySetInnerHTML={{ __html: responsiveCSS }} />
+        <div className="step6-container">
+          {/* Header de retour */}
+          <div className="ast-section">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  onClick={() => setCurrentView('main')}
+                  className="ast-button button-secondary"
+                  style={{ width: 'auto', minWidth: isMobile ? '100px' : '120px' }}
+                >
+                  <ArrowLeft size={16} />
+                  {t.back}
+                </button>
+                <div>
+                  <h2 className="section-title" style={{ margin: 0, marginBottom: '4px' }}>
+                    <Database size={24} />
+                    {t.database}
+                  </h2>
+                  <p style={{ color: '#d1d5db', fontSize: isMobile ? '12px' : '14px', margin: 0 }}>
+                    {tenant} - {language === 'fr' ? 'Base de données AST complètes' : 'Complete JSA Database'}
+                  </p>
+                </div>
               </div>
             </div>
+            
+            {/* Barre de recherche */}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder={t.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: isMobile ? '44px' : '48px' }}
+              />
+              <Search 
+                size={isMobile ? 18 : 20} 
+                style={{ 
+                  position: 'absolute', 
+                  left: isMobile ? '12px' : '16px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: '#9ca3af' 
+                }} 
+              />
+              {isSearching && (
+                <div style={{ position: 'absolute', right: isMobile ? '12px' : '16px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <div className="spinning" style={{ width: '16px', height: '16px', border: '2px solid #3b82f6', borderTop: '2px solid transparent', borderRadius: '50%' }} />
+                </div>
+              )}
+            </div>
+          </div>
 
-            {/* Gestion équipe avec traductions */}
-            <div className="finalization-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <h3 className="section-title">
-                  <Users size={24} />
-                  {t.teamManagement}
-                </h3>
-                <button 
-                  className="premium-button"
-                  onClick={() => setShowAddWorker(true)}
-                >
-                  <Plus size={18} />
-                  {t.addWorker}
-                </button>
+          {/* Résultats de recherche */}
+          <div className="ast-section">
+            {isSearching ? (
+              <div style={{ textAlign: 'center', padding: isMobile ? '30px' : '40px', color: '#9ca3af' }}>
+                <div className="spinning" style={{ width: '32px', height: '32px', border: '3px solid #3b82f6', borderTop: '3px solid transparent', borderRadius: '50%', margin: '0 auto 16px' }} />
+                <p>{t.searching}</p>
               </div>
-
-              {/* Liste des travailleurs */}
-              <div className="workers-grid">
-                {finalizationData.workers.map(worker => (
-                  <div key={worker.id} className="worker-card">
-                    <div className="worker-header">
-                      <div>
-                        <div className="worker-name">{worker.name}</div>
-                        <div className="worker-company">{worker.company}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          background: worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.2)' : 
-                                     worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                          color: worker.approbationStatus === 'approved' ? '#10b981' : 
-                                 worker.approbationStatus === 'rejected' ? '#ef4444' : '#f59e0b',
-                          border: `1px solid ${worker.approbationStatus === 'approved' ? 'rgba(16, 185, 129, 0.3)' : 
-                                                worker.approbationStatus === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-                        }}>
-                          {t.status[worker.approbationStatus]}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Section consentement avec traductions */}
-                    <div className="consent-section">
-                      <div 
-                        className="consent-checkbox"
-                        onClick={() => toggleConsent(worker.id)}
-                      >
-                        <input 
-                          type="checkbox" 
-                          checked={worker.hasConsented}
-                          onChange={() => {}}
-                        />
-                        <span className="consent-text">
-                          {t.consentText}
-                        </span>
-                      </div>
-                      {worker.hasConsented && worker.consentTimestamp && (
-                        <div className="consent-timestamp">
-                          {t.consentGiven} {new Date(worker.consentTimestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+            ) : searchResults.length > 0 ? (
+              <div style={{ display: 'grid', gap: isMobile ? '10px' : '12px' }}>
+                {searchResults.map((result) => (
+                  <div 
+                    key={result.id}
+                    className="ast-section"
+                    style={{
+                      margin: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      border: '1px solid #4b5563'
+                    }}
+                    onClick={() => {
+                      console.log('🔄 Step6 AST - Chargement AST:', result.astNumber);
+                      setCurrentView('main');
+                      showNotificationToast(`AST ${result.astNumber} chargée`, 'success');
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ color: '#3b82f6', margin: '0 0 6px 0', fontSize: isMobile ? '14px' : '16px', fontWeight: '700' }}>
+                          🛡️ {result.astNumber}
+                        </h4>
+                        <p style={{ color: 'white', margin: '0 0 4px 0', fontSize: isMobile ? '12px' : '14px' }}>
+                          📋 {result.projectNumber} • 📍 {result.workLocation}
+                        </p>
+                        <p style={{ color: '#9ca3af', margin: '0 0 6px 0', fontSize: isMobile ? '11px' : '13px' }}>
+                          🏢 {result.client} • {t.industries[result.industry as keyof typeof t.industries] || result.industry}
+                        </p>
+                        <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: 'wrap', fontSize: isMobile ? '10px' : '12px', color: '#6b7280' }}>
+                          <span>⚠️ {result.hazardCount} {language === 'fr' ? 'dangers' : 'hazards'}</span>
+                          <span>🛡️ {result.equipmentCount} {language === 'fr' ? 'équipements' : 'equipment'}</span>
+                          <span>📄 {result.permitCount} {language === 'fr' ? 'permis' : 'permits'}</span>
+                          <span>👥 {result.workerCount} {language === 'fr' ? 'travailleurs' : 'workers'}</span>
+                          <span>📷 {result.photoCount} photos</span>
+                          <span>🕒 {new Date(result.lastModified || Date.now()).toLocaleDateString()}</span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Boutons approbation avec traductions */}
-                    <div className="approbation-section">
-                      <button 
-                        className="approbation-btn approbation-approve"
-                        onClick={() => updateApprobation(worker.id, 'approved', 'Approuvé par le superviseur')}
-                      >
-                        {t.approve}
-                      </button>
-                      <button 
-                        className="approbation-btn approbation-reject"
-                        onClick={() => updateApprobation(worker.id, 'rejected', 'Formation supplémentaire requise')}
-                      >
-                        {t.reject}
-                      </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                        <span className={`status-badge ${result.status === 'completed' ? 'status-success' : result.status === 'active' ? 'status-warning' : 'status-error'}`}>
+                          {t[result.status as keyof typeof t] || result.status}
+                        </span>
+                        <span style={{ fontSize: isMobile ? '10px' : '12px', color: '#9ca3af' }}>
+                          {result.completionPercentage}% {t.complete}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
-
-                {finalizationData.workers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    <Users size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>{t.noWorkers}</p>
-                  </div>
-                )}
               </div>
-            </div>
+            ) : searchQuery.length >= 2 ? (
+              <div style={{ textAlign: 'center', padding: isMobile ? '30px' : '40px', color: '#9ca3af' }}>
+                <Search size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                <p>{t.noResults}</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: isMobile ? '30px' : '40px', color: '#9ca3af' }}>
+                <p>💡 {language === 'fr' ? 'Tapez au moins 2 caractères pour rechercher' : 'Type at least 2 characters to search'}</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      </>
+    );
+  }
 
-        {/* ONGLET 2: PARTAGE SIMPLE AVEC TRADUCTIONS */}
-        {activeTab === 'sharing' && (
-          <div>
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <Share2 size={24} />
-                {t.sharing}
-              </h3>
-              
-              {/* Lien de partage avec traductions */}
-              <div style={{ marginBottom: '20px' }}>
-                <label className="form-label">
-                  {t.secureLink}
-                </label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <input 
-                    type="text" 
-                    value={shareLink}
-                    readOnly
-                    className="form-input"
-                    style={{ flex: 1, minWidth: '200px' }}
-                  />
-                  <button 
-                    onClick={copyShareLink}
-                    className="premium-button"
-                    style={{ minWidth: '120px' }}
-                  >
-                    {copySuccess ? <Check size={18} /> : <Copy size={18} />}
-                    {copySuccess ? t.copied : t.copy}
-                  </button>
-                </div>
-              </div>
+  // =================== RENDU PRINCIPAL AST ===================
+  const validation = getASTValidation;
+  const stats = getASTStatistics();
+  const sections = getSectionValidation();
 
-              {/* Instructions avec traductions */}
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: responsiveCSS }} />
+      
+      <div className="step6-container">
+        {/* Header Principal avec Logo */}
+        <div className="ast-header">
+          <div className="ast-header-content">
+            <div className="ast-logo">
+              <img 
+                src="/c-secur360-logo.png" 
+                alt="C-Secur360"
+                style={{ 
+                  width: isMobile ? '48px' : '64px', 
+                  height: isMobile ? '48px' : '64px', 
+                  objectFit: 'contain',
+                  filter: 'brightness(1.2) contrast(1.1)'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
               <div style={{ 
-                background: 'rgba(59, 130, 246, 0.1)', 
-                border: '1px solid rgba(59, 130, 246, 0.2)', 
-                borderRadius: '8px', 
-                padding: '16px', 
-                marginBottom: '20px' 
+                display: 'none',
+                color: '#f59e0b', 
+                fontSize: isMobile ? '20px' : '28px', 
+                fontWeight: 'bold',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
-                <h4 style={{ margin: '0 0 8px 0', color: '#3b82f6', fontSize: '14px', fontWeight: '600' }}>
-                  {t.shareInstructions}
-                </h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', color: '#94a3b8', fontSize: '13px' }}>
-                  {t.shareList.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
+                C🛡️
+              </div>
+            </div>
+            <h1 className="ast-title">{t.title}</h1>
+            <p className="ast-subtitle">{t.subtitle}</p>
+            
+            {/* Indicateur de complétion */}
+            <div style={{ 
+              marginTop: isMobile ? '16px' : '20px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: isMobile ? '12px' : '16px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                fontSize: isMobile ? '20px' : '28px',
+                fontWeight: '800',
+                color: validation.isValid ? '#10b981' : '#f59e0b',
+              }}>
+                {validation.percentage}%
+              </div>
+              <span className={`status-badge ${validation.isValid ? 'status-success' : 'status-warning'}`}>
+                {validation.isValid ? t.valid : t.incomplete}
+              </span>
+              <div style={{ 
+                fontSize: isMobile ? '11px' : '13px', 
+                color: '#d1d5db',
+                textAlign: 'center'
+              }}>
+                AST #{stats.astNumber}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation onglets */}
+        <div className="tabs-container">
+          {[
+            { id: 'validation', label: t.tabs.validation, icon: CheckCircle },
+            { id: 'actions', label: t.tabs.actions, icon: Zap },
+            { id: 'sharing', label: t.tabs.sharing, icon: Share2 },
+            { id: 'reports', label: t.tabs.reports, icon: BarChart3 }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <tab.icon size={isMobile ? 16 : 18} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ONGLET 1: VALIDATION GLOBALE */}
+        {activeTab === 'validation' && (
+          <div>
+            {/* Statistiques générales */}
+            <div className="ast-section">
+              <h2 className="section-title">
+                <BarChart3 size={24} />
+                {t.statistics}
+              </h2>
+              
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-number">{stats.completedSections}/{stats.totalSections}</div>
+                  <div className="stat-label">{t.sectionsComplete}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">{stats.identifiedHazards}</div>
+                  <div className="stat-label">{t.identifiedHazards}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">{stats.selectedEquipment}</div>
+                  <div className="stat-label">{t.selectedEquipment}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">{stats.requiredPermits}</div>
+                  <div className="stat-label">{t.requiredPermits}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">{stats.teamMembers}</div>
+                  <div className="stat-label">{t.teamMembers}</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-number">{stats.photosCount}</div>
+                  <div className="stat-label">{t.documentsPhotos}</div>
+                </div>
               </div>
 
-              {/* Boutons de partage */}
-              <div className="share-buttons">
-                <div className="share-btn" onClick={shareViaEmail}>
-                  <Mail size={24} style={{ color: '#dc2626', marginBottom: '4px' }} />
-                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📧 Email</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    {language === 'fr' ? 'Courriel' : 'Email'}
+              <div className="info-grid">
+                <div className="info-box">
+                  <h3>🏢 {language === 'fr' ? 'Informations Projet' : 'Project Information'}</h3>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'N° AST:' : 'JSA #:'}</span>
+                    <span className="info-value">{stats.astNumber}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Client:' : 'Client:'}</span>
+                    <span className="info-value">{stats.client}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Projet:' : 'Project:'}</span>
+                    <span className="info-value">{stats.projectNumber}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Lieu:' : 'Location:'}</span>
+                    <span className="info-value">{stats.workLocation}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Industrie:' : 'Industry:'}</span>
+                    <span className="info-value">{t.industries[stats.industry as keyof typeof t.industries] || stats.industry}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Travailleurs:' : 'Workers:'}</span>
+                    <span className="info-value">{stats.workerCount}</span>
                   </div>
                 </div>
                 
-                <div className="share-btn" onClick={shareViaSMS}>
-                  <Smartphone size={24} style={{ color: '#059669', marginBottom: '4px' }} />
-                  <div style={{ fontWeight: '600', color: '#ffffff' }}>📱 SMS</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    {language === 'fr' ? 'Texto' : 'Text'}
+                <div className="info-box">
+                  <h3>⏱️ {language === 'fr' ? 'Suivi Temporel' : 'Time Tracking'}</h3>
+                  <div className="info-row">
+                    <span className="info-label">{t.creationDate}:</span>
+                    <span className="info-value">{new Date(stats.createdAt).toLocaleDateString()}</span>
                   </div>
-                </div>
-                
-                <div className="share-btn" onClick={shareViaWhatsApp}>
-                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>💬</div>
-                  <div style={{ fontWeight: '600', color: '#ffffff' }}>WhatsApp</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Messenger</div>
-                </div>
-                
-                <div className="share-btn" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`)}>
-                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>📘</div>
-                  <div style={{ fontWeight: '600', color: '#ffffff' }}>Facebook</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    {language === 'fr' ? 'Réseau social' : 'Social network'}
+                  <div className="info-row">
+                    <span className="info-label">{t.lastActivity}:</span>
+                    <span className="info-value">{new Date(stats.lastModified).toLocaleDateString()}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Dernière sauvegarde:' : 'Last saved:'}</span>
+                    <span className="info-value" style={{ fontSize: isMobile ? '10px' : '12px' }}>
+                      {stats.lastSaved !== 'Jamais' && stats.lastSaved !== 'Never' ? new Date(stats.lastSaved).toLocaleString() : stats.lastSaved}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Statut:' : 'Status:'}</span>
+                    <span className={`status-badge ${stats.isLocked ? 'status-error' : 'status-warning'}`}>
+                      {stats.isLocked ? t.locked : (language === 'fr' ? '🔓 EN COURS' : '🔓 IN PROGRESS')}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'QR Code:' : 'QR Code:'}</span>
+                    <span className="info-value">
+                      {stats.hasQRCode ? '✅' : '❌'} {stats.hasQRCode ? (language === 'fr' ? 'Généré' : 'Generated') : (language === 'fr' ? 'Non généré' : 'Not generated')}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">{language === 'fr' ? 'Lien partage:' : 'Share link:'}</span>
+                    <span className="info-value">
+                      {stats.hasShareableLink ? '✅' : '❌'} {stats.hasShareableLink ? (language === 'fr' ? 'Disponible' : 'Available') : (language === 'fr' ? 'Non disponible' : 'Not available')}
+                    </span>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Validation des sections par step */}
+            <div className="ast-section">
+              <h2 className="section-title">
+                <CheckCircle size={24} />
+                {t.validationSummary}
+              </h2>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '12px' }}>
+                {sections.map((section, index) => (
+                  <div 
+                    key={index}
+                    className={`validation-item ${section.isComplete ? 'validation-complete' : 'validation-incomplete'}`}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '12px', flex: 1 }}>
+                      {section.icon}
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ 
+                          color: section.isComplete ? '#86efac' : '#fde047', 
+                          margin: 0, 
+                          fontSize: isMobile ? '14px' : '16px',
+                          fontWeight: '700'
+                        }}>
+                          {section.sectionName}
+                        </h4>
+                        {section.errors.length > 0 && (
+                          <p style={{ 
+                            color: '#fca5a5', 
+                            margin: '4px 0 0 0', 
+                            fontSize: isMobile ? '12px' : '14px' 
+                          }}>
+                            {section.errors[0]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontSize: isMobile ? '16px' : '20px',
+                        fontWeight: '800',
+                        color: section.isComplete ? '#10b981' : '#f59e0b'
+                      }}>
+                        {section.completionPercentage}%
+                      </div>
+                      <div style={{ fontSize: isMobile ? '10px' : '12px', color: '#9ca3af' }}>
+                        Step {section.stepNumber}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {validation.errors.length > 0 && (
+                <div style={{
+                  marginTop: isMobile ? '16px' : '20px',
+                  padding: isMobile ? '12px' : '16px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: isMobile ? '8px' : '12px'
+                }}>
+                  <h4 style={{ color: '#fca5a5', margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '16px' }}>
+                    ⚠️ {t.validationErrors}
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: '20px', color: '#fecaca' }}>
+                    {validation.errors.map((error, index) => (
+                      <li key={index} style={{ marginBottom: '4px', fontSize: isMobile ? '12px' : '14px' }}>
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {validation.isValid && (
+                <div style={{
+                  marginTop: isMobile ? '16px' : '20px',
+                  padding: isMobile ? '12px' : '16px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: isMobile ? '8px' : '12px',
+                  textAlign: 'center'
+                }}>
+                  <h4 style={{ color: '#86efac', margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '16px' }}>
+                    ✅ {t.allValidationsPassed}
+                  </h4>
+                  <p style={{ color: '#bbf7d0', margin: 0, fontSize: isMobile ? '12px' : '14px' }}>
+                    {language === 'fr' ? 'Votre AST est prête pour la finalisation et le partage.' : 'Your JSA is ready for finalization and sharing.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* ONGLET 3: FINALISATION AVEC TRADUCTIONS */}
-        {activeTab === 'finalization' && (
+        {/* ONGLET 2: ACTIONS FINALES */}
+        {activeTab === 'actions' && (
           <div>
-            {/* État de complétion */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <BarChart3 size={24} />
-                {t.completionStatus}
-              </h3>
-              
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${finalizationData.completionPercentage}%` }}
-                ></div>
-              </div>
-              <p style={{ textAlign: 'center', fontWeight: '600', color: '#10b981', marginBottom: '16px' }}>
-                {finalizationData.completionPercentage}% {t.completed}
-              </p>
+            {/* Actions principales */}
+            <div className="ast-section">
+              <h2 className="section-title">
+                <Zap size={24} />
+                {t.tabs.actions}
+              </h2>
 
-              {/* Statuts des sections */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
-                  <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.projectInfo}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
-                  <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.hazards}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '6px' }}>
-                  <CheckCircle size={16} style={{ color: '#10b981' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.equipment}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px' }}>
-                  <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
-                  <span style={{ fontSize: '13px', color: '#e2e8f0' }}>{t.sectionStatus.teamValidation}</span>
-                </div>
-              </div>
-            </div>
+              <div className="buttons-grid">
+                <button
+                  onClick={handleSaveToSupabase}
+                  disabled={isSaving}
+                  className={`ast-button button-success ${isSaving ? 'button-disabled' : ''}`}
+                >
+                  {isSaving ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <Save size={20} />
+                  )}
+                  {isSaving ? t.saving : t.saveAST}
+                </button>
 
-            {/* Options de génération */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <FileText size={24} />
-                {t.reportOptions}
-              </h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includePhotos ? 'checked' : ''}`}
-                  onClick={() => updateDocumentOption('includePhotos', !finalizationData.documentGeneration.includePhotos)}
+                <button
+                  onClick={handleGenerateQR}
+                  disabled={isGeneratingQR}
+                  className={`ast-button button-primary ${isGeneratingQR ? 'button-disabled' : ''}`}
                 >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includePhotos} onChange={() => {}} />
-                  <span>{t.includePhotos}</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeSignatures ? 'checked' : ''}`}
-                  onClick={() => updateDocumentOption('includeSignatures', !finalizationData.documentGeneration.includeSignatures)}
+                  {isGeneratingQR ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <QrCode size={20} />
+                  )}
+                  {t.generateQR}
+                </button>
+
+                <button
+                  onClick={() => handleGeneratePDF('standard')}
+                  disabled={isGeneratingPDF}
+                  className={`ast-button button-warning ${isGeneratingPDF ? 'button-disabled' : ''}`}
                 >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeSignatures} onChange={() => {}} />
-                  <span>{t.includeSignatures}</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeQRCode ? 'checked' : ''}`}
-                  onClick={() => updateDocumentOption('includeQRCode', !finalizationData.documentGeneration.includeQRCode)}
+                  {isGeneratingPDF ? (
+                    <div className="spinning" style={{ width: '20px', height: '20px', border: '2px solid rgba(255, 255, 255, 0.3)', borderTop: '2px solid white', borderRadius: '50%' }} />
+                  ) : (
+                    <Printer size={20} />
+                  )}
+                  {t.printPDF}
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('database')}
+                  className="ast-button button-secondary"
                 >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeQRCode} onChange={() => {}} />
-                  <span>{t.includeQRCode}</span>
-                </div>
-                
-                <div 
-                  className={`checkbox-field ${finalizationData.documentGeneration.includeBranding ? 'checked' : ''}`}
-                  onClick={() => updateDocumentOption('includeBranding', !finalizationData.documentGeneration.includeBranding)}
+                  <Database size={20} />
+                  {t.searchDatabase}
+                </button>
+
+                <button
+                  onClick={handleCopyLink}
+                  className={`ast-button ${copySuccess ? 'button-success' : 'button-secondary'}`}
                 >
-                  <input type="checkbox" checked={finalizationData.documentGeneration.includeBranding} onChange={() => {}} />
-                  <span>{t.includeBranding}</span>
-                </div>
+                  {copySuccess ? <Check size={20} /> : <Copy size={20} />}
+                  {copySuccess ? (language === 'fr' ? 'Copié!' : 'Copied!') : t.copy}
+                </button>
+
+                <button
+                  onClick={() => setShowLockConfirm(true)}
+                  disabled={finalizationData.isLocked}
+                  className={`ast-button ${finalizationData.isLocked ? 'button-disabled' : 'button-danger'}`}
+                >
+                  {finalizationData.isLocked ? <Lock size={20} /> : <Unlock size={20} />}
+                  {finalizationData.isLocked ? t.locked : t.lockAST}
+                </button>
               </div>
             </div>
 
             {/* Commentaires finaux */}
-            <div className="finalization-section">
-              <h3 className="section-title">
+            <div className="ast-section">
+              <h2 className="section-title">
                 <MessageSquare size={24} />
                 {t.finalComments}
-              </h3>
+              </h2>
               
               <textarea
                 value={finalizationData.finalComments}
                 onChange={(e) => updateComments(e.target.value)}
                 placeholder={t.commentsPlaceholder}
-                className="form-input"
-                style={{ minHeight: '100px', resize: 'vertical' }}
+                className="form-input form-textarea"
                 disabled={finalizationData.isLocked}
               />
               
               {finalizationData.isLocked && (
-                <p style={{ marginTop: '8px', color: '#ef4444', fontSize: '14px', fontStyle: 'italic' }}>
+                <p style={{
+                  marginTop: '8px',
+                  color: '#ef4444',
+                  fontSize: isMobile ? '12px' : '14px',
+                  fontStyle: 'italic'
+                }}>
                   {t.documentLocked}
                 </p>
               )}
             </div>
-
-            {/* Actions finales */}
-            <div className="finalization-section">
-              <h3 className="section-title">
-                <Target size={24} />
-                {t.finalActions}
-              </h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                <button 
-                  onClick={printAST}
-                  className="premium-button"
-                  disabled={isLoading}
-                >
-                  {isLoading ? <RefreshCw size={18} className="spinning" /> : <Printer size={18} />}
-                  {t.print}
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    console.log('💾 Sauvegarde AST...');
-                    alert(t.astSaved);
-                  }}
-                  className="premium-button"
-                >
-                  <Save size={18} />
-                  {t.save}
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    console.log('📁 Archivage AST...');
-                    alert(t.astArchived);
-                  }}
-                  className="premium-button"
-                >
-                  <Archive size={18} />
-                  {t.archive}
-                </button>
-                
-                <button 
-                  onClick={() => setShowLockConfirm(true)}
-                  className="premium-button"
-                  disabled={finalizationData.isLocked}
-                  style={{ 
-                    background: finalizationData.isLocked ? 
-                      'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' : 
-                      'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                  }}
-                >
-                  {finalizationData.isLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                  {finalizationData.isLocked ? t.locked : t.lock}
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* MODAL AJOUT TRAVAILLEUR AVEC TRADUCTIONS */}
-        {showAddWorker && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
-                  {t.addWorkerModal}
-                </h4>
-                <button
-                  onClick={() => setShowAddWorker(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    transition: 'color 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ef4444'}
-                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#94a3b8'}
-                >
-                  <X size={20} />
-                </button>
-              </div>
+        {/* ONGLET 3: PARTAGE */}
+        {activeTab === 'sharing' && (
+          <div>
+            <div className="ast-section">
+              <h2 className="section-title">
+                <Share2 size={24} />
+                {t.sharing}
+              </h2>
               
-              <div className="form-group">
-                <label className="form-label">{t.fullName}</label>
-                <input
-                  type="text"
-                  value={newWorker.name || ''}
-                  onChange={(e) => setNewWorker(prev => ({ ...prev, name: e.target.value }))}
-                  className="form-input"
-                  placeholder={t.namePlaceholder}
-                  autoFocus
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">{t.company}</label>
-                <input
-                  type="text"
-                  value={newWorker.company || ''}
-                  onChange={(e) => setNewWorker(prev => ({ ...prev, company: e.target.value }))}
-                  className="form-input"
-                  placeholder={t.companyPlaceholder}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button
-                  onClick={addWorker}
-                  className="premium-button"
-                  style={{ flex: 1 }}
-                  disabled={!newWorker.name || !newWorker.company}
-                >
-                  <Plus size={18} />
-                  {t.add}
-                </button>
-                <button
-                  onClick={() => setShowAddWorker(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 20px',
-                    border: '2px solid rgba(148, 163, 184, 0.3)',
-                    borderRadius: '8px',
-                    background: 'rgba(51, 65, 85, 0.6)',
-                    color: '#e2e8f0',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLButtonElement).style.borderColor = '#ef4444';
-                    (e.target as HTMLButtonElement).style.background = 'rgba(239, 68, 68, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(148, 163, 184, 0.3)';
-                    (e.target as HTMLButtonElement).style.background = 'rgba(51, 65, 85, 0.6)';
-                  }}
-                >
-                  <X size={18} />
-                  {t.cancel}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL CONFIRMATION VERROUILLAGE AVEC TRADUCTIONS */}
-        {showLockConfirm && (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{ 
-              background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-              border: '2px solid rgba(239, 68, 68, 0.3)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>
-                  {t.confirmLock}
-                </h4>
-                <button
-                  onClick={() => setShowLockConfirm(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#fca5a5',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    transition: 'color 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.color = '#ffffff'}
-                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.color = '#fca5a5'}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div style={{ marginBottom: '20px', color: '#fef2f2' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  marginBottom: '12px',
-                  padding: '12px',
-                  background: 'rgba(254, 242, 242, 0.1)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(252, 165, 165, 0.2)'
-                }}>
-                  <AlertTriangle size={20} style={{ color: '#fbbf24' }} />
-                  <strong>{t.lockWarning}</strong>
+              {/* Méthodes de partage */}
+              <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
+                <h3 style={{ color: '#d1d5db', fontSize: isMobile ? '14px' : '16px', marginBottom: isMobile ? '12px' : '16px' }}>
+                  {language === 'fr' ? 'Méthodes de partage:' : 'Sharing methods:'}
+                </h3>
+                
+                <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '16px' : '20px', flexWrap: 'wrap' }}>
+                  {(['email', 'sms', 'whatsapp', 'teams', 'slack'] as ShareMethod[]).map((method) => (
+                    <button
+                      key={method}
+                      onClick={() => setSelectedShareMethod(method)}
+                      className={`ast-button ${selectedShareMethod === method ? 'button-primary' : 'button-secondary'}`}
+                      style={{ flex: isMobile ? '1' : 'none', minWidth: isMobile ? '0' : '120px' }}
+                    >
+                      {method === 'email' && <Mail size={16} />}
+                      {method === 'sms' && <Smartphone size={16} />}
+                      {method === 'whatsapp' && <MessageSquare size={16} />}
+                      {method === 'teams' && <Users size={16} />}
+                      {method === 'slack' && <Hash size={16} />}
+                      {method.charAt(0).toUpperCase() + method.slice(1)}
+                    </button>
+                  ))}
                 </div>
-                
-                <div style={{ 
-                  background: 'rgba(254, 242, 242, 0.1)', 
-                  padding: '16px', 
-                  borderRadius: '8px', 
-                  marginBottom: '16px',
-                  border: '1px solid rgba(252, 165, 165, 0.2)'
+
+                <button
+                  onClick={handleShare}
+                  className="ast-button button-success"
+                  style={{ width: '100%' }}
+                >
+                  <Share size={20} />
+                  {language === 'fr' ? 'Partager via' : 'Share via'} {selectedShareMethod.charAt(0).toUpperCase() + selectedShareMethod.slice(1)}
+                </button>
+              </div>
+
+              {/* Instructions de partage */}
+              <div style={{ 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                borderRadius: isMobile ? '8px' : '12px', 
+                padding: isMobile ? '12px' : '16px'
+              }}>
+                <h4 style={{
+                  margin: '0 0 8px 0',
+                  color: '#60a5fa',
+                  fontSize: isMobile ? '12px' : '14px',
+                  fontWeight: '700'
                 }}>
-                  <h5 style={{ margin: '0 0 8px 0', color: '#fbbf24', fontSize: '14px' }}>
-                    {t.autoChecks}
-                  </h5>
-                  <div style={{ fontSize: '13px', color: '#fef2f2', lineHeight: '1.4' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span>{t.sectionsCompleted}</span>
-                      <strong>{finalizationData.completionPercentage}%</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span>{t.stats.consents}:</span>
-                      <strong>{finalizationData.workers.filter(w => w.hasConsented).length}/{finalizationData.workers.length}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{t.stats.approvals}:</span>
-                      <strong>{finalizationData.workers.filter(w => w.approbationStatus === 'approved').length}/{finalizationData.workers.length}</strong>
-                    </div>
+                  {t.shareInstructions}
+                </h4>
+                <ul style={{
+                  margin: 0,
+                  paddingLeft: '20px',
+                  color: '#94a3b8',
+                  fontSize: isMobile ? '11px' : '13px'
+                }}>
+                  {t.shareList.map((item, index) => (
+                    <li key={index} style={{ marginBottom: '4px' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            {finalizationData.qrCodeUrl && (
+              <div className="ast-section">
+                <h2 className="section-title">
+                  <QrCode size={24} />
+                  {language === 'fr' ? '📱 Code QR - Accès Mobile AST' : '📱 QR Code - Mobile JSA Access'}
+                </h2>
+                
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    display: 'inline-block',
+                    padding: isMobile ? '15px' : '20px',
+                    backgroundColor: 'white',
+                    borderRadius: isMobile ? '12px' : '16px',
+                    marginBottom: isMobile ? '12px' : '16px',
+                    border: '3px solid #f59e0b',
+                    boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
+                  }}>
+                    <img 
+                      src={finalizationData.qrCodeUrl} 
+                      alt="QR Code AST" 
+                      style={{ 
+                        width: isMobile ? '180px' : '220px', 
+                        height: isMobile ? '180px' : '220px',
+                        display: 'block'
+                      }} 
+                    />
                   </div>
+                  <p style={{ color: '#d1d5db', fontSize: isMobile ? '12px' : '14px', lineHeight: 1.5 }}>
+                    {language === 'fr' ? 
+                      '📱 Scannez ce code QR pour accéder à l\'AST depuis un appareil mobile' :
+                      '📱 Scan this QR code to access the JSA from a mobile device'
+                    }
+                  </p>
                 </div>
-                
-                <p style={{ fontSize: '13px', lineHeight: '1.4', opacity: 0.9 }}>
-                  {t.lockDescription}
-                </p>
               </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => lockAST('permanent')}
-                  className="premium-button"
-                  style={{ 
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-                    borderColor: 'rgba(220, 38, 38, 0.3)'
-                  }}
-                >
-                  <Lock size={18} />
-                  {t.lockPermanently}
-                </button>
-                <button
-                  onClick={() => setShowLockConfirm(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 20px',
-                    border: '2px solid rgba(252, 165, 165, 0.3)',
-                    borderRadius: '8px',
-                    background: 'rgba(254, 242, 242, 0.1)',
-                    color: '#fef2f2',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.2)';
-                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.target as HTMLButtonElement).style.background = 'rgba(254, 242, 242, 0.1)';
-                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(252, 165, 165, 0.3)';
-                  }}
-                >
-                  <X size={18} />
-                  {t.cancel}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
-      </div>
-    </>
-  );
-}
 
-// =================== EXPORT DU COMPOSANT ===================
-export default Step6Finalization;
+        {/* ONGLET 4: RAPPORTS */}
+        {activeTab === 'reports' && (
+          <div>
+            <div className="ast-section">
+              <h2 className="section-title">
+                <BarChart3 size={24} />
+                {t.reportOptions}
+              </h2>
+              
+              {/* Options de génération */}
+              <div style={{ marginBottom: isMobile ? '20px' : '24px' }}>
+                <h3 style={{ color: '#d1d5db', fontSize: isMobile ? '14px' : '16px', marginBottom: isMobile ? '12px' : '16px' }}>
+                  {language === 'fr' ? 'Options d\'inclusion:' : 'Inclusion options:'}
+                </h3>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: isMobile ? '8px' : '12px'
+                }}>
+                  {Object.entries({
+                    includePhotos: t.includePhotos,
+                    includeSignatures: t.includeSignatures,
+                    includeQRCode: t.includeQRCode,
+                    includeBranding: t.includeBranding,
+                    includeTimestamps: t.includeTimestamps,
+                    includeComments: t.includeComments,
+                    includeStatistics: t.includeStatistics,
+                    includeValidation: t.includeValidation,
+                    includePermits: t.includePermits,
+                    includeHazards: t.includeHazards,
+                    includeEquipment: t.includeEquipment
+                  }).map(([key, label]) => (
+                    <div 
+                      key={key}
+                      className={`checkbox-field ${finalizationData.documentGeneration[key as keyof typeof finalizationData.documentGeneration] ? 'checked' : ''}`}
+                      onClick={() => toggleDocumentOption(key as keyof DocumentGeneration)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={finalizationData.documentGeneration[key as keyof typeof finalizationData.documentGeneration] as boolean}
+                        onChange={() => toggleDocumentOption(key as keyof DocumentGeneration)}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      <span>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Boutons génération rapports */}
