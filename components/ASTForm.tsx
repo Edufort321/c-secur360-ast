@@ -2491,8 +2491,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-input" 
                 placeholder={t.repPhonePlaceholder}
                 value={localState.clientRepresentativePhone} 
-                onChange={(e) => updateLocalState('clientRepresentativePhone', e.target.value)}
-                onBlur={(e) => syncToParent('clientRepresentativePhone', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('clientRepresentativePhone', e.target.value);
+                }}
               />
             </div>
           </div>
@@ -2513,8 +2516,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-input" 
                 placeholder={t.projectNumberPlaceholder}
                 value={localState.projectNumber} 
-                onChange={(e) => updateLocalState('projectNumber', e.target.value)}
-                onBlur={(e) => syncToParent('projectNumber', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('projectNumber', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2526,8 +2532,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-input" 
                 placeholder={t.astClientPlaceholder}
                 value={localState.astClientNumber} 
-                onChange={(e) => updateLocalState('astClientNumber', e.target.value)}
-                onBlur={(e) => syncToParent('astClientNumber', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('astClientNumber', e.target.value);
+                }}
               />
               <div className="field-help">{t.astClientHelp}</div>
             </div>
@@ -2540,8 +2549,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="date" 
                   className="premium-input"
                   value={localState.date}
-                  onChange={(e) => updateLocalState('date', e.target.value)}
-                  onBlur={(e) => syncToParent('date', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('date', e.target.value);
+                  }}
                 />
               </div>
               <div className="form-field">
@@ -2552,8 +2564,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="time" 
                   className="premium-input"
                   value={localState.time}
-                  onChange={(e) => updateLocalState('time', e.target.value)}
-                  onBlur={(e) => syncToParent('time', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('time', e.target.value);
+                  }}
                 />
               </div>
             </div>
@@ -2575,8 +2590,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-input" 
                 placeholder={t.workLocationPlaceholder}
                 value={localState.workLocation} 
-                onChange={(e) => updateLocalState('workLocation', e.target.value)}
-                onBlur={(e) => syncToParent('workLocation', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('workLocation', e.target.value);
+                }}
               />
             </div>
             <div className="form-field">
@@ -2603,8 +2621,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   className="premium-input" 
                   placeholder={t.emergencyContactPlaceholder}
                   value={localState.emergencyContact} 
-                  onChange={(e) => updateLocalState('emergencyContact', e.target.value)}
-                  onBlur={(e) => syncToParent('emergencyContact', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('emergencyContact', e.target.value);
+                  }}
                 />
               </div>
               <div className="form-field">
@@ -2616,8 +2637,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   className="premium-input" 
                   placeholder={t.emergencyPhonePlaceholder}
                   value={localState.emergencyPhone} 
-                  onChange={(e) => updateLocalState('emergencyPhone', e.target.value)}
-                  onBlur={(e) => syncToParent('emergencyPhone', e.target.value)}
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateLocalState('emergencyPhone', e.target.value);
+                  }}
                 />
               </div>
             </div>
@@ -2639,8 +2663,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
                 value={localState.workDescription} 
-                onChange={(e) => updateLocalState('workDescription', e.target.value)}
-                onBlur={(e) => syncToParent('workDescription', e.target.value)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateLocalState('workDescription', e.target.value);
+                }}
               />
               <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
