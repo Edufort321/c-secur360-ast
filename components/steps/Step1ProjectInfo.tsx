@@ -16,7 +16,7 @@ interface Step1ProjectInfoProps {
   errors: any;
 }
 
-// =================== NOUVELLES INTERFACES EMPLACEMENTS ===================
+// =================== INTERFACES OPTIMISÉES POUR EMPLACEMENTS ===================
 interface WorkLocation {
   id: string;
   name: string;
@@ -24,13 +24,13 @@ interface WorkLocation {
   zone: string;
   building?: string;
   floor?: string;
-  maxWorkersReached: number; // ✅ NOUVEAU - Max atteint durant la journée
+  maxWorkersReached: number; // Max atteint durant la journée
   currentWorkers: number;
   lockoutPoints: number;
   isActive: boolean;
   createdAt: string;
   notes?: string;
-  estimatedDuration: string; // ✅ NOUVEAU - Durée des travaux
+  estimatedDuration: string; // Durée des travaux
   startTime?: string;
   endTime?: string;
 }
@@ -39,14 +39,14 @@ interface LocationStats {
   totalWorkers: number;
   totalLocations: number;
   activeLockouts: number;
-  peakUtilization: number; // ✅ CHANGÉ - Pic d'utilisation basé sur max atteint
+  peakUtilization: number; // Pic d'utilisation basé sur max atteint
   locationBreakdown: {
     locationId: string;
     name: string;
     currentWorkers: number;
-    maxReached: number; // ✅ NOUVEAU - Max atteint
+    maxReached: number; // Max atteint
     lockouts: number;
-    utilizationCurrent: number; // ✅ NOUVEAU - Utilisation actuelle
+    utilizationCurrent: number; // Utilisation actuelle
     estimatedDuration: string;
   }[];
 }
@@ -64,7 +64,7 @@ interface LockoutPoint {
   photos: string[];
   notes: string;
   completedProcedures: number[];
-  assignedLocation?: string; // ✅ NOUVEAU - Lien avec emplacement
+  assignedLocation?: string; // Lien avec emplacement
 }
 
 interface LockoutPhoto {
@@ -76,7 +76,7 @@ interface LockoutPhoto {
   lockoutPointId?: string;
 }
 
-// =================== SYSTÈME DE TRADUCTIONS ÉTENDU ===================
+// =================== SYSTÈME DE TRADUCTIONS COMPLET ET OPTIMISÉ ===================
 const translations = {
   fr: {
     // Générateur AST
@@ -89,9 +89,8 @@ const translations = {
     clientInfo: "🏢 Informations Client",
     projectDetails: "📋 Détails du Projet",
     location: "📍 Localisation",
-    workLocations: "🏗️ Emplacements de Travail", // ✅ NOUVEAU
-    locationStats: "📊 Statistiques Temps Réel", // ✅ NOUVEAU
-    team: "👥 Équipe de Travail",
+    workLocations: "🏗️ Emplacements de Travail",
+    locationStats: "📊 Statistiques Temps Réel",
     emergency: "🚨 Contacts d'Urgence",
     workDescription: "📝 Description Détaillée des Travaux",
     lockoutSection: "🔒 Verrouillage / Cadenassage (LOTO)",
@@ -120,7 +119,7 @@ const translations = {
     workLocationPlaceholder: "Adresse complète du site de travail",
     industryType: "Type d'Industrie",
     
-    // ✅ NOUVEAUX - Emplacements multiples
+    // Emplacements multiples
     addLocation: "Ajouter Emplacement",
     locationName: "Nom de l'Emplacement",
     locationNamePlaceholder: "Ex: Bâtiment A - Étage 2",
@@ -140,7 +139,7 @@ const translations = {
     noLocations: "Aucun emplacement défini",
     noLocationsDescription: "Ajoutez des emplacements pour organiser vos équipes",
     
-    // ✅ NOUVEAUX - Statistiques
+    // Statistiques
     totalWorkers: "Total Travailleurs",
     totalLocations: "Emplacements Actifs",
     totalLockouts: "Cadenas Apposés",
@@ -158,13 +157,6 @@ const translations = {
     manufacturing: "⚙️ Manufacturier",
     office: "🏢 Bureau/Administratif",
     other: "🔧 Autre",
-    
-    // Équipe
-    workerCount: "Nombre de Personnes",
-    workerCountPlaceholder: "Ex: 5",
-    workerCountHelp: "Ce nombre sera comparé aux approbations d'équipe et emplacements",
-    estimatedDuration: "Durée Estimée",
-    durationPlaceholder: "Ex: 4 heures, 2 jours, 1 semaine",
     
     // Urgence
     emergencyContact: "Contact d'Urgence",
@@ -228,6 +220,7 @@ const translations = {
     cancel: "Annuler",
     save: "Sauvegarder",
     edit: "Modifier",
+    adding: "Ajout en cours...",
     
     // Catégories photo
     categories: {
@@ -250,9 +243,8 @@ const translations = {
     clientInfo: "🏢 Client Information",
     projectDetails: "📋 Project Details",
     location: "📍 Location",
-    workLocations: "🏗️ Work Locations", // ✅ NEW
-    locationStats: "📊 Real-Time Statistics", // ✅ NEW
-    team: "👥 Work Team",
+    workLocations: "🏗️ Work Locations",
+    locationStats: "📊 Real-Time Statistics",
     emergency: "🚨 Emergency Contacts",
     workDescription: "📝 Detailed Work Description",
     lockoutSection: "🔒 Lockout / Tagout (LOTO)",
@@ -281,7 +273,7 @@ const translations = {
     workLocationPlaceholder: "Complete address of work site",
     industryType: "Industry Type",
     
-    // ✅ NEW - Multiple locations
+    // Multiple locations
     addLocation: "Add Location",
     locationName: "Location Name",
     locationNamePlaceholder: "Ex: Building A - Floor 2",
@@ -301,7 +293,7 @@ const translations = {
     noLocations: "No locations defined",
     noLocationsDescription: "Add locations to organize your teams",
     
-    // ✅ NEW - Statistics
+    // Statistics
     totalWorkers: "Total Workers",
     totalLocations: "Active Locations",
     totalLockouts: "Applied Locks",
@@ -319,13 +311,6 @@ const translations = {
     manufacturing: "⚙️ Manufacturing",
     office: "🏢 Office/Administrative",
     other: "🔧 Other",
-    
-    // Team
-    workerCount: "Number of People",
-    workerCountPlaceholder: "Ex: 5",
-    workerCountHelp: "This number will be compared to team approvals and locations",
-    estimatedDuration: "Estimated Duration",
-    durationPlaceholder: "Ex: 4 hours, 2 days, 1 week",
     
     // Emergency
     emergencyContact: "Emergency Contact",
@@ -389,6 +374,7 @@ const translations = {
     cancel: "Cancel",
     save: "Save",
     edit: "Edit",
+    adding: "Adding...",
     
     // Photo categories
     categories: {
@@ -401,7 +387,7 @@ const translations = {
   }
 };
 
-// Types d'énergie avec icônes et couleurs + traductions
+// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES OPTIMISÉES ===================
 const getEnergyTypes = (language: 'fr' | 'en') => ({
   electrical: { 
     name: language === 'fr' ? 'Électrique' : 'Electrical', 
@@ -545,7 +531,7 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
   }
 });
 
-// Générateur de numéro AST
+// =================== GÉNÉRATEUR DE NUMÉRO AST OPTIMISÉ ===================
 const generateASTNumber = (): string => {
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -563,9 +549,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   const projectInfo = formData?.projectInfo || {};
   const lockoutPoints = projectInfo?.lockoutPoints || [];
   const lockoutPhotos = projectInfo?.lockoutPhotos || [];
-  const workLocations = projectInfo?.workLocations || []; // ✅ NOUVEAU
+  const workLocations = projectInfo?.workLocations || [];
   
-  // ✅ FIX CRITIQUE - ÉTAT LOCAL STABLE AVEC DEBOUNCE POUR ÉVITER ÉJECTION
+  // =================== ÉTAT LOCAL STABLE AVEC DEBOUNCE OPTIMISÉ ===================
   const [localState, setLocalState] = useState({
     client: projectInfo.client || '',
     clientPhone: projectInfo.clientPhone || '',
@@ -577,21 +563,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     time: projectInfo.time || new Date().toTimeString().substring(0, 5),
     workLocation: projectInfo.workLocation || '',
     industry: projectInfo.industry || 'electrical',
-    workerCount: projectInfo.workerCount || 1,
-    estimatedDuration: projectInfo.estimatedDuration || '',
     emergencyContact: projectInfo.emergencyContact || '',
     emergencyPhone: projectInfo.emergencyPhone || '',
     workDescription: projectInfo.workDescription || ''
   });
 
-  // États pour AST et interactions
+  // =================== ÉTATS POUR AST ET INTERACTIONS ===================
   const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
   
-  // ✅ NOUVEAUX ÉTATS - Gestion emplacements
+  // =================== ÉTATS EMPLACEMENTS AVEC ISOLATION MODAL ===================
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState<string | null>(null);
   const [newLocation, setNewLocation] = useState({
@@ -605,27 +589,31 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     endTime: ''
   });
 
-  // ✅ FIX CRITIQUE - DEBOUNCE TIMER POUR ÉVITER DOUBLE ÉJECTION
+  // =================== TIMERS ET PROTECTION ANTI-ÉJECTION ===================
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const modalDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isModalSaving, setIsModalSaving] = useState(false);
 
-  // =================== HANDLERS ÉTAT LOCAL AVEC DEBOUNCE ===================
+  // =================== HANDLERS ÉTAT LOCAL AVEC DEBOUNCE OPTIMISÉ ===================
   const updateLocalState = (field: string, value: any) => {
+    if (isSaving) return; // Protection supplémentaire
+    
     setLocalState(prev => ({ ...prev, [field]: value }));
     
-    // ✅ FIX: Débouncer la sauvegarde pour éviter éjection multiple
+    // Debounce optimisé pour éviter éjection multiple
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
     debounceTimerRef.current = setTimeout(() => {
       syncToParent(field, value);
-    }, 300); // 300ms de délai
+    }, 300); // 300ms de délai optimal
   };
 
-  // Sync vers ASTForm avec protection anti-éjection
+  // =================== SYNC VERS PARENT AVEC PROTECTION ===================
   const syncToParent = (field: string, value: any) => {
-    if (isSaving) return; // Éviter multiple sync simultané
+    if (isSaving) return;
     
     setIsSaving(true);
     try {
@@ -637,7 +625,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     }
   };
 
-  // Sync complet optimisé
+  // =================== SYNC COMPLET OPTIMISÉ ===================
   const syncAllToParent = () => {
     if (isSaving) return;
     
@@ -646,7 +634,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       onDataChange('projectInfo', { 
         ...projectInfo, 
         ...localState,
-        workLocations // Inclure les emplacements
+        workLocations,
+        lockoutPoints,
+        lockoutPhotos
       });
     } catch (error) {
       console.error('Erreur sync complet:', error);
@@ -655,13 +645,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     }
   };
 
+  // =================== HANDLER MODAL ISOLÉ (SANS DEBOUNCE) ===================
+  const updateModalField = (field: string, value: string) => {
+    setNewLocation(prev => ({ ...prev, [field]: value }));
+    // PAS de sync vers parent - isolation complète pour éviter éjection
+  };
+
   // =================== FONCTIONS STATISTIQUES TEMPS RÉEL ===================
   const calculateLocationStats = (): LocationStats => {
     const totalLocations = workLocations.filter((loc: WorkLocation) => loc.isActive).length;
     const totalWorkers = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
     const activeLockouts = lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
     
-    // ✅ NOUVEAU - Pic d'utilisation basé sur max atteint durant la journée
+    // Pic d'utilisation basé sur max atteint durant la journée
     const totalMaxReached = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
     const peakUtilization = totalMaxReached > 0 ? Math.round((totalWorkers / totalMaxReached) * 100) : 0;
     
@@ -670,7 +666,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
         point.assignedLocation === loc.id && point.isLocked
       ).length;
       
-      // ✅ NOUVEAU - Utilisation actuelle basée sur max atteint
       const utilizationCurrent = loc.maxWorkersReached > 0 
         ? Math.round((loc.currentWorkers / loc.maxWorkersReached) * 100) 
         : 0;
@@ -720,11 +715,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     onDataChange('astNumber', newNumber);
   };
 
-  // =================== GESTION EMPLACEMENTS (NOUVEAUX HANDLERS) ===================
+  // =================== GESTION EMPLACEMENTS OPTIMISÉE ===================
   const addWorkLocation = () => {
     if (!newLocation.name.trim() || !newLocation.zone.trim()) {
       return;
     }
+
+    if (isModalSaving) return; // Protection double-save
+    setIsModalSaving(true);
 
     const location: WorkLocation = {
       id: `location_${Date.now()}`,
@@ -733,7 +731,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       zone: newLocation.zone.trim(),
       building: newLocation.building.trim() || undefined,
       floor: newLocation.floor.trim() || undefined,
-      maxWorkersReached: 0, // ✅ NOUVEAU - Commence à 0, sera mis à jour par Step5
+      maxWorkersReached: 0, // Commence à 0, sera mis à jour par Step5
       currentWorkers: 0,
       lockoutPoints: 0,
       isActive: true,
@@ -745,26 +743,32 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
 
     const updatedLocations = [...workLocations, location];
     
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      workLocations: updatedLocations
-    });
+    try {
+      onDataChange('projectInfo', {
+        ...projectInfo,
+        ...localState,
+        workLocations: updatedLocations
+      });
 
-    // Reset formulaire
-    setNewLocation({
-      name: '',
-      description: '',
-      zone: '',
-      building: '',
-      floor: '',
-      estimatedDuration: '',
-      startTime: '',
-      endTime: ''
-    });
-    setShowAddLocation(false);
-    
-    console.log('✅ Emplacement ajouté:', location.name);
+      // Reset formulaire modal
+      setNewLocation({
+        name: '',
+        description: '',
+        zone: '',
+        building: '',
+        floor: '',
+        estimatedDuration: '',
+        startTime: '',
+        endTime: ''
+      });
+      setShowAddLocation(false);
+      
+      console.log('✅ Emplacement ajouté:', location.name);
+    } catch (error) {
+      console.error('Erreur ajout emplacement:', error);
+    } finally {
+      setTimeout(() => setIsModalSaving(false), 200);
+    }
   };
 
   const removeWorkLocation = (locationId: string, e?: React.MouseEvent) => {
@@ -775,7 +779,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     
     const updatedLocations = workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
     
-    // Aussi retirer l'assignation des lockout points
+    // Retirer l'assignation des lockout points
     const updatedLockouts = lockoutPoints.map((point: LockoutPoint) => 
       point.assignedLocation === locationId 
         ? { ...point, assignedLocation: undefined }
@@ -804,7 +808,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     });
   };
 
-  // ✅ NOUVELLE FONCTION - Mise à jour du max atteint (appelée depuis Step5)
+  // =================== FONCTION POUR STEP5 - MISE À JOUR MAX ATTEINT ===================
   const updateLocationWorkerCount = (locationId: string, newWorkerCount: number) => {
     const updatedLocations = workLocations.map((loc: WorkLocation) => {
       if (loc.id === locationId) {
@@ -827,7 +831,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     console.log(`✅ Emplacement ${locationId} - Travailleurs: ${newWorkerCount}, Max atteint: ${Math.max(workLocations.find((loc: WorkLocation) => loc.id === locationId)?.maxWorkersReached || 0, newWorkerCount)}`);
   };
 
-  // =================== GESTION PHOTOS (CONSERVÉ) ===================
+  // =================== GESTION PHOTOS OPTIMISÉE ===================
   const handlePhotoCapture = async (category: string, lockoutPointId?: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -891,7 +895,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     });
   };
 
-  // =================== GESTION POINTS DE VERROUILLAGE (CONSERVÉ + AMÉLIORÉ) ===================
+  // =================== GESTION POINTS DE VERROUILLAGE OPTIMISÉE ===================
   const addLockoutPoint = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -910,7 +914,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       photos: [],
       notes: '',
       completedProcedures: [],
-      assignedLocation: workLocations.length > 0 ? workLocations[0].id : undefined // ✅ Auto-assign première location
+      assignedLocation: workLocations.length > 0 ? workLocations[0].id : undefined
     };
     const updatedPoints = [...lockoutPoints, newPoint];
     onDataChange('projectInfo', {
@@ -925,7 +929,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       point.id === pointId ? { ...point, [field]: value } : point
     );
     
-    // ✅ NOUVEAU: Mettre à jour les stats location si lockout status change
+    // Mettre à jour les stats location si lockout status change
     if (field === 'isLocked') {
       const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
       if (point?.assignedLocation) {
@@ -998,7 +1002,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     });
   };
 
-  // =================== FONCTIONS GESTION TEMPS (CONSERVÉ) ===================
+  // =================== FONCTIONS GESTION TEMPS OPTIMISÉES ===================
   const setTimeNow = (pointId: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -1028,18 +1032,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     updateLockoutPoint(pointId, 'energyType', energyType);
   };
 
-  // ✅ CLEANUP DEBOUNCE TIMER
+  // =================== CLEANUP TIMERS MULTIPLES ===================
   React.useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+      if (modalDebounceTimerRef.current) {
+        clearTimeout(modalDebounceTimerRef.current);
       }
     };
   }, []);
 
   // =================== CALCUL STATISTIQUES EN TEMPS RÉEL ===================
   const locationStats = calculateLocationStats();
-  // =================== CARROUSEL PHOTOS (CONSERVÉ INTÉGRALEMENT) ===================
+  // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ ===================
   const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
@@ -1151,7 +1158,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     );
   };
 
-  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE (CONSERVÉ) ===================
+  // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE OPTIMISÉ ===================
   const IndustrySelector = () => (
     <select 
       className="premium-select" 
@@ -1168,7 +1175,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </select>
   );
 
-  // =================== COMPOSANT VIDE POUR PHOTOS (CONSERVÉ) ===================
+  // =================== COMPOSANT VIDE POUR PHOTOS OPTIMISÉ ===================
   const EmptyPhotoPlaceholder = ({ 
     onClick, 
     title, 
@@ -1180,24 +1187,25 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     description: string;
     color?: string;
   }) => (
-    <div style={{
-      background: `${color}20`, 
-      border: `2px dashed ${color}50`,
-      borderRadius: '12px', 
-      padding: '40px 20px', 
-      textAlign: 'center', 
-      cursor: 'pointer', 
-      transition: 'all 0.3s ease'
-    }}
-    onClick={onClick}
-    onMouseEnter={(e) => {
-      (e.target as HTMLDivElement).style.background = `${color}30`;
-      (e.target as HTMLDivElement).style.borderColor = `${color}70`;
-    }}
-    onMouseLeave={(e) => {
-      (e.target as HTMLDivElement).style.background = `${color}20`;
-      (e.target as HTMLDivElement).style.borderColor = `${color}50`;
-    }}>
+    <div 
+      className="empty-photo-placeholder"
+      style={{
+        background: `${color}20`, 
+        border: `2px dashed ${color}50`,
+        borderColor: `${color}50`
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        const target = e.target as HTMLDivElement;
+        target.style.background = `${color}30`;
+        target.style.borderColor = `${color}70`;
+      }}
+      onMouseLeave={(e) => {
+        const target = e.target as HTMLDivElement;
+        target.style.background = `${color}20`;
+        target.style.borderColor = `${color}50`;
+      }}
+    >
       <Camera size={32} color={color} style={{ marginBottom: '12px' }} />
       <h4 style={{ margin: '0 0 8px', color }}>{title}</h4>
       <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
@@ -1206,7 +1214,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </div>
   );
 
-  // ✅ NOUVEAU COMPOSANT - DASHBOARD STATISTIQUES TEMPS RÉEL
+  // =================== COMPOSANT DASHBOARD STATISTIQUES TEMPS RÉEL ===================
   const LocationStatsCard = () => (
     <div className="location-stats-card">
       <div className="stats-header">
@@ -1289,7 +1297,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </div>
   );
 
-  // ✅ NOUVEAU COMPOSANT - GESTION EMPLACEMENTS
+  // =================== COMPOSANT GESTION EMPLACEMENTS OPTIMISÉ ===================
   const WorkLocationManager = () => (
     <div className="work-locations-section">
       <div className="locations-header">
@@ -1319,7 +1327,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   <div className="location-metadata">
                     <span className="location-zone">🏢 {location.zone}</span>
                     {location.building && <span className="location-building">🏗️ {location.building}</span>}
-                    {location.floor && <span className="location-floor">🏢 {location.floor}</span>}
+                    {location.floor && <span className="location-floor">📍 {location.floor}</span>}
                   </div>
                 </div>
                 <div className="location-stats">
@@ -1376,10 +1384,18 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
         </div>
       )}
 
-      {/* Modal Ajout Emplacement */}
+      {/* =================== MODAL CRITIQUE AVEC Z-INDEX MAXIMUM =================== */}
       {showAddLocation && (
-        <div className="modal-overlay" onClick={() => setShowAddLocation(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="modal-overlay-critical" 
+          onClick={() => setShowAddLocation(false)}
+          style={{ zIndex: 99999 }}
+        >
+          <div 
+            className="modal-content-critical" 
+            onClick={(e) => e.stopPropagation()}
+            style={{ zIndex: 100000 }}
+          >
             <div className="modal-header">
               <h3>{t.addLocation}</h3>
               <button 
@@ -1400,10 +1416,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.locationNamePlaceholder}
                     value={newLocation.name}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => updateModalField('name', e.target.value)}
                   />
                 </div>
               </div>
@@ -1416,10 +1432,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.locationDescriptionPlaceholder}
                     value={newLocation.description}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => updateModalField('description', e.target.value)}
                   />
                 </div>
               </div>
@@ -1432,10 +1448,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.zonePlaceholder}
                     value={newLocation.zone}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, zone: e.target.value }))}
+                    onChange={(e) => updateModalField('zone', e.target.value)}
                   />
                 </div>
                 <div className="form-field">
@@ -1445,10 +1461,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.workDurationPlaceholder}
                     value={newLocation.estimatedDuration}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                    onChange={(e) => updateModalField('estimatedDuration', e.target.value)}
                   />
                 </div>
               </div>
@@ -1461,9 +1477,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="time"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     value={newLocation.startTime}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, startTime: e.target.value }))}
+                    onChange={(e) => updateModalField('startTime', e.target.value)}
                   />
                 </div>
                 <div className="form-field">
@@ -1473,9 +1489,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="time"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     value={newLocation.endTime}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, endTime: e.target.value }))}
+                    onChange={(e) => updateModalField('endTime', e.target.value)}
                   />
                 </div>
               </div>
@@ -1488,10 +1504,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.buildingPlaceholder}
                     value={newLocation.building}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, building: e.target.value }))}
+                    onChange={(e) => updateModalField('building', e.target.value)}
                   />
                 </div>
                 <div className="form-field">
@@ -1501,10 +1517,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                   </label>
                   <input
                     type="text"
-                    className="premium-input"
+                    className="premium-input modal-input"
                     placeholder={t.floorPlaceholder}
                     value={newLocation.floor}
-                    onChange={(e) => setNewLocation(prev => ({ ...prev, floor: e.target.value }))}
+                    onChange={(e) => updateModalField('floor', e.target.value)}
                   />
                 </div>
               </div>
@@ -1522,10 +1538,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 type="button"
                 className="btn-primary" 
                 onClick={addWorkLocation}
-                disabled={!newLocation.name.trim() || !newLocation.zone.trim()}
+                disabled={!newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving}
               >
                 <Plus size={16} />
-                {t.add}
+                {isModalSaving ? t.adding : t.add}
               </button>
             </div>
           </div>
@@ -1534,7 +1550,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
     </div>
   );
 
-  // ✅ NOUVEAU COMPOSANT - SÉLECTEUR EMPLACEMENT POUR LOCKOUT POINTS
+  // =================== COMPOSANT SÉLECTEUR EMPLACEMENT POUR LOCKOUT POINTS ===================
   const LocationSelector = ({ currentLocationId, onLocationChange }: {
     currentLocationId?: string;
     onLocationChange: (locationId: string) => void;
@@ -1554,18 +1570,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
   );
   return (
     <>
-      {/* =================== CSS OPTIMISÉ COMPLET AVEC NOUVEAUX STYLES =================== */}
+      {/* =================== CSS OPTIMISÉ COMPLET AVEC MODAL CRITIQUE =================== */}
       <style dangerouslySetInnerHTML={{
         __html: `
-          /* =================== CONTAINER PRINCIPAL =================== */
+          /* =================== CONTAINER PRINCIPAL OPTIMISÉ =================== */
           .step1-container { 
             padding: 0; 
             margin: 0;
             max-width: 100%;
             color: #ffffff;
+            position: relative;
+            z-index: 1;
           }
 
-          /* =================== GRILLE PREMIUM =================== */
+          /* =================== GRILLE PREMIUM RESPONSIVE =================== */
           .premium-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
@@ -1574,7 +1592,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: start;
           }
 
-          /* =================== SECTIONS DE BASE =================== */
+          /* =================== SECTIONS DE BASE OPTIMISÉES =================== */
           .form-section { 
             background: rgba(30, 41, 59, 0.6); 
             backdrop-filter: blur(20px); 
@@ -1586,6 +1604,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             min-height: auto;
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 2;
           }
 
           .form-section:hover { 
@@ -1610,7 +1630,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             grid-column: 1 / -1;
           }
 
-          /* ✅ NOUVEAUX STYLES - DASHBOARD STATISTIQUES */
+          /* =================== DASHBOARD STATISTIQUES OPTIMISÉ =================== */
           .location-stats-card {
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
             border: 2px solid rgba(16, 185, 129, 0.3);
@@ -1619,6 +1639,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             margin-bottom: 24px;
             position: relative;
             overflow: hidden;
+            z-index: 2;
           }
 
           .location-stats-card::before {
@@ -1630,6 +1651,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
             animation: shine 3s ease-in-out infinite;
+          }
+
+          @keyframes shine { 
+            0% { left: -100%; } 
+            50% { left: 100%; } 
+            100% { left: 100%; } 
           }
 
           .stats-header {
@@ -1779,7 +1806,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             text-align: right;
           }
 
-          /* ✅ NOUVEAUX STYLES - GESTION EMPLACEMENTS */
+          /* =================== GESTION EMPLACEMENTS OPTIMISÉE =================== */
           .work-locations-section {
             background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(20px);
@@ -1787,6 +1814,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             border-radius: 20px;
             padding: 24px;
             margin-bottom: 24px;
+            position: relative;
+            z-index: 2;
           }
 
           .locations-header {
@@ -1925,30 +1954,51 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             color: #64748b;
           }
 
-          /* ✅ NOUVEAUX STYLES - MODAL */
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
+          /* =================== MODAL CRITIQUE AVEC Z-INDEX MAXIMUM =================== */
+          .modal-overlay-critical {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(0, 0, 0, 0.95) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 99999 !important;
             padding: 16px;
+            backdrop-filter: blur(10px) !important;
+            pointer-events: all !important;
           }
 
-          .modal-content {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 16px;
-            max-width: 600px;
+          .modal-content-critical {
+            background: rgba(15, 23, 42, 0.98) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 2px solid rgba(59, 130, 246, 0.5) !important;
+            border-radius: 20px;
+            max-width: 700px;
             width: 100%;
             max-height: calc(100vh - 32px);
             overflow-y: auto;
+            z-index: 100000 !important;
+            position: relative !important;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8) !important;
+            pointer-events: all !important;
+          }
+
+          .modal-input {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border: 2px solid rgba(100, 116, 139, 0.4) !important;
+            position: relative !important;
+            z-index: 100001 !important;
+          }
+
+          .modal-input:focus {
+            background: rgba(15, 23, 42, 1) !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+            z-index: 100002 !important;
+            outline: none !important;
           }
 
           .modal-header {
@@ -1957,32 +2007,41 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: center;
             padding: 24px 24px 0;
             margin-bottom: 20px;
+            position: relative;
+            z-index: 100001;
           }
 
           .modal-header h3 {
             color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 700;
             margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
           }
 
           .modal-close {
-            background: none;
-            border: none;
-            color: #94a3b8;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
             cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
+            padding: 10px;
+            border-radius: 8px;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100002;
           }
 
           .modal-close:hover {
-            background: rgba(100, 116, 139, 0.2);
-            color: #ffffff;
+            background: rgba(239, 68, 68, 0.2);
+            transform: scale(1.05);
           }
 
           .modal-body {
             padding: 0 24px;
+            position: relative;
+            z-index: 100001;
           }
 
           .modal-footer {
@@ -1990,6 +2049,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             gap: 12px;
             padding: 20px 24px 24px;
             justify-content: flex-end;
+            position: relative;
+            z-index: 100001;
           }
 
           .form-row {
@@ -2000,31 +2061,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
-          }
-
-          .btn-secondary {
-            background: rgba(100, 116, 139, 0.6);
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            color: #ffffff;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            min-height: 40px;
-          }
-
-          .btn-secondary:hover {
-            background: rgba(100, 116, 139, 0.8);
-            transform: translateY(-1px);
-          }
-
-          .location-selector {
-            margin-top: 8px;
           }
 
           /* =================== STYLES EXISTANTS CONSERVÉS =================== */
@@ -2139,6 +2175,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             align-items: start;
           }
 
+          .empty-photo-placeholder {
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 140px;
+          }
+
+          .location-selector {
+            margin-top: 8px;
+          }
+
+          /* =================== CARTE AST PREMIUM =================== */
           .ast-number-card { 
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%); 
             border: 2px solid #22c55e; 
@@ -2147,6 +2201,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             margin-bottom: 32px; 
             position: relative; 
             overflow: hidden;
+            z-index: 2;
           }
 
           .ast-number-card::before { 
@@ -2158,12 +2213,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             height: 100%; 
             background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.1), transparent); 
             animation: shine 3s ease-in-out infinite; 
-          }
-
-          @keyframes shine { 
-            0% { left: -100%; } 
-            50% { left: 100%; } 
-            100% { left: 100%; } 
           }
 
           .ast-number-header { 
@@ -2251,6 +2300,27 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             transform: none;
           }
 
+          .btn-secondary {
+            background: rgba(100, 116, 139, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            min-height: 40px;
+          }
+
+          .btn-secondary:hover {
+            background: rgba(100, 116, 139, 0.8);
+            transform: translateY(-1px);
+          }
+
           .btn-danger { 
             background: linear-gradient(135deg, #ef4444, #dc2626); 
             border: none; 
@@ -2272,7 +2342,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); 
           }
 
-          /* =================== RESPONSIVE PARTIEL =================== */
+          /* =================== RESPONSIVE OPTIMISÉ =================== */
           @media (max-width: 768px) {
             .premium-grid { 
               grid-template-columns: 1fr; 
@@ -2308,6 +2378,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               flex-direction: row;
               justify-content: space-between;
             }
+
+            .modal-content-critical {
+              margin: 8px;
+              max-height: calc(100vh - 16px);
+            }
+
+            .modal-header, .modal-body, .modal-footer {
+              padding-left: 16px;
+              padding-right: 16px;
+            }
           }
 
           @media (max-width: 480px) {
@@ -2323,14 +2403,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               padding: 12px;
             }
 
-            .modal-content {
-              margin: 8px;
-              max-height: calc(100vh - 16px);
+            .ast-number-value {
+              font-size: 18px;
             }
 
-            .modal-header, .modal-body, .modal-footer {
-              padding-left: 16px;
-              padding-right: 16px;
+            .ast-actions {
+              flex-wrap: wrap;
             }
           }
         `
@@ -2340,7 +2418,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
       
       <div className="step1-container">
-        {/* Carte Numéro AST Premium */}
+        {/* =================== CARTE NUMÉRO AST PREMIUM =================== */}
         <div className="ast-number-card">
           <div className="ast-number-header">
             <div className="ast-number-title">
@@ -2370,15 +2448,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           <div className="field-help">{t.astNumberGenerated}</div>
         </div>
 
-        {/* ✅ NOUVEAU - Dashboard Statistiques Temps Réel */}
+        {/* =================== DASHBOARD STATISTIQUES TEMPS RÉEL =================== */}
         {workLocations.length > 0 && <LocationStatsCard />}
 
-        {/* ✅ NOUVEAU - Gestion Emplacements de Travail */}
+        {/* =================== GESTION EMPLACEMENTS DE TRAVAIL =================== */}
         <WorkLocationManager />
 
-        {/* Grille Premium des Sections EXISTANTES */}
+        {/* =================== GRILLE PREMIUM DES SECTIONS PRINCIPALES =================== */}
         <div className="premium-grid">
-          {/* Section Client avec ÉTAT LOCAL + onBlur */}
+          {/* Section Client avec État Local + onBlur */}
           <div className="form-section">
             <div className="section-header">
               <Building className="section-icon" />
@@ -2529,8 +2607,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           </div>
 
-          {/* Section Équipe SUPPRIMÉE - Remplacée par durée dans emplacements */}
-
           {/* Section Contacts d'Urgence */}
           <div className="form-section">
             <div className="section-header">
@@ -2590,7 +2666,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
             </div>
           </div>
         </div>
-        {/* SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE AVEC ASSIGNATION EMPLACEMENTS */}
+        {/* =================== SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE =================== */}
         <div className="form-section lockout-section">
           <div className="section-header">
             <Lock className="section-icon lockout-icon" />
@@ -2660,7 +2736,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
                 </button>
               </div>
 
-              {/* ✅ NOUVEAU - Assignation Emplacement */}
+              {/* NOUVEAU - Assignation Emplacement */}
               {workLocations.length > 0 && (
                 <div className="form-field">
                   <label className="field-label">
@@ -2910,10 +2986,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
           )}
         </div>
 
-        {/* ✅ AJOUT CSS MANQUANT POUR STYLES LOCKOUT CONSERVÉS */}
+        {/* =================== CSS STYLES LOCKOUT COMPLETS =================== */}
         <style dangerouslySetInnerHTML={{
           __html: `
-            /* =================== STYLES LOCKOUT CONSERVÉS =================== */
+            /* =================== STYLES LOCKOUT CONSERVÉS ET OPTIMISÉS =================== */
             .energy-type-selector { 
               display: grid; 
               grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
@@ -3361,7 +3437,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors }: 
               border-color: #ef4444; 
             }
 
-            /* =================== RESPONSIVE COMPLET FINAL =================== */
+            /* =================== RESPONSIVE LOCKOUT OPTIMISÉ =================== */
             @media (max-width: 768px) {
               .energy-type-selector { 
                 grid-template-columns: repeat(2, 1fr); 
