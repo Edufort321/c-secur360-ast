@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
