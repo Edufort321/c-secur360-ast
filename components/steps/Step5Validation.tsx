@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -228,7 +228,8 @@ export default function Step5Validation({
 }: ValidationStepProps) {
   const t = translations[language];
   
-  const [validationData, setValidationData] = useState<ValidationData>({
+  // ✅ FIX CRITIQUE : État local stable SANS useEffect problématique
+  const [validationData, setValidationData] = useState<ValidationData>(() => ({
     reviewers: [],
     approvalRequired: true,
     minimumReviewers: 2,
@@ -241,7 +242,7 @@ export default function Step5Validation({
       regulatory: false
     },
     ...formData.validation
-  });
+  }));
 
   const [showAddReviewer, setShowAddReviewer] = useState(false);
   
@@ -253,17 +254,13 @@ export default function Step5Validation({
     certification: ''
   });
 
-  // =================== FIX CRITIQUE - useCallback STABLE ===================
-  const updateParentData = useCallback((data: ValidationData) => {
-    onDataChange('validation', data);
-  }, []); // ← Dépendances vides = fonction stable
+  // ✅ FIX CRITIQUE : NOTIFICATION PARENT DIRECTE SANS BOUCLE
+  const notifyParent = useCallback((newData: ValidationData) => {
+    console.log('🔥 Step5 - Notification parent directe:', newData);
+    onDataChange('validation', newData);
+  }, [onDataChange]);
 
-  // =================== FIX CRITIQUE - useEffect OPTIMISÉ ===================
-  useEffect(() => {
-    updateParentData(validationData);
-  }, [validationData]); // ← Plus onDataChange dans les deps !
-
-  // =================== HANDLERS OPTIMISÉS ===================
+  // =================== HANDLERS OPTIMISÉS SANS BOUCLES ===================
   const addReviewer = useCallback(() => {
     if (!newReviewer.name.trim() || !newReviewer.email.trim() || !newReviewer.role.trim()) {
       return;
@@ -279,11 +276,16 @@ export default function Step5Validation({
       status: 'pending'
     };
 
-    setValidationData(prev => ({
-      ...prev,
-      reviewers: [...prev.reviewers, reviewer]
-    }));
+    const updatedData = {
+      ...validationData,
+      reviewers: [...validationData.reviewers, reviewer]
+    };
 
+    // ✅ Mise à jour locale + notification parent en une seule fois
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+
+    // Reset formulaire
     setNewReviewer({
       name: '',
       role: '',
@@ -292,19 +294,25 @@ export default function Step5Validation({
       certification: ''
     });
     setShowAddReviewer(false);
-  }, [newReviewer]);
+    
+    console.log('✅ Step5 - Réviseur ajouté:', reviewer.name);
+  }, [newReviewer, validationData, notifyParent]);
 
   const removeReviewer = useCallback((reviewerId: string) => {
-    setValidationData(prev => ({
-      ...prev,
-      reviewers: prev.reviewers.filter(r => r.id !== reviewerId)
-    }));
-  }, []);
+    const updatedData = {
+      ...validationData,
+      reviewers: validationData.reviewers.filter(r => r.id !== reviewerId)
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+    console.log('✅ Step5 - Réviseur supprimé:', reviewerId);
+  }, [validationData, notifyParent]);
 
   const updateReviewerStatus = useCallback((reviewerId: string, status: 'approved' | 'rejected', comment?: string, rating?: number) => {
-    setValidationData(prev => ({
-      ...prev,
-      reviewers: prev.reviewers.map(reviewer => 
+    const updatedData = {
+      ...validationData,
+      reviewers: validationData.reviewers.map(reviewer => 
         reviewer.id === reviewerId 
           ? { 
               ...reviewer, 
@@ -316,31 +324,43 @@ export default function Step5Validation({
             }
           : reviewer
       )
-    }));
-  }, [language]);
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+    console.log(`✅ Step5 - Statut ${status} pour réviseur:`, reviewerId);
+  }, [validationData, notifyParent, language]);
 
   const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
-    setValidationData(prev => ({
-      ...prev,
+    const updatedData = {
+      ...validationData,
       validationCriteria: {
-        ...prev.validationCriteria,
+        ...validationData.validationCriteria,
         [criteria]: value
       }
-    }));
-  }, []);
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+    console.log(`✅ Step5 - Critère ${criteria} mis à jour:`, value);
+  }, [validationData, notifyParent]);
 
   const finalizeApproval = useCallback(() => {
-    setValidationData(prev => ({
-      ...prev,
+    const updatedData = {
+      ...validationData,
       finalApproval: {
         approvedBy: 'Superviseur HSE',
         approvedAt: new Date().toISOString(),
         signature: 'Signature électronique - ' + new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')
       }
-    }));
-  }, [language]);
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+    console.log('✅ Step5 - Approbation finalisée');
+  }, [validationData, notifyParent, language]);
 
-  // =================== UTILS ===================
+  // =================== FONCTIONS UTILITAIRES ===================
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', text: '#10b981' };
@@ -359,7 +379,7 @@ export default function Step5Validation({
     }
   };
 
-  // =================== COMPUTED VALUES ===================
+  // =================== VALEURS CALCULÉES ===================
   const allCriteriaValidated = Object.values(validationData.validationCriteria).every(Boolean);
   const sufficientReviewers = validationData.reviewers.length >= validationData.minimumReviewers;
   const allReviewersResponded = validationData.reviewers.every(r => r.status !== 'pending');
