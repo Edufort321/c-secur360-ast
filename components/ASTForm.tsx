@@ -559,15 +559,8 @@ export default function ASTForm({
         maxWidth: '100%',
         marginBottom: '8px'
       }}>
-        {/* 🔥 Logo mobile carré orange auto-ajustable (style dashboard) */}
-        <LogoComponent 
-          containerSize="40px"
-          logoSize="32px" 
-          mobileContainerSize="40px"
-          mobileLogo="32px"
-          showBorder={true}
-          showEffects={false}
-        />
+        {/* 🔥 Logo mobile auto-ajustable (exactement comme dashboard) */}
+        <LogoComponent isMobile={true} />
         
         {/* Titre mobile responsive (conservé) */}
         <div style={{ 
@@ -715,25 +708,8 @@ export default function ASTForm({
       }}>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          {/* 🔥 Logo desktop carré orange auto-ajustable (style dashboard) */}
-          <div 
-            className="float-animation glow-effect"
-            style={{
-              padding: '32px',
-              borderRadius: '32px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <LogoComponent 
-              containerSize="200px"
-              logoSize="136px" 
-              mobileContainerSize="96px"
-              mobileLogo="64px"
-              showBorder={true}
-              showEffects={true}
-            />
-          </div>
+          {/* 🔥 Logo desktop auto-ajustable (exactement comme dashboard) */}
+          <LogoComponent isMobile={false} />
           
           <div className="slide-in-right">
             <h1 className="text-gradient" style={{
