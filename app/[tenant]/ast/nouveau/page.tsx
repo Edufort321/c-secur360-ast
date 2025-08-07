@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import ASTForm from '@/components/ASTForm';
-import { DEFAULT_TENANT_CONFIGS } from '@/components/ASTContext';
 
 interface PageProps {
   params: {
@@ -74,19 +73,27 @@ export default function NouvellePage({ params }: PageProps) {
 
     // Simulation récupération user depuis session/auth
     setUserId(`user_${Date.now()}`);
-    setUserRole('worker'); // À adapter selon votre système d'auth
+    setUserRole('worker');
   }, [params.tenant]);
 
-  // ✅ VALIDATION TENANT
-  const tenantConfig = DEFAULT_TENANT_CONFIGS[params.tenant] || DEFAULT_TENANT_CONFIGS.demo;
+  // ✅ HANDLER POUR SYNC DONNÉES
+  const handleDataChange = (section: string, data: any) => {
+    console.log('📝 Page - Data changed:', { section, data });
+    setAstData(prev => ({
+      ...prev,
+      [section]: data,
+      updatedAt: new Date().toISOString()
+    }));
+  };
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      {/* ✅ NOUVELLE INTERFACE SIMPLIFIÉE */}
+      {/* ✅ INTERFACE COMPATIBLE AVEC TON ASTFORM ACTUEL */}
       <ASTForm
-        tenant={tenantConfig}
+        tenant={params.tenant}
         language="fr"
-        initialData={astData}
+        formData={astData}
+        onDataChange={handleDataChange}
         userId={userId}
         userRole={userRole}
       />
