@@ -1286,7 +1286,7 @@ export default function ASTForm({
       default:
         return null;
     }
-  }, [currentStep]);
+  });
 
   // =================== NAVIGATION MOBILE FIXE (CONSERVÉE) ===================
   const MobileNavigation = () => (
