@@ -1,3 +1,5 @@
+// =================== SECTION 1/2 - IMPORTS, INTERFACES & HOOKS OPTIMISÉS ===================
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -9,7 +11,7 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
-// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 ===================
+// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
 import Step2Equipment from '@/components/steps/Step2Equipment';
 import Step3Hazards from '@/components/steps/Step3Hazards';
@@ -17,7 +19,7 @@ import Step4Permits from '@/components/steps/Step4Permits';
 import Step5Validation from '@/components/steps/Step5Validation';
 import Step6Finalization from '@/components/steps/Step6Finalization';
 
-// =================== INTERFACES PRINCIPALES ===================
+// =================== INTERFACES PRINCIPALES (CONSERVÉES) ===================
 interface ASTFormProps {
   tenant: string;
   language: 'fr' | 'en';
@@ -27,7 +29,7 @@ interface ASTFormProps {
   onDataChange: (section: string, data: any) => void;
 }
 
-// =================== TRADUCTIONS PRINCIPALES COMPLÈTES ===================
+// =================== TRADUCTIONS COMPLÈTES (CONSERVÉES INTÉGRALEMENT) ===================
 const translations = {
   fr: {
     title: "🛡️ C-Secur360",
@@ -145,7 +147,7 @@ const translations = {
   }
 };
 
-// =================== CONFIGURATION DES STEPS AVEC TRADUCTIONS ===================
+// =================== CONFIGURATION DES STEPS (CONSERVÉE) ===================
 const steps = [
   {
     id: 1,
@@ -191,7 +193,7 @@ const steps = [
   }
 ];
 
-// =================== HOOK DÉTECTION MOBILE OPTIMISÉ ===================
+// =================== HOOK DÉTECTION MOBILE OPTIMISÉ (CONSERVÉ) ===================
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -234,7 +236,7 @@ export default function ASTForm({
   onDataChange
 }: ASTFormProps) {
   
-  // =================== GESTION DE LA LANGUE OPTIMISÉE ===================
+  // =================== GESTION DE LA LANGUE OPTIMISÉE (CONSERVÉE) ===================
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
@@ -244,10 +246,10 @@ export default function ASTForm({
   });
   const t = translations[currentLanguage];
   
-  // =================== DÉTECTION MOBILE ===================
+  // =================== DÉTECTION MOBILE (CONSERVÉE) ===================
   const isMobile = useIsMobile();
 
-  // =================== ÉTATS PRINCIPAUX STABLES ===================
+  // =================== ÉTATS PRINCIPAUX STABLES (CONSERVÉS) ===================
   const [currentStep, setCurrentStep] = useState(1);
   const [isOnline, setIsOnline] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -258,7 +260,7 @@ export default function ASTForm({
   const [copied, setCopied] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // =================== DONNÉES AST STABLES ===================
+  // =================== DONNÉES AST STABLES (CONSERVÉES) ===================
   const [astData, setAstData] = useState(() => ({
     ...formData,
     id: formData.id || `ast_${Date.now()}`,
@@ -271,17 +273,17 @@ export default function ASTForm({
     language: currentLanguage
   }));
 
-  // =================== 🔥 FIX ANTI-ÉJECTION PRINCIPAL ===================
+  // =================== 🔥 FIX ANTI-ÉJECTION CRITIQUE APPLIQUÉ ===================
   const stableFormDataRef = useRef(astData);
   
-  // ✅ RÉFÉRENCE FIGÉE POUR HANDLER - INITIALISÉE UNE SEULE FOIS
+  // ✅ RÉFÉRENCE FIGÉE ULTRA-STABLE - INITIALISÉE UNE SEULE FOIS
   const stableHandlerRef = useRef<(section: string, data: any) => void>();
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section: string, data: any) => {
-      console.log('🔥 HANDLER ULTRA-STABLE:', { section, data });
+      console.log('🔥 HANDLER ULTRA-STABLE (ANTI-ÉJECTION):', { section, data });
       
-      // Mise à jour synchrone de l'état local
+      // ✅ MISE À JOUR SYNCHRONE DE L'ÉTAT LOCAL
       setAstData((prev: any) => {
         const newData = {
           ...prev,
@@ -289,30 +291,31 @@ export default function ASTForm({
           updatedAt: new Date().toISOString()
         };
         
-        // Mise à jour de la ref pour éviter les re-renders
+        // ✅ MISE À JOUR DE LA REF POUR ÉVITER LES RE-RENDERS
         stableFormDataRef.current = newData;
         return newData;
       });
       
-      // ✅ SYNC PARENT DIFFÉRÉE - ÉVITE LES CONFLITS
+      // ✅ SYNC PARENT DIFFÉRÉE - ÉVITE LES CONFLITS (CRITIQUE)
       setTimeout(() => {
         try {
           onDataChange(section, data);
         } catch (error) {
-          console.error('Erreur sync parent:', error);
+          console.error('❌ Erreur sync parent:', error);
         }
-      }, 100);
+      }, 50); // 50ms au lieu de 100ms pour plus de réactivité
       
       setHasUnsavedChanges(true);
     };
   }
   
-  // Mise à jour de la ref seulement quand nécessaire
+  // ✅ MISE À JOUR DE LA REF SEULEMENT QUAND NÉCESSAIRE
   useEffect(() => {
     stableFormDataRef.current = astData;
   }, [astData]);
+ // =================== SECTION 2/2 - HEADERS, NAVIGATION & CSS COMPLET ===================
 
-  // =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
+  // =================== FONCTIONS UTILITAIRES OPTIMISÉES (CONSERVÉES INTÉGRALEMENT) ===================
   const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
     if (newLanguage !== currentLanguage) {
       setCurrentLanguage(newLanguage);
@@ -376,7 +379,7 @@ export default function ASTForm({
     }
   }, [astData, currentStep]);
 
-  // =================== NAVIGATION OPTIMISÉE ===================
+  // =================== NAVIGATION OPTIMISÉE (CONSERVÉE) ===================
   const handlePrevious = useCallback(() => {
     setCurrentStep(prev => Math.max(1, prev - 1));
   }, []);
@@ -391,7 +394,7 @@ export default function ASTForm({
     setCurrentStep(step);
   }, []);
 
-  // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES ===================
+  // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES (CONSERVÉES) ===================
   const handleCopyAST = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(astData.astNumber);
@@ -410,7 +413,7 @@ export default function ASTForm({
     }));
   }, []);
 
-  // =================== STATUS BADGE OPTIMISÉ ===================
+  // =================== STATUS BADGE OPTIMISÉ (CONSERVÉ) ===================
   const getStatusBadge = useCallback(() => {
     const statusConfig = {
       'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
@@ -442,7 +445,7 @@ export default function ASTForm({
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== HEADER MOBILE ULTRA-RESPONSIVE ===================
+  // =================== 🔥 HEADER MOBILE ULTRA-RESPONSIVE + LOGO AUTO-ADAPTATIF ===================
   const MobileHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
@@ -461,7 +464,7 @@ export default function ASTForm({
         maxWidth: '100%',
         marginBottom: '8px'
       }}>
-        {/* Logo mobile optimisé */}
+        {/* 🔥 Logo mobile multi-plateforme auto-adaptatif */}
         <div style={{
           width: '40px',
           height: '40px',
@@ -471,33 +474,54 @@ export default function ASTForm({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0
+          flexShrink: 0,
+          position: 'relative',
+          overflow: 'hidden'
         }}>
           <img 
-            src="/c-secur360-logo.png" 
-            alt="C-Secur360"
+            src={`/${tenant}-logo.png`}
+            alt={`${tenant} Logo`}
             style={{ 
-              width: '200px', 
-              height: '200px', 
-              objectFit: 'contain'
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'contain',
+              maxWidth: '32px',
+              maxHeight: '32px',
+              transition: 'all 0.3s ease'
             }}
             onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'flex';
+              // Essayer logo générique C-Secur360
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallback1) {
+                img.dataset.fallback1 = 'true';
+                img.src = '/c-secur360-logo.png';
+              } else if (!img.dataset.fallback2) {
+                img.dataset.fallback2 = 'true';
+                img.src = '/logo.png';
+              } else {
+                // Fallback final vers emoji
+                img.style.display = 'none';
+                const fallback = img.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }
             }}
           />
-          <span style={{ 
+          <div style={{ 
             display: 'none',
             color: '#f59e0b', 
-            fontSize: '12px', 
-            fontWeight: 'bold' 
+            fontSize: '16px', 
+            fontWeight: '900',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            textShadow: '0 2px 4px rgba(0,0,0,0.5)'
           }}>
-            C🛡️
-          </span>
+            🛡️
+          </div>
         </div>
         
-        {/* Titre mobile responsive */}
+        {/* Titre mobile responsive (conservé) */}
         <div style={{ 
           flex: 1, 
           marginLeft: '12px', 
@@ -514,7 +538,8 @@ export default function ASTForm({
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            {t.title}
+            {/* Titre dynamique selon tenant */}
+            {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
           </h1>
           <div style={{
             color: '#94a3b8',
@@ -525,11 +550,11 @@ export default function ASTForm({
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            AST #{astData.astNumber.slice(-6)} • {tenant}
+            AST #{astData.astNumber.slice(-6)} • {tenant.toUpperCase()}
           </div>
         </div>
         
-        {/* Sélecteur de langue mobile compact */}
+        {/* Sélecteur de langue mobile (conservé) */}
         <div style={{
           display: 'flex',
           background: 'rgba(30, 41, 59, 0.8)',
@@ -579,7 +604,7 @@ export default function ASTForm({
         </div>
       </div>
       
-      {/* Status mobile compact */}
+      {/* Status mobile compact (conservé) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -620,7 +645,7 @@ export default function ASTForm({
     </header>
   );
 
-  // =================== HEADER DESKTOP PREMIUM ===================
+  // =================== 🔥 HEADER DESKTOP PREMIUM + LOGO AUTO-ADAPTATIF ===================
   const DesktopHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
@@ -664,21 +689,48 @@ export default function ASTForm({
               position: 'relative',
               zIndex: 1
             }}>
+              {/* 🔥 Logo desktop multi-plateforme auto-adaptatif */}
               <img 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360"
+                src={`/${tenant}-logo.png`}
+                alt={`${tenant} Platform`}
                 className="logo-glow"
                 style={{ 
-                  width: '80px', 
-                  height: '80px', 
+                  width: '100%', 
+                  height: '100%', 
                   objectFit: 'contain',
-                  filter: 'brightness(1.2) contrast(1.1)'
+                  maxWidth: '80px',
+                  maxHeight: '80px',
+                  filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))',
+                  transition: 'all 0.3s ease'
                 }}
                 onError={(e) => {
-                  console.log('❌ Erreur chargement logo:', e);
-                  e.currentTarget.style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'flex';
+                  console.log(`❌ Erreur chargement logo ${tenant}:`, e);
+                  const img = e.currentTarget as HTMLImageElement;
+                  
+                  if (!img.dataset.fallback1) {
+                    // Essayer logo générique C-Secur360
+                    img.dataset.fallback1 = 'true';
+                    img.src = '/c-secur360-logo.png';
+                    img.alt = 'C-Secur360';
+                  } else if (!img.dataset.fallback2) {
+                    // Essayer logo générique
+                    img.dataset.fallback2 = 'true';
+                    img.src = '/logo.png';
+                    img.alt = 'Platform Logo';
+                  } else if (!img.dataset.fallback3) {
+                    // Essayer avec dimensions auto-ajustées pour dashboard 200x200
+                    img.dataset.fallback3 = 'true';
+                    img.style.width = 'auto';
+                    img.style.height = 'auto';
+                    img.style.maxWidth = '200px';
+                    img.style.maxHeight = '200px';
+                    img.src = '/c-secur360-logo.png';
+                  } else {
+                    // Fallback final vers emoji
+                    img.style.display = 'none';
+                    const fallback = img.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }
                 }}
               />
               <div style={{ 
@@ -687,9 +739,12 @@ export default function ASTForm({
                 fontSize: '48px', 
                 fontWeight: '900',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                textShadow: '0 4px 8px rgba(0,0,0,0.7)',
+                width: '100%',
+                height: '100%'
               }}>
-                C🛡️
+                🛡️
               </div>
             </div>
             
@@ -720,7 +775,8 @@ export default function ASTForm({
               fontWeight: '900',
               letterSpacing: '-0.025em'
             }}>
-              {t.title}
+              {/* Titre dynamique selon tenant */}
+              {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
             </h1>
             <p style={{
               color: 'rgba(251, 191, 36, 0.9)',
@@ -728,13 +784,14 @@ export default function ASTForm({
               margin: 0,
               fontWeight: '600'
             }}>
-              {t.subtitle} • {tenant}
+              {t.subtitle} • {tenant.toUpperCase()}
             </p>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              marginTop: '12px'
+              marginTop: '12px',
+              flexWrap: 'wrap'
             }}>
               <div style={{
                 width: '12px',
@@ -859,7 +916,7 @@ export default function ASTForm({
     </header>
   );
 
-  // =================== COMPOSANT SÉLECTEUR DE LANGUE ===================
+  // =================== COMPOSANT SÉLECTEUR DE LANGUE (CONSERVÉ) ===================
   const LanguageSelector = () => (
     <div style={{
       display: 'flex',
@@ -930,7 +987,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== NAVIGATION STEPS MOBILE ===================
+  // =================== NAVIGATION STEPS MOBILE (CONSERVÉE) ===================
   const MobileStepsNavigation = () => (
     <div style={{
       padding: '12px 16px',
@@ -1039,7 +1096,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== NAVIGATION DESKTOP ===================
+  // =================== NAVIGATION DESKTOP (CONSERVÉE) ===================
   const DesktopStepsNavigation = () => (
     <div className="glass-effect slide-in desktop-only" style={{ 
       padding: '24px', 
@@ -1153,7 +1210,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== COMPOSANTS MÉMORISÉS POUR PERFORMANCE ===================
+  // =================== COMPOSANTS MÉMORISÉS POUR PERFORMANCE (CONSERVÉS) ===================
   const MemoizedStep1 = React.memo(Step1ProjectInfo);
   const MemoizedStep2 = React.memo(Step2Equipment);
   const MemoizedStep3 = React.memo(Step3Hazards);
@@ -1161,7 +1218,7 @@ export default function ASTForm({
   const MemoizedStep5 = React.memo(Step5Validation);
   const MemoizedStep6 = React.memo(Step6Finalization);
 
-  // =================== 🔥 RENDU DU CONTENU DES STEPS AVEC FIXES ===================
+  // =================== 🔥 RENDU DU CONTENU DES STEPS AVEC FIXES ANTI-ÉJECTION ===================
   const StepContent = React.memo(() => {
     console.log('🔥 StepContent render - Step:', currentStep);
     
@@ -1233,7 +1290,7 @@ export default function ASTForm({
     }
   });
 
-  // =================== NAVIGATION MOBILE FIXE ===================
+  // =================== NAVIGATION MOBILE FIXE (CONSERVÉE) ===================
   const MobileNavigation = () => (
     <div style={{
       position: 'fixed',
@@ -1309,7 +1366,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== NAVIGATION FOOTER DESKTOP ===================
+  // =================== NAVIGATION FOOTER DESKTOP (CONSERVÉE) ===================
   const DesktopFooterNavigation = () => (
     <div className="glass-effect desktop-only" style={{ 
       padding: '20px 24px', 
@@ -1398,7 +1455,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== EFFETS ET CLEANUP ===================
+  // =================== EFFETS ET CLEANUP (CONSERVÉS) ===================
   useEffect(() => {
     const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
     if (savedLanguage && savedLanguage !== currentLanguage) {
@@ -1430,7 +1487,7 @@ export default function ASTForm({
     };
   }, []);
 
-  // =================== 🔥 CSS AVEC FIX MODAL Z-INDEX ABSOLU ===================
+  // =================== 🔥 CSS AVEC FIX MODAL Z-INDEX ABSOLU + LOGO AUTO ===================
   const mobileOptimizedCSS = `
     @keyframes float {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -1524,16 +1581,17 @@ export default function ASTForm({
       transform: none;
     }
 
-    /* =================== 🔥 FIX CRITIQUE MODAL Z-INDEX =================== */
+    /* =================== 🔥 FIX CRITIQUE MODAL Z-INDEX MAXIMUM ABSOLU =================== */
     .modal-overlay {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
       right: 0 !important;
       bottom: 0 !important;
-      background: rgba(0, 0, 0, 0.95) !important;
-      z-index: 999999999 !important;
-      backdrop-filter: blur(10px) !important;
+      background: rgba(0, 0, 0, 0.98) !important;
+      z-index: 2147483647 !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
     }
     
     .modal-content {
@@ -1541,16 +1599,26 @@ export default function ASTForm({
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
-      z-index: 9999999999 !important;
+      z-index: 2147483647 !important;
       background: rgba(15, 23, 42, 0.98) !important;
-      border: 1px solid rgba(59, 130, 246, 0.5) !important;
+      border: 2px solid rgba(59, 130, 246, 0.7) !important;
       border-radius: 16px !important;
       max-width: 90vw !important;
       max-height: 90vh !important;
       overflow-y: auto !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8) !important;
     }
     
-    /* =================== RESPONSIVE OPTIMISÉ =================== */
+    /* =================== FIX MODAL INPUTS BACKGROUND =================== */
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      background: rgba(30, 41, 59, 0.9) !important;
+      border: 1px solid rgba(59, 130, 246, 0.5) !important;
+      color: #ffffff !important;
+    }
+    
+    /* =================== RESPONSIVE OPTIMISÉ + LOGO AUTO =================== */
     @media (max-width: 768px) {
       .step-grid {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -1584,9 +1652,12 @@ export default function ASTForm({
         padding: 20px !important;
       }
 
+      /* Logo mobile auto-adaptatif */
       .logo-glow {
-        width: 60px !important;
-        height: 60px !important;
+        width: auto !important;
+        height: auto !important;
+        max-width: 60px !important;
+        max-height: 60px !important;
       }
 
       .modal-content {
@@ -1614,15 +1685,34 @@ export default function ASTForm({
         padding: 16px !important;
       }
 
+      /* Logo mobile très petit écran */
       .logo-glow {
-        width: 48px !important;
-        height: 48px !important;
+        max-width: 48px !important;
+        max-height: 48px !important;
       }
     }
     
     @media (min-width: 769px) {
       .mobile-only {
         display: none !important;
+      }
+      
+      /* Logo desktop auto-adaptatif avec support 200x200 dashboard */
+      .logo-glow {
+        width: auto !important;
+        height: auto !important;
+        max-width: 80px !important;
+        max-height: 80px !important;
+        object-fit: contain !important;
+      }
+      
+      /* Support spécial pour logos 200x200 du dashboard */
+      img[src*="logo"][width="200"],
+      img[src*="logo"][height="200"] {
+        max-width: 80px !important;
+        max-height: 80px !important;
+        width: auto !important;
+        height: auto !important;
       }
     }
     
@@ -1683,7 +1773,7 @@ export default function ASTForm({
     }
   `;
 
-  // =================== RENDU PRINCIPAL ===================
+  // =================== 🔥 RENDU PRINCIPAL AVEC TOUS LES FIXES ===================
   return (
     <div style={{
       minHeight: '100vh',
@@ -1740,4 +1830,4 @@ export default function ASTForm({
       {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
     </div>
   );
-}
+} 
