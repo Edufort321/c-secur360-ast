@@ -456,15 +456,21 @@ export default function ASTForm({
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== 🔥 COMPOSANT LOGO OPTIMISÉ SANS ERREURS ===================
+  // =================== 🔥 COMPOSANT LOGO CARRÉ ORANGE AUTO-AJUSTABLE (STYLE DASHBOARD) ===================
   const LogoComponent = useMemo(() => ({ 
-    size = '80px', 
-    mobileSize = '32px',
-    className = '' 
+    containerSize = '96px',
+    logoSize = '80px',
+    mobileContainerSize = '40px',
+    mobileLogo = '32px',
+    showBorder = true,
+    showEffects = true
   }: { 
-    size?: string; 
-    mobileSize?: string; 
-    className?: string; 
+    containerSize?: string;
+    logoSize?: string;
+    mobileContainerSize?: string;
+    mobileLogo?: string;
+    showBorder?: boolean;
+    showEffects?: boolean;
   }) => {
     const [logoError, setLogoError] = useState(false);
     const [logoLoaded, setLogoLoaded] = useState(false);
@@ -484,44 +490,87 @@ export default function ASTForm({
       }
     }, [logoError]);
 
-    const logoSize = isMobile ? mobileSize : size;
-
-    if (logoError || !logoLoaded) {
-      return (
-        <div style={{
-          width: logoSize,
-          height: logoSize,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#f59e0b',
-          fontSize: isMobile ? '16px' : '48px',
-          fontWeight: '900',
-          textShadow: '0 4px 8px rgba(0,0,0,0.7)'
-        }}>
-          🛡️
-        </div>
-      );
-    }
+    const currentContainerSize = isMobile ? mobileContainerSize : containerSize;
+    const currentLogoSize = isMobile ? mobileLogo : logoSize;
 
     return (
-      <>
-        <img 
-          src={logoSrc}
-          alt={`${tenant} Logo`}
-          className={className}
-          style={{ 
-            width: logoSize,
-            height: logoSize,
-            objectFit: 'contain',
-            transition: 'all 0.3s ease'
-          }}
-          onLoad={() => {
-            setLogoLoaded(true);
-            console.log('✅ Logo chargé avec succès:', logoSrc);
-          }}
-          onError={handleLogoError}
-        />
+      <div style={{
+        width: currentContainerSize,
+        height: currentContainerSize,
+        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        border: showBorder ? '4px solid #f59e0b' : 'none',
+        borderRadius: isMobile ? '8px' : '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: showEffects ? '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)' : '0 4px 8px rgba(245, 158, 11, 0.3)',
+        transition: 'all 0.3s ease'
+      }}>
+        {/* Logo ou fallback */}
+        {!logoError && logoLoaded ? (
+          <img 
+            src={logoSrc}
+            alt={`${tenant} Logo`}
+            style={{ 
+              width: currentLogoSize,
+              height: currentLogoSize,
+              objectFit: 'contain',
+              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))',
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              zIndex: 1
+            }}
+            onLoad={() => {
+              setLogoLoaded(true);
+              console.log('✅ Logo chargé avec succès:', logoSrc);
+            }}
+            onError={handleLogoError}
+          />
+        ) : (
+          <div style={{
+            width: currentLogoSize,
+            height: currentLogoSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            fontSize: isMobile ? '16px' : '48px',
+            fontWeight: '900',
+            textShadow: '0 4px 8px rgba(0,0,0,0.7)',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            🛡️
+          </div>
+        )}
+
+        {/* Effet brillance animé (style dashboard) */}
+        {showEffects && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '-100%',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            animation: 'shine 2.5s ease-in-out infinite'
+          }} />
+        )}
+
+        {/* Effet pulse border (style dashboard) */}
+        {showEffects && (
+          <div style={{
+            position: 'absolute',
+            inset: '-10px',
+            border: '2px solid rgba(245, 158, 11, 0.3)',
+            borderRadius: isMobile ? '16px' : '24px',
+            animation: 'pulse 3s ease-in-out infinite'
+          }} />
+        )}
+
+        {/* Chargement invisible pour preload */}
         {!logoLoaded && (
           <img 
             src={logoSrc}
@@ -531,7 +580,7 @@ export default function ASTForm({
             onError={handleLogoError}
           />
         )}
-      </>
+      </div>
     );
   }, [tenant, isMobile]);
   // =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
@@ -553,23 +602,15 @@ export default function ASTForm({
         maxWidth: '100%',
         marginBottom: '8px'
       }}>
-        {/* 🔥 Logo mobile carré orange comme ton design */}
-        <div style={{
-          width: '40px',
-          height: '40px',
-          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          border: '2px solid #f59e0b',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 4px 8px rgba(245, 158, 11, 0.3)'
-        }}>
-          <LogoComponent size="32px" mobileSize="32px" className="logo-glow" />
-        </div>
+        {/* 🔥 Logo mobile carré orange auto-ajustable (style dashboard) */}
+        <LogoComponent 
+          containerSize="40px"
+          logoSize="32px" 
+          mobileContainerSize="40px"
+          mobileLogo="32px"
+          showBorder={true}
+          showEffects={false}
+        />
         
         {/* Titre mobile responsive (conservé) */}
         <div style={{ 
@@ -717,53 +758,24 @@ export default function ASTForm({
       }}>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          {/* 🔥 Logo desktop carré orange 200x200 comme ton design */}
+          {/* 🔥 Logo desktop carré orange auto-ajustable (style dashboard) */}
           <div 
             className="float-animation glow-effect"
             style={{
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%)',
               padding: '32px',
               borderRadius: '32px',
-              border: '4px solid #f59e0b',
-              boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
               position: 'relative',
-              overflow: 'hidden',
-              width: '200px',
-              height: '200px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              overflow: 'hidden'
             }}
           >
-            <div style={{
-              width: '136px',
-              height: '136px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <LogoComponent size="136px" mobileSize="136px" className="logo-glow" />
-            </div>
-            
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: '-100%',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
-              animation: 'shine 2.5s ease-in-out infinite'
-            }} />
-            
-            <div style={{
-              position: 'absolute',
-              inset: '-10px',
-              border: '2px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '40px',
-              animation: 'pulse 3s ease-in-out infinite'
-            }} />
+            <LogoComponent 
+              containerSize="200px"
+              logoSize="136px" 
+              mobileContainerSize="96px"
+              mobileLogo="64px"
+              showBorder={true}
+              showEffects={true}
+            />
           </div>
           
           <div className="slide-in-right">
