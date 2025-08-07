@@ -1,3 +1,4 @@
+// =================== SECTION 1/5 - INTERFACES & TRADUCTIONS ===================
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
@@ -8,15 +9,15 @@ import {
   TrendingUp, Activity, Shield
 } from 'lucide-react';
 
+// =================== INTERFACES OPTIMISÉES ===================
 interface Step1ProjectInfoProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any; // ✅ RENDU OPTIONNEL POUR ÉVITER ERREUR TYPESCRIPT
+  errors?: any;
 }
 
-// =================== INTERFACES OPTIMISÉES POUR EMPLACEMENTS ===================
 interface WorkLocation {
   id: string;
   name: string;
@@ -24,13 +25,13 @@ interface WorkLocation {
   zone: string;
   building?: string;
   floor?: string;
-  maxWorkersReached: number; // Max atteint durant la journée
+  maxWorkersReached: number;
   currentWorkers: number;
   lockoutPoints: number;
   isActive: boolean;
   createdAt: string;
   notes?: string;
-  estimatedDuration: string; // Durée des travaux
+  estimatedDuration: string;
   startTime?: string;
   endTime?: string;
 }
@@ -39,14 +40,14 @@ interface LocationStats {
   totalWorkers: number;
   totalLocations: number;
   activeLockouts: number;
-  peakUtilization: number; // Pic d'utilisation basé sur max atteint
+  peakUtilization: number;
   locationBreakdown: {
     locationId: string;
     name: string;
     currentWorkers: number;
-    maxReached: number; // Max atteint
+    maxReached: number;
     lockouts: number;
-    utilizationCurrent: number; // Utilisation actuelle
+    utilizationCurrent: number;
     estimatedDuration: string;
   }[];
 }
@@ -64,7 +65,7 @@ interface LockoutPoint {
   photos: string[];
   notes: string;
   completedProcedures: number[];
-  assignedLocation?: string; // Lien avec emplacement
+  assignedLocation?: string;
 }
 
 interface LockoutPhoto {
@@ -76,7 +77,7 @@ interface LockoutPhoto {
   lockoutPointId?: string;
 }
 
-// =================== SYSTÈME DE TRADUCTIONS COMPLET ET OPTIMISÉ ===================
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     // Générateur AST
@@ -387,7 +388,7 @@ const translations = {
   }
 };
 
-// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES OPTIMISÉES ===================
+// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES ===================
 const getEnergyTypes = (language: 'fr' | 'en') => ({
   electrical: { 
     name: language === 'fr' ? 'Électrique' : 'Electrical', 
@@ -531,7 +532,7 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
   }
 });
 
-// =================== GÉNÉRATEUR DE NUMÉRO AST OPTIMISÉ ===================
+// =================== GÉNÉRATEUR DE NUMÉRO AST ===================
 const generateASTNumber = (): string => {
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -540,6 +541,8 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
+// =================== SECTION 2/5 - ÉTAT LOCAL STABLE & HANDLERS OPTIMISÉS ===================
+
 function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {} }: Step1ProjectInfoProps) {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
@@ -551,8 +554,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const lockoutPhotos = projectInfo?.lockoutPhotos || [];
   const workLocations = projectInfo?.workLocations || [];
   
-  // =================== ÉTAT LOCAL STABLE AVEC DEBOUNCE OPTIMISÉ ===================
-  const [localState, setLocalState] = useState({
+  // =================== 🔥 ÉTAT LOCAL STABLE STYLE STEP5 (SANS useEffect PROBLÉMATIQUE) ===================
+  const [projectData, setProjectData] = useState(() => ({
+    // ✅ INITIALISATION DIRECTE - PAS DE BOUCLE
     client: projectInfo.client || '',
     clientPhone: projectInfo.clientPhone || '',
     clientRepresentative: projectInfo.clientRepresentative || '',
@@ -565,8 +569,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     industry: projectInfo.industry || 'electrical',
     emergencyContact: projectInfo.emergencyContact || '',
     emergencyPhone: projectInfo.emergencyPhone || '',
-    workDescription: projectInfo.workDescription || ''
-  });
+    workDescription: projectInfo.workDescription || '',
+    workLocations: workLocations,
+    lockoutPoints: lockoutPoints,
+    lockoutPhotos: lockoutPhotos
+  }));
 
   // =================== ÉTATS POUR AST ET INTERACTIONS ===================
   const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
@@ -575,7 +582,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
   
-  // =================== ÉTATS EMPLACEMENTS AVEC ISOLATION MODAL ===================
+  // =================== 🔥 ÉTATS MODAL AVEC ISOLATION CRITIQUE ===================
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState<string | null>(null);
   const [newLocation, setNewLocation] = useState({
@@ -588,69 +595,301 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     startTime: '',
     endTime: ''
   });
-
-  // =================== TIMERS ET PROTECTION ANTI-ÉJECTION ===================
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const modalDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isModalSaving, setIsModalSaving] = useState(false);
 
-  // =================== HANDLERS ISOLÉS POUR ÉVITER CONFLIT ASTFORM ===================
-  const updateLocalState = useCallback((field: string, value: any) => {
-    // MISE À JOUR IMMÉDIATE SANS DEBOUNCE POUR ÉVITER ÉJECTION
-    setLocalState(prev => {
-      const newState = { ...prev, [field]: value };
-      
-      // Sync immédiat mais protégé
-      requestAnimationFrame(() => {
-        if (!isSaving) {
-          try {
-            onDataChange('projectInfo', { ...projectInfo, [field]: value });
-          } catch (error) {
-            console.error('Erreur sync:', error);
-          }
-        }
-      });
-      
-      return newState;
-    });
-  }, [projectInfo, onDataChange, isSaving]);
+  // =================== 🔥 NOTIFICATION PARENT DIRECTE SANS BOUCLE (STYLE STEP5) ===================
+  const notifyParent = useCallback((newData: any) => {
+    console.log('🔥 Step1 - Notification parent directe:', newData);
+    onDataChange('projectInfo', newData);
+  }, [onDataChange]);
 
-  // =================== HANDLERS LOCKOUT POINTS ISOLÉS ===================
-  const updateLockoutPointDirect = useCallback((pointId: string, field: string, value: any) => {
-    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
+  // =================== 🔥 HANDLERS ULTRA-STABLES SANS CONFLIT ===================
+  const updateProjectField = useCallback((field: string, value: any) => {
+    console.log('🔥 Step1 - Update field:', field, value);
+    
+    const updatedData = {
+      ...projectData,
+      [field]: value
+    };
+    
+    // ✅ MISE À JOUR LOCALE D'ABORD
+    setProjectData(updatedData);
+    
+    // ✅ NOTIFICATION PARENT ENSUITE (STYLE STEP5)
+    notifyParent(updatedData);
+  }, [projectData, notifyParent]);
+
+  // =================== HANDLERS LOCKOUT POINTS STABLES ===================
+  const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
+    const updatedPoints = projectData.lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
     
-    // Sync immédiat sans débounce
-    try {
-      onDataChange('projectInfo', {
-        ...projectInfo,
-        lockoutPoints: updatedPoints
-      });
-    } catch (error) {
-      console.error('Erreur update lockout:', error);
-    }
-  }, [lockoutPoints, projectInfo, onDataChange]);
+    const updatedData = {
+      ...projectData,
+      lockoutPoints: updatedPoints
+    };
+    
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+    
+    console.log('✅ Step1 - Lockout point mis à jour:', pointId, field, value);
+  }, [projectData, notifyParent]);
 
-  // =================== HANDLER MODAL ISOLÉ (SANS DEBOUNCE) ===================
-  const updateModalField = (field: string, value: string) => {
+  const addLockoutPoint = useCallback(() => {
+    const newPoint: LockoutPoint = {
+      id: `lockout_${Date.now()}`,
+      energyType: 'electrical',
+      equipmentName: '',
+      location: '',
+      lockType: '',
+      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
+      isLocked: false,
+      verifiedBy: '',
+      verificationTime: '',
+      photos: [],
+      notes: '',
+      completedProcedures: [],
+      assignedLocation: projectData.workLocations.length > 0 ? projectData.workLocations[0].id : undefined
+    };
+
+    const updatedData = {
+      ...projectData,
+      lockoutPoints: [...projectData.lockoutPoints, newPoint]
+    };
+    
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+    
+    console.log('✅ Step1 - Point de verrouillage ajouté:', newPoint.id);
+  }, [projectData, notifyParent]);
+
+  const deleteLockoutPoint = useCallback((pointId: string) => {
+    const updatedPoints = projectData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    const updatedPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    
+    const updatedData = {
+      ...projectData,
+      lockoutPoints: updatedPoints,
+      lockoutPhotos: updatedPhotos
+    };
+    
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+    
+    console.log('✅ Step1 - Point de verrouillage supprimé:', pointId);
+  }, [projectData, notifyParent]);
+
+  // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC PARENT) ===================
+  const updateModalField = useCallback((field: string, value: string) => {
     setNewLocation(prev => ({ ...prev, [field]: value }));
-    // PAS de sync vers parent - isolation complète pour éviter éjection
-  };
+    // ✅ PAS de sync vers parent - isolation complète pour éviter éjection
+  }, []);
+
+  // =================== GESTION EMPLACEMENTS OPTIMISÉE ===================
+  const addWorkLocation = useCallback(() => {
+    if (!newLocation.name.trim() || !newLocation.zone.trim()) {
+      return;
+    }
+
+    if (isModalSaving) return;
+    setIsModalSaving(true);
+
+    const location: WorkLocation = {
+      id: `location_${Date.now()}`,
+      name: newLocation.name.trim(),
+      description: newLocation.description.trim(),
+      zone: newLocation.zone.trim(),
+      building: newLocation.building.trim() || undefined,
+      floor: newLocation.floor.trim() || undefined,
+      maxWorkersReached: 0,
+      currentWorkers: 0,
+      lockoutPoints: 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      estimatedDuration: newLocation.estimatedDuration.trim() || '8 heures',
+      startTime: newLocation.startTime || '08:00',
+      endTime: newLocation.endTime || '16:00'
+    };
+
+    const updatedData = {
+      ...projectData,
+      workLocations: [...projectData.workLocations, location]
+    };
+
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+
+    // Reset formulaire modal
+    setNewLocation({
+      name: '',
+      description: '',
+      zone: '',
+      building: '',
+      floor: '',
+      estimatedDuration: '',
+      startTime: '',
+      endTime: ''
+    });
+    setShowAddLocation(false);
+    
+    setTimeout(() => setIsModalSaving(false), 200);
+    console.log('✅ Step1 - Emplacement ajouté:', location.name);
+  }, [newLocation, projectData, notifyParent, isModalSaving]);
+
+  const removeWorkLocation = useCallback((locationId: string) => {
+    const updatedLocations = projectData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
+    
+    // Retirer l'assignation des lockout points
+    const updatedLockouts = projectData.lockoutPoints.map((point: LockoutPoint) => 
+      point.assignedLocation === locationId 
+        ? { ...point, assignedLocation: undefined }
+        : point
+    );
+    
+    const updatedData = {
+      ...projectData,
+      workLocations: updatedLocations,
+      lockoutPoints: updatedLockouts
+    };
+    
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+    
+    console.log('✅ Step1 - Emplacement supprimé:', locationId);
+  }, [projectData, notifyParent]);
+
+  // =================== GESTION PHOTOS OPTIMISÉE ===================
+  const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.multiple = true;
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  }, []);
+
+  const processPhoto = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
+    try {
+      const photoUrl = URL.createObjectURL(file);
+      const newPhoto: LockoutPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+        category: category as any,
+        timestamp: new Date().toISOString(),
+        lockoutPointId
+      };
+      
+      const updatedData = {
+        ...projectData,
+        lockoutPhotos: [...projectData.lockoutPhotos, newPhoto]
+      };
+      
+      setProjectData(updatedData);
+      notifyParent(updatedData);
+      
+      console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
+  }, [projectData, notifyParent, language]);
+
+  const deletePhoto = useCallback((photoId: string) => {
+    const updatedData = {
+      ...projectData,
+      lockoutPhotos: projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId)
+    };
+    
+    setProjectData(updatedData);
+    notifyParent(updatedData);
+    
+    console.log('✅ Step1 - Photo supprimée:', photoId);
+  }, [projectData, notifyParent]);
+
+  // =================== HANDLERS AST ET UTILITAIRES ===================
+  const copyASTNumber = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(astNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erreur copie:', err);
+    }
+  }, [astNumber]);
+
+  const regenerateASTNumber = useCallback(() => {
+    const newNumber = generateASTNumber();
+    setAstNumber(newNumber);
+    // Sync AST number vers parent via handler séparé si nécessaire
+    console.log('✅ Step1 - Nouveau numéro AST:', newNumber);
+  }, []);
+
+  // =================== FONCTIONS UTILITAIRES ===================
+  const getCategoryLabel = useCallback((category: string): string => {
+    return t.categories[category as keyof typeof t.categories] || category;
+  }, [t.categories]);
+
+  const toggleProcedureComplete = useCallback((pointId: string, procedureIndex: number) => {
+    const point = projectData.lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+    if (!point) return;
+
+    const completedProcedures = point.completedProcedures || [];
+    const isCompleted = completedProcedures.includes(procedureIndex);
+    
+    const updatedCompleted = isCompleted 
+      ? completedProcedures.filter((index: number) => index !== procedureIndex)
+      : [...completedProcedures, procedureIndex];
+
+    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
+  }, [projectData.lockoutPoints, updateLockoutPoint]);
+
+  const getProcedureProgress = useCallback((point: LockoutPoint): { completed: number; total: number; percentage: number } => {
+    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
+    const total = energyType?.procedures.length || 0;
+    const completed = (point.completedProcedures || []).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  }, [ENERGY_TYPES]);
+
+  const setTimeNow = useCallback((pointId: string) => {
+    const now = new Date();
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  }, [updateLockoutPoint]);
+
+  const setTimePlus = useCallback((pointId: string, minutes: number) => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + minutes);
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  }, [updateLockoutPoint]);
+
+  const selectEnergyType = useCallback((pointId: string, energyType: string) => {
+    updateLockoutPoint(pointId, 'energyType', energyType);
+  }, [updateLockoutPoint]);
 
   // =================== FONCTIONS STATISTIQUES TEMPS RÉEL ===================
-  const calculateLocationStats = (): LocationStats => {
-    const totalLocations = workLocations.filter((loc: WorkLocation) => loc.isActive).length;
-    const totalWorkers = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
-    const activeLockouts = lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
+  const calculateLocationStats = useCallback((): LocationStats => {
+    const totalLocations = projectData.workLocations.filter((loc: WorkLocation) => loc.isActive).length;
+    const totalWorkers = projectData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
+    const activeLockouts = projectData.lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
     
-    // Pic d'utilisation basé sur max atteint durant la journée
-    const totalMaxReached = workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
+    const totalMaxReached = projectData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
     const peakUtilization = totalMaxReached > 0 ? Math.round((totalWorkers / totalMaxReached) * 100) : 0;
     
-    const locationBreakdown = workLocations.map((loc: WorkLocation) => {
-      const locationLockouts = lockoutPoints.filter((point: LockoutPoint) => 
+    const locationBreakdown = projectData.workLocations.map((loc: WorkLocation) => {
+      const locationLockouts = projectData.lockoutPoints.filter((point: LockoutPoint) => 
         point.assignedLocation === loc.id && point.isLocked
       ).length;
       
@@ -676,129 +915,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       peakUtilization,
       locationBreakdown
     };
-  };
-
-  // =================== HANDLERS AST ET UTILITAIRES ===================
-  const copyASTNumber = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    try {
-      await navigator.clipboard.writeText(astNumber);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Erreur copie:', err);
-    }
-  };
-
-  const regenerateASTNumber = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const newNumber = generateASTNumber();
-    setAstNumber(newNumber);
-    onDataChange('astNumber', newNumber);
-  };
-
-  // =================== GESTION EMPLACEMENTS OPTIMISÉE ===================
-  const addWorkLocation = () => {
-    if (!newLocation.name.trim() || !newLocation.zone.trim()) {
-      return;
-    }
-
-    if (isModalSaving) return; // Protection double-save
-    setIsModalSaving(true);
-
-    const location: WorkLocation = {
-      id: `location_${Date.now()}`,
-      name: newLocation.name.trim(),
-      description: newLocation.description.trim(),
-      zone: newLocation.zone.trim(),
-      building: newLocation.building.trim() || undefined,
-      floor: newLocation.floor.trim() || undefined,
-      maxWorkersReached: 0, // Commence à 0, sera mis à jour par Step5
-      currentWorkers: 0,
-      lockoutPoints: 0,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      estimatedDuration: newLocation.estimatedDuration.trim() || '8 heures',
-      startTime: newLocation.startTime || '08:00',
-      endTime: newLocation.endTime || '16:00'
-    };
-
-    const updatedLocations = [...workLocations, location];
-    
-    try {
-      onDataChange('projectInfo', {
-        ...projectInfo,
-        ...localState,
-        workLocations: updatedLocations
-      });
-
-      // Reset formulaire modal
-      setNewLocation({
-        name: '',
-        description: '',
-        zone: '',
-        building: '',
-        floor: '',
-        estimatedDuration: '',
-        startTime: '',
-        endTime: ''
-      });
-      setShowAddLocation(false);
-      
-      console.log('✅ Emplacement ajouté:', location.name);
-    } catch (error) {
-      console.error('Erreur ajout emplacement:', error);
-    } finally {
-      setTimeout(() => setIsModalSaving(false), 200);
-    }
-  };
-
-  const removeWorkLocation = (locationId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    const updatedLocations = workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
-    
-    // Retirer l'assignation des lockout points
-    const updatedLockouts = lockoutPoints.map((point: LockoutPoint) => 
-      point.assignedLocation === locationId 
-        ? { ...point, assignedLocation: undefined }
-        : point
-    );
-    
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      workLocations: updatedLocations,
-      lockoutPoints: updatedLockouts
-    });
-    
-    console.log('✅ Emplacement supprimé:', locationId);
-  };
-
-  const updateWorkLocation = (locationId: string, field: string, value: any) => {
-    const updatedLocations = workLocations.map((loc: WorkLocation) => 
-      loc.id === locationId ? { ...loc, [field]: value } : loc
-    );
-    
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      workLocations: updatedLocations
-    });
-  };
+  }, [projectData.workLocations, projectData.lockoutPoints]);
 
   // =================== FONCTION POUR STEP5 - MISE À JOUR MAX ATTEINT ===================
-  const updateLocationWorkerCount = (locationId: string, newWorkerCount: number) => {
-    const updatedLocations = workLocations.map((loc: WorkLocation) => {
+  const updateLocationWorkerCount = useCallback((locationId: string, newWorkerCount: number) => {
+    const updatedLocations = projectData.workLocations.map((loc: WorkLocation) => {
       if (loc.id === locationId) {
         const updatedMaxReached = Math.max(loc.maxWorkersReached, newWorkerCount);
         return { 
@@ -810,212 +931,23 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return loc;
     });
     
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
+    const updatedData = {
+      ...projectData,
       workLocations: updatedLocations
-    });
-    
-    console.log(`✅ Emplacement ${locationId} - Travailleurs: ${newWorkerCount}, Max atteint: ${Math.max(workLocations.find((loc: WorkLocation) => loc.id === locationId)?.maxWorkersReached || 0, newWorkerCount)}`);
-  };
-
-  // =================== GESTION PHOTOS OPTIMISÉE ===================
-  const handlePhotoCapture = async (category: string, lockoutPointId?: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    try {
-      if (fileInputRef.current) {
-        fileInputRef.current.accept = 'image/*';
-        fileInputRef.current.capture = 'environment';
-        fileInputRef.current.multiple = true;
-        fileInputRef.current.onchange = (e) => {
-          const files = Array.from((e.target as HTMLInputElement).files || []);
-          if (files.length > 0) {
-            files.forEach(file => processPhoto(file, category, lockoutPointId));
-          }
-        };
-        fileInputRef.current.click();
-      }
-    } catch (error) {
-      console.error('Erreur capture photo:', error);
-    }
-  };
-
-  const processPhoto = async (file: File, category: string, lockoutPointId?: string) => {
-    try {
-      const photoUrl = URL.createObjectURL(file);
-      const newPhoto: LockoutPhoto = {
-        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        url: photoUrl,
-        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-        category: category as any,
-        timestamp: new Date().toISOString(),
-        lockoutPointId
-      };
-      
-      const updatedPhotos = [...lockoutPhotos, newPhoto];
-      onDataChange('projectInfo', {
-        ...projectInfo,
-        ...localState,
-        lockoutPhotos: updatedPhotos
-      });
-    } catch (error) {
-      console.error('Erreur traitement photo:', error);
-    }
-  };
-
-  const getCategoryLabel = (category: string): string => {
-    return t.categories[category as keyof typeof t.categories] || category;
-  };
-
-  const deletePhoto = (photoId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId);
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      lockoutPhotos: updatedPhotos
-    });
-  };
-
-  // =================== GESTION POINTS DE VERROUILLAGE OPTIMISÉE ===================
-  const addLockoutPoint = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const newPoint: LockoutPoint = {
-      id: `lockout_${Date.now()}`,
-      energyType: 'electrical',
-      equipmentName: '',
-      location: '',
-      lockType: '',
-      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
-      isLocked: false,
-      verifiedBy: '',
-      verificationTime: '',
-      photos: [],
-      notes: '',
-      completedProcedures: [],
-      assignedLocation: workLocations.length > 0 ? workLocations[0].id : undefined
     };
-    const updatedPoints = [...lockoutPoints, newPoint];
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      lockoutPoints: updatedPoints
-    });
-  };
-
-  const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
-    const updatedPoints = lockoutPoints.map((point: LockoutPoint) => 
-      point.id === pointId ? { ...point, [field]: value } : point
-    );
     
-    // Sync direct sans état local pour éviter conflit ASTForm
-    try {
-      onDataChange('projectInfo', {
-        ...projectInfo,
-        lockoutPoints: updatedPoints
-      });
-    } catch (error) {
-      console.error('Erreur update lockout:', error);
-    }
-  }, [lockoutPoints, projectInfo, onDataChange]);
-
-  const toggleProcedureComplete = (pointId: string, procedureIndex: number, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const point = lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
-    if (!point) return;
-
-    const completedProcedures = point.completedProcedures || [];
-    const isCompleted = completedProcedures.includes(procedureIndex);
+    setProjectData(updatedData);
+    notifyParent(updatedData);
     
-    const updatedCompleted = isCompleted 
-      ? completedProcedures.filter((index: number) => index !== procedureIndex)
-      : [...completedProcedures, procedureIndex];
-
-    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
-  };
-
-  const getProcedureProgress = (point: LockoutPoint): { completed: number; total: number; percentage: number } => {
-    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
-    const total = energyType?.procedures.length || 0;
-    const completed = (point.completedProcedures || []).length;
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-    return { completed, total, percentage };
-  };
-
-  const deleteLockoutPoint = (pointId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const updatedPoints = lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
-    const updatedPhotos = lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
-    
-    onDataChange('projectInfo', {
-      ...projectInfo,
-      ...localState,
-      lockoutPoints: updatedPoints,
-      lockoutPhotos: updatedPhotos
-    });
-  };
-
-  // =================== FONCTIONS GESTION TEMPS OPTIMISÉES ===================
-  const setTimeNow = (pointId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const now = new Date();
-    const timeString = now.toTimeString().substring(0, 5);
-    updateLockoutPoint(pointId, 'verificationTime', timeString);
-  };
-
-  const setTimePlus = (pointId: string, minutes: number, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + minutes);
-    const timeString = now.toTimeString().substring(0, 5);
-    updateLockoutPoint(pointId, 'verificationTime', timeString);
-  };
-
-  const selectEnergyType = (pointId: string, energyType: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    updateLockoutPoint(pointId, 'energyType', energyType);
-  };
-
-  // =================== CLEANUP TIMERS MULTIPLES ===================
-  React.useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      if (modalDebounceTimerRef.current) {
-        clearTimeout(modalDebounceTimerRef.current);
-      }
-    };
-  }, []);
+    console.log(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
+  }, [projectData, notifyParent]);
+  // =================== SECTION 3/5 - COMPOSANTS UI OPTIMISÉS & FONCTIONS UTILITAIRES ===================
 
   // =================== CALCUL STATISTIQUES EN TEMPS RÉEL ===================
   const locationStats = calculateLocationStats();
+
   // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ ===================
-  const PhotoCarousel = ({ photos, onAddPhoto, lockoutPointId }: {
+  const PhotoCarousel = React.memo(({ photos, onAddPhoto, lockoutPointId }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
     lockoutPointId?: string;
@@ -1031,29 +963,29 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       }
     };
 
-    const nextSlide = (e?: React.MouseEvent) => {
+    const nextSlide = useCallback((e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
       setCurrentIndex((currentIndex + 1) % totalSlides);
-    };
+    }, [currentIndex, totalSlides]);
 
-    const prevSlide = (e?: React.MouseEvent) => {
+    const prevSlide = useCallback((e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
       setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
-    };
+    }, [currentIndex, totalSlides]);
 
-    const goToSlide = (index: number, e?: React.MouseEvent) => {
+    const goToSlide = useCallback((index: number, e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
       setCurrentIndex(index);
-    };
+    }, []);
 
     return (
       <div className="photo-carousel">
@@ -1071,7 +1003,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                     <button 
                       type="button"
                       className="photo-action-btn delete" 
-                      onClick={(e) => deletePhoto(photo.id, e)} 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deletePhoto(photo.id);
+                      }} 
                       title={language === 'fr' ? "Supprimer cette photo" : "Delete this photo"}
                     >
                       <Trash2 size={14} />
@@ -1124,17 +1060,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       </div>
     );
-  };
+  });
 
   // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE OPTIMISÉ ===================
-  const IndustrySelector = () => (
+  const IndustrySelector = React.memo(() => (
     <select 
       className="premium-select" 
-      value={localState.industry}
+      value={projectData.industry}
       onChange={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        updateLocalState('industry', e.target.value);
+        updateProjectField('industry', e.target.value);
       }}
     >
       <option value="electrical">{t.electrical}</option>
@@ -1144,10 +1080,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       <option value="office">{t.office}</option>
       <option value="other">{t.other}</option>
     </select>
-  );
+  ));
 
   // =================== COMPOSANT VIDE POUR PHOTOS OPTIMISÉ ===================
-  const EmptyPhotoPlaceholder = ({ 
+  const EmptyPhotoPlaceholder = React.memo(({ 
     onClick, 
     title, 
     description, 
@@ -1163,7 +1099,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       style={{
         background: `${color}20`, 
         border: `2px dashed ${color}50`,
-        borderColor: `${color}50`
+        borderColor: `${color}50`,
+        borderRadius: '12px',
+        padding: '40px 20px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '140px'
       }}
       onClick={onClick}
       onMouseEnter={(e) => {
@@ -1183,10 +1129,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         {description}
       </p>
     </div>
-  );
+  ));
 
   // =================== COMPOSANT DASHBOARD STATISTIQUES TEMPS RÉEL ===================
-  const LocationStatsCard = () => (
+  const LocationStatsCard = React.memo(() => (
     <div className="location-stats-card">
       <div className="stats-header">
         <BarChart3 size={20} />
@@ -1266,10 +1212,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  );
+  ));
 
-  // =================== COMPOSANT GESTION EMPLACEMENTS OPTIMISÉ ===================
-  const WorkLocationManager = () => (
+  // =================== COMPOSANT GESTION EMPLACEMENTS AVEC MODAL Z-INDEX CRITIQUE ===================
+  const WorkLocationManager = React.memo(() => (
     <div className="work-locations-section">
       <div className="locations-header">
         <div className="section-header">
@@ -1287,9 +1233,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       </div>
 
       {/* Liste des emplacements */}
-      {workLocations.length > 0 ? (
+      {projectData.workLocations.length > 0 ? (
         <div className="locations-list">
-          {workLocations.map((location: WorkLocation) => (
+          {projectData.workLocations.map((location: WorkLocation) => (
             <div key={location.id} className="location-item">
               <div className="location-main">
                 <div className="location-info">
@@ -1318,7 +1264,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <button 
                   type="button"
                   className="location-remove" 
-                  onClick={(e) => removeWorkLocation(location.id, e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeWorkLocation(location.id);
+                  }}
                   title={t.removeLocation}
                 >
                   <Trash2 size={14} />
@@ -1355,17 +1305,42 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
 
-      {/* =================== MODAL CRITIQUE AVEC Z-INDEX MAXIMUM =================== */}
+      {/* =================== 🔥 MODAL CRITIQUE AVEC Z-INDEX ABSOLU MAXIMUM =================== */}
       {showAddLocation && (
         <div 
-          className="modal-overlay-critical" 
+          className="modal-overlay-ultra-critical" 
           onClick={() => setShowAddLocation(false)}
-          style={{ zIndex: 2147483647 }} /* ✅ Z-INDEX MAXIMUM INLINE AUSSI */
+          style={{ 
+            position: 'fixed !important' as any,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.98) !important',
+            zIndex: 2147483647,
+            backdropFilter: 'blur(15px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
         >
           <div 
-            className="modal-content-critical" 
+            className="modal-content-ultra-critical" 
             onClick={(e) => e.stopPropagation()}
-            style={{ zIndex: 2147483647 }} /* ✅ Z-INDEX MAXIMUM INLINE AUSSI */
+            style={{ 
+              background: 'rgba(15, 23, 42, 1) !important',
+              backdropFilter: 'blur(30px)',
+              border: '3px solid rgba(59, 130, 246, 0.8)',
+              borderRadius: '20px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: 'calc(100vh - 32px)',
+              overflowY: 'auto',
+              zIndex: 2147483647,
+              position: 'relative',
+              boxShadow: '0 50px 100px rgba(0, 0, 0, 0.95)'
+            }}
           >
             <div className="modal-header">
               <h3>{t.addLocation}</h3>
@@ -1387,10 +1362,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.locationNamePlaceholder}
                     value={newLocation.name}
                     onChange={(e) => updateModalField('name', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
               </div>
@@ -1403,10 +1384,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.locationDescriptionPlaceholder}
                     value={newLocation.description}
                     onChange={(e) => updateModalField('description', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
               </div>
@@ -1419,10 +1406,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.zonePlaceholder}
                     value={newLocation.zone}
                     onChange={(e) => updateModalField('zone', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
                 <div className="form-field">
@@ -1432,10 +1425,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.workDurationPlaceholder}
                     value={newLocation.estimatedDuration}
                     onChange={(e) => updateModalField('estimatedDuration', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
               </div>
@@ -1448,9 +1447,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="time"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     value={newLocation.startTime}
                     onChange={(e) => updateModalField('startTime', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
                 <div className="form-field">
@@ -1460,9 +1465,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="time"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     value={newLocation.endTime}
                     onChange={(e) => updateModalField('endTime', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
               </div>
@@ -1475,10 +1486,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.buildingPlaceholder}
                     value={newLocation.building}
                     onChange={(e) => updateModalField('building', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
                 <div className="form-field">
@@ -1488,10 +1505,16 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input"
+                    className="premium-input modal-input-critical"
                     placeholder={t.floorPlaceholder}
                     value={newLocation.floor}
                     onChange={(e) => updateModalField('floor', e.target.value)}
+                    style={{
+                      background: 'rgba(15, 23, 42, 1) !important',
+                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
+                      position: 'relative',
+                      zIndex: 2147483647
+                    }}
                   />
                 </div>
               </div>
@@ -1519,10 +1542,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  );
+  ));
 
   // =================== COMPOSANT SÉLECTEUR EMPLACEMENT POUR LOCKOUT POINTS ===================
-  const LocationSelector = ({ currentLocationId, onLocationChange }: {
+  const LocationSelector = React.memo(({ currentLocationId, onLocationChange }: {
     currentLocationId?: string;
     onLocationChange: (locationId: string) => void;
   }) => (
@@ -1532,16 +1555,521 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       onChange={(e) => onLocationChange(e.target.value)}
     >
       <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
-      {workLocations.map((location: WorkLocation) => (
+      {projectData.workLocations.map((location: WorkLocation) => (
         <option key={location.id} value={location.id}>
           {location.name} - {location.zone}
         </option>
       ))}
     </select>
-  );
+  ));
+  // =================== SECTION 4/5 - GESTION LOCKOUT POINTS & SYSTÈME PHOTOS AVANCÉ ===================
+
+  // =================== COMPOSANT ÉNERGIE AVEC PROCÉDURES INTERACTIVES ===================
+  const EnergyTypeSelector = React.memo(({ point }: { point: LockoutPoint }) => (
+    <div className="form-field">
+      <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
+      <div className="energy-type-selector">
+        {Object.entries(ENERGY_TYPES).map(([key, type]) => {
+          const IconComponent = type.icon;
+          return (
+            <div 
+              key={key} 
+              className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectEnergyType(point.id, key);
+              }}
+              style={{ 
+                borderColor: point.energyType === key ? type.color : undefined,
+                backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
+              }}
+            >
+              <IconComponent size={20} color={type.color} />
+              <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Procédures recommandées */}
+      {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
+        <div className="procedures-list">
+          <h4>{t.proceduresToFollow}</h4>
+          <ul className="procedures-checklist">
+            {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
+              const isCompleted = (point.completedProcedures || []).includes(idx);
+              return (
+                <li 
+                  key={idx} 
+                  className={`procedure-item ${isCompleted ? 'completed' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleProcedureComplete(point.id, idx);
+                  }}
+                >
+                  <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
+                    {isCompleted && <Check size={12} />}
+                  </div>
+                  <span className="procedure-text">{procedure}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="procedures-progress">
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${getProcedureProgress(point).percentage}%` }} />
+            </div>
+            <div className="progress-text">
+              {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} {t.stepsCompleted} 
+              ({getProcedureProgress(point).percentage}%)
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ));
+
+  // =================== COMPOSANT BOUTONS TEMPS RAPIDES ===================
+  const TimeQuickButtons = React.memo(({ pointId }: { pointId: string }) => (
+    <div className="time-quick-select">
+      <button 
+        type="button"
+        className="time-btn now" 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setTimeNow(pointId);
+        }}
+      >
+        <Clock size={12} />{t.now}
+      </button>
+      <button 
+        type="button"
+        className="time-btn plus5" 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setTimePlus(pointId, 5);
+        }}
+      >
+        +5min
+      </button>
+      <button 
+        type="button"
+        className="time-btn plus15" 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setTimePlus(pointId, 15);
+        }}
+      >
+        +15min
+      </button>
+    </div>
+  ));
+
+  // =================== COMPOSANT PHOTOS LOCKOUT POINTS ===================
+  const LockoutPhotosSection = React.memo(({ point }: { point: LockoutPoint }) => {
+    const pointPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id);
+    
+    return (
+      <div className="form-field">
+        <label className="field-label">
+          <Camera style={{ width: '18px', height: '18px' }} />
+          {t.pointPhotos}
+        </label>
+        
+        <div className="photo-capture-buttons">
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('during_lockout', point.id);
+            }}
+          >
+            <Camera size={14} />{t.duringLockout}
+          </button>
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('lockout_device', point.id);
+            }}
+          >
+            <Lock size={14} />{t.lockoutDevice}
+          </button>
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('verification', point.id);
+            }}
+          >
+            <Eye size={14} />{t.verification}
+          </button>
+        </div>
+        
+        {pointPhotos.length > 0 ? (
+          <PhotoCarousel 
+            photos={pointPhotos}
+            onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)}
+            lockoutPointId={point.id}
+          />
+        ) : (
+          <EmptyPhotoPlaceholder
+            onClick={() => handlePhotoCapture('during_lockout', point.id)}
+            title={t.noPhotos}
+            description={t.clickToPhotoDevice}
+            color="#f87171"
+          />
+        )}
+      </div>
+    );
+  });
+
+  // =================== COMPOSANT LOCKOUT POINT COMPLET ===================
+  const LockoutPointCard = React.memo(({ point, index }: { point: LockoutPoint; index: number }) => (
+    <div className="lockout-point">
+      <div className="lockout-point-header">
+        <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+          {t.lockoutPoint}{index + 1}
+        </h4>
+        <button 
+          type="button"
+          className="btn-danger" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteLockoutPoint(point.id);
+          }}
+        >
+          <Trash2 size={14} />
+          {t.delete}
+        </button>
+      </div>
+
+      {/* Assignation Emplacement */}
+      {projectData.workLocations.length > 0 && (
+        <div className="form-field">
+          <label className="field-label">
+            <MapPin style={{ width: '18px', height: '18px' }} />
+            {language === 'fr' ? 'Emplacement Assigné' : 'Assigned Location'}
+          </label>
+          <LocationSelector 
+            currentLocationId={point.assignedLocation}
+            onLocationChange={(locationId) => updateLockoutPoint(point.id, 'assignedLocation', locationId)}
+          />
+        </div>
+      )}
+
+      {/* Type d'énergie avec procédures */}
+      <EnergyTypeSelector point={point} />
+
+      {/* Détails équipement */}
+      <div className="two-column">
+        <div className="form-field">
+          <label className="field-label">
+            <Settings style={{ width: '18px', height: '18px' }} />
+            {t.equipmentName}
+          </label>
+          <input 
+            type="text" 
+            className="premium-input" 
+            placeholder={t.equipmentPlaceholder}
+            value={point.equipmentName} 
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'equipmentName', e.target.value);
+            }} 
+          />
+        </div>
+        <div className="form-field">
+          <label className="field-label">
+            <MapPin style={{ width: '18px', height: '18px' }} />
+            {t.locationLabel}
+          </label>
+          <input 
+            type="text" 
+            className="premium-input" 
+            placeholder={t.locationPlaceholder}
+            value={point.location} 
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'location', e.target.value);
+            }} 
+          />
+        </div>
+      </div>
+
+      <div className="two-column">
+        <div className="form-field">
+          <label className="field-label">
+            <Lock style={{ width: '18px', height: '18px' }} />
+            {t.lockType}
+          </label>
+          <input 
+            type="text" 
+            className="premium-input" 
+            placeholder={t.lockTypePlaceholder}
+            value={point.lockType} 
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'lockType', e.target.value);
+            }} 
+          />
+        </div>
+        <div className="form-field">
+          <label className="field-label">
+            <FileText style={{ width: '18px', height: '18px' }} />
+            {t.tagNumber}
+          </label>
+          <input 
+            type="text" 
+            className="premium-input" 
+            placeholder={t.tagPlaceholder}
+            value={point.tagNumber} 
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'tagNumber', e.target.value);
+            }} 
+          />
+        </div>
+      </div>
+
+      {/* Vérification avec boutons temps */}
+      <div className="two-column">
+        <div className="form-field">
+          <label className="field-label">
+            <User style={{ width: '18px', height: '18px' }} />
+            {t.verifiedBy}
+          </label>
+          <input 
+            type="text" 
+            className="premium-input" 
+            placeholder={t.verifiedByPlaceholder}
+            value={point.verifiedBy} 
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'verifiedBy', e.target.value);
+            }} 
+          />
+        </div>
+        <div className="form-field">
+          <label className="field-label">
+            <Clock style={{ width: '18px', height: '18px' }} />
+            {t.verificationTime}
+          </label>
+          <input 
+            type="time" 
+            className="premium-input" 
+            value={point.verificationTime}
+            onChange={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              updateLockoutPoint(point.id, 'verificationTime', e.target.value);
+            }} 
+          />
+          <TimeQuickButtons pointId={point.id} />
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="form-field">
+        <label className="field-label">
+          <FileText style={{ width: '18px', height: '18px' }} />
+          {t.notes}
+        </label>
+        <textarea 
+          className="premium-textarea" 
+          style={{ minHeight: '80px' }}
+          placeholder={t.notesPlaceholder}
+          value={point.notes} 
+          onChange={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            updateLockoutPoint(point.id, 'notes', e.target.value);
+          }} 
+        />
+      </div>
+
+      {/* Photos spécifiques au point */}
+      <LockoutPhotosSection point={point} />
+    </div>
+  ));
+
+  // =================== COMPOSANT PHOTOS GÉNÉRALES ===================
+  const GeneralPhotosSection = React.memo(() => {
+    const generalPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId);
+    
+    return (
+      <div className="form-field">
+        <label className="field-label">
+          <Camera style={{ width: '18px', height: '18px' }} />
+          {t.generalPhotos}
+        </label>
+        <div className="photo-capture-buttons">
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('before_lockout');
+            }}
+          >
+            <Camera size={14} />{t.beforeLockout}
+          </button>
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('client_form');
+            }}
+          >
+            <FileText size={14} />{t.clientForm}
+          </button>
+          <button 
+            type="button"
+            className="photo-capture-btn" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePhotoCapture('verification');
+            }}
+          >
+            <Eye size={14} />{t.verification}
+          </button>
+        </div>
+
+        {generalPhotos.length > 0 ? (
+          <PhotoCarousel 
+            photos={generalPhotos}
+            onAddPhoto={() => handlePhotoCapture('verification')}
+          />
+        ) : (
+          <EmptyPhotoPlaceholder
+            onClick={() => handlePhotoCapture('before_lockout')}
+            title={t.noPhotos}
+            description={t.clickToPhoto}
+          />
+        )}
+      </div>
+    );
+  });
+
+  // =================== SECTION LOCKOUT COMPLÈTE ===================
+  const LockoutSection = React.memo(() => (
+    <div className="form-section lockout-section">
+      <div className="section-header">
+        <Lock className="section-icon lockout-icon" />
+        <h3 className="section-title">{t.lockoutSection}</h3>
+      </div>
+      <div className="field-help" style={{ marginBottom: '24px' }}>
+        {t.lockoutDescription}
+      </div>
+
+      {/* Photos générales de verrouillage */}
+      <GeneralPhotosSection />
+
+      {/* Points de verrouillage dynamiques */}
+      {projectData.lockoutPoints.map((point: LockoutPoint, index: number) => (
+        <LockoutPointCard key={point.id} point={point} index={index} />
+      ))}
+
+      {/* Bouton ajouter point */}
+      <div style={{ marginTop: projectData.lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+        <button 
+          type="button"
+          className="btn-primary" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            addLockoutPoint();
+          }}
+        >
+          <Plus size={20} />{t.addLockoutPoint}
+        </button>
+      </div>
+
+      {/* Message si aucun point */}
+      {projectData.lockoutPoints.length === 0 && (
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.1)', 
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          borderRadius: '12px', 
+          padding: '24px', 
+          textAlign: 'center', 
+          color: '#60a5fa'
+        }}>
+          <Lock size={32} style={{ marginBottom: '12px' }} />
+          <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>{t.noLockoutPoints}</h4>
+          <p style={{ margin: 0, fontSize: '14px' }}>
+            {t.noLockoutDescription}
+          </p>
+        </div>
+      )}
+    </div>
+  ));
+
+  // =================== COMPOSANT CARTE AST PREMIUM ===================
+  const ASTNumberCard = React.memo(() => (
+    <div className="ast-number-card">
+      <div className="ast-number-header">
+        <div className="ast-number-title">
+          <FileText style={{ width: '20px', height: '20px' }} />
+          {t.astNumberTitle}
+        </div>
+        <div className="ast-actions">
+          <button 
+            type="button"
+            className={`btn-icon ${copied ? 'copied' : ''}`} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              copyASTNumber();
+            }} 
+            title={t.copyNumber}
+          >
+            {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+          </button>
+          <button 
+            type="button"
+            className="btn-icon" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              regenerateASTNumber();
+            }} 
+            title={t.generateNew}
+          >
+            <FileText style={{ width: '16px', height: '16px' }} />
+          </button>
+        </div>
+      </div>
+      <div className="ast-number-value">{astNumber}</div>
+      <div className="field-help">{t.astNumberGenerated}</div>
+    </div>
+  ));
+  // =================== SECTION 5/5 - RENDU PRINCIPAL JSX + CSS COMPLET OPTIMISÉ ===================
+
   return (
     <>
-      {/* =================== CSS OPTIMISÉ COMPLET AVEC MODAL CRITIQUE =================== */}
+      {/* =================== CSS OPTIMISÉ COMPLET AVEC MODAL Z-INDEX CRITIQUE =================== */}
       <style dangerouslySetInnerHTML={{
         __html: `
           /* =================== CONTAINER PRINCIPAL OPTIMISÉ =================== */
@@ -1925,8 +2453,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             color: #64748b;
           }
 
-          /* =================== MODAL CRITIQUE AVEC Z-INDEX ABSOLU MAXIMUM =================== */
-          .modal-overlay-critical {
+          /* =================== 🔥 MODAL ULTRA-CRITIQUE Z-INDEX MAXIMUM ABSOLU =================== */
+          .modal-overlay-ultra-critical {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -1936,13 +2464,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
             padding: 16px;
             backdrop-filter: blur(15px) !important;
             pointer-events: all !important;
           }
 
-          .modal-content-critical {
+          .modal-content-ultra-critical {
             background: rgba(15, 23, 42, 1) !important;
             backdrop-filter: blur(30px) !important;
             border: 3px solid rgba(59, 130, 246, 0.8) !important;
@@ -1951,24 +2479,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             width: 100%;
             max-height: calc(100vh - 32px);
             overflow-y: auto;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
             position: relative !important;
             box-shadow: 0 50px 100px rgba(0, 0, 0, 0.95) !important;
             pointer-events: all !important;
           }
 
-          .modal-input-critical, .modal-input {
+          .modal-input-critical {
             background: rgba(15, 23, 42, 1) !important;
             border: 2px solid rgba(100, 116, 139, 0.5) !important;
             position: relative !important;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
           }
 
-          .modal-input-critical:focus, .modal-input:focus {
+          .modal-input-critical:focus {
             background: rgba(15, 23, 42, 1) !important;
             border-color: #3b82f6 !important;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
             outline: none !important;
           }
 
@@ -1979,7 +2507,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             padding: 24px 24px 0;
             margin-bottom: 20px;
             position: relative;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
           }
 
           .modal-header h3 {
@@ -2001,7 +2529,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
           }
 
           .modal-close:hover {
@@ -2012,7 +2540,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           .modal-body {
             padding: 0 24px;
             position: relative;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
           }
 
           .modal-footer {
@@ -2021,7 +2549,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             padding: 20px 24px 24px;
             justify-content: flex-end;
             position: relative;
-            z-index: 2147483647 !important; /* ✅ Z-INDEX MAXIMUM ABSOLU */
+            z-index: 2147483647 !important;
           }
 
           .form-row {
@@ -2313,6 +2841,454 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); 
           }
 
+          /* =================== STYLES LOCKOUT CONSERVÉS ET OPTIMISÉS =================== */
+          .energy-type-selector { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
+            gap: 12px; 
+            margin-bottom: 16px;
+          }
+
+          .energy-type-option { 
+            padding: 12px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 2px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 8px;
+            min-height: 80px;
+            justify-content: center;
+          }
+
+          .energy-type-option.selected { 
+            border-color: #ef4444; 
+            background: rgba(239, 68, 68, 0.1); 
+          }
+
+          .energy-type-option:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
+          }
+
+          .lockout-point { 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            position: relative;
+          }
+
+          .lockout-point:last-child {
+            margin-bottom: 0;
+          }
+
+          .lockout-point-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 16px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+            min-height: 40px;
+          }
+
+          .procedures-list { 
+            background: rgba(15, 23, 42, 0.6); 
+            border: 1px solid rgba(100, 116, 139, 0.2); 
+            border-radius: 12px; 
+            padding: 16px; 
+            margin-top: 12px; 
+          }
+
+          .procedures-list h4 { 
+            color: #e2e8f0; 
+            font-size: 14px; 
+            font-weight: 600; 
+            margin: 0 0 12px 0; 
+          }
+
+          .procedures-checklist { 
+            margin: 0; 
+            padding: 0; 
+            list-style: none; 
+          }
+
+          .procedure-item { 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 12px; 
+            margin-bottom: 12px; 
+            padding: 8px; 
+            border-radius: 8px; 
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+          }
+
+          .procedure-item:hover { 
+            background: rgba(59, 130, 246, 0.1); 
+          }
+
+          .procedure-item.completed { 
+            background: rgba(34, 197, 94, 0.1); 
+            border: 1px solid rgba(34, 197, 94, 0.3); 
+          }
+
+          .procedure-checkbox { 
+            width: 18px; 
+            height: 18px; 
+            border: 2px solid rgba(100, 116, 139, 0.5); 
+            border-radius: 4px; 
+            background: rgba(15, 23, 42, 0.8); 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+            flex-shrink: 0; 
+            margin-top: 2px; 
+          }
+
+          .procedure-checkbox.checked { 
+            background: #22c55e; 
+            border-color: #22c55e; 
+            color: white; 
+          }
+
+          .procedure-checkbox:hover { 
+            border-color: #3b82f6; 
+            transform: scale(1.05); 
+          }
+
+          .procedure-text { 
+            color: #94a3b8; 
+            font-size: 13px; 
+            line-height: 1.5; 
+            flex: 1; 
+          }
+
+          .procedure-item.completed .procedure-text { 
+            color: #a7f3d0; 
+          }
+
+          .procedures-progress { 
+            margin-top: 12px; 
+            padding-top: 12px; 
+            border-top: 1px solid rgba(100, 116, 139, 0.2); 
+          }
+
+          .progress-bar { 
+            background: rgba(15, 23, 42, 0.8); 
+            border-radius: 8px; 
+            height: 6px; 
+            overflow: hidden; 
+            margin-bottom: 8px; 
+          }
+
+          .progress-fill { 
+            height: 100%; 
+            background: linear-gradient(90deg, #22c55e, #16a34a); 
+            transition: width 0.5s ease; 
+            border-radius: 8px; 
+          }
+
+          .progress-text { 
+            font-size: 12px; 
+            color: #64748b; 
+            text-align: center; 
+          }
+
+          .time-quick-select { 
+            display: flex; 
+            gap: 6px; 
+            margin-top: 8px; 
+          }
+
+          .time-btn { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 1px solid rgba(59, 130, 246, 0.3); 
+            color: #60a5fa; 
+            padding: 6px 10px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 4px; 
+            font-size: 11px; 
+            font-weight: 500; 
+            flex: 1; 
+            justify-content: center;
+            min-height: 32px;
+          }
+
+          .time-btn:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            border-color: rgba(59, 130, 246, 0.5); 
+            transform: translateY(-1px); 
+          }
+
+          .time-btn.now { 
+            background: rgba(34, 197, 94, 0.1); 
+            border-color: rgba(34, 197, 94, 0.3); 
+            color: #4ade80; 
+          }
+
+          .time-btn.now:hover { 
+            background: rgba(34, 197, 94, 0.2); 
+            border-color: rgba(34, 197, 94, 0.5); 
+          }
+
+          .time-btn.plus5 { 
+            background: rgba(245, 158, 11, 0.1); 
+            border-color: rgba(245, 158, 11, 0.3); 
+            color: #fbbf24; 
+          }
+
+          .time-btn.plus5:hover { 
+            background: rgba(245, 158, 11, 0.2); 
+            border-color: rgba(245, 158, 11, 0.5); 
+          }
+
+          .time-btn.plus15 { 
+            background: rgba(139, 92, 246, 0.1); 
+            border-color: rgba(139, 92, 246, 0.3); 
+            color: #a78bfa; 
+          }
+
+          .time-btn.plus15:hover { 
+            background: rgba(139, 92, 246, 0.2); 
+            border-color: rgba(139, 92, 246, 0.5); 
+          }
+
+          .photo-capture-buttons { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            margin-top: 12px; 
+          }
+
+          .photo-capture-btn { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 1px solid rgba(59, 130, 246, 0.3); 
+            color: #60a5fa; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 12px; 
+            font-weight: 500;
+            min-height: 36px;
+          }
+
+          .photo-capture-btn:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            transform: translateY(-1px); 
+          }
+
+          .photo-carousel { 
+            position: relative; 
+            margin-top: 16px; 
+            background: rgba(15, 23, 42, 0.8); 
+            border: 1px solid rgba(100, 116, 139, 0.3); 
+            border-radius: 16px; 
+            overflow: hidden; 
+          }
+
+          .carousel-container { 
+            position: relative; 
+            width: 100%; 
+            height: 300px; 
+            overflow: hidden; 
+          }
+
+          .carousel-track { 
+            display: flex; 
+            transition: transform 0.3s ease; 
+            height: 100%; 
+          }
+
+          .carousel-slide { 
+            min-width: 100%; 
+            height: 100%; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+          }
+
+          .carousel-slide img { 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+            border-radius: 8px; 
+          }
+
+          .carousel-slide.add-photo { 
+            background: rgba(59, 130, 246, 0.1); 
+            border: 2px dashed rgba(59, 130, 246, 0.3); 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            flex-direction: column; 
+            gap: 16px; 
+          }
+
+          .carousel-slide.add-photo:hover { 
+            background: rgba(59, 130, 246, 0.2); 
+            border-color: rgba(59, 130, 246, 0.5); 
+          }
+
+          .add-photo-content { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 12px; 
+            color: #60a5fa; 
+          }
+
+          .add-photo-icon { 
+            width: 48px; 
+            height: 48px; 
+            background: rgba(59, 130, 246, 0.2); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+          }
+
+          .carousel-slide.add-photo:hover .add-photo-icon { 
+            transform: scale(1.1); 
+            background: rgba(59, 130, 246, 0.3); 
+          }
+
+          .carousel-nav { 
+            position: absolute; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: rgba(0, 0, 0, 0.7); 
+            border: none; 
+            color: white; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: all 0.3s ease; 
+            z-index: 10; 
+          }
+
+          .carousel-nav:hover { 
+            background: rgba(0, 0, 0, 0.9); 
+            transform: translateY(-50%) scale(1.1); 
+          }
+
+          .carousel-nav:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+          }
+
+          .carousel-nav.prev { 
+            left: 16px; 
+          }
+
+          .carousel-nav.next { 
+            right: 16px; 
+          }
+
+          .carousel-indicators { 
+            position: absolute; 
+            bottom: 16px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 8px; 
+            z-index: 10; 
+          }
+
+          .carousel-indicator { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: rgba(255, 255, 255, 0.4); 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+          }
+
+          .carousel-indicator.active { 
+            background: rgba(255, 255, 255, 0.9); 
+            transform: scale(1.2); 
+          }
+
+          .photo-info { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
+            color: white; 
+            padding: 20px 16px 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+          }
+
+          .photo-caption { 
+            flex: 1; 
+            margin-right: 12px; 
+          }
+
+          .photo-caption h4 { 
+            margin: 0 0 4px; 
+            font-size: 14px; 
+            font-weight: 600; 
+          }
+
+          .photo-caption p { 
+            margin: 0; 
+            font-size: 12px; 
+            opacity: 0.8; 
+          }
+
+          .photo-actions { 
+            display: flex; 
+            gap: 8px; 
+          }
+
+          .photo-action-btn { 
+            background: rgba(255, 255, 255, 0.2); 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            color: white; 
+            padding: 6px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            min-width: 28px;
+            min-height: 28px;
+          }
+
+          .photo-action-btn:hover { 
+            background: rgba(255, 255, 255, 0.3); 
+          }
+
+          .photo-action-btn.delete:hover { 
+            background: rgba(239, 68, 68, 0.8); 
+            border-color: #ef4444; 
+          }
+
           /* =================== RESPONSIVE OPTIMISÉ =================== */
           @media (max-width: 768px) {
             .premium-grid { 
@@ -2350,7 +3326,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               justify-content: space-between;
             }
 
-            .modal-content-critical {
+            .modal-content-ultra-critical {
               margin: 8px;
               max-height: calc(100vh - 16px);
             }
@@ -2358,6 +3334,23 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             .modal-header, .modal-body, .modal-footer {
               padding-left: 16px;
               padding-right: 16px;
+            }
+
+            .energy-type-selector { 
+              grid-template-columns: repeat(2, 1fr); 
+            }
+            
+            .photo-capture-buttons { 
+              flex-direction: column; 
+            }
+            
+            .time-quick-select { 
+              flex-direction: column; 
+              gap: 4px; 
+            }
+            
+            .time-btn { 
+              flex: none; 
             }
           }
 
@@ -2381,6 +3374,29 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             .ast-actions {
               flex-wrap: wrap;
             }
+
+            .energy-type-selector { 
+              grid-template-columns: 1fr; 
+            }
+
+            .lockout-point-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 12px;
+            }
+
+            .carousel-nav {
+              width: 36px;
+              height: 36px;
+            }
+
+            .carousel-nav.prev {
+              left: 8px;
+            }
+
+            .carousel-nav.next {
+              right: 8px;
+            }
           }
         `
       }} />
@@ -2390,44 +3406,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       
       <div className="step1-container">
         {/* =================== CARTE NUMÉRO AST PREMIUM =================== */}
-        <div className="ast-number-card">
-          <div className="ast-number-header">
-            <div className="ast-number-title">
-              <FileText style={{ width: '20px', height: '20px' }} />
-              {t.astNumberTitle}
-            </div>
-            <div className="ast-actions">
-              <button 
-                type="button"
-                className={`btn-icon ${copied ? 'copied' : ''}`} 
-                onClick={copyASTNumber} 
-                title={t.copyNumber}
-              >
-                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
-              </button>
-              <button 
-                type="button"
-                className="btn-icon" 
-                onClick={regenerateASTNumber} 
-                title={t.generateNew}
-              >
-                <FileText style={{ width: '16px', height: '16px' }} />
-              </button>
-            </div>
-          </div>
-          <div className="ast-number-value">{astNumber}</div>
-          <div className="field-help">{t.astNumberGenerated}</div>
-        </div>
+        <ASTNumberCard />
 
         {/* =================== DASHBOARD STATISTIQUES TEMPS RÉEL =================== */}
-        {workLocations.length > 0 && <LocationStatsCard />}
+        {projectData.workLocations.length > 0 && <LocationStatsCard />}
 
         {/* =================== GESTION EMPLACEMENTS DE TRAVAIL =================== */}
         <WorkLocationManager />
 
         {/* =================== GRILLE PREMIUM DES SECTIONS PRINCIPALES =================== */}
         <div className="premium-grid">
-          {/* Section Client avec État Local + onBlur */}
+          {/* Section Client */}
           <div className="form-section">
             <div className="section-header">
               <Building className="section-icon" />
@@ -2442,11 +3431,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientNamePlaceholder}
-                value={localState.client} 
+                value={projectData.client} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('client', e.target.value);
+                  updateProjectField('client', e.target.value);
                 }}
               />
             </div>
@@ -2458,11 +3447,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.clientPhonePlaceholder}
-                value={localState.clientPhone} 
+                value={projectData.clientPhone} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('clientPhone', e.target.value);
+                  updateProjectField('clientPhone', e.target.value);
                 }}
               />
             </div>
@@ -2474,11 +3463,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientRepPlaceholder}
-                value={localState.clientRepresentative} 
+                value={projectData.clientRepresentative} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('clientRepresentative', e.target.value);
+                  updateProjectField('clientRepresentative', e.target.value);
                 }}
               />
             </div>
@@ -2490,11 +3479,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.repPhonePlaceholder}
-                value={localState.clientRepresentativePhone} 
+                value={projectData.clientRepresentativePhone} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('clientRepresentativePhone', e.target.value);
+                  updateProjectField('clientRepresentativePhone', e.target.value);
                 }}
               />
             </div>
@@ -2515,11 +3504,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.projectNumberPlaceholder}
-                value={localState.projectNumber} 
+                value={projectData.projectNumber} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('projectNumber', e.target.value);
+                  updateProjectField('projectNumber', e.target.value);
                 }}
               />
             </div>
@@ -2531,11 +3520,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.astClientPlaceholder}
-                value={localState.astClientNumber} 
+                value={projectData.astClientNumber} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('astClientNumber', e.target.value);
+                  updateProjectField('astClientNumber', e.target.value);
                 }}
               />
               <div className="field-help">{t.astClientHelp}</div>
@@ -2548,11 +3537,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <input 
                   type="date" 
                   className="premium-input"
-                  value={localState.date}
+                  value={projectData.date}
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateLocalState('date', e.target.value);
+                    updateProjectField('date', e.target.value);
                   }}
                 />
               </div>
@@ -2563,11 +3552,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <input 
                   type="time" 
                   className="premium-input"
-                  value={localState.time}
+                  value={projectData.time}
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateLocalState('time', e.target.value);
+                    updateProjectField('time', e.target.value);
                   }}
                 />
               </div>
@@ -2589,11 +3578,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.workLocationPlaceholder}
-                value={localState.workLocation} 
+                value={projectData.workLocation} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('workLocation', e.target.value);
+                  updateProjectField('workLocation', e.target.value);
                 }}
               />
             </div>
@@ -2620,11 +3609,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="text" 
                   className="premium-input" 
                   placeholder={t.emergencyContactPlaceholder}
-                  value={localState.emergencyContact} 
+                  value={projectData.emergencyContact} 
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateLocalState('emergencyContact', e.target.value);
+                    updateProjectField('emergencyContact', e.target.value);
                   }}
                 />
               </div>
@@ -2636,11 +3625,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="tel" 
                   className="premium-input" 
                   placeholder={t.emergencyPhonePlaceholder}
-                  value={localState.emergencyPhone} 
+                  value={projectData.emergencyPhone} 
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateLocalState('emergencyPhone', e.target.value);
+                    updateProjectField('emergencyPhone', e.target.value);
                   }}
                 />
               </div>
@@ -2662,849 +3651,24 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-textarea" 
                 style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
-                value={localState.workDescription} 
+                value={projectData.workDescription} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateLocalState('workDescription', e.target.value);
+                  updateProjectField('workDescription', e.target.value);
                 }}
               />
               <div className="field-help">{t.workDescriptionHelp}</div>
             </div>
           </div>
         </div>
+
         {/* =================== SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE =================== */}
-        <div className="form-section lockout-section">
-          <div className="section-header">
-            <Lock className="section-icon lockout-icon" />
-            <h3 className="section-title">{t.lockoutSection}</h3>
-          </div>
-          <div className="field-help" style={{ marginBottom: '24px' }}>
-            {t.lockoutDescription}
-          </div>
-
-          {/* Photos générales de verrouillage */}
-          <div className="form-field">
-            <label className="field-label">
-              <Camera style={{ width: '18px', height: '18px' }} />{t.generalPhotos}
-            </label>
-            <div className="photo-capture-buttons">
-              <button 
-                type="button"
-                className="photo-capture-btn" 
-                onClick={(e) => handlePhotoCapture('before_lockout', undefined, e)}
-              >
-                <Camera size={14} />{t.beforeLockout}
-              </button>
-              <button 
-                type="button"
-                className="photo-capture-btn" 
-                onClick={(e) => handlePhotoCapture('client_form', undefined, e)}
-              >
-                <FileText size={14} />{t.clientForm}
-              </button>
-              <button 
-                type="button"
-                className="photo-capture-btn" 
-                onClick={(e) => handlePhotoCapture('verification', undefined, e)}
-              >
-                <Eye size={14} />{t.verification}
-              </button>
-            </div>
-
-            {lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId).length > 0 ? (
-              <PhotoCarousel 
-                photos={lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId)}
-                onAddPhoto={() => handlePhotoCapture('verification')}
-              />
-            ) : (
-              <EmptyPhotoPlaceholder
-                onClick={() => handlePhotoCapture('before_lockout')}
-                title={t.noPhotos}
-                description={t.clickToPhoto}
-              />
-            )}
-          </div>
-
-          {/* POINTS DE VERROUILLAGE DYNAMIQUES AVEC ASSIGNATION EMPLACEMENT */}
-          {lockoutPoints.map((point: LockoutPoint, index: number) => (
-            <div key={point.id} className="lockout-point">
-              <div className="lockout-point-header">
-                <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
-                  {t.lockoutPoint}{index + 1}
-                </h4>
-                <button 
-                  type="button"
-                  className="btn-danger" 
-                  onClick={(e) => deleteLockoutPoint(point.id, e)}
-                >
-                  <Trash2 size={14} />
-                  {t.delete}
-                </button>
-              </div>
-
-              {/* NOUVEAU - Assignation Emplacement */}
-              {workLocations.length > 0 && (
-                <div className="form-field">
-                  <label className="field-label">
-                    <MapPin style={{ width: '18px', height: '18px' }} />
-                    {language === 'fr' ? 'Emplacement Assigné' : 'Assigned Location'}
-                  </label>
-                  <LocationSelector 
-                    currentLocationId={point.assignedLocation}
-                    onLocationChange={(locationId) => updateLockoutPoint(point.id, 'assignedLocation', locationId)}
-                  />
-                </div>
-              )}
-
-              {/* Type d'énergie avec procédures (CONSERVÉ INTÉGRALEMENT) */}
-              <div className="form-field">
-                <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
-                <div className="energy-type-selector">
-                  {Object.entries(ENERGY_TYPES).map(([key, type]) => {
-                    const IconComponent = type.icon;
-                    return (
-                      <div 
-                        key={key} 
-                        className={`energy-type-option ${point.energyType === key ? 'selected' : ''}`}
-                        onClick={(e) => selectEnergyType(point.id, key, e)}
-                        style={{ 
-                          borderColor: point.energyType === key ? type.color : undefined,
-                          backgroundColor: point.energyType === key ? `${type.color}20` : undefined 
-                        }}
-                      >
-                        <IconComponent size={20} color={type.color} />
-                        <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Procédures recommandées */}
-                {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
-                  <div className="procedures-list">
-                    <h4>{t.proceduresToFollow}</h4>
-                    <ul className="procedures-checklist">
-                      {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
-                        const isCompleted = (point.completedProcedures || []).includes(idx);
-                        return (
-                          <li 
-                            key={idx} 
-                            className={`procedure-item ${isCompleted ? 'completed' : ''}`}
-                            onClick={(e) => toggleProcedureComplete(point.id, idx, e)}
-                          >
-                            <div className={`procedure-checkbox ${isCompleted ? 'checked' : ''}`}>
-                              {isCompleted && <Check size={12} />}
-                            </div>
-                            <span className="procedure-text">{procedure}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <div className="procedures-progress">
-                      <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${getProcedureProgress(point).percentage}%` }} />
-                      </div>
-                      <div className="progress-text">
-                        {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} {t.stepsCompleted} 
-                        ({getProcedureProgress(point).percentage}%)
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Détails équipement (CONSERVÉ) */}
-              <div className="two-column">
-                <div className="form-field">
-                  <label className="field-label"><Settings style={{ width: '18px', height: '18px' }} />{t.equipmentName}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={t.equipmentPlaceholder}
-                    value={point.equipmentName} 
-                    onChange={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateLockoutPoint(point.id, 'equipmentName', e.target.value);
-                    }} 
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label"><MapPin style={{ width: '18px', height: '18px' }} />{t.locationLabel}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={t.locationPlaceholder}
-                    value={point.location} 
-                    onChange={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateLockoutPoint(point.id, 'location', e.target.value);
-                    }} 
-                  />
-                </div>
-              </div>
-
-              <div className="two-column">
-                <div className="form-field">
-                  <label className="field-label"><Lock style={{ width: '18px', height: '18px' }} />{t.lockType}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={t.lockTypePlaceholder}
-                    value={point.lockType} 
-                    onChange={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateLockoutPoint(point.id, 'lockType', e.target.value);
-                    }} 
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.tagNumber}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={t.tagPlaceholder}
-                    value={point.tagNumber} 
-                    onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)} 
-                  />
-                </div>
-              </div>
-
-              {/* Vérification avec boutons temps (CONSERVÉ) */}
-              <div className="two-column">
-                <div className="form-field">
-                  <label className="field-label"><User style={{ width: '18px', height: '18px' }} />{t.verifiedBy}</label>
-                  <input 
-                    type="text" 
-                    className="premium-input" 
-                    placeholder={t.verifiedByPlaceholder}
-                    value={point.verifiedBy} 
-                    onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)} 
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label"><Clock style={{ width: '18px', height: '18px' }} />{t.verificationTime}</label>
-                  <input 
-                    type="time" 
-                    className="premium-input" 
-                    value={point.verificationTime}
-                    onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)} 
-                  />
-                  
-                  {/* Boutons sélection rapide temps */}
-                  <div className="time-quick-select">
-                    <button 
-                      type="button"
-                      className="time-btn now" 
-                      onClick={(e) => setTimeNow(point.id, e)}
-                    >
-                      <Clock size={12} />{t.now}
-                    </button>
-                    <button 
-                      type="button"
-                      className="time-btn plus5" 
-                      onClick={(e) => setTimePlus(point.id, 5, e)}
-                    >
-                      +5min
-                    </button>
-                    <button 
-                      type="button"
-                      className="time-btn plus15" 
-                      onClick={(e) => setTimePlus(point.id, 15, e)}
-                    >
-                      +15min
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes (CONSERVÉ) */}
-              <div className="form-field">
-                <label className="field-label"><FileText style={{ width: '18px', height: '18px' }} />{t.notes}</label>
-                <textarea 
-                  className="premium-textarea" 
-                  style={{ minHeight: '80px' }}
-                  placeholder={t.notesPlaceholder}
-                  value={point.notes} 
-                  onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)} 
-                />
-              </div>
-
-              {/* Photos spécifiques au point (CONSERVÉ) */}
-              <div className="form-field">
-                <label className="field-label"><Camera style={{ width: '18px', height: '18px' }} />{t.pointPhotos}</label>
-                
-                <div className="photo-capture-buttons">
-                  <button 
-                    type="button"
-                    className="photo-capture-btn" 
-                    onClick={(e) => handlePhotoCapture('during_lockout', point.id, e)}
-                  >
-                    <Camera size={14} />{t.duringLockout}
-                  </button>
-                  <button 
-                    type="button"
-                    className="photo-capture-btn" 
-                    onClick={(e) => handlePhotoCapture('lockout_device', point.id, e)}
-                  >
-                    <Lock size={14} />{t.lockoutDevice}
-                  </button>
-                  <button 
-                    type="button"
-                    className="photo-capture-btn" 
-                    onClick={(e) => handlePhotoCapture('verification', point.id, e)}
-                  >
-                    <Eye size={14} />{t.verification}
-                  </button>
-                </div>
-                
-                {lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id).length > 0 ? (
-                  <PhotoCarousel 
-                    photos={lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id)}
-                    onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)}
-                    lockoutPointId={point.id}
-                  />
-                ) : (
-                  <EmptyPhotoPlaceholder
-                    onClick={() => handlePhotoCapture('during_lockout', point.id)}
-                    title={t.noPhotos}
-                    description={t.clickToPhotoDevice}
-                    color="#f87171"
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* Bouton ajouter point */}
-          <div style={{ marginTop: lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
-            <button 
-              type="button"
-              className="btn-primary" 
-              onClick={addLockoutPoint}
-            >
-              <Plus size={20} />{t.addLockoutPoint}
-            </button>
-          </div>
-
-          {/* Message si aucun point */}
-          {lockoutPoints.length === 0 && (
-            <div style={{
-              background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#60a5fa'
-            }}>
-              <Lock size={32} style={{ marginBottom: '12px' }} />
-              <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>{t.noLockoutPoints}</h4>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t.noLockoutDescription}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* =================== CSS STYLES LOCKOUT COMPLETS =================== */}
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            /* =================== STYLES LOCKOUT CONSERVÉS ET OPTIMISÉS =================== */
-            .energy-type-selector { 
-              display: grid; 
-              grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-              gap: 12px; 
-              margin-bottom: 16px;
-            }
-
-            .energy-type-option { 
-              padding: 12px; 
-              background: rgba(15, 23, 42, 0.8); 
-              border: 2px solid rgba(100, 116, 139, 0.3); 
-              border-radius: 12px; 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-              text-align: center; 
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
-              gap: 8px;
-              min-height: 80px;
-              justify-content: center;
-            }
-
-            .energy-type-option.selected { 
-              border-color: #ef4444; 
-              background: rgba(239, 68, 68, 0.1); 
-            }
-
-            .energy-type-option:hover { 
-              transform: translateY(-2px); 
-              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
-            }
-
-            .lockout-point { 
-              background: rgba(15, 23, 42, 0.8); 
-              border: 1px solid rgba(239, 68, 68, 0.3); 
-              border-radius: 16px; 
-              padding: 20px; 
-              margin-bottom: 20px; 
-              position: relative;
-            }
-
-            .lockout-point:last-child {
-              margin-bottom: 0;
-            }
-
-            .lockout-point-header { 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: center; 
-              margin-bottom: 16px; 
-              padding-bottom: 12px; 
-              border-bottom: 1px solid rgba(239, 68, 68, 0.2);
-              min-height: 40px;
-            }
-
-            .procedures-list { 
-              background: rgba(15, 23, 42, 0.6); 
-              border: 1px solid rgba(100, 116, 139, 0.2); 
-              border-radius: 12px; 
-              padding: 16px; 
-              margin-top: 12px; 
-            }
-
-            .procedures-list h4 { 
-              color: #e2e8f0; 
-              font-size: 14px; 
-              font-weight: 600; 
-              margin: 0 0 12px 0; 
-            }
-
-            .procedures-checklist { 
-              margin: 0; 
-              padding: 0; 
-              list-style: none; 
-            }
-
-            .procedure-item { 
-              display: flex; 
-              align-items: flex-start; 
-              gap: 12px; 
-              margin-bottom: 12px; 
-              padding: 8px; 
-              border-radius: 8px; 
-              transition: all 0.3s ease; 
-              cursor: pointer; 
-            }
-
-            .procedure-item:hover { 
-              background: rgba(59, 130, 246, 0.1); 
-            }
-
-            .procedure-item.completed { 
-              background: rgba(34, 197, 94, 0.1); 
-              border: 1px solid rgba(34, 197, 94, 0.3); 
-            }
-
-            .procedure-checkbox { 
-              width: 18px; 
-              height: 18px; 
-              border: 2px solid rgba(100, 116, 139, 0.5); 
-              border-radius: 4px; 
-              background: rgba(15, 23, 42, 0.8); 
-              cursor: pointer; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              transition: all 0.3s ease; 
-              flex-shrink: 0; 
-              margin-top: 2px; 
-            }
-
-            .procedure-checkbox.checked { 
-              background: #22c55e; 
-              border-color: #22c55e; 
-              color: white; 
-            }
-
-            .procedure-checkbox:hover { 
-              border-color: #3b82f6; 
-              transform: scale(1.05); 
-            }
-
-            .procedure-text { 
-              color: #94a3b8; 
-              font-size: 13px; 
-              line-height: 1.5; 
-              flex: 1; 
-            }
-
-            .procedure-item.completed .procedure-text { 
-              color: #a7f3d0; 
-            }
-
-            .procedures-progress { 
-              margin-top: 12px; 
-              padding-top: 12px; 
-              border-top: 1px solid rgba(100, 116, 139, 0.2); 
-            }
-
-            .progress-bar { 
-              background: rgba(15, 23, 42, 0.8); 
-              border-radius: 8px; 
-              height: 6px; 
-              overflow: hidden; 
-              margin-bottom: 8px; 
-            }
-
-            .progress-fill { 
-              height: 100%; 
-              background: linear-gradient(90deg, #22c55e, #16a34a); 
-              transition: width 0.5s ease; 
-              border-radius: 8px; 
-            }
-
-            .progress-text { 
-              font-size: 12px; 
-              color: #64748b; 
-              text-align: center; 
-            }
-
-            .time-quick-select { 
-              display: flex; 
-              gap: 6px; 
-              margin-top: 8px; 
-            }
-
-            .time-btn { 
-              background: rgba(59, 130, 246, 0.1); 
-              border: 1px solid rgba(59, 130, 246, 0.3); 
-              color: #60a5fa; 
-              padding: 6px 10px; 
-              border-radius: 6px; 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-              display: flex; 
-              align-items: center; 
-              gap: 4px; 
-              font-size: 11px; 
-              font-weight: 500; 
-              flex: 1; 
-              justify-content: center;
-              min-height: 32px;
-            }
-
-            .time-btn:hover { 
-              background: rgba(59, 130, 246, 0.2); 
-              border-color: rgba(59, 130, 246, 0.5); 
-              transform: translateY(-1px); 
-            }
-
-            .time-btn.now { 
-              background: rgba(34, 197, 94, 0.1); 
-              border-color: rgba(34, 197, 94, 0.3); 
-              color: #4ade80; 
-            }
-
-            .time-btn.now:hover { 
-              background: rgba(34, 197, 94, 0.2); 
-              border-color: rgba(34, 197, 94, 0.5); 
-            }
-
-            .time-btn.plus5 { 
-              background: rgba(245, 158, 11, 0.1); 
-              border-color: rgba(245, 158, 11, 0.3); 
-              color: #fbbf24; 
-            }
-
-            .time-btn.plus5:hover { 
-              background: rgba(245, 158, 11, 0.2); 
-              border-color: rgba(245, 158, 11, 0.5); 
-            }
-
-            .time-btn.plus15 { 
-              background: rgba(139, 92, 246, 0.1); 
-              border-color: rgba(139, 92, 246, 0.3); 
-              color: #a78bfa; 
-            }
-
-            .time-btn.plus15:hover { 
-              background: rgba(139, 92, 246, 0.2); 
-              border-color: rgba(139, 92, 246, 0.5); 
-            }
-
-            .photo-capture-buttons { 
-              display: flex; 
-              flex-wrap: wrap; 
-              gap: 8px; 
-              margin-top: 12px; 
-            }
-
-            .photo-capture-btn { 
-              background: rgba(59, 130, 246, 0.1); 
-              border: 1px solid rgba(59, 130, 246, 0.3); 
-              color: #60a5fa; 
-              padding: 8px 12px; 
-              border-radius: 8px; 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-              display: flex; 
-              align-items: center; 
-              gap: 6px; 
-              font-size: 12px; 
-              font-weight: 500;
-              min-height: 36px;
-            }
-
-            .photo-capture-btn:hover { 
-              background: rgba(59, 130, 246, 0.2); 
-              transform: translateY(-1px); 
-            }
-
-            .photo-carousel { 
-              position: relative; 
-              margin-top: 16px; 
-              background: rgba(15, 23, 42, 0.8); 
-              border: 1px solid rgba(100, 116, 139, 0.3); 
-              border-radius: 16px; 
-              overflow: hidden; 
-            }
-
-            .carousel-container { 
-              position: relative; 
-              width: 100%; 
-              height: 300px; 
-              overflow: hidden; 
-            }
-
-            .carousel-track { 
-              display: flex; 
-              transition: transform 0.3s ease; 
-              height: 100%; 
-            }
-
-            .carousel-slide { 
-              min-width: 100%; 
-              height: 100%; 
-              position: relative; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-            }
-
-            .carousel-slide img { 
-              max-width: 100%; 
-              max-height: 100%; 
-              object-fit: contain; 
-              border-radius: 8px; 
-            }
-
-            .carousel-slide.add-photo { 
-              background: rgba(59, 130, 246, 0.1); 
-              border: 2px dashed rgba(59, 130, 246, 0.3); 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-              flex-direction: column; 
-              gap: 16px; 
-            }
-
-            .carousel-slide.add-photo:hover { 
-              background: rgba(59, 130, 246, 0.2); 
-              border-color: rgba(59, 130, 246, 0.5); 
-            }
-
-            .add-photo-content { 
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
-              gap: 12px; 
-              color: #60a5fa; 
-            }
-
-            .add-photo-icon { 
-              width: 48px; 
-              height: 48px; 
-              background: rgba(59, 130, 246, 0.2); 
-              border-radius: 50%; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              transition: all 0.3s ease; 
-            }
-
-            .carousel-slide.add-photo:hover .add-photo-icon { 
-              transform: scale(1.1); 
-              background: rgba(59, 130, 246, 0.3); 
-            }
-
-            .carousel-nav { 
-              position: absolute; 
-              top: 50%; 
-              transform: translateY(-50%); 
-              background: rgba(0, 0, 0, 0.7); 
-              border: none; 
-              color: white; 
-              width: 40px; 
-              height: 40px; 
-              border-radius: 50%; 
-              cursor: pointer; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              transition: all 0.3s ease; 
-              z-index: 10; 
-            }
-
-            .carousel-nav:hover { 
-              background: rgba(0, 0, 0, 0.9); 
-              transform: translateY(-50%) scale(1.1); 
-            }
-
-            .carousel-nav:disabled { 
-              opacity: 0.3; 
-              cursor: not-allowed; 
-            }
-
-            .carousel-nav.prev { 
-              left: 16px; 
-            }
-
-            .carousel-nav.next { 
-              right: 16px; 
-            }
-
-            .carousel-indicators { 
-              position: absolute; 
-              bottom: 16px; 
-              left: 50%; 
-              transform: translateX(-50%); 
-              display: flex; 
-              gap: 8px; 
-              z-index: 10; 
-            }
-
-            .carousel-indicator { 
-              width: 8px; 
-              height: 8px; 
-              border-radius: 50%; 
-              background: rgba(255, 255, 255, 0.4); 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-            }
-
-            .carousel-indicator.active { 
-              background: rgba(255, 255, 255, 0.9); 
-              transform: scale(1.2); 
-            }
-
-            .photo-info { 
-              position: absolute; 
-              bottom: 0; 
-              left: 0; 
-              right: 0; 
-              background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); 
-              color: white; 
-              padding: 20px 16px 16px; 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: flex-end; 
-            }
-
-            .photo-caption { 
-              flex: 1; 
-              margin-right: 12px; 
-            }
-
-            .photo-caption h4 { 
-              margin: 0 0 4px; 
-              font-size: 14px; 
-              font-weight: 600; 
-            }
-
-            .photo-caption p { 
-              margin: 0; 
-              font-size: 12px; 
-              opacity: 0.8; 
-            }
-
-            .photo-actions { 
-              display: flex; 
-              gap: 8px; 
-            }
-
-            .photo-action-btn { 
-              background: rgba(255, 255, 255, 0.2); 
-              border: 1px solid rgba(255, 255, 255, 0.3); 
-              color: white; 
-              padding: 6px; 
-              border-radius: 6px; 
-              cursor: pointer; 
-              transition: all 0.3s ease; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center;
-              min-width: 28px;
-              min-height: 28px;
-            }
-
-            .photo-action-btn:hover { 
-              background: rgba(255, 255, 255, 0.3); 
-            }
-
-            .photo-action-btn.delete:hover { 
-              background: rgba(239, 68, 68, 0.8); 
-              border-color: #ef4444; 
-            }
-
-            /* =================== RESPONSIVE LOCKOUT OPTIMISÉ =================== */
-            @media (max-width: 768px) {
-              .energy-type-selector { 
-                grid-template-columns: repeat(2, 1fr); 
-              }
-              
-              .photo-capture-buttons { 
-                flex-direction: column; 
-              }
-              
-              .time-quick-select { 
-                flex-direction: column; 
-                gap: 4px; 
-              }
-              
-              .time-btn { 
-                flex: none; 
-              }
-            }
-
-            @media (max-width: 480px) {
-              .energy-type-selector { 
-                grid-template-columns: 1fr; 
-              }
-
-              .lockout-point-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-              }
-
-              .carousel-nav {
-                width: 36px;
-                height: 36px;
-              }
-
-              .carousel-nav.prev {
-                left: 8px;
-              }
-
-              .carousel-nav.next {
-                right: 8px;
-              }
-            }
-          `
-        }} />
+        <LockoutSection />
       </div>
     </>
   );
 }
 
 export default Step1ProjectInfo;
+
