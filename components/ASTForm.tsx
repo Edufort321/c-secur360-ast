@@ -456,7 +456,7 @@ export default function ASTForm({
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== 🔥 COMPOSANT LOGO CARRÉ ORANGE AUTO-AJUSTABLE (STYLE DASHBOARD) ===================
+  // =================== 🔥 COMPOSANT LOGO STYLE DASHBOARD EXACT (NOIR + BORDURE DORÉE) ===================
   const LogoComponent = useMemo(() => ({ 
     containerSize = '96px',
     logoSize = '80px',
@@ -476,12 +476,9 @@ export default function ASTForm({
     const [logoLoaded, setLogoLoaded] = useState(false);
 
     const logoSrc = useMemo(() => {
-      // ✅ PRIORITÉ LOGO SELON TENANT
-      if (tenant && tenant !== 'demo') {
-        return `/${tenant}-logo.png`;
-      }
+      // ✅ UTILISE TON LOGO PUBLIC
       return '/c-secur360-logo.png';
-    }, [tenant]);
+    }, []);
 
     const handleLogoError = useCallback(() => {
       if (!logoError) {
@@ -497,9 +494,10 @@ export default function ASTForm({
       <div style={{
         width: currentContainerSize,
         height: currentContainerSize,
-        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        // 🔥 STYLE DASHBOARD EXACT : NOIR + BORDURE DORÉE
+        background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
         border: showBorder ? '4px solid #f59e0b' : 'none',
-        borderRadius: isMobile ? '8px' : '16px',
+        borderRadius: isMobile ? '8px' : '32px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -512,7 +510,7 @@ export default function ASTForm({
         {!logoError && logoLoaded ? (
           <img 
             src={logoSrc}
-            alt={`${tenant} Logo`}
+            alt="C-Secur360"
             style={{ 
               width: currentLogoSize,
               height: currentLogoSize,
@@ -535,7 +533,7 @@ export default function ASTForm({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#ffffff',
+            color: '#f59e0b',
             fontSize: isMobile ? '16px' : '48px',
             fontWeight: '900',
             textShadow: '0 4px 8px rgba(0,0,0,0.7)',
@@ -554,7 +552,7 @@ export default function ASTForm({
             left: '-100%',
             width: '100%',
             height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
             animation: 'shine 2.5s ease-in-out infinite'
           }} />
         )}
@@ -565,7 +563,7 @@ export default function ASTForm({
             position: 'absolute',
             inset: '-10px',
             border: '2px solid rgba(245, 158, 11, 0.3)',
-            borderRadius: isMobile ? '16px' : '24px',
+            borderRadius: isMobile ? '16px' : '40px',
             animation: 'pulse 3s ease-in-out infinite'
           }} />
         )}
@@ -582,7 +580,7 @@ export default function ASTForm({
         )}
       </div>
     );
-  }, [tenant, isMobile]);
+  }, [isMobile]);
   // =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const MobileHeader = () => (
     <header style={{
