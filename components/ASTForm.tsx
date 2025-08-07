@@ -477,8 +477,8 @@ export default function ASTForm({
             src="/c-secur360-logo.png" 
             alt="C-Secur360"
             style={{ 
-              width: '32px', 
-              height: '32px', 
+              width: '200px', 
+              height: '200px', 
               objectFit: 'contain'
             }}
             onError={(e) => {
