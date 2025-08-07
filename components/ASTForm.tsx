@@ -456,132 +456,91 @@ export default function ASTForm({
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== 🔥 COMPOSANT LOGO STYLE DASHBOARD EXACT (NOIR + BORDURE DORÉE) ===================
+  // =================== 🔥 COMPOSANT LOGO EXACTEMENT COMME DASHBOARD + AUTO-AJUSTABLE ===================
   const LogoComponent = useMemo(() => ({ 
-    containerSize = '96px',
-    logoSize = '80px',
-    mobileContainerSize = '40px',
-    mobileLogo = '32px',
-    showBorder = true,
-    showEffects = true
+    isMobile = false
   }: { 
-    containerSize?: string;
-    logoSize?: string;
-    mobileContainerSize?: string;
-    mobileLogo?: string;
-    showBorder?: boolean;
-    showEffects?: boolean;
+    isMobile?: boolean;
   }) => {
-    const [logoError, setLogoError] = useState(false);
-    const [logoLoaded, setLogoLoaded] = useState(false);
-
-    const logoSrc = useMemo(() => {
-      // ✅ UTILISE TON LOGO PUBLIC
-      return '/c-secur360-logo.png';
-    }, []);
-
-    const handleLogoError = useCallback(() => {
-      if (!logoError) {
-        console.log('⚠️ Logo non trouvé, utilisation fallback emoji');
-        setLogoError(true);
-      }
-    }, [logoError]);
-
-    const currentContainerSize = isMobile ? mobileContainerSize : containerSize;
-    const currentLogoSize = isMobile ? mobileLogo : logoSize;
-
     return (
-      <div style={{
-        width: currentContainerSize,
-        height: currentContainerSize,
-        // 🔥 STYLE DASHBOARD EXACT : NOIR + BORDURE DORÉE
-        background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-        border: showBorder ? '4px solid #f59e0b' : 'none',
-        borderRadius: isMobile ? '8px' : '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: showEffects ? '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)' : '0 4px 8px rgba(245, 158, 11, 0.3)',
-        transition: 'all 0.3s ease'
-      }}>
-        {/* Logo ou fallback */}
-        {!logoError && logoLoaded ? (
+      <div 
+        className="float-animation glow-effect"
+        style={{
+          // 🔥 EXACTEMENT COMME DASHBOARD
+          background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+          padding: isMobile ? '16px' : '32px',
+          borderRadius: isMobile ? '16px' : '32px',
+          border: '4px solid #f59e0b',
+          boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{
+          width: isMobile ? '32px' : '96px',
+          height: isMobile ? '32px' : '96px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 1
+        }}>
           <img 
-            src={logoSrc}
+            src="/c-secur360-logo.png" 
             alt="C-Secur360"
+            className="logo-glow"
             style={{ 
-              width: currentLogoSize,
-              height: currentLogoSize,
+              width: isMobile ? '24px' : '80px',
+              height: isMobile ? '24px' : '80px',
               objectFit: 'contain',
-              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))',
-              transition: 'all 0.3s ease',
-              position: 'relative',
-              zIndex: 1
+              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))'
             }}
-            onLoad={() => {
-              setLogoLoaded(true);
-              console.log('✅ Logo chargé avec succès:', logoSrc);
+            onError={(e) => {
+              console.log('❌ Erreur chargement logo:', e);
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
             }}
-            onError={handleLogoError}
           />
-        ) : (
-          <div style={{
-            width: currentLogoSize,
-            height: currentLogoSize,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#f59e0b',
+          <div style={{ 
+            display: 'none',
+            color: '#f59e0b', 
             fontSize: isMobile ? '16px' : '48px',
             fontWeight: '900',
+            alignItems: 'center',
+            justifyContent: 'center',
             textShadow: '0 4px 8px rgba(0,0,0,0.7)',
-            position: 'relative',
-            zIndex: 1
+            width: '100%',
+            height: '100%'
           }}>
             🛡️
           </div>
-        )}
-
-        {/* Effet brillance animé (style dashboard) */}
-        {showEffects && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-            animation: 'shine 2.5s ease-in-out infinite'
-          }} />
-        )}
-
-        {/* Effet pulse border (style dashboard) */}
-        {showEffects && (
-          <div style={{
-            position: 'absolute',
-            inset: '-10px',
-            border: '2px solid rgba(245, 158, 11, 0.3)',
-            borderRadius: isMobile ? '16px' : '40px',
-            animation: 'pulse 3s ease-in-out infinite'
-          }} />
-        )}
-
-        {/* Chargement invisible pour preload */}
-        {!logoLoaded && (
-          <img 
-            src={logoSrc}
-            alt=""
-            style={{ display: 'none' }}
-            onLoad={() => setLogoLoaded(true)}
-            onError={handleLogoError}
-          />
-        )}
+        </div>
+        
+        {/* Effet brillance animé (exactement comme dashboard) */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: '-100%',
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+          animation: 'shine 2.5s ease-in-out infinite'
+        }} />
+        
+        {/* Effet pulse border (exactement comme dashboard) */}
+        <div style={{
+          position: 'absolute',
+          inset: '-10px',
+          border: '2px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: isMobile ? '24px' : '40px',
+          animation: 'pulse 3s ease-in-out infinite'
+        }} />
       </div>
     );
-  }, [isMobile]);
-  // =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
+  }, []);
+  {/* 🔥 Logo desktop auto-ajustable (exactement comme dashboard) */}
+          <LogoComponent isMobile={false} />// =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const MobileHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
