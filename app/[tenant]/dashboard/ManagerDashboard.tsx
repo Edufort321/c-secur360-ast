@@ -1,1545 +1,1768 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  AlertTriangle, 
-  Calendar, 
-  FileText, 
-  Users, 
-  Shield, 
-  Target,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Eye,
-  Download,
-  Filter,
-  Search,
-  Bell,
-  MapPin,
-  ChevronRight,
-  Activity,
-  Award,
-  Zap,
-  Play,
-  Archive,
-  FolderOpen,
-  History,
-  Bookmark,
-  Database,
-  ChevronDown,
-  Camera,
-  Timer,
-  PieChart,
-  LineChart
-} from 'lucide-react'
+  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
+  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
+  Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
+  Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
+  Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
+} from 'lucide-react';
 
-interface DashboardData {
-  // KPI Fonctionnels
-  totalAST: number
-  astThisMonth: number
-  astCompleted: number
-  astMonthly: number[]
-  
-  incidents: number
-  nearMiss: number
-  incidentsTrend: number
-  incidentsByType: { type: string; count: number; color: string }[]
-  
-  hoursWorked: number
-  safeHours: number
-  safetyRate: number
-  
-  photosCount: number
-  photosThisWeek: number
-  
-  // Données graphiques
-  monthlyData: { month: string; ast: number; incidents: number; safety: number }[]
-  performanceTrend: number[]
+// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
+import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
+import Step2Equipment from '@/components/steps/Step2Equipment';
+import Step3Hazards from '@/components/steps/Step3Hazards';
+import Step4Permits from '@/components/steps/Step4Permits';
+import Step5Validation from '@/components/steps/Step5Validation';
+import Step6Finalization from '@/components/steps/Step6Finalization';
+
+// =================== INTERFACES PRINCIPALES (CONSERVÉES) ===================
+interface ASTFormProps {
+  tenant: string;
+  language: 'fr' | 'en';
+  userId?: string;
+  userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
+  formData: any;
+  onDataChange: (section: string, data: any) => void;
 }
 
-interface Tenant {
-  id: string
-  subdomain: string
-  companyName: string
-}
-
-// Données fonctionnelles réalistes
-const getFunctionalData = (isDemo: boolean): DashboardData => {
-  if (isDemo) {
-    // Données simulées pour démo
-    return {
-      totalAST: 347,
-      astThisMonth: 28,
-      astCompleted: 325,
-      astMonthly: [15, 22, 28, 31, 25, 29, 28],
-      
-      incidents: 2,
-      nearMiss: 8,
-      incidentsTrend: -25,
-      incidentsByType: [
-        { type: 'Électrique', count: 3, color: '#ef4444' },
-        { type: 'Chute', count: 2, color: '#f97316' },
-        { type: 'Équipement', count: 2, color: '#eab308' },
-        { type: 'Ergonomique', count: 1, color: '#22c55e' }
-      ],
-      
-      hoursWorked: 12480,
-      safeHours: 12456,
-      safetyRate: 99.8,
-      
-      photosCount: 156,
-      photosThisWeek: 12,
-      
-      monthlyData: [
-        { month: 'Jan', ast: 15, incidents: 3, safety: 98.2 },
-        { month: 'Fév', ast: 22, incidents: 2, safety: 98.8 },
-        { month: 'Mar', ast: 28, incidents: 1, safety: 99.1 },
-        { month: 'Avr', ast: 31, incidents: 2, safety: 98.9 },
-        { month: 'Mai', ast: 25, incidents: 1, safety: 99.3 },
-        { month: 'Jun', ast: 29, incidents: 0, safety: 99.8 },
-        { month: 'Jul', ast: 28, incidents: 1, safety: 99.5 }
-      ],
-      performanceTrend: [95, 96, 97, 98, 97, 99, 98, 99, 100]
+// =================== TRADUCTIONS COMPLÈTES (CONSERVÉES INTÉGRALEMENT) ===================
+const translations = {
+  fr: {
+    title: "🛡️ C-Secur360",
+    subtitle: "Analyse Sécuritaire de Travail",
+    systemOperational: "Système opérationnel",
+    astStep: "AST • Étape",
+    astNumber: "NUMÉRO AST",
+    online: "En ligne",
+    offline: "Hors ligne",
+    submit: "Soumettre",
+    approve: "Approuver",
+    status: {
+      draft: "Brouillon",
+      pending_verification: "En attente",
+      approved: "Approuvé",
+      auto_approved: "Auto-approuvé",
+      rejected: "Rejeté"
+    },
+    progress: "Progression AST",
+    completed: "complété",
+    stepOf: "sur",
+    previous: "Précédent",
+    next: "Suivant",
+    finished: "Terminé ✓",
+    autoSave: "Sauvegarde auto",
+    saving: "Modification...",
+    saved: "Sauvegardé",
+    active: "Actif",
+    language: "Langue",
+    french: "Français",
+    english: "English",
+    steps: {
+      step1: {
+        title: "Informations Projet",
+        subtitle: "Identification & Verrouillage"
+      },
+      step2: {
+        title: "Équipements", 
+        subtitle: "EPI et équipements sécurité"
+      },
+      step3: {
+        title: "Dangers & Contrôles",
+        subtitle: "Risques + Moyens contrôle"
+      },
+      step4: {
+        title: "Permis & Autorisations",
+        subtitle: "Conformité réglementaire"
+      },
+      step5: {
+        title: "Validation Équipe",
+        subtitle: "Signatures & Approbations"
+      },
+      step6: {
+        title: "Finalisation",
+        subtitle: "Consentement & Archive"
+      }
     }
-  } else {
-    // Données réelles client (à connecter à la DB)
-    return {
-      totalAST: 89,
-      astThisMonth: 12,
-      astCompleted: 84,
-      astMonthly: [8, 12, 15, 11, 9, 14, 12],
-      
-      incidents: 0,
-      nearMiss: 3,
-      incidentsTrend: -100,
-      incidentsByType: [
-        { type: 'Électrique', count: 1, color: '#ef4444' },
-        { type: 'Équipement', count: 2, color: '#eab308' }
-      ],
-      
-      hoursWorked: 3240,
-      safeHours: 3240,
-      safetyRate: 100,
-      
-      photosCount: 67,
-      photosThisWeek: 8,
-      
-      monthlyData: [
-        { month: 'Jan', ast: 8, incidents: 1, safety: 99.1 },
-        { month: 'Fév', ast: 12, incidents: 0, safety: 100 },
-        { month: 'Mar', ast: 15, incidents: 0, safety: 100 },
-        { month: 'Avr', ast: 11, incidents: 0, safety: 100 },
-        { month: 'Mai', ast: 9, incidents: 1, safety: 99.2 },
-        { month: 'Jun', ast: 14, incidents: 0, safety: 100 },
-        { month: 'Jul', ast: 12, incidents: 0, safety: 100 }
-      ],
-      performanceTrend: [98, 99, 100, 100, 99, 100, 100, 100, 100]
+  },
+  en: {
+    title: "🛡️ C-Secur360",
+    subtitle: "Job Safety Analysis",
+    systemOperational: "System operational",
+    astStep: "JSA • Step",
+    astNumber: "JSA NUMBER",
+    online: "Online",
+    offline: "Offline",
+    submit: "Submit",
+    approve: "Approve",
+    status: {
+      draft: "Draft",
+      pending_verification: "Pending",
+      approved: "Approved",
+      auto_approved: "Auto-approved",
+      rejected: "Rejected"
+    },
+    progress: "JSA Progress",
+    completed: "completed",
+    stepOf: "of",
+    previous: "Previous",
+    next: "Next",
+    finished: "Finished ✓",
+    autoSave: "Auto save",
+    saving: "Saving...",
+    saved: "Saved",
+    active: "Active",
+    language: "Language",
+    french: "Français",
+    english: "English",
+    steps: {
+      step1: {
+        title: "Project Information",
+        subtitle: "Identification & Lockout"
+      },
+      step2: {
+        title: "Equipment",
+        subtitle: "PPE and safety equipment"
+      },
+      step3: {
+        title: "Hazards & Controls",
+        subtitle: "Risks + Control measures"
+      },
+      step4: {
+        title: "Permits & Authorizations",
+        subtitle: "Regulatory compliance"
+      },
+      step5: {
+        title: "Team Validation",
+        subtitle: "Signatures & Approvals"
+      },
+      step6: {
+        title: "Finalization",
+        subtitle: "Consent & Archive"
+      }
     }
   }
-}
+};
 
-// Composant Graphique Simple
-const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'bar' | 'pie' }) => {
-  if (type === 'pie') {
-    const total = data.reduce((sum, item) => sum + item.count, 0)
-    let currentAngle = 0
-    
-    return (
-      <div style={{ width: '200px', height: '200px', position: 'relative', margin: '0 auto' }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
-          {data.map((item, index) => {
-            const percentage = (item.count / total) * 100
-            const angle = (percentage / 100) * 360
-            const startAngle = currentAngle
-            currentAngle += angle
-            
-            const startX = 100 + 80 * Math.cos((startAngle - 90) * Math.PI / 180)
-            const startY = 100 + 80 * Math.sin((startAngle - 90) * Math.PI / 180)
-            const endX = 100 + 80 * Math.cos((currentAngle - 90) * Math.PI / 180)
-            const endY = 100 + 80 * Math.sin((currentAngle - 90) * Math.PI / 180)
-            
-            const largeArcFlag = angle > 180 ? 1 : 0
-            const pathData = `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
-            
-            return (
-              <path
-                key={index}
-                d={pathData}
-                fill={item.color}
-                opacity={0.8}
-                stroke="rgba(255,255,255,0.2)"
-                strokeWidth="2"
-              />
-            )
-          })}
-        </svg>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-          <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{total}</div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total</div>
-        </div>
-      </div>
-    )
+// =================== CONFIGURATION DES STEPS (CONSERVÉE) ===================
+const steps = [
+  {
+    id: 1,
+    titleKey: 'step1',
+    icon: FileText,
+    color: '#3b82f6',
+    required: true
+  },
+  {
+    id: 2,
+    titleKey: 'step2',
+    icon: Shield,
+    color: '#10b981',
+    required: true
+  },
+  {
+    id: 3,
+    titleKey: 'step3',
+    icon: AlertTriangle,
+    color: '#f59e0b',
+    required: true
+  },
+  {
+    id: 4,
+    titleKey: 'step4',
+    icon: Edit,
+    color: '#8b5cf6',
+    required: false
+  },
+  {
+    id: 5,
+    titleKey: 'step5',
+    icon: Users,
+    color: '#06b6d4',
+    required: false
+  },
+  {
+    id: 6,
+    titleKey: 'step6',
+    icon: CheckCircle,
+    color: '#10b981',
+    required: false
   }
-  
-  if (type === 'line') {
-    const maxValue = Math.max(...data.map(d => d.ast))
-    const width = 300
-    const height = 150
-    const padding = 20
-    
-    return (
-      <svg width={width} height={height} style={{ overflow: 'visible' }}>
-        {/* Ligne de performance */}
-        <polyline
-          fill="none"
-          stroke="#22c55e"
-          strokeWidth="3"
-          points={data.map((d, i) => 
-            `${padding + (i * (width - 2 * padding) / (data.length - 1))},${height - padding - (d.ast / maxValue) * (height - 2 * padding)}`
-          ).join(' ')}
-        />
-        {/* Points */}
-        {data.map((d, i) => (
-          <circle
-            key={i}
-            cx={padding + (i * (width - 2 * padding) / (data.length - 1))}
-            cy={height - padding - (d.ast / maxValue) * (height - 2 * padding)}
-            r="4"
-            fill="#22c55e"
-            stroke="white"
-            strokeWidth="2"
-          />
-        ))}
-      </svg>
-    )
-  }
-  
-  return <div>Graphique en développement</div>
-}
+];
 
-export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' } }: { tenant?: Tenant }) {
-  const [timeFilter, setTimeFilter] = useState('30d')
-  const [isVisible, setIsVisible] = useState(false)
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [showArchiveMenu, setShowArchiveMenu] = useState(false)
-  
-  const isDemo = tenant.subdomain === 'demo'
-  const data = getFunctionalData(isDemo)
+// =================== HOOK DÉTECTION MOBILE OPTIMISÉ (CONSERVÉ) ===================
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth <= 768;
+    }
+    return false;
+  });
 
-  // Animation d'entrée
   useEffect(() => {
-    setIsVisible(true)
+    let timeoutId: NodeJS.Timeout;
     
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
+    const checkIsMobile = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const newIsMobile = window.innerWidth <= 768;
+        if (newIsMobile !== isMobile) {
+          setIsMobile(newIsMobile);
+        }
+      }, 150);
+    };
+
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+      clearTimeout(timeoutId);
+    };
+  }, [isMobile]);
+
+  return isMobile;
+};
+
+// =================== COMPOSANT PRINCIPAL ASTFORM ===================
+export default function ASTForm({ 
+  tenant, 
+  language: initialLanguage = 'fr', 
+  userId, 
+  userRole = 'worker',
+  formData,
+  onDataChange
+}: ASTFormProps) {
+  
+  // =================== GESTION DE LA LANGUE OPTIMISÉE (CONSERVÉE) ===================
+  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
+      return savedLanguage || initialLanguage;
+    }
+    return initialLanguage;
+  });
+  const t = translations[currentLanguage];
+  
+  // =================== DÉTECTION MOBILE (CONSERVÉE) ===================
+  const isMobile = useIsMobile();
+
+  // =================== ÉTATS PRINCIPAUX STABLES (CONSERVÉS) ===================
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return navigator.onLine;
+    }
+    return true;
+  });
+  const [copied, setCopied] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // =================== DONNÉES AST STABLES (CONSERVÉES) ===================
+  const [astData, setAstData] = useState(() => ({
+    ...formData,
+    id: formData.id || `ast_${Date.now()}`,
+    astNumber: formData.astNumber || `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    tenant,
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy: userId || 'user_anonymous',
+    language: currentLanguage
+  }));
+
+  // =================== 🔥 FIX ANTI-BOUCLES ULTRA-STABLE ===================
+  const stableFormDataRef = useRef(astData);
+  const renderCountRef = useRef(0);
+  const lastUpdateRef = useRef<string>('');
+  
+  // ✅ HANDLER ULTRA-STABLE - INITIALISÉ UNE SEULE FOIS AVEC DEBOUNCE
+  const stableHandlerRef = useRef<(section: string, data: any) => void>();
+  
+  if (!stableHandlerRef.current) {
+    stableHandlerRef.current = (section: string, data: any) => {
+      const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
+      
+      // ✅ ÉVITER LES DOUBLONS
+      if (lastUpdateRef.current === updateKey) {
+        console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
+        return;
+      }
+      
+      lastUpdateRef.current = updateKey;
+      console.log('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
+      
+      // ✅ MISE À JOUR SYNCHRONE DE L'ÉTAT LOCAL
+      setAstData((prev: any) => {
+        const newData = {
+          ...prev,
+          [section]: data,
+          updatedAt: new Date().toISOString()
+        };
+        
+        // ✅ MISE À JOUR DE LA REF POUR ÉVITER LES RE-RENDERS
+        stableFormDataRef.current = newData;
+        return newData;
+      });
+      
+      // ✅ SYNC PARENT DIFFÉRÉE AVEC DEBOUNCE - ÉVITE LES CONFLITS CRITIQUES
+      setTimeout(() => {
+        try {
+          onDataChange(section, data);
+        } catch (error) {
+          console.error('❌ Erreur sync parent:', error);
+        }
+      }, 100);
+      
+      setHasUnsavedChanges(true);
+    };
+  }
+
+  // ✅ TRACK RENDERS POUR DEBUG
+  renderCountRef.current++;
+  
+  // ✅ MISE À JOUR DE LA REF SEULEMENT QUAND NÉCESSAIRE
+  useEffect(() => {
+    stableFormDataRef.current = astData;
+  }, [astData]);
+
+  // =================== FONCTIONS UTILITAIRES MÉMORISÉES (CONSERVÉES) ===================
+  const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
+    if (newLanguage !== currentLanguage) {
+      setCurrentLanguage(newLanguage);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ast-language-preference', newLanguage);
+      }
+    }
+  }, [currentLanguage]);
+
+  const getCompletionPercentage = useCallback((): number => {
+    const completedSteps = getCurrentCompletedSteps();
+    return Math.round((completedSteps / 6) * 100);
+  }, []);
+
+  const getCurrentCompletedSteps = useCallback((): number => {
+    let completed = 0;
+    
+    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
+      completed++;
     }
     
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    if (astData.equipment?.selected?.length > 0) {
+      completed++;
+    }
+    
+    if (astData.hazards?.selected?.length > 0) {
+      completed++;
+    }
+    
+    if (astData.permits?.permits?.length > 0) {
+      completed++;
+    }
+    
+    if (astData.validation?.reviewers?.length > 0) {
+      completed++;
+    }
+    
+    if (currentStep >= 6) {
+      completed++;
+    }
+    
+    return completed;
+  }, [astData, currentStep]);
 
-  return (
-    <>
-      {/* CSS Animations Global */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes gradientShift {
-            0%, 100% { 
-              background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
-              background-size: 400% 400%;
-              background-position: 0% 50%;
-            }
-            50% { 
-              background-position: 100% 50%;
-            }
-          }
-          
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-10px) rotate(1deg); }
-            66% { transform: translateY(-5px) rotate(-1deg); }
-          }
-          
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
-          }
-          
-          @keyframes slideInUp {
-            from { 
-              opacity: 0; 
-              transform: translateY(60px) scale(0.95); 
-            }
-            to { 
-              opacity: 1; 
-              transform: translateY(0) scale(1); 
-            }
-          }
-          
-          @keyframes slideInRight {
-            from { 
-              opacity: 0; 
-              transform: translateX(-60px); 
-            }
-            to { 
-              opacity: 1; 
-              transform: translateX(0); 
-            }
-          }
-          
-          @keyframes glow {
-            0%, 100% { 
-              box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
-            }
-            50% { 
-              box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
-            }
-          }
-          
-          @keyframes shine {
-            0% { left: -100%; }
-            50% { left: 100%; }
-            100% { left: 100%; }
-          }
-          
-          @keyframes progressFill {
-            from { width: 0%; }
-            to { width: var(--progress, 0%); }
-          }
-          
-          @keyframes logoGlow {
-            0%, 100% { 
-              filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
-            }
-            50% { 
-              filter: brightness(1.5) contrast(1.3) drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
-            }
-          }
-          
-          .dashboard-container {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-          }
-          
-          .float-animation { 
-            animation: float 6s ease-in-out infinite; 
-          }
-          
-          .pulse-animation { 
-            animation: pulse 3s ease-in-out infinite; 
-          }
-          
-          .slide-in-up { 
-            animation: slideInUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-          }
-          
-          .slide-in-right { 
-            animation: slideInRight 0.6s ease-out; 
-          }
-          
-          .glow-effect {
-            animation: glow 4s ease-in-out infinite;
-          }
-          
-          .logo-glow {
-            animation: logoGlow 3s ease-in-out infinite;
-          }
-          
-          .card-hover {
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-          }
-          
-          .card-hover:hover {
-            transform: translateY(-12px) scale(1.03);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(251, 191, 36, 0.3);
-          }
-          
-          .progress-bar {
-            animation: progressFill 2s ease-out;
-          }
-          
-          .glass-effect {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-          }
-          
-          .text-gradient {
-            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-          
-          .btn-premium {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
-            background-size: 200% 200%;
-            border: none;
-            border-radius: 16px;
-            padding: 14px 28px;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
-          }
-          
-          .btn-premium:hover {
-            transform: translateY(-2px);
-            background-position: 100% 0;
-            box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
-          }
-          
-          .dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            min-width: 280px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            overflow: hidden;
-          }
-          
-          .dropdown-item {
-            padding: 16px 20px;
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          
-          .dropdown-item:hover {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-            transform: translateX(8px);
-          }
-          
-          .interactive-bg {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(251, 191, 36, 0.1) 0%, transparent 70%);
-            pointer-events: none;
-            transition: all 0.3s ease;
-            z-index: 0;
-          }
-          
-          @media (max-width: 768px) {
-            .slide-in-up { animation-delay: 0.1s; }
-            .dashboard-container { padding: 12px; }
-            
-            .mobile-grid {
-              grid-template-columns: 1fr !important;
-              gap: 16px !important;
-            }
-            
-            .mobile-padding {
-              padding: 16px !important;
-            }
-            
-            .mobile-text {
-              font-size: 14px !important;
-            }
-            
-            .mobile-title {
-              font-size: 24px !important;
-            }
-            
-            .mobile-kpi {
-              font-size: 28px !important;
-            }
-          }
-          
-          @media (max-width: 480px) {
-            .dashboard-container { padding: 8px; }
-            
-            .ultra-mobile-grid {
-              grid-template-columns: 1fr !important;
-              gap: 12px !important;
-            }
-            
-            .ultra-mobile-padding {
-              padding: 12px !important;
-            }
-          }
-          
-          @media (min-width: 769px) and (max-width: 1024px) {
-            .tablet-grid {
-              grid-template-columns: repeat(2, 1fr) !important;
-            }
-          }
-          
-          @media (min-width: 1025px) {
-            .desktop-grid {
-              grid-template-columns: repeat(3, 1fr) !important;
-            }
-            
-            .desktop-kpi-grid {
-              grid-template-columns: repeat(4, 1fr) !important;
-            }
-          }
-        `
-      }} />
+  const canNavigateToNext = useCallback((): boolean => {
+    switch (currentStep) {
+      case 1:
+        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
+      case 2:
+        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
+      case 3:
+        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
+      case 4:
+        return true;
+      case 5:
+        return true;
+      case 6:
+        return false;
+      default:
+        return false;
+    }
+  }, [astData, currentStep]);
 
-      <div className="dashboard-container">
-        {/* Fond interactif qui suit la souris */}
-        <div 
-          className="interactive-bg"
-          style={{
-            left: mousePosition.x - 150,
-            top: mousePosition.y - 150,
-          }}
-        />
+  // =================== NAVIGATION OPTIMISÉE (CONSERVÉE) ===================
+  const handlePrevious = useCallback(() => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  }, []);
 
-        {/* Pattern overlay pour texture */}
+  const handleNext = useCallback(() => {
+    if (canNavigateToNext() && currentStep < 6) {
+      setCurrentStep(prev => prev + 1);
+    }
+  }, [canNavigateToNext, currentStep]);
+
+  const handleStepClick = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
+
+  // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES (CONSERVÉES) ===================
+  const handleCopyAST = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(astData.astNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Erreur lors de la copie:', err);
+    }
+  }, [astData.astNumber]);
+
+  const changeStatus = useCallback((newStatus: any) => {
+    setAstData((prev: any) => ({
+      ...prev,
+      status: newStatus,
+      updatedAt: new Date().toISOString()
+    }));
+  }, []);
+
+  // =================== STATUS BADGE MÉMORISÉ (CONSERVÉ) ===================
+  const getStatusBadge = useCallback(() => {
+    const statusConfig = {
+      'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
+      'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
+      'approved': { color: '#10b981', text: t.status.approved, icon: CheckCircle },
+      'auto_approved': { color: '#059669', text: t.status.auto_approved, icon: CheckCircle },
+      'rejected': { color: '#ef4444', text: t.status.rejected, icon: AlertTriangle }
+    };
+
+    const config = statusConfig[astData.status as keyof typeof statusConfig] || statusConfig.draft;
+    const Icon = config.icon;
+
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: isMobile ? '6px 12px' : '8px 16px',
+        background: `${config.color}20`,
+        border: `1px solid ${config.color}40`,
+        borderRadius: '20px',
+        color: config.color,
+        fontSize: isMobile ? '12px' : '14px',
+        fontWeight: '500'
+      }}>
+        <Icon size={isMobile ? 14 : 16} />
+        {config.text}
+      </div>
+    );
+  }, [astData.status, t.status, isMobile]);
+
+  // =================== 🔥 COMPOSANT LOGO EXACTEMENT COMME DASHBOARD + AUTO-AJUSTABLE ===================
+  const LogoComponent = useMemo(() => ({ 
+    isMobile = false
+  }: { 
+    isMobile?: boolean;
+  }) => {
+    return (
+      <div 
+        className="float-animation glow-effect"
+        style={{
+          // 🔥 EXACTEMENT COMME DASHBOARD
+          background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+          padding: isMobile ? '16px' : '32px',
+          borderRadius: isMobile ? '16px' : '32px',
+          border: '4px solid #f59e0b',
+          boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{
+          width: isMobile ? '32px' : '96px',
+          height: isMobile ? '32px' : '96px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <img 
+            src="/c-secur360-logo.png" 
+            alt="C-Secur360"
+            className="logo-glow"
+            style={{ 
+              width: isMobile ? '24px' : '80px',
+              height: isMobile ? '24px' : '80px',
+              objectFit: 'contain',
+              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))'
+            }}
+            onError={(e) => {
+              console.log('❌ Erreur chargement logo:', e);
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+          <div style={{ 
+            display: 'none',
+            color: '#f59e0b', 
+            fontSize: isMobile ? '16px' : '48px',
+            fontWeight: '900',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textShadow: '0 4px 8px rgba(0,0,0,0.7)',
+            width: '100%',
+            height: '100%'
+          }}>
+            🛡️
+          </div>
+        </div>
+        
+        {/* Effet brillance animé (exactement comme dashboard) */}
         <div style={{
           position: 'absolute',
           top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0.03,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          pointerEvents: 'none',
-          zIndex: 1
+          left: '-100%',
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+          animation: 'shine 2.5s ease-in-out infinite'
         }} />
-
-        {/* Header Ultra Premium avec Logo Ultra Grossi */}
-        <header style={{
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
-          position: 'relative',
-          zIndex: 10
-        }}>
-          <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            padding: '24px 20px',
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(-20px)',
-            transition: 'all 0.8s ease'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '20px'
-            }}>
-              
-              {/* Logo Premium Ultra Grossi */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div 
-                  className="float-animation glow-effect"
-                  style={{
-                    background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                    padding: '32px',
-                    borderRadius: '32px',
-                    border: '4px solid #f59e0b',
-                    boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div style={{
-                    width: '96px',
-                    height: '96px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    zIndex: 1
-                  }}>
-                    <img 
-                      src="/c-secur360-logo.png" 
-                      alt="C-Secur360"
-                      className="logo-glow"
-                      style={{ 
-                        width: '200px', 
-                        height: '200px', 
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'block';
-                      }}
-                    />
-                    <BarChart3 style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      display: 'none',
-                      color: '#f59e0b'
-                    }} />
-                  </div>
-                  
-                  {/* Effet brillance animé renforcé */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-                    animation: 'shine 2.5s ease-in-out infinite'
-                  }} />
-                  
-                  {/* Effet de pulse en arrière-plan */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: '-10px',
-                    border: '2px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '40px',
-                    animation: 'pulse 3s ease-in-out infinite'
-                  }} />
-                </div>
-                
-                <div className="slide-in-right">
-                  <h1 className="text-gradient" style={{
-                    fontSize: '40px',
-                    margin: 0,
-                    lineHeight: 1.2,
-                    fontWeight: '900',
-                    letterSpacing: '-0.025em'
-                  }}>
-                    🛡️ C-Secur360
-                  </h1>
-                  <p style={{
-                    color: 'rgba(251, 191, 36, 0.9)',
-                    fontSize: '20px',
-                    margin: 0,
-                    fontWeight: '600'
-                  }}>
-                    Dashboard Gestionnaire SST • {tenant.companyName}
-                  </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginTop: '12px'
-                  }}>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: '#22c55e'
-                    }} className="pulse-animation" />
-                    <span style={{
-                      color: '#22c55e',
-                      fontSize: '16px',
-                      fontWeight: '600'
-                    }}>
-                      Système opérationnel
-                    </span>
-                    {isDemo && (
-                      <span style={{
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        color: '#f59e0b',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginLeft: '8px'
-                      }}>
-                        VERSION DÉMO
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Contrôles premium */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px',
-                flexWrap: 'wrap'
-              }}>
-                <select 
-                  value={timeFilter} 
-                  onChange={(e) => setTimeFilter(e.target.value)}
-                  style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    color: 'white',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    backdropFilter: 'blur(10px)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <option value="7d">7 derniers jours</option>
-                  <option value="30d">30 derniers jours</option>
-                  <option value="90d">3 derniers mois</option>
-                  <option value="1y">Dernière année</option>
-                </select>
-                
-                <button className="btn-premium">
-                  <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Rapport Exécutif
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-                  {/* Container principal */}
+        
+        {/* Effet pulse border (exactement comme dashboard) */}
+        <div style={{
+          position: 'absolute',
+          inset: '-10px',
+          border: '2px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: isMobile ? '24px' : '40px',
+          animation: 'pulse 3s ease-in-out infinite'
+        }} />
+      </div>
+    );
+  }, []);
+  {/* 🔥 Logo desktop auto-ajustable (exactement comme dashboard) */}
+          <LogoComponent isMobile={false} />// =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
+  const MobileHeader = () => (
+    <header style={{
+      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
+      backdropFilter: 'blur(20px)',
+      padding: '12px 16px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
+      minHeight: '70px'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        maxWidth: '100%',
+        marginBottom: '8px'
+      }}>
+        {/* 🔥 Logo mobile carré orange auto-ajustable (style dashboard) */}
+        <LogoComponent 
+          containerSize="40px"
+          logoSize="32px" 
+          mobileContainerSize="40px"
+          mobileLogo="32px"
+          showBorder={true}
+          showEffects={false}
+        />
+        
+        {/* Titre mobile responsive (conservé) */}
         <div style={{ 
-          maxWidth: '1400px', 
-          margin: '0 auto', 
-          padding: '32px 20px', 
-          position: 'relative',
-          zIndex: 5
+          flex: 1, 
+          marginLeft: '12px', 
+          marginRight: '8px',
+          minWidth: 0
         }}>
-
-          {/* Actions Rapides EN HAUT - Responsive */}
-          <div 
-            className="slide-in-up mobile-grid tablet-grid desktop-grid"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '24px',
-              marginBottom: '48px'
-            }}
-          >
-            {[
-              { 
-                href: `/${tenant.subdomain}/ast/nouveau`, 
-                icon: FileText, 
-                title: 'Nouveau AST', 
-                desc: 'Créer une analyse complète', 
-                color: '#3b82f6',
-                gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/near-miss/nouveau`, 
-                icon: AlertTriangle, 
-                title: 'Passé Proche', 
-                desc: 'Signaler un incident/accident', 
-                color: '#f97316',
-                gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/improvements/nouveau`, 
-                icon: Target, 
-                title: 'Amélioration', 
-                desc: 'Suggérer une amélioration', 
-                color: '#22c55e',
-                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                priority: true
-              }
-            ].map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
-                  <div 
-                    className="glass-effect card-hover mobile-padding"
-                    style={{
-                      padding: '32px 24px',
-                      textAlign: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      border: `2px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
-                      minHeight: '180px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {/* Barre colorée en haut */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '6px',
-                      background: action.gradient,
-                      opacity: 0.9
-                    }} />
-                    
-                    {/* Badge priorité */}
-                    <div className="mobile-text" style={{
-                      position: 'absolute',
-                      top: '16px',
-                      right: '16px',
-                      background: action.gradient,
-                      color: 'white',
-                      padding: '4px 8px',
-                      borderRadius: '8px',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      Priorité
-                    </div>
-                    
-                    {/* Icône principale */}
-                    <div 
-                      className="float-animation"
-                      style={{
-                        width: '64px',
-                        height: '64px',
-                        margin: '0 auto 16px auto',
-                        background: action.gradient,
-                        borderRadius: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 8px 32px rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
-                        position: 'relative'
-                      }}
-                    >
-                      <Icon style={{ width: '32px', height: '32px', color: 'white' }} />
-                    </div>
-                    
-                    {/* Titre */}
-                    <h3 className="text-gradient mobile-text" style={{ 
-                      fontSize: '18px', 
-                      fontWeight: '700', 
-                      margin: '0 0 8px 0',
-                      textAlign: 'center'
-                    }}>
-                      {action.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="mobile-text" style={{ 
-                      color: '#94a3b8', 
-                      fontSize: '13px', 
-                      margin: '0 0 16px 0',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      lineHeight: 1.4
-                    }}>
-                      {action.desc}
-                    </p>
-                    
-                    {/* Call to action */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      color: action.color,
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      background: `rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.1)`,
-                      padding: '8px 16px',
-                      borderRadius: '12px',
-                      border: `1px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.2)`
-                    }}>
-                      <Play style={{ width: '12px', height: '12px' }} />
-                      Commencer
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <h1 style={{
+            color: '#ffffff',
+            fontSize: '16px',
+            fontWeight: '700',
+            margin: 0,
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
+          </h1>
+          <div style={{
+            color: '#94a3b8',
+            fontSize: '11px',
+            margin: '2px 0 0 0',
+            fontWeight: '400',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            AST #{astData.astNumber.slice(-6)} • {tenant.toUpperCase()}
           </div>
-          
-          {/* KPI Cards Fonctionnels */}
-          <div 
-            className="slide-in-up" 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '20px',
-              marginBottom: '40px'
-            }}
-          >
-            
-            {/* AST Complétés - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(34, 197, 94, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    AST Complétés
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.astCompleted.toLocaleString()}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(34, 197, 94, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    +{data.astThisMonth} ce mois
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                      borderRadius: '2px',
-                      '--progress': `${Math.min((data.astCompleted / data.totalAST) * 100, 100)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)'
-                  }}
-                >
-                  <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* AST Mensuels - REMPLACE Conformité */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(59, 130, 246, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    AST Mensuels
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.astThisMonth}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(59, 130, 246, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Calendar style={{ width: '12px', height: '12px' }} />
-                    Objectif: {Math.round(data.totalAST / 12)}/mois
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-                      borderRadius: '2px',
-                      '--progress': `${Math.min((data.astThisMonth / (data.totalAST / 12)) * 100, 100)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
-                  }}
-                >
-                  <Calendar style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Incidents - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(245, 158, 11, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    Incidents
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.incidents}
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(245, 158, 11, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    {Math.abs(data.incidentsTrend)}% {data.incidentsTrend < 0 ? 'réduction' : 'augmentation'}
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: data.incidents === 0 ? 'linear-gradient(90deg, #22c55e, #16a34a)' : 'linear-gradient(90deg, #f59e0b, #d97706)',
-                      borderRadius: '2px',
-                      '--progress': `${data.incidents === 0 ? 100 : Math.max(100 - (data.incidents * 20), 20)}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: data.incidents === 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${data.incidents === 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-                  }}
-                >
-                  {data.incidents === 0 ? 
-                    <CheckCircle style={{ width: '28px', height: '28px', color: '#22c55e' }} /> :
-                    <AlertTriangle style={{ width: '28px', height: '28px', color: '#f59e0b' }} />
-                  }
-                </div>
-              </div>
-            </div>
-
-            {/* Heures Sécuritaires - REMPLACE Économies */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ 
-                position: 'absolute', 
-                top: '-50%', 
-                right: '-50%', 
-                width: '200%', 
-                height: '200%', 
-                background: 'radial-gradient(circle, rgba(147, 51, 234, 0.15) 0%, transparent 70%)', 
-                pointerEvents: 'none' 
-              }} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(147, 51, 234, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
-                  }}>
-                    Heures Sécuritaires
-                  </p>
-                  <p style={{ 
-                    color: 'white', 
-                    fontSize: '32px', 
-                    fontWeight: '900', 
-                    margin: '0 0 6px 0', 
-                    lineHeight: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {(data.safeHours / 1000).toFixed(1)}K
-                  </p>
-                  <p style={{ 
-                    color: 'rgba(147, 51, 234, 0.8)', 
-                    fontSize: '12px', 
-                    margin: 0, 
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <Timer style={{ width: '12px', height: '12px' }} />
-                    {data.safetyRate}% taux sécurité
-                  </p>
-                  <div style={{
-                    marginTop: '10px',
-                    height: '3px',
-                    background: 'rgba(147, 51, 234, 0.2)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
-                    <div className="progress-bar" style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #9333ea, #7c3aed)',
-                      borderRadius: '2px',
-                      '--progress': `${data.safetyRate}%`
-                    } as any} />
-                  </div>
-                </div>
-                <div 
-                  className="pulse-animation"
-                  style={{
-                    background: 'rgba(147, 51, 234, 0.2)',
-                    padding: '16px',
-                    borderRadius: '16px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(147, 51, 234, 0.3)'
-                  }}
-                >
-                  <Timer style={{ width: '28px', height: '28px', color: '#9333ea' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Graphiques de Performance - REMPLACE Alertes Prioritaires */}
-          <div 
-            className="glass-effect slide-in-up"
+        </div>
+        
+        {/* Sélecteur de langue mobile (conservé) */}
+        <div style={{
+          display: 'flex',
+          background: 'rgba(30, 41, 59, 0.8)',
+          borderRadius: '6px',
+          padding: '4px',
+          gap: '2px',
+          flexShrink: 0
+        }}>
+          <button
+            onClick={() => handleLanguageChange('fr')}
             style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
-              borderColor: 'rgba(59, 130, 246, 0.2)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: 'none',
+              background: currentLanguage === 'fr' 
+                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+                : 'transparent',
+              color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
+              fontSize: '10px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              minWidth: '24px'
+            }}
+          >
+            FR
+          </button>
+          <button
+            onClick={() => handleLanguageChange('en')}
+            style={{
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: 'none',
+              background: currentLanguage === 'en' 
+                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+                : 'transparent',
+              color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
+              fontSize: '10px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              minWidth: '24px'
+            }}
+          >
+            EN
+          </button>
+        </div>
+      </div>
+      
+      {/* Status mobile compact (conservé) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          padding: '4px 8px',
+          borderRadius: '12px',
+          fontSize: '10px'
+        }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            background: '#22c55e',
+            borderRadius: '50%',
+            animation: 'pulse 2s infinite'
+          }} />
+          <span style={{
+            color: '#22c55e',
+            fontSize: '10px',
+            fontWeight: '600'
+          }}>
+            {t.active}
+          </span>
+        </div>
+        
+        <div style={{ fontSize: '10px' }}>
+          {getStatusBadge()}
+        </div>
+      </div>
+    </header>
+  );
+
+  // =================== 🔥 HEADER DESKTOP AVEC LOGO CARRÉ ORANGE 200x200 ===================
+  const DesktopHeader = () => (
+    <header style={{
+      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
+      backdropFilter: 'blur(20px)',
+      borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
+      padding: '24px 20px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50
+    }}>
+      <div style={{ 
+        maxWidth: '1400px', 
+        margin: '0 auto', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        flexWrap: 'wrap', 
+        gap: '20px' 
+      }}>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          {/* 🔥 Logo desktop carré orange auto-ajustable (style dashboard) */}
+          <div 
+            className="float-animation glow-effect"
+            style={{
               padding: '32px',
-              marginBottom: '40px',
+              borderRadius: '32px',
               position: 'relative',
               overflow: 'hidden'
             }}
           >
+            <LogoComponent 
+              containerSize="200px"
+              logoSize="136px" 
+              mobileContainerSize="96px"
+              mobileLogo="64px"
+              showBorder={true}
+              showEffects={true}
+            />
+          </div>
+          
+          <div className="slide-in-right">
+            <h1 className="text-gradient" style={{
+              fontSize: '40px',
+              margin: 0,
+              lineHeight: 1.2,
+              fontWeight: '900',
+              letterSpacing: '-0.025em'
+            }}>
+              {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
+            </h1>
+            <p style={{
+              color: 'rgba(251, 191, 36, 0.9)',
+              fontSize: '20px',
+              margin: 0,
+              fontWeight: '600'
+            }}>
+              {t.subtitle} • {tenant.toUpperCase()}
+            </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: '#22c55e'
+              }} className="pulse-animation" />
+              <span style={{
+                color: '#22c55e',
+                fontSize: '16px',
+                fontWeight: '600'
+              }}>
+                {t.systemOperational}
+              </span>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#94a3b8', 
+                margin: 0,
+                fontWeight: '500'
+              }}>
+                {t.astStep} {currentStep} {t.stepOf} {steps.length}
+              </p>
+              {getStatusBadge()}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          
+          <LanguageSelector />
+          
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Shield size={16} color="#3b82f6" />
+            <div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '2px' }}>
+                {t.astNumber}
+              </div>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#ffffff',
+                fontFamily: 'monospace',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                {astData.astNumber}
+                <button
+                  onClick={handleCopyAST}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: copied ? '#10b981' : '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    borderRadius: '4px',
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {isOnline ? <Wifi size={14} color="#10b981" /> : <WifiOff size={14} color="#ef4444" />}
+            <span style={{ fontSize: '12px', color: isOnline ? '#10b981' : '#ef4444' }}>
+              {isOnline ? t.online : t.offline}
+            </span>
+          </div>
+
+          {(userRole === 'supervisor' || userRole === 'manager') && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => changeStatus('pending_verification')}
+                disabled={astData.status !== 'draft'}
+                className="btn-premium"
+                style={{
+                  opacity: astData.status === 'draft' ? 1 : 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 12px',
+                  fontSize: '12px'
+                }}
+              >
+                <Bell size={12} />
+                {t.submit}
+              </button>
+              
+              <button
+                onClick={() => changeStatus('approved')}
+                disabled={astData.status !== 'pending_verification'}
+                className="btn-premium"
+                style={{
+                  opacity: astData.status === 'pending_verification' ? 1 : 0.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  background: 'linear-gradient(135deg, #10b981, #059669)'
+                }}
+              >
+                <CheckCircle size={12} />
+                {t.approve}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+
+  // =================== COMPOSANT SÉLECTEUR DE LANGUE (CONSERVÉ) ===================
+  const LanguageSelector = () => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      background: 'rgba(15, 23, 42, 0.8)',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(100, 116, 139, 0.3)',
+      borderRadius: '12px',
+      padding: '8px 12px',
+      position: 'relative'
+    }}>
+      <span style={{
+        fontSize: '12px',
+        color: '#94a3b8',
+        fontWeight: '500'
+      }}>
+        {t.language}
+      </span>
+      
+      <div style={{
+        display: 'flex',
+        background: 'rgba(30, 41, 59, 0.8)',
+        borderRadius: '8px',
+        padding: '2px',
+        gap: '2px'
+      }}>
+        <button
+          onClick={() => handleLanguageChange('fr')}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: 'none',
+            background: currentLanguage === 'fr' 
+              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+              : 'transparent',
+            color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
+            fontSize: '11px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '30px'
+          }}
+        >
+          FR
+        </button>
+        
+        <button
+          onClick={() => handleLanguageChange('en')}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            border: 'none',
+            background: currentLanguage === 'en' 
+              ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+              : 'transparent',
+            color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
+            fontSize: '11px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            minWidth: '30px'
+          }}
+        >
+          EN
+        </button>
+      </div>
+    </div>
+  );
+
+  // =================== NAVIGATION STEPS MOBILE (CONSERVÉE INTÉGRALEMENT) ===================
+  const MobileStepsNavigation = () => (
+    <div style={{
+      padding: '12px 16px',
+      background: 'rgba(15, 23, 42, 0.8)',
+      backdropFilter: 'blur(10px)',
+      borderBottom: '1px solid rgba(100, 116, 139, 0.2)'
+    }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '6px',
+        marginBottom: '10px'
+      }}>
+        {steps.map((step) => (
+          <div
+            key={step.id}
+            style={{
+              background: currentStep === step.id 
+                ? 'rgba(59, 130, 246, 0.2)' 
+                : 'rgba(30, 41, 59, 0.6)',
+              border: currentStep === step.id 
+                ? '1px solid #3b82f6' 
+                : '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '8px',
+              padding: '8px 6px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              transform: currentStep === step.id ? 'translateY(-1px)' : 'none',
+              boxShadow: currentStep === step.id ? '0 2px 8px rgba(59, 130, 246, 0.3)' : 'none',
+              minHeight: '60px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onClick={() => handleStepClick(step.id)}
+          >
+            <div style={{
+              width: '24px',
+              height: '24px',
+              margin: '0 auto 4px',
+              background: currentStep === step.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: currentStep === step.id ? '#3b82f6' : '#60a5fa',
+              fontSize: '12px'
+            }}>
+              {getCurrentCompletedSteps() > step.id - 1 ? '✓' : 
+               currentStep === step.id ? <step.icon size={12} /> : 
+               <step.icon size={10} />}
+            </div>
+            <div style={{
+              color: currentStep === step.id ? '#ffffff' : '#e2e8f0',
+              fontSize: '9px',
+              fontWeight: '600',
+              margin: 0,
+              lineHeight: '1.2',
+              textAlign: 'center'
+            }}>
+              {(t.steps as any)[step.titleKey]?.title}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div style={{ marginTop: '10px' }}>
+        <div style={{
+          width: '100%',
+          height: '4px',
+          background: 'rgba(30, 41, 59, 0.8)',
+          borderRadius: '2px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            height: '100%',
+            background: 'linear-gradient(90deg, #3b82f6, #1d4ed8)',
+            borderRadius: '2px',
+            transition: 'width 0.5s ease',
+            width: `${getCompletionPercentage()}%`,
+            position: 'relative'
+          }}>
             <div style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #3b82f6, #9333ea, #22c55e)',
-              opacity: 0.6
+              bottom: 0,
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+              animation: 'progressShine 2s ease-in-out infinite'
             }} />
-            
-            <h2 className="text-gradient" style={{
-              fontSize: '28px',
-              margin: '0 0 32px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              fontWeight: '700'
-            }}>
-              <BarChart3 className="pulse-animation" style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
-              Graphiques de Performance
-              {isDemo && (
-                <span style={{
-                  background: 'rgba(245, 158, 11, 0.2)',
-                  color: '#f59e0b',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}>
-                  Données simulées
-                </span>
-              )}
-            </h2>
-            
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
-              gap: '32px' 
-            }}>
-              
-              {/* Évolution AST par mois */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#3b82f6', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <LineChart style={{ width: '20px', height: '20px' }} />
-                  Évolution AST
-                </h3>
-                <SimpleChart data={data.monthlyData} type="line" />
-                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
-                  <span>Jan</span>
-                  <span>Mar</span>
-                  <span>Mai</span>
-                  <span>Jul</span>
-                </div>
-              </div>
-
-              {/* Types d'incidents (Camembert) */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#f59e0b', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <PieChart style={{ width: '20px', height: '20px' }} />
-                  Types d'Incidents
-                </h3>
-                <SimpleChart data={data.incidentsByType} type="pie" />
-                <div style={{ marginTop: '16px' }}>
-                  {data.incidentsByType.map((item, index) => (
-                    <div key={index} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      marginBottom: '8px',
-                      fontSize: '12px'
-                    }}>
-                      <div style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        borderRadius: '50%', 
-                        background: item.color 
-                      }} />
-                      <span style={{ color: 'white', flex: 1 }}>{item.type}</span>
-                      <span style={{ color: '#94a3b8' }}>{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Photos AST */}
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                borderRadius: '20px',
-                padding: '24px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <h3 style={{ 
-                  color: '#22c55e', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  margin: '0 0 20px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <Camera style={{ width: '20px', height: '20px' }} />
-                  Photos Documentation
-                </h3>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    color: 'white', 
-                    fontSize: '48px', 
-                    fontWeight: '900', 
-                    margin: '20px 0 8px 0',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    {data.photosCount}
-                  </div>
-                  <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
-                    Photos totales
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
-                    +{data.photosThisWeek} cette semaine
-                  </div>
-                  
-                  <div style={{
-                    marginTop: '20px',
-                    height: '6px',
-                    background: 'rgba(34, 197, 94, 0.2)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                      borderRadius: '3px',
-                      width: `${Math.min((data.photosCount / (data.astCompleted * 3)) * 100, 100)}%`,
-                      transition: 'width 2s ease'
-                    }} />
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '8px' }}>
-                    Objectif: 3 photos/AST
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions Secondaires */}
-          <div 
-            className="slide-in-up"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-              gap: '20px',
-              marginBottom: '40px'
-            }}
-          >
-            {[
-              { 
-                href: `/${tenant.subdomain}/reports`, 
-                icon: BarChart3, 
-                title: 'Rapports Analytics', 
-                desc: 'Graphiques détaillés', 
-                color: '#9333ea',
-                gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)'
-              },
-              { 
-                href: `/${tenant.subdomain}/photos`, 
-                icon: Camera, 
-                title: 'Photos AST', 
-                desc: 'Galerie documentation', 
-                color: '#22c55e',
-                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-              },
-              { 
-                href: `/${tenant.subdomain}/archives`, 
-                icon: Archive, 
-                title: 'Archives', 
-                desc: 'Historique des données', 
-                color: '#f59e0b',
-                gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-              }
-            ].map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
-                  <div 
-                    className="glass-effect card-hover"
-                    style={{
-                      padding: '20px',
-                      textAlign: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      border: `1px solid rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`,
-                      minHeight: '140px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      background: action.gradient,
-                      opacity: 0.8
-                    }} />
-                    
-                    <div 
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        margin: '0 auto 12px auto',
-                        background: action.gradient,
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 6px 20px rgba(${action.color === '#9333ea' ? '147, 51, 234' : action.color === '#22c55e' ? '34, 197, 94' : '245, 158, 11'}, 0.3)`
-                      }}
-                    >
-                      <Icon style={{ width: '24px', height: '24px', color: 'white' }} />
-                    </div>
-                    
-                    <h3 className="text-gradient" style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      margin: '0 0 6px 0' 
-                    }}>
-                      {action.title}
-                    </h3>
-                    <p style={{ 
-                      color: '#94a3b8', 
-                      fontSize: '12px', 
-                      margin: 0,
-                      fontWeight: '500'
-                    }}>
-                      {action.desc}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
           </div>
         </div>
-
-        {/* Footer Ultra Premium */}
-        <footer style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '1px solid rgba(100, 116, 139, 0.2)',
-          marginTop: '60px',
-          position: 'relative',
-          zIndex: 10
+        <div style={{
+          textAlign: 'center',
+          color: '#94a3b8',
+          fontSize: '10px',
+          marginTop: '4px',
+          fontWeight: '500'
         }}>
-          <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            padding: '32px 20px' 
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              flexWrap: 'wrap', 
-              gap: '20px' 
-            }}>
-              <div>
-                <p style={{ 
-                  color: '#94a3b8', 
-                  fontSize: '14px', 
-                  margin: '0 0 8px 0',
-                  fontWeight: '500'
-                }}>
-                  🏛️ Conforme CNESST • CSA Z1000 • C-Secur360 © 2024
-                </p>
-                <p style={{ 
-                  color: '#64748b', 
-                  fontSize: '12px', 
-                  margin: 0 
-                }}>
-                  {isDemo ? 'Plateforme de démonstration avec données simulées' : 'Plateforme certifiée pour la sécurité au travail'}
-                </p>
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px', 
-                fontSize: '14px', 
-                color: '#94a3b8',
-                flexWrap: 'wrap'
-              }}>
-                <span>Dernière mise à jour: {new Date().toLocaleDateString('fr-CA')}</span>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  color: '#22c55e'
-                }}>
-                  <div style={{ 
-                    width: '10px', 
-                    height: '10px', 
-                    borderRadius: '50%', 
-                    background: '#22c55e' 
-                  }} className="pulse-animation" />
-                  Système opérationnel
-                </div>
-                {isDemo && (
-                  <span style={{ color: '#f59e0b', fontWeight: '600' }}>
-                    MODE DÉMONSTRATION
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </footer>
+          {t.astStep.replace('AST •', '').replace('JSA •', '')} {currentStep}/6 • {Math.round(getCompletionPercentage())}% {t.completed}
+        </div>
       </div>
-    </>
-  )
+    </div>
+  );
+
+  // =================== NAVIGATION DESKTOP (CONSERVÉE INTÉGRALEMENT) ===================
+  const DesktopStepsNavigation = () => (
+    <div className="glass-effect slide-in desktop-only" style={{ 
+      padding: '24px', 
+      marginBottom: '24px',
+      maxWidth: '1200px',
+      margin: '20px auto 24px'
+    }}>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
+            {t.progress}
+          </h2>
+          <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+            {Math.round((currentStep / steps.length) * 100)}% {t.completed}
+          </span>
+        </div>
+        
+        <div style={{
+          background: 'rgba(15, 23, 42, 0.5)',
+          borderRadius: '12px',
+          height: '8px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            background: `linear-gradient(90deg, ${steps[0]?.color || '#3b82f6'}, ${steps[Math.min(currentStep - 1, steps.length - 1)]?.color || '#10b981'})`,
+            height: '100%',
+            width: `${(currentStep / steps.length) * 100}%`,
+            transition: 'width 0.5s ease',
+            borderRadius: '12px'
+          }} />
+        </div>
+      </div>
+
+      <div className="step-grid" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: '16px'
+      }}>
+        {steps.map((step) => (
+          <div
+            key={step.id}
+            onClick={() => setCurrentStep(step.id)}
+            style={{
+              background: currentStep === step.id 
+                ? `linear-gradient(135deg, ${step.color}25, ${step.color}15)`
+                : 'rgba(30, 41, 59, 0.5)',
+              border: currentStep === step.id 
+                ? `2px solid ${step.color}` 
+                : '1px solid rgba(148, 163, 184, 0.2)',
+              borderRadius: '16px',
+              padding: '16px 12px',
+              cursor: 'pointer',
+              textAlign: 'center',
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              minHeight: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+            className="mobile-touch"
+          >
+            {step.required && (
+              <div style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                width: '6px',
+                height: '6px',
+                background: '#ef4444',
+                borderRadius: '50%'
+              }} />
+            )}
+            
+            <div style={{
+              width: '40px',
+              height: '40px',
+              background: currentStep === step.id ? step.color : 'rgba(148, 163, 184, 0.2)',
+              borderRadius: '12px',
+              margin: '0 auto 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <step.icon size={20} color={currentStep === step.id ? '#ffffff' : '#94a3b8'} />
+            </div>
+            
+            <h3 style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: currentStep === step.id ? '#ffffff' : '#94a3b8',
+              margin: '0 0 4px',
+              lineHeight: '1.2'
+            }}>
+              {(t.steps as any)[step.titleKey]?.title}
+            </h3>
+            
+            <p style={{
+              fontSize: '11px',
+              color: '#64748b',
+              margin: 0,
+              lineHeight: '1.3'
+            }}>
+              {(t.steps as any)[step.titleKey]?.subtitle}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // =================== COMPOSANTS MÉMORISÉS POUR PERFORMANCE (CONSERVÉS) ===================
+  const MemoizedStep1 = React.memo(Step1ProjectInfo);
+  const MemoizedStep2 = React.memo(Step2Equipment);
+  const MemoizedStep3 = React.memo(Step3Hazards);
+  const MemoizedStep4 = React.memo(Step4Permits);
+  const MemoizedStep5 = React.memo(Step5Validation);
+  const MemoizedStep6 = React.memo(Step6Finalization);
+
+  // =================== 🔥 STEPCONTENT ANTI-BOUCLES ULTRA-STABLE ===================
+  const StepContent = React.memo(() => {
+    // ✅ HANDLER ULTRA-STABLE - RÉFÉRENCE FIGÉE
+    const ultraStableHandler = stableHandlerRef.current!;
+    
+    // ✅ PROPS STABLES - MÉMORISÉS POUR ÉVITER RE-RENDERS
+    const stepProps = useMemo(() => ({
+      formData: stableFormDataRef.current,
+      language: currentLanguage,
+      tenant: tenant,
+      errors: {},
+      onDataChange: ultraStableHandler
+    }), [currentLanguage, tenant, ultraStableHandler]);
+    
+    console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
+    
+    switch (currentStep) {
+      case 1:
+        return (
+          <MemoizedStep1
+            key="step1-stable"
+            {...stepProps}
+          />
+        );
+      case 2:
+        return (
+          <MemoizedStep2
+            key="step2-stable"
+            {...stepProps}
+          />
+        );
+      case 3:
+        return (
+          <MemoizedStep3
+            key="step3-stable"
+            {...stepProps}
+          />
+        );
+      case 4:
+        return (
+          <MemoizedStep4
+            key="step4-stable"
+            {...stepProps}
+            province={'QC'}
+            userRole={'worker'}
+            touchOptimized={true}
+            compactMode={false}
+            onPermitChange={(permits) => {
+              ultraStableHandler('permits', permits);
+            }}
+            initialPermits={[]}
+          />
+        );
+      case 5:
+        return (
+          <MemoizedStep5
+            key="step5-stable"
+            {...stepProps}
+          />
+        );
+      case 6:
+        return (
+          <MemoizedStep6
+            key="step6-stable"
+            {...stepProps}
+          />
+        );
+      default:
+        return null;
+    }
+  });
+
+  // =================== NAVIGATION MOBILE FIXE (CONSERVÉE) ===================
+  const MobileNavigation = () => (
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: 'rgba(15, 23, 42, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+      padding: '16px 20px',
+      zIndex: 50
+    }}>
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        maxWidth: '500px',
+        margin: '0 auto'
+      }}>
+        <button
+          onClick={handlePrevious}
+          disabled={currentStep === 1}
+          style={{
+            flex: 1,
+            padding: '14px 20px',
+            borderRadius: '12px',
+            fontWeight: '600',
+            fontSize: '14px',
+            border: 'none',
+            cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: '48px',
+            background: currentStep === 1 ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+            color: currentStep === 1 ? '#94a3b8' : '#94a3b8',
+            opacity: currentStep === 1 ? 0.5 : 1
+          }}
+        >
+          <ArrowLeft size={16} />
+          {t.previous}
+        </button>
+        
+        <button
+          onClick={handleNext}
+          disabled={currentStep === 6 || !canNavigateToNext()}
+          style={{
+            flex: 1,
+            padding: '14px 20px',
+            borderRadius: '12px',
+            fontWeight: '600',
+            fontSize: '14px',
+            border: 'none',
+            cursor: (currentStep === 6 || !canNavigateToNext()) ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            minHeight: '48px',
+            background: (currentStep === 6 || !canNavigateToNext()) 
+              ? 'rgba(100, 116, 139, 0.3)' 
+              : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            color: '#ffffff',
+            opacity: (currentStep === 6 || !canNavigateToNext()) ? 0.5 : 1
+          }}
+        >
+          {currentStep === 6 ? t.finished : t.next}
+          {currentStep !== 6 && <ArrowRight size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+
+  // =================== NAVIGATION FOOTER DESKTOP (CONSERVÉE) ===================
+  const DesktopFooterNavigation = () => (
+    <div className="glass-effect desktop-only" style={{ 
+      padding: '20px 24px', 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center',
+      position: 'sticky',
+      bottom: '16px',
+      flexWrap: 'wrap',
+      gap: '16px',
+      maxWidth: '1200px',
+      margin: '0 auto'
+    }}>
+      <button
+        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+        disabled={currentStep === 1}
+        className="mobile-touch"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '14px 20px',
+          background: currentStep === 1 ? 'rgba(75, 85, 99, 0.3)' : 'rgba(59, 130, 246, 0.2)',
+          border: currentStep === 1 ? '1px solid rgba(75, 85, 99, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
+          borderRadius: '12px',
+          color: currentStep === 1 ? '#9ca3af' : '#ffffff',
+          fontSize: '16px',
+          fontWeight: '500',
+          cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        <ArrowLeft size={18} />
+        {t.previous}
+      </button>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        color: '#94a3b8',
+        fontSize: '14px',
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Save size={14} />
+          <span>{t.autoSave}</span>
+        </div>
+        <div style={{
+          width: '6px',
+          height: '6px',
+          background: hasUnsavedChanges ? '#f59e0b' : '#10b981',
+          borderRadius: '50%',
+          animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none'
+        }} />
+        <span style={{ fontSize: '12px', color: hasUnsavedChanges ? '#f59e0b' : '#10b981' }}>
+          {hasUnsavedChanges ? t.saving : t.saved}
+        </span>
+      </div>
+
+      <button
+        onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
+        disabled={currentStep === steps.length}
+        className="mobile-touch"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '14px 20px',
+          background: currentStep === steps.length 
+            ? 'rgba(75, 85, 99, 0.3)' 
+            : `linear-gradient(135deg, ${steps[currentStep]?.color || '#10b981'}, ${steps[currentStep]?.color || '#059669'}CC)`,
+          border: `1px solid ${steps[currentStep]?.color || '#10b981'}80`,
+          borderRadius: '12px',
+          color: '#ffffff',
+          fontSize: '16px',
+          fontWeight: '500',
+          cursor: currentStep === steps.length ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s'
+        }}
+      >
+        {t.next}
+        <ArrowRight size={18} />
+      </button>
+    </div>
+  );
+
+  // =================== EFFETS ET CLEANUP (CONSERVÉS) ===================
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
+    if (savedLanguage && savedLanguage !== currentLanguage) {
+      setCurrentLanguage(savedLanguage);
+    }
+  }, [currentLanguage]);
+
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      const saveTimer = setTimeout(() => {
+        console.log('🔄 Sauvegarde automatique...');
+        setHasUnsavedChanges(false);
+      }, 1000);
+
+      return () => clearTimeout(saveTimer);
+    }
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // =================== 🔥 CSS AVEC LOGO 200x200 + MODAL Z-INDEX ABSOLU ===================
+  const mobileOptimizedCSS = `
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(1deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    
+    @keyframes shine {
+      0% { left: -100%; }
+      50% { left: 100%; }
+      100% { left: 100%; }
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes glow {
+      0%, 100% { 
+        box-shadow: 0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15);
+      }
+      50% { 
+        box-shadow: 0 0 70px rgba(245, 158, 11, 0.8), inset 0 0 40px rgba(245, 158, 11, 0.25);
+      }
+    }
+    
+    @keyframes progressShine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .float-animation { animation: float 6s ease-in-out infinite; }
+    .pulse-animation { animation: pulse 4s ease-in-out infinite; }
+    .slide-in { animation: slideIn 0.5s ease-out; }
+    .slide-in-right { animation: slideIn 0.6s ease-out; }
+    .glow-effect { animation: glow 4s ease-in-out infinite; }
+    .logo-glow { 
+      filter: brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5)); 
+    }
+    
+    .glass-effect {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+    }
+    
+    .mobile-touch {
+      min-height: 44px;
+      padding: 12px 16px;
+      font-size: 16px;
+    }
+    
+    .text-gradient {
+      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .btn-premium {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+      background-size: 200% 200%;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 28px;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+    }
+    
+    .btn-premium:hover {
+      transform: translateY(-2px);
+      background-position: 100% 0;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.4);
+    }
+    
+    .btn-premium:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* =================== 🔥 FIX CRITIQUE MODAL Z-INDEX MAXIMUM ABSOLU =================== */
+    .modal-overlay {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      background: rgba(0, 0, 0, 0.98) !important;
+      z-index: 2147483647 !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+    }
+    
+    .modal-content {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 2147483647 !important;
+      background: rgba(15, 23, 42, 0.98) !important;
+      border: 2px solid rgba(59, 130, 246, 0.7) !important;
+      border-radius: 16px !important;
+      max-width: 90vw !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8) !important;
+    }
+    
+    /* =================== FIX MODAL INPUTS BACKGROUND =================== */
+    .modal-content input,
+    .modal-content textarea,
+    .modal-content select {
+      background: rgba(30, 41, 59, 0.9) !important;
+      border: 1px solid rgba(59, 130, 246, 0.5) !important;
+      color: #ffffff !important;
+    }
+    
+    /* =================== RESPONSIVE OPTIMISÉ + LOGO 200x200 =================== */
+    @media (max-width: 768px) {
+      .step-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+      }
+      
+      .glass-effect {
+        padding: 20px !important;
+        margin: 12px !important;
+        border-radius: 16px !important;
+      }
+      
+      .mobile-touch {
+        min-height: 48px !important;
+        font-size: 16px !important;
+      }
+      
+      .desktop-only {
+        display: none !important;
+      }
+      
+      .mobile-only {
+        display: block !important;
+      }
+
+      .text-gradient {
+        font-size: 28px !important;
+      }
+
+      .float-animation {
+        padding: 20px !important;
+      }
+
+      .modal-content {
+        max-width: 95vw !important;
+        max-height: 95vh !important;
+        margin: 2.5vh !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .step-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .glass-effect {
+        padding: 16px !important;
+        margin: 8px !important;
+      }
+
+      .text-gradient {
+        font-size: 24px !important;
+      }
+
+      .float-animation {
+        padding: 16px !important;
+      }
+    }
+    
+    @media (min-width: 769px) {
+      .mobile-only {
+        display: none !important;
+      }
+    }
+    
+    .mobile-touch:active {
+      transform: scale(0.98);
+    }
+    
+    /* =================== FIX iOS ZOOM =================== */
+    @media screen and (-webkit-min-device-pixel-ratio: 0) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+
+    /* =================== DARK THEME FIXES =================== */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea, [contenteditable] {
+      -webkit-user-select: text !important;
+      -khtml-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* =================== SCROLL OPTIMIZATIONS =================== */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+    /* =================== PRINT STYLES =================== */
+    @media print {
+      .desktop-only, .mobile-only {
+        display: block !important;
+      }
+      
+      .glass-effect {
+        background: white !important;
+        border: 1px solid #ccc !important;
+      }
+      
+      .text-gradient {
+        color: #000 !important;
+        -webkit-text-fill-color: #000 !important;
+      }
+    }
+  `;
+
+  // =================== 🔥 RENDU PRINCIPAL AVEC TOUS LES FIXES ===================
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
+      color: '#ffffff',
+      position: 'relative'
+    }}>
+      
+      <style dangerouslySetInnerHTML={{ __html: mobileOptimizedCSS }} />
+
+      {isMobile ? <MobileHeader /> : <DesktopHeader />}
+      
+      {isMobile ? <MobileStepsNavigation /> : <DesktopStepsNavigation />}
+
+      <main style={{ 
+        padding: isMobile ? '0' : '20px 16px', 
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        paddingBottom: isMobile ? '100px' : '20px'
+      }}>
+        
+        <div className={`glass-effect slide-in ${isMobile ? 'mobile-content' : ''}`} style={{ 
+          padding: isMobile ? '20px 16px' : '32px 24px', 
+          marginBottom: isMobile ? '16px' : '24px',
+          borderRadius: isMobile ? '16px' : '20px',
+          margin: isMobile ? '16px' : '0 auto 24px'
+        }}>
+          
+          {!isMobile && (
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h2 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                color: '#ffffff',
+                marginBottom: '8px',
+                background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                {(t.steps as any)[steps[currentStep - 1]?.titleKey]?.title}
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+                {(t.steps as any)[steps[currentStep - 1]?.titleKey]?.subtitle}
+              </p>
+            </div>
+          )}
+
+          <div style={{ minHeight: isMobile ? '300px' : '400px' }}>
+            <StepContent />
+          </div>
+        </div>
+      </main>
+
+      {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
+    </div>
+  );
 }
