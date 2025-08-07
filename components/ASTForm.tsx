@@ -1,8 +1,6 @@
-// =================== SECTION 1/2 - IMPORTS, INTERFACES & HOOKS OPTIMISÉS ===================
-
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
@@ -11,7 +9,7 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
-// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS) ===================
+// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
 import Step2Equipment from '@/components/steps/Step2Equipment';
 import Step3Hazards from '@/components/steps/Step3Hazards';
@@ -273,15 +271,26 @@ export default function ASTForm({
     language: currentLanguage
   }));
 
-  // =================== 🔥 FIX ANTI-ÉJECTION CRITIQUE APPLIQUÉ ===================
+  // =================== 🔥 FIX ANTI-BOUCLES ULTRA-STABLE ===================
   const stableFormDataRef = useRef(astData);
+  const renderCountRef = useRef(0);
+  const lastUpdateRef = useRef<string>('');
   
-  // ✅ RÉFÉRENCE FIGÉE ULTRA-STABLE - INITIALISÉE UNE SEULE FOIS
+  // ✅ HANDLER ULTRA-STABLE - INITIALISÉ UNE SEULE FOIS AVEC DEBOUNCE
   const stableHandlerRef = useRef<(section: string, data: any) => void>();
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section: string, data: any) => {
-      console.log('🔥 HANDLER ULTRA-STABLE (ANTI-ÉJECTION):', { section, data });
+      const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
+      
+      // ✅ ÉVITER LES DOUBLONS
+      if (lastUpdateRef.current === updateKey) {
+        console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
+        return;
+      }
+      
+      lastUpdateRef.current = updateKey;
+      console.log('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
       
       // ✅ MISE À JOUR SYNCHRONE DE L'ÉTAT LOCAL
       setAstData((prev: any) => {
@@ -296,26 +305,28 @@ export default function ASTForm({
         return newData;
       });
       
-      // ✅ SYNC PARENT DIFFÉRÉE - ÉVITE LES CONFLITS (CRITIQUE)
+      // ✅ SYNC PARENT DIFFÉRÉE AVEC DEBOUNCE - ÉVITE LES CONFLITS CRITIQUES
       setTimeout(() => {
         try {
           onDataChange(section, data);
         } catch (error) {
           console.error('❌ Erreur sync parent:', error);
         }
-      }, 50); // 50ms au lieu de 100ms pour plus de réactivité
+      }, 100);
       
       setHasUnsavedChanges(true);
     };
   }
+
+  // ✅ TRACK RENDERS POUR DEBUG
+  renderCountRef.current++;
   
   // ✅ MISE À JOUR DE LA REF SEULEMENT QUAND NÉCESSAIRE
   useEffect(() => {
     stableFormDataRef.current = astData;
   }, [astData]);
- // =================== SECTION 2/2 - HEADERS, NAVIGATION & CSS COMPLET ===================
 
-  // =================== FONCTIONS UTILITAIRES OPTIMISÉES (CONSERVÉES INTÉGRALEMENT) ===================
+  // =================== FONCTIONS UTILITAIRES MÉMORISÉES (CONSERVÉES) ===================
   const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
     if (newLanguage !== currentLanguage) {
       setCurrentLanguage(newLanguage);
@@ -413,7 +424,7 @@ export default function ASTForm({
     }));
   }, []);
 
-  // =================== STATUS BADGE OPTIMISÉ (CONSERVÉ) ===================
+  // =================== STATUS BADGE MÉMORISÉ (CONSERVÉ) ===================
   const getStatusBadge = useCallback(() => {
     const statusConfig = {
       'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
@@ -445,7 +456,85 @@ export default function ASTForm({
     );
   }, [astData.status, t.status, isMobile]);
 
-  // =================== 🔥 HEADER MOBILE ULTRA-RESPONSIVE + LOGO AUTO-ADAPTATIF ===================
+  // =================== 🔥 COMPOSANT LOGO OPTIMISÉ SANS ERREURS ===================
+  const LogoComponent = useMemo(() => ({ 
+    size = '80px', 
+    mobileSize = '32px',
+    className = '' 
+  }: { 
+    size?: string; 
+    mobileSize?: string; 
+    className?: string; 
+  }) => {
+    const [logoError, setLogoError] = useState(false);
+    const [logoLoaded, setLogoLoaded] = useState(false);
+
+    const logoSrc = useMemo(() => {
+      // ✅ PRIORITÉ LOGO SELON TENANT
+      if (tenant && tenant !== 'demo') {
+        return `/${tenant}-logo.png`;
+      }
+      return '/c-secur360-logo.png';
+    }, [tenant]);
+
+    const handleLogoError = useCallback(() => {
+      if (!logoError) {
+        console.log('⚠️ Logo non trouvé, utilisation fallback emoji');
+        setLogoError(true);
+      }
+    }, [logoError]);
+
+    const logoSize = isMobile ? mobileSize : size;
+
+    if (logoError || !logoLoaded) {
+      return (
+        <div style={{
+          width: logoSize,
+          height: logoSize,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#f59e0b',
+          fontSize: isMobile ? '16px' : '48px',
+          fontWeight: '900',
+          textShadow: '0 4px 8px rgba(0,0,0,0.7)'
+        }}>
+          🛡️
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <img 
+          src={logoSrc}
+          alt={`${tenant} Logo`}
+          className={className}
+          style={{ 
+            width: logoSize,
+            height: logoSize,
+            objectFit: 'contain',
+            transition: 'all 0.3s ease'
+          }}
+          onLoad={() => {
+            setLogoLoaded(true);
+            console.log('✅ Logo chargé avec succès:', logoSrc);
+          }}
+          onError={handleLogoError}
+        />
+        {!logoLoaded && (
+          <img 
+            src={logoSrc}
+            alt=""
+            style={{ display: 'none' }}
+            onLoad={() => setLogoLoaded(true)}
+            onError={handleLogoError}
+          />
+        )}
+      </>
+    );
+  }, [tenant, isMobile]);
+  // =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const MobileHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
@@ -464,11 +553,11 @@ export default function ASTForm({
         maxWidth: '100%',
         marginBottom: '8px'
       }}>
-        {/* 🔥 Logo mobile multi-plateforme auto-adaptatif */}
+        {/* 🔥 Logo mobile carré orange comme ton design */}
         <div style={{
           width: '40px',
           height: '40px',
-          background: 'linear-gradient(135deg, #000 0%, #1e293b 100%)',
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
           border: '2px solid #f59e0b',
           borderRadius: '8px',
           display: 'flex',
@@ -476,49 +565,10 @@ export default function ASTForm({
           justifyContent: 'center',
           flexShrink: 0,
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          boxShadow: '0 4px 8px rgba(245, 158, 11, 0.3)'
         }}>
-          <img 
-            src={`/${tenant}-logo.png`}
-            alt={`${tenant} Logo`}
-            style={{ 
-              width: '100%', 
-              height: '100%', 
-              objectFit: 'contain',
-              maxWidth: '32px',
-              maxHeight: '32px',
-              transition: 'all 0.3s ease'
-            }}
-            onError={(e) => {
-              // Essayer logo générique C-Secur360
-              const img = e.currentTarget as HTMLImageElement;
-              if (!img.dataset.fallback1) {
-                img.dataset.fallback1 = 'true';
-                img.src = '/c-secur360-logo.png';
-              } else if (!img.dataset.fallback2) {
-                img.dataset.fallback2 = 'true';
-                img.src = '/logo.png';
-              } else {
-                // Fallback final vers emoji
-                img.style.display = 'none';
-                const fallback = img.nextElementSibling as HTMLElement;
-                if (fallback) fallback.style.display = 'flex';
-              }
-            }}
-          />
-          <div style={{ 
-            display: 'none',
-            color: '#f59e0b', 
-            fontSize: '16px', 
-            fontWeight: '900',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            height: '100%',
-            textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-          }}>
-            🛡️
-          </div>
+          <LogoComponent size="32px" mobileSize="32px" className="logo-glow" />
         </div>
         
         {/* Titre mobile responsive (conservé) */}
@@ -538,7 +588,6 @@ export default function ASTForm({
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            {/* Titre dynamique selon tenant */}
             {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
           </h1>
           <div style={{
@@ -645,7 +694,7 @@ export default function ASTForm({
     </header>
   );
 
-  // =================== 🔥 HEADER DESKTOP PREMIUM + LOGO AUTO-ADAPTATIF ===================
+  // =================== 🔥 HEADER DESKTOP AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const DesktopHeader = () => (
     <header style={{
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
@@ -668,84 +717,34 @@ export default function ASTForm({
       }}>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          {/* 🔥 Logo desktop carré orange 200x200 comme ton design */}
           <div 
             className="float-animation glow-effect"
             style={{
-              background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%)',
               padding: '32px',
               borderRadius: '32px',
               border: '4px solid #f59e0b',
               boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              width: '200px',
+              height: '200px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             <div style={{
-              width: '96px',
-              height: '96px',
+              width: '136px',
+              height: '136px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
               zIndex: 1
             }}>
-              {/* 🔥 Logo desktop multi-plateforme auto-adaptatif */}
-              <img 
-                src={`/${tenant}-logo.png`}
-                alt={`${tenant} Platform`}
-                className="logo-glow"
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'contain',
-                  maxWidth: '80px',
-                  maxHeight: '80px',
-                  filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))',
-                  transition: 'all 0.3s ease'
-                }}
-                onError={(e) => {
-                  console.log(`❌ Erreur chargement logo ${tenant}:`, e);
-                  const img = e.currentTarget as HTMLImageElement;
-                  
-                  if (!img.dataset.fallback1) {
-                    // Essayer logo générique C-Secur360
-                    img.dataset.fallback1 = 'true';
-                    img.src = '/c-secur360-logo.png';
-                    img.alt = 'C-Secur360';
-                  } else if (!img.dataset.fallback2) {
-                    // Essayer logo générique
-                    img.dataset.fallback2 = 'true';
-                    img.src = '/logo.png';
-                    img.alt = 'Platform Logo';
-                  } else if (!img.dataset.fallback3) {
-                    // Essayer avec dimensions auto-ajustées pour dashboard 200x200
-                    img.dataset.fallback3 = 'true';
-                    img.style.width = 'auto';
-                    img.style.height = 'auto';
-                    img.style.maxWidth = '200px';
-                    img.style.maxHeight = '200px';
-                    img.src = '/c-secur360-logo.png';
-                  } else {
-                    // Fallback final vers emoji
-                    img.style.display = 'none';
-                    const fallback = img.nextElementSibling as HTMLElement;
-                    if (fallback) fallback.style.display = 'flex';
-                  }
-                }}
-              />
-              <div style={{ 
-                display: 'none',
-                color: '#f59e0b', 
-                fontSize: '48px', 
-                fontWeight: '900',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textShadow: '0 4px 8px rgba(0,0,0,0.7)',
-                width: '100%',
-                height: '100%'
-              }}>
-                🛡️
-              </div>
+              <LogoComponent size="136px" mobileSize="136px" className="logo-glow" />
             </div>
             
             <div style={{
@@ -754,7 +753,7 @@ export default function ASTForm({
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
               animation: 'shine 2.5s ease-in-out infinite'
             }} />
             
@@ -775,7 +774,6 @@ export default function ASTForm({
               fontWeight: '900',
               letterSpacing: '-0.025em'
             }}>
-              {/* Titre dynamique selon tenant */}
               {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
             </h1>
             <p style={{
@@ -987,7 +985,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== NAVIGATION STEPS MOBILE (CONSERVÉE) ===================
+  // =================== NAVIGATION STEPS MOBILE (CONSERVÉE INTÉGRALEMENT) ===================
   const MobileStepsNavigation = () => (
     <div style={{
       padding: '12px 16px',
@@ -1096,7 +1094,7 @@ export default function ASTForm({
     </div>
   );
 
-  // =================== NAVIGATION DESKTOP (CONSERVÉE) ===================
+  // =================== NAVIGATION DESKTOP (CONSERVÉE INTÉGRALEMENT) ===================
   const DesktopStepsNavigation = () => (
     <div className="glass-effect slide-in desktop-only" style={{ 
       padding: '24px', 
@@ -1218,48 +1216,48 @@ export default function ASTForm({
   const MemoizedStep5 = React.memo(Step5Validation);
   const MemoizedStep6 = React.memo(Step6Finalization);
 
-  // =================== 🔥 RENDU DU CONTENU DES STEPS AVEC FIXES ANTI-ÉJECTION ===================
+  // =================== 🔥 STEPCONTENT ANTI-BOUCLES ULTRA-STABLE ===================
   const StepContent = React.memo(() => {
-    console.log('🔥 StepContent render - Step:', currentStep);
-    
     // ✅ HANDLER ULTRA-STABLE - RÉFÉRENCE FIGÉE
     const ultraStableHandler = stableHandlerRef.current!;
     
-    // ✅ PROPS STABLES - RÉFÉRENCES FIGÉES
-    const stepProps = {
+    // ✅ PROPS STABLES - MÉMORISÉS POUR ÉVITER RE-RENDERS
+    const stepProps = useMemo(() => ({
       formData: stableFormDataRef.current,
       language: currentLanguage,
       tenant: tenant,
       errors: {},
       onDataChange: ultraStableHandler
-    };
+    }), [currentLanguage, tenant, ultraStableHandler]);
+    
+    console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
     
     switch (currentStep) {
       case 1:
         return (
           <MemoizedStep1
-            key="step1"
+            key="step1-stable"
             {...stepProps}
           />
         );
       case 2:
         return (
           <MemoizedStep2
-            key="step2"
+            key="step2-stable"
             {...stepProps}
           />
         );
       case 3:
         return (
           <MemoizedStep3
-            key="step3"
+            key="step3-stable"
             {...stepProps}
           />
         );
       case 4:
         return (
           <MemoizedStep4
-            key="step4"
+            key="step4-stable"
             {...stepProps}
             province={'QC'}
             userRole={'worker'}
@@ -1274,21 +1272,21 @@ export default function ASTForm({
       case 5:
         return (
           <MemoizedStep5
-            key="step5"
+            key="step5-stable"
             {...stepProps}
           />
         );
       case 6:
         return (
           <MemoizedStep6
-            key="step6"
+            key="step6-stable"
             {...stepProps}
           />
         );
       default:
         return null;
     }
-  });
+  }, [currentStep]);
 
   // =================== NAVIGATION MOBILE FIXE (CONSERVÉE) ===================
   const MobileNavigation = () => (
@@ -1487,7 +1485,7 @@ export default function ASTForm({
     };
   }, []);
 
-  // =================== 🔥 CSS AVEC FIX MODAL Z-INDEX ABSOLU + LOGO AUTO ===================
+  // =================== 🔥 CSS AVEC LOGO 200x200 + MODAL Z-INDEX ABSOLU ===================
   const mobileOptimizedCSS = `
     @keyframes float {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -1618,7 +1616,7 @@ export default function ASTForm({
       color: #ffffff !important;
     }
     
-    /* =================== RESPONSIVE OPTIMISÉ + LOGO AUTO =================== */
+    /* =================== RESPONSIVE OPTIMISÉ + LOGO 200x200 =================== */
     @media (max-width: 768px) {
       .step-grid {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -1652,14 +1650,6 @@ export default function ASTForm({
         padding: 20px !important;
       }
 
-      /* Logo mobile auto-adaptatif */
-      .logo-glow {
-        width: auto !important;
-        height: auto !important;
-        max-width: 60px !important;
-        max-height: 60px !important;
-      }
-
       .modal-content {
         max-width: 95vw !important;
         max-height: 95vh !important;
@@ -1684,35 +1674,11 @@ export default function ASTForm({
       .float-animation {
         padding: 16px !important;
       }
-
-      /* Logo mobile très petit écran */
-      .logo-glow {
-        max-width: 48px !important;
-        max-height: 48px !important;
-      }
     }
     
     @media (min-width: 769px) {
       .mobile-only {
         display: none !important;
-      }
-      
-      /* Logo desktop auto-adaptatif avec support 200x200 dashboard */
-      .logo-glow {
-        width: auto !important;
-        height: auto !important;
-        max-width: 80px !important;
-        max-height: 80px !important;
-        object-fit: contain !important;
-      }
-      
-      /* Support spécial pour logos 200x200 du dashboard */
-      img[src*="logo"][width="200"],
-      img[src*="logo"][height="200"] {
-        max-width: 80px !important;
-        max-height: 80px !important;
-        width: auto !important;
-        height: auto !important;
       }
     }
     
@@ -1830,4 +1796,4 @@ export default function ASTForm({
       {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
     </div>
   );
-} 
+}
