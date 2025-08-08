@@ -60,12 +60,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
   
   const [showModal, setShowModal] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
+  const [locations, setLocations] = useState<string[]>([]);
   
   // =================== HANDLER SIMPLE ET STABLE ===================
   const updateField = useCallback((field: string, value: string) => {
     console.log('🔥 Updating field:', field, value);
     
     setLocalData(prev => {
+      // ✅ TOUJOURS METTRE À JOUR - PAS DE BLOCAGE
       const updated = { ...prev, [field]: value };
       
       // Notifier le parent après mise à jour
@@ -90,9 +92,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
   const addLocation = useCallback(() => {
     if (newLocationName.trim()) {
       console.log('✅ Location ajoutée:', newLocationName);
-      closeModal();
+      
+      // ✅ AJOUTER VRAIMENT LA LOCATION
+      setLocations(prev => [...prev, newLocationName.trim()]);
+      
+      // ✅ FERMER ET RESET
+      setNewLocationName('');
+      setShowModal(false);
     }
-  }, [newLocationName, closeModal]);
+  }, [newLocationName]);
 
   console.log('🔥 Step1 Simple - Render avec localData:', localData);
 
@@ -333,6 +341,31 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
             <Plus size={16} />
             {t.addLocation}
           </button>
+          
+          {/* Liste des locations ajoutées */}
+          {locations.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <h4 style={{ color: '#ffffff', fontSize: '14px', marginBottom: '8px' }}>
+                Emplacements ajoutés:
+              </h4>
+              {locations.map((location, index) => (
+                <div 
+                  key={index}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    margin: '4px 0',
+                    color: '#ffffff',
+                    fontSize: '13px'
+                  }}
+                >
+                  {location}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Modal Simple */}
