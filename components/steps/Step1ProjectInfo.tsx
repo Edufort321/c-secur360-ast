@@ -60,26 +60,26 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
     console.log('🔥 Client Name:', value);
     setClientName(value);
     
-    // Sync parent
-    setTimeout(() => {
-      onDataChange('projectInfo', { 
-        clientName: value,
-        projectNumber: projectNumber 
-      });
-    }, 0);
+    // ✅ COMMENTÉ TEMPORAIREMENT POUR TEST
+    // setTimeout(() => {
+    //   onDataChange('projectInfo', { 
+    //     clientName: value,
+    //     projectNumber: projectNumber 
+    //   });
+    // }, 0);
   }, [projectNumber, onDataChange]);
   
   const updateProjectNumber = useCallback((value: string) => {
     console.log('🔥 Project Number:', value);
     setProjectNumber(value);
     
-    // Sync parent
-    setTimeout(() => {
-      onDataChange('projectInfo', { 
-        clientName: clientName,
-        projectNumber: value 
-      });
-    }, 0);
+    // ✅ COMMENTÉ TEMPORAIREMENT POUR TEST
+    // setTimeout(() => {
+    //   onDataChange('projectInfo', { 
+    //     clientName: clientName,
+    //     projectNumber: value 
+    //   });
+    // }, 0);
   }, [clientName, onDataChange]);
   
   // =================== HANDLERS MODAL SIMPLES ===================
