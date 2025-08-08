@@ -1,7 +1,7 @@
-// =================== SECTION 1/5 - INTERFACES & TRADUCTIONS ===================
+// =================== SECTION 1/5 - IMPORTS & INTERFACES COMPATIBLES ===================
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -9,7 +9,7 @@ import {
   TrendingUp, Activity, Shield
 } from 'lucide-react';
 
-// =================== INTERFACES OPTIMISÉES ===================
+// =================== 🔥 INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
@@ -18,6 +18,7 @@ interface Step1ProjectInfoProps {
   errors?: any;
 }
 
+// =================== INTERFACES MÉTIER CONSERVÉES ===================
 interface WorkLocation {
   id: string;
   name: string;
@@ -34,22 +35,6 @@ interface WorkLocation {
   estimatedDuration: string;
   startTime?: string;
   endTime?: string;
-}
-
-interface LocationStats {
-  totalWorkers: number;
-  totalLocations: number;
-  activeLockouts: number;
-  peakUtilization: number;
-  locationBreakdown: {
-    locationId: string;
-    name: string;
-    currentWorkers: number;
-    maxReached: number;
-    lockouts: number;
-    utilizationCurrent: number;
-    estimatedDuration: string;
-  }[];
 }
 
 interface LockoutPoint {
@@ -77,7 +62,23 @@ interface LockoutPhoto {
   lockoutPointId?: string;
 }
 
-// =================== TRADUCTIONS COMPLÈTES ===================
+interface LocationStats {
+  totalWorkers: number;
+  totalLocations: number;
+  activeLockouts: number;
+  peakUtilization: number;
+  locationBreakdown: {
+    locationId: string;
+    name: string;
+    currentWorkers: number;
+    maxReached: number;
+    lockouts: number;
+    utilizationCurrent: number;
+    estimatedDuration: string;
+  }[];
+}
+
+// =================== TRADUCTIONS COMPLÈTES CONSERVÉES ===================
 const translations = {
   fr: {
     // Générateur AST
@@ -140,17 +141,6 @@ const translations = {
     noLocations: "Aucun emplacement défini",
     noLocationsDescription: "Ajoutez des emplacements pour organiser vos équipes",
     
-    // Statistiques
-    totalWorkers: "Total Travailleurs",
-    totalLocations: "Emplacements Actifs",
-    totalLockouts: "Cadenas Apposés",
-    peakUtilization: "Pic d'Utilisation",
-    locationBreakdown: "Répartition par Emplacement",
-    workersCount: "travailleurs",
-    lockoutsCount: "cadenas",
-    currentWorkers: "actuels",
-    maxReached: "max atteint",
-    
     // Industries
     electrical: "⚡ Électrique",
     construction: "🏗️ Construction",
@@ -170,7 +160,7 @@ const translations = {
     workDescriptionPlaceholder: "Décrivez en détail les travaux à effectuer :\n\n• Méthodes utilisées\n• Équipements impliqués\n• Zones d'intervention\n• Procédures spéciales\n• Conditions particulières\n\nPlus la description est détaillée, plus l'analyse de sécurité sera précise.",
     workDescriptionHelp: "Une description complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.",
     
-    // Verrouillage
+    // Lockout
     lockoutDescription: "Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.",
     generalPhotos: "Photos Générales de Verrouillage",
     beforeLockout: "Avant verrouillage",
@@ -222,6 +212,17 @@ const translations = {
     save: "Sauvegarder",
     edit: "Modifier",
     adding: "Ajout en cours...",
+    
+    // Statistiques
+    totalWorkers: "Total Travailleurs",
+    totalLocations: "Emplacements Actifs",
+    totalLockouts: "Cadenas Apposés",
+    peakUtilization: "Pic d'Utilisation",
+    locationBreakdown: "Répartition par Emplacement",
+    workersCount: "travailleurs",
+    lockoutsCount: "cadenas",
+    currentWorkers: "actuels",
+    maxReached: "max atteint",
     
     // Catégories photo
     categories: {
@@ -293,17 +294,6 @@ const translations = {
     removeLocation: "Remove this location",
     noLocations: "No locations defined",
     noLocationsDescription: "Add locations to organize your teams",
-    
-    // Statistics
-    totalWorkers: "Total Workers",
-    totalLocations: "Active Locations",
-    totalLockouts: "Applied Locks",
-    peakUtilization: "Peak Utilization",
-    locationBreakdown: "Breakdown by Location",
-    workersCount: "workers",
-    lockoutsCount: "locks",
-    currentWorkers: "current",
-    maxReached: "max reached",
     
     // Industries
     electrical: "⚡ Electrical",
@@ -377,6 +367,17 @@ const translations = {
     edit: "Edit",
     adding: "Adding...",
     
+    // Statistics
+    totalWorkers: "Total Workers",
+    totalLocations: "Active Locations",
+    totalLockouts: "Applied Locks",
+    peakUtilization: "Peak Utilization",
+    locationBreakdown: "Breakdown by Location",
+    workersCount: "workers",
+    lockoutsCount: "locks",
+    currentWorkers: "current",
+    maxReached: "max reached",
+    
     // Photo categories
     categories: {
       before_lockout: "Before lockout",
@@ -388,7 +389,7 @@ const translations = {
   }
 };
 
-// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES ===================
+// =================== TYPES D'ÉNERGIE AVEC PROCÉDURES CONSERVÉS ===================
 const getEnergyTypes = (language: 'fr' | 'en') => ({
   electrical: { 
     name: language === 'fr' ? 'Électrique' : 'Electrical', 
@@ -532,7 +533,7 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
   }
 });
 
-// =================== GÉNÉRATEUR DE NUMÉRO AST ===================
+// =================== GÉNÉRATEUR NUMÉRO AST CONSERVÉ ===================
 const generateASTNumber = (): string => {
   const year = new Date().getFullYear();
   const month = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -541,22 +542,23 @@ const generateASTNumber = (): string => {
   const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
   return `AST-${year}${month}${day}-${timestamp}${random.slice(0, 2)}`;
 };
-// =================== SECTION 2/5 - ÉTAT LOCAL STABLE & HANDLERS OPTIMISÉS ===================
 
+// =================== 🔥 COMPOSANT PRINCIPAL - ARCHITECTURE ULTRA-STABLE ===================
 function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {} }: Step1ProjectInfoProps) {
-  // =================== TRADUCTIONS ET CONFIGURATION ===================
+  
+  // =================== CONFIGURATION & TRADUCTIONS ===================
   const t = translations[language];
   const ENERGY_TYPES = getEnergyTypes(language);
   
-  // =================== EXTRACTION DONNÉES EXISTANTES ===================
-  const projectInfo = formData?.projectInfo || {};
-  const lockoutPoints = projectInfo?.lockoutPoints || [];
-  const lockoutPhotos = projectInfo?.lockoutPhotos || [];
-  const workLocations = projectInfo?.workLocations || [];
+  // =================== 🔥 EXTRACTION DONNÉES EXISTANTES - COMPATIBLE AVEC ASTFORM ===================
+  const projectInfo = useMemo(() => formData?.projectInfo || {}, [formData?.projectInfo]);
+  const lockoutPoints = useMemo(() => projectInfo?.lockoutPoints || [], [projectInfo?.lockoutPoints]);
+  const lockoutPhotos = useMemo(() => projectInfo?.lockoutPhotos || [], [projectInfo?.lockoutPhotos]);
+  const workLocations = useMemo(() => projectInfo?.workLocations || [], [projectInfo?.workLocations]);
   
-  // =================== 🔥 ÉTAT LOCAL STABLE STYLE STEP5 (SANS useEffect PROBLÉMATIQUE) ===================
-  const [projectData, setProjectData] = useState(() => ({
-    // ✅ INITIALISATION DIRECTE - PAS DE BOUCLE
+  // =================== 🔥 ÉTAT LOCAL ULTRA-MINIMAL (STYLE STEP5) ===================
+  const [localData, setLocalData] = useState(() => ({
+    // ✅ INITIALISATION DIRECTE SANS BOUCLE - Compatible avec formData existant
     client: projectInfo.client || '',
     clientPhone: projectInfo.clientPhone || '',
     clientRepresentative: projectInfo.clientRepresentative || '',
@@ -570,19 +572,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     emergencyContact: projectInfo.emergencyContact || '',
     emergencyPhone: projectInfo.emergencyPhone || '',
     workDescription: projectInfo.workDescription || '',
+    // ✅ Données complexes référencées directement
     workLocations: workLocations,
     lockoutPoints: lockoutPoints,
     lockoutPhotos: lockoutPhotos
   }));
 
-  // =================== ÉTATS POUR AST ET INTERACTIONS ===================
-  const [astNumber, setAstNumber] = useState(formData?.astNumber || generateASTNumber());
+  // =================== ÉTATS UI SÉPARÉS (ISOLATION CRITIQUE) ===================
+  const [astNumber, setAstNumber] = useState(() => formData?.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // =================== 🔥 ÉTATS MODAL AVEC ISOLATION CRITIQUE ===================
+  // =================== 🔥 ÉTATS MODAL AVEC ISOLATION ULTRA-CRITIQUE ===================
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState<string | null>(null);
   const [newLocation, setNewLocation] = useState({
@@ -597,44 +600,61 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   });
   const [isModalSaving, setIsModalSaving] = useState(false);
 
-  // =================== 🔥 NOTIFICATION PARENT DIRECTE SANS BOUCLE (STYLE STEP5) ===================
-  const notifyParent = useCallback((newData: any) => {
-    console.log('🔥 Step1 - Notification parent directe:', newData);
-    onDataChange('projectInfo', newData);
+  // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
+  const stableFormDataRef = useRef(localData);
+  const lastUpdateRef = useRef<string>('');
+  
+  // ✅ HANDLER PARENT FIGÉ UNE SEULE FOIS
+  const notifyParentStable = useCallback((updatedData: any) => {
+    const updateKey = JSON.stringify(updatedData).slice(0, 100);
+    
+    // 🛡️ ÉVITER DOUBLONS
+    if (lastUpdateRef.current === updateKey) {
+      console.log('🛡️ Step1 - Doublon évité');
+      return;
+    }
+    
+    lastUpdateRef.current = updateKey;
+    console.log('🔥 Step1 - Notification parent stable:', Object.keys(updatedData));
+    
+    // ✅ SYNC DIFFÉRÉE POUR ÉVITER BOUCLES
+    setTimeout(() => {
+      try {
+        onDataChange('projectInfo', updatedData);
+      } catch (error) {
+        console.error('❌ Step1 - Erreur sync parent:', error);
+      }
+    }, 50);
   }, [onDataChange]);
 
-  // =================== 🔥 HANDLERS ULTRA-STABLES SANS CONFLIT ===================
-  const updateProjectField = useCallback((field: string, value: any) => {
+  // =================== 🔥 HANDLERS ULTRA-STABLES ===================
+  const updateField = useCallback((field: string, value: any) => {
     console.log('🔥 Step1 - Update field:', field, value);
     
-    const updatedData = {
-      ...projectData,
-      [field]: value
-    };
-    
-    // ✅ MISE À JOUR LOCALE D'ABORD
-    setProjectData(updatedData);
-    
-    // ✅ NOTIFICATION PARENT ENSUITE (STYLE STEP5)
-    notifyParent(updatedData);
-  }, [projectData, notifyParent]);
+    setLocalData(prev => {
+      const updated = { ...prev, [field]: value };
+      stableFormDataRef.current = updated;
+      
+      // ✅ Notification parent immédiate
+      notifyParentStable(updated);
+      
+      return updated;
+    });
+  }, [notifyParentStable]);
 
-  // =================== HANDLERS LOCKOUT POINTS STABLES ===================
+  // =================== HANDLERS SPÉCIALISÉS ===================
   const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
-    const updatedPoints = projectData.lockoutPoints.map((point: LockoutPoint) => 
+    const updatedPoints = localData.lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
     
-    const updatedData = {
-      ...projectData,
-      lockoutPoints: updatedPoints
-    };
-    
-    setProjectData(updatedData);
-    notifyParent(updatedData);
-    
-    console.log('✅ Step1 - Lockout point mis à jour:', pointId, field, value);
-  }, [projectData, notifyParent]);
+    setLocalData(prev => {
+      const updated = { ...prev, lockoutPoints: updatedPoints };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
+  }, [localData.lockoutPoints, notifyParentStable]);
 
   const addLockoutPoint = useCallback(() => {
     const newPoint: LockoutPoint = {
@@ -650,43 +670,42 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       photos: [],
       notes: '',
       completedProcedures: [],
-      assignedLocation: projectData.workLocations.length > 0 ? projectData.workLocations[0].id : undefined
+      assignedLocation: localData.workLocations.length > 0 ? localData.workLocations[0].id : undefined
     };
 
-    const updatedData = {
-      ...projectData,
-      lockoutPoints: [...projectData.lockoutPoints, newPoint]
-    };
-    
-    setProjectData(updatedData);
-    notifyParent(updatedData);
-    
-    console.log('✅ Step1 - Point de verrouillage ajouté:', newPoint.id);
-  }, [projectData, notifyParent]);
+    setLocalData(prev => {
+      const updated = { ...prev, lockoutPoints: [...prev.lockoutPoints, newPoint] };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
+  }, [localData.workLocations, notifyParentStable]);
 
   const deleteLockoutPoint = useCallback((pointId: string) => {
-    const updatedPoints = projectData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
-    const updatedPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    const updatedPoints = localData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    const updatedPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     
-    const updatedData = {
-      ...projectData,
-      lockoutPoints: updatedPoints,
-      lockoutPhotos: updatedPhotos
-    };
-    
-    setProjectData(updatedData);
-    notifyParent(updatedData);
-    
-    console.log('✅ Step1 - Point de verrouillage supprimé:', pointId);
-  }, [projectData, notifyParent]);
+    setLocalData(prev => {
+      const updated = { 
+        ...prev, 
+        lockoutPoints: updatedPoints,
+        lockoutPhotos: updatedPhotos 
+      };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
+  }, [localData.lockoutPoints, localData.lockoutPhotos, notifyParentStable]);
 
-  // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC PARENT) ===================
+  // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC) ===================
   const updateModalField = useCallback((field: string, value: string) => {
     setNewLocation(prev => ({ ...prev, [field]: value }));
-    // ✅ PAS de sync vers parent - isolation complète pour éviter éjection
+    // ✅ PAS de sync vers parent - isolation complète
   }, []);
 
-  // =================== GESTION EMPLACEMENTS OPTIMISÉE ===================
+  // =================== SECTION 2/5 - FONCTIONS UTILITAIRES & HANDLERS COMPLEXES ===================
+
+  // =================== GESTION EMPLACEMENTS DE TRAVAIL OPTIMISÉE ===================
   const addWorkLocation = useCallback(() => {
     if (!newLocation.name.trim() || !newLocation.zone.trim()) {
       return;
@@ -712,13 +731,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       endTime: newLocation.endTime || '16:00'
     };
 
-    const updatedData = {
-      ...projectData,
-      workLocations: [...projectData.workLocations, location]
-    };
-
-    setProjectData(updatedData);
-    notifyParent(updatedData);
+    setLocalData(prev => {
+      const updated = { ...prev, workLocations: [...prev.workLocations, location] };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
 
     // Reset formulaire modal
     setNewLocation({
@@ -735,29 +753,55 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     
     setTimeout(() => setIsModalSaving(false), 200);
     console.log('✅ Step1 - Emplacement ajouté:', location.name);
-  }, [newLocation, projectData, notifyParent, isModalSaving]);
+  }, [newLocation, notifyParentStable, isModalSaving]);
 
   const removeWorkLocation = useCallback((locationId: string) => {
-    const updatedLocations = projectData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
+    const updatedLocations = localData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
     
     // Retirer l'assignation des lockout points
-    const updatedLockouts = projectData.lockoutPoints.map((point: LockoutPoint) => 
+    const updatedLockouts = localData.lockoutPoints.map((point: LockoutPoint) => 
       point.assignedLocation === locationId 
         ? { ...point, assignedLocation: undefined }
         : point
     );
     
-    const updatedData = {
-      ...projectData,
-      workLocations: updatedLocations,
-      lockoutPoints: updatedLockouts
-    };
-    
-    setProjectData(updatedData);
-    notifyParent(updatedData);
+    setLocalData(prev => {
+      const updated = { 
+        ...prev, 
+        workLocations: updatedLocations,
+        lockoutPoints: updatedLockouts 
+      };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
     
     console.log('✅ Step1 - Emplacement supprimé:', locationId);
-  }, [projectData, notifyParent]);
+  }, [localData.workLocations, localData.lockoutPoints, notifyParentStable]);
+
+  // =================== MISE À JOUR STATISTIQUES WORKERS ===================
+  const updateLocationWorkerCount = useCallback((locationId: string, newWorkerCount: number) => {
+    const updatedLocations = localData.workLocations.map((loc: WorkLocation) => {
+      if (loc.id === locationId) {
+        const updatedMaxReached = Math.max(loc.maxWorkersReached, newWorkerCount);
+        return { 
+          ...loc, 
+          currentWorkers: newWorkerCount,
+          maxWorkersReached: updatedMaxReached
+        };
+      }
+      return loc;
+    });
+    
+    setLocalData(prev => {
+      const updated = { ...prev, workLocations: updatedLocations };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
+    
+    console.log(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
+  }, [localData.workLocations, notifyParentStable]);
 
   // =================== GESTION PHOTOS OPTIMISÉE ===================
   const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
@@ -791,31 +835,32 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         lockoutPointId
       };
       
-      const updatedData = {
-        ...projectData,
-        lockoutPhotos: [...projectData.lockoutPhotos, newPhoto]
-      };
-      
-      setProjectData(updatedData);
-      notifyParent(updatedData);
+      setLocalData(prev => {
+        const updated = { ...prev, lockoutPhotos: [...prev.lockoutPhotos, newPhoto] };
+        stableFormDataRef.current = updated;
+        notifyParentStable(updated);
+        return updated;
+      });
       
       console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
-  }, [projectData, notifyParent, language]);
+  }, [language, notifyParentStable]);
 
   const deletePhoto = useCallback((photoId: string) => {
-    const updatedData = {
-      ...projectData,
-      lockoutPhotos: projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId)
-    };
-    
-    setProjectData(updatedData);
-    notifyParent(updatedData);
+    setLocalData(prev => {
+      const updated = { 
+        ...prev, 
+        lockoutPhotos: prev.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId) 
+      };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
     
     console.log('✅ Step1 - Photo supprimée:', photoId);
-  }, [projectData, notifyParent]);
+  }, [notifyParentStable]);
 
   // =================== HANDLERS AST ET UTILITAIRES ===================
   const copyASTNumber = useCallback(async () => {
@@ -831,7 +876,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const regenerateASTNumber = useCallback(() => {
     const newNumber = generateASTNumber();
     setAstNumber(newNumber);
-    // Sync AST number vers parent via handler séparé si nécessaire
     console.log('✅ Step1 - Nouveau numéro AST:', newNumber);
   }, []);
 
@@ -841,7 +885,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [t.categories]);
 
   const toggleProcedureComplete = useCallback((pointId: string, procedureIndex: number) => {
-    const point = projectData.lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
+    const point = localData.lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
     if (!point) return;
 
     const completedProcedures = point.completedProcedures || [];
@@ -852,7 +896,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       : [...completedProcedures, procedureIndex];
 
     updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
-  }, [projectData.lockoutPoints, updateLockoutPoint]);
+  }, [localData.lockoutPoints, updateLockoutPoint]);
 
   const getProcedureProgress = useCallback((point: LockoutPoint): { completed: number; total: number; percentage: number } => {
     const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
@@ -879,17 +923,17 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     updateLockoutPoint(pointId, 'energyType', energyType);
   }, [updateLockoutPoint]);
 
-  // =================== FONCTIONS STATISTIQUES TEMPS RÉEL ===================
+  // =================== STATISTIQUES TEMPS RÉEL ===================
   const calculateLocationStats = useCallback((): LocationStats => {
-    const totalLocations = projectData.workLocations.filter((loc: WorkLocation) => loc.isActive).length;
-    const totalWorkers = projectData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
-    const activeLockouts = projectData.lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
+    const totalLocations = localData.workLocations.filter((loc: WorkLocation) => loc.isActive).length;
+    const totalWorkers = localData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.currentWorkers, 0);
+    const activeLockouts = localData.lockoutPoints.filter((point: LockoutPoint) => point.isLocked).length;
     
-    const totalMaxReached = projectData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
+    const totalMaxReached = localData.workLocations.reduce((sum: number, loc: WorkLocation) => sum + loc.maxWorkersReached, 0);
     const peakUtilization = totalMaxReached > 0 ? Math.round((totalWorkers / totalMaxReached) * 100) : 0;
     
-    const locationBreakdown = projectData.workLocations.map((loc: WorkLocation) => {
-      const locationLockouts = projectData.lockoutPoints.filter((point: LockoutPoint) => 
+    const locationBreakdown = localData.workLocations.map((loc: WorkLocation) => {
+      const locationLockouts = localData.lockoutPoints.filter((point: LockoutPoint) => 
         point.assignedLocation === loc.id && point.isLocked
       ).length;
       
@@ -915,33 +959,42 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       peakUtilization,
       locationBreakdown
     };
-  }, [projectData.workLocations, projectData.lockoutPoints]);
+  }, [localData.workLocations, localData.lockoutPoints]);
 
-  // =================== FONCTION POUR STEP5 - MISE À JOUR MAX ATTEINT ===================
-  const updateLocationWorkerCount = useCallback((locationId: string, newWorkerCount: number) => {
-    const updatedLocations = projectData.workLocations.map((loc: WorkLocation) => {
-      if (loc.id === locationId) {
-        const updatedMaxReached = Math.max(loc.maxWorkersReached, newWorkerCount);
-        return { 
-          ...loc, 
-          currentWorkers: newWorkerCount,
-          maxWorkersReached: updatedMaxReached
-        };
-      }
-      return loc;
-    });
+  // =================== NAVIGATION CARROUSEL PHOTOS ===================
+  const nextSlide = useCallback((photos: LockoutPhoto[], lockoutPointId?: string) => {
+    const totalSlides = photos.length + 1;
+    const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
+    const newIndex = (currentIndex + 1) % totalSlides;
     
-    const updatedData = {
-      ...projectData,
-      workLocations: updatedLocations
-    };
+    if (lockoutPointId) {
+      setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: newIndex }));
+    } else {
+      setCurrentPhotoIndex(newIndex);
+    }
+  }, [currentPhotoIndex, currentLockoutPhotoIndex]);
+
+  const prevSlide = useCallback((photos: LockoutPhoto[], lockoutPointId?: string) => {
+    const totalSlides = photos.length + 1;
+    const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
+    const newIndex = currentIndex === 0 ? totalSlides - 1 : currentIndex - 1;
     
-    setProjectData(updatedData);
-    notifyParent(updatedData);
-    
-    console.log(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
-  }, [projectData, notifyParent]);
-  // =================== SECTION 3/5 - COMPOSANTS UI OPTIMISÉS & FONCTIONS UTILITAIRES ===================
+    if (lockoutPointId) {
+      setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: newIndex }));
+    } else {
+      setCurrentPhotoIndex(newIndex);
+    }
+  }, [currentPhotoIndex, currentLockoutPhotoIndex]);
+
+  const goToSlide = useCallback((index: number, lockoutPointId?: string) => {
+    if (lockoutPointId) {
+      setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: index }));
+    } else {
+      setCurrentPhotoIndex(index);
+    }
+  }, []);
+
+  // =================== SECTION 3/5 - COMPOSANTS UI OPTIMISÉS & MODALS CRITIQUES ===================
 
   // =================== CALCUL STATISTIQUES EN TEMPS RÉEL ===================
   const locationStats = calculateLocationStats();
@@ -955,37 +1008,29 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
     const totalSlides = photos.length + 1;
 
-    const setCurrentIndex = (index: number) => {
-      if (lockoutPointId) {
-        setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: index }));
-      } else {
-        setCurrentPhotoIndex(index);
-      }
-    };
-
-    const nextSlide = useCallback((e?: React.MouseEvent) => {
+    const handleNextSlide = useCallback((e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
-      setCurrentIndex((currentIndex + 1) % totalSlides);
-    }, [currentIndex, totalSlides]);
+      nextSlide(photos, lockoutPointId);
+    }, [photos, lockoutPointId]);
 
-    const prevSlide = useCallback((e?: React.MouseEvent) => {
+    const handlePrevSlide = useCallback((e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
-      setCurrentIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
-    }, [currentIndex, totalSlides]);
+      prevSlide(photos, lockoutPointId);
+    }, [photos, lockoutPointId]);
 
-    const goToSlide = useCallback((index: number, e?: React.MouseEvent) => {
+    const handleGoToSlide = useCallback((index: number, e?: React.MouseEvent) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
-      setCurrentIndex(index);
-    }, []);
+      goToSlide(index, lockoutPointId);
+    }, [lockoutPointId]);
 
     return (
       <div className="photo-carousel">
@@ -1031,7 +1076,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="carousel-nav prev" 
-                onClick={prevSlide} 
+                onClick={handlePrevSlide} 
                 disabled={totalSlides <= 1}
               >
                 <ArrowLeft size={20} />
@@ -1039,7 +1084,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="carousel-nav next" 
-                onClick={nextSlide} 
+                onClick={handleNextSlide} 
                 disabled={totalSlides <= 1}
               >
                 <ArrowRight size={20} />
@@ -1052,7 +1097,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <div 
                   key={index} 
                   className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`} 
-                  onClick={(e) => goToSlide(index, e)} 
+                  onClick={(e) => handleGoToSlide(index, e)} 
                 />
               ))}
             </div>
@@ -1066,11 +1111,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const IndustrySelector = React.memo(() => (
     <select 
       className="premium-select" 
-      value={projectData.industry}
+      value={localData.industry}
       onChange={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        updateProjectField('industry', e.target.value);
+        updateField('industry', e.target.value);
       }}
     >
       <option value="electrical">{t.electrical}</option>
@@ -1233,9 +1278,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       </div>
 
       {/* Liste des emplacements */}
-      {projectData.workLocations.length > 0 ? (
+      {localData.workLocations.length > 0 ? (
         <div className="locations-list">
-          {projectData.workLocations.map((location: WorkLocation) => (
+          {localData.workLocations.map((location: WorkLocation) => (
             <div key={location.id} className="location-item">
               <div className="location-main">
                 <div className="location-info">
@@ -1555,14 +1600,55 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       onChange={(e) => onLocationChange(e.target.value)}
     >
       <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
-      {projectData.workLocations.map((location: WorkLocation) => (
+      {localData.workLocations.map((location: WorkLocation) => (
         <option key={location.id} value={location.id}>
           {location.name} - {location.zone}
         </option>
       ))}
     </select>
   ));
-  // =================== SECTION 4/5 - GESTION LOCKOUT POINTS & SYSTÈME PHOTOS AVANCÉ ===================
+
+  // =================== COMPOSANT CARTE AST PREMIUM ===================
+  const ASTNumberCard = React.memo(() => (
+    <div className="ast-number-card">
+      <div className="ast-number-header">
+        <div className="ast-number-title">
+          <FileText style={{ width: '20px', height: '20px' }} />
+          {t.astNumberTitle}
+        </div>
+        <div className="ast-actions">
+          <button 
+            type="button"
+            className={`btn-icon ${copied ? 'copied' : ''}`} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              copyASTNumber();
+            }} 
+            title={t.copyNumber}
+          >
+            {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+          </button>
+          <button 
+            type="button"
+            className="btn-icon" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              regenerateASTNumber();
+            }} 
+            title={t.generateNew}
+          >
+            <FileText style={{ width: '16px', height: '16px' }} />
+          </button>
+        </div>
+      </div>
+      <div className="ast-number-value">{astNumber}</div>
+      <div className="field-help">{t.astNumberGenerated}</div>
+    </div>
+  ));
+
+  // =================== SECTION 4/5 - COMPOSANTS LOCKOUT POINTS & SYSTÈME ÉNERGIES ===================
 
   // =================== COMPOSANT ÉNERGIE AVEC PROCÉDURES INTERACTIVES ===================
   const EnergyTypeSelector = React.memo(({ point }: { point: LockoutPoint }) => (
@@ -1672,7 +1758,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
   // =================== COMPOSANT PHOTOS LOCKOUT POINTS ===================
   const LockoutPhotosSection = React.memo(({ point }: { point: LockoutPoint }) => {
-    const pointPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id);
+    const pointPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id);
     
     return (
       <div className="form-field">
@@ -1757,7 +1843,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       </div>
 
       {/* Assignation Emplacement */}
-      {projectData.workLocations.length > 0 && (
+      {localData.workLocations.length > 0 && (
         <div className="form-field">
           <label className="field-label">
             <MapPin style={{ width: '18px', height: '18px' }} />
@@ -1912,7 +1998,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
   // =================== COMPOSANT PHOTOS GÉNÉRALES ===================
   const GeneralPhotosSection = React.memo(() => {
-    const generalPhotos = projectData.lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId);
+    const generalPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId);
     
     return (
       <div className="form-field">
@@ -1987,12 +2073,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       <GeneralPhotosSection />
 
       {/* Points de verrouillage dynamiques */}
-      {projectData.lockoutPoints.map((point: LockoutPoint, index: number) => (
+      {localData.lockoutPoints.map((point: LockoutPoint, index: number) => (
         <LockoutPointCard key={point.id} point={point} index={index} />
       ))}
 
       {/* Bouton ajouter point */}
-      <div style={{ marginTop: projectData.lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+      <div style={{ marginTop: localData.lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
         <button 
           type="button"
           className="btn-primary" 
@@ -2007,7 +2093,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       </div>
 
       {/* Message si aucun point */}
-      {projectData.lockoutPoints.length === 0 && (
+      {localData.lockoutPoints.length === 0 && (
         <div style={{
           background: 'rgba(59, 130, 246, 0.1)', 
           border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -2026,46 +2112,55 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     </div>
   ));
 
-  // =================== COMPOSANT CARTE AST PREMIUM ===================
-  const ASTNumberCard = React.memo(() => (
-    <div className="ast-number-card">
-      <div className="ast-number-header">
-        <div className="ast-number-title">
-          <FileText style={{ width: '20px', height: '20px' }} />
-          {t.astNumberTitle}
+  // =================== COMPOSANT VALIDATION ÉTAT LOCKOUT ===================
+  const LockoutValidationSummary = React.memo(() => {
+    const totalPoints = localData.lockoutPoints.length;
+    const completedPoints = localData.lockoutPoints.filter((point: LockoutPoint) => {
+      const progress = getProcedureProgress(point);
+      return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+    }).length;
+    
+    const completionPercentage = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0;
+    
+    if (totalPoints === 0) return null;
+    
+    return (
+      <div className="lockout-validation-summary" style={{
+        background: completionPercentage >= 80 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+        border: `1px solid ${completionPercentage >= 80 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+        borderRadius: '12px',
+        padding: '16px',
+        marginTop: '16px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <Shield size={20} color={completionPercentage >= 80 ? '#22c55e' : '#f59e0b'} />
+          <h4 style={{ margin: 0, color: completionPercentage >= 80 ? '#22c55e' : '#f59e0b' }}>
+            {language === 'fr' ? 'État Verrouillage' : 'Lockout Status'}
+          </h4>
         </div>
-        <div className="ast-actions">
-          <button 
-            type="button"
-            className={`btn-icon ${copied ? 'copied' : ''}`} 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              copyASTNumber();
-            }} 
-            title={t.copyNumber}
-          >
-            {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
-          </button>
-          <button 
-            type="button"
-            className="btn-icon" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              regenerateASTNumber();
-            }} 
-            title={t.generateNew}
-          >
-            <FileText style={{ width: '16px', height: '16px' }} />
-          </button>
+        <div style={{ fontSize: '14px', color: '#e2e8f0', marginBottom: '8px' }}>
+          {completedPoints}/{totalPoints} points complétés ({completionPercentage}%)
+        </div>
+        <div style={{
+          background: 'rgba(15, 23, 42, 0.8)',
+          borderRadius: '8px',
+          height: '6px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            background: completionPercentage >= 80 ? '#22c55e' : '#f59e0b',
+            height: '100%',
+            width: `${completionPercentage}%`,
+            transition: 'width 0.5s ease'
+          }} />
         </div>
       </div>
-      <div className="ast-number-value">{astNumber}</div>
-      <div className="field-help">{t.astNumberGenerated}</div>
-    </div>
-  ));
-  // =================== SECTION 5/5 - RENDU PRINCIPAL JSX + CSS COMPLET OPTIMISÉ ===================
+    );
+  });
+
+  // =================== SECTION 5/5 FINALE - RENDU JSX COMPLET + CSS OPTIMISÉ ===================
+
+  console.log('🔥 Step1 - Render avec localData:', Object.keys(localData));
 
   return (
     <>
@@ -3409,7 +3504,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <ASTNumberCard />
 
         {/* =================== DASHBOARD STATISTIQUES TEMPS RÉEL =================== */}
-        {projectData.workLocations.length > 0 && <LocationStatsCard />}
+        {localData.workLocations.length > 0 && <LocationStatsCard />}
 
         {/* =================== GESTION EMPLACEMENTS DE TRAVAIL =================== */}
         <WorkLocationManager />
@@ -3431,11 +3526,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientNamePlaceholder}
-                value={projectData.client} 
+                value={localData.client} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('client', e.target.value);
+                  updateField('client', e.target.value);
                 }}
               />
             </div>
@@ -3447,11 +3542,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.clientPhonePlaceholder}
-                value={projectData.clientPhone} 
+                value={localData.clientPhone} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('clientPhone', e.target.value);
+                  updateField('clientPhone', e.target.value);
                 }}
               />
             </div>
@@ -3463,11 +3558,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.clientRepPlaceholder}
-                value={projectData.clientRepresentative} 
+                value={localData.clientRepresentative} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('clientRepresentative', e.target.value);
+                  updateField('clientRepresentative', e.target.value);
                 }}
               />
             </div>
@@ -3479,11 +3574,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="tel" 
                 className="premium-input" 
                 placeholder={t.repPhonePlaceholder}
-                value={projectData.clientRepresentativePhone} 
+                value={localData.clientRepresentativePhone} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('clientRepresentativePhone', e.target.value);
+                  updateField('clientRepresentativePhone', e.target.value);
                 }}
               />
             </div>
@@ -3504,11 +3599,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.projectNumberPlaceholder}
-                value={projectData.projectNumber} 
+                value={localData.projectNumber} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('projectNumber', e.target.value);
+                  updateField('projectNumber', e.target.value);
                 }}
               />
             </div>
@@ -3520,11 +3615,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.astClientPlaceholder}
-                value={projectData.astClientNumber} 
+                value={localData.astClientNumber} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('astClientNumber', e.target.value);
+                  updateField('astClientNumber', e.target.value);
                 }}
               />
               <div className="field-help">{t.astClientHelp}</div>
@@ -3537,11 +3632,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <input 
                   type="date" 
                   className="premium-input"
-                  value={projectData.date}
+                  value={localData.date}
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateProjectField('date', e.target.value);
+                    updateField('date', e.target.value);
                   }}
                 />
               </div>
@@ -3552,11 +3647,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <input 
                   type="time" 
                   className="premium-input"
-                  value={projectData.time}
+                  value={localData.time}
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateProjectField('time', e.target.value);
+                    updateField('time', e.target.value);
                   }}
                 />
               </div>
@@ -3578,11 +3673,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 type="text" 
                 className="premium-input" 
                 placeholder={t.workLocationPlaceholder}
-                value={projectData.workLocation} 
+                value={localData.workLocation} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('workLocation', e.target.value);
+                  updateField('workLocation', e.target.value);
                 }}
               />
             </div>
@@ -3609,11 +3704,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="text" 
                   className="premium-input" 
                   placeholder={t.emergencyContactPlaceholder}
-                  value={projectData.emergencyContact} 
+                  value={localData.emergencyContact} 
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateProjectField('emergencyContact', e.target.value);
+                    updateField('emergencyContact', e.target.value);
                   }}
                 />
               </div>
@@ -3625,11 +3720,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                   type="tel" 
                   className="premium-input" 
                   placeholder={t.emergencyPhonePlaceholder}
-                  value={projectData.emergencyPhone} 
+                  value={localData.emergencyPhone} 
                   onChange={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    updateProjectField('emergencyPhone', e.target.value);
+                    updateField('emergencyPhone', e.target.value);
                   }}
                 />
               </div>
@@ -3651,11 +3746,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 className="premium-textarea" 
                 style={{ width: '100%', minHeight: '200px', maxWidth: 'none', resize: 'vertical' }}
                 placeholder={t.workDescriptionPlaceholder}
-                value={projectData.workDescription} 
+                value={localData.workDescription} 
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  updateProjectField('workDescription', e.target.value);
+                  updateField('workDescription', e.target.value);
                 }}
               />
               <div className="field-help">{t.workDescriptionHelp}</div>
@@ -3665,10 +3760,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
         {/* =================== SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE =================== */}
         <LockoutSection />
+
+        {/* =================== VALIDATION ÉTAT LOCKOUT =================== */}
+        <LockoutValidationSummary />
       </div>
     </>
   );
 }
 
 export default Step1ProjectInfo;
-
