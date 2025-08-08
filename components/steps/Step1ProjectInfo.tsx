@@ -1289,7 +1289,28 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           className="btn-primary" 
           onClick={() => {
             setShowAddLocation(true);
-            forceModalOnTop();
+            // 🚀 FORCE MODAL ON TOP INLINE
+            document.body.classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.height = '100%';
+            
+            setTimeout(() => {
+              const modalOverlay = document.querySelector('.modal-overlay-ultra-critical') as HTMLElement;
+              const modalContent = document.querySelector('.modal-content-ultra-critical') as HTMLElement;
+              
+              if (modalOverlay) {
+                modalOverlay.style.zIndex = '2147483647';
+                modalOverlay.style.position = 'fixed';
+                modalOverlay.style.transform = 'translateZ(999999px)';
+              }
+              
+              if (modalContent) {
+                modalContent.style.zIndex = '2147483647';
+                modalContent.style.transform = 'translateZ(999999px)';
+              }
+            }, 0);
           }}
         >
           <Plus size={16} />
@@ -1374,7 +1395,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       {showAddLocation && (
         <div 
           className="modal-overlay-ultra-critical" 
-          onClick={closeModal}
+          onClick={() => {
+            // 🚀 RESTORE BODY INLINE
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            setShowAddLocation(false);
+          }}
           style={{ 
             position: 'fixed !important' as any,
             top: 0,
@@ -1418,7 +1447,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="modal-close" 
-                onClick={closeModal}
+                onClick={() => {
+                  document.body.classList.remove('modal-open');
+                  document.body.style.overflow = '';
+                  document.body.style.position = '';
+                  document.body.style.width = '';
+                  document.body.style.height = '';
+                  setShowAddLocation(false);
+                }}
               >
                 <X size={20} />
               </button>
@@ -1595,7 +1631,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="btn-secondary" 
-                onClick={closeModal}
+                onClick={() => {
+                  document.body.classList.remove('modal-open');
+                  document.body.style.overflow = '';
+                  document.body.style.position = '';
+                  document.body.style.width = '';
+                  document.body.style.height = '';
+                  setShowAddLocation(false);
+                }}
               >
                 {t.cancel}
               </button>
