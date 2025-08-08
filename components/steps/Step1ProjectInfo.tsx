@@ -1287,31 +1287,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <button 
           type="button"
           className="btn-primary" 
-          onClick={() => {
-            setShowAddLocation(true);
-            // 🚀 FORCE MODAL ON TOP INLINE
-            document.body.classList.add('modal-open');
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.height = '100%';
-            
-            setTimeout(() => {
-              const modalOverlay = document.querySelector('.modal-overlay-ultra-critical') as HTMLElement;
-              const modalContent = document.querySelector('.modal-content-ultra-critical') as HTMLElement;
-              
-              if (modalOverlay) {
-                modalOverlay.style.zIndex = '2147483647';
-                modalOverlay.style.position = 'fixed';
-                modalOverlay.style.transform = 'translateZ(999999px)';
-              }
-              
-              if (modalContent) {
-                modalContent.style.zIndex = '2147483647';
-                modalContent.style.transform = 'translateZ(999999px)';
-              }
-            }, 0);
-          }}
+          onClick={() => setShowAddLocation(true)}
         >
           <Plus size={16} />
           {t.addLocation}
@@ -1391,262 +1367,184 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
 
-      {/* =================== 🔥 MODAL CRITIQUE AVEC Z-INDEX ABSOLU MAXIMUM =================== */}
+      {/* =================== 🔥 MODAL SIMPLE FONCTIONNEL =================== */}
       {showAddLocation && (
         <div 
-          className="modal-overlay-ultra-critical" 
-          onClick={() => {
-            // 🚀 RESTORE BODY INLINE
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
-            setShowAddLocation(false);
-          }}
+          className="modal-overlay-simple" 
+          onClick={() => setShowAddLocation(false)}
           style={{ 
-            position: 'fixed !important' as any,
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            width: '100vw !important',
-            height: '100vh !important',
-            background: 'rgba(0, 0, 0, 0.98) !important',
-            backdropFilter: 'blur(20px)',
-            zIndex: 2147483647,
+            background: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px',
-            transform: 'translateZ(999999px)',
-            willChange: 'transform'
+            padding: '16px'
           }}
         >
           <div 
-            className="modal-content-ultra-critical" 
+            className="modal-content-simple" 
             onClick={(e) => e.stopPropagation()}
             style={{ 
-              background: 'rgba(15, 23, 42, 0.98) !important',
-              backdropFilter: 'blur(30px)',
-              border: '3px solid rgba(59, 130, 246, 0.8)',
-              borderRadius: '20px',
-              maxWidth: '700px',
+              background: '#1e293b',
+              border: '2px solid #3b82f6',
+              borderRadius: '16px',
+              maxWidth: '600px',
               width: '100%',
-              maxHeight: 'calc(100vh - 32px)',
+              maxHeight: '90vh',
               overflowY: 'auto',
-              zIndex: 2147483647,
-              position: 'relative',
-              boxShadow: '0 50px 100px rgba(0, 0, 0, 0.95)',
-              transform: 'translateZ(999999px)',
-              willChange: 'transform'
+              zIndex: 10000
             }}
           >
-            <div className="modal-header">
-              <h3>{t.addLocation}</h3>
-              <button 
-                type="button"
-                className="modal-close" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ color: '#ffffff', margin: 0 }}>{t.addLocation}</h3>
+                <button 
+                  type="button"
+                  onClick={() => setShowAddLocation(false)}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             
-            <div className="modal-body">
-              <div className="form-row">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Building size={16} />
-                    {t.locationName} <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.locationNamePlaceholder}
-                    value={newLocation.name}
-                    onChange={(e) => updateModalField('name', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
+            <div style={{ padding: '0 20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', color: '#e2e8f0', marginBottom: '8px' }}>
+                  <Building size={16} style={{ display: 'inline', marginRight: '8px' }} />
+                  {t.locationName} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder={t.locationNamePlaceholder}
+                  value={newLocation.name}
+                  onChange={(e) => updateModalField('name', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#0f172a',
+                    border: '2px solid rgba(100, 116, 139, 0.5)',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
 
-              <div className="form-row">
-                <div className="form-field">
-                  <label className="field-label">
-                    <FileText size={16} />
-                    {t.locationDescription}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.locationDescriptionPlaceholder}
-                    value={newLocation.description}
-                    onChange={(e) => updateModalField('description', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', color: '#e2e8f0', marginBottom: '8px' }}>
+                  <FileText size={16} style={{ display: 'inline', marginRight: '8px' }} />
+                  {t.locationDescription}
+                </label>
+                <input
+                  type="text"
+                  placeholder={t.locationDescriptionPlaceholder}
+                  value={newLocation.description}
+                  onChange={(e) => updateModalField('description', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#0f172a',
+                    border: '2px solid rgba(100, 116, 139, 0.5)',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
 
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <MapPin size={16} />
-                    {t.zone} <span className="required-indicator">*</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#e2e8f0', marginBottom: '8px' }}>
+                    <MapPin size={16} style={{ display: 'inline', marginRight: '8px' }} />
+                    {t.zone} <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input-critical"
                     placeholder={t.zonePlaceholder}
                     value={newLocation.zone}
                     onChange={(e) => updateModalField('zone', e.target.value)}
                     style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
+                      width: '100%',
+                      padding: '12px',
+                      background: '#0f172a',
+                      border: '2px solid rgba(100, 116, 139, 0.5)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
+                <div>
+                  <label style={{ display: 'block', color: '#e2e8f0', marginBottom: '8px' }}>
+                    <Clock size={16} style={{ display: 'inline', marginRight: '8px' }} />
                     {t.workDuration}
                   </label>
                   <input
                     type="text"
-                    className="premium-input modal-input-critical"
                     placeholder={t.workDurationPlaceholder}
                     value={newLocation.estimatedDuration}
                     onChange={(e) => updateModalField('estimatedDuration', e.target.value)}
                     style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
-                    {t.startTime}
-                  </label>
-                  <input
-                    type="time"
-                    className="premium-input modal-input-critical"
-                    value={newLocation.startTime}
-                    onChange={(e) => updateModalField('startTime', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
-                    {t.endTime}
-                  </label>
-                  <input
-                    type="time"
-                    className="premium-input modal-input-critical"
-                    value={newLocation.endTime}
-                    onChange={(e) => updateModalField('endTime', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Building size={16} />
-                    {t.building}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.buildingPlaceholder}
-                    value={newLocation.building}
-                    onChange={(e) => updateModalField('building', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Activity size={16} />
-                    {t.floor}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.floorPlaceholder}
-                    value={newLocation.floor}
-                    onChange={(e) => updateModalField('floor', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
+                      width: '100%',
+                      padding: '12px',
+                      background: '#0f172a',
+                      border: '2px solid rgba(100, 116, 139, 0.5)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
                     }}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div style={{ display: 'flex', gap: '12px', padding: '20px', justifyContent: 'flex-end' }}>
               <button 
                 type="button"
-                className="btn-secondary" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
+                onClick={() => setShowAddLocation(false)}
+                style={{
+                  background: 'rgba(100, 116, 139, 0.6)',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  color: '#ffffff',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
                 }}
               >
                 {t.cancel}
               </button>
               <button 
                 type="button"
-                className="btn-primary" 
                 onClick={addWorkLocation}
                 disabled={!newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  cursor: !newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving ? 'not-allowed' : 'pointer',
+                  opacity: !newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
               >
                 <Plus size={16} />
                 {isModalSaving ? t.adding : t.add}
