@@ -16,8 +16,6 @@ interface Step1ProjectInfoProps {
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
-  userId?: string;
-  userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }
 
 // =================== INTERFACES MÉTIER CONSERVÉES ===================
@@ -546,7 +544,7 @@ const generateASTNumber = (): string => {
 };
 
 // =================== 🔥 COMPOSANT PRINCIPAL - ARCHITECTURE ULTRA-STABLE ===================
-function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {}, userId, userRole }: Step1ProjectInfoProps) {
+function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {} }: Step1ProjectInfoProps) {
   
   // =================== CONFIGURATION & TRADUCTIONS ===================
   const t = translations[language];
@@ -629,49 +627,34 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     }, 50);
   }, [onDataChange]);
 
-  // =================== 🔥 HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
+  // =================== 🔥 HANDLERS ULTRA-STABLES ===================
   const updateField = useCallback((field: string, value: any) => {
-    console.log('🔥 Step1 - Update field ULTRA-STABLE:', field, value);
+    console.log('🔥 Step1 - Update field:', field, value);
     
-    // ✅ RÉFÉRENCE DIRECTE SANS BOUCLE
-    const currentData = stableFormDataRef.current;
-    
-    // ✅ MISE À JOUR IMMÉDIATE
-    const updatedData = { ...currentData, [field]: value };
-    stableFormDataRef.current = updatedData;
-    
-    // ✅ BATCH UPDATE REACT
-    setLocalData(updatedData);
-    
-    // ✅ SYNC PARENT AVEC TIMEOUT ULTRA-COURT
-    setTimeout(() => {
-      notifyParentStable(updatedData);
-    }, 0);
+    setLocalData(prev => {
+      const updated = { ...prev, [field]: value };
+      stableFormDataRef.current = updated;
+      
+      // ✅ Notification parent immédiate
+      notifyParentStable(updated);
+      
+      return updated;
+    });
   }, [notifyParentStable]);
 
   // =================== HANDLERS SPÉCIALISÉS ===================
   const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
-    console.log('🔥 Step1 - Update lockout ULTRA-STABLE:', pointId, field, value);
-    
-    // ✅ RÉFÉRENCE DIRECTE SANS RE-CRÉATION
-    const currentData = stableFormDataRef.current;
-    
-    // ✅ MISE À JOUR OPTIMISÉE
-    const updatedPoints = currentData.lockoutPoints.map((point: LockoutPoint) => 
+    const updatedPoints = localData.lockoutPoints.map((point: LockoutPoint) => 
       point.id === pointId ? { ...point, [field]: value } : point
     );
     
-    const updatedData = { ...currentData, lockoutPoints: updatedPoints };
-    stableFormDataRef.current = updatedData;
-    
-    // ✅ BATCH UPDATE
-    setLocalData(updatedData);
-    
-    // ✅ SYNC PARENT IMMÉDIATE
-    setTimeout(() => {
-      notifyParentStable(updatedData);
-    }, 0);
-  }, [notifyParentStable]);
+    setLocalData(prev => {
+      const updated = { ...prev, lockoutPoints: updatedPoints };
+      stableFormDataRef.current = updated;
+      notifyParentStable(updated);
+      return updated;
+    });
+  }, [localData.lockoutPoints, notifyParentStable]);
 
   const addLockoutPoint = useCallback(() => {
     const newPoint: LockoutPoint = {
@@ -1287,31 +1270,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <button 
           type="button"
           className="btn-primary" 
-          onClick={() => {
-            setShowAddLocation(true);
-            // 🚀 FORCE MODAL ON TOP INLINE
-            document.body.classList.add('modal-open');
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.height = '100%';
-            
-            setTimeout(() => {
-              const modalOverlay = document.querySelector('.modal-overlay-ultra-critical') as HTMLElement;
-              const modalContent = document.querySelector('.modal-content-ultra-critical') as HTMLElement;
-              
-              if (modalOverlay) {
-                modalOverlay.style.zIndex = '2147483647';
-                modalOverlay.style.position = 'fixed';
-                modalOverlay.style.transform = 'translateZ(999999px)';
-              }
-              
-              if (modalContent) {
-                modalContent.style.zIndex = '2147483647';
-                modalContent.style.transform = 'translateZ(999999px)';
-              }
-            }, 0);
-          }}
+          onClick={() => setShowAddLocation(true)}
         >
           <Plus size={16} />
           {t.addLocation}
@@ -1395,39 +1354,27 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       {showAddLocation && (
         <div 
           className="modal-overlay-ultra-critical" 
-          onClick={() => {
-            // 🚀 RESTORE BODY INLINE
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
-            setShowAddLocation(false);
-          }}
+          onClick={() => setShowAddLocation(false)}
           style={{ 
             position: 'fixed !important' as any,
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            width: '100vw !important',
-            height: '100vh !important',
             background: 'rgba(0, 0, 0, 0.98) !important',
-            backdropFilter: 'blur(20px)',
             zIndex: 2147483647,
+            backdropFilter: 'blur(15px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px',
-            transform: 'translateZ(999999px)',
-            willChange: 'transform'
+            padding: '16px'
           }}
         >
           <div 
             className="modal-content-ultra-critical" 
             onClick={(e) => e.stopPropagation()}
             style={{ 
-              background: 'rgba(15, 23, 42, 0.98) !important',
+              background: 'rgba(15, 23, 42, 1) !important',
               backdropFilter: 'blur(30px)',
               border: '3px solid rgba(59, 130, 246, 0.8)',
               borderRadius: '20px',
@@ -1437,9 +1384,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               overflowY: 'auto',
               zIndex: 2147483647,
               position: 'relative',
-              boxShadow: '0 50px 100px rgba(0, 0, 0, 0.95)',
-              transform: 'translateZ(999999px)',
-              willChange: 'transform'
+              boxShadow: '0 50px 100px rgba(0, 0, 0, 0.95)'
             }}
           >
             <div className="modal-header">
@@ -1447,14 +1392,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="modal-close" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
-                }}
+                onClick={() => setShowAddLocation(false)}
               >
                 <X size={20} />
               </button>
@@ -1631,14 +1569,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               <button 
                 type="button"
                 className="btn-secondary" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
-                }}
+                onClick={() => setShowAddLocation(false)}
               >
                 {t.cancel}
               </button>
@@ -2617,94 +2548,51 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             color: #64748b;
           }
 
-          /* =================== 🚀 MODAL Z-INDEX ULTRA-MAXIMUM ABSOLU - FORCE SUPRÊME =================== */
+          /* =================== 🔥 MODAL ULTRA-CRITIQUE Z-INDEX MAXIMUM ABSOLU =================== */
           .modal-overlay-ultra-critical {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
             background: rgba(0, 0, 0, 0.98) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            z-index: 2147483647 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: 16px !important;
+            z-index: 2147483647 !important;
+            padding: 16px;
+            backdrop-filter: blur(15px) !important;
             pointer-events: all !important;
-            /* 🔥 FORCE SUPRÊME - OVERRIDES TOUT */
-            transform: translateZ(999999px) !important;
-            will-change: transform !important;
           }
 
           .modal-content-ultra-critical {
-            position: relative !important;
-            background: rgba(15, 23, 42, 0.98) !important;
+            background: rgba(15, 23, 42, 1) !important;
             backdrop-filter: blur(30px) !important;
-            -webkit-backdrop-filter: blur(30px) !important;
             border: 3px solid rgba(59, 130, 246, 0.8) !important;
-            border-radius: 20px !important;
-            max-width: 700px !important;
-            width: 100% !important;
-            max-height: calc(100vh - 32px) !important;
-            overflow-y: auto !important;
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
             z-index: 2147483647 !important;
+            position: relative !important;
             box-shadow: 0 50px 100px rgba(0, 0, 0, 0.95) !important;
             pointer-events: all !important;
-            /* 🔥 FORCE SUPRÊME */
-            transform: translateZ(999999px) !important;
-            will-change: transform !important;
           }
 
-          /* 🔥 INPUTS MODAL AVEC BACKGROUND FORCÉ */
           .modal-input-critical {
             background: rgba(15, 23, 42, 1) !important;
             border: 2px solid rgba(100, 116, 139, 0.5) !important;
-            color: #ffffff !important;
             position: relative !important;
             z-index: 2147483647 !important;
-            transform: translateZ(999999px) !important;
           }
 
           .modal-input-critical:focus {
             background: rgba(15, 23, 42, 1) !important;
             border-color: #3b82f6 !important;
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+            z-index: 2147483647 !important;
             outline: none !important;
-            z-index: 2147483647 !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 FORCE TOUS LES ÉLÉMENTS DU MODAL AU-DESSUS */
-          .modal-content-ultra-critical * {
-            z-index: 2147483647 !important;
-            position: relative !important;
-          }
-
-          .modal-header,
-          .modal-body,
-          .modal-footer {
-            z-index: 2147483647 !important;
-            position: relative !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 BOUTONS MODAL FORCÉS */
-          .modal-content-ultra-critical button {
-            z-index: 2147483647 !important;
-            position: relative !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 OVERRIDE BODY SCROLL QUAND MODAL OUVERT */
-          body.modal-open {
-            overflow: hidden !important;
-            position: fixed !important;
-            width: 100% !important;
-            height: 100% !important;
           }
 
           .modal-header {
