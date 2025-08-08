@@ -24,6 +24,8 @@ const translations = {
     projectDetails: "📋 Détails du Projet", 
     clientName: "Nom du Client",
     clientPhone: "Téléphone Client",
+    clientRepresentative: "Représentant Client",
+    clientRepPhone: "Téléphone Représentant",
     projectNumber: "Numéro de Projet",
     date: "Date",
     addLocation: "Ajouter Emplacement",
@@ -36,6 +38,8 @@ const translations = {
     projectDetails: "📋 Project Details",
     clientName: "Client Name", 
     clientPhone: "Client Phone",
+    clientRepresentative: "Client Representative",
+    clientRepPhone: "Representative Phone",
     projectNumber: "Project Number",
     date: "Date",
     addLocation: "Add Location",
@@ -52,10 +56,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
   
   // =================== ÉTAT LOCAL MINIMAL ===================
   const [localData, setLocalData] = useState({
-    client: formData?.projectInfo?.client || '',
-    clientPhone: formData?.projectInfo?.clientPhone || '',
     projectNumber: formData?.projectInfo?.projectNumber || '',
-    date: formData?.projectInfo?.date || new Date().toISOString().split('T')[0]
+    date: formData?.projectInfo?.date || new Date().toISOString().split('T')[0],
+    // ✅ CLIENT DATA SÉPARÉE COMME PROJET
+    clientName: formData?.projectInfo?.clientName || '',
+    clientPhone: formData?.projectInfo?.clientPhone || '',
+    clientRepresentative: formData?.projectInfo?.clientRepresentative || '',
+    clientRepPhone: formData?.projectInfo?.clientRepPhone || ''
   });
   
   const [showModal, setShowModal] = useState(false);
@@ -264,7 +271,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
       
       <div className="step1-container">
         
-        {/* Section Informations Client */}
+        {/* ✅ SECTION CLIENT REFAITE AVEC STRUCTURE QUI MARCHE */}
         <div className="form-section">
           <div className="section-header">
             <Building size={20} color="#3b82f6" />
@@ -280,8 +287,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
               type="text"
               className="form-input"
               placeholder="Ex: Hydro-Québec..."
-              value={localData.client}
-              onChange={(e) => updateField('client', e.target.value)}
+              value={localData.clientName}
+              onChange={(e) => updateField('clientName', e.target.value)}
             />
           </div>
           
@@ -296,6 +303,34 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
               placeholder="Ex: (514) 555-0123"
               value={localData.clientPhone}
               onChange={(e) => updateField('clientPhone', e.target.value)}
+            />
+          </div>
+          
+          <div className="form-field">
+            <label className="field-label">
+              <User size={16} />
+              {t.clientRepresentative}
+            </label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Ex: Jean Tremblay"
+              value={localData.clientRepresentative}
+              onChange={(e) => updateField('clientRepresentative', e.target.value)}
+            />
+          </div>
+          
+          <div className="form-field">
+            <label className="field-label">
+              <Phone size={16} />
+              {t.clientRepPhone}
+            </label>
+            <input
+              type="tel"
+              className="form-input"
+              placeholder="Ex: (514) 555-0456"
+              value={localData.clientRepPhone}
+              onChange={(e) => updateField('clientRepPhone', e.target.value)}
             />
           </div>
         </div>
