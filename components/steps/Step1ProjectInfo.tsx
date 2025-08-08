@@ -1276,7 +1276,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     </div>
   ));
 
-  // =================== COMPOSANT GESTION EMPLACEMENTS AVEC MODAL Z-INDEX CRITIQUE ===================
+  // =================== COMPOSANT GESTION EMPLACEMENTS AVEC MODAL SIMPLE ===================
   const WorkLocationManager = React.memo(() => (
     <div className="work-locations-section">
       <div className="locations-header">
