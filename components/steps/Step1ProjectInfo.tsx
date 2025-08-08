@@ -23,11 +23,7 @@ const translations = {
     clientInfo: "🏢 Informations Client",
     projectDetails: "📋 Détails du Projet", 
     clientName: "Nom du Client",
-    clientPhone: "Téléphone Client",
-    clientRepresentative: "Représentant Client",
-    clientRepPhone: "Téléphone Représentant",
     projectNumber: "Numéro de Projet",
-    date: "Date",
     addLocation: "Ajouter Emplacement",
     locationName: "Nom de l'Emplacement",
     cancel: "Annuler",
@@ -37,11 +33,7 @@ const translations = {
     clientInfo: "🏢 Client Information",
     projectDetails: "📋 Project Details",
     clientName: "Client Name", 
-    clientPhone: "Client Phone",
-    clientRepresentative: "Client Representative",
-    clientRepPhone: "Representative Phone",
     projectNumber: "Project Number",
-    date: "Date",
     addLocation: "Add Location",
     locationName: "Location Name",
     cancel: "Cancel",
@@ -49,42 +41,46 @@ const translations = {
   }
 };
 
-// =================== COMPOSANT PRINCIPAL SIMPLE ===================
+// =================== COMPOSANT ULTRA-SIMPLE - ÉTATS SÉPARÉS ===================
 function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1ProjectInfoProps) {
   
   const t = translations[language];
   
-  // =================== ÉTAT LOCAL MINIMAL ===================
-  const [localData, setLocalData] = useState({
-    projectNumber: formData?.projectInfo?.projectNumber || '',
-    date: formData?.projectInfo?.date || new Date().toISOString().split('T')[0],
-    // ✅ CLIENT DATA SÉPARÉE COMME PROJET
-    clientName: formData?.projectInfo?.clientName || '',
-    clientPhone: formData?.projectInfo?.clientPhone || '',
-    clientRepresentative: formData?.projectInfo?.clientRepresentative || '',
-    clientRepPhone: formData?.projectInfo?.clientRepPhone || ''
-  });
-  
-  const [showModal, setShowModal] = useState(false);
-  const [newLocationName, setNewLocationName] = useState('');
+  // =================== 🔥 ÉTATS COMPLÈTEMENT SÉPARÉS ===================
+  const [clientName, setClientName] = useState(formData?.projectInfo?.clientName || '');
+  const [projectNumber, setProjectNumber] = useState(formData?.projectInfo?.projectNumber || '');
   const [locations, setLocations] = useState<string[]>([]);
   
-  // =================== HANDLER SIMPLE ET STABLE ===================
-  const updateField = useCallback((field: string, value: string) => {
-    console.log('🔥 Updating field:', field, value);
+  // États modal séparés
+  const [showModal, setShowModal] = useState(false);
+  const [newLocationName, setNewLocationName] = useState('');
+  
+  // =================== HANDLERS ULTRA-SIMPLES SÉPARÉS ===================
+  const updateClientName = useCallback((value: string) => {
+    console.log('🔥 Client Name:', value);
+    setClientName(value);
     
-    setLocalData(prev => {
-      // ✅ TOUJOURS METTRE À JOUR - PAS DE BLOCAGE
-      const updated = { ...prev, [field]: value };
-      
-      // Notifier le parent après mise à jour
-      setTimeout(() => {
-        onDataChange('projectInfo', updated);
-      }, 0);
-      
-      return updated;
-    });
-  }, [onDataChange]);
+    // Sync parent
+    setTimeout(() => {
+      onDataChange('projectInfo', { 
+        clientName: value,
+        projectNumber: projectNumber 
+      });
+    }, 0);
+  }, [projectNumber, onDataChange]);
+  
+  const updateProjectNumber = useCallback((value: string) => {
+    console.log('🔥 Project Number:', value);
+    setProjectNumber(value);
+    
+    // Sync parent
+    setTimeout(() => {
+      onDataChange('projectInfo', { 
+        clientName: clientName,
+        projectNumber: value 
+      });
+    }, 0);
+  }, [clientName, onDataChange]);
   
   // =================== HANDLERS MODAL SIMPLES ===================
   const openModal = useCallback(() => {
@@ -99,17 +95,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
   const addLocation = useCallback(() => {
     if (newLocationName.trim()) {
       console.log('✅ Location ajoutée:', newLocationName);
-      
-      // ✅ AJOUTER VRAIMENT LA LOCATION
       setLocations(prev => [...prev, newLocationName.trim()]);
-      
-      // ✅ FERMER ET RESET
       setNewLocationName('');
       setShowModal(false);
     }
   }, [newLocationName]);
 
-  console.log('🔥 Step1 Simple - Render avec localData:', localData);
+  console.log('🔥 Step1 Ultra-Simple - clientName:', clientName, 'projectNumber:', projectNumber);
 
   return (
     <>
@@ -117,7 +109,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
         __html: `
           .step1-container { 
             padding: 20px; 
-            max-width: 800px; 
+            max-width: 600px; 
             margin: 0 auto;
             color: #ffffff;
           }
@@ -209,7 +201,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
             background: rgba(100, 116, 139, 0.5);
           }
           
-          /* =================== MODAL SIMPLE Z-INDEX MAXIMUM =================== */
+          /* =================== MODAL SIMPLE =================== */
           .modal-overlay {
             position: fixed;
             top: 0;
@@ -230,7 +222,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
             border-radius: 16px;
             padding: 24px;
             width: 100%;
-            max-width: 500px;
+            max-width: 400px;
             z-index: 999999;
           }
           
@@ -266,12 +258,22 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
             margin-top: 20px;
             justify-content: flex-end;
           }
+          
+          .location-item {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 4px 0;
+            color: #ffffff;
+            fontSize: 13px;
+          }
         `
       }} />
       
       <div className="step1-container">
         
-        {/* ✅ SECTION CLIENT REFAITE AVEC STRUCTURE QUI MARCHE */}
+        {/* ✅ SECTION CLIENT - 1 SEUL CHAMP */}
         <div className="form-section">
           <div className="section-header">
             <Building size={20} color="#3b82f6" />
@@ -287,55 +289,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
               type="text"
               className="form-input"
               placeholder="Ex: Hydro-Québec..."
-              value={localData.clientName}
-              onChange={(e) => updateField('clientName', e.target.value)}
-            />
-          </div>
-          
-          <div className="form-field">
-            <label className="field-label">
-              <Phone size={16} />
-              {t.clientPhone}
-            </label>
-            <input
-              type="tel"
-              className="form-input"
-              placeholder="Ex: (514) 555-0123"
-              value={localData.clientPhone}
-              onChange={(e) => updateField('clientPhone', e.target.value)}
-            />
-          </div>
-          
-          <div className="form-field">
-            <label className="field-label">
-              <User size={16} />
-              {t.clientRepresentative}
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Ex: Jean Tremblay"
-              value={localData.clientRepresentative}
-              onChange={(e) => updateField('clientRepresentative', e.target.value)}
-            />
-          </div>
-          
-          <div className="form-field">
-            <label className="field-label">
-              <Phone size={16} />
-              {t.clientRepPhone}
-            </label>
-            <input
-              type="tel"
-              className="form-input"
-              placeholder="Ex: (514) 555-0456"
-              value={localData.clientRepPhone}
-              onChange={(e) => updateField('clientRepPhone', e.target.value)}
+              value={clientName}
+              onChange={(e) => updateClientName(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Section Projet */}
+        {/* ✅ SECTION PROJET - 1 SEUL CHAMP */}
         <div className="form-section">
           <div className="section-header">
             <Briefcase size={20} color="#3b82f6" />
@@ -351,51 +311,27 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
               type="text"
               className="form-input"
               placeholder="Ex: PRJ-2025-001"
-              value={localData.projectNumber}
-              onChange={(e) => updateField('projectNumber', e.target.value)}
-            />
-          </div>
-          
-          <div className="form-field">
-            <label className="field-label">
-              <Calendar size={16} />
-              {t.date}
-            </label>
-            <input
-              type="date"
-              className="form-input"
-              value={localData.date}
-              onChange={(e) => updateField('date', e.target.value)}
+              value={projectNumber}
+              onChange={(e) => updateProjectNumber(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Test Modal */}
+        {/* ✅ SECTION EMPLACEMENTS SIMPLE */}
         <div className="form-section">
           <button className="btn-primary" onClick={openModal}>
             <Plus size={16} />
             {t.addLocation}
           </button>
           
-          {/* Liste des locations ajoutées */}
+          {/* Liste des locations */}
           {locations.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <h4 style={{ color: '#ffffff', fontSize: '14px', marginBottom: '8px' }}>
-                Emplacements ajoutés:
+                Emplacements ajoutés ({locations.length}):
               </h4>
               {locations.map((location, index) => (
-                <div 
-                  key={index}
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    margin: '4px 0',
-                    color: '#ffffff',
-                    fontSize: '13px'
-                  }}
-                >
+                <div key={index} className="location-item">
                   {location}
                 </div>
               ))}
@@ -403,7 +339,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
           )}
         </div>
 
-        {/* Modal Simple */}
+        {/* ✅ MODAL ULTRA-SIMPLE */}
         {showModal && (
           <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -422,7 +358,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant }: Step1Pro
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Ex: Bâtiment A - Étage 2"
+                  placeholder="Ex: Bâtiment A"
                   value={newLocationName}
                   onChange={(e) => setNewLocationName(e.target.value)}
                 />
