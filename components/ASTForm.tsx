@@ -365,9 +365,37 @@ export default function ASTForm({
   }, [currentLanguage]);
 
   const getCompletionPercentage = useCallback((): number => {
-    const completedSteps = getCurrentCompletedSteps();
-    return Math.round((completedSteps / 6) * 100);
-  }, []);
+    let completed = 0;
+    
+    // ✅ Calcul direct pour éviter la dépendance circulaire
+    const currentData = stableFormDataRef.current;
+    
+    if (currentData.projectInfo?.client && currentData.projectInfo?.workDescription) {
+      completed++;
+    }
+    
+    if (currentData.equipment?.selected?.length > 0) {
+      completed++;
+    }
+    
+    if (currentData.hazards?.selected?.length > 0) {
+      completed++;
+    }
+    
+    if (currentData.permits?.permits?.length > 0) {
+      completed++;
+    }
+    
+    if (currentData.validation?.reviewers?.length > 0) {
+      completed++;
+    }
+    
+    if (currentStep >= 6) {
+      completed++;
+    }
+    
+    return Math.round((completed / 6) * 100);
+  }, [currentStep]);
 
   // =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE (STYLE ORIGINAL) ===================
   const MobileHeader = () => (
