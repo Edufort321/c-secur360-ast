@@ -17,15 +17,18 @@ import Step4Permits from '@/components/steps/Step4Permits';
 import Step5Validation from '@/components/steps/Step5Validation';
 import Step6Finalization from '@/components/steps/Step6Finalization';
 
-// =================== INTERFACES PRINCIPALES (CONSERVÉES) ===================
+// =================== INTERFACES PRINCIPALES ADAPTÉES À TES TYPES ===================
 interface ASTFormProps {
   tenant: string;
   language: 'fr' | 'en';
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
-  formData: any;
+  formData: Partial<AST>; // Utilise ton interface AST existante
   onDataChange: (section: string, data: any) => void;
 }
+
+// Import de tes types existants (à ajouter en haut du fichier)
+// import { AST, ProjectInfo, Participant, ASTStep } from '@/types/ast';
 
 // =================== TRADUCTIONS COMPLÈTES (CONSERVÉES INTÉGRALEMENT) ===================
 const translations = {
@@ -258,17 +261,31 @@ export default function ASTForm({
   const [copied, setCopied] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // =================== DONNÉES AST STABLES (CONSERVÉES) ===================
-  const [astData, setAstData] = useState(() => ({
+  // =================== DONNÉES AST STABLES ADAPTÉES À TON INTERFACE ===================
+  const [astData, setAstData] = useState<Partial<AST>>(() => ({
     ...formData,
     id: formData.id || `ast_${Date.now()}`,
-    astNumber: formData.astNumber || `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    name: formData.name || `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
     tenant,
-    status: 'draft',
-    createdAt: new Date().toISOString(),
+    status: formData.status || 'draft',
+    createdAt: formData.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    createdBy: userId || 'user_anonymous',
-    language: currentLanguage
+    createdBy: formData.createdBy || userId || 'user_anonymous',
+    currentStep: formData.currentStep || 1,
+    completedSteps: formData.completedSteps || [],
+    steps: formData.steps || [],
+    participants: formData.participants || [],
+    validations: formData.validations || [],
+    revisionHistory: formData.revisionHistory || [],
+    // Initialisation des sections avec ta structure
+    projectInfo: formData.projectInfo || {
+      workType: '',
+      location: {
+        site: ''
+      },
+      estimatedDuration: '',
+      equipmentRequired: []
+    }
   }));
 
   // =================== 🔥🔥🔥 HANDLER ULTRA-STABLE DÉFINITIF (FIXES TOUS LES BUGS) 🔥🔥🔥 ===================
@@ -359,23 +376,20 @@ export default function ASTForm({
   const getCurrentCompletedSteps = useCallback((): number => {
     let completed = 0;
     
-    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
+    // Adaptation à ta structure AST
+    if (astData.projectInfo?.workType && astData.projectInfo?.location?.site) {
       completed++;
     }
     
-    if (astData.equipment?.selected?.length > 0) {
+    if (astData.steps && astData.steps.length > 0) {
+      completed += astData.steps.filter(step => step.isCompleted).length;
+    }
+    
+    if (astData.participants && astData.participants.length > 0) {
       completed++;
     }
     
-    if (astData.hazards?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.permits?.permits?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.validation?.reviewers?.length > 0) {
+    if (astData.validations && astData.validations.length > 0) {
       completed++;
     }
     
@@ -383,17 +397,17 @@ export default function ASTForm({
       completed++;
     }
     
-    return completed;
+    return Math.min(completed, 6);
   }, [astData, currentStep]);
 
   const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
       case 1:
-        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
+        return Boolean(astData.projectInfo?.workType && astData.projectInfo?.location?.site);
       case 2:
-        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
+        return Boolean(astData.participants && astData.participants.length > 0);
       case 3:
-        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
+        return Boolean(astData.steps && astData.steps.length > 0);
       case 4:
         return true;
       case 5:
@@ -460,7 +474,7 @@ export default function ASTForm({
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            AST #{astData.astNumber.slice(-6)} • {tenant.toUpperCase()}
+            AST #{(astData.name || astData.id || '').slice(-6)} • {tenant.toUpperCase()}
           </div>
         </div>
         
@@ -1289,7 +1303,7 @@ export default function ASTForm({
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                {astData.astNumber}
+                {(astData.name || astData.id || 'AST-NEW').slice(-8)}
                 <button
                   onClick={handleCopyAST}
                   style={{
@@ -1665,13 +1679,14 @@ export default function ASTForm({
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES STABLES ===================
   const handleCopyAST = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(astData.astNumber);
+      const astNumber = astData.name || astData.id || 'AST-NEW';
+      await navigator.clipboard.writeText(astNumber);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Erreur lors de la copie:', err);
     }
-  }, [astData.astNumber]);
+  }, [astData.name, astData.id]);
 
   const changeStatus = useCallback((newStatus: any) => {
     setAstData((prev: any) => ({
