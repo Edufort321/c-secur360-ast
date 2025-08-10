@@ -52,29 +52,6 @@ export default function ASTPage() {
         }
       }
     },
-    participants: [],
-    hazardIdentification: {
-      potentialHazards: [],
-      riskAssessment: [],
-      controlMeasures: []
-    },
-    controlMeasures: {
-      engineering: [],
-      administrative: [],
-      ppe: []
-    },
-    emergencyProcedures: {
-      emergencyContacts: [],
-      evacuationPlan: '',
-      firstAidProcedures: '',
-      equipmentShutdown: ''
-    },
-    documentation: {
-      permits: [],
-      certifications: [],
-      photos: [],
-      sketches: []
-    },
     status: 'draft',
     createdAt: new Date(),
     updatedAt: new Date(),
