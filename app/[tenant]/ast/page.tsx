@@ -1,191 +1,264 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { 
-  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
-  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
-  Phone, User, Briefcase, Copy, Check, Camera, Hash, Globe
-} from 'lucide-react';
-import { AST } from '../types/ast'; // Import selon ta structure exacte
+import React, { useState, useCallback, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import ASTForm from '@/components/ASTForm';
+import { AST } from '../../../types/ast';
 
-// Interface ASTForm compatible avec ton AST
-interface ASTFormProps {
-  formData: Partial<AST>;
-  onDataChange: (section: string, data: any) => void;
-  tenant: string;
-  language?: 'fr' | 'en';
-}
+export default function ASTPage() {
+  const params = useParams();
+  const router = useRouter();
+  const tenant = params?.tenant as string;
 
-// Interface pour les steps
-interface StepProps {
-  formData: Partial<AST>;
-  language: 'fr' | 'en';
-  tenant: string;
-  errors?: Record<string, string>;
-  onDataChange: (section: string, data: any) => void;
-}
-
-const translations = {
-  fr: {
-    title: "Analyse de Sécurité des Tâches",
-    subtitle: "Évaluation complète des risques et mesures de contrôle",
-    steps: {
-      1: "Informations Projet",
-      2: "Participants",
-      3: "Identification Dangers", 
-      4: "Mesures Contrôle",
-      5: "Procédures Urgence",
-      6: "Documentation"
+  const [formData, setFormData] = useState<Partial<AST>>({
+    id: '',
+    tenant: tenant || '',
+    projectInfo: {
+      workType: '',
+      workTypeDetails: {
+        category: '',
+        subcategory: '',
+        complexity: 'simple',
+        frequency: 'routine',
+        criticality: 'low'
+      },
+      location: {
+        site: '',
+        building: '',
+        floor: '',
+        room: '',
+        specificArea: ''
+      },
+      estimatedDuration: '',
+      actualDuration: '',
+      equipmentRequired: [],
+      environmentalConditions: {
+        temperature: { min: 20, max: 25, units: 'celsius' },
+        humidity: 50,
+        lighting: { 
+          type: 'artificial', 
+          adequacy: 'good', 
+          requiresSupplemental: false 
+        },
+        noise: { level: 0, requiresProtection: false },
+        airQuality: { 
+          quality: 'good', 
+          requiresVentilation: false, 
+          requiresRespiratory: false 
+        },
+        weather: { 
+          condition: 'clear', 
+          impactsWork: false 
+        }
+      }
     },
-    navigation: {
-      previous: "Précédent",
-      next: "Suivant",
-      save: "Sauvegarder",
-      complete: "Terminer"
+    participants: [],
+    hazardIdentification: {
+      potentialHazards: [],
+      riskAssessment: [],
+      controlMeasures: []
     },
-    status: {
-      draft: "Brouillon",
-      in_progress: "En cours",
-      under_review: "En révision", 
-      approved: "Approuvé",
-      rejected: "Rejeté"
-    }
-  },
-  en: {
-    title: "Job Safety Analysis",
-    subtitle: "Complete risk assessment and control measures",
-    steps: {
-      1: "Project Information",
-      2: "Participants", 
-      3: "Hazard Identification",
-      4: "Control Measures",
-      5: "Emergency Procedures",
-      6: "Documentation"
+    controlMeasures: {
+      engineering: [],
+      administrative: [],
+      ppe: []
     },
-    navigation: {
-      previous: "Previous",
-      next: "Next", 
-      save: "Save",
-      complete: "Complete"
+    emergencyProcedures: {
+      emergencyContacts: [],
+      evacuationPlan: '',
+      firstAidProcedures: '',
+      equipmentShutdown: ''
     },
-    status: {
-      draft: "Draft",
-      in_progress: "In Progress",
-      under_review: "Under Review",
-      approved: "Approved", 
-      rejected: "Rejected"
-    }
-  }
-};
+    documentation: {
+      permits: [],
+      certifications: [],
+      photos: [],
+      sketches: []
+    },
+    status: 'draft',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: '',
+    assignedTo: [],
+    completedAt: null
+  });
 
-// Configuration des steps avec couleurs
-const stepsConfig = [
-  { id: 1, color: '#3b82f6', icon: Building },
-  { id: 2, color: '#10b981', icon: Users },
-  { id: 3, color: '#f59e0b', icon: AlertTriangle },
-  { id: 4, color: '#8b5cf6', icon: Shield },
-  { id: 5, color: '#ef4444', icon: Phone },
-  { id: 6, color: '#06b6d4', icon: FileText }
-];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-export default function ASTForm({ 
-  formData, 
-  onDataChange, 
-  tenant, 
-  language = 'fr' 
-}: ASTFormProps) {
-  const t = translations[language];
-  
-  // Hooks mobiles
-  const [isMobile, setIsMobile] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(language);
-  
-  // État AST avec structure complète selon ton interface
-  const [astData, setAstData] = useState<Partial<AST>>(() => ({
-    ...formData,
-    id: formData.id || '',
-    tenant: formData.tenant || tenant,
-    status: formData.status || 'draft',
-    createdAt: formData.createdAt || new Date(),
-    updatedAt: formData.updatedAt || new Date()
-  }));
-
-  // Refs pour éviter les boucles
-  const isUpdatingRef = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
-
-  // Hook responsive
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    if (!tenant) return;
 
-  // Sync avec le parent de manière stable
-  useEffect(() => {
-    if (JSON.stringify(formData) !== JSON.stringify(astData)) {
-      setAstData(prev => ({
-        ...prev,
-        ...formData,
-        updatedAt: new Date()
-      }));
-    }
-  }, [formData]);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        
+        const userResponse = await fetch(`/api/${tenant}/user`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          console.log('User data loaded:', userData);
+        }
 
-  // Handler ultra-stable pour éviter les boucles
-  const stableDataChangeHandler = useCallback((section: string, data: any) => {
-    if (isUpdatingRef.current) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const astId = urlParams.get('id');
+        
+        if (astId) {
+          const astResponse = await fetch(`/api/${tenant}/ast/${astId}`);
+          if (astResponse.ok) {
+            const astData = await astResponse.json();
+            setFormData(astData);
+          }
+        }
+
+      } catch (err) {
+        console.error('Erreur lors du chargement:', err);
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [tenant]);
+
+  const handleDataChange = useCallback(async (section: string, data: any) => {
+    setSaving(true);
     
-    isUpdatingRef.current = true;
-    
-    // Clear timeout précédent
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    setAstData(prev => {
+    setFormData(prev => {
       const newData = {
         ...prev,
         [section]: data,
         updatedAt: new Date()
       };
       
-      // Sync différée avec le parent
-      timeoutRef.current = setTimeout(() => {
-        onDataChange(section, data);
-        isUpdatingRef.current = false;
-      }, 100);
+      setTimeout(async () => {
+        try {
+          await fetch(`/api/${tenant}/ast/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newData)
+          });
+        } catch (err) {
+          console.error('Erreur sauvegarde:', err);
+        } finally {
+          setSaving(false);
+        }
+      }, 500);
       
       return newData;
     });
-  }, [onDataChange]);
+  }, [tenant]);
 
-  // Navigation handlers
-  const handlePrevious = useCallback(() => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-    }
-  }, [currentStep]);
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+      }}>
+        <div style={{
+          padding: '20px',
+          borderRadius: '12px',
+          background: 'rgba(15, 23, 42, 0.8)',
+          color: '#ffffff',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '3px solid #3b82f6',
+            borderTop: '3px solid transparent',
+            borderRadius: '50%',
+            margin: '0 auto 16px',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <p>Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleNext = useCallback(() => {
-    if (currentStep < 6) {
-      setCurrentStep(prev => prev + 1);
-    }
-  }, [currentStep]);
+  if (error) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+      }}>
+        <div style={{
+          padding: '20px',
+          borderRadius: '12px',
+          background: 'rgba(15, 23, 42, 0.8)',
+          color: '#ef4444',
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
+          <h2>Erreur</h2>
+          <p>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              marginTop: '16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#3b82f6',
+              color: '#ffffff',
+              cursor: 'pointer'
+            }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleStepClick = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+    }}>
+      {saving && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '8px 16px',
+          background: 'rgba(34, 197, 94, 0.9)',
+          color: '#ffffff',
+          borderRadius: '8px',
+          fontSize: '14px',
+          zIndex: 9999,
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          Sauvegarde...
+        </div>
+      )}
 
-  const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
-    setCurrentLanguage(newLanguage);
-  }, []);
+      <ASTForm
+        formData={formData}
+        onDataChange={handleDataChange}
+        tenant={tenant}
+        language="fr"
+      />
 
-  // Calcul du pourcentage de completion
-  const getCompletionPercentage = useCallback(() => {
-    let completed = 0;
-    const total = 6;
-    
-    if (astData.projectInfo?.work
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          0% { opacity: 0; transform: translateY(-10px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
