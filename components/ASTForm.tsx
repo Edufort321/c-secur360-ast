@@ -1594,7 +1594,7 @@ export default function ASTForm({
     let completed = 0;
     
     // ✅ Utiliser stableFormDataRef.current au lieu d'astData
-    const currentData = stableFormDataRef.current;
+    const currentData = formData;
     
     if (currentData.projectInfo?.client && currentData.projectInfo?.workDescription) {
       completed++;
