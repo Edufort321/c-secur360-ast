@@ -3,20 +3,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
-import { AST } from '../../../types/ast'; // Import correct selon ta structure
-
-// Interface pour la page dans ta structure
-interface ASTPageProps {
-  params: { tenant: string };
-}
+import { AST } from '../../../types/ast';
 
 export default function ASTPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params?.tenant as string;
 
-  // État principal avec initialisation complète selon ton interface AST
-  const [formData, setFormData] = useState<Partial<AST>>(() => ({
+  const [formData, setFormData] = useState<Partial<AST>>({
     id: '',
     tenant: tenant || '',
     projectInfo: {
@@ -87,13 +81,12 @@ export default function ASTPage() {
     createdBy: '',
     assignedTo: [],
     completedAt: null
-  }));
+  });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Chargement initial des données
   useEffect(() => {
     if (!tenant) return;
 
@@ -101,14 +94,12 @@ export default function ASTPage() {
       try {
         setLoading(true);
         
-        // Fetch user data
         const userResponse = await fetch(`/api/${tenant}/user`);
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          // Utiliser les données utilisateur si nécessaire
+          console.log('User data loaded:', userData);
         }
 
-        // Fetch AST data si un ID existe
         const urlParams = new URLSearchParams(window.location.search);
         const astId = urlParams.get('id');
         
@@ -131,9 +122,7 @@ export default function ASTPage() {
     loadData();
   }, [tenant]);
 
-  // Handler optimisé pour éviter les re-renders en boucle
   const handleDataChange = useCallback(async (section: string, data: any) => {
-    // Débounce pour éviter les appels simultanés
     setSaving(true);
     
     setFormData(prev => {
@@ -143,7 +132,6 @@ export default function ASTPage() {
         updatedAt: new Date()
       };
       
-      // Sauvegarde différée pour éviter les conflits
       setTimeout(async () => {
         try {
           await fetch(`/api/${tenant}/ast/save`, {
@@ -236,7 +224,6 @@ export default function ASTPage() {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
     }}>
-      {/* Indicateur de sauvegarde */}
       {saving && (
         <div style={{
           position: 'fixed',
@@ -254,7 +241,6 @@ export default function ASTPage() {
         </div>
       )}
 
-      {/* ASTForm principal */}
       <ASTForm
         formData={formData}
         onDataChange={handleDataChange}
@@ -262,7 +248,6 @@ export default function ASTPage() {
         language="fr"
       />
 
-      {/* CSS pour les animations */}
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
