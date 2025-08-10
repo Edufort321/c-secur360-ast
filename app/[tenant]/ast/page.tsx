@@ -52,12 +52,7 @@ export default function ASTPage() {
         }
       }
     },
-    status: 'draft',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    createdBy: '',
-    assignedTo: [],
-    completedAt: null
+    status: 'draft'
   });
 
   const [loading, setLoading] = useState(true);
