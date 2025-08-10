@@ -1,264 +1,567 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import ASTForm from '@/components/ASTForm';
-import { AST } from '../../../types/ast';
+import React, { useState, useCallback } from 'react';
+import { Building, Phone, MapPin, Calendar, User, Briefcase, Plus, Trash2, Camera } from 'lucide-react';
+import { AST, ProjectInfo } from '@/types/ast';
 
-export default function ASTPage() {
-  const params = useParams();
-  const router = useRouter();
-  const tenant = params?.tenant as string;
+// Interface pour Step1 adaptée à ton AST
+interface Step1Props {
+  formData: Partial<AST>;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: Record<string, string>;
+  onDataChange: (section: string, data: any) => void;
+}
 
-  const [formData, setFormData] = useState<Partial<AST>>({
-    id: '',
-    tenant: tenant || '',
-    projectInfo: {
-      workType: '',
-      workTypeDetails: {
+// Traductions pour Step1
+const translations = {
+  fr: {
+    title: "Informations du Projet",
+    subtitle: "Identification et détails du projet",
+    workType: "Type de Travail",
+    workTypeDetails: "Détails du Travail",
+    complexity: "Complexité",
+    frequency: "Fréquence",
+    criticality: "Criticité",
+    location: "Emplacement",
+    site: "Site",
+    building: "Bâtiment",
+    floor: "Étage", 
+    room: "Salle",
+    specificArea: "Zone Spécifique",
+    estimatedDuration: "Durée Estimée",
+    actualDuration: "Durée Réelle",
+    equipmentRequired: "Équipement Requis",
+    environmentalConditions: "Conditions Environnementales",
+    temperature: "Température",
+    humidity: "Humidité",
+    lighting: "Éclairage",
+    noise: "Bruit",
+    airQuality: "Qualité de l'Air",
+    weather: "Météo",
+    required: "Obligatoire",
+    optional: "Optionnel",
+    simple: "Simple",
+    moderate: "Modéré", 
+    complex: "Complexe",
+    highly_complex: "Très Complexe",
+    routine: "Routine",
+    periodic: "Périodique",
+    occasional: "Occasionnel",
+    rare: "Rare",
+    low: "Faible",
+    medium: "Moyen",
+    high: "Élevé",
+    critical: "Critique"
+  },
+  en: {
+    title: "Project Information",
+    subtitle: "Identification and project details",
+    workType: "Work Type",
+    workTypeDetails: "Work Details", 
+    complexity: "Complexity",
+    frequency: "Frequency",
+    criticality: "Criticality",
+    location: "Location",
+    site: "Site",
+    building: "Building",
+    floor: "Floor",
+    room: "Room", 
+    specificArea: "Specific Area",
+    estimatedDuration: "Estimated Duration",
+    actualDuration: "Actual Duration",
+    equipmentRequired: "Required Equipment",
+    environmentalConditions: "Environmental Conditions",
+    temperature: "Temperature",
+    humidity: "Humidity",
+    lighting: "Lighting",
+    noise: "Noise",
+    airQuality: "Air Quality",
+    weather: "Weather",
+    required: "Required",
+    optional: "Optional",
+    simple: "Simple",
+    moderate: "Moderate",
+    complex: "Complex", 
+    highly_complex: "Highly Complex",
+    routine: "Routine",
+    periodic: "Periodic",
+    occasional: "Occasional",
+    rare: "Rare",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    critical: "Critical"
+  }
+};
+
+export default function Step1ProjectInfo({ 
+  formData, 
+  language = 'fr', 
+  tenant, 
+  errors = {}, 
+  onDataChange 
+}: Step1Props) {
+  
+  const t = translations[language];
+  
+  // État local adapté à ta structure ProjectInfo
+  const [localData, setLocalData] = useState(() => {
+    const projectInfo = formData.projectInfo || {};
+    return {
+      workType: projectInfo.workType || '',
+      workTypeDetails: projectInfo.workTypeDetails || {
         category: '',
         subcategory: '',
-        complexity: 'simple',
-        frequency: 'routine',
-        criticality: 'low'
+        complexity: 'simple' as const,
+        frequency: 'routine' as const,
+        criticality: 'low' as const
       },
-      location: {
+      location: projectInfo.location || {
         site: '',
         building: '',
         floor: '',
         room: '',
         specificArea: ''
       },
-      estimatedDuration: '',
-      actualDuration: '',
-      equipmentRequired: [],
-      environmentalConditions: {
-        temperature: { min: 20, max: 25, units: 'celsius' },
+      estimatedDuration: projectInfo.estimatedDuration || '',
+      actualDuration: projectInfo.actualDuration || '',
+      equipmentRequired: projectInfo.equipmentRequired || [],
+      environmentalConditions: projectInfo.environmentalConditions || {
+        temperature: { min: 20, max: 25, units: 'celsius' as const },
         humidity: 50,
         lighting: { 
-          type: 'artificial', 
-          adequacy: 'good', 
+          type: 'artificial' as const, 
+          adequacy: 'good' as const, 
           requiresSupplemental: false 
         },
         noise: { level: 0, requiresProtection: false },
         airQuality: { 
-          quality: 'good', 
+          quality: 'good' as const, 
           requiresVentilation: false, 
           requiresRespiratory: false 
         },
         weather: { 
-          condition: 'clear', 
+          condition: 'clear' as const, 
           impactsWork: false 
         }
       }
-    },
-    participants: [],
-    hazardIdentification: {
-      potentialHazards: [],
-      riskAssessment: [],
-      controlMeasures: []
-    },
-    controlMeasures: {
-      engineering: [],
-      administrative: [],
-      ppe: []
-    },
-    emergencyProcedures: {
-      emergencyContacts: [],
-      evacuationPlan: '',
-      firstAidProcedures: '',
-      equipmentShutdown: ''
-    },
-    documentation: {
-      permits: [],
-      certifications: [],
-      photos: [],
-      sketches: []
-    },
-    status: 'draft',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    createdBy: '',
-    assignedTo: [],
-    completedAt: null
+    };
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!tenant) return;
-
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        
-        const userResponse = await fetch(`/api/${tenant}/user`);
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          console.log('User data loaded:', userData);
-        }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const astId = urlParams.get('id');
-        
-        if (astId) {
-          const astResponse = await fetch(`/api/${tenant}/ast/${astId}`);
-          if (astResponse.ok) {
-            const astData = await astResponse.json();
-            setFormData(astData);
-          }
-        }
-
-      } catch (err) {
-        console.error('Erreur lors du chargement:', err);
-        setError('Erreur lors du chargement des données');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [tenant]);
-
-  const handleDataChange = useCallback(async (section: string, data: any) => {
-    setSaving(true);
-    
-    setFormData(prev => {
+  // Handler pour les champs simples
+  const updateField = useCallback((section: string, field: string, value: any) => {
+    setLocalData(prev => {
       const newData = {
         ...prev,
-        [section]: data,
-        updatedAt: new Date()
+        [section]: {
+          ...prev[section as keyof typeof prev],
+          [field]: value
+        }
       };
       
-      setTimeout(async () => {
-        try {
-          await fetch(`/api/${tenant}/ast/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newData)
-          });
-        } catch (err) {
-          console.error('Erreur sauvegarde:', err);
-        } finally {
-          setSaving(false);
-        }
-      }, 500);
+      // Sync avec le parent après un délai
+      setTimeout(() => {
+        onDataChange('projectInfo', newData);
+      }, 0);
       
       return newData;
     });
-  }, [tenant]);
+  }, [onDataChange]);
 
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-      }}>
-        <div style={{
-          padding: '20px',
-          borderRadius: '12px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          color: '#ffffff',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid #3b82f6',
-            borderTop: '3px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 16px',
-            animation: 'spin 1s linear infinite'
-          }} />
-          <p>Chargement des données...</p>
-        </div>
-      </div>
-    );
-  }
+  // Handler pour les champs de premier niveau
+  const updateTopLevelField = useCallback((field: string, value: any) => {
+    setLocalData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      setTimeout(() => {
+        onDataChange('projectInfo', newData);
+      }, 0);
+      
+      return newData;
+    });
+  }, [onDataChange]);
 
-  if (error) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-      }}>
-        <div style={{
-          padding: '20px',
-          borderRadius: '12px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          color: '#ef4444',
-          textAlign: 'center',
-          maxWidth: '400px'
-        }}>
-          <h2>Erreur</h2>
-          <p>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              marginTop: '16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: '#3b82f6',
-              color: '#ffffff',
-              cursor: 'pointer'
-            }}
-          >
-            Réessayer
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Styles communs
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    border: '1px solid rgba(148, 163, 184, 0.3)',
+    background: 'rgba(30, 41, 59, 0.8)',
+    color: '#ffffff',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.2s ease'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#e2e8f0',
+    marginBottom: '6px'
+  };
+
+  const fieldStyle = {
+    marginBottom: '20px'
+  };
+
+  const selectStyle = {
+    ...inputStyle,
+    cursor: 'pointer'
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+    <div style={{ 
+      padding: '20px',
+      maxWidth: '800px',
+      margin: '0 auto'
     }}>
-      {saving && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '8px 16px',
-          background: 'rgba(34, 197, 94, 0.9)',
+      
+      {/* Header */}
+      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <h2 style={{ 
+          fontSize: '24px', 
+          fontWeight: '700', 
           color: '#ffffff',
-          borderRadius: '8px',
-          fontSize: '14px',
-          zIndex: 9999,
-          animation: 'fadeIn 0.3s ease'
+          marginBottom: '8px'
         }}>
-          Sauvegarde...
+          {t.title}
+        </h2>
+        <p style={{ color: '#94a3b8', fontSize: '16px', margin: 0 }}>
+          {t.subtitle}
+        </p>
+      </div>
+
+      {/* Type de Travail */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#ffffff',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Briefcase size={20} color="#3b82f6" />
+          {t.workType}
+        </h3>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '20px' 
+        }}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              {t.workType} <span style={{color: '#ef4444'}}>*</span>
+            </label>
+            <input
+              type="text"
+              value={localData.workType}
+              onChange={(e) => updateTopLevelField('workType', e.target.value)}
+              placeholder={t.workType}
+              style={{
+                ...inputStyle,
+                borderColor: errors.workType ? '#ef4444' : 'rgba(148, 163, 184, 0.3)'
+              }}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.complexity}</label>
+            <select
+              value={localData.workTypeDetails.complexity}
+              onChange={(e) => updateField('workTypeDetails', 'complexity', e.target.value)}
+              style={selectStyle}
+            >
+              <option value="simple">{t.simple}</option>
+              <option value="moderate">{t.moderate}</option>
+              <option value="complex">{t.complex}</option>
+              <option value="highly_complex">{t.highly_complex}</option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.frequency}</label>
+            <select
+              value={localData.workTypeDetails.frequency}
+              onChange={(e) => updateField('workTypeDetails', 'frequency', e.target.value)}
+              style={selectStyle}
+            >
+              <option value="routine">{t.routine}</option>
+              <option value="periodic">{t.periodic}</option>
+              <option value="occasional">{t.occasional}</option>
+              <option value="rare">{t.rare}</option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.criticality}</label>
+            <select
+              value={localData.workTypeDetails.criticality}
+              onChange={(e) => updateField('workTypeDetails', 'criticality', e.target.value)}
+              style={selectStyle}
+            >
+              <option value="low">{t.low}</option>
+              <option value="medium">{t.medium}</option>
+              <option value="high">{t.high}</option>
+              <option value="critical">{t.critical}</option>
+            </select>
+          </div>
         </div>
-      )}
+      </div>
 
-      <ASTForm
-        formData={formData}
-        onDataChange={handleDataChange}
-        tenant={tenant}
-        language="fr"
-      />
+      {/* Emplacement */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#ffffff',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <MapPin size={20} color="#10b981" />
+          {t.location}
+        </h3>
 
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes fadeIn {
-          0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+          gap: '20px' 
+        }}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              {t.site} <span style={{color: '#ef4444'}}>*</span>
+            </label>
+            <input
+              type="text"
+              value={localData.location.site}
+              onChange={(e) => updateField('location', 'site', e.target.value)}
+              placeholder={t.site}
+              style={{
+                ...inputStyle,
+                borderColor: errors.site ? '#ef4444' : 'rgba(148, 163, 184, 0.3)'
+              }}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.building}</label>
+            <input
+              type="text"
+              value={localData.location.building || ''}
+              onChange={(e) => updateField('location', 'building', e.target.value)}
+              placeholder={t.building}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.floor}</label>
+            <input
+              type="text"
+              value={localData.location.floor || ''}
+              onChange={(e) => updateField('location', 'floor', e.target.value)}
+              placeholder={t.floor}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.room}</label>
+            <input
+              type="text"
+              value={localData.location.room || ''}
+              onChange={(e) => updateField('location', 'room', e.target.value)}
+              placeholder={t.room}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.specificArea}</label>
+            <input
+              type="text"
+              value={localData.location.specificArea || ''}
+              onChange={(e) => updateField('location', 'specificArea', e.target.value)}
+              placeholder={t.specificArea}
+              style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Durée */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#ffffff',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Calendar size={20} color="#f59e0b" />
+          Durée du Travail
+        </h3>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '20px' 
+        }}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>
+              {t.estimatedDuration} <span style={{color: '#ef4444'}}>*</span>
+            </label>
+            <input
+              type="text"
+              value={localData.estimatedDuration}
+              onChange={(e) => updateTopLevelField('estimatedDuration', e.target.value)}
+              placeholder="Ex: 4 heures, 2 jours"
+              style={{
+                ...inputStyle,
+                borderColor: errors.estimatedDuration ? '#ef4444' : 'rgba(148, 163, 184, 0.3)'
+              }}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.actualDuration}</label>
+            <input
+              type="text"
+              value={localData.actualDuration || ''}
+              onChange={(e) => updateTopLevelField('actualDuration', e.target.value)}
+              placeholder="Ex: 3.5 heures"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Conditions Environnementales */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#ffffff',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Camera size={20} color="#8b5cf6" />
+          {t.environmentalConditions}
+        </h3>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: '20px' 
+        }}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.temperature} (°C)</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="number"
+                value={localData.environmentalConditions.temperature?.min || 20}
+                onChange={(e) => updateField('environmentalConditions', 'temperature', {
+                  ...localData.environmentalConditions.temperature,
+                  min: parseInt(e.target.value)
+                })}
+                placeholder="Min"
+                style={{ ...inputStyle, width: '50%' }}
+              />
+              <input
+                type="number"
+                value={localData.environmentalConditions.temperature?.max || 25}
+                onChange={(e) => updateField('environmentalConditions', 'temperature', {
+                  ...localData.environmentalConditions.temperature,
+                  max: parseInt(e.target.value)
+                })}
+                placeholder="Max"
+                style={{ ...inputStyle, width: '50%' }}
+              />
+            </div>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.humidity} (%)</label>
+            <input
+              type="number"
+              value={localData.environmentalConditions.humidity || 50}
+              onChange={(e) => updateField('environmentalConditions', 'humidity', parseInt(e.target.value))}
+              placeholder="50"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.lighting}</label>
+            <select
+              value={localData.environmentalConditions.lighting?.adequacy || 'good'}
+              onChange={(e) => updateField('environmentalConditions', 'lighting', {
+                ...localData.environmentalConditions.lighting,
+                adequacy: e.target.value
+              })}
+              style={selectStyle}
+            >
+              <option value="excellent">Excellent</option>
+              <option value="good">Bon</option>
+              <option value="adequate">Adéquat</option>
+              <option value="poor">Pauvre</option>
+            </select>
+          </div>
+
+          <div style={fieldStyle}>
+            <label style={labelStyle}>{t.airQuality}</label>
+            <select
+              value={localData.environmentalConditions.airQuality?.quality || 'good'}
+              onChange={(e) => updateField('environmentalConditions', 'airQuality', {
+                ...localData.environmentalConditions.airQuality,
+                quality: e.target.value
+              })}
+              style={selectStyle}
+            >
+              <option value="excellent">Excellente</option>
+              <option value="good">Bonne</option>
+              <option value="moderate">Modérée</option>
+              <option value="poor">Pauvre</option>
+              <option value="hazardous">Dangereuse</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
