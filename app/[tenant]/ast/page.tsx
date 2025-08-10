@@ -1,130 +1,287 @@
-import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
-import { ArrowLeft, Plus, Eye } from 'lucide-react'
+'use client';
 
-interface ASTListPageProps {
-  params: { tenant: string }
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import ASTForm from '@/components/ASTForm';
+import { AST } from '@/types/ast';
+
+// Interface pour la page dans ta structure
+interface ASTPageProps {
+  params: {
+    tenant: string;
+  };
 }
 
-export default async function ASTListPage({ params }: ASTListPageProps) {
-  const tenant = await prisma.tenant.findUnique({
-    where: { subdomain: params.tenant }
-  })
+export default function ASTPage({ params }: ASTPageProps) {
+  const { tenant } = params;
+  const router = useRouter();
+  
+  // =================== ÉTAT PRINCIPAL ADAPTÉ À TON INTERFACE AST ===================
+  const [formData, setFormData] = useState<Partial<AST>>(() => ({
+    id: `ast_${Date.now()}`,
+    name: `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    description: '',
+    version: '1.0',
+    tenant,
+    status: 'draft',
+    priority: 'medium',
+    currentStep: 1,
+    completedSteps: [],
+    steps: [],
+    participants: [],
+    validations: [],
+    revisionHistory: [],
+    overallRiskLevel: 'medium',
+    createdBy: 'user_anonymous',
+    lastModifiedBy: 'user_anonymous',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    // Initialisation projectInfo avec ta structure
+    projectInfo: {
+      workType: '',
+      location: {
+        site: '',
+        building: '',
+        floor: '',
+        room: '',
+        specificArea: ''
+      },
+      estimatedDuration: '',
+      equipmentRequired: [],
+      environmentalConditions: {
+        temperature: { min: 20, max: 25, units: 'celsius' },
+        humidity: 50,
+        lighting: { type: 'artificial', adequacy: 'good', requiresSupplemental: false },
+        noise: { level: 0, requiresProtection: false },
+        airQuality: { quality: 'good', requiresVentilation: false, requiresRespiratory: false },
+        weather: { condition: 'clear', impactsWork: false }
+      }
+    }
+  }));
 
-  if (!tenant) {
-    return <div>Tenant not found</div>
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [userId, setUserId] = useState<string>('user_anonymous');
+  const [userRole, setUserRole] = useState<'worker' | 'supervisor' | 'manager' | 'admin'>('worker');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // =================== REF POUR ÉVITER LES BOUCLES ===================
+  const lastSaveRef = useRef<string>('');
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // =================== RÉCUPÉRATION DONNÉES INITIALES ===================
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // Récupérer les préférences utilisateur
+        const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
+        if (savedLanguage) {
+          setLanguage(savedLanguage);
+        }
+
+        // Récupérer les données utilisateur (remplace par ton API)
+        const userData = await fetchUserData();
+        if (userData) {
+          setUserId(userData.id);
+          setUserRole(userData.role);
+        }
+
+        // Récupérer les données AST existantes (si modification)
+        const astId = new URLSearchParams(window.location.search).get('id');
+        if (astId) {
+          const existingData = await fetchASTData(astId);
+          if (existingData) {
+            setFormData(existingData);
+          }
+        }
+
+      } catch (err) {
+        console.error('Erreur chargement données:', err);
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, [tenant]);
+
+  // =================== HANDLER DATA CHANGE STABLE ===================
+  const handleDataChange = useCallback((section: string, data: any) => {
+    const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
+    
+    // Éviter les doublons
+    if (lastSaveRef.current === updateKey) {
+      return;
+    }
+    
+    lastSaveRef.current = updateKey;
+    
+    // Mettre à jour l'état local avec ta structure AST
+    setFormData(prev => ({
+      ...prev,
+      [section]: data,
+      updatedAt: new Date().toISOString(),
+      lastModifiedBy: userId
+    }));
+
+    // Sauvegarder avec débounce
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveASTData({
+        ...formData,
+        [section]: data,
+        updatedAt: new Date().toISOString(),
+        lastModifiedBy: userId
+      });
+    }, 1000);
+    
+  }, [formData, userId]);
+
+  // =================== FONCTIONS API (À ADAPTER À TON BACKEND) ===================
+  const fetchUserData = async () => {
+    try {
+      // Remplace par ton endpoint API utilisateur
+      const response = await fetch(`/api/${tenant}/user`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.error('Erreur récupération utilisateur:', error);
+    }
+    return null;
+  };
+
+  const fetchASTData = async (astId: string): Promise<Partial<AST> | null> => {
+    try {
+      // Remplace par ton endpoint API AST
+      const response = await fetch(`/api/${tenant}/ast/${astId}`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.error('Erreur récupération AST:', error);
+    }
+    return null;
+  };
+
+  const saveASTData = async (data: Partial<AST>) => {
+    try {
+      // Remplace par ton endpoint API AST
+      const response = await fetch(`/api/${tenant}/ast`, {
+        method: data.id ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur sauvegarde');
+      }
+      
+      console.log('✅ AST sauvegardé avec succès');
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde AST:', error);
+      setError('Erreur lors de la sauvegarde');
+    }
+  };
+
+  // =================== GESTION ERREURS ===================
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
+        color: '#ffffff'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid rgba(59, 130, 246, 0.3)',
+            borderTop: '4px solid #3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p>Chargement AST...</p>
+        </div>
+      </div>
+    );
   }
 
-  const astForms = await prisma.aSTForm.findMany({
-    where: { tenantId: tenant.id },
-    orderBy: { createdAt: 'desc' },
-    take: 50
-  })
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-black to-slate-800 border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link 
-                href={`/${params.tenant}/dashboard`}
-                className="text-white hover:text-yellow-300 transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-white">📊 Mes AST</h1>
-                <p className="text-slate-400 text-sm">{tenant.companyName}</p>
-              </div>
-            </div>
-            
-            <Link href={`/${params.tenant}/ast/nouveau`}>
-              <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all flex items-center space-x-2">
-                <Plus className="w-5 h-5" />
-                <span>Nouveau AST</span>
-              </button>
-            </Link>
+  if (error) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
+        color: '#ffffff'
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '20px' }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            background: 'rgba(239, 68, 68, 0.2)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            border: '2px solid #ef4444'
+          }}>
+            ❌
           </div>
+          <h2 style={{ color: '#ef4444', marginBottom: '8px' }}>Erreur</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              color: '#ffffff',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Réessayer
+          </button>
         </div>
-      </header>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {astForms.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📝</div>
-            <h2 className="text-2xl font-bold text-white mb-2">Aucun AST pour le moment</h2>
-            <p className="text-slate-400 mb-6">Créez votre première analyse sécuritaire de tâches</p>
-            <Link href={`/${params.tenant}/ast/nouveau`}>
-              <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all">
-                Créer un AST
-              </button>
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {astForms.map((ast) => (
-              <div
-                key={ast.id}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 transition-all duration-300 hover:scale-105"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg">
-                        <span className="text-white font-bold">🛡️</span>
-                      </div>
-                      <div>
-                        <h3 className="text-white font-semibold text-lg">{ast.astMdlNumber}</h3>
-                        <p className="text-slate-400 text-sm">{ast.clientName}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <p className="text-slate-400 text-sm">Projet</p>
-                        <p className="text-white">{ast.projectNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm">Lieu</p>
-                        <p className="text-white">{ast.workLocation}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm">Description</p>
-                        <p className="text-white text-sm">{ast.workDescription.substring(0, 100)}...</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm">Créé le</p>
-                        <p className="text-white">{new Date(ast.createdAt).toLocaleDateString('fr-CA')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        ast.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {ast.status === 'completed' ? '✅ Complété' : '⏳ En cours'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col space-y-2 ml-4">
-                    <Link href={`/${params.tenant}/ast/${ast.id}`}>
-                      <button className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition-colors">
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
+    );
+  }
+
+  // =================== RENDU PRINCIPAL ===================
+  return (
+    <div>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `
+      }} />
+      
+      <ASTForm
+        tenant={tenant}
+        language={language}
+        userId={userId}
+        userRole={userRole}
+        formData={formData}
+        onDataChange={handleDataChange}
+      />
     </div>
-  )
+  );
 }
