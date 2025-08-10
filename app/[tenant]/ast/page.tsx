@@ -1,287 +1,191 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import ASTForm from '@/components/ASTForm';
-import { AST } from '@/types/ast';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { 
+  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
+  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
+  Phone, User, Briefcase, Copy, Check, Camera, Hash, Globe
+} from 'lucide-react';
+import { AST } from '../types/ast'; // Import selon ta structure exacte
 
-// Interface pour la page dans ta structure
-interface ASTPageProps {
-  params: {
-    tenant: string;
-  };
+// Interface ASTForm compatible avec ton AST
+interface ASTFormProps {
+  formData: Partial<AST>;
+  onDataChange: (section: string, data: any) => void;
+  tenant: string;
+  language?: 'fr' | 'en';
 }
 
-export default function ASTPage({ params }: ASTPageProps) {
-  const { tenant } = params;
-  const router = useRouter();
-  
-  // =================== ÉTAT PRINCIPAL ADAPTÉ À TON INTERFACE AST ===================
-  const [formData, setFormData] = useState<Partial<AST>>(() => ({
-    id: `ast_${Date.now()}`,
-    name: `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
-    description: '',
-    version: '1.0',
-    tenant,
-    status: 'draft',
-    priority: 'medium',
-    currentStep: 1,
-    completedSteps: [],
-    steps: [],
-    participants: [],
-    validations: [],
-    revisionHistory: [],
-    overallRiskLevel: 'medium',
-    createdBy: 'user_anonymous',
-    lastModifiedBy: 'user_anonymous',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    // Initialisation projectInfo avec ta structure
-    projectInfo: {
-      workType: '',
-      location: {
-        site: '',
-        building: '',
-        floor: '',
-        room: '',
-        specificArea: ''
-      },
-      estimatedDuration: '',
-      equipmentRequired: [],
-      environmentalConditions: {
-        temperature: { min: 20, max: 25, units: 'celsius' },
-        humidity: 50,
-        lighting: { type: 'artificial', adequacy: 'good', requiresSupplemental: false },
-        noise: { level: 0, requiresProtection: false },
-        airQuality: { quality: 'good', requiresVentilation: false, requiresRespiratory: false },
-        weather: { condition: 'clear', impactsWork: false }
-      }
+// Interface pour les steps
+interface StepProps {
+  formData: Partial<AST>;
+  language: 'fr' | 'en';
+  tenant: string;
+  errors?: Record<string, string>;
+  onDataChange: (section: string, data: any) => void;
+}
+
+const translations = {
+  fr: {
+    title: "Analyse de Sécurité des Tâches",
+    subtitle: "Évaluation complète des risques et mesures de contrôle",
+    steps: {
+      1: "Informations Projet",
+      2: "Participants",
+      3: "Identification Dangers", 
+      4: "Mesures Contrôle",
+      5: "Procédures Urgence",
+      6: "Documentation"
+    },
+    navigation: {
+      previous: "Précédent",
+      next: "Suivant",
+      save: "Sauvegarder",
+      complete: "Terminer"
+    },
+    status: {
+      draft: "Brouillon",
+      in_progress: "En cours",
+      under_review: "En révision", 
+      approved: "Approuvé",
+      rejected: "Rejeté"
     }
+  },
+  en: {
+    title: "Job Safety Analysis",
+    subtitle: "Complete risk assessment and control measures",
+    steps: {
+      1: "Project Information",
+      2: "Participants", 
+      3: "Hazard Identification",
+      4: "Control Measures",
+      5: "Emergency Procedures",
+      6: "Documentation"
+    },
+    navigation: {
+      previous: "Previous",
+      next: "Next", 
+      save: "Save",
+      complete: "Complete"
+    },
+    status: {
+      draft: "Draft",
+      in_progress: "In Progress",
+      under_review: "Under Review",
+      approved: "Approved", 
+      rejected: "Rejected"
+    }
+  }
+};
+
+// Configuration des steps avec couleurs
+const stepsConfig = [
+  { id: 1, color: '#3b82f6', icon: Building },
+  { id: 2, color: '#10b981', icon: Users },
+  { id: 3, color: '#f59e0b', icon: AlertTriangle },
+  { id: 4, color: '#8b5cf6', icon: Shield },
+  { id: 5, color: '#ef4444', icon: Phone },
+  { id: 6, color: '#06b6d4', icon: FileText }
+];
+
+export default function ASTForm({ 
+  formData, 
+  onDataChange, 
+  tenant, 
+  language = 'fr' 
+}: ASTFormProps) {
+  const t = translations[language];
+  
+  // Hooks mobiles
+  const [isMobile, setIsMobile] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(language);
+  
+  // État AST avec structure complète selon ton interface
+  const [astData, setAstData] = useState<Partial<AST>>(() => ({
+    ...formData,
+    id: formData.id || '',
+    tenant: formData.tenant || tenant,
+    status: formData.status || 'draft',
+    createdAt: formData.createdAt || new Date(),
+    updatedAt: formData.updatedAt || new Date()
   }));
 
-  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
-  const [userId, setUserId] = useState<string>('user_anonymous');
-  const [userRole, setUserRole] = useState<'worker' | 'supervisor' | 'manager' | 'admin'>('worker');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Refs pour éviter les boucles
+  const isUpdatingRef = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
-  // =================== REF POUR ÉVITER LES BOUCLES ===================
-  const lastSaveRef = useRef<string>('');
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // =================== RÉCUPÉRATION DONNÉES INITIALES ===================
+  // Hook responsive
   useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        // Récupérer les préférences utilisateur
-        const savedLanguage = localStorage.getItem('ast-language-preference') as 'fr' | 'en';
-        if (savedLanguage) {
-          setLanguage(savedLanguage);
-        }
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-        // Récupérer les données utilisateur (remplace par ton API)
-        const userData = await fetchUserData();
-        if (userData) {
-          setUserId(userData.id);
-          setUserRole(userData.role);
-        }
-
-        // Récupérer les données AST existantes (si modification)
-        const astId = new URLSearchParams(window.location.search).get('id');
-        if (astId) {
-          const existingData = await fetchASTData(astId);
-          if (existingData) {
-            setFormData(existingData);
-          }
-        }
-
-      } catch (err) {
-        console.error('Erreur chargement données:', err);
-        setError('Erreur lors du chargement des données');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, [tenant]);
-
-  // =================== HANDLER DATA CHANGE STABLE ===================
-  const handleDataChange = useCallback((section: string, data: any) => {
-    const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
-    
-    // Éviter les doublons
-    if (lastSaveRef.current === updateKey) {
-      return;
-    }
-    
-    lastSaveRef.current = updateKey;
-    
-    // Mettre à jour l'état local avec ta structure AST
-    setFormData(prev => ({
-      ...prev,
-      [section]: data,
-      updatedAt: new Date().toISOString(),
-      lastModifiedBy: userId
-    }));
-
-    // Sauvegarder avec débounce
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    saveTimeoutRef.current = setTimeout(() => {
-      saveASTData({
+  // Sync avec le parent de manière stable
+  useEffect(() => {
+    if (JSON.stringify(formData) !== JSON.stringify(astData)) {
+      setAstData(prev => ({
+        ...prev,
         ...formData,
-        [section]: data,
-        updatedAt: new Date().toISOString(),
-        lastModifiedBy: userId
-      });
-    }, 1000);
+        updatedAt: new Date()
+      }));
+    }
+  }, [formData]);
+
+  // Handler ultra-stable pour éviter les boucles
+  const stableDataChangeHandler = useCallback((section: string, data: any) => {
+    if (isUpdatingRef.current) return;
     
-  }, [formData, userId]);
-
-  // =================== FONCTIONS API (À ADAPTER À TON BACKEND) ===================
-  const fetchUserData = async () => {
-    try {
-      // Remplace par ton endpoint API utilisateur
-      const response = await fetch(`/api/${tenant}/user`);
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('Erreur récupération utilisateur:', error);
+    isUpdatingRef.current = true;
+    
+    // Clear timeout précédent
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
-    return null;
-  };
+    
+    setAstData(prev => {
+      const newData = {
+        ...prev,
+        [section]: data,
+        updatedAt: new Date()
+      };
+      
+      // Sync différée avec le parent
+      timeoutRef.current = setTimeout(() => {
+        onDataChange(section, data);
+        isUpdatingRef.current = false;
+      }, 100);
+      
+      return newData;
+    });
+  }, [onDataChange]);
 
-  const fetchASTData = async (astId: string): Promise<Partial<AST> | null> => {
-    try {
-      // Remplace par ton endpoint API AST
-      const response = await fetch(`/api/${tenant}/ast/${astId}`);
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('Erreur récupération AST:', error);
+  // Navigation handlers
+  const handlePrevious = useCallback(() => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
     }
-    return null;
-  };
+  }, [currentStep]);
 
-  const saveASTData = async (data: Partial<AST>) => {
-    try {
-      // Remplace par ton endpoint API AST
-      const response = await fetch(`/api/${tenant}/ast`, {
-        method: data.id ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erreur sauvegarde');
-      }
-      
-      console.log('✅ AST sauvegardé avec succès');
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde AST:', error);
-      setError('Erreur lors de la sauvegarde');
+  const handleNext = useCallback(() => {
+    if (currentStep < 6) {
+      setCurrentStep(prev => prev + 1);
     }
-  };
+  }, [currentStep]);
 
-  // =================== GESTION ERREURS ===================
-  if (isLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
-        color: '#ffffff'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(59, 130, 246, 0.3)',
-            borderTop: '4px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }} />
-          <p>Chargement AST...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleStepClick = useCallback((step: number) => {
+    setCurrentStep(step);
+  }, []);
 
-  if (error) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%)',
-        color: '#ffffff'
-      }}>
-        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '20px' }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            background: 'rgba(239, 68, 68, 0.2)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            border: '2px solid #ef4444'
-          }}>
-            ❌
-          </div>
-          <h2 style={{ color: '#ef4444', marginBottom: '8px' }}>Erreur</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              color: '#ffffff',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Réessayer
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleLanguageChange = useCallback((newLanguage: 'fr' | 'en') => {
+    setCurrentLanguage(newLanguage);
+  }, []);
 
-  // =================== RENDU PRINCIPAL ===================
-  return (
-    <div>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `
-      }} />
-      
-      <ASTForm
-        tenant={tenant}
-        language={language}
-        userId={userId}
-        userRole={userRole}
-        formData={formData}
-        onDataChange={handleDataChange}
-      />
-    </div>
-  );
-}
+  // Calcul du pourcentage de completion
+  const getCompletionPercentage = useCallback(() => {
+    let completed = 0;
+    const total = 6;
+    
+    if (astData.projectInfo?.work
