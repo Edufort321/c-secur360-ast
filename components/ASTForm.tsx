@@ -1565,23 +1565,26 @@ export default function ASTForm({
   const getCurrentCompletedSteps = useCallback((): number => {
     let completed = 0;
     
-    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
+    // ✅ Utiliser stableFormDataRef.current au lieu d'astData
+    const currentData = stableFormDataRef.current;
+    
+    if (currentData.projectInfo?.client && currentData.projectInfo?.workDescription) {
       completed++;
     }
     
-    if (astData.equipment?.selected?.length > 0) {
+    if (currentData.equipment?.selected?.length > 0) {
       completed++;
     }
     
-    if (astData.hazards?.selected?.length > 0) {
+    if (currentData.hazards?.selected?.length > 0) {
       completed++;
     }
     
-    if (astData.permits?.permits?.length > 0) {
+    if (currentData.permits?.permits?.length > 0) {
       completed++;
     }
     
-    if (astData.validation?.reviewers?.length > 0) {
+    if (currentData.validation?.reviewers?.length > 0) {
       completed++;
     }
     
@@ -1590,16 +1593,19 @@ export default function ASTForm({
     }
     
     return completed;
-  }, [astData, currentStep]);
+  }, [currentStep]);
 
   const canNavigateToNext = useCallback((): boolean => {
+    // ✅ Utiliser stableFormDataRef.current au lieu d'astData
+    const currentData = stableFormDataRef.current;
+    
     switch (currentStep) {
       case 1:
-        return Boolean(astData.projectInfo?.client && astData.projectInfo?.workDescription);
+        return Boolean(currentData.projectInfo?.client && currentData.projectInfo?.workDescription);
       case 2:
-        return Boolean(astData.equipment?.selected?.length && astData.equipment.selected.length > 0);
+        return Boolean(currentData.equipment?.selected?.length && currentData.equipment.selected.length > 0);
       case 3:
-        return Boolean(astData.hazards?.selected?.length && astData.hazards.selected.length > 0);
+        return Boolean(currentData.hazards?.selected?.length && currentData.hazards.selected.length > 0);
       case 4:
         return true;
       case 5:
@@ -1609,7 +1615,7 @@ export default function ASTForm({
       default:
         return false;
     }
-  }, [astData, currentStep]);
+  }, [currentStep]);
 
   // =================== NAVIGATION OPTIMISÉE (CONSERVÉE) ===================
   const handlePrevious = useCallback(() => {
@@ -1629,13 +1635,15 @@ export default function ASTForm({
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES (CONSERVÉES) ===================
   const handleCopyAST = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(astData.astNumber);
+      // ✅ Utiliser stableFormDataRef.current au lieu d'astData
+      const currentData = stableFormDataRef.current;
+      await navigator.clipboard.writeText(currentData.astNumber);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Erreur lors de la copie:', err);
     }
-  }, [astData.astNumber]);
+  }, []);
 
   const changeStatus = useCallback((newStatus: any) => {
     setAstData((prev: any) => ({
@@ -1646,6 +1654,9 @@ export default function ASTForm({
 
   // =================== STATUS BADGE MÉMORISÉ (CONSERVÉ) ===================
   const getStatusBadge = useCallback(() => {
+    // ✅ Utiliser stableFormDataRef.current au lieu d'astData
+    const currentData = stableFormDataRef.current;
+    
     const statusConfig = {
       'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
       'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
@@ -1654,7 +1665,7 @@ export default function ASTForm({
       'rejected': { color: '#ef4444', text: t.status.rejected, icon: AlertTriangle }
     };
 
-    const config = statusConfig[astData.status as keyof typeof statusConfig] || statusConfig.draft;
+    const config = statusConfig[currentData.status as keyof typeof statusConfig] || statusConfig.draft;
     const Icon = config.icon;
 
     return (
@@ -1674,7 +1685,7 @@ export default function ASTForm({
         {config.text}
       </div>
     );
-  }, [astData.status, t.status, isMobile]);
+  }, [t.status, isMobile]);
 
   // =================== 🔥 COMPOSANT LOGO EXACTEMENT COMME TON STYLE ORIGINAL ===================
   const LogoComponent = useMemo(() => ({ 
