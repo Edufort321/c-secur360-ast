@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import type { Location } from '@/types/ast';
+import type { Location } from '../../app/types/ast';
 
 interface Props {
   isOpen: boolean;
