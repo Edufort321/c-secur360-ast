@@ -672,19 +672,17 @@ function Step1ProjectInfo({
     locationBreakdown: []
   }), []);
   const updateLocationWorkerCount = useCallback((locationId: string, count: number) => {}, []);
+// =================== STEP 2 / 3 — HANDLERS (définitions uniques, sans alias) ===================
 
-  // ======= Expose pour Section 2 via commentaire de repère =======
-  // -------------------- 🔽🔽🔽 COLLER LA SECTION 2 ICI (handlers & components UI) 🔽🔽🔽
-// =================== STEP 2 / 3 — HANDLERS + COMPOSANTS UI ===================
-
-// ---------- Handlers (implémentations réelles) ----------
-const updateProjectFieldImpl = useCallback((field: string, value: any) => {
+// ---------- Project fields ----------
+const updateProjectField = useCallback((field: string, value: any) => {
   const next = { ...stableDataRef.current, [field]: value };
   setProjectData(next);
   notifyParent(next);
 }, [notifyParent]);
 
-const updateLockoutPointImpl = useCallback((pointId: string, field: string, value: any) => {
+// ---------- Lockout points CRUD ----------
+const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
   const updated = stableDataRef.current.lockoutPoints.map((p: LockoutPoint) =>
     p.id === pointId ? { ...p, [field]: value } : p
   );
@@ -693,7 +691,7 @@ const updateLockoutPointImpl = useCallback((pointId: string, field: string, valu
   notifyParent(next);
 }, [notifyParent]);
 
-const addLockoutPointImpl = useCallback(() => {
+const addLockoutPoint = useCallback(() => {
   const newPoint: LockoutPoint = {
     id: `lockout_${Date.now()}`,
     energyType: 'electrical',
@@ -714,7 +712,7 @@ const addLockoutPointImpl = useCallback(() => {
   notifyParent(next);
 }, [notifyParent]);
 
-const deleteLockoutPointImpl = useCallback((pointId: string) => {
+const deleteLockoutPoint = useCallback((pointId: string) => {
   const lockoutPoints = stableDataRef.current.lockoutPoints.filter((p: LockoutPoint) => p.id !== pointId);
   const lockoutPhotos = stableDataRef.current.lockoutPhotos.filter((ph: LockoutPhoto) => ph.lockoutPointId !== pointId);
   const next = { ...stableDataRef.current, lockoutPoints, lockoutPhotos };
@@ -722,11 +720,12 @@ const deleteLockoutPointImpl = useCallback((pointId: string) => {
   notifyParent(next);
 }, [notifyParent]);
 
-const updateModalFieldImpl = useCallback((field: string, value: string) => {
+// ---------- Modal (work location) ----------
+const updateModalField = useCallback((field: string, value: string) => {
   setNewLocation(prev => ({ ...prev, [field]: value }));
 }, []);
 
-const addWorkLocationImpl = useCallback(() => {
+const addWorkLocation = useCallback(() => {
   if (!newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving) return;
   setIsModalSaving(true);
 
@@ -765,7 +764,7 @@ const addWorkLocationImpl = useCallback(() => {
   setTimeout(() => setIsModalSaving(false), 200);
 }, [newLocation, isModalSaving, notifyParent, language]);
 
-const removeWorkLocationImpl = useCallback((locationId: string) => {
+const removeWorkLocation = useCallback((locationId: string) => {
   const workLocations = stableDataRef.current.workLocations.filter((l: WorkLocation) => l.id !== locationId);
   const lockoutPoints = stableDataRef.current.lockoutPoints.map((p: LockoutPoint) =>
     p.assignedLocation === locationId ? { ...p, assignedLocation: undefined } : p
@@ -775,21 +774,22 @@ const removeWorkLocationImpl = useCallback((locationId: string) => {
   notifyParent(next);
 }, [notifyParent]);
 
-const handlePhotoCaptureImpl = useCallback(async (category: string, lockoutPointId?: string) => {
+// ---------- Photos ----------
+const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
   const input = fileInputRef.current;
   if (!input) return;
   input.accept = 'image/*';
-  // @ts-expect-error capture is valid on mobile browsers
+  // @ts-expect-error capture est accepté par la plupart des mobiles
   input.capture = 'environment';
   input.multiple = true;
   input.onchange = (e) => {
     const files = Array.from((e.target as HTMLInputElement).files || []);
-    files.forEach(f => processPhotoImpl(f, category, lockoutPointId));
+    files.forEach(f => processPhoto(f, category, lockoutPointId));
   };
   input.click();
 }, []);
 
-const processPhotoImpl = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
+const processPhoto = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
   const url = URL.createObjectURL(file);
   const photo: LockoutPhoto = {
     id: `photo_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -804,13 +804,14 @@ const processPhotoImpl = useCallback(async (file: File, category: string, lockou
   notifyParent(next);
 }, [notifyParent, t.categories, language]);
 
-const deletePhotoImpl = useCallback((photoId: string) => {
+const deletePhoto = useCallback((photoId: string) => {
   const next = { ...stableDataRef.current, lockoutPhotos: stableDataRef.current.lockoutPhotos.filter((p: LockoutPhoto) => p.id !== photoId) };
   setProjectData(next);
   notifyParent(next);
 }, [notifyParent]);
 
-const copyASTNumberImpl = useCallback(async () => {
+// ---------- AST number ----------
+const copyASTNumber = useCallback(async () => {
   try {
     await navigator.clipboard.writeText(astNumber);
     setCopied(true);
@@ -820,24 +821,25 @@ const copyASTNumberImpl = useCallback(async () => {
   }
 }, [astNumber]);
 
-const regenerateASTNumberImpl = useCallback(() => {
+const regenerateASTNumber = useCallback(() => {
   const newNum = generateASTNumber();
   setAstNumber(newNum);
 }, []);
 
-const getCategoryLabelImpl = useCallback((category: string): string => {
+// ---------- Lockout helpers ----------
+const getCategoryLabel = useCallback((category: string): string => {
   return (t.categories as any)[category] ?? category;
 }, [t.categories]);
 
-const toggleProcedureCompleteImpl = useCallback((pointId: string, idx: number) => {
+const toggleProcedureComplete = useCallback((pointId: string, idx: number) => {
   const point = stableDataRef.current.lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
   if (!point) return;
   const done = new Set(point.completedProcedures || []);
   done.has(idx) ? done.delete(idx) : done.add(idx);
-  updateLockoutPointImpl(pointId, 'completedProcedures', Array.from(done));
-}, [updateLockoutPointImpl]);
+  updateLockoutPoint(pointId, 'completedProcedures', Array.from(done));
+}, [updateLockoutPoint]);
 
-const getProcedureProgressImpl = useCallback((point: LockoutPoint) => {
+const getProcedureProgress = useCallback((point: LockoutPoint) => {
   const type = ENERGY_TYPES[point.energyType];
   const total = type?.procedures.length ?? 0;
   const completed = (point.completedProcedures || []).length;
@@ -845,22 +847,23 @@ const getProcedureProgressImpl = useCallback((point: LockoutPoint) => {
   return { completed, total, percentage };
 }, [ENERGY_TYPES]);
 
-const setTimeNowImpl = useCallback((pointId: string) => {
+const setTimeNow = useCallback((pointId: string) => {
   const ts = new Date().toTimeString().slice(0, 5);
-  updateLockoutPointImpl(pointId, 'verificationTime', ts);
-}, [updateLockoutPointImpl]);
+  updateLockoutPoint(pointId, 'verificationTime', ts);
+}, [updateLockoutPoint]);
 
-const setTimePlusImpl = useCallback((pointId: string, minutes: number) => {
+const setTimePlus = useCallback((pointId: string, minutes: number) => {
   const d = new Date();
   d.setMinutes(d.getMinutes() + minutes);
-  updateLockoutPointImpl(pointId, 'verificationTime', d.toTimeString().slice(0, 5));
-}, [updateLockoutPointImpl]);
+  updateLockoutPoint(pointId, 'verificationTime', d.toTimeString().slice(0, 5));
+}, [updateLockoutPoint]);
 
-const selectEnergyTypeImpl = useCallback((pointId: string, energy: string) => {
-  updateLockoutPointImpl(pointId, 'energyType', energy);
-}, [updateLockoutPointImpl]);
+const selectEnergyType = useCallback((pointId: string, energy: string) => {
+  updateLockoutPoint(pointId, 'energyType', energy);
+}, [updateLockoutPoint]);
 
-const calculateLocationStatsImpl = useCallback((): LocationStats => {
+// ---------- Stats ----------
+const calculateLocationStats = useCallback((): LocationStats => {
   const locs: WorkLocation[] = stableDataRef.current.workLocations || [];
   const pts: LockoutPoint[] = stableDataRef.current.lockoutPoints || [];
   const totalLocations = locs.filter(l => l.isActive).length;
@@ -886,7 +889,7 @@ const calculateLocationStatsImpl = useCallback((): LocationStats => {
   return { totalWorkers, totalLocations, activeLockouts, peakUtilization, locationBreakdown };
 }, []);
 
-const updateLocationWorkerCountImpl = useCallback((locationId: string, count: number) => {
+const updateLocationWorkerCount = useCallback((locationId: string, count: number) => {
   const locs = stableDataRef.current.workLocations.map((l: WorkLocation) => {
     if (l.id !== locationId) return l;
     const maxReached = Math.max(l.maxWorkersReached, count);
@@ -896,786 +899,6 @@ const updateLocationWorkerCountImpl = useCallback((locationId: string, count: nu
   setProjectData(next);
   notifyParent(next);
 }, [notifyParent]);
-
-// ---------- Aliases: on lie les noms “publics” aux implémentations ----------
-const updateProjectField = updateProjectFieldImpl;
-const updateLockoutPoint = updateLockoutPointImpl;
-const addLockoutPoint = addLockoutPointImpl;
-const deleteLockoutPoint = deleteLockoutPointImpl;
-const updateModalField = updateModalFieldImpl;
-const addWorkLocation = addWorkLocationImpl;
-const removeWorkLocation = removeWorkLocationImpl;
-const handlePhotoCapture = handlePhotoCaptureImpl;
-const processPhoto = processPhotoImpl;
-const deletePhoto = deletePhotoImpl;
-const copyASTNumber = copyASTNumberImpl;
-const regenerateASTNumber = regenerateASTNumberImpl;
-const getCategoryLabel = getCategoryLabelImpl;
-const toggleProcedureComplete = toggleProcedureCompleteImpl;
-const getProcedureProgress = getProcedureProgressImpl;
-const setTimeNow = setTimeNowImpl;
-const setTimePlus = setTimePlusImpl;
-const selectEnergyType = selectEnergyTypeImpl;
-const calculateLocationStats = calculateLocationStatsImpl;
-const updateLocationWorkerCount = updateLocationWorkerCountImpl;
-
-// ---------- Sélecteur d’industrie ----------
-const IndustrySelector = React.memo(() => (
-  <select
-    className="premium-select"
-    value={projectData.industry}
-    onChange={(e) => updateProjectField('industry', e.target.value)}
-  >
-    <option value="electrical">{t.electrical}</option>
-    <option value="construction">{t.construction}</option>
-    <option value="industrial">{t.industrial}</option>
-    <option value="manufacturing">{t.manufacturing}</option>
-    <option value="office">{t.office}</option>
-    <option value="other">{t.other}</option>
-  </select>
-));
-
-// ---------- Placeholder photo vide ----------
-const EmptyPhotoPlaceholder = React.memo(({ onClick, title, description, color = '#60a5fa' }: {
-  onClick: () => void; title: string; description: string; color?: string;
-}) => (
-  <div
-    className="empty-photo-placeholder"
-    style={{ background: `${color}20`, border: `2px dashed ${color}50` }}
-    onClick={onClick}
-  >
-    <Camera size={32} color={color} style={{ marginBottom: 12 }} />
-    <h4 style={{ margin: '0 0 8px', color }}>{title}</h4>
-    <p style={{ margin: 0, fontSize: 14, color: '#94a3b8' }}>{description}</p>
-  </div>
-));
-
-// ---------- Carrousel Photos ----------
-const PhotoCarousel = React.memo(({ photos, onAddPhoto, lockoutPointId }: {
-  photos: LockoutPhoto[]; onAddPhoto: () => void; lockoutPointId?: string;
-}) => {
-  const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
-  const totalSlides = photos.length + 1;
-
-  const setIndex = (i: number) => {
-    if (lockoutPointId) {
-      setCurrentLockoutPhotoIndex(prev => ({ ...prev, [lockoutPointId]: i }));
-    } else {
-      setCurrentPhotoIndex(i);
-    }
-  };
-
-  const next = useCallback((e?: React.MouseEvent) => {
-    e?.preventDefault();
-    setIndex((currentIndex + 1) % totalSlides);
-  }, [currentIndex, totalSlides]);
-
-  const prev = useCallback((e?: React.MouseEvent) => {
-    e?.preventDefault();
-    setIndex(currentIndex === 0 ? totalSlides - 1 : currentIndex - 1);
-  }, [currentIndex, totalSlides]);
-
-  const goTo = useCallback((i: number, e?: React.MouseEvent) => {
-    e?.preventDefault();
-    setIndex(i);
-  }, []);
-
-  return (
-    <div className="photo-carousel">
-      <div className="carousel-container">
-        <div className="carousel-track" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
-          {photos.map((ph) => (
-            <div key={ph.id} className="carousel-slide">
-              <img src={ph.url} alt={ph.caption} />
-              <div className="photo-info">
-                <div className="photo-caption">
-                  <h4>{getCategoryLabel(ph.category)}</h4>
-                  <p>{new Date(ph.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}</p>
-                </div>
-                <div className="photo-actions">
-                  <button
-                    type="button"
-                    className="photo-action-btn delete"
-                    onClick={(e) => { e.preventDefault(); deletePhoto(ph.id); }}
-                    title={language === 'fr' ? 'Supprimer' : 'Delete'}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-          <div className="carousel-slide add-photo" onClick={onAddPhoto}>
-            <div className="add-photo-content">
-              <div className="add-photo-icon"><Camera size={24} /></div>
-              <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t.addPhoto}</h4>
-              <p style={{ margin: 0, fontSize: 14, opacity: 0.8, textAlign: 'center' }}>
-                {t.addPhotoDescription}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {totalSlides > 1 && (
-          <>
-            <button type="button" className="carousel-nav prev" onClick={prev}><ArrowLeft size={20} /></button>
-            <button type="button" className="carousel-nav next" onClick={next}><ArrowRight size={20} /></button>
-            <div className="carousel-indicators">
-              {Array.from({ length: totalSlides }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`carousel-indicator ${i === currentIndex ? 'active' : ''}`}
-                  onClick={(e) => goTo(i, e)}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-});
-
-// ---------- Carte stats emplacement ----------
-const LocationStatsCard = React.memo(() => {
-  const s = calculateLocationStats();
-  return (
-    <div className="location-stats-card">
-      <div className="stats-header">
-        <BarChart3 size={20} />
-        <h3>{t.locationStats}</h3>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-item">
-          <div className="stat-icon total-workers"><Users size={18} /></div>
-          <div className="stat-content">
-            <div className="stat-value">{s.totalWorkers}</div>
-            <div className="stat-label">{t.totalWorkers}</div>
-          </div>
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-icon total-locations"><Building size={18} /></div>
-          <div className="stat-content">
-            <div className="stat-value">{s.totalLocations}</div>
-            <div className="stat-label">{t.totalLocations}</div>
-          </div>
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-icon total-lockouts"><Lock size={18} /></div>
-          <div className="stat-content">
-            <div className="stat-value">{s.activeLockouts}</div>
-            <div className="stat-label">{t.totalLockouts}</div>
-          </div>
-        </div>
-
-        <div className="stat-item">
-          <div className="stat-icon utilization-rate"><TrendingUp size={18} /></div>
-          <div className="stat-content">
-            <div className="stat-value">{s.peakUtilization}%</div>
-            <div className="stat-label">{t.peakUtilization}</div>
-          </div>
-        </div>
-      </div>
-
-      {s.locationBreakdown.length > 0 && (
-        <div className="location-breakdown">
-          <h4 className="breakdown-title">{t.locationBreakdown}</h4>
-          <div className="breakdown-list">
-            {s.locationBreakdown.map(loc => (
-              <div key={loc.locationId} className="breakdown-item">
-                <div className="breakdown-info">
-                  <span className="location-name">{loc.name}</span>
-                  <span className="location-details">
-                    {loc.currentWorkers}/{loc.maxReached} {t.workersCount} • {loc.lockouts} {t.lockoutsCount}
-                  </span>
-                </div>
-                <div className="breakdown-utilization">
-                  <div className="utilization-bar">
-                    <div
-                      className="utilization-fill"
-                      style={{
-                        width: `${Math.min(loc.utilizationCurrent, 100)}%`,
-                        backgroundColor:
-                          loc.utilizationCurrent > 90 ? '#ef4444' :
-                          loc.utilizationCurrent > 70 ? '#f59e0b' : '#10b981'
-                      }}
-                    />
-                  </div>
-                  <span className="utilization-text">{loc.utilizationCurrent}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-});
-
-// ---------- Manager des emplacements + Modal ----------
-const WorkLocationManager = React.memo(() => (
-  <div className="work-locations-section">
-    <div className="locations-header">
-      <div className="section-header">
-        <MapPin className="section-icon" />
-        <h3 className="section-title">{t.workLocations}</h3>
-      </div>
-      <button type="button" className="btn-primary" onClick={() => setShowAddLocation(true)}>
-        <Plus size={16} />
-        {t.addLocation}
-      </button>
-    </div>
-
-    {projectData.workLocations.length > 0 ? (
-      <div className="locations-list">
-        {projectData.workLocations.map((loc: WorkLocation) => (
-          <div key={loc.id} className="location-item">
-            <div className="location-main">
-              <div className="location-info">
-                <h4 className="location-name">{loc.name}</h4>
-                <p className="location-description">{loc.description}</p>
-                <div className="location-metadata">
-                  <span className="location-zone">🏢 {loc.zone}</span>
-                  {loc.building && <span className="location-building">🏗️ {loc.building}</span>}
-                  {loc.floor && <span className="location-floor">📍 {loc.floor}</span>}
-                </div>
-              </div>
-              <div className="location-stats">
-                <div className="location-stat"><Users size={14} /><span>{loc.currentWorkers}/{loc.maxWorkersReached}</span></div>
-                <div className="location-stat"><Lock size={14} /><span>{loc.lockoutPoints}</span></div>
-                <div className="location-stat"><Clock size={14} /><span>{loc.estimatedDuration}</span></div>
-              </div>
-              <button
-                type="button"
-                className="location-remove"
-                onClick={(e) => { e.preventDefault(); removeWorkLocation(loc.id); }}
-                title={t.removeLocation}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-
-            <div className="location-capacity-bar">
-              <div
-                className="capacity-fill"
-                style={{
-                  width: `${loc.maxWorkersReached ? Math.min((loc.currentWorkers / loc.maxWorkersReached) * 100, 100) : 0}%`,
-                  backgroundColor:
-                    loc.maxWorkersReached && loc.currentWorkers > loc.maxWorkersReached * 0.9
-                      ? '#ef4444'
-                      : loc.maxWorkersReached && loc.currentWorkers > loc.maxWorkersReached * 0.7
-                        ? '#f59e0b'
-                        : '#10b981'
-                }}
-              />
-            </div>
-            <div className="capacity-text">
-              {loc.maxWorkersReached ? Math.round((loc.currentWorkers / loc.maxWorkersReached) * 100) : 0}% {t.currentWorkers}
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="empty-locations">
-        <MapPin size={40} style={{ marginBottom: 12, color: '#64748b' }} />
-        <h4 style={{ margin: '0 0 8px', color: '#94a3b8' }}>{t.noLocations}</h4>
-        <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{t.noLocationsDescription}</p>
-      </div>
-    )}
-
-    {showAddLocation && (
-      <div
-        className="modal-overlay-ultra-critical"
-        onClick={() => setShowAddLocation(false)}
-      >
-        <div
-          className="modal-content-ultra-critical"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="modal-header">
-            <h3>{t.addLocation}</h3>
-            <button type="button" className="modal-close" onClick={() => setShowAddLocation(false)}>
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="modal-body">
-            <div className="form-row">
-              <div className="form-field">
-                <label className="field-label">
-                  <Building size={16} />
-                  {t.locationName} <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.locationNamePlaceholder}
-                  value={newLocation.name}
-                  onChange={(e) => updateModalField('name', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-field">
-                <label className="field-label">
-                  <FileText size={16} />
-                  {t.locationDescription}
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.locationDescriptionPlaceholder}
-                  value={newLocation.description}
-                  onChange={(e) => updateModalField('description', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row two-columns">
-              <div className="form-field">
-                <label className="field-label">
-                  <MapPin size={16} />
-                  {t.zone} <span className="required-indicator">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.zonePlaceholder}
-                  value={newLocation.zone}
-                  onChange={(e) => updateModalField('zone', e.target.value)}
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">
-                  <Clock size={16} />
-                  {t.workDuration}
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.workDurationPlaceholder}
-                  value={newLocation.estimatedDuration}
-                  onChange={(e) => updateModalField('estimatedDuration', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row two-columns">
-              <div className="form-field">
-                <label className="field-label">
-                  <Clock size={16} />
-                  {t.startTime}
-                </label>
-                <input
-                  type="time"
-                  className="premium-input modal-input-critical"
-                  value={newLocation.startTime}
-                  onChange={(e) => updateModalField('startTime', e.target.value)}
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">
-                  <Clock size={16} />
-                  {t.endTime}
-                </label>
-                <input
-                  type="time"
-                  className="premium-input modal-input-critical"
-                  value={newLocation.endTime}
-                  onChange={(e) => updateModalField('endTime', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row two-columns">
-              <div className="form-field">
-                <label className="field-label">
-                  <Building size={16} />
-                  {t.building}
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.buildingPlaceholder}
-                  value={newLocation.building}
-                  onChange={(e) => updateModalField('building', e.target.value)}
-                />
-              </div>
-              <div className="form-field">
-                <label className="field-label">
-                  <Activity size={16} />
-                  {t.floor}
-                </label>
-                <input
-                  type="text"
-                  className="premium-input modal-input-critical"
-                  placeholder={t.floorPlaceholder}
-                  value={newLocation.floor}
-                  onChange={(e) => updateModalField('floor', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={() => setShowAddLocation(false)}>
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={addWorkLocation}
-              disabled={!newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving}
-            >
-              <Plus size={16} />
-              {isModalSaving ? t.adding : t.add}
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
-));
-
-// ---------- Sélecteur d’emplacement pour points LOTO ----------
-const LocationSelector = React.memo(({ currentLocationId, onLocationChange }: {
-  currentLocationId?: string; onLocationChange: (id: string) => void;
-}) => (
-  <select
-    className="premium-select location-selector"
-    value={currentLocationId || ''}
-    onChange={(e) => onLocationChange(e.target.value)}
-  >
-    <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
-    {projectData.workLocations.map((l: WorkLocation) => (
-      <option key={l.id} value={l.id}>{l.name} - {l.zone}</option>
-    ))}
-  </select>
-));
-
-// ---------- Sélecteur Type d’énergie + checklist ----------
-const EnergyTypeSelector = React.memo(({ point }: { point: LockoutPoint }) => (
-  <div className="form-field">
-    <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
-    <div className="energy-type-selector">
-      {Object.entries(ENERGY_TYPES).map(([key, type]) => {
-        const IconC = type.icon;
-        const selected = point.energyType === key;
-        return (
-          <div
-            key={key}
-            className={`energy-type-option ${selected ? 'selected' : ''}`}
-            onClick={(e) => { e.preventDefault(); selectEnergyType(point.id, key); }}
-            style={{ borderColor: selected ? type.color : undefined, backgroundColor: selected ? `${type.color}20` : undefined }}
-          >
-            <IconC size={20} color={type.color} />
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#e2e8f0' }}>{type.name}</span>
-          </div>
-        );
-      })}
-    </div>
-
-    {!!point.energyType && (
-      <div className="procedures-list">
-        <h4>{t.proceduresToFollow}</h4>
-        <ul className="procedures-checklist">
-          {ENERGY_TYPES[point.energyType].procedures.map((p, idx) => {
-            const done = (point.completedProcedures || []).includes(idx);
-            return (
-              <li
-                key={idx}
-                className={`procedure-item ${done ? 'completed' : ''}`}
-                onClick={(e) => { e.preventDefault(); toggleProcedureComplete(point.id, idx); }}
-              >
-                <div className={`procedure-checkbox ${done ? 'checked' : ''}`}>
-                  {done && <Check size={12} />}
-                </div>
-                <span className="procedure-text">{p}</span>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="procedures-progress">
-          {(() => {
-            const prog = getProcedureProgress(point);
-            return (
-              <>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${prog.percentage}%` }} />
-                </div>
-                <div className="progress-text">
-                  {prog.completed} / {prog.total} {t.stepsCompleted} ({prog.percentage}%)
-                </div>
-              </>
-            );
-          })()}
-        </div>
-      </div>
-    )}
-  </div>
-));
-
-// ---------- Boutons rapides temps ----------
-const TimeQuickButtons = React.memo(({ pointId }: { pointId: string }) => (
-  <div className="time-quick-select">
-    <button type="button" className="time-btn now" onClick={(e) => { e.preventDefault(); setTimeNow(pointId); }}>
-      <Clock size={12} />{t.now}
-    </button>
-    <button type="button" className="time-btn plus5" onClick={(e) => { e.preventDefault(); setTimePlus(pointId, 5); }}>
-      +5min
-    </button>
-    <button type="button" className="time-btn plus15" onClick={(e) => { e.preventDefault(); setTimePlus(pointId, 15); }}>
-      +15min
-    </button>
-  </div>
-));
-
-// ---------- Photos spécifiques d’un point ----------
-const LockoutPhotosSection = React.memo(({ point }: { point: LockoutPoint }) => {
-  const pPhotos = projectData.lockoutPhotos.filter((ph: LockoutPhoto) => ph.lockoutPointId === point.id);
-  return (
-    <div className="form-field">
-      <label className="field-label">
-        <Camera style={{ width: 18, height: 18 }} />
-        {t.pointPhotos}
-      </label>
-
-      <div className="photo-capture-buttons">
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('during_lockout', point.id)}>
-          <Camera size={14} />{t.duringLockout}
-        </button>
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('lockout_device', point.id)}>
-          <Lock size={14} />{t.lockoutDevice}
-        </button>
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('verification', point.id)}>
-          <Eye size={14} />{t.verification}
-        </button>
-      </div>
-
-      {pPhotos.length > 0 ? (
-        <PhotoCarousel photos={pPhotos} onAddPhoto={() => handlePhotoCapture('lockout_device', point.id)} lockoutPointId={point.id} />
-      ) : (
-        <EmptyPhotoPlaceholder
-          onClick={() => handlePhotoCapture('during_lockout', point.id)}
-          title={t.noPhotos}
-          description={t.clickToPhotoDevice}
-          color="#f87171"
-        />
-      )}
-    </div>
-  );
-});
-
-// ---------- Carte Point de verrouillage ----------
-const LockoutPointCard = React.memo(({ point, index }: { point: LockoutPoint; index: number }) => (
-  <div className="lockout-point">
-    <div className="lockout-point-header">
-      <h4 style={{ color: '#ef4444', margin: 0, fontSize: 16, fontWeight: 600 }}>
-        {t.lockoutPoint}{index + 1}
-      </h4>
-      <button type="button" className="btn-danger" onClick={() => deleteLockoutPoint(point.id)}>
-        <Trash2 size={14} />
-        {t.delete}
-      </button>
-    </div>
-
-    {projectData.workLocations.length > 0 && (
-      <div className="form-field">
-        <label className="field-label">
-          <MapPin style={{ width: 18, height: 18 }} />
-          {language === 'fr' ? 'Emplacement Assigné' : 'Assigned Location'}
-        </label>
-        <LocationSelector
-          currentLocationId={point.assignedLocation}
-          onLocationChange={(id) => updateLockoutPoint(point.id, 'assignedLocation', id)}
-        />
-    </div>
-    )}
-
-    <EnergyTypeSelector point={point} />
-
-    <div className="two-column">
-      <div className="form-field">
-        <label className="field-label"><Settings style={{ width: 18, height: 18 }} />{t.equipmentName}</label>
-        <input
-          type="text"
-          className="premium-input"
-          placeholder={t.equipmentPlaceholder}
-          value={point.equipmentName}
-          onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)}
-        />
-      </div>
-      <div className="form-field">
-        <label className="field-label"><MapPin style={{ width: 18, height: 18 }} />{t.locationLabel}</label>
-        <input
-          type="text"
-          className="premium-input"
-          placeholder={t.locationPlaceholder}
-          value={point.location}
-          onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)}
-        />
-      </div>
-    </div>
-
-    <div className="two-column">
-      <div className="form-field">
-        <label className="field-label"><Lock style={{ width: 18, height: 18 }} />{t.lockType}</label>
-        <input
-          type="text"
-          className="premium-input"
-          placeholder={t.lockTypePlaceholder}
-          value={point.lockType}
-          onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)}
-        />
-      </div>
-      <div className="form-field">
-        <label className="field-label"><FileText style={{ width: 18, height: 18 }} />{t.tagNumber}</label>
-        <input
-          type="text"
-          className="premium-input"
-          placeholder={t.tagPlaceholder}
-          value={point.tagNumber}
-          onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)}
-        />
-      </div>
-    </div>
-
-    <div className="two-column">
-      <div className="form-field">
-        <label className="field-label"><User style={{ width: 18, height: 18 }} />{t.verifiedBy}</label>
-        <input
-          type="text"
-          className="premium-input"
-          placeholder={t.verifiedByPlaceholder}
-          value={point.verifiedBy}
-          onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)}
-        />
-      </div>
-      <div className="form-field">
-        <label className="field-label"><Clock style={{ width: 18, height: 18 }} />{t.verificationTime}</label>
-        <input
-          type="time"
-          className="premium-input"
-          value={point.verificationTime}
-          onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)}
-        />
-        <TimeQuickButtons pointId={point.id} />
-      </div>
-    </div>
-
-    <div className="form-field">
-      <label className="field-label"><FileText style={{ width: 18, height: 18 }} />{t.notes}</label>
-      <textarea
-        className="premium-textarea"
-        style={{ minHeight: 80 }}
-        placeholder={t.notesPlaceholder}
-        value={point.notes}
-        onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)}
-      />
-    </div>
-
-    <LockoutPhotosSection point={point} />
-  </div>
-));
-
-// ---------- Photos générales ----------
-const GeneralPhotosSection = React.memo(() => {
-  const general = projectData.lockoutPhotos.filter((p: LockoutPhoto) => !p.lockoutPointId);
-  return (
-    <div className="form-field">
-      <label className="field-label">
-        <Camera style={{ width: 18, height: 18 }} />
-        {t.generalPhotos}
-      </label>
-
-      <div className="photo-capture-buttons">
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('before_lockout')}>
-          <Camera size={14} />{t.beforeLockout}
-        </button>
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('client_form')}>
-          <FileText size={14} />{t.clientForm}
-        </button>
-        <button type="button" className="photo-capture-btn" onClick={() => handlePhotoCapture('verification')}>
-          <Eye size={14} />{t.verification}
-        </button>
-      </div>
-
-      {general.length > 0 ? (
-        <PhotoCarousel photos={general} onAddPhoto={() => handlePhotoCapture('verification')} />
-      ) : (
-        <EmptyPhotoPlaceholder
-          onClick={() => handlePhotoCapture('before_lockout')}
-          title={t.noPhotos}
-          description={t.clickToPhoto}
-        />
-      )}
-    </div>
-  );
-});
-
-// ---------- Carte Numéro AST ----------
-const ASTNumberCard = React.memo(() => (
-  <div className="ast-number-card">
-    <div className="ast-number-header">
-      <div className="ast-number-title">
-        <FileText style={{ width: 20, height: 20 }} />
-        {t.astNumberTitle}
-      </div>
-      <div className="ast-actions">
-        <button type="button" className={`btn-icon ${copied ? 'copied' : ''}`} onClick={() => copyASTNumber()} title={t.copyNumber}>
-          {copied ? <Check style={{ width: 16, height: 16 }} /> : <Copy style={{ width: 16, height: 16 }} />}
-        </button>
-        <button type="button" className="btn-icon" onClick={() => regenerateASTNumber()} title={t.generateNew}>
-          <FileText style={{ width: 16, height: 16 }} />
-        </button>
-      </div>
-    </div>
-    <div className="ast-number-value">{astNumber}</div>
-    <div className="field-help">{t.astNumberGenerated}</div>
-  </div>
-));
-
-// ---------- Section Lockout complète ----------
-const LockoutSection = React.memo(() => (
-  <div className="form-section lockout-section">
-    <div className="section-header">
-      <Lock className="section-icon lockout-icon" />
-      <h3 className="section-title">{t.lockoutSection}</h3>
-    </div>
-    <div className="field-help" style={{ marginBottom: 24 }}>{t.lockoutDescription}</div>
-
-    <GeneralPhotosSection />
-
-    {projectData.lockoutPoints.map((p: LockoutPoint, i: number) => (
-      <LockoutPointCard key={p.id} point={p} index={i} />
-    ))}
-
-    <div style={{ marginTop: projectData.lockoutPoints.length > 0 ? 24 : 0, marginBottom: 24 }}>
-      <button type="button" className="btn-primary" onClick={() => addLockoutPoint()}>
-        <Plus size={20} />{t.addLockoutPoint}
-      </button>
-    </div>
-
-    {projectData.lockoutPoints.length === 0 && (
-      <div style={{
-        background: 'rgba(59, 130, 246, 0.1)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
-        borderRadius: 12,
-        padding: 24,
-        textAlign: 'center',
-        color: '#60a5fa'
-      }}>
-        <Lock size={32} style={{ marginBottom: 12 }} />
-        <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>{t.noLockoutPoints}</h4>
-        <p style={{ margin: 0, fontSize: 14 }}>{t.noLockoutDescription}</p>
-      </div>
-    )}
-  </div>
-));
 
 // -------------------- 🔽🔽🔽 COLLER LA SECTION 3 ENSUITE (CSS + RENDER JSX + export default) 🔽🔽🔽
 // =================== STEP 3 / 3 — CSS + RENDER JSX + EXPORT ===================
