@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
-import { AST } from '../../types/ast';
+import { AST } from '../types/ast';
 
 export default function ASTPage() {
   const params = useParams();
