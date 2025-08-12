@@ -382,11 +382,19 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
         accessibility: 'normal',
         photos: []
       }],
-      atmosphericHazards: [],
-      physicalHazards: [],
-      environmentalConditions: {},
-      spacePhotos: []
-    };
+        atmosphericHazards: [],
+        physicalHazards: [],
+        environmentalConditions: {
+          ventilationRequired: false,
+          ventilationType: '',
+          lightingConditions: '',
+          temperatureRange: '',
+          moistureLevel: '',
+          noiseLevel: '',
+          weatherConditions: '',
+        },
+        spacePhotos: []
+      };
   }, [permitData, safetyManager]);
   
   // États pour l'interface seulement
