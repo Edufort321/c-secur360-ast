@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { 
-  BarChart3, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  BarChart3,
+  TrendingUp,
+  AlertTriangle,
   Calendar, 
   FileText, 
   Users, 
@@ -36,6 +36,7 @@ import {
   PieChart,
   LineChart
 } from 'lucide-react'
+import { translationService, t } from '../../utils/translations'
 
 interface DashboardData {
   // KPI Fonctionnels
@@ -179,7 +180,7 @@ const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'ba
         </svg>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
           <div style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>{total}</div>
-          <div style={{ color: '#94a3b8', fontSize: '12px' }}>Total</div>
+          <div style={{ color: '#94a3b8', fontSize: '12px' }}>{t('dashboard.sections.total')}</div>
         </div>
       </div>
     )
@@ -223,12 +224,19 @@ const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'ba
 
 export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' } }: { tenant?: Tenant }) {
   const [timeFilter, setTimeFilter] = useState('30d')
+  const [language, setLanguage] = useState<'fr' | 'en'>(translationService.getCurrentLanguage())
   const [isVisible, setIsVisible] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [showArchiveMenu, setShowArchiveMenu] = useState(false)
-  
+
   const isDemo = tenant.subdomain === 'demo'
   const data = getFunctionalData(isDemo)
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const lang = e.target.value as 'fr' | 'en'
+    setLanguage(lang)
+    translationService.setLanguage(lang)
+  }
 
   // Animation d'entrée
   useEffect(() => {
@@ -673,14 +681,34 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               </div>
               
               {/* Contrôles premium */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '20px',
                 flexWrap: 'wrap'
               }}>
-                <select 
-                  value={timeFilter} 
+                <select
+                  value={language}
+                  onChange={handleLanguageChange}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    color: 'white',
+                    border: '1px solid rgba(251, 191, 36, 0.3)',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    backdropFilter: 'blur(10px)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <option value="fr">FR</option>
+                  <option value="en">EN</option>
+                </select>
+
+                <select
+                  value={timeFilter}
                   onChange={(e) => setTimeFilter(e.target.value)}
                   style={{
                     background: 'rgba(30, 41, 59, 0.8)',
@@ -695,15 +723,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  <option value="7d">7 derniers jours</option>
-                  <option value="30d">30 derniers jours</option>
-                  <option value="90d">3 derniers mois</option>
-                  <option value="1y">Dernière année</option>
+                  <option value="7d">{t('dashboard.timeRange.last7Days')}</option>
+                  <option value="30d">{t('dashboard.timeRange.last30Days')}</option>
+                  <option value="90d">{t('dashboard.timeRange.last90Days')}</option>
+                  <option value="1y">{t('dashboard.timeRange.lastYear')}</option>
                 </select>
-                
+
                 <button className="btn-premium">
                   <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Rapport Exécutif
+                  {t('dashboard.sections.executiveReport')}
                 </button>
               </div>
             </div>
@@ -728,36 +756,36 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               gap: '24px',
               marginBottom: '48px'
             }}
-          >
-            {[
-              { 
-                href: `/${tenant.subdomain}/ast/nouveau`, 
-                icon: FileText, 
-                title: 'Nouveau AST', 
-                desc: 'Créer une analyse complète', 
-                color: '#3b82f6',
-                gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/near-miss/nouveau`, 
-                icon: AlertTriangle, 
-                title: 'Passé Proche', 
-                desc: 'Signaler un incident/accident', 
-                color: '#f97316',
-                gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                priority: true
-              },
-              { 
-                href: `/${tenant.subdomain}/improvements/nouveau`, 
-                icon: Target, 
-                title: 'Amélioration', 
-                desc: 'Suggérer une amélioration', 
-                color: '#22c55e',
-                gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                priority: true
-              }
-            ].map((action, index) => {
+            >
+              {[
+                {
+                  href: `/${tenant.subdomain}/ast/nouveau`,
+                  icon: FileText,
+                  title: t('dashboard.quickActions.newAst'),
+                  desc: t('dashboard.quickActions.createFullAnalysis'),
+                  color: '#3b82f6',
+                  gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  priority: true
+                },
+                {
+                  href: `/${tenant.subdomain}/near-miss/nouveau`,
+                  icon: AlertTriangle,
+                  title: t('dashboard.quickActions.nearMiss'),
+                  desc: t('dashboard.quickActions.reportIncident'),
+                  color: '#f97316',
+                  gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  priority: true
+                },
+                {
+                  href: `/${tenant.subdomain}/improvements/nouveau`,
+                  icon: Target,
+                  title: t('dashboard.quickActions.improvement'),
+                  desc: t('dashboard.quickActions.suggestImprovement'),
+                  color: '#22c55e',
+                  gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                  priority: true
+                }
+              ].map((action, index) => {
               const Icon = action.icon;
               return (
                 <Link key={index} href={action.href} style={{ textDecoration: 'none' }}>
@@ -892,15 +920,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               }} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
                 <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(34, 197, 94, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
+                  <p style={{
+                    color: 'rgba(34, 197, 94, 0.9)',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    margin: '0 0 8px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
                   }}>
-                    AST Complétés
+                    {t('dashboard.sections.astCompleted')}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -922,7 +950,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    +{data.astThisMonth} ce mois
+                    +{data.astThisMonth} {t('dashboard.sections.thisMonth')}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -967,15 +995,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               }} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
                 <div style={{ flex: 1 }}>
-                  <p style={{ 
-                    color: 'rgba(59, 130, 246, 0.9)', 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    margin: '0 0 8px 0', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.1em' 
+                  <p style={{
+                    color: 'rgba(59, 130, 246, 0.9)',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    margin: '0 0 8px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
                   }}>
-                    AST Mensuels
+                    {t('dashboard.sections.astMonthly')}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -997,7 +1025,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <Calendar style={{ width: '12px', height: '12px' }} />
-                    Objectif: {Math.round(data.totalAST / 12)}/mois
+                    {t('dashboard.sections.monthlyGoal', { goal: Math.round(data.totalAST / 12) })}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -1243,17 +1271,17 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 padding: '24px',
                 backdropFilter: 'blur(10px)'
               }}>
-                <h3 style={{ 
-                  color: '#3b82f6', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
+                <h3 style={{
+                  color: '#3b82f6',
+                  fontSize: '18px',
+                  fontWeight: '700',
                   margin: '0 0 20px 0',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}>
                   <LineChart style={{ width: '20px', height: '20px' }} />
-                  Évolution AST
+                  {t('dashboard.sections.astEvolution')}
                 </h3>
                 <SimpleChart data={data.monthlyData} type="line" />
                 <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
@@ -1272,17 +1300,17 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 padding: '24px',
                 backdropFilter: 'blur(10px)'
               }}>
-                <h3 style={{ 
-                  color: '#f59e0b', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
+                <h3 style={{
+                  color: '#f59e0b',
+                  fontSize: '18px',
+                  fontWeight: '700',
                   margin: '0 0 20px 0',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}>
                   <PieChart style={{ width: '20px', height: '20px' }} />
-                  Types d'Incidents
+                  {t('dashboard.sections.incidentTypes')}
                 </h3>
                 <SimpleChart data={data.incidentsByType} type="pie" />
                 <div style={{ marginTop: '16px' }}>
@@ -1315,17 +1343,17 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 padding: '24px',
                 backdropFilter: 'blur(10px)'
               }}>
-                <h3 style={{ 
-                  color: '#22c55e', 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
+                <h3 style={{
+                  color: '#22c55e',
+                  fontSize: '18px',
+                  fontWeight: '700',
                   margin: '0 0 20px 0',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}>
                   <Camera style={{ width: '20px', height: '20px' }} />
-                  Photos Documentation
+                  {t('dashboard.sections.astPhotos')}
                 </h3>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ 
@@ -1338,10 +1366,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     {data.photosCount}
                   </div>
                   <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
-                    Photos totales
+                    {t('dashboard.sections.totalPhotos')}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
-                    +{data.photosThisWeek} cette semaine
+                    +{data.photosThisWeek} {t('time.thisWeek')}
                   </div>
                   
                   <div style={{
@@ -1360,7 +1388,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     }} />
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '8px' }}>
-                    Objectif: 3 photos/AST
+                    {t('dashboard.sections.photosGoal')}
                   </div>
                 </div>
               </div>
@@ -1377,28 +1405,28 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               marginBottom: '40px'
             }}
           >
-            {[
-              { 
-                href: `/${tenant.subdomain}/reports`, 
-                icon: BarChart3, 
-                title: 'Rapports Analytics', 
-                desc: 'Graphiques détaillés', 
+            {[ 
+              {
+                href: `/${tenant.subdomain}/reports`,
+                icon: BarChart3,
+                title: t('dashboard.secondary.analyticsReports'),
+                desc: t('dashboard.secondary.detailedCharts'),
                 color: '#9333ea',
                 gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)'
               },
-              { 
-                href: `/${tenant.subdomain}/photos`, 
-                icon: Camera, 
-                title: 'Photos AST', 
-                desc: 'Galerie documentation', 
+              {
+                href: `/${tenant.subdomain}/photos`,
+                icon: Camera,
+                title: t('dashboard.secondary.astPhotos'),
+                desc: t('dashboard.secondary.documentationGallery'),
                 color: '#22c55e',
                 gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
               },
-              { 
-                href: `/${tenant.subdomain}/archives`, 
-                icon: Archive, 
-                title: 'Archives', 
-                desc: 'Historique des données', 
+              {
+                href: `/${tenant.subdomain}/archives`,
+                icon: Archive,
+                title: t('dashboard.secondary.archives'),
+                desc: t('dashboard.secondary.dataHistory'),
                 color: '#f59e0b',
                 gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
               }
