@@ -80,6 +80,7 @@ export const useTeamSharing = (astId: string) => {
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
+  // Extract current user ID from the session, defaulting to an empty string when not available
   const currentUserId = (session?.user as { id: string } | undefined)?.id || '';
   const currentUserName = session?.user?.name || 'Équipe Sécurité';
 
