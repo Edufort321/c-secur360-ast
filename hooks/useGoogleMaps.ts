@@ -99,7 +99,10 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
       
       geocoder.geocode(
         { address, region: defaultConfig.region },
-        (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
+        (
+          results: google.maps.GeocoderResult[] | null,
+          status: google.maps.GeocoderStatus
+        ) => {
           if (status === 'OK' && results && results[0]) {
             const result = results[0];
             const location = result.geometry.location;
@@ -137,7 +140,10 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
       
       geocoder.geocode(
         { location: latLng },
-        (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
+        (
+          results: google.maps.GeocoderResult[] | null,
+          status: google.maps.GeocoderStatus
+        ) => {
           if (status === 'OK' && results && results[0]) {
             const result = results[0];
             const location = result.geometry.location;
