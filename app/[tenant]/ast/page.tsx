@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
 import { ASTFormData } from '../../types/astForm';
 
 export default function ASTPage() {
   const params = useParams();
-  const router = useRouter();
   const tenant = params?.tenant as string;
 
   const [formData, setFormData] = useState<ASTFormData>({
