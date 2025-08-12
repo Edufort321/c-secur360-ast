@@ -34,3 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Accessibility Preferences
+
+Global styles support user accessibility preferences for motion and contrast. The styles also use relative units so text scales correctly with browser zoom.
+
+### Reduced Motion
+
+Animations are disabled when the operating system requests reduced motion (`prefers-reduced-motion`). QA can verify this by enabling the reduced motion setting in their OS and observing that interface animations no longer play.
+
+### Contrast Modes
+
+High and low contrast modes are handled via the `prefers-contrast` media query. Switch your OS to a high contrast theme to see the adjusted colors. Return to the default theme to restore normal styling.
+
+### Relative Font Sizes
+
+Font sizes now use `rem` units instead of hard-coded pixel values. This ensures that text and layout scale as users adjust their browser's zoom level.
+
+Developers and testers should confirm these behaviors across supported browsers and platforms.

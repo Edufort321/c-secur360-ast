@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 100%; /* Respect user browser settings */
+}
+
+body {
+  font-size: 1rem;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -15,4 +23,25 @@
 
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  body {
+    background-color: #ffffff;
+    color: #000000;
+  }
+}
+
+@media (prefers-contrast: less) {
+  body {
+    background-color: #f8f9fa;
+    color: #111827;
+  }
 }
