@@ -28,6 +28,14 @@ To execute the unit test suite, run:
 npm test
 ```
 
+## Database
+
+This project uses Prisma as its database ORM. Ensure the `DATABASE_URL` environment variable is configured before running any database commands. You can generate and apply the database schema with:
+
+```bash
+npm run db:push
+```
+
 
 ## Learn More
 

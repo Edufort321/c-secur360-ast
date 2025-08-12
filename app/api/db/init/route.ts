@@ -3,11 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    console.log('🔄 Testing database connection...')
+    console.log('🔄 Testing Prisma database connection...')
 
     // Test de connexion à la base et création des tenants de démonstration
     await prisma.$connect()
-    console.log('✅ Connected to database')
+    console.log('✅ Connected to Prisma database')
     
     // Vérifier si les tenants existent déjà
     const existingTenants = await prisma.tenant.findMany()
@@ -61,12 +61,12 @@ export async function GET() {
     })
     
   } catch (error: any) {
-    console.error('❌ Database error:', error)
+    console.error('❌ Prisma database error:', error)
     return NextResponse.json({ 
       success: false, 
       error: error.message,
       code: error.code,
-      details: 'Vérifiez les variables d\'environnement Supabase'
+      details: 'Vérifiez la configuration de la base de données Prisma'
     }, { status: 500 })
   }
 }
