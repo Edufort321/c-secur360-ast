@@ -210,22 +210,24 @@ export const useTeamSharing = (astId: string) => {
 
   // Fonction pour envoyer les invitations
   const sendInvitations = async (session: ShareSession) => {
-    for (const member of session.members) {
-      try {
-        if (member.notificationPreferences.email) {
-          await sendEmailInvitation(member, session);
-        }
-        if (member.notificationPreferences.sms) {
-          if (member.phone) {
-            await sendSMSInvitation(member, session);
-          } else {
-            console.warn(`Numéro de téléphone manquant pour ${member.name}, invitation SMS ignorée.`);
+    await Promise.all(
+      session.members.map(async member => {
+        try {
+          if (member.notificationPreferences.email) {
+            await sendEmailInvitation(member, session);
           }
+          if (member.notificationPreferences.sms) {
+            if (member.phone) {
+              await sendSMSInvitation(member, session);
+            } else {
+              console.warn(`Numéro de téléphone manquant pour ${member.name}, invitation SMS ignorée.`);
+            }
+          }
+        } catch (err) {
+          console.error(`Erreur envoi invitation à ${member.name}:`, err);
         }
-      } catch (err) {
-        console.error(`Erreur envoi invitation à ${member.name}:`, err);
-      }
-    }
+      })
+    );
   };
 
   // Fonction pour envoyer invitation email
