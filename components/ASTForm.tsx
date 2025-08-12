@@ -282,8 +282,9 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section, data) => {
+      // Convert section (which may be a symbol) to string for a stable key
       const updateKey = `${String(section)}-${JSON.stringify(data).slice(0, 50)}`;
-      
+
       // ✅ ÉVITER LES DOUBLONS
       if (lastUpdateRef.current === updateKey) {
         console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
