@@ -334,7 +334,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   onValidationChange
 }) => {
   // ✅ CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
-  const siteInfo = React.useMemo(() => {
+  const siteInfo: ConfinedSpaceDetails = React.useMemo(() => {
     // Essai avec permitData fourni en props
     if (permitData?.siteInformation) {
       return permitData.siteInformation;
@@ -364,6 +364,10 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       workDescription: '',
       spaceType: '',
       csaClass: '',
+      entryMethod: '',
+      accessType: '',
+      spaceLocation: '',
+      spaceDescription: '',
       unitSystem: 'metric' as UnitSystem,
       dimensions: {
         length: 0,
@@ -384,7 +388,29 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       }],
       atmosphericHazards: [],
       physicalHazards: [],
-      environmentalConditions: {},
+      environmentalConditions: {
+        ventilationRequired: false,
+        ventilationType: '',
+        lightingConditions: '',
+        temperatureRange: '',
+        moistureLevel: '',
+        noiseLevel: '',
+        weatherConditions: ''
+      },
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: ''
+      },
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: []
+      },
       spacePhotos: []
     };
   }, [permitData, safetyManager]);
