@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { Location } from '../../app/types/ast';
+import useGoogleMaps from '../../hooks/useGoogleMaps';
 
 interface Props {
   isOpen: boolean;
@@ -18,12 +19,18 @@ interface Props {
  */
 export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: Props) {
   const [mounted, setMounted] = useState(false);
-  const [loc, setLoc] = useState<Location>({
+  const mapRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<any>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const mapInstance = useRef<any>(null);
+  const { getCurrentPosition, createMap, createMarker, geocodeAddress, isLoaded } = useGoogleMaps();
+  const [loc, setLoc] = useState<Location & { address?: string }>({
     site: '',
     building: '',
     floor: '',
     room: '',
     specificArea: '',
+    address: '',
   });
 
   useEffect(() => { setMounted(true); }, []);
@@ -38,9 +45,109 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         coordinates: initial.coordinates,
         accessRestrictions: initial.accessRestrictions,
         emergencyExits: initial.emergencyExits,
+        address: (initial as any).address ?? '',
       });
     }
   }, [initial]);
+
+  useEffect(() => {
+    if (!isOpen || !mounted) return;
+
+    const initMap = async () => {
+      let pos = { lat: 45.5017, lng: -73.5673 };
+      try {
+        pos = initial?.coordinates
+          ? { lat: initial.coordinates.latitude, lng: initial.coordinates.longitude }
+          : await getCurrentPosition();
+      } catch (e) {
+        console.warn(e);
+      }
+
+      setLoc((prev) => ({
+        ...prev,
+        coordinates: { latitude: pos.lat, longitude: pos.lng },
+      }));
+
+      if (mapRef.current) {
+        mapInstance.current = createMap(mapRef.current, { center: pos, zoom: 14 });
+        markerRef.current = createMarker(mapInstance.current, pos);
+        if (markerRef.current.addListener) {
+          markerRef.current.addListener('dragend', (e: any) => {
+            const lat = e.latLng.lat();
+            const lng = e.latLng.lng();
+            setLoc((prev) => ({
+              ...prev,
+              coordinates: { latitude: lat, longitude: lng },
+            }));
+          });
+        }
+      }
+    };
+
+    initMap();
+  }, [isOpen, mounted]);
+
+  useEffect(() => {
+    if (!isOpen || !isLoaded || !addressInputRef.current) return;
+
+    const google = (window as any).google;
+    let autocomplete: any;
+
+    if (google?.maps?.places) {
+      autocomplete = new google.maps.places.Autocomplete(addressInputRef.current);
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place?.geometry) return;
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setLoc((prev) => ({
+          ...prev,
+          address: place.formatted_address,
+          coordinates: { latitude: lat, longitude: lng },
+        }));
+        if (mapInstance.current) {
+          mapInstance.current.setCenter({ lat, lng });
+        }
+        if (markerRef.current) {
+          markerRef.current.setPosition({ lat, lng });
+        } else if (mapInstance.current) {
+          markerRef.current = createMarker(mapInstance.current, { lat, lng });
+        }
+      });
+    }
+
+    return () => {
+      if (autocomplete && google?.maps?.event) {
+        google.maps.event.clearInstanceListeners(autocomplete);
+      }
+    };
+  }, [isOpen, isLoaded]);
+
+  const handleAddressBlur = async () => {
+    const value = addressInputRef.current?.value;
+    if (!value) return;
+    try {
+      const result = await geocodeAddress(value);
+      if (result) {
+        const { address, coordinates } = result;
+        setLoc((prev) => ({
+          ...prev,
+          address,
+          coordinates: { latitude: coordinates.lat, longitude: coordinates.lng },
+        }));
+        if (mapInstance.current) {
+          mapInstance.current.setCenter({ lat: coordinates.lat, lng: coordinates.lng });
+        }
+        if (markerRef.current) {
+          markerRef.current.setPosition({ lat: coordinates.lat, lng: coordinates.lng });
+        } else if (mapInstance.current) {
+          markerRef.current = createMarker(mapInstance.current, { lat: coordinates.lat, lng: coordinates.lng });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (!isOpen || !mounted) return null;
 
@@ -88,6 +195,17 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         </div>
 
         <div style={grid}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <div style={label}>Adresse</div>
+            <input
+              ref={addressInputRef}
+              style={input}
+              value={loc.address ?? ''}
+              onChange={(e) => setLoc({ ...loc, address: e.target.value })}
+              onBlur={handleAddressBlur}
+              placeholder="Rechercher une adresse"
+            />
+          </div>
           <div>
             <div style={label}>Nom du site</div>
             <input style={input} value={loc.site}
@@ -119,6 +237,8 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
               placeholder="Ex.: Cellule 6, section disjoncteurs" />
           </div>
         </div>
+
+        <div ref={mapRef} style={{ width: '100%', height: 200, marginTop: 12, borderRadius: 10 }} />
 
         <div style={footer}>
           <button onClick={onCancel}
