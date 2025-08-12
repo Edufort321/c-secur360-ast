@@ -8,7 +8,7 @@ import {
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
-import { ASTFormData } from '@/app/types/astForm';
+import { ASTFormData } from '@/types/astForm';
 
 // =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
@@ -282,7 +282,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section, data) => {
-      const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
+      const updateKey = `${String(section)}-${JSON.stringify(data).slice(0, 50)}`;
       
       // ✅ ÉVITER LES DOUBLONS
       if (lastUpdateRef.current === updateKey) {
@@ -1173,7 +1173,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
       language: currentLanguage,
       tenant: tenant,
       errors: {},
-      onDataChange: ultraStableHandler
+        onDataChange: ultraStableHandler as (section: string, data: any) => void
     }), [currentLanguage, tenant, ultraStableHandler]);
     
     console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
