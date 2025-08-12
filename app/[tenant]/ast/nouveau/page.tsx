@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import ASTForm from '@/components/ASTForm';
+import { ASTFormData } from '../../../types/astForm';
 
 interface PageProps {
   params: {
@@ -11,7 +12,7 @@ interface PageProps {
 }
 
 export default function NouvellePage({ params }: PageProps) {
-  const [astData, setAstData] = useState({
+  const [astData, setAstData] = useState<ASTFormData>({
     id: '',
     astNumber: '',
     projectInfo: {
@@ -77,7 +78,7 @@ export default function NouvellePage({ params }: PageProps) {
   }, [params.tenant]);
 
   // ✅ HANDLER POUR SYNC DONNÉES
-  const handleDataChange = (section: string, data: any) => {
+  const handleDataChange = <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
     console.log('📝 Page - Data changed:', { section, data });
     setAstData(prev => ({
       ...prev,

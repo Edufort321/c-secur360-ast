@@ -3,56 +3,45 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
-import { AST } from '../../types/ast';
+import { ASTFormData } from '../../types/astForm';
 
 export default function ASTPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params?.tenant as string;
 
-  const [formData, setFormData] = useState<Partial<AST>>({
+  const [formData, setFormData] = useState<ASTFormData>({
     id: '',
-    tenant: tenant || '',
+    astNumber: '',
     projectInfo: {
-      workType: '',
-      workTypeDetails: {
-        category: '',
-        subcategory: '',
-        complexity: 'simple',
-        frequency: 'routine',
-        criticality: 'low'
-      },
-      location: {
-        site: '',
-        building: '',
-        floor: '',
-        room: '',
-        specificArea: ''
-      },
-      estimatedDuration: '',
-      actualDuration: '',
-      equipmentRequired: [],
-      environmentalConditions: {
-        temperature: { min: 20, max: 25, units: 'celsius' },
-        humidity: 50,
-        lighting: { 
-          type: 'artificial', 
-          adequacy: 'good', 
-          requiresSupplemental: false 
-        },
-        noise: { level: 0, requiresProtection: false },
-        airQuality: { 
-          quality: 'good', 
-          requiresVentilation: false, 
-          requiresRespiratory: false 
-        },
-        weather: { 
-          condition: 'clear', 
-          impactsWork: false 
-        }
-      }
+      client: '',
+      workLocation: '',
+      industry: '',
+      projectNumber: '',
+      date: '',
+      time: '',
+      workDescription: '',
+      workerCount: 1,
+      lockoutPoints: []
     },
-    status: 'draft'
+    equipment: {
+      selected: [],
+      custom: []
+    },
+    hazards: {
+      selected: [],
+      controls: []
+    },
+    permits: {
+      permits: []
+    },
+    validation: {
+      reviewers: []
+    },
+    finalization: {
+      consent: false,
+      signatures: []
+    }
   });
 
   const [loading, setLoading] = useState(true);
@@ -94,14 +83,14 @@ export default function ASTPage() {
     loadData();
   }, [tenant]);
 
-  const handleDataChange = useCallback(async (section: string, data: any) => {
+  const handleDataChange = useCallback(async <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
     setSaving(true);
-    
+
     setFormData(prev => {
-      const newData = {
+      const newData: ASTFormData = {
         ...prev,
         [section]: data,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       };
       
       setTimeout(async () => {
