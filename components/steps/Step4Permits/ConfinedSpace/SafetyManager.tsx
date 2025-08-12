@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
+import { ConfinedSpaceDetails } from '@/types/confinedSpace';
 
 // =================== CONFIGURATION SUPABASE ROBUSTE ===================
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
@@ -247,50 +248,6 @@ export interface ValidationData {
   errors: string[];
   warnings?: string[];
   lastValidated: string;
-}
-
-// ✅ INTERFACE SITEINFO POUR LA SAISIE - TOUTES PROPRIÉTÉS DÉFINIES
-export interface ConfinedSpaceDetails {
-  // ✅ Informations principales - GARANTIES STRING DÉFINIES
-  projectNumber: string;
-  workLocation: string;
-  contractor: string;
-  supervisor: string;
-  entryDate: string;
-  duration: string;
-  workerCount: number;
-  workDescription: string;
-
-  // Identification de l'espace
-  spaceType: string;
-  csaClass: string;
-  entryMethod: string;
-  accessType: string;
-  spaceLocation: string;
-  spaceDescription: string;
-
-  // Dimensions avec forme
-  dimensions: Dimensions;
-  unitSystem: 'metric' | 'imperial';
-
-  // Points d'entrée
-  entryPoints: EntryPoint[];
-
-  // Dangers
-  atmosphericHazards: string[];
-  physicalHazards: string[];
-
-  // Conditions environnementales
-  environmentalConditions: EnvironmentalConditions;
-
-  // Contenu de l'espace
-  spaceContent: SpaceContent;
-
-  // Mesures de sécurité
-  safetyMeasures: SafetyMeasures;
-
-  // Photos de l'espace
-  spacePhotos: SpacePhoto[];
 }
 
 export interface Dimensions {
