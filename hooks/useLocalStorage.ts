@@ -206,7 +206,7 @@ interface ASTPreferences {
   language: 'fr' | 'en';
   autoSave: boolean;
   notifications: boolean;
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'auto';
 }
 
 interface RecentProject {
@@ -229,7 +229,7 @@ export const useASTLocalStorage = () => {
     language: 'fr' as 'fr' | 'en',
     autoSave: true,
     notifications: true,
-    theme: 'dark' as 'light' | 'dark'
+    theme: 'auto'
   });
   const preferences = preferencesStorage.value;
   const setPreferences = preferencesStorage.setValue;
