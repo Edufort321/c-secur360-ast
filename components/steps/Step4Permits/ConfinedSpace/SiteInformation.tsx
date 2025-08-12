@@ -1,7 +1,7 @@
 // SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
@@ -21,6 +21,7 @@ import {
 } from './SafetyManager';
 
 import { styles, isMobile } from './styles';
+import useGoogleMaps from '../../../../hooks/useGoogleMaps';
 
 // =================== TYPES LOCAUX ===================
 type UnitSystem = 'metric' | 'imperial';
@@ -46,6 +47,7 @@ const translations = {
     // Champs du formulaire
     projectNumber: "Numéro de projet",
     workLocation: "Lieu des travaux",
+    chooseOnMap: "Choisir sur la carte",
     contractor: "Entrepreneur",
     supervisor: "Superviseur",
     entryDate: "Date d'entrée prévue",
@@ -192,6 +194,7 @@ const translations = {
     // Champs du formulaire
     projectNumber: "Project number",
     workLocation: "Work location",
+    chooseOnMap: "Choose on map",
     contractor: "Contractor",
     supervisor: "Supervisor",
     entryDate: "Planned entry date",
@@ -356,6 +359,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     return {
       projectNumber: '',
       workLocation: '',
+      workLocationCoordinates: { lat: 45.5017, lng: -73.5673 },
       contractor: '',
       supervisor: '',
       entryDate: '',
@@ -393,7 +397,13 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const [mapVisible, setMapVisible] = useState(false);
+  const { createMap, createMarker, getCurrentPosition, isLoaded } = useGoogleMaps();
+
   const t = translations[language];
 
   // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
@@ -434,6 +444,28 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       console.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
     }
   }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
+
+  useEffect(() => {
+    if (mapVisible && mapRef.current && isLoaded) {
+      (async () => {
+        const center = siteInfo.workLocationCoordinates || await getCurrentPosition();
+        if (!mapInstanceRef.current) {
+          const map = createMap(mapRef.current, { center, zoom: 14 });
+          mapInstanceRef.current = map;
+          const marker = createMarker(map, center);
+          markerRef.current = marker;
+          marker.addListener('dragend', () => {
+            const pos = marker.getPosition();
+            const coords = { lat: pos.lat(), lng: pos.lng() };
+            updateSiteInfo('workLocationCoordinates', coords);
+          });
+        } else {
+          mapInstanceRef.current.setCenter(center);
+          markerRef.current?.setPosition(center);
+        }
+      })();
+    }
+  }, [mapVisible, isLoaded, siteInfo.workLocationCoordinates, createMap, createMarker, getCurrentPosition, updateSiteInfo]);
 
   // ✅ CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
   const updateDimensions = useCallback((dimensionUpdates: Partial<Dimensions>) => {
@@ -1344,13 +1376,31 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                 <MapPin style={{ width: '18px', height: '18px' }} />
                 {t.workLocation}<span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 style={styles.input}
                 placeholder={language === 'fr' ? 'Adresse complète du site' : 'Complete site address'}
                 value={siteInfo.workLocation}
                 onChange={(e) => updateSiteInfo('workLocation', e.target.value)}
               />
+              <button
+                type="button"
+                style={{ ...styles.button, ...styles.buttonSecondary, marginTop: '8px', width: '100%' }}
+                onClick={() => setMapVisible(!mapVisible)}
+              >
+                {t.chooseOnMap}
+              </button>
+              {mapVisible && (
+                <div
+                  ref={mapRef}
+                  style={{ height: '300px', marginTop: '8px', borderRadius: '8px' }}
+                />
+              )}
+              {siteInfo.workLocationCoordinates && (
+                <p style={{ marginTop: '8px', fontSize: '14px' }}>
+                  {siteInfo.workLocationCoordinates.lat.toFixed(5)}, {siteInfo.workLocationCoordinates.lng.toFixed(5)}
+                </p>
+              )}
             </div>
 
             <div style={{ marginBottom: '16px' }}>
