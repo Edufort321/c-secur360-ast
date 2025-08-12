@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
 import { ASTFormData } from '../types/astForm';
@@ -47,6 +47,7 @@ export default function ASTPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!tenant) return;
@@ -83,8 +84,20 @@ export default function ASTPage() {
     loadData();
   }, [tenant]);
 
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleDataChange = useCallback(async <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
     setSaving(true);
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
 
     setFormData(prev => {
       const newData: ASTFormData = {
@@ -92,8 +105,8 @@ export default function ASTPage() {
         [section]: data,
         updatedAt: new Date().toISOString()
       };
-      
-      setTimeout(async () => {
+
+      saveTimeoutRef.current = setTimeout(async () => {
         try {
           await fetch(`/api/${tenant}/ast/save`, {
             method: 'POST',
@@ -106,7 +119,7 @@ export default function ASTPage() {
           setSaving(false);
         }
       }, 500);
-      
+
       return newData;
     });
   }, [tenant]);
