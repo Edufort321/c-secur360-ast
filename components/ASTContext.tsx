@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useRef, useState, useEffect } from 'react';
 import { ASTFormData } from '@/types/astForm';
+import env from '@/lib/env';
 
 // =================== INTERFACES MULTI-TENANT ===================
 export interface TenantConfig {
@@ -348,7 +349,7 @@ async function saveToTenantDatabase(
 ) {
   try {
     // 🚀 Mode development - simulation API
-    if (process.env.NODE_ENV === 'development') {
+    if (env.NODE_ENV === 'development') {
       console.log('💾 DEV - Sauvegarde simulée:', {
         tenant: dbConfig.schema,
         section,
