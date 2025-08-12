@@ -1130,20 +1130,20 @@ function Step6Finalization({
           } 
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: 'Arial', sans-serif; 
-          line-height: 1.3; 
-          color: #1f2937; 
-          background: white; 
-          font-size: 10px; 
+        body {
+          font-family: 'Arial', sans-serif;
+          line-height: 1.3;
+          color: var(--text-color);
+          background: var(--color-bg);
+          font-size: 10px;
           max-width: 8.5in;
           margin: 0 auto;
         }
         
         /* ✅ HEADER OPTIMISÉ POUR 8.5x11 */
-        .header { 
-          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
-          color: white; 
+        .header {
+          background: linear-gradient(135deg, var(--finalization-bg-start) 0%, var(--finalization-bg-end) 100%);
+          color: var(--text-color);
           padding: 15px 20px; 
           text-align: center; 
           margin-bottom: 20px; 
@@ -1153,19 +1153,19 @@ function Step6Finalization({
           height: auto;
           min-height: 80px;
         }
-        .logo-container { 
-          position: absolute; 
-          left: 15px; 
-          top: 50%; 
-          transform: translateY(-50%); 
-          width: 60px; 
-          height: 60px; 
-          background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
-          border: 2px solid #f59e0b; 
-          border-radius: 8px; 
-          display: flex; 
-          align-items: center; 
-          justifyContent: center;
+        .logo-container {
+          position: absolute;
+          left: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 60px;
+          height: 60px;
+          background: linear-gradient(135deg, var(--finalization-overlay-start) 0%, var(--finalization-overlay-end) 50%, var(--finalization-overlay-start) 100%);
+          border: 2px solid #f59e0b;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
         }
         .logo-image { 
@@ -1350,7 +1350,7 @@ function Step6Finalization({
           transform: translateY(-50%);
           width: 35px;
           height: 35px;
-          background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+          background: linear-gradient(135deg, var(--finalization-overlay-start) 0%, var(--finalization-overlay-end) 100%);
           border: 2px solid #f59e0b;
           border-radius: 6px;
           display: flex;
@@ -1520,7 +1520,7 @@ function Step6Finalization({
           transform: translateY(-50%);
           width: 50px;
           height: 50px;
-          background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+          background: linear-gradient(135deg, var(--finalization-overlay-start) 0%, var(--finalization-overlay-end) 100%);
           border: 3px solid #f59e0b;
           border-radius: 8px;
           display: flex;
@@ -2139,7 +2139,7 @@ function Step6Finalization({
       width: ${isMobile ? '56px' : '72px'};
       height: ${isMobile ? '56px' : '72px'};
       margin: 0 auto ${isMobile ? '16px' : '20px'};
-      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+      background: linear-gradient(135deg, var(--finalization-overlay-start) 0%, var(--finalization-overlay-end) 50%, var(--finalization-overlay-start) 100%);
       border: 3px solid #f59e0b;
       border-radius: ${isMobile ? '12px' : '16px'};
       display: flex;
@@ -2789,7 +2789,7 @@ function Step6Finalization({
     
     /* ✅ LOADING SKELETON ANIMATIONS */
     .skeleton {
-      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+      background: linear-gradient(90deg, var(--finalization-bg-start) 25%, #334155 50%, var(--finalization-bg-start) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }
