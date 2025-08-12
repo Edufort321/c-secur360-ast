@@ -1,7 +1,7 @@
 // AtmosphericTesting.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
@@ -175,26 +175,31 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // Accès direct aux données depuis permitData
-  const atmosphericData = permitData.atmosphericTesting || {
-    equipment: {
-      deviceModel: '',
-      serialNumber: '',
-      calibrationDate: '',
-      nextCalibration: ''
-    },
-    readings: [],
-    continuousMonitoring: false,
-    alarmSettings: {
-      oxygen: { min: 19.5, max: 23.0 },
-      combustibleGas: { max: 10 },
-      hydrogenSulfide: { max: 10 },
-      carbonMonoxide: { max: 35 }
-    },
-    lastUpdated: new Date().toISOString()
-  };
+  // Accès direct aux données depuis SafetyManager plutôt que permitData
+  const atmosphericData = useMemo(() => (
+    safetyManager?.currentPermit?.atmosphericTesting || {
+      equipment: {
+        deviceModel: '',
+        serialNumber: '',
+        calibrationDate: '',
+        nextCalibration: ''
+      },
+      readings: [],
+      continuousMonitoring: false,
+      alarmSettings: {
+        oxygen: { min: 19.5, max: 23.0 },
+        combustibleGas: { max: 10 },
+        hydrogenSulfide: { max: 10 },
+        carbonMonoxide: { max: 35 }
+      },
+      lastUpdated: new Date().toISOString()
+    }
+  ), [safetyManager?.currentPermit?.atmosphericTesting, safetyManager?.lastUpdateTime]);
 
-  const atmosphericReadings = atmosphericData.readings || [];
+  const atmosphericReadings = useMemo(
+    () => atmosphericData.readings || [],
+    [atmosphericData]
+  );
   
   // États locaux pour l'interface
   const [retestTimer, setRetestTimer] = useState(0);
