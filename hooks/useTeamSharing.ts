@@ -1,5 +1,6 @@
 // hooks/useTeamSharing.ts
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export interface TeamMember {
   id: string;
@@ -233,7 +234,7 @@ export const useTeamSharing = () => {
       .replace('{senderName}', 'Équipe Sécurité');
 
     // Simulation d'envoi email
-    console.log(`Email envoyé à ${member.email}:`, {
+    logger.info(`Email envoyé à ${member.email}:`, {
       subject: template.subject,
       message
     });
@@ -246,7 +247,7 @@ export const useTeamSharing = () => {
     const message = `AST - Révision requise pour "${session.astId}". Lien: ${session.shareLink}`;
     
     // Simulation d'envoi SMS
-    console.log(`SMS envoyé à ${member.phone}:`, message);
+    logger.info(`SMS envoyé à ${member.phone}:`, message);
 
     return true;
   };
@@ -307,7 +308,7 @@ export const useTeamSharing = () => {
       .replace('{shareLink}', session.shareLink);
 
     if (member.notificationPreferences.email) {
-      console.log(`Rappel email envoyé à ${member.email}:`, {
+      logger.info(`Rappel email envoyé à ${member.email}:`, {
         subject: template.subject,
         message
       });

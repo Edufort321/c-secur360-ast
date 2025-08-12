@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback, useRef, useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 // =================== INTERFACES MULTI-TENANT ===================
 export interface TenantConfig {
@@ -159,7 +160,7 @@ export function ASTProvider({
 
   // ✅ HANDLERS ULTRA-STABLES - Références figées
   const updateStepData = useCallback((section: string, data: any) => {
-    console.log('🔥 Context Update:', { section, data, tenant: tenant.id });
+    logger.debug('🔥 Context Update:', { section, data, tenant: tenant.id });
     
     dispatch({
       type: 'UPDATE_STEP_DATA',
@@ -347,7 +348,7 @@ async function saveToTenantDatabase(
   try {
     // 🚀 Mode development - simulation API
     if (process.env.NODE_ENV === 'development') {
-      console.log('💾 DEV - Sauvegarde simulée:', {
+      logger.debug('💾 DEV - Sauvegarde simulée:', {
         tenant: dbConfig.schema,
         section,
         astNumber,
@@ -378,10 +379,10 @@ async function saveToTenantDatabase(
     }
 
     const result = await response.json();
-    console.log('✅ Sauvegardé dans BD tenant:', dbConfig.schema, result);
+    logger.info('✅ Sauvegardé dans BD tenant:', dbConfig.schema, result);
     
-  } catch (error) {
-    console.error('❌ Erreur sauvegarde tenant:', error);
+    } catch (error) {
+      logger.error('❌ Erreur sauvegarde tenant:', error);
     // En cas d'erreur, sauvegarde locale de secours
     if (typeof window !== 'undefined') {
       localStorage.setItem(`ast_backup_${astNumber}`, JSON.stringify({
