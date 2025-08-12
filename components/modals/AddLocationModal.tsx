@@ -51,10 +51,13 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
   };
 
   const panel: React.CSSProperties = {
-    width: 'min(720px, 100%)',
+    width: '100%',
+    maxWidth: '90vw',
     background: '#0b1220', color: 'white',
     borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
     boxShadow: '0 20px 60px rgba(0,0,0,0.35)', padding: 20,
+    overflowY: 'auto',
+    maxHeight: '90vh',
   };
 
   const header: React.CSSProperties = {
@@ -62,9 +65,6 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     justifyContent: 'space-between', marginBottom: 12,
   };
 
-  const grid: React.CSSProperties = {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
-  };
 
   const label: React.CSSProperties = { fontSize: 12, opacity: 0.8, marginBottom: 6 };
   const input: React.CSSProperties = {
@@ -87,7 +87,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
           </button>
         </div>
 
-        <div style={grid}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div style={label}>Nom du site</div>
             <input style={input} value={loc.site}
