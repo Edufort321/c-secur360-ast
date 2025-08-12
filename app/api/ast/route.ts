@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const userId = token?.sub
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     const { tenantId, formData } = await request.json()
     
     // Générer un numéro AST automatique
@@ -12,7 +22,7 @@ export async function POST(request: NextRequest) {
     const astForm = await prisma.aSTForm.create({
       data: {
         tenantId,
-        userId: 'temp-user', // À remplacer par l'authentification
+        userId,
         projectNumber: formData.projectNumber || '',
         clientName: formData.client || '',
         workLocation: formData.workLocation || '',
@@ -52,6 +62,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token?.sub) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const tenantId = searchParams.get('tenantId')
     
