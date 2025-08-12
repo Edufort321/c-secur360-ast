@@ -1,5 +1,6 @@
 // =================== SECTION 1/5 - IMPORTS & INTERFACES COMPATIBLES ===================
 'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { 
@@ -612,26 +613,26 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     
     // 🛡️ ÉVITER DOUBLONS
     if (lastUpdateRef.current === updateKey) {
-      console.log('🛡️ Step1 - Doublon évité');
+      logger.debug('🛡️ Step1 - Doublon évité');
       return;
     }
     
     lastUpdateRef.current = updateKey;
-    console.log('🔥 Step1 - Notification parent stable:', Object.keys(updatedData));
+    logger.debug('🔥 Step1 - Notification parent stable:', Object.keys(updatedData));
     
     // ✅ SYNC DIFFÉRÉE POUR ÉVITER BOUCLES
     setTimeout(() => {
       try {
         onDataChange('projectInfo', updatedData);
       } catch (error) {
-        console.error('❌ Step1 - Erreur sync parent:', error);
+        logger.error('❌ Step1 - Erreur sync parent:', error);
       }
     }, 50);
   }, [onDataChange]);
 
   // =================== 🔥 HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
   const updateField = useCallback((field: string, value: any) => {
-    console.log('🔥 Step1 - Update field ULTRA-STABLE:', field, value);
+    logger.debug('🔥 Step1 - Update field ULTRA-STABLE:', field, value);
     
     // ✅ RÉFÉRENCE DIRECTE SANS BOUCLE
     const currentData = stableFormDataRef.current;
@@ -651,7 +652,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
   // =================== HANDLERS SPÉCIALISÉS ===================
   const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
-    console.log('🔥 Step1 - Update lockout ULTRA-STABLE:', pointId, field, value);
+    logger.debug('🔥 Step1 - Update lockout ULTRA-STABLE:', pointId, field, value);
     
     // ✅ RÉFÉRENCE DIRECTE SANS RE-CRÉATION
     const currentData = stableFormDataRef.current;
@@ -769,7 +770,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     setShowAddLocation(false);
     
     setTimeout(() => setIsModalSaving(false), 200);
-    console.log('✅ Step1 - Emplacement ajouté:', location.name);
+    logger.debug('✅ Step1 - Emplacement ajouté:', location.name);
   }, [newLocation, notifyParentStable, isModalSaving]);
 
   const removeWorkLocation = useCallback((locationId: string) => {
@@ -793,7 +794,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
     
-    console.log('✅ Step1 - Emplacement supprimé:', locationId);
+    logger.debug('✅ Step1 - Emplacement supprimé:', locationId);
   }, [localData.workLocations, localData.lockoutPoints, notifyParentStable]);
 
   // =================== MISE À JOUR STATISTIQUES WORKERS ===================
@@ -817,7 +818,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
     
-    console.log(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
+    logger.debug(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
   }, [localData.workLocations, notifyParentStable]);
 
   // =================== GESTION PHOTOS OPTIMISÉE ===================
@@ -836,7 +837,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         fileInputRef.current.click();
       }
     } catch (error) {
-      console.error('Erreur capture photo:', error);
+      logger.error('Erreur capture photo:', error);
     }
   }, []);
 
@@ -859,9 +860,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         return updated;
       });
       
-      console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
+      logger.debug('✅ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
-      console.error('Erreur traitement photo:', error);
+      logger.error('Erreur traitement photo:', error);
     }
   }, [language, notifyParentStable]);
 
@@ -876,7 +877,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
     
-    console.log('✅ Step1 - Photo supprimée:', photoId);
+    logger.debug('✅ Step1 - Photo supprimée:', photoId);
   }, [notifyParentStable]);
 
   // =================== HANDLERS AST ET UTILITAIRES ===================
@@ -886,14 +887,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Erreur copie:', err);
+      logger.error('Erreur copie:', err);
     }
   }, [astNumber]);
 
   const regenerateASTNumber = useCallback(() => {
     const newNumber = generateASTNumber();
     setAstNumber(newNumber);
-    console.log('✅ Step1 - Nouveau numéro AST:', newNumber);
+    logger.debug('✅ Step1 - Nouveau numéro AST:', newNumber);
   }, []);
 
   // =================== FONCTIONS UTILITAIRES ===================
@@ -2229,7 +2230,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
   // =================== SECTION 5/5 FINALE - RENDU JSX COMPLET + CSS OPTIMISÉ ===================
 
-  console.log('🔥 Step1 - Render avec localData:', Object.keys(localData));
+  logger.debug('🔥 Step1 - Render avec localData:', Object.keys(localData));
 
   return (
     <>

@@ -1,7 +1,7 @@
 // SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
@@ -348,7 +348,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           return currentPermit.siteInformation;
         }
       } catch (error) {
-        console.warn('SafetyManager currentPermit.siteInformation access failed:', error);
+        logger.warn('SafetyManager currentPermit.siteInformation access failed:', error);
       }
     }
     
@@ -432,7 +432,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation(updates);
       } catch (error) {
-        console.warn('SafetyManager updateSiteInformation failed:', error);
+        logger.warn('SafetyManager updateSiteInformation failed:', error);
       }
     }
     
@@ -447,7 +447,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
         const validation = safetyManager.validateSection('siteInformation');
         onValidationChange(validation.isValid, validation.errors);
       } catch (error) {
-        console.warn('SafetyManager validateSection failed:', error);
+        logger.warn('SafetyManager validateSection failed:', error);
         // Fallback validation basique
         const isValid = Boolean(updates.projectNumber || siteInfo.projectNumber) && 
                         Boolean(updates.workLocation || siteInfo.workLocation);
@@ -457,7 +457,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     
     // Fallback : si pas de SafetyManager, log des données
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
+      logger.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
     }
   }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
 
@@ -469,7 +469,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ dimensions: updatedDimensions });
       } catch (error) {
-        console.warn('SafetyManager updateSiteInformation dimensions failed:', error);
+        logger.warn('SafetyManager updateSiteInformation dimensions failed:', error);
       }
     }
     
@@ -478,7 +478,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateDimensions:', dimensionUpdates);
+      logger.warn('SafetyManager non disponible pour updateDimensions:', dimensionUpdates);
     }
   }, [safetyManager, siteInfo.dimensions, onUpdate]);
 
@@ -521,7 +521,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
         // ✅ UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
         safetyManager.updateSiteInformation({ environmentalConditions: typeSafeConditions });
       } catch (error) {
-        console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
+        logger.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
       }
     }
     
@@ -530,7 +530,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value: sanitizedValue });
+      logger.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value: sanitizedValue });
     }
   }, [safetyManager, siteInfo.environmentalConditions, onUpdate]);
   // SiteInformation.tsx - PARTIE 2/2 - Fonctions Avancées et Rendu JSX Complet
@@ -591,12 +591,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           unitSystem: toSystem 
         });
       } catch (error) {
-        console.warn('SafetyManager convertUnits failed:', error);
+        logger.warn('SafetyManager convertUnits failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour convertUnits');
+      logger.warn('SafetyManager non disponible pour convertUnits');
     }
   }, [safetyManager, siteInfo]);
 
@@ -618,12 +618,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
       } catch (error) {
-        console.warn('SafetyManager addEntryPoint failed:', error);
+        logger.warn('SafetyManager addEntryPoint failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour addEntryPoint');
+      logger.warn('SafetyManager non disponible pour addEntryPoint');
     }
   }, [safetyManager, siteInfo.entryPoints]);
 
@@ -640,12 +640,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
       } catch (error) {
-        console.warn('SafetyManager removeEntryPoint failed:', error);
+        logger.warn('SafetyManager removeEntryPoint failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour removeEntryPoint');
+      logger.warn('SafetyManager non disponible pour removeEntryPoint');
     }
   }, [safetyManager, siteInfo.entryPoints, language]);
 
@@ -659,12 +659,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
       } catch (error) {
-        console.warn('SafetyManager updateEntryPoint failed:', error);
+        logger.warn('SafetyManager updateEntryPoint failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateEntryPoint');
+      logger.warn('SafetyManager non disponible pour updateEntryPoint');
     }
   }, [safetyManager, siteInfo.entryPoints]);
 
@@ -1048,12 +1048,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ atmosphericHazards: updatedHazards });
       } catch (error) {
-        console.warn('SafetyManager toggleAtmosphericHazard failed:', error);
+        logger.warn('SafetyManager toggleAtmosphericHazard failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour toggleAtmosphericHazard:', hazardType);
+      logger.warn('SafetyManager non disponible pour toggleAtmosphericHazard:', hazardType);
     }
   }, [safetyManager, siteInfo.atmosphericHazards]);
 
@@ -1068,12 +1068,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateSiteInformation({ physicalHazards: updatedHazards });
       } catch (error) {
-        console.warn('SafetyManager togglePhysicalHazard failed:', error);
+        logger.warn('SafetyManager togglePhysicalHazard failed:', error);
       }
     }
     
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour togglePhysicalHazard:', hazardType);
+      logger.warn('SafetyManager non disponible pour togglePhysicalHazard:', hazardType);
     }
   }, [safetyManager, siteInfo.physicalHazards]);
 
@@ -1115,12 +1115,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
                     } catch (error) {
-                      console.warn('SafetyManager photo update with GPS failed:', error);
+                      logger.warn('SafetyManager photo update with GPS failed:', error);
                     }
                   }
                   
                   if (!safetyManager) {
-                    console.warn('SafetyManager non disponible pour photo GPS:', newPhoto);
+                    logger.warn('SafetyManager non disponible pour photo GPS:', newPhoto);
                   }
                 }, 
                 () => {
@@ -1133,12 +1133,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
                     } catch (error) {
-                      console.warn('SafetyManager photo update without GPS failed:', error);
+                      logger.warn('SafetyManager photo update without GPS failed:', error);
                     }
                   }
                   
                   if (!safetyManager) {
-                    console.warn('SafetyManager non disponible pour photo sans GPS:', newPhoto);
+                    logger.warn('SafetyManager non disponible pour photo sans GPS:', newPhoto);
                   }
                 }
               );
@@ -1151,12 +1151,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                 try {
                   safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
                 } catch (error) {
-                  console.warn('SafetyManager photo update no geolocation failed:', error);
+                  logger.warn('SafetyManager photo update no geolocation failed:', error);
                 }
               }
               
               if (!safetyManager) {
-                console.warn('SafetyManager non disponible pour photo no geolocation:', newPhoto);
+                logger.warn('SafetyManager non disponible pour photo no geolocation:', newPhoto);
               }
             }
           };
@@ -1176,12 +1176,12 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
         try {
           safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
         } catch (error) {
-          console.warn('SafetyManager handlePhotoDelete failed:', error);
+          logger.warn('SafetyManager handlePhotoDelete failed:', error);
         }
       }
       
       if (!safetyManager) {
-        console.warn('SafetyManager non disponible pour handlePhotoDelete:', photoId);
+        logger.warn('SafetyManager non disponible pour handlePhotoDelete:', photoId);
       }
     }
   }, [safetyManager, siteInfo.spacePhotos, language]);

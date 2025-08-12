@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import { logger } from '@/lib/logger';
 
 /**
  * Génère un QR code (base64) pour une url ou un texte donné.
@@ -9,7 +9,7 @@ export async function generateQRCode(text: string): Promise<string> {
   try {
     return await QRCode.toDataURL(text);
   } catch (err) {
-    console.error("Erreur génération QR code:", err);
+    logger.error("Erreur génération QR code:", err);
     return "";
   }
 }

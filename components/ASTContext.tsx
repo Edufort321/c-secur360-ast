@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { createContext, useContext, useReducer, useCallback, useRef, useState, useEffect } from 'react';
 
@@ -159,7 +159,7 @@ export function ASTProvider({
 
   // ✅ HANDLERS ULTRA-STABLES - Références figées
   const updateStepData = useCallback((section: string, data: any) => {
-    console.log('🔥 Context Update:', { section, data, tenant: tenant.id });
+    logger.debug('🔥 Context Update:', { section, data, tenant: tenant.id });
     
     dispatch({
       type: 'UPDATE_STEP_DATA',
@@ -273,7 +273,7 @@ export function ASTProvider({
       );
       dispatch({ type: 'MARK_SAVED' });
     } catch (error) {
-      console.error('❌ Erreur sauvegarde:', error);
+      logger.error('❌ Erreur sauvegarde:', error);
       throw error;
     }
   }, [tenant.database, state.formData]);
@@ -347,7 +347,7 @@ async function saveToTenantDatabase(
   try {
     // 🚀 Mode development - simulation API
     if (process.env.NODE_ENV === 'development') {
-      console.log('💾 DEV - Sauvegarde simulée:', {
+      logger.debug('💾 DEV - Sauvegarde simulée:', {
         tenant: dbConfig.schema,
         section,
         astNumber,
@@ -378,10 +378,10 @@ async function saveToTenantDatabase(
     }
 
     const result = await response.json();
-    console.log('✅ Sauvegardé dans BD tenant:', dbConfig.schema, result);
+    logger.debug('✅ Sauvegardé dans BD tenant:', dbConfig.schema, result);
     
   } catch (error) {
-    console.error('❌ Erreur sauvegarde tenant:', error);
+    logger.error('❌ Erreur sauvegarde tenant:', error);
     // En cas d'erreur, sauvegarde locale de secours
     if (typeof window !== 'undefined') {
       localStorage.setItem(`ast_backup_${astNumber}`, JSON.stringify({

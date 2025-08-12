@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -60,7 +60,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
           ? { lat: initial.coordinates.latitude, lng: initial.coordinates.longitude }
           : await getCurrentPosition();
       } catch (e) {
-        console.warn(e);
+        logger.warn(e);
       }
 
       setLoc((prev) => ({
@@ -145,7 +145,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         }
       }
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 

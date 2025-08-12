@@ -1,7 +1,7 @@
 // PermitManager.tsx - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   FileText, Database, QrCode, Printer, Mail, Share, Download, 
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
@@ -270,7 +270,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         return safetyManager.validatePermitCompleteness();
       } catch (error) {
-        console.warn('SafetyManager validatePermitCompleteness failed:', error);
+        logger.warn('SafetyManager validatePermitCompleteness failed:', error);
         return { isValid: false, percentage: 0, errors: ['Erreur de validation'] };
       }
     }
@@ -286,7 +286,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         return safetyManager.currentPermit;
       } catch (error) {
-        console.warn('SafetyManager currentPermit access failed:', error);
+        logger.warn('SafetyManager currentPermit access failed:', error);
         return {
           permit_number: 'N/A',
           siteInformation: {},
@@ -313,7 +313,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    logger.debug(`[${type.toUpperCase()}] ${message}`);
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification('C-SECUR360', {
         body: message,
@@ -340,7 +340,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
         }
       }
     } catch (error) {
-      console.error('Erreur sauvegarde:', error);
+      logger.error('Erreur sauvegarde:', error);
       showNotification('Erreur lors de la sauvegarde', 'error');
     }
   };
@@ -358,7 +358,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       setQrCodeUrl(qrUrl);
       showNotification(t.qrGenerated, 'success');
     } catch (error) {
-      console.error('Erreur QR:', error);
+      logger.error('Erreur QR:', error);
       showNotification('Erreur génération QR Code', 'error');
     } finally {
       setIsGeneratingQR(false);
@@ -383,7 +383,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       URL.revokeObjectURL(url);
       showNotification(t.pdfGenerated, 'success');
     } catch (error) {
-      console.error('Erreur PDF:', error);
+      logger.error('Erreur PDF:', error);
       showNotification('Erreur génération PDF', 'error');
     } finally {
       setIsGeneratingPDF(false);
@@ -401,7 +401,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       await safetyManager.sharePermit(selectedShareMethod);
       showNotification(t.emailSent, 'success');
     } catch (error) {
-      console.error('Erreur partage:', error);
+      logger.error('Erreur partage:', error);
       showNotification('Erreur lors du partage', 'error');
     }
   };
@@ -416,7 +416,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       showNotification(t.linkCopied, 'success');
       setTimeout(() => setLinkCopied(false), 3000);
     } catch (error) {
-      console.error('Erreur copie:', error);
+      logger.error('Erreur copie:', error);
       showNotification('Erreur copie du lien', 'error');
     }
   };
@@ -463,7 +463,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       
       setSearchResults(results);
     } catch (error) {
-      console.error('Erreur recherche:', error);
+      logger.error('Erreur recherche:', error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -482,7 +482,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       setCurrentView('main');
       showNotification(`Permis ${permitNumber} chargé`, 'success');
     } catch (error) {
-      console.error('Erreur chargement:', error);
+      logger.error('Erreur chargement:', error);
       showNotification(`Erreur chargement ${permitNumber}`, 'error');
     }
   };
@@ -498,7 +498,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
       safetyManager.createNewPermit(selectedProvince);
       showNotification('Nouveau permis créé', 'success');
     } catch (error) {
-      console.error('Erreur création permis:', error);
+      logger.error('Erreur création permis:', error);
       showNotification('Erreur création nouveau permis', 'error');
     }
   };
