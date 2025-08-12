@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  tenantId: z.string(),
+  formData: z.any()
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +19,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { tenantId, formData } = await request.json()
+    const body = await request.json()
+    const parsed = requestSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body' },
+        { status: 400 }
+      )
+    }
+
+    const { tenantId, formData } = parsed.data
     
     // Générer un numéro AST automatique
     const astCount = await prisma.aSTForm.count({ where: { tenantId } })
