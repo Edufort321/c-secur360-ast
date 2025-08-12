@@ -1,47 +1,72 @@
-export type SpaceShape =
-  | 'rectangular'
-  | 'cylindrical'
-  | 'spherical'
-  | 'irregular';
-
-export interface Dimensions {
+export interface RectangularDimensions {
+  shape: 'rectangular';
   length: number;
   width: number;
   height: number;
+}
+
+export interface CylindricalDimensions {
+  shape: 'cylindrical';
+  diameter: number;
+  height: number;
+}
+
+export interface SphericalDimensions {
+  shape: 'spherical';
   diameter: number;
 }
 
+export interface IrregularDimensions {
+  shape: 'irregular';
+  length: number;
+  width: number;
+  height: number;
+}
+
+export type Dimensions =
+  | RectangularDimensions
+  | CylindricalDimensions
+  | SphericalDimensions
+  | IrregularDimensions;
+
 /**
  * Calculate the volume of a confined space based on its shape and dimensions.
+ * Accepts a discriminated union of shape-specific dimension interfaces.
  * Returns the volume rounded to two decimals.
  */
-export function calculateVolume(
-  shape: SpaceShape,
-  { length, width, height, diameter }: Dimensions
-): number {
+export function calculateVolume(dimensions: Dimensions): number {
   let volume = 0;
 
-  switch (shape) {
+  switch (dimensions.shape) {
     case 'rectangular':
-      if (length > 0 && width > 0 && height > 0) {
-        volume = length * width * height;
+      if (
+        dimensions.length > 0 &&
+        dimensions.width > 0 &&
+        dimensions.height > 0
+      ) {
+        volume = dimensions.length * dimensions.width * dimensions.height;
       }
       break;
     case 'cylindrical':
-      if (diameter > 0 && height > 0) {
-        const radius = diameter / 2;
-        volume = Math.PI * Math.pow(radius, 2) * height;
+      if (dimensions.diameter > 0 && dimensions.height > 0) {
+        const radius = dimensions.diameter / 2;
+        volume = Math.PI * Math.pow(radius, 2) * dimensions.height;
       }
       break;
     case 'spherical':
-      if (diameter > 0) {
-        const radius = diameter / 2;
+      if (dimensions.diameter > 0) {
+        const radius = dimensions.diameter / 2;
         volume = (4 / 3) * Math.PI * Math.pow(radius, 3);
       }
       break;
     case 'irregular':
-      if (length > 0 && width > 0 && height > 0) {
-        volume = length * width * height * 0.85;
+      if (
+        dimensions.length > 0 &&
+        dimensions.width > 0 &&
+        dimensions.height > 0
+      ) {
+        volume =
+          dimensions.length * dimensions.width * dimensions.height * 0.85;
       }
       break;
   }
