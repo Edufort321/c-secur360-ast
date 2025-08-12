@@ -635,6 +635,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
 }) => {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
+  const priorities = t.priorities;
   
   // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
@@ -667,7 +668,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       item.name.toLowerCase().includes(searchLower) ||
       item.category.toLowerCase().includes(searchLower) ||
       (item.certification?.toLowerCase().includes(searchLower)) ||
-      (item.priority && t.priorities[item.priority].toLowerCase().includes(searchLower));
+      (item.priority && priorities[item.priority as keyof typeof priorities].toLowerCase().includes(searchLower));
     
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -734,7 +735,9 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   };
 
   const getPriorityLabel = (priority?: string) => {
-    return t.priorities[priority as keyof typeof t.priorities] || t.priorities.default;
+    return priority
+      ? priorities[priority as keyof typeof priorities]
+      : priorities.default;
   };
 
   // =================== HANDLERS DE RECHERCHE AVANCÉE ===================
