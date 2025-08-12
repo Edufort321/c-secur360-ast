@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { 
-  FileText, Database, QrCode, Printer, Mail, Share, Download, 
-  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
-  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar, 
+import {
+  FileText, Database, QrCode, Printer, Mail, Share, Download,
+  Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
+  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar,
   MapPin, Building, User, Search, X, Plus, RefreshCw, Upload,
-  ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive, 
+  ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive,
   Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 // =================== TYPES DE BASE ===================
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
@@ -1030,13 +1031,15 @@ function Step6Finalization({
       
       console.log('📤 Step6 AST - Données pour Supabase:', supabaseData);
       
-      // TODO: Intégrer vraie API Supabase
-      // const { data, error } = await supabase
-      //   .from('ast_complete_records')
-      //   .upsert(supabaseData, { onConflict: 'ast_number' });
-      
-      // Simulation délai réseau réaliste
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      const { data, error } = await supabase
+        .from('ast_complete_records')
+        .upsert(supabaseData, { onConflict: 'ast_number' });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Step6 AST - Réponse Supabase:', data);
       
       // Mise à jour état local avec timestamp de sauvegarde
       const updatedData = {
