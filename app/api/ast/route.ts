@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { ASTFormSchema } from '@/types/astForm'
 
 const requestSchema = z.object({
   tenantId: z.string(),
-  formData: z.any()
+  formData: ASTFormSchema
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     const parsed = requestSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request body' },
+        { success: false, errors: parsed.error.errors },
         { status: 400 }
       )
     }
@@ -38,25 +39,24 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId,
         userId,
-        projectNumber: formData.projectNumber || '',
-        clientName: formData.client || '',
-        workLocation: formData.workLocation || '',
-        clientRep: formData.clientRep,
-        emergencyNumber: formData.emergencyNumber,
+        projectNumber: formData.projectInfo.projectNumber || '',
+        clientName: formData.projectInfo.client || '',
+        workLocation: formData.projectInfo.workLocation || '',
         astMdlNumber: astNumber,
-        astClientNumber: formData.astClientNumber,
-        workDescription: formData.workDescription || '',
-        status: 'completed',
+        astClientNumber: formData.astNumber,
+        workDescription: formData.projectInfo.workDescription || '',
+        status: formData.status ?? 'completed',
         generalInfo: {
-          datetime: formData.datetime,
+          date: formData.projectInfo.date,
+          time: formData.projectInfo.time,
+          workerCount: formData.projectInfo.workerCount,
+          lockoutPoints: formData.projectInfo.lockoutPoints,
           language: formData.language
         },
-        teamDiscussion: formData.teamDiscussion,
-        isolation: formData.isolation,
+        isolation: formData.equipment,
         hazards: formData.hazards,
-        controlMeasures: formData.controlMeasures,
-        workers: formData.workers,
-        photos: formData.photos
+        workers: formData.validation.reviewers,
+        photos: formData.finalization.signatures
       }
     })
     
