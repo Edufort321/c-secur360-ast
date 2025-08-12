@@ -504,10 +504,12 @@ const translations = {
   }
 };
 
+export type Translations = typeof translations['fr'];
+
 // =================== FONCTION PRINCIPALE STEP6 ===================
-function Step6Finalization({ 
+function Step6Finalization({
   formData,
-  onDataChange, 
+  onDataChange,
   language = 'fr',
   tenant 
 }: FinalizationStepProps) {
@@ -903,8 +905,6 @@ function Step6Finalization({
       if (typeof currentValue === 'boolean') {
         newValue = !currentValue;
 }
-
-export type Translations = typeof translations['fr'];
       const updatedData = {
         ...finalizationData,
         documentGeneration: {
