@@ -82,6 +82,10 @@ interface ASTData {
   projectNumber?: string;
   workLocation?: string;
   date?: string;
+  selectedEquipment?: string[];
+  selectedHazards?: string[];
+  selectedPermits?: string[];
+  teamMembers?: string[];
   
   // Step 1 - Informations projet
   projectInfo: {
@@ -617,7 +621,11 @@ function Step6Finalization({
       createdAt: formData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       status: formData?.status || 'draft',
-      
+      selectedEquipment: formData?.selectedEquipment,
+      selectedHazards: formData?.selectedHazards,
+      selectedPermits: formData?.selectedPermits,
+      teamMembers: formData?.teamMembers,
+
       // ✅ Step 1 - Informations projet (récupérées de ASTForm)
       projectInfo: {
         client: formData?.projectInfo?.client || 'Non spécifié',

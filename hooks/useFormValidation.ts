@@ -360,7 +360,7 @@ export const useASTFormValidation = (initialData: ASTFormData) => {
       required: true,
       custom: (value) => {
         if (!value) return false;
-        const startDate = new Date(value);
+        const startDate = new Date(value as string);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (startDate < today) {
@@ -412,7 +412,7 @@ export const useASTFormValidation = (initialData: ASTFormData) => {
     }
   };
 
-  return useFormValidation(initialData, validationSchema, {
+  return useFormValidation(initialData as unknown as Record<string, unknown>, validationSchema, {
     validateOnChange: true,
     validateOnBlur: true,
     revalidateOnSubmit: true
