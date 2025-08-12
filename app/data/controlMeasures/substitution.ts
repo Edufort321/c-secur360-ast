@@ -83,7 +83,7 @@ export const substituteChemicalsSafer: ControlMeasure = createNewControlMeasure(
   
   prerequisites: [
     'Évaluation alternatives disponibles',
-    'Tests préalables efficacité',
+    'Tests préalables d'efficacité',
     'Budget transition produits'
   ],
   
