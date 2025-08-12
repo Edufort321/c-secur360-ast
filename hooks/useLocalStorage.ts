@@ -285,6 +285,10 @@ export const useASTLocalStorage = () => {
 
   // Fonction pour ajouter aux projets récents
   const addToRecentProjects = useCallback((project: ASTData) => {
+    if (!project.id) {
+      project.id = `project_${Date.now()}`;
+    }
+
     const recentProject: RecentProject = {
       id: project.id,
       title: project.projectInfo?.projectName || 'Projet sans titre',
