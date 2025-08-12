@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { getValidTenants } from '@/lib/tenants'
 
 // ⭐ AJOUT : Métadonnées avec votre logo
 export const metadata: Metadata = {
@@ -22,8 +23,8 @@ export default async function TenantLayout({
   children,
   params,
 }: TenantLayoutProps) {
-  const validTenants = ['demo', 'futureclient']
-  
+  const validTenants = await getValidTenants()
+
   if (!validTenants.includes(params.tenant)) {
     notFound()
   }
