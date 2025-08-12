@@ -282,7 +282,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section, data) => {
-      const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
+      const updateKey = `${String(section)}-${JSON.stringify(data).slice(0, 50)}`;
       
       // ✅ ÉVITER LES DOUBLONS
       if (lastUpdateRef.current === updateKey) {
@@ -1168,13 +1168,16 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
     const ultraStableHandler = stableHandlerRef.current!;
     
     // ✅ PROPS STABLES - MÉMORISÉS POUR ÉVITER RE-RENDERS
-    const stepProps = useMemo(() => ({
-      formData: stableFormDataRef.current,
-      language: currentLanguage,
-      tenant: tenant,
-      errors: {},
-      onDataChange: ultraStableHandler
-    }), [currentLanguage, tenant, ultraStableHandler]);
+    const stepProps: any = useMemo(
+      () => ({
+        formData: stableFormDataRef.current as ASTFormData,
+        language: currentLanguage,
+        tenant: tenant,
+        errors: {},
+        onDataChange: ultraStableHandler as (section: string, data: any) => void
+      }),
+      [currentLanguage, tenant, ultraStableHandler]
+    );
     
     console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
     

@@ -1,28 +1,23 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
-  Zap, Activity, Star, AlertTriangle 
+import {
+  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand,
+  Zap, Activity, Star, AlertTriangle
 } from 'lucide-react';
+import type {
+  ASTFormData,
+  Step2Data,
+  Step2EquipmentItem
+} from '@/types/astForm';
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'equipment', data: Step2Data) => void;
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  required: boolean;
-  certification?: string;
-  priority?: 'high' | 'medium' | 'low';
-  icon: string;
 }
 
 // =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
@@ -241,7 +236,7 @@ const translations = {
 };
 
 // =================== FONCTION POUR GÉNÉRER LA LISTE D'ÉQUIPEMENTS TRADUITE ===================
-const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
+const getEquipmentList = (language: 'fr' | 'en'): Step2EquipmentItem[] => {
   const t = translations[language];
   
   return [
@@ -642,15 +637,15 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
   
   // Initialiser avec la liste complète des équipements traduits
-  const [equipment, setEquipment] = useState<Equipment[]>(() => {
+  const [equipment, setEquipment] = useState<Step2EquipmentItem[]>(() => {
     if (formData.equipment?.list && formData.equipment.list.length > 0) {
       // Si nous avons déjà des équipements sauvegardés, les utiliser mais mettre à jour les traductions
       const savedEquipment = formData.equipment.list;
       const translatedEquipment = getEquipmentList(language);
-      
+
       // Fusionner les données sauvegardées avec les nouvelles traductions
       return translatedEquipment.map(translatedItem => {
-        const savedItem = savedEquipment.find((saved: Equipment) => saved.id === translatedItem.id);
+        const savedItem = savedEquipment.find((saved: Step2EquipmentItem) => saved.id === translatedItem.id);
         return savedItem ? { ...translatedItem, required: savedItem.required } : translatedItem;
       });
     }
@@ -692,20 +687,20 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   // =================== HANDLERS ===================
   
   const handleEquipmentToggle = (equipmentId: string) => {
-    const updatedEquipment = equipment.map(item => 
-      item.id === equipmentId 
+    const updatedEquipment = equipment.map(item =>
+      item.id === equipmentId
         ? { ...item, required: !item.required }
         : item
     );
-    
+
     setEquipment(updatedEquipment);
     updateFormData(updatedEquipment);
   };
 
-  const updateFormData = (updatedEquipment: Equipment[]) => {
+  const updateFormData = (updatedEquipment: Step2EquipmentItem[]) => {
     const selectedList = updatedEquipment.filter(eq => eq.required);
-    
-    const equipmentData = {
+
+    const equipmentData: Step2Data = {
       list: updatedEquipment,
       selected: selectedList,
       totalSelected: selectedList.length,
@@ -719,7 +714,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
         availabilityRate: 100
       }
     };
-    
+
     onDataChange('equipment', equipmentData);
   };
 
@@ -912,7 +907,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   };
 
   // =================== COMPOSANT CARTE D'ÉQUIPEMENT ===================
-  const EquipmentCard = ({ item }: { item: Equipment }) => {
+  const EquipmentCard = ({ item }: { item: Step2EquipmentItem }) => {
     const isSelected = item.required;
     
     return (
