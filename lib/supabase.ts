@@ -1,7 +1,25 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const FALLBACK_URL = 'http://localhost:54321'
+const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseAnonKey) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Set it in your .env.local file.')
+  throw new Error('Supabase anon key is required. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+}
+
+let supabaseUrl: string
+try {
+  supabaseUrl = new URL(supabaseUrlEnv ?? FALLBACK_URL).toString()
+  if (!supabaseUrlEnv) {
+    console.warn(`NEXT_PUBLIC_SUPABASE_URL is not set. Configure it in .env.local. Falling back to ${FALLBACK_URL}`)
+  }
+} catch {
+  const message = `Invalid NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrlEnv}`
+  console.error(message)
+  throw new Error(message)
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
