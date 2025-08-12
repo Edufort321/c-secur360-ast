@@ -1,5 +1,6 @@
 // hooks/useLocalStorage.ts
 import { useState, useEffect, useCallback } from 'react';
+import type { ASTData } from '../types/ast';
 
 export interface StorageOptions<T = unknown> {
   serialize?: (value: T) => string;
@@ -194,17 +195,6 @@ export const useLocalStorage = <T>(
   };
 };
 
-// Interface pour les types AST
-interface ASTData {
-  id?: string;
-  projectInfo?: {
-    projectName?: string;
-    client?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
-
 interface ASTDraft {
   id: string;
   data: ASTData;
@@ -282,7 +272,7 @@ export const useASTLocalStorage = () => {
   // Fonction pour ajouter aux projets récents
   const addToRecentProjects = useCallback((project: ASTData) => {
     const recentProject: RecentProject = {
-      id: project.id,
+      id: project.id || `project_${Date.now()}`,
       title: project.projectInfo?.projectName || 'Projet sans titre',
       client: project.projectInfo?.client || 'Client inconnu',
       lastAccessed: new Date().toISOString()
