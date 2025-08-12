@@ -24,9 +24,15 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    const message = 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is missing. Please set it to your Google Maps API key.';
+    console.error(message);
+    throw new Error(message);
+  }
 
   const defaultConfig: GoogleMapsConfig = {
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
+    apiKey,
     libraries: ['places', 'geometry'],
     region: 'CA',
     language: 'fr',
