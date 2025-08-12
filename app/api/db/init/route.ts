@@ -49,8 +49,6 @@ export async function GET() {
     // Recompter le nombre total de tenants après création/upsert
     const totalTenants = await prisma.tenant.count()
 
-    await prisma.$disconnect()
-
     return NextResponse.json({
       success: true,
       message: '🎉 Base de données connectée et tenants créés!',
@@ -80,5 +78,7 @@ export async function GET() {
       error: 'Unknown error',
       details: "Vérifiez les variables d'environnement Supabase"
     }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
   }
 }
