@@ -390,7 +390,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             padding: 14px 28px;
             color: white;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 0.875rem;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
@@ -460,15 +460,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             }
             
             .mobile-text {
-              font-size: 14px !important;
+              font-size: 0.875rem !important;
             }
             
             .mobile-title {
-              font-size: 24px !important;
+              font-size: 1.5rem !important;
             }
             
             .mobile-kpi {
-              font-size: 28px !important;
+              font-size: 1.75rem !important;
             }
           }
           
