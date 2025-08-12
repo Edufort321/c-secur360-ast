@@ -197,6 +197,10 @@ export const useLocalStorage = <T>(
 // Interface pour les types AST
 interface ASTData {
   id?: string;
+  selectedEquipment?: string[];
+  selectedHazards?: string[];
+  selectedPermits?: string[];
+  teamMembers?: string[];
   projectInfo?: {
     projectName?: string;
     client?: string;
