@@ -485,3 +485,49 @@
     background: #374151;
   }
 }
+
+/* =================== UTILITY CLASSES =================== */
+@layer components {
+  .full-screen-center {
+    @apply flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800;
+  }
+
+  .loading-box {
+    @apply p-5 rounded-xl bg-slate-900/80 text-white text-center;
+  }
+
+  .spinner {
+    @apply w-10 h-10 border-[3px] border-blue-500 border-t-transparent rounded-full mx-auto mb-4 animate-spin;
+  }
+
+  .error-box {
+    @apply p-5 rounded-xl bg-slate-900/80 text-red-500 text-center max-w-md;
+  }
+
+  .retry-button {
+    @apply px-5 py-2 mt-4 rounded-md bg-blue-500 text-white cursor-pointer;
+  }
+
+  .saving-toast {
+    @apply fixed top-5 right-5 px-4 py-2 bg-green-500/90 text-white rounded-md text-sm z-[9999] animate-fade-in;
+  }
+
+  .text-shadow-sm {
+    text-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.3);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.7);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-0.625rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.3s ease both;
+  }
+}

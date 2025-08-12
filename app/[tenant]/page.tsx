@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
 import { AST } from '../types/ast';
+import '@/styles/components.css';
 
 export default function ASTPage() {
   const params = useParams();
@@ -124,29 +125,9 @@ export default function ASTPage() {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-      }}>
-        <div style={{
-          padding: '20px',
-          borderRadius: '12px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          color: '#ffffff',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid #3b82f6',
-            borderTop: '3px solid transparent',
-            borderRadius: '50%',
-            margin: '0 auto 16px',
-            animation: 'spin 1s linear infinite'
-          }} />
+      <div className="full-screen-center">
+        <div className="loading-box">
+          <div className="spinner" />
           <p>Chargement des données...</p>
         </div>
       </div>
@@ -155,35 +136,11 @@ export default function ASTPage() {
 
   if (error) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-      }}>
-        <div style={{
-          padding: '20px',
-          borderRadius: '12px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          color: '#ef4444',
-          textAlign: 'center',
-          maxWidth: '400px'
-        }}>
+      <div className="full-screen-center">
+        <div className="error-box">
           <h2>Erreur</h2>
           <p>{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              marginTop: '16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: '#3b82f6',
-              color: '#ffffff',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={() => window.location.reload()} className="retry-button">
             Réessayer
           </button>
         </div>
@@ -192,26 +149,8 @@ export default function ASTPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-    }}>
-      {saving && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '8px 16px',
-          background: 'rgba(34, 197, 94, 0.9)',
-          color: '#ffffff',
-          borderRadius: '8px',
-          fontSize: '14px',
-          zIndex: 9999,
-          animation: 'fadeIn 0.3s ease'
-        }}>
-          Sauvegarde...
-        </div>
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+      {saving && <div className="saving-toast">Sauvegarde...</div>}
 
       <ASTForm
         formData={formData}
@@ -219,18 +158,6 @@ export default function ASTPage() {
         tenant={tenant}
         language="fr"
       />
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes fadeIn {
-          0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
