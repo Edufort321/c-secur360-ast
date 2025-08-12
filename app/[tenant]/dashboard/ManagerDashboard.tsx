@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { t } from '@/utils/translations'
+import LanguageSwitcher from './LanguageSwitcher'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -502,6 +504,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           }
         `
       }} />
+
+      <div className="p-4 flex justify-end">
+        <LanguageSwitcher />
+      </div>
 
       <div className="dashboard-container">
         {/* Fond interactif qui suit la souris */}
@@ -1050,7 +1056,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    Incidents
+                    {t('dashboard.incidents')}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -1282,7 +1288,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   gap: '8px'
                 }}>
                   <PieChart style={{ width: '20px', height: '20px' }} />
-                  Types d'Incidents
+                  {t('dashboard.incidentTypes')}
                 </h3>
                 <SimpleChart data={data.incidentsByType} type="pie" />
                 <div style={{ marginTop: '16px' }}>
@@ -1325,7 +1331,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   gap: '8px'
                 }}>
                   <Camera style={{ width: '20px', height: '20px' }} />
-                  Photos Documentation
+                  {t('dashboard.photoDocumentation')}
                 </h3>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ 
@@ -1338,10 +1344,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     {data.photosCount}
                   </div>
                   <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
-                    Photos totales
+                    {t('dashboard.totalPhotos')}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
-                    +{data.photosThisWeek} cette semaine
+                    +{data.photosThisWeek} {t('dashboard.thisWeek')}
                   </div>
                   
                   <div style={{
