@@ -9,9 +9,9 @@ export async function GET() {
     await prisma.$connect()
     console.log('✅ Connected to database')
     
-    // Vérifier si les tenants existent déjà
-    const existingTenants = await prisma.tenant.findMany()
-    console.log('📊 Existing tenants:', existingTenants.length)
+    // Vérifier combien de tenants existent déjà
+    const initialTenantCount = await prisma.tenant.count()
+    console.log('📊 Existing tenants:', initialTenantCount)
     
     // Créer tenant démo seulement s'il n'existe pas
     const demoTenant = await prisma.tenant.upsert({
@@ -45,14 +45,17 @@ export async function GET() {
         plan: 'admin'
       }
     })
-    
+
+    // Recompter le nombre total de tenants après création/upsert
+    const totalTenants = await prisma.tenant.count()
+
     await prisma.$disconnect()
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: '🎉 Base de données connectée et tenants créés!',
       tenants: [demoTenant, futureClientTenant, csecurTenant],
-      totalTenants: existingTenants.length,
+      totalTenants,
       created: {
         demo: demoTenant.companyName,
         futureclient: futureClientTenant.companyName,
