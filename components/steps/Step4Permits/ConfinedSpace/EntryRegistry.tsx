@@ -193,18 +193,27 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   onValidationChange
 }) => {
   // ✅ Derive registry data directly from SafetyManager store
-  const [entryRegistryData, setEntryRegistryData] = useState<EntryRegistryData>(() => (
-    safetyManager?.currentPermit?.entryRegistry || {
+  const [entryRegistryData, setEntryRegistryData] = useState<EntryRegistryData>(() => {
+    if (safetyManager?.currentPermit?.entryRegistry) {
+      return safetyManager.currentPermit.entryRegistry;
+    }
+    return {
       personnel: [],
+      entryLog: [],
       entryLogs: [],
-      currentOccupancy: 0,
+      activeEntrants: [],
       maxOccupancy: 3,
+      communicationProtocol: {
+        type: 'radio',
+        checkInterval: 0
+      },
+      lastUpdated: new Date().toISOString(),
+      currentOccupancy: 0,
       attendantPresent: false,
       communicationSystemActive: false,
-      emergencyContactsNotified: false,
-      lastUpdated: new Date().toISOString()
-    }
-  ));
+      emergencyContactsNotified: false
+    };
+  });
 
   // Subscribe to store updates so changes reflect immediately
   useEffect(() => {
