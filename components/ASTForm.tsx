@@ -8,7 +8,7 @@ import {
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
-import { ASTFormData } from '@/types/astForm';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
