@@ -2,12 +2,14 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { 
+import {
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
-  Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
+  Copy, Check, AlertTriangle, Camera, Upload, Lock, Zap, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
   TrendingUp, Activity, Shield
 } from 'lucide-react';
+import AddLocationModal from '../modals/AddLocationModal';
+import type { Location } from '../../app/types/ast';
 
 // =================== 🔥 INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
@@ -589,18 +591,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   
   // =================== 🔥 ÉTATS MODAL AVEC ISOLATION ULTRA-CRITIQUE ===================
   const [showAddLocation, setShowAddLocation] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<string | null>(null);
-  const [newLocation, setNewLocation] = useState({
-    name: '',
-    description: '',
-    zone: '',
-    building: '',
-    floor: '',
-    estimatedDuration: '',
-    startTime: '',
-    endTime: ''
-  });
-  const [isModalSaving, setIsModalSaving] = useState(false);
 
   // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
   const stableFormDataRef = useRef(localData);
@@ -714,38 +704,25 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     });
   }, [localData.lockoutPoints, localData.lockoutPhotos, notifyParentStable]);
 
-  // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC) ===================
-  const updateModalField = useCallback((field: string, value: string) => {
-    setNewLocation(prev => ({ ...prev, [field]: value }));
-    // ✅ PAS de sync vers parent - isolation complète
-  }, []);
-
   // =================== SECTION 2/5 - FONCTIONS UTILITAIRES & HANDLERS COMPLEXES ===================
 
   // =================== GESTION EMPLACEMENTS DE TRAVAIL OPTIMISÉE ===================
-  const addWorkLocation = useCallback(() => {
-    if (!newLocation.name.trim() || !newLocation.zone.trim()) {
-      return;
-    }
-
-    if (isModalSaving) return;
-    setIsModalSaving(true);
-
+  const handleLocationSave = useCallback((loc: Location) => {
     const location: WorkLocation = {
       id: `location_${Date.now()}`,
-      name: newLocation.name.trim(),
-      description: newLocation.description.trim(),
-      zone: newLocation.zone.trim(),
-      building: newLocation.building.trim() || undefined,
-      floor: newLocation.floor.trim() || undefined,
+      name: [loc.site, loc.building, loc.floor, loc.room].filter(Boolean).join(' - ') || 'Nouveau site',
+      description: loc.specificArea || '',
+      zone: loc.site || 'Zone',
+      building: loc.building || undefined,
+      floor: loc.floor || undefined,
       maxWorkersReached: 0,
       currentWorkers: 0,
       lockoutPoints: 0,
       isActive: true,
       createdAt: new Date().toISOString(),
-      estimatedDuration: newLocation.estimatedDuration.trim() || '8 heures',
-      startTime: newLocation.startTime || '08:00',
-      endTime: newLocation.endTime || '16:00'
+      estimatedDuration: '8 heures',
+      startTime: '08:00',
+      endTime: '16:00'
     };
 
     setLocalData(prev => {
@@ -755,22 +732,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
 
-    // Reset formulaire modal
-    setNewLocation({
-      name: '',
-      description: '',
-      zone: '',
-      building: '',
-      floor: '',
-      estimatedDuration: '',
-      startTime: '',
-      endTime: ''
-    });
     setShowAddLocation(false);
-    
-    setTimeout(() => setIsModalSaving(false), 200);
     console.log('✅ Step1 - Emplacement ajouté:', location.name);
-  }, [newLocation, notifyParentStable, isModalSaving]);
+  }, [notifyParentStable]);
 
   const removeWorkLocation = useCallback((locationId: string) => {
     const updatedLocations = localData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
@@ -1284,34 +1248,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           <MapPin className="section-icon" />
           <h3 className="section-title">{t.workLocations}</h3>
         </div>
-        <button 
+        <button
           type="button"
-          className="btn-primary" 
-          onClick={() => {
-            setShowAddLocation(true);
-            // 🚀 FORCE MODAL ON TOP INLINE
-            document.body.classList.add('modal-open');
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.height = '100%';
-            
-            setTimeout(() => {
-              const modalOverlay = document.querySelector('.modal-overlay-ultra-critical') as HTMLElement;
-              const modalContent = document.querySelector('.modal-content-ultra-critical') as HTMLElement;
-              
-              if (modalOverlay) {
-                modalOverlay.style.zIndex = '2147483647';
-                modalOverlay.style.position = 'fixed';
-                modalOverlay.style.transform = 'translateZ(999999px)';
-              }
-              
-              if (modalContent) {
-                modalContent.style.zIndex = '2147483647';
-                modalContent.style.transform = 'translateZ(999999px)';
-              }
-            }, 0);
-          }}
+          className="btn-primary"
+          onClick={() => setShowAddLocation(true)}
         >
           <Plus size={16} />
           {t.addLocation}
@@ -1391,270 +1331,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
 
-      {/* =================== 🔥 MODAL CRITIQUE AVEC Z-INDEX ABSOLU MAXIMUM =================== */}
-      {showAddLocation && (
-        <div 
-          className="modal-overlay-ultra-critical" 
-          onClick={() => {
-            // 🚀 RESTORE BODY INLINE
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
-            setShowAddLocation(false);
-          }}
-          style={{ 
-            position: 'fixed !important' as any,
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw !important',
-            height: '100vh !important',
-            background: 'rgba(0, 0, 0, 0.98) !important',
-            backdropFilter: 'blur(20px)',
-            zIndex: 2147483647,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            transform: 'translateZ(999999px)',
-            willChange: 'transform'
-          }}
-        >
-          <div 
-            className="modal-content-ultra-critical" 
-            onClick={(e) => e.stopPropagation()}
-            style={{ 
-              background: 'rgba(15, 23, 42, 0.98) !important',
-              backdropFilter: 'blur(30px)',
-              border: '3px solid rgba(59, 130, 246, 0.8)',
-              borderRadius: '20px',
-              maxWidth: '700px',
-              width: '100%',
-              maxHeight: 'calc(100vh - 32px)',
-              overflowY: 'auto',
-              zIndex: 2147483647,
-              position: 'relative',
-              boxShadow: '0 50px 100px rgba(0, 0, 0, 0.95)',
-              transform: 'translateZ(999999px)',
-              willChange: 'transform'
-            }}
-          >
-            <div className="modal-header">
-              <h3>{t.addLocation}</h3>
-              <button 
-                type="button"
-                className="modal-close" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="form-row">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Building size={16} />
-                    {t.locationName} <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.locationNamePlaceholder}
-                    value={newLocation.name}
-                    onChange={(e) => updateModalField('name', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-field">
-                  <label className="field-label">
-                    <FileText size={16} />
-                    {t.locationDescription}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.locationDescriptionPlaceholder}
-                    value={newLocation.description}
-                    onChange={(e) => updateModalField('description', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <MapPin size={16} />
-                    {t.zone} <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.zonePlaceholder}
-                    value={newLocation.zone}
-                    onChange={(e) => updateModalField('zone', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
-                    {t.workDuration}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.workDurationPlaceholder}
-                    value={newLocation.estimatedDuration}
-                    onChange={(e) => updateModalField('estimatedDuration', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
-                    {t.startTime}
-                  </label>
-                  <input
-                    type="time"
-                    className="premium-input modal-input-critical"
-                    value={newLocation.startTime}
-                    onChange={(e) => updateModalField('startTime', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Clock size={16} />
-                    {t.endTime}
-                  </label>
-                  <input
-                    type="time"
-                    className="premium-input modal-input-critical"
-                    value={newLocation.endTime}
-                    onChange={(e) => updateModalField('endTime', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-row two-columns">
-                <div className="form-field">
-                  <label className="field-label">
-                    <Building size={16} />
-                    {t.building}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.buildingPlaceholder}
-                    value={newLocation.building}
-                    onChange={(e) => updateModalField('building', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-                <div className="form-field">
-                  <label className="field-label">
-                    <Activity size={16} />
-                    {t.floor}
-                  </label>
-                  <input
-                    type="text"
-                    className="premium-input modal-input-critical"
-                    placeholder={t.floorPlaceholder}
-                    value={newLocation.floor}
-                    onChange={(e) => updateModalField('floor', e.target.value)}
-                    style={{
-                      background: 'rgba(15, 23, 42, 1) !important',
-                      border: '2px solid rgba(100, 116, 139, 0.5) !important',
-                      position: 'relative',
-                      zIndex: 2147483647
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button 
-                type="button"
-                className="btn-secondary" 
-                onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
-                  setShowAddLocation(false);
-                }}
-              >
-                {t.cancel}
-              </button>
-              <button 
-                type="button"
-                className="btn-primary" 
-                onClick={addWorkLocation}
-                disabled={!newLocation.name.trim() || !newLocation.zone.trim() || isModalSaving}
-              >
-                <Plus size={16} />
-                {isModalSaving ? t.adding : t.add}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddLocationModal
+        isOpen={showAddLocation}
+        onCancel={() => setShowAddLocation(false)}
+        onSave={handleLocationSave}
+      />
     </div>
   ));
 
@@ -2617,158 +2298,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             color: #64748b;
           }
 
-          /* =================== 🚀 MODAL Z-INDEX ULTRA-MAXIMUM ABSOLU - FORCE SUPRÊME =================== */
-          .modal-overlay-ultra-critical {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: rgba(0, 0, 0, 0.98) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            z-index: 2147483647 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 16px !important;
-            pointer-events: all !important;
-            /* 🔥 FORCE SUPRÊME - OVERRIDES TOUT */
-            transform: translateZ(999999px) !important;
-            will-change: transform !important;
-          }
-
-          .modal-content-ultra-critical {
-            position: relative !important;
-            background: rgba(15, 23, 42, 0.98) !important;
-            backdrop-filter: blur(30px) !important;
-            -webkit-backdrop-filter: blur(30px) !important;
-            border: 3px solid rgba(59, 130, 246, 0.8) !important;
-            border-radius: 20px !important;
-            max-width: 700px !important;
-            width: 100% !important;
-            max-height: calc(100vh - 32px) !important;
-            overflow-y: auto !important;
-            z-index: 2147483647 !important;
-            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.95) !important;
-            pointer-events: all !important;
-            /* 🔥 FORCE SUPRÊME */
-            transform: translateZ(999999px) !important;
-            will-change: transform !important;
-          }
-
-          /* 🔥 INPUTS MODAL AVEC BACKGROUND FORCÉ */
-          .modal-input-critical {
-            background: rgba(15, 23, 42, 1) !important;
-            border: 2px solid rgba(100, 116, 139, 0.5) !important;
-            color: #ffffff !important;
-            position: relative !important;
-            z-index: 2147483647 !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          .modal-input-critical:focus {
-            background: rgba(15, 23, 42, 1) !important;
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
-            outline: none !important;
-            z-index: 2147483647 !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 FORCE TOUS LES ÉLÉMENTS DU MODAL AU-DESSUS */
-          .modal-content-ultra-critical * {
-            z-index: 2147483647 !important;
-            position: relative !important;
-          }
-
-          .modal-header,
-          .modal-body,
-          .modal-footer {
-            z-index: 2147483647 !important;
-            position: relative !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 BOUTONS MODAL FORCÉS */
-          .modal-content-ultra-critical button {
-            z-index: 2147483647 !important;
-            position: relative !important;
-            transform: translateZ(999999px) !important;
-          }
-
-          /* 🔥 OVERRIDE BODY SCROLL QUAND MODAL OUVERT */
-          body.modal-open {
-            overflow: hidden !important;
-            position: fixed !important;
-            width: 100% !important;
-            height: 100% !important;
-          }
-
-          .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 24px 24px 0;
-            margin-bottom: 20px;
-            position: relative;
-            z-index: 2147483647 !important;
-          }
-
-          .modal-header h3 {
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-          }
-
-          .modal-close {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2147483647 !important;
-          }
-
-          .modal-close:hover {
-            background: rgba(239, 68, 68, 0.2);
-            transform: scale(1.05);
-          }
-
-          .modal-body {
-            padding: 0 24px;
-            position: relative;
-            z-index: 2147483647 !important;
-          }
-
-          .modal-footer {
-            display: flex;
-            gap: 12px;
-            padding: 20px 24px 24px;
-            justify-content: flex-end;
-            position: relative;
-            z-index: 2147483647 !important;
-          }
-
-          .form-row {
-            margin-bottom: 20px;
-          }
-
-          .form-row.two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-          }
-
           /* =================== STYLES EXISTANTS CONSERVÉS =================== */
           .section-header { 
             display: flex; 
@@ -3533,18 +3062,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
               justify-content: space-between;
             }
 
-            .modal-content-ultra-critical {
-              margin: 8px;
-              max-height: calc(100vh - 16px);
-            }
-
-            .modal-header, .modal-body, .modal-footer {
-              padding-left: 16px;
-              padding-right: 16px;
-            }
-
-            .energy-type-selector { 
-              grid-template-columns: repeat(2, 1fr); 
+            .energy-type-selector {
+              grid-template-columns: repeat(2, 1fr);
             }
             
             .photo-capture-buttons { 
