@@ -2,10 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
+import {
   Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
 } from 'lucide-react';
+
+// Hook météo
+import { useWeatherData, Coordinates } from '../../../../hooks/useWeatherData';
 
 // Import des types et du hook centralisé
 import {
@@ -122,7 +125,10 @@ const translations = {
     frequencyMinutes: "Fréquence réglementaire",
     calibrated: "Calibré",
     certified: "Certifié",
-    validated: "Validé"
+    validated: "Validé",
+    updateFromWeather: "Mettre à jour selon la météo",
+    weatherLoading: "Chargement des données météo...",
+    weatherError: "Erreur lors de la récupération des données météo"
   },
   en: {
     title: "Mandatory Atmospheric Testing",
@@ -159,7 +165,10 @@ const translations = {
     frequencyMinutes: "Regulatory frequency",
     calibrated: "Calibrated",
     certified: "Certified",
-    validated: "Validated"
+    validated: "Validated",
+    updateFromWeather: "Update from weather",
+    weatherLoading: "Loading weather data...",
+    weatherError: "Error fetching weather data"
   }
 };
 
@@ -204,17 +213,58 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   const [lastDangerReading, setLastDangerReading] = useState<AtmosphericReading | null>(null);
   
   // États saisie manuelle
-  const [manualReading, setManualReading] = useState({ 
+  const [manualReading, setManualReading] = useState({
     level: 'top' as 'top' | 'middle' | 'bottom',
-    oxygen: '', 
-    lel: '', 
-    h2s: '', 
-    co: '', 
-    temperature: '', 
+    oxygen: '',
+    lel: '',
+    h2s: '',
+    co: '',
+    temperature: '',
     humidity: '',
     device_id: '',
     notes: ''
   });
+
+  // Coordonnées du site et météo
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const { weather, loading: weatherLoading, error: weatherError } = useWeatherData(coordinates || { lat: 0, lng: 0 });
+
+  useEffect(() => {
+    const saved = (permitData as any)?.siteInformation?.location?.coordinates || (permitData as any)?.siteInformation?.coordinates;
+    if (saved?.latitude && saved?.longitude) {
+      setCoordinates({ lat: saved.latitude, lng: saved.longitude });
+    } else if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('siteCoordinates');
+      if (stored) {
+        try {
+          setCoordinates(JSON.parse(stored));
+          return;
+        } catch {
+          // ignore
+        }
+      }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setCoordinates(coords);
+            try { localStorage.setItem('siteCoordinates', JSON.stringify(coords)); } catch {}
+          },
+          () => {}
+        );
+      }
+    }
+  }, [permitData]);
+
+  const handleUseWeather = () => {
+    if (weather) {
+      setManualReading(prev => ({
+        ...prev,
+        temperature: weather.temperature.toString(),
+        humidity: weather.humidity.toString()
+      }));
+    }
+  };
 
   // État monitoring continu
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -1074,7 +1124,14 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           marginTop: '20px' 
         }}>
           <div>
-            <label style={styles.label}>{t.temperature} (°C)</label>
+            <label style={styles.label}>
+              {t.temperature} (°C)
+              {weather && (
+                <span style={{ marginLeft: 8, fontSize: '0.8em', opacity: 0.7 }}>
+                  {weather.temperature}°C
+                </span>
+              )}
+            </label>
             <input
               type="number"
               step="0.1"
@@ -1085,7 +1142,14 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             />
           </div>
           <div>
-            <label style={styles.label}>{t.humidity} (%)</label>
+            <label style={styles.label}>
+              {t.humidity} (%)
+              {weather && (
+                <span style={{ marginLeft: 8, fontSize: '0.8em', opacity: 0.7 }}>
+                  {weather.humidity}%
+                </span>
+              )}
+            </label>
             <input
               type="number"
               step="0.1"
@@ -1123,7 +1187,18 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             </button>
           </div>
         </div>
-        
+        {weatherLoading && <p style={{ marginTop: '10px' }}>{t.weatherLoading}</p>}
+        {weatherError && <p style={{ marginTop: '10px', color: '#f87171' }}>{t.weatherError}</p>}
+        {weather && !weatherLoading && !weatherError && (
+          <button
+            type="button"
+            onClick={handleUseWeather}
+            style={{ ...styles.button, marginTop: '10px' }}
+          >
+            {t.updateFromWeather}
+          </button>
+        )}
+
         <div style={{ marginTop: '20px' }}>
           <label style={styles.label}>{t.notes}</label>
           <textarea
