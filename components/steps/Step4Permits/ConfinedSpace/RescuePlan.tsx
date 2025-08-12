@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // Import SafetyManager et styles unifiés
-import { ConfinedSpaceComponentProps } from './SafetyManager';
+import { ConfinedSpaceComponentProps, RescuePlanData } from './SafetyManager';
 import { styles } from './styles';
 
 // =================== TYPES ET INTERFACES ===================
@@ -101,59 +101,59 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager]);
 
   // ✅ CORRECTION 2 : Accès sécurisé aux données rescueData avec fallbacks
-  const rescueData = React.useMemo(() => {
-    // Essai avec permitData fourni en props
+  const EMPTY_RESCUE_PLAN: RescuePlanData = {
+    rescue_plan_type: '',
+    rescue_plan_responsible: '',
+    rescue_team_phone: '',
+    rescue_response_time: '',
+    rescue_plan: '',
+    rescue_equipment: {},
+    rescue_equipment_validated: false,
+    rescue_steps: [],
+    rescue_team_certifications: {
+      csa_z1006_certified: false,
+      certification_expiry: '',
+      first_aid_level2: false,
+      cpr_certified: false,
+      rescue_training_hours: 0
+    },
+    equipment_certifications: {
+      harness_inspection_date: '',
+      scba_certification: '',
+      mechanical_recovery_cert: '',
+      last_equipment_inspection: '',
+      equipment_serial_numbers: []
+    },
+    rescue_training: {},
+    annual_drill_required: false,
+    last_effectiveness_test: '',
+    regulatory_compliance_verified: false,
+    response_time_verified: false,
+    last_drill_date: '',
+    drill_results: '',
+    drill_notes: '',
+    rescue_plan_validated: false
+  };
+
+  const [rescueData, setRescueData] = React.useState<RescuePlanData>(() => {
     if (permitData?.rescuePlan) {
-      return permitData.rescuePlan;
+      return permitData.rescuePlan as RescuePlanData;
     }
-    
-    // Essai avec SafetyManager currentPermit
-    if (safetyManager) {
-      try {
-        const currentPermit = safetyManager.currentPermit;
-        if (currentPermit?.rescuePlan) {
-          return currentPermit.rescuePlan;
-        }
-      } catch (error) {
-        console.warn('SafetyManager currentPermit.rescuePlan access failed:', error);
-      }
+    if (safetyManager?.currentPermit?.rescuePlan) {
+      return safetyManager.currentPermit.rescuePlan as RescuePlanData;
     }
-    
-    // Fallback : objet vide avec structure par défaut
-    return {
-      rescue_plan_type: '',
-      rescue_plan_responsible: '',
-      rescue_team_phone: '',
-      rescue_response_time: '',
-      rescue_plan: '',
-      rescue_equipment: {},
-      rescue_equipment_validated: false,
-      rescue_steps: [],
-      rescue_team_certifications: {
-        csa_z1006_certified: false,
-        certification_expiry: '',
-        first_aid_level2: false,
-        cpr_certified: false,
-        rescue_training_hours: 0
-      },
-      equipment_certifications: {
-        harness_inspection_date: '',
-        scba_certification: '',
-        mechanical_recovery_cert: '',
-        last_equipment_inspection: '',
-        equipment_serial_numbers: []
-      },
-      rescue_training: {},
-      annual_drill_required: false,
-      last_effectiveness_test: '',
-      regulatory_compliance_verified: false,
-      response_time_verified: false,
-      last_drill_date: '',
-      drill_results: '',
-      drill_notes: '',
-      rescue_plan_validated: false
-    };
-  }, [permitData, safetyManager]);
+    return EMPTY_RESCUE_PLAN;
+  });
+
+  React.useEffect(() => {
+    if (safetyManager?.currentPermit?.rescuePlan) {
+      setRescueData(safetyManager.currentPermit.rescuePlan as RescuePlanData);
+    } else if (permitData?.rescuePlan) {
+      setRescueData(permitData.rescuePlan as RescuePlanData);
+    } else {
+      setRescueData(EMPTY_RESCUE_PLAN);
+    }
+  }, [safetyManager?.currentPermit?.rescuePlan, permitData]);
 
   // =================== TRADUCTIONS ===================
   const getTexts = (language: 'fr' | 'en') => ({
