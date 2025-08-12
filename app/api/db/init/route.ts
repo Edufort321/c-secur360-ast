@@ -1,17 +1,18 @@
+import { logger } from '@/lib/logger';
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    console.log('🔄 Testing database connection...')
+    logger.debug('🔄 Testing database connection...')
 
     // Test de connexion à la base et création des tenants de démonstration
     await prisma.$connect()
-    console.log('✅ Connected to database')
+    logger.debug('✅ Connected to database')
 
     // Vérifier combien de tenants existent déjà
     const initialTenantCount = await prisma.tenant.count()
-    console.log('📊 Existing tenants:', initialTenantCount)
+    logger.debug('📊 Existing tenants:', initialTenantCount)
 
     // Créer tenant démo seulement s'il n'existe pas
     const demoTenant = await prisma.tenant.upsert({

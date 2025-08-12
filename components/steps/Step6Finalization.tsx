@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
@@ -584,7 +584,7 @@ function Step6Finalization({
    * ✅ FONCTION NOTIFICATION SYSTÈME STABLE
    */
   const showNotificationToast = useCallback((message: string, type: NotificationType = 'success') => {
-    console.log(`[${type.toUpperCase()}] Step6 AST - ${message}`);
+    logger.debug(`[${type.toUpperCase()}] Step6 AST - ${message}`);
     
     setNotificationMessage(message);
     setNotificationType(type);
@@ -600,7 +600,7 @@ function Step6Finalization({
    * ✅ EXTRACTION DONNÉES COMPLÈTES AST (FONCTION CORE)
    */
   const extractCompleteASTData = useCallback((): ASTData => {
-    console.log('📊 Step6 AST - Extraction données complètes formData:', formData);
+    logger.debug('📊 Step6 AST - Extraction données complètes formData:', formData);
     
     // Génération numéro AST unique si manquant
     const astNumber = formData?.astNumber || 
@@ -879,7 +879,7 @@ function Step6Finalization({
    */
   const toggleDocumentOption = useCallback((option: keyof DocumentGeneration) => {
     try {
-      console.log('🔧 Step6 AST - Toggle option:', option);
+      logger.debug('🔧 Step6 AST - Toggle option:', option);
       
       const currentValue = finalizationData.documentGeneration[option];
       let newValue: any = currentValue;
@@ -900,7 +900,7 @@ function Step6Finalization({
       setFinalizationData(updatedData);
       onDataChange('finalization', updatedData);
       
-      console.log('✅ Step6 AST - Option mise à jour:', option, '=', newValue);
+      logger.debug('✅ Step6 AST - Option mise à jour:', option, '=', newValue);
     } catch (error) {
       console.error('❌ Step6 AST - Erreur toggle option:', error);
     }
@@ -928,7 +928,7 @@ function Step6Finalization({
    * ✅ HANDLER SAUVEGARDE SUPABASE AST COMPLÈTE
    */
   const handleSaveToSupabase = useCallback(async () => {
-    console.log('💾 Step6 AST - Début sauvegarde Supabase...');
+    logger.debug('💾 Step6 AST - Début sauvegarde Supabase...');
     setIsSaving(true);
     
     try {
@@ -1029,7 +1029,7 @@ function Step6Finalization({
         }
       };
 
-      console.log('📤 Step6 AST - Données pour Supabase:', supabaseData);
+      logger.debug('📤 Step6 AST - Données pour Supabase:', supabaseData);
       const { data, error } = await supabase
         .from('ast_complete_records')
         .upsert(supabaseData, { onConflict: 'ast_number' });
@@ -1048,7 +1048,7 @@ function Step6Finalization({
       onDataChange('finalization', updatedData);
       
       showNotificationToast(t.saveSuccess, 'success');
-      console.log('✅ Step6 AST - Sauvegarde Supabase réussie', data);
+      logger.debug('✅ Step6 AST - Sauvegarde Supabase réussie', data);
       
     } catch (error) {
       console.error('❌ Step6 AST - Erreur sauvegarde Supabase:', error);
@@ -1062,7 +1062,7 @@ function Step6Finalization({
    * ✅ HANDLER GÉNÉRATION QR CODE AST SÉCURISÉ
    */
   const handleGenerateQR = useCallback(async () => {
-    console.log('📱 Step6 AST - Début génération QR Code...');
+    logger.debug('📱 Step6 AST - Début génération QR Code...');
     setIsGeneratingQR(true);
     
     try {
@@ -1082,7 +1082,7 @@ function Step6Finalization({
       onDataChange('finalization', updatedData);
       
       showNotificationToast(t.qrGenerated, 'success');
-      console.log('✅ Step6 AST - QR Code généré:', qrCodeUrl);
+      logger.debug('✅ Step6 AST - QR Code généré:', qrCodeUrl);
       
     } catch (error) {
       console.error('❌ Step6 AST - Erreur génération QR:', error);
@@ -1096,7 +1096,7 @@ function Step6Finalization({
    * ✅ HANDLER GÉNÉRATION PDF PROFESSIONNEL AVEC LOGO C-SECUR360
    */
   const handleGeneratePDF = useCallback(async (reportType: ReportType = 'standard') => {
-    console.log(`🖨️ Step6 AST - Début génération PDF ${reportType}...`);
+    logger.debug(`🖨️ Step6 AST - Début génération PDF ${reportType}...`);
     setIsGeneratingPDF(true);
     
     try {
@@ -1851,7 +1851,7 @@ function Step6Finalization({
           showNotificationToast(t.pdfGenerated, 'success');
         };
         
-        console.log(`✅ Step6 AST - PDF ${reportType} généré avec logo officiel`);
+        logger.debug(`✅ Step6 AST - PDF ${reportType} généré avec logo officiel`);
       } else {
         throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
       }
@@ -1867,7 +1867,7 @@ function Step6Finalization({
    * ✅ HANDLER PARTAGE AST MULTI-CANAUX SÉCURISÉ
    */
   const handleShare = useCallback(async () => {
-    console.log(`📤 Step6 AST - Début partage via ${selectedShareMethod}...`);
+    logger.debug(`📤 Step6 AST - Début partage via ${selectedShareMethod}...`);
     
     try {
       const astData = extractCompleteASTData();
@@ -1899,19 +1899,19 @@ function Step6Finalization({
           
         case 'teams':
           // Intégration Microsoft Teams (future implementation)
-          console.log('🔄 Step6 AST - Partage Teams à implémenter');
+          logger.debug('🔄 Step6 AST - Partage Teams à implémenter');
           showNotificationToast(language === 'fr' ? 'Intégration Teams bientôt disponible' : 'Teams integration coming soon', 'warning');
           break;
           
         case 'slack':
           // Intégration Slack (future implementation)
-          console.log('🔄 Step6 AST - Partage Slack à implémenter');
+          logger.debug('🔄 Step6 AST - Partage Slack à implémenter');
           showNotificationToast(language === 'fr' ? 'Intégration Slack bientôt disponible' : 'Slack integration coming soon', 'warning');
           break;
       }
       
       showNotificationToast(`${language === 'fr' ? 'Partage AST initié via' : 'JSA sharing initiated via'} ${selectedShareMethod}`, 'success');
-      console.log(`✅ Step6 AST - Partage ${selectedShareMethod} initié`);
+      logger.debug(`✅ Step6 AST - Partage ${selectedShareMethod} initié`);
       
     } catch (error) {
       console.error('❌ Step6 AST - Erreur partage:', error);
@@ -1931,7 +1931,7 @@ function Step6Finalization({
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 3000);
       showNotificationToast(t.linkCopied, 'success');
-      console.log('✅ Step6 AST - Lien copié:', shareUrl);
+      logger.debug('✅ Step6 AST - Lien copié:', shareUrl);
       
     } catch (error) {
       console.error('❌ Step6 AST - Erreur copie lien:', error);
@@ -1943,7 +1943,7 @@ function Step6Finalization({
    * ✅ HANDLER VERROUILLAGE AST DÉFINITIF
    */
   const handleLockDocument = useCallback(() => {
-    console.log('🔒 Step6 AST - Verrouillage AST...');
+    logger.debug('🔒 Step6 AST - Verrouillage AST...');
     
     const updatedData = {
       ...finalizationData,
@@ -1955,7 +1955,7 @@ function Step6Finalization({
     onDataChange('finalization', updatedData);
     
     showNotificationToast(t.astLocked, 'success');
-    console.log('✅ Step6 AST - AST verrouillée');
+    logger.debug('✅ Step6 AST - AST verrouillée');
   }, [finalizationData, onDataChange, t.astLocked, showNotificationToast]);
 
   /**
@@ -2034,7 +2034,7 @@ function Step6Finalization({
       );
       
       setSearchResults(mockResults);
-      console.log('🔍 Step6 AST - Recherche terminée:', mockResults.length, 'résultats');
+      logger.debug('🔍 Step6 AST - Recherche terminée:', mockResults.length, 'résultats');
       
     } catch (error) {
       console.error('❌ Step6 AST - Erreur recherche:', error);
@@ -2063,7 +2063,7 @@ function Step6Finalization({
   React.useEffect(() => {
     const validation = getASTValidation;
     if (validation.percentage >= 80 && !finalizationData.qrCodeUrl && !isGeneratingQR) {
-      console.log('🚀 Step6 AST - Auto-génération QR Code à', validation.percentage, '%');
+      logger.debug('🚀 Step6 AST - Auto-génération QR Code à', validation.percentage, '%');
       handleGenerateQR();
     }
   }, [getASTValidation, finalizationData.qrCodeUrl, isGeneratingQR, handleGenerateQR]);
@@ -2075,7 +2075,7 @@ function Step6Finalization({
     const autoSaveInterval = setInterval(() => {
       const validation = getASTValidation;
       if (validation.percentage > 0 && !isSaving && !finalizationData.isLocked) {
-        console.log('💾 Step6 AST - Sauvegarde automatique...');
+        logger.debug('💾 Step6 AST - Sauvegarde automatique...');
         handleSaveToSupabase();
       }
     }, 5 * 60 * 1000); // 5 minutes
@@ -2955,7 +2955,7 @@ function Step6Finalization({
                       border: '1px solid #4b5563'
                     }}
                     onClick={() => {
-                      console.log('🔄 Step6 AST - Chargement AST:', result.astNumber);
+                      logger.debug('🔄 Step6 AST - Chargement AST:', result.astNumber);
                       setCurrentView('main');
                       showNotificationToast(`AST ${result.astNumber} chargée`, 'success');
                     }}
