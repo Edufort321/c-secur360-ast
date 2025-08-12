@@ -1,7 +1,7 @@
 // SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
@@ -334,60 +334,54 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   onValidationChange
 }) => {
   // ✅ CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
-  const siteInfo = React.useMemo(() => {
-    // Essai avec permitData fourni en props
-    if (permitData?.siteInformation) {
-      return permitData.siteInformation;
-    }
-    
-    // Essai avec SafetyManager currentPermit
-    if (safetyManager) {
-      try {
-        const currentPermit = safetyManager.currentPermit;
-        if (currentPermit?.siteInformation) {
-          return currentPermit.siteInformation;
-        }
-      } catch (error) {
-        console.warn('SafetyManager currentPermit.siteInformation access failed:', error);
-      }
-    }
-    
-    // Fallback : objet vide avec structure par défaut
-    return {
-      projectNumber: '',
-      workLocation: '',
-      contractor: '',
-      supervisor: '',
-      entryDate: '',
-      duration: '',
-      workerCount: 1,
-      workDescription: '',
-      spaceType: '',
-      csaClass: '',
-      unitSystem: 'metric' as UnitSystem,
-      dimensions: {
-        length: 0,
-        width: 0,
-        height: 0,
-        diameter: 0,
-        volume: 0,
-        spaceShape: 'rectangular' as any
-      },
-      entryPoints: [{
-        id: generatePermitId(),
-        type: 'circular',
-        dimensions: '',
-        location: '',
-        condition: 'good',
-        accessibility: 'normal',
-        photos: []
-      }],
-      atmosphericHazards: [],
-      physicalHazards: [],
-      environmentalConditions: {},
-      spacePhotos: []
-    };
-  }, [permitData, safetyManager]);
+  const defaultSiteInfo: ConfinedSpaceDetails = {
+    projectNumber: '',
+    workLocation: '',
+    contractor: '',
+    supervisor: '',
+    entryDate: '',
+    duration: '',
+    workerCount: 1,
+    workDescription: '',
+    spaceType: '',
+    csaClass: '',
+    unitSystem: 'metric' as UnitSystem,
+    dimensions: {
+      length: 0,
+      width: 0,
+      height: 0,
+      diameter: 0,
+      volume: 0,
+      spaceShape: 'rectangular' as any
+    },
+    entryPoints: [{
+      id: generatePermitId(),
+      type: 'circular',
+      dimensions: '',
+      location: '',
+      condition: 'good',
+      accessibility: 'normal',
+      photos: []
+    }],
+    atmosphericHazards: [],
+    physicalHazards: [],
+    environmentalConditions: {},
+    spacePhotos: []
+  } as ConfinedSpaceDetails;
+
+  const [siteInfo, setSiteInfo] = useState(
+    permitData?.siteInformation ||
+      safetyManager?.currentPermit?.siteInformation ||
+      defaultSiteInfo
+  );
+
+  useEffect(() => {
+    setSiteInfo(
+      permitData?.siteInformation ||
+        safetyManager?.currentPermit?.siteInformation ||
+        defaultSiteInfo
+    );
+  }, [permitData?.siteInformation, safetyManager?.currentPermit?.siteInformation]);
   
   // États pour l'interface seulement
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
