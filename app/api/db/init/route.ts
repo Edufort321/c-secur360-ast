@@ -46,10 +46,8 @@ export async function GET() {
       }
     })
     
-    await prisma.$disconnect()
-    
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: '🎉 Base de données connectée et tenants créés!',
       tenants: [demoTenant, futureClientTenant, csecurTenant],
       totalTenants: existingTenants.length,
@@ -59,14 +57,16 @@ export async function GET() {
         admin: csecurTenant.companyName
       }
     })
-    
+
   } catch (error: any) {
     console.error('❌ Database error:', error)
-    return NextResponse.json({ 
-      success: false, 
+    return NextResponse.json({
+      success: false,
       error: error.message,
       code: error.code,
-      details: 'Vérifiez les variables d\'environnement Supabase'
+      details: "Vérifiez les variables d'environnement de la base de données"
     }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
   }
 }
