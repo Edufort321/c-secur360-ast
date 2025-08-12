@@ -45,14 +45,16 @@ export async function GET() {
         plan: 'admin'
       }
     })
-    
+
+    const totalTenants = await prisma.tenant.count()
+
     await prisma.$disconnect()
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: '🎉 Base de données connectée et tenants créés!',
       tenants: [demoTenant, futureClientTenant, csecurTenant],
-      totalTenants: existingTenants.length,
+      totalTenants,
       created: {
         demo: demoTenant.companyName,
         futureclient: futureClientTenant.companyName,
