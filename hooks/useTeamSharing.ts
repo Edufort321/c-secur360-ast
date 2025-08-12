@@ -1,6 +1,7 @@
 // hooks/useTeamSharing.ts
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Buffer } from 'buffer';
 
 export interface TeamMember {
   id: string;
@@ -339,8 +340,9 @@ export const useTeamSharing = (astId: string) => {
 
   // Fonction pour générer un QR code
   const generateQRCode = async (url: string): Promise<string> => {
-    // Simulation de génération QR code
-    return `data:image/svg+xml;base64,${btoa(`<svg><text>${url}</text></svg>`)}`;
+    // Simulation de génération QR code compatible serveur et client
+    const svg = `<svg><text>${url}</text></svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
   };
 
   // Fonction pour obtenir les statistiques d'une session
