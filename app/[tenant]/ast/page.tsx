@@ -56,8 +56,7 @@ export default function ASTPage() {
         
         const userResponse = await fetch(`/api/${tenant}/user`);
         if (userResponse.ok) {
-          const userData = await userResponse.json();
-          console.log('User data loaded:', userData);
+          await userResponse.json();
         }
 
         const urlParams = new URLSearchParams(window.location.search);
