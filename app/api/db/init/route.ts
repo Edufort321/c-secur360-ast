@@ -60,13 +60,22 @@ export async function GET() {
       }
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Database error:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message,
-      code: error.code,
-      details: 'Vérifiez les variables d\'environnement Supabase'
+
+    if (error instanceof Error) {
+      return NextResponse.json({
+        success: false,
+        error: error.message,
+        code: (error as { code?: string }).code,
+        details: "Vérifiez les variables d'environnement Supabase"
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: 'Unknown error',
+      details: "Vérifiez les variables d'environnement Supabase"
     }, { status: 500 })
   }
 }
