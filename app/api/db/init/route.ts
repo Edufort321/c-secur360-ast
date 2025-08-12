@@ -4,15 +4,15 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     console.log('🔄 Testing database connection...')
-    
+
     // Test simple de connexion
     await prisma.$connect()
     console.log('✅ Connected to database')
-    
+
     // Vérifier si les tenants existent déjà
     const existingTenants = await prisma.tenant.findMany()
     console.log('📊 Existing tenants:', existingTenants.length)
-    
+
     // Créer tenant démo seulement s'il n'existe pas
     const demoTenant = await prisma.tenant.upsert({
       where: { subdomain: 'demo' },
@@ -23,7 +23,7 @@ export async function GET() {
         plan: 'demo'
       }
     })
-    
+
     // Créer tenant futureclient seulement s'il n'existe pas
     const futureClientTenant = await prisma.tenant.upsert({
       where: { subdomain: 'futureclient' },
@@ -34,7 +34,7 @@ export async function GET() {
         plan: 'trial'
       }
     })
-    
+
     // Garder le tenant c-secur360 pour usage interne si nécessaire
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
@@ -45,11 +45,9 @@ export async function GET() {
         plan: 'admin'
       }
     })
-    
-    await prisma.$disconnect()
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: '🎉 Base de données connectée et tenants créés!',
       tenants: [demoTenant, futureClientTenant, csecurTenant],
       totalTenants: existingTenants.length,
@@ -59,14 +57,16 @@ export async function GET() {
         admin: csecurTenant.companyName
       }
     })
-    
+
   } catch (error: any) {
     console.error('❌ Database error:', error)
-    return NextResponse.json({ 
-      success: false, 
+    return NextResponse.json({
+      success: false,
       error: error.message,
       code: error.code,
       details: 'Vérifiez les variables d\'environnement Supabase'
     }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
   }
 }
