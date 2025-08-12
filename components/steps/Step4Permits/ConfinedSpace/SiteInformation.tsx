@@ -1,14 +1,15 @@
 // SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
   Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home, Layers, 
-  Ruler, Gauge, Thermometer, Activity, Shield, Zap, CheckCircle, 
+  Ruler, Gauge, Thermometer, Activity, Shield, Zap, CheckCircle,
   ChevronDown, ChevronUp, Info, Star, Globe, Wifi, Navigation, Check
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // Import des types et du hook centralisé
 import {
@@ -26,300 +27,7 @@ import { styles, isMobile } from './styles';
 type UnitSystem = 'metric' | 'imperial';
 
 // =================== TRADUCTIONS COMPLÈTES ===================
-const translations = {
-  fr: {
-    title: "Informations du Site - Espace Clos",
-    subtitle: "Identification et évaluation complète de l'espace de travail confiné",
-    
-    // Sections principales
-    projectInfo: "Informations du Projet",
-    planning: "Planification",
-    spaceIdentification: "Identification de l'Espace Clos",
-    spaceDimensions: "Dimensions et Volume",
-    entryPoints: "Points d'Entrée et Accès",
-    hazardAssessment: "Évaluation des Dangers",
-    environmentalConditions: "Conditions Environnementales",
-    spaceContent: "Contenu et Historique",
-    safetyMeasures: "Mesures de Sécurité",
-    photoDocumentation: "Documentation Photographique",
-    
-    // Champs du formulaire
-    projectNumber: "Numéro de projet",
-    workLocation: "Lieu des travaux",
-    contractor: "Entrepreneur",
-    supervisor: "Superviseur",
-    entryDate: "Date d'entrée prévue",
-    duration: "Durée estimée",
-    workerCount: "Nombre de travailleurs",
-    workDescription: "Description des travaux",
-    
-    // Unités
-    unitSystem: "Système d'unités",
-    metric: "Métrique (m)",
-    imperial: "Impérial (ft)",
-    
-    // Formes d'espaces
-    spaceShape: "Forme de l'espace",
-    rectangular: "Rectangulaire",
-    cylindrical: "Cylindrique",
-    spherical: "Sphérique",
-    irregular: "Irrégulier",
-    
-    // Types d'espaces
-    spaceType: "Type d'espace",
-    spaceTypes: {
-      tank: "Réservoir",
-      vessel: "Cuve/Récipient", 
-      silo: "Silo",
-      pit: "Fosse",
-      vault: "Voûte",
-      tunnel: "Tunnel",
-      trench: "Tranchée",
-      manhole: "Regard d'égout",
-      storage: "Espace de stockage",
-      boiler: "Chaudière",
-      duct: "Conduit",
-      chamber: "Chambre",
-      other: "Autre"
-    },
-    
-    // Classifications CSA
-    csaClass: "Classification CSA",
-    csaClasses: {
-      class1: "Classe 1 - Danger immédiat pour la vie",
-      class2: "Classe 2 - Risque potentiel",
-      class3: "Classe 3 - Risque minimal"
-    },
-    
-    // Dimensions
-    length: "Longueur",
-    width: "Largeur", 
-    height: "Hauteur",
-    diameter: "Diamètre",
-    volume: "Volume calculé",
-    calculateVolume: "Calculer Volume",
-    
-    // Points d'entrée
-    entryPoint: "Point d'entrée",
-    entryType: "Type d'entrée",
-    entryDimensions: "Dimensions",
-    entryLocation: "Localisation",
-    entryCondition: "État",
-    entryAccessibility: "Accessibilité",
-    addEntryPoint: "Ajouter point d'entrée",
-    
-    // Dangers
-    atmosphericHazards: "Dangers Atmosphériques",
-    physicalHazards: "Dangers Physiques",
-    selectHazards: "Sélectionnez tous les dangers présents",
-    
-    // Photos
-    addPhoto: "Ajouter photo",
-    takePhoto: "Prendre photo",
-    noPhotos: "Aucune photo",
-    photoCategories: {
-      exterior: "Extérieur",
-      interior: "Intérieur",
-      entry: "Points d'entrée",
-      hazards: "Dangers",
-      equipment: "Équipement",
-      safety: "Sécurité"
-    },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
-      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
-      flammable_gases: "Gaz inflammables/combustibles",
-      toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
-      carbon_monoxide: "Monoxyde de carbone (CO)",
-      carbon_dioxide: "Dioxyde de carbone (CO2)",
-      methane: "Méthane (CH4)",
-      ammonia: "Ammoniac (NH3)",
-      chlorine: "Chlore (Cl2)",
-      nitrogen: "Azote (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Fumées de soudage"
-    },
-
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement/Engloutissement",
-      crushing: "Écrasement par équipement",
-      electrical: "Dangers électriques",
-      mechanical: "Dangers mécaniques",
-      structural_collapse: "Effondrement structural",
-      falls: "Chutes de hauteur",
-      temperature_extreme: "Températures extrêmes",
-      noise: "Bruit excessif",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Exposition chimique",
-      biological: "Dangers biologiques",
-      confined_space_hazard: "Configuration de l'espace",
-      traffic: "Circulation/Trafic"
-    },
-
-    // Actions
-    save: "Sauvegarder",
-    delete: "Supprimer",
-    edit: "Modifier",
-    add: "Ajouter",
-    remove: "Retirer",
-    select: "Sélectionner",
-    required: "Requis",
-    optional: "Optionnel",
-    yes: "Oui",
-    no: "Non"
-  },
-  en: {
-    title: "Site Information - Confined Space",
-    subtitle: "Complete identification and assessment of the confined workspace",
-    
-    // Sections principales
-    projectInfo: "Project Information",
-    planning: "Planning",
-    spaceIdentification: "Confined Space Identification",
-    spaceDimensions: "Dimensions and Volume",
-    entryPoints: "Entry Points and Access",
-    hazardAssessment: "Hazard Assessment",
-    environmentalConditions: "Environmental Conditions",
-    spaceContent: "Content and History",
-    safetyMeasures: "Safety Measures",
-    photoDocumentation: "Photo Documentation",
-    
-    // Champs du formulaire
-    projectNumber: "Project number",
-    workLocation: "Work location",
-    contractor: "Contractor",
-    supervisor: "Supervisor",
-    entryDate: "Planned entry date",
-    duration: "Estimated duration",
-    workerCount: "Number of workers",
-    workDescription: "Work description",
-    
-    // Unités
-    unitSystem: "Unit system",
-    metric: "Metric (m)",
-    imperial: "Imperial (ft)",
-    
-    // Formes d'espaces
-    spaceShape: "Space shape",
-    rectangular: "Rectangular",
-    cylindrical: "Cylindrical",
-    spherical: "Spherical",
-    irregular: "Irregular",
-    
-    // Types d'espaces
-    spaceType: "Space type",
-    spaceTypes: {
-      tank: "Tank",
-      vessel: "Vessel/Container",
-      silo: "Silo",
-      pit: "Pit",
-      vault: "Vault",
-      tunnel: "Tunnel",
-      trench: "Trench",
-      manhole: "Manhole",
-      storage: "Storage space",
-      boiler: "Boiler",
-      duct: "Duct",
-      chamber: "Chamber",
-      other: "Other"
-    },
-    
-    // Classifications CSA
-    csaClass: "CSA Classification",
-    csaClasses: {
-      class1: "Class 1 - Immediate danger to life",
-      class2: "Class 2 - Potential risk",
-      class3: "Class 3 - Minimal risk"
-    },
-    
-    // Dimensions
-    length: "Length",
-    width: "Width",
-    height: "Height",
-    diameter: "Diameter",
-    volume: "Calculated volume",
-    calculateVolume: "Calculate Volume",
-    
-    // Points d'entrée
-    entryPoint: "Entry point",
-    entryType: "Entry type",
-    entryDimensions: "Dimensions",
-    entryLocation: "Location",
-    entryCondition: "Condition",
-    entryAccessibility: "Accessibility",
-    addEntryPoint: "Add entry point",
-    
-    // Dangers
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    selectHazards: "Select all present hazards",
-    
-    // Photos
-    addPhoto: "Add photo",
-    takePhoto: "Take photo",
-    noPhotos: "No photos",
-    photoCategories: {
-      exterior: "Exterior",
-      interior: "Interior",
-      entry: "Entry points",
-      hazards: "Hazards",
-      equipment: "Equipment",
-      safety: "Safety"
-    },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
-      oxygen_enrichment: "Oxygen enrichment (>23%)",
-      flammable_gases: "Flammable/combustible gases",
-      toxic_gases: "Toxic gases",
-      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
-      carbon_monoxide: "Carbon monoxide (CO)",
-      carbon_dioxide: "Carbon dioxide (CO2)",
-      methane: "Methane (CH4)",
-      ammonia: "Ammonia (NH3)",
-      chlorine: "Chlorine (Cl2)",
-      nitrogen: "Nitrogen (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Welding fumes"
-    },
-
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Engulfment",
-      crushing: "Crushing by equipment",
-      electrical: "Electrical hazards",
-      mechanical: "Mechanical hazards",
-      structural_collapse: "Structural collapse",
-      falls: "Falls from height",
-      temperature_extreme: "Extreme temperatures",
-      noise: "Excessive noise",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Chemical exposure",
-      biological: "Biological hazards",
-      confined_space_hazard: "Space configuration",
-      traffic: "Traffic/Circulation"
-    },
-
-    // Actions
-    save: "Save",
-    delete: "Delete",
-    edit: "Edit",
-    add: "Add",
-    remove: "Remove",
-    select: "Select",
-    required: "Required",
-    optional: "Optional",
-    yes: "Yes",
-    no: "No"
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
@@ -394,7 +102,11 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photoInputRef = useRef<HTMLInputElement>(null);
   
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step4.siteInformation');
 
   // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
   // ✅ CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager

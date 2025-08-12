@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { 
-  CheckCircle, 
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  CheckCircle,
   AlertTriangle, 
   Users, 
   Clock, 
@@ -24,6 +24,7 @@ import {
   Trash2,
   BarChart3
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // =================== INTERFACES ===================
 interface TeamMember {
@@ -74,150 +75,7 @@ interface ValidationStepProps {
 }
 
 // =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: "Validation & Approbation Équipe",
-    subtitle: "Processus de validation collaborative et approbation finale",
-    
-    // Sections
-    reviewersSection: "Réviseurs Désignés",
-    validationCriteria: "Critères de Validation",
-    validationSummary: "Résumé de Validation",
-    
-    // Reviewers
-    addReviewer: "Ajouter un Réviseur",
-    reviewerName: "Nom du Réviseur",
-    reviewerRole: "Rôle",
-    reviewerEmail: "Email",
-    department: "Département",
-    certification: "Certification",
-    removeReviewer: "Retirer ce réviseur",
-    
-    // Status
-    pending: "En Attente",
-    reviewing: "En Révision",
-    approved: "Approuvé",
-    rejected: "Rejeté",
-    
-    // Actions
-    approve: "Approuver",
-    reject: "Rejeter",
-    
-    // Validation criteria
-    hazardIdentification: "Identification des Dangers",
-    controlMeasures: "Mesures de Contrôle",
-    equipmentSelection: "Sélection d'Équipements",
-    procedural: "Procédures",
-    regulatory: "Conformité Réglementaire",
-    
-    // Messages
-    allCriteriaRequired: "Tous les critères doivent être validés",
-    readyForApproval: "Prêt pour l'approbation finale",
-    documentApproved: "Document Approuvé",
-    
-    // Comments
-    comments: "Commentaires",
-    rating: "Évaluation",
-    needsModifications: "Nécessite des modifications",
-    
-    // Final approval
-    approvedBy: "Approuvé par",
-    approvedAt: "Approuvé le",
-    signDocument: "Signer le Document",
-    
-    // Summary
-    totalReviewers: "Réviseurs Assignés",
-    approvals: "Approbations",
-    rejections: "Rejets",
-    pendingReviews: "En Attente",
-    noReviewersAssigned: "Aucun réviseur assigné pour le moment",
-    additionalReviewersRequired: "réviseur(s) supplémentaire(s) requis",
-    completionRate: "Taux de Complétion",
-    
-    // Form fields
-    enterName: "Entrer le nom complet",
-    enterRole: "Entrer le rôle/poste",
-    enterEmail: "Entrer l'adresse email",
-    enterDepartment: "Entrer le département",
-    enterCertification: "Certification (optionnel)",
-    
-    // Buttons
-    add: "Ajouter",
-    cancel: "Annuler",
-    close: "Fermer"
-  },
-  en: {
-    title: "Team Validation & Approval",
-    subtitle: "Collaborative validation process and final approval",
-    
-    // Sections
-    reviewersSection: "Designated Reviewers",
-    validationCriteria: "Validation Criteria",
-    validationSummary: "Validation Summary",
-    
-    // Reviewers
-    addReviewer: "Add Reviewer",
-    reviewerName: "Reviewer Name",
-    reviewerRole: "Role",
-    reviewerEmail: "Email",
-    department: "Department",
-    certification: "Certification",
-    removeReviewer: "Remove this reviewer",
-    
-    // Status
-    pending: "Pending",
-    reviewing: "Reviewing",
-    approved: "Approved",
-    rejected: "Rejected",
-    
-    // Actions
-    approve: "Approve",
-    reject: "Reject",
-    
-    // Validation criteria
-    hazardIdentification: "Hazard Identification",
-    controlMeasures: "Control Measures",
-    equipmentSelection: "Equipment Selection",
-    procedural: "Procedures",
-    regulatory: "Regulatory Compliance",
-    
-    // Messages
-    allCriteriaRequired: "All criteria must be validated",
-    readyForApproval: "Ready for final approval",
-    documentApproved: "Document Approved",
-    
-    // Comments
-    comments: "Comments",
-    rating: "Rating",
-    needsModifications: "Needs modifications",
-    
-    // Final approval
-    approvedBy: "Approved by",
-    approvedAt: "Approved on",
-    signDocument: "Sign Document",
-    
-    // Summary
-    totalReviewers: "Assigned Reviewers",
-    approvals: "Approvals",
-    rejections: "Rejections",
-    pendingReviews: "Pending",
-    noReviewersAssigned: "No reviewers assigned yet",
-    additionalReviewersRequired: "additional reviewer(s) required",
-    completionRate: "Completion Rate",
-    
-    // Form fields
-    enterName: "Enter full name",
-    enterRole: "Enter role/position",
-    enterEmail: "Enter email address",
-    enterDepartment: "Enter department",
-    enterCertification: "Certification (optional)",
-    
-    // Buttons
-    add: "Add",
-    cancel: "Cancel",
-    close: "Close"
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== COMPOSANT PRINCIPAL ===================
 export default function Step5Validation({ 
@@ -226,7 +84,11 @@ export default function Step5Validation({
   language = 'fr',
   tenant 
 }: ValidationStepProps) {
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step5');
   
   // ✅ FIX CRITIQUE : État local stable SANS useEffect problématique
   const [validationData, setValidationData] = useState<ValidationData>(() => ({
