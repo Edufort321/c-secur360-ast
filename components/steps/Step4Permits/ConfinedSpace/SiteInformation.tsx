@@ -364,6 +364,10 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       workDescription: '',
       spaceType: '',
       csaClass: '',
+      entryMethod: '',
+      accessType: '',
+      spaceLocation: '',
+      spaceDescription: '',
       unitSystem: 'metric' as UnitSystem,
       dimensions: {
         length: 0,
@@ -385,6 +389,20 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       atmosphericHazards: [],
       physicalHazards: [],
       environmentalConditions: {},
+      spaceContent: {
+        contents: '',
+        residues: '',
+        previousUse: '',
+        lastEntry: '',
+        cleaningStatus: '',
+      },
+      safetyMeasures: {
+        emergencyEgress: '',
+        communicationMethod: '',
+        monitoringEquipment: [],
+        ventilationEquipment: [],
+        emergencyEquipment: [],
+      },
       spacePhotos: []
     };
   }, [permitData, safetyManager]);
