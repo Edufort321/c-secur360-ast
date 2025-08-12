@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+The application requires tenant-specific API keys to access the database. Define the following variables in your `.env.local` file:
+
+- `TENANT_DEMO_API_KEY`
+- `TENANT_HYDRO_QUEBEC_API_KEY`
+- `TENANT_ENERGIR_API_KEY`
+
+For additional tenants, use the pattern `TENANT_<TENANT_ID>_API_KEY` where `<TENANT_ID>` is the tenant identifier in uppercase with hyphens replaced by underscores.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
