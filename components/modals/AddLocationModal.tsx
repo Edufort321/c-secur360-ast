@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { Location } from '../../app/types/ast';
@@ -25,6 +25,8 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     room: '',
     specificArea: '',
   });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
@@ -41,6 +43,50 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
       });
     }
   }, [initial]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const body = document.body;
+    const panelEl = panelRef.current;
+    if (!panelEl) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    body.classList.add('overflow-hidden');
+
+    const focusable = panelEl.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            (last as HTMLElement)?.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            (first as HTMLElement)?.focus();
+          }
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    panelEl.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      body.classList.remove('overflow-hidden');
+      panelEl.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen, onCancel]);
 
   if (!isOpen || !mounted) return null;
 
@@ -79,7 +125,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
 
   return createPortal(
     <div style={overlay} role="dialog" aria-modal>
-      <div style={panel}>
+      <div style={panel} ref={panelRef}>
         <div style={header}>
           <h3 style={{ fontSize: 18, fontWeight: 700 }}>Ajouter Emplacement</h3>
           <button onClick={onCancel} aria-label="Fermer" style={{ background: 'transparent', color: 'white' }}>
