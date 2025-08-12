@@ -409,7 +409,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     database: {
       host: 'https://api.c-secur360.com',
       schema: 'demo',
-      apiKey: 'demo_key_123'
+      apiKey: process.env.TENANT_DEMO_API_KEY || ''
     },
     billing: {
       plan: 'starter',
@@ -432,7 +432,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     database: {
       host: 'https://api.c-secur360.com',
       schema: 'hydro_quebec',
-      apiKey: 'hq_prod_key_123'
+      apiKey: process.env.TENANT_HYDRO_QUEBEC_API_KEY || ''
     },
     billing: {
       plan: 'enterprise',
@@ -455,7 +455,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     database: {
       host: 'https://api.c-secur360.com',
       schema: 'energir',
-      apiKey: 'en_prod_key_456'
+      apiKey: process.env.TENANT_ENERGIR_API_KEY || ''
     },
     billing: {
       plan: 'pro',
@@ -485,7 +485,8 @@ export function createTenantConfig(
     database: {
       host: 'https://api.c-secur360.com',
       schema: id,
-      apiKey: `${id}_key_${Date.now()}`
+      apiKey:
+        process.env[`TENANT_${id.toUpperCase().replace(/-/g, '_')}_API_KEY`] || ''
     },
     billing: {
       plan: 'starter',
