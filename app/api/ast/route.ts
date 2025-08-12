@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { ASTFormData } from '@/types/astFormSchema'
 
 const requestSchema = z.object({
   tenantId: z.string(),
-  formData: z.any()
+  formData: ASTFormData
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     const parsed = requestSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request body' },
+        { success: false, error: parsed.error.flatten() },
         { status: 400 }
       )
     }
