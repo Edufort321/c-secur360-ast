@@ -276,12 +276,17 @@ export const searchPermits = async (query: string, province?: ProvinceCode) => {
     .select('*')
 
   if (query.trim()) {
-    queryBuilder = queryBuilder.or(`
-      permit_number.ilike.%${query}%,
-      project_number.ilike.%${query}%,
-      work_location.ilike.%${query}%,
-      contractor.ilike.%${query}%
-    `)
+    const sanitizedQuery = query.trim()
+    const searchExpression = [
+      'permit_number',
+      'project_number',
+      'work_location',
+      'contractor'
+    ]
+      .map((field) => `${field}.ilike.%${sanitizedQuery}%`)
+      .join(',')
+
+    queryBuilder = queryBuilder.or(searchExpression)
   }
 
   if (province) {
