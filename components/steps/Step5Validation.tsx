@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/logger';
 import React, { useState, useCallback } from 'react';
 import { 
   CheckCircle, 
@@ -256,7 +257,7 @@ export default function Step5Validation({
 
   // ✅ FIX CRITIQUE : NOTIFICATION PARENT DIRECTE SANS BOUCLE
   const notifyParent = useCallback((newData: ValidationData) => {
-    console.log('🔥 Step5 - Notification parent directe:', newData);
+    logger.info('🔥 Step5 - Notification parent directe:', newData);
     onDataChange('validation', newData);
   }, [onDataChange]);
 
@@ -295,7 +296,7 @@ export default function Step5Validation({
     });
     setShowAddReviewer(false);
     
-    console.log('✅ Step5 - Réviseur ajouté:', reviewer.name);
+    logger.info('✅ Step5 - Réviseur ajouté:', reviewer.name);
   }, [newReviewer, validationData, notifyParent]);
 
   const removeReviewer = useCallback((reviewerId: string) => {
@@ -306,7 +307,7 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log('✅ Step5 - Réviseur supprimé:', reviewerId);
+    logger.info('✅ Step5 - Réviseur supprimé:', reviewerId);
   }, [validationData, notifyParent]);
 
   const updateReviewerStatus = useCallback((reviewerId: string, status: 'approved' | 'rejected', comment?: string, rating?: number) => {
@@ -328,7 +329,7 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log(`✅ Step5 - Statut ${status} pour réviseur:`, reviewerId);
+    logger.info(`✅ Step5 - Statut ${status} pour réviseur:`, reviewerId);
   }, [validationData, notifyParent, language]);
 
   const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
@@ -342,7 +343,7 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log(`✅ Step5 - Critère ${criteria} mis à jour:`, value);
+    logger.info(`✅ Step5 - Critère ${criteria} mis à jour:`, value);
   }, [validationData, notifyParent]);
 
   const finalizeApproval = useCallback(() => {
@@ -357,7 +358,7 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log('✅ Step5 - Approbation finalisée');
+    logger.info('✅ Step5 - Approbation finalisée');
   }, [validationData, notifyParent, language]);
 
   // =================== FONCTIONS UTILITAIRES ===================

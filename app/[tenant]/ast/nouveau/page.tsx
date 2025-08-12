@@ -1,6 +1,7 @@
 // app/[tenant]/ast/nouveau/page.tsx
 'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import ASTForm from '@/components/ASTForm';
 import { ASTFormData } from '../../../types/astForm';
@@ -79,7 +80,7 @@ export default function NouvellePage({ params }: PageProps) {
 
   // ✅ HANDLER POUR SYNC DONNÉES
   const handleDataChange = <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
-    console.log('📝 Page - Data changed:', { section, data });
+    logger.info('📝 Page - Data changed:', { section, data });
     setAstData(prev => ({
       ...prev,
       [section]: data,
