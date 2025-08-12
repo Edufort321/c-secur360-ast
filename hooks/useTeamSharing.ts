@@ -1,5 +1,6 @@
 // hooks/useTeamSharing.ts
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 export interface TeamMember {
   id: string;
@@ -74,10 +75,13 @@ export interface NotificationTemplate {
   language: 'fr' | 'en';
 }
 
-export const useTeamSharing = () => {
+export const useTeamSharing = (astId: string) => {
   const [activeSessions, setActiveSessions] = useState<ShareSession[]>([]);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id || '';
+  const currentUserName = session?.user?.name || 'Équipe Sécurité';
 
   // Templates de notification prédéfinis
   const notificationTemplates: NotificationTemplate[] = [
@@ -99,7 +103,6 @@ export const useTeamSharing = () => {
 
   // Fonction pour créer une session de partage
   const createShareSession = async (
-    astData: any,
     members: TeamMember[],
     settings: ShareSettings
   ): Promise<ShareSession> => {
@@ -112,11 +115,11 @@ export const useTeamSharing = () => {
       
       const session: ShareSession = {
         id: sessionId,
-        astId: astData.id || 'temp-ast-id',
+        astId,
         shareLink,
         createdAt: new Date().toISOString(),
         expiresAt: settings.expirationDate,
-        createdBy: 'current-user-id', // À remplacer par l'utilisateur actuel
+        createdBy: currentUserId,
         isActive: true,
         settings,
         members,
@@ -151,7 +154,6 @@ export const useTeamSharing = () => {
   const shareWithTeam = async (
     members: string[],
     method: 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack',
-    astData: any,
     settings?: Partial<ShareSettings>
   ) => {
     const defaultSettings: ShareSettings = {
@@ -186,7 +188,7 @@ export const useTeamSharing = () => {
     }));
 
     try {
-      const session = await createShareSession(astData, teamMembers, defaultSettings);
+      const session = await createShareSession(teamMembers, defaultSettings);
 
       return {
         success: true,
@@ -227,10 +229,10 @@ export const useTeamSharing = () => {
 
     const message = template.message
       .replace('{memberName}', member.name)
-      .replace('{projectName}', 'Projet AST')
+      .replace('{projectName}', session.astId)
       .replace('{shareLink}', session.shareLink)
       .replace('{expirationDate}', session.expiresAt ? new Date(session.expiresAt).toLocaleDateString('fr-CA') : 'Non définie')
-      .replace('{senderName}', 'Équipe Sécurité');
+      .replace('{senderName}', currentUserName);
 
     // Simulation d'envoi email
     console.log(`Email envoyé à ${member.email}:`, {
