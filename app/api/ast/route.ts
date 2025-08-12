@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { ASTFormDataSchema } from '@/types/astForm'
 
 const requestSchema = z.object({
   tenantId: z.string(),
-  formData: z.any()
+  formData: ASTFormDataSchema
 })
 
 export async function POST(request: NextRequest) {
@@ -19,8 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const parsed = requestSchema.safeParse(body)
+    const parsed = requestSchema.safeParse(await request.json())
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: 'Invalid request body' },
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { tenantId, formData } = parsed.data
+    const { tenantId } = parsed.data
+    const formData = parsed.data.formData
     
     // Générer un numéro AST automatique
     const astCount = await prisma.aSTForm.count({ where: { tenantId } })
@@ -38,25 +39,25 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId,
         userId,
-        projectNumber: formData.projectNumber || '',
-        clientName: formData.client || '',
-        workLocation: formData.workLocation || '',
-        clientRep: formData.clientRep,
-        emergencyNumber: formData.emergencyNumber,
+        projectNumber: formData.projectInfo.projectNumber || '',
+        clientName: formData.projectInfo.client || '',
+        workLocation: formData.projectInfo.workLocation || '',
+        clientRep: formData.projectInfo.clientRepresentative,
+        emergencyNumber: formData.projectInfo.emergencyPhone,
         astMdlNumber: astNumber,
-        astClientNumber: formData.astClientNumber,
-        workDescription: formData.workDescription || '',
+        astClientNumber: formData.projectInfo.astClientNumber,
+        workDescription: formData.projectInfo.workDescription || '',
         status: 'completed',
         generalInfo: {
-          datetime: formData.datetime,
+          datetime: `${formData.projectInfo.date} ${formData.projectInfo.time}`,
           language: formData.language
         },
-        teamDiscussion: formData.teamDiscussion,
-        isolation: formData.isolation,
+        teamDiscussion: (formData as any).teamDiscussion,
+        isolation: (formData as any).isolation,
         hazards: formData.hazards,
-        controlMeasures: formData.controlMeasures,
-        workers: formData.workers,
-        photos: formData.photos
+        controlMeasures: (formData as any).controlMeasures,
+        workers: (formData as any).workers,
+        photos: (formData as any).photos
       }
     })
     

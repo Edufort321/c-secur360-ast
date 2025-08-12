@@ -1,5 +1,7 @@
 // =================== STEP 1 - PROJECT INFORMATION ===================
 
+import { z } from 'zod'
+
 export interface WorkLocation {
   id: string;
   name: string;
@@ -135,3 +137,141 @@ export interface ASTFormData {
   createdBy?: string;
   language?: 'fr' | 'en';
 }
+
+export const WorkLocationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  zone: z.string(),
+  building: z.string().optional(),
+  floor: z.string().optional(),
+  maxWorkersReached: z.number(),
+  currentWorkers: z.number(),
+  lockoutPoints: z.number(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  notes: z.string().optional(),
+  estimatedDuration: z.string(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional()
+})
+
+export const LockoutPointSchema = z.object({
+  id: z.string(),
+  energyType: z.enum([
+    'electrical',
+    'mechanical',
+    'hydraulic',
+    'pneumatic',
+    'chemical',
+    'thermal',
+    'gravity'
+  ]),
+  equipmentName: z.string(),
+  location: z.string(),
+  lockType: z.string(),
+  tagNumber: z.string(),
+  isLocked: z.boolean(),
+  verifiedBy: z.string(),
+  verificationTime: z.string(),
+  photos: z.array(z.string()),
+  notes: z.string(),
+  completedProcedures: z.array(z.number()),
+  assignedLocation: z.string().optional()
+})
+
+export const LockoutPhotoSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  caption: z.string(),
+  category: z.enum([
+    'before_lockout',
+    'during_lockout',
+    'lockout_device',
+    'client_form',
+    'verification'
+  ]),
+  timestamp: z.string(),
+  lockoutPointId: z.string().optional()
+})
+
+export const Step1DataSchema = z.object({
+  client: z.string(),
+  clientPhone: z.string(),
+  clientRepresentative: z.string(),
+  clientRepresentativePhone: z.string(),
+  projectNumber: z.string(),
+  astClientNumber: z.string(),
+  date: z.string(),
+  time: z.string(),
+  workLocation: z.string(),
+  industry: z.string(),
+  emergencyContact: z.string(),
+  emergencyPhone: z.string(),
+  workDescription: z.string(),
+  workLocations: z.array(WorkLocationSchema),
+  lockoutPoints: z.array(LockoutPointSchema),
+  lockoutPhotos: z.array(LockoutPhotoSchema)
+})
+
+export const Step2EquipmentItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  required: z.boolean(),
+  certification: z.string().optional(),
+  priority: z.enum(['high', 'medium', 'low']).optional(),
+  icon: z.string()
+})
+
+export const Step2DataSchema = z.object({
+  list: z.array(Step2EquipmentItemSchema),
+  selected: z.array(Step2EquipmentItemSchema),
+  totalSelected: z.number(),
+  highPriority: z.number(),
+  categories: z.array(z.string()),
+  inspectionStatus: z.object({
+    total: z.number(),
+    verified: z.number(),
+    available: z.number(),
+    verificationRate: z.number(),
+    availabilityRate: z.number()
+  })
+})
+
+export const HazardsDataSchema = z.object({
+  selected: z.array(z.string()),
+  controls: z.array(z.string())
+})
+
+export const PermitsDataSchema = z.object({
+  permits: z.array(z.string())
+})
+
+export const ValidationDataSchema = z.object({
+  reviewers: z.array(z.string())
+})
+
+export const FinalizationDataSchema = z.object({
+  consent: z.boolean(),
+  signatures: z.array(z.string())
+})
+
+export const ASTFormDataSchema = z.object({
+  id: z.string(),
+  astNumber: z.string(),
+  projectInfo: Step1DataSchema,
+  equipment: Step2DataSchema,
+  hazards: HazardsDataSchema,
+  permits: PermitsDataSchema,
+  validation: ValidationDataSchema,
+  finalization: FinalizationDataSchema,
+  tenant: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+  createdBy: z.string().optional(),
+  language: z.enum(['fr', 'en']).optional()
+})
+
+export type ASTFormData = z.infer<typeof ASTFormDataSchema>
