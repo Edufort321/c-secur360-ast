@@ -3,12 +3,8 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    console.log('🔄 Testing database connection...')
+    console.log('🔄 Testing database queries...')
 
-    // Test de connexion à la base et création des tenants de démonstration
-    await prisma.$connect()
-    console.log('✅ Connected to database')
-    
     // Vérifier combien de tenants existent déjà
     const initialTenantCount = await prisma.tenant.count()
     console.log('📊 Existing tenants:', initialTenantCount)
@@ -48,8 +44,6 @@ export async function GET() {
 
     // Recompter le nombre total de tenants après création/upsert
     const totalTenants = await prisma.tenant.count()
-
-    await prisma.$disconnect()
 
     return NextResponse.json({
       success: true,
