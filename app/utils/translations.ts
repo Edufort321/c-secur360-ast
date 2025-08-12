@@ -193,7 +193,46 @@ export const TRANSLATIONS: LanguageResources = {
       from: 'Du',
       to: 'Au'
     },
-    
+
+    // Tableau de bord
+    dashboard: {
+      timeRange: {
+        last7Days: '7 derniers jours',
+        last30Days: '30 derniers jours',
+        last90Days: '3 derniers mois',
+        lastYear: 'Dernière année'
+      },
+      quickActions: {
+        newAst: 'Nouveau AST',
+        nearMiss: 'Passé Proche',
+        improvement: 'Amélioration',
+        createFullAnalysis: 'Créer une analyse complète',
+        reportIncident: 'Signaler un incident/accident',
+        suggestImprovement: 'Suggérer une amélioration'
+      },
+      sections: {
+        astCompleted: 'AST Complétés',
+        astMonthly: 'AST Mensuels',
+        astEvolution: 'Évolution AST',
+        astPhotos: 'Photos AST',
+        monthlyGoal: 'Objectif: {{goal}}/mois',
+        photosGoal: 'Objectif: 3 photos/AST',
+        executiveReport: 'Rapport Exécutif',
+        thisMonth: 'ce mois',
+        total: 'Total',
+        totalPhotos: 'Photos totales',
+        incidentTypes: "Types d'Incidents"
+      },
+      secondary: {
+        analyticsReports: 'Rapports Analytics',
+        detailedCharts: 'Graphiques détaillés',
+        astPhotos: 'Photos AST',
+        documentationGallery: 'Galerie documentation',
+        archives: 'Archives',
+        dataHistory: 'Historique des données'
+      }
+    },
+
     // Messages
     messages: {
       success: {
@@ -440,7 +479,46 @@ export const TRANSLATIONS: LanguageResources = {
       from: 'From',
       to: 'To'
     },
-    
+
+    // Dashboard
+    dashboard: {
+      timeRange: {
+        last7Days: 'Last 7 days',
+        last30Days: 'Last 30 days',
+        last90Days: 'Last 3 months',
+        lastYear: 'Last year'
+      },
+      quickActions: {
+        newAst: 'New AST',
+        nearMiss: 'Near Miss',
+        improvement: 'Improvement',
+        createFullAnalysis: 'Create a full analysis',
+        reportIncident: 'Report an incident/accident',
+        suggestImprovement: 'Suggest an improvement'
+      },
+      sections: {
+        astCompleted: 'Completed AST',
+        astMonthly: 'Monthly AST',
+        astEvolution: 'AST Evolution',
+        astPhotos: 'AST Photos',
+        monthlyGoal: 'Goal: {{goal}}/month',
+        photosGoal: 'Goal: 3 photos/AST',
+        executiveReport: 'Executive Report',
+        thisMonth: 'this month',
+        total: 'Total',
+        totalPhotos: 'Total photos',
+        incidentTypes: 'Incident Types'
+      },
+      secondary: {
+        analyticsReports: 'Analytics Reports',
+        detailedCharts: 'Detailed charts',
+        astPhotos: 'AST Photos',
+        documentationGallery: 'Documentation gallery',
+        archives: 'Archives',
+        dataHistory: 'Data history'
+      }
+    },
+
     // Messages
     messages: {
       success: {
