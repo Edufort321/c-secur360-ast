@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: #ffffff;
+  --color-card: #f9fafb;
+  --color-border: #d1d5db;
+  --color-bg-rgb: 249, 250, 251;
+  --text-color: #1f2937;
+  --finalization-bg-start: #f9fafb;
+  --finalization-bg-end: #e5e7eb;
+  --finalization-overlay-start: #ffffff;
+  --finalization-overlay-end: #d1d5db;
+}
+
+html[data-theme='dark'] {
+  --color-bg: #111827;
+  --color-card: #1f2937;
+  --color-border: #374151;
+  --color-bg-rgb: 17, 24, 39;
+  --text-color: #f8fafc;
+  --finalization-bg-start: #1e293b;
+  --finalization-bg-end: #0f172a;
+  --finalization-overlay-start: #000000;
+  --finalization-overlay-end: #1a1a1a;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

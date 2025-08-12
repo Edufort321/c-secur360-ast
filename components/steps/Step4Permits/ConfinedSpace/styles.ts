@@ -105,19 +105,19 @@ export const styles: ConfinedSpaceStyles = {
     maxWidth: '100%',
     margin: '0 auto',
     padding: isMobile ? '8px' : '24px',
-    backgroundColor: '#111827',
+    backgroundColor: 'var(--color-bg)',
     minHeight: '100vh',
-    color: 'white',
+    color: 'var(--text-color)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
     overflowX: 'hidden',
     position: 'relative'
   },
 
   card: {
-    backgroundColor: '#1f2937',
+    backgroundColor: 'var(--color-card)',
     borderRadius: isMobile ? '12px' : '16px',
     padding: isMobile ? '16px' : '24px',
-    border: '1px solid #374151',
+    border: '1px solid var(--color-border)',
     marginBottom: isMobile ? '16px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
     width: '100%',
@@ -137,10 +137,10 @@ export const styles: ConfinedSpaceStyles = {
 
   // ===== NOUVEAUX STYLES POUR ENTRYREGISTRY =====
   statCard: {
-    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    backgroundColor: 'rgba(var(--color-bg-rgb), 0.6)',
     borderRadius: '12px',
     padding: isMobile ? '16px' : '20px',
-    border: '1px solid #4b5563',
+    border: '1px solid var(--color-border)',
     transition: 'all 0.2s ease',
     textAlign: 'center'
   },
@@ -199,9 +199,9 @@ export const styles: ConfinedSpaceStyles = {
 
   // ===== FORMULAIRES =====
   input: {
-    backgroundColor: '#374151',
-    color: 'white',
-    border: '1px solid #4b5563',
+    backgroundColor: 'var(--color-card)',
+    color: 'var(--text-color)',
+    border: '1px solid var(--color-border)',
     borderRadius: isMobile ? '8px' : '10px',
     padding: isMobile ? '12px 14px' : '16px',
     width: '100%',
@@ -218,9 +218,9 @@ export const styles: ConfinedSpaceStyles = {
   },
 
   textarea: {
-    backgroundColor: '#374151',
-    color: 'white',
-    border: '1px solid #4b5563',
+    backgroundColor: 'var(--color-card)',
+    color: 'var(--text-color)',
+    border: '1px solid var(--color-border)',
     borderRadius: isMobile ? '8px' : '10px',
     padding: isMobile ? '12px 14px' : '16px',
     width: '100%',
@@ -233,9 +233,9 @@ export const styles: ConfinedSpaceStyles = {
   },
 
   select: {
-    backgroundColor: '#374151',
-    color: 'white',
-    border: '1px solid #4b5563',
+    backgroundColor: 'var(--color-card)',
+    color: 'var(--text-color)',
+    border: '1px solid var(--color-border)',
     borderRadius: isMobile ? '8px' : '10px',
     padding: isMobile ? '12px 14px' : '16px',
     width: '100%',
@@ -356,12 +356,12 @@ export const styles: ConfinedSpaceStyles = {
   },
 
   tabInactive: {
-    backgroundColor: '#374151',
+    backgroundColor: 'var(--color-card)',
     color: '#d1d5db',
-    border: '1px solid #4b5563',
+    border: '1px solid var(--color-border)',
     ':hover': {
-      backgroundColor: '#4b5563',
-      color: 'white'
+      backgroundColor: 'var(--color-border)',
+      color: 'var(--text-color)'
     }
   },
 
@@ -483,7 +483,7 @@ export const styles: ConfinedSpaceStyles = {
     fontWeight: '600',
     color: '#d1d5db',
     marginBottom: isMobile ? '12px' : '16px',
-    borderBottom: '2px solid #374151',
+    borderBottom: '2px solid var(--color-border)',
     paddingBottom: '8px'
   },
 
@@ -491,10 +491,10 @@ export const styles: ConfinedSpaceStyles = {
   mobileHeader: {
     position: 'sticky',
     top: 0,
-    backgroundColor: '#111827',
+    backgroundColor: 'var(--color-bg)',
     zIndex: 100,
     paddingBottom: isMobile ? '12px' : '16px',
-    borderBottom: '1px solid #374151',
+    borderBottom: '1px solid var(--color-border)',
     marginBottom: isMobile ? '12px' : '20px',
     width: '100%',
     boxSizing: 'border-box'
@@ -517,7 +517,7 @@ export const styles: ConfinedSpaceStyles = {
       height: '4px'
     },
     '::-webkit-scrollbar-track': {
-      background: '#374151'
+      background: 'var(--color-border)'
     },
     '::-webkit-scrollbar-thumb': {
       background: '#6b7280',
@@ -527,8 +527,8 @@ export const styles: ConfinedSpaceStyles = {
 
   // ===== VALIDATION ET PROGRESSION =====
   validationCard: {
-    backgroundColor: '#1f2937',
-    border: '1px solid #374151',
+    backgroundColor: 'var(--color-card)',
+    border: '1px solid var(--color-border)',
     borderRadius: '12px',
     padding: isMobile ? '16px' : '20px',
     marginBottom: '16px'
@@ -537,7 +537,7 @@ export const styles: ConfinedSpaceStyles = {
   progressBar: {
     width: '100%',
     height: isMobile ? '8px' : '10px',
-    backgroundColor: '#374151',
+    backgroundColor: 'var(--color-border)',
     borderRadius: '5px',
     overflow: 'hidden',
     marginBottom: '8px'
@@ -591,7 +591,7 @@ export const styles: ConfinedSpaceStyles = {
     borderRadius: '10px',
     padding: isMobile ? '20px' : '30px',
     textAlign: 'center',
-    backgroundColor: '#374151',
+    backgroundColor: 'var(--color-border)',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     ':hover': {

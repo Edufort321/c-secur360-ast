@@ -36,6 +36,7 @@ import {
   PieChart,
   LineChart
 } from 'lucide-react'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface DashboardData {
   // KPI Fonctionnels
@@ -504,8 +505,11 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
       }} />
 
       <div className="dashboard-container">
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
         {/* Fond interactif qui suit la souris */}
-        <div 
+        <div
           className="interactive-bg"
           style={{
             left: mousePosition.x - 150,
