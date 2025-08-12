@@ -105,19 +105,19 @@ export const styles: ConfinedSpaceStyles = {
     maxWidth: '100%',
     margin: '0 auto',
     padding: isMobile ? '8px' : '24px',
-    backgroundColor: '#111827',
+    backgroundColor: 'var(--bg-primary)',
     minHeight: '100vh',
-    color: 'white',
+    color: 'var(--text-primary)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
     overflowX: 'hidden',
     position: 'relative'
   },
 
   card: {
-    backgroundColor: '#1f2937',
+    backgroundColor: 'var(--bg-secondary)',
     borderRadius: isMobile ? '12px' : '16px',
     padding: isMobile ? '16px' : '24px',
-    border: '1px solid #374151',
+    border: '1px solid var(--border-color)',
     marginBottom: isMobile ? '16px' : '24px',
     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
     width: '100%',
@@ -126,8 +126,8 @@ export const styles: ConfinedSpaceStyles = {
   },
 
   emergencyCard: {
-    backgroundColor: 'rgba(220, 38, 38, 0.2)',
-    border: '2px solid #ef4444',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '2px solid var(--border-color)',
     borderRadius: '16px',
     padding: isMobile ? '20px' : '28px',
     animation: 'pulse 2s infinite',
@@ -137,10 +137,10 @@ export const styles: ConfinedSpaceStyles = {
 
   // ===== NOUVEAUX STYLES POUR ENTRYREGISTRY =====
   statCard: {
-    backgroundColor: 'rgba(17, 24, 39, 0.6)',
+    backgroundColor: 'var(--bg-secondary)',
     borderRadius: '12px',
     padding: isMobile ? '16px' : '20px',
-    border: '1px solid #4b5563',
+    border: '1px solid var(--border-color)',
     transition: 'all 0.2s ease',
     textAlign: 'center'
   },
