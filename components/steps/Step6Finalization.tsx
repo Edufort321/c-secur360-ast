@@ -2,24 +2,27 @@
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
-  FileText, Database, QrCode, Printer, Mail, Share, Download,
+  FileText, Database, QrCode, Printer,
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
-  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar,
+  Globe, Copy, Check, BarChart3, Calendar,
   MapPin, Building, User, Search, X, Plus, RefreshCw, Upload,
   ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive,
-  Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
+  Send, MessageSquare, Lock, Unlock, Share2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import StatisticsSection from './Step6Finalization/StatisticsSection';
+import ReportGenerationSection from './Step6Finalization/ReportGenerationSection';
+import SharingSection from './Step6Finalization/SharingSection';
 
 // =================== TYPES DE BASE ===================
-type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
-type LockType = 'temporary' | 'permanent' | 'review' | 'archive';
-type NotificationType = 'success' | 'error' | 'warning';
-type ReportType = 'standard' | 'executive' | 'technical' | 'compact';
-type ViewType = 'main' | 'database';
+export type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
+export type LockType = 'temporary' | 'permanent' | 'review' | 'archive';
+export type NotificationType = 'success' | 'error' | 'warning';
+export type ReportType = 'standard' | 'executive' | 'technical' | 'compact';
+export type ViewType = 'main' | 'database';
 
 // =================== INTERFACES PHOTOS ET DOCUMENTS ===================
-interface Photo {
+export interface Photo {
   id: string;
   url: string;
   description: string;
@@ -30,7 +33,7 @@ interface Photo {
   stepSource?: string;
 }
 
-interface DocumentGeneration {
+export interface DocumentGeneration {
   includePhotos: boolean;
   includeSignatures: boolean;
   includeQRCode: boolean;
@@ -46,7 +49,7 @@ interface DocumentGeneration {
   template: ReportType;
 }
 
-interface GeneratedReport {
+export interface GeneratedReport {
   id: string;
   type: ReportType;
   url: string;
@@ -56,7 +59,7 @@ interface GeneratedReport {
 }
 
 // =================== INTERFACE FINALISATION DONNÉES ===================
-interface FinalizationData {
+export interface FinalizationData {
   photos: Photo[];
   finalComments: string;
   documentGeneration: DocumentGeneration;
@@ -71,7 +74,7 @@ interface FinalizationData {
 }
 
 // =================== INTERFACES AST PRINCIPALES ===================
-interface ASTData {
+export interface ASTData {
   astNumber: string;
   tenant: string;
   language: 'fr' | 'en';
@@ -146,7 +149,7 @@ interface ASTData {
   finalization: FinalizationData;
 }
 
-interface ASTStatistics {
+export interface ASTStatistics {
   astNumber: string;
   tenant: string;
   createdAt: string;
@@ -185,7 +188,7 @@ interface ASTStatistics {
   hasShareableLink: boolean;
 }
 
-interface ValidationSummary {
+export interface ValidationSummary {
   sectionName: string;
   icon: React.ReactNode;
   isComplete: boolean;
@@ -195,7 +198,7 @@ interface ValidationSummary {
   stepNumber: number;
 }
 
-interface ASTHistoryEntry {
+export interface ASTHistoryEntry {
   id: string;
   astNumber: string;
   projectNumber: string;
@@ -891,8 +894,9 @@ function Step6Finalization({
       // Seulement toggle les booléens, pas les strings/objects
       if (typeof currentValue === 'boolean') {
         newValue = !currentValue;
-      }
-      
+}
+
+export type Translations = typeof translations['fr'];
       const updatedData = {
         ...finalizationData,
         documentGeneration: {
@@ -3161,111 +3165,12 @@ function Step6Finalization({
         {/* ONGLET 1: VALIDATION GLOBALE */}
         {activeTab === 'validation' && (
           <div>
-            {/* Statistiques générales complètes */}
-            <div className="ast-section">
-              <h2 className="section-title">
-                <BarChart3 size={24} />
-                {t.statistics}
-              </h2>
-              
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-number">{stats.completedSections}/{stats.totalSections}</div>
-                  <div className="stat-label">{t.sectionsComplete}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.identifiedHazards}</div>
-                  <div className="stat-label">{t.identifiedHazards}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.selectedEquipment}</div>
-                  <div className="stat-label">{t.selectedEquipment}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.requiredPermits}</div>
-                  <div className="stat-label">{t.requiredPermits}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.teamMembers}</div>
-                  <div className="stat-label">{t.teamMembers}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.photosCount}</div>
-                  <div className="stat-label">{t.documentsPhotos}</div>
-                </div>
-              </div>
-
-              <div className="info-grid">
-                <div className="info-box">
-                  <h3>🏢 {language === 'fr' ? 'Informations Projet' : 'Project Information'}</h3>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'N° AST:' : 'JSA #:'}</span>
-                    <span className="info-value">{stats.astNumber}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Client:' : 'Client:'}</span>
-                    <span className="info-value">{stats.client}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Projet:' : 'Project:'}</span>
-                    <span className="info-value">{stats.projectNumber}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Lieu:' : 'Location:'}</span>
-                    <span className="info-value">{stats.workLocation}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Industrie:' : 'Industry:'}</span>
-                    <span className="info-value">{t.industries[stats.industry as keyof typeof t.industries] || stats.industry}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Travailleurs:' : 'Workers:'}</span>
-                    <span className="info-value">{stats.workerCount}</span>
-                  </div>
-                </div>
-                
-                <div className="info-box">
-                  <h3>⏱️ {language === 'fr' ? 'Suivi Temporel' : 'Time Tracking'}</h3>
-                  <div className="info-row">
-                    <span className="info-label">{t.creationDate}:</span>
-                    <span className="info-value">{new Date(stats.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{t.lastActivity}:</span>
-                    <span className="info-value">{new Date(stats.lastModified).toLocaleDateString()}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Dernière sauvegarde:' : 'Last saved:'}</span>
-                    <span className="info-value" style={{ fontSize: isMobile ? '10px' : '12px' }}>
-                      {stats.lastSaved !== 'Jamais' && stats.lastSaved !== 'Never' ? 
-                        new Date(stats.lastSaved).toLocaleString() : stats.lastSaved}
-                    </span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Statut:' : 'Status:'}</span>
-                    <span className={`status-badge ${stats.isLocked ? 'status-error' : 'status-warning'}`}>
-                      {stats.isLocked ? t.locked : (language === 'fr' ? '🔓 EN COURS' : '🔓 IN PROGRESS')}
-                    </span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'QR Code:' : 'QR Code:'}</span>
-                    <span className="info-value">
-                      {stats.hasQRCode ? '✅' : '❌'} {stats.hasQRCode ? 
-                        (language === 'fr' ? 'Généré' : 'Generated') : 
-                        (language === 'fr' ? 'Non généré' : 'Not generated')}
-                    </span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">{language === 'fr' ? 'Lien partage:' : 'Share link:'}</span>
-                    <span className="info-value">
-                      {stats.hasShareableLink ? '✅' : '❌'} {stats.hasShareableLink ? 
-                        (language === 'fr' ? 'Disponible' : 'Available') : 
-                        (language === 'fr' ? 'Non disponible' : 'Not available')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <StatisticsSection
+              stats={stats}
+              t={t}
+              language={language}
+              isMobile={isMobile}
+            />
 
             {/* Validation des sections par step avec détails */}
             <div className="ast-section">
@@ -3510,375 +3415,29 @@ function Step6Finalization({
 
         {/* ONGLET 3: PARTAGE MULTI-CANAUX */}
         {activeTab === 'sharing' && (
-          <div>
-            <div className="ast-section">
-              <h2 className="section-title">
-                <Share2 size={24} />
-                {t.sharing}
-              </h2>
-              
-              {/* Méthodes de partage sélectionnables */}
-              <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
-                <h3 style={{ 
-                  color: '#d1d5db', 
-                  fontSize: isMobile ? '14px' : '16px', 
-                  marginBottom: isMobile ? '12px' : '16px' 
-                }}>
-                  {language === 'fr' ? 'Méthodes de partage:' : 'Sharing methods:'}
-                </h3>
-                
-                <div style={{ 
-                  display: 'flex', 
-                  gap: isMobile ? '8px' : '12px', 
-                  marginBottom: isMobile ? '16px' : '20px', 
-                  flexWrap: 'wrap' 
-                }}>
-                  {(['email', 'sms', 'whatsapp', 'teams', 'slack'] as ShareMethod[]).map((method) => (
-                    <button
-                      key={method}
-                      onClick={() => setSelectedShareMethod(method)}
-                      className={`ast-button ${selectedShareMethod === method ? 'button-primary' : 'button-secondary'}`}
-                      style={{ flex: isMobile ? '1' : 'none', minWidth: isMobile ? '0' : '120px' }}
-                    >
-                      {method === 'email' && <Mail size={16} />}
-                      {method === 'sms' && <Smartphone size={16} />}
-                      {method === 'whatsapp' && <MessageSquare size={16} />}
-                      {method === 'teams' && <Users size={16} />}
-                      {method === 'slack' && <Hash size={16} />}
-                      {method.charAt(0).toUpperCase() + method.slice(1)}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={handleShare}
-                  className="ast-button button-success"
-                  style={{ width: '100%' }}
-                >
-                  <Share size={20} />
-                  {language === 'fr' ? 'Partager via' : 'Share via'} {selectedShareMethod.charAt(0).toUpperCase() + selectedShareMethod.slice(1)}
-                </button>
-              </div>
-
-              {/* Instructions de partage détaillées */}
-              <div style={{ 
-                background: 'rgba(59, 130, 246, 0.1)', 
-                border: '1px solid rgba(59, 130, 246, 0.2)', 
-                borderRadius: isMobile ? '8px' : '12px', 
-                padding: isMobile ? '12px' : '16px'
-              }}>
-                <h4 style={{
-                  margin: '0 0 8px 0',
-                  color: '#60a5fa',
-                  fontSize: isMobile ? '12px' : '14px',
-                  fontWeight: '700'
-                }}>
-                  {t.shareInstructions}
-                </h4>
-                <ul style={{
-                  margin: 0,
-                  paddingLeft: '20px',
-                  color: '#94a3b8',
-                  fontSize: isMobile ? '11px' : '13px'
-                }}>
-                  {t.shareList.map((item, index) => (
-                    <li key={index} style={{ marginBottom: '4px' }}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* QR Code pour accès mobile */}
-            {finalizationData.qrCodeUrl && (
-              <div className="ast-section">
-                <h2 className="section-title">
-                  <QrCode size={24} />
-                  {language === 'fr' ? '📱 Code QR - Accès Mobile AST' : '📱 QR Code - Mobile JSA Access'}
-                </h2>
-                
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    display: 'inline-block',
-                    padding: isMobile ? '15px' : '20px',
-                    backgroundColor: 'white',
-                    borderRadius: isMobile ? '12px' : '16px',
-                    marginBottom: isMobile ? '12px' : '16px',
-                    border: '3px solid #f59e0b',
-                    boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)'
-                  }}>
-                    <img 
-                      src={finalizationData.qrCodeUrl} 
-                      alt="QR Code AST" 
-                      style={{ 
-                        width: isMobile ? '180px' : '220px', 
-                        height: isMobile ? '180px' : '220px',
-                        display: 'block'
-                      }} 
-                    />
-                  </div>
-                  <p style={{ 
-                    color: '#d1d5db', 
-                    fontSize: isMobile ? '12px' : '14px', 
-                    lineHeight: 1.5 
-                  }}>
-                    {language === 'fr' ? 
-                      '📱 Scannez ce code QR pour accéder à l\'AST depuis un appareil mobile' :
-                      '📱 Scan this QR code to access the JSA from a mobile device'
-                    }
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <SharingSection
+            finalizationData={finalizationData}
+            selectedShareMethod={selectedShareMethod}
+            onSelectMethod={setSelectedShareMethod}
+            onShare={handleShare}
+            t={t}
+            language={language}
+            isMobile={isMobile}
+          />
         )}
 
         {/* ONGLET 4: RAPPORTS PROFESSIONNELS */}
         {activeTab === 'reports' && (
-          <div>
-            <div className="ast-section">
-              <h2 className="section-title">
-                <BarChart3 size={24} />
-                {t.reportOptions}
-              </h2>
-              
-              {/* Options de génération détaillées */}
-              <div style={{ marginBottom: isMobile ? '20px' : '24px' }}>
-                <h3 style={{ 
-                  color: '#d1d5db', 
-                  fontSize: isMobile ? '14px' : '16px', 
-                  marginBottom: isMobile ? '12px' : '16px' 
-                }}>
-                  {language === 'fr' ? 'Options d\'inclusion:' : 'Inclusion options:'}
-                </h3>
-                
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: isMobile ? '8px' : '12px'
-                }}>
-                  {Object.entries({
-                    includePhotos: t.includePhotos,
-                    includeSignatures: t.includeSignatures,
-                    includeQRCode: t.includeQRCode,
-                    includeBranding: t.includeBranding,
-                    includeTimestamps: t.includeTimestamps,
-                    includeComments: t.includeComments,
-                    includeStatistics: t.includeStatistics,
-                    includeValidation: t.includeValidation,
-                    includePermits: t.includePermits,
-                    includeHazards: t.includeHazards,
-                    includeEquipment: t.includeEquipment
-                  }).map(([key, label]) => (
-                    <div 
-                      key={key}
-                      className={`checkbox-field ${
-                        finalizationData.documentGeneration[key as keyof typeof finalizationData.documentGeneration] ? 'checked' : ''
-                      }`}
-                      onClick={() => toggleDocumentOption(key as keyof DocumentGeneration)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={finalizationData.documentGeneration[key as keyof typeof finalizationData.documentGeneration] as boolean}
-                        onChange={() => toggleDocumentOption(key as keyof DocumentGeneration)}
-                        style={{ pointerEvents: 'none' }}
-                      />
-                      <span>{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Boutons génération rapports professionnels */}
-              <div className="buttons-grid">
-                <button
-                  onClick={() => handleGeneratePDF('standard')}
-                  disabled={isGeneratingPDF}
-                  className={`ast-button button-primary ${isGeneratingPDF ? 'button-disabled' : ''}`}
-                >
-                  {isGeneratingPDF ? (
-                    <div className="spinning" style={{ 
-                      width: '20px', 
-                      height: '20px', 
-                      border: '2px solid rgba(255, 255, 255, 0.3)', 
-                      borderTop: '2px solid white', 
-                      borderRadius: '50%' 
-                    }} />
-                  ) : (
-                    <FileText size={20} />
-                  )}
-                  {language === 'fr' ? 'Rapport Standard' : 'Standard Report'}
-                </button>
-
-                <button
-                  onClick={() => handleGeneratePDF('executive')}
-                  disabled={isGeneratingPDF}
-                  className={`ast-button button-warning ${isGeneratingPDF ? 'button-disabled' : ''}`}
-                >
-                  {isGeneratingPDF ? (
-                    <div className="spinning" style={{ 
-                      width: '20px', 
-                      height: '20px', 
-                      border: '2px solid rgba(255, 255, 255, 0.3)', 
-                      borderTop: '2px solid white', 
-                      borderRadius: '50%' 
-                    }} />
-                  ) : (
-                    <Award size={20} />
-                  )}
-                  {language === 'fr' ? 'Résumé Exécutif' : 'Executive Summary'}
-                </button>
-
-                <button
-                  onClick={() => handleGeneratePDF('technical')}
-                  disabled={isGeneratingPDF}
-                  className={`ast-button button-success ${isGeneratingPDF ? 'button-disabled' : ''}`}
-                >
-                  {isGeneratingPDF ? (
-                    <div className="spinning" style={{ 
-                      width: '20px', 
-                      height: '20px', 
-                      border: '2px solid rgba(255, 255, 255, 0.3)', 
-                      borderTop: '2px solid white', 
-                      borderRadius: '50%' 
-                    }} />
-                  ) : (
-                    <Cog size={20} />
-                  )}
-                  {language === 'fr' ? 'Rapport Technique' : 'Technical Report'}
-                </button>
-
-                <button
-                  onClick={() => handleGeneratePDF('compact')}
-                  disabled={isGeneratingPDF}
-                  className={`ast-button button-secondary ${isGeneratingPDF ? 'button-disabled' : ''}`}
-                >
-                  <Smartphone size={20} />
-                  {language === 'fr' ? 'Version Compacte' : 'Compact Version'}
-                </button>
-              </div>
-
-              {/* Aperçu format avec statistiques temps réel */}
-              <div style={{ 
-                marginTop: isMobile ? '16px' : '20px',
-                background: 'rgba(100, 116, 139, 0.1)', 
-                border: '1px solid rgba(148, 163, 184, 0.2)', 
-                borderRadius: isMobile ? '8px' : '12px', 
-                padding: isMobile ? '12px' : '16px'
-              }}>
-                <h4 style={{
-                  margin: '0 0 8px 0',
-                  color: '#94a3b8',
-                  fontSize: isMobile ? '12px' : '14px',
-                  fontWeight: '700'
-                }}>
-                  📋 {language === 'fr' ? 'Aperçu du format sélectionné:' : 'Selected format preview:'}
-                </h4>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                  gap: isMobile ? '8px' : '12px',
-                  fontSize: isMobile ? '11px' : '13px',
-                  color: '#d1d5db'
-                }}>
-                  <div>📄 {language === 'fr' ? 'Pages estimées:' : 'Estimated pages:'} <strong>8-12</strong></div>
-                  <div>📊 {language === 'fr' ? 'Graphiques:' : 'Charts:'} <strong>{finalizationData.documentGeneration.includeStatistics ? '✅' : '❌'}</strong></div>
-                  <div>📷 {language === 'fr' ? 'Photos:' : 'Photos:'} <strong>{finalizationData.documentGeneration.includePhotos ? `✅ ${stats.photosCount}` : '❌'}</strong></div>
-                  <div>🔗 {language === 'fr' ? 'Code QR:' : 'QR Code:'} <strong>{finalizationData.documentGeneration.includeQRCode ? '✅' : '❌'}</strong></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Historique des rapports générés */}
-            <div className="ast-section">
-              <h2 className="section-title">
-                <Clock size={24} />
-                {language === 'fr' ? '📋 Historique des Rapports' : '📋 Report History'}
-              </h2>
-              
-              {finalizationData.generatedReports.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px' }}>
-                  {finalizationData.generatedReports.map((report, index) => (
-                    <div 
-                      key={index}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: isMobile ? '10px' : '12px',
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)',
-                        borderRadius: isMobile ? '6px' : '8px',
-                        flexWrap: 'wrap',
-                        gap: '8px'
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ 
-                          fontSize: isMobile ? '12px' : '14px', 
-                          fontWeight: '600', 
-                          color: '#60a5fa',
-                          marginBottom: '2px'
-                        }}>
-                          📄 {report.type.charAt(0).toUpperCase() + report.type.slice(1)} Report
-                        </div>
-                        <div style={{ 
-                          fontSize: isMobile ? '10px' : '12px', 
-                          color: '#9ca3af' 
-                        }}>
-                          🕒 {new Date(report.generatedAt).toLocaleDateString()} {new Date(report.generatedAt).toLocaleTimeString()}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: isMobile ? '6px' : '8px' }}>
-                        <button
-                          onClick={() => window.open(report.url, '_blank')}
-                          className="ast-button button-secondary"
-                          style={{ 
-                            padding: isMobile ? '6px 10px' : '8px 12px',
-                            fontSize: isMobile ? '11px' : '12px',
-                            minHeight: 'auto'
-                          }}
-                        >
-                          <Eye size={14} />
-                          {language === 'fr' ? 'Voir' : 'View'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = report.url;
-                            link.download = `AST-${stats.astNumber}-${report.type}-${new Date(report.generatedAt).toISOString().split('T')[0]}.pdf`;
-                            link.click();
-                          }}
-                          className="ast-button button-primary"
-                          style={{ 
-                            padding: isMobile ? '6px 10px' : '8px 12px',
-                            fontSize: isMobile ? '11px' : '12px',
-                            minHeight: 'auto'
-                          }}
-                        >
-                          <Download size={14} />
-                          {language === 'fr' ? 'Télécharger' : 'Download'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: isMobile ? '24px' : '32px', 
-                  color: '#9ca3af' 
-                }}>
-                  <FileText size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                  <p style={{ margin: 0, fontSize: isMobile ? '12px' : '14px' }}>
-                    {language === 'fr' ? 
-                      'Aucun rapport généré pour le moment. Utilisez les boutons ci-dessus pour créer votre premier rapport.' :
-                      'No reports generated yet. Use the buttons above to create your first report.'
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <ReportGenerationSection
+            finalizationData={finalizationData}
+            t={t}
+            language={language}
+            isMobile={isMobile}
+            toggleDocumentOption={toggleDocumentOption}
+            handleGeneratePDF={handleGeneratePDF}
+            isGeneratingPDF={isGeneratingPDF}
+            stats={stats}
+          />
         )}
 
         {/* =================== MODALES ET CONFIRMATIONS =================== */}
