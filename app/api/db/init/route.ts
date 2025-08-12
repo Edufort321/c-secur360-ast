@@ -48,8 +48,8 @@ export async function GET() {
     
     await prisma.$disconnect()
     
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: '🎉 Base de données connectée et tenants créés!',
       tenants: [demoTenant, futureClientTenant, csecurTenant],
       totalTenants: existingTenants.length,
@@ -58,7 +58,7 @@ export async function GET() {
         futureclient: futureClientTenant.companyName,
         admin: csecurTenant.companyName
       }
-    })
+    }, { status: 200 })
     
   } catch (error: unknown) {
     console.error('❌ Database error:', error)

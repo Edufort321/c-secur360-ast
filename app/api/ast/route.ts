@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       astForm,
       message: 'AST sauvegardé avec succès!'
-    })
+    }, { status: 200 })
     
   } catch (error: any) {
     console.error('Error saving AST:', error)
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
     
-    return NextResponse.json({ astForms })
+    return NextResponse.json({ astForms }, { status: 200 })
     
   } catch (error: any) {
     return NextResponse.json({ 
