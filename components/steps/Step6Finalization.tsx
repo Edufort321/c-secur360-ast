@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { 
-  FileText, Database, QrCode, Printer, Mail, Share, Download, 
-  Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
-  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar, 
+import {
+  FileText, Database, QrCode, Printer, Mail, Share, Download,
+  Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
+  Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar,
   MapPin, Building, User, Search, X, Plus, RefreshCw, Upload,
-  ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive, 
+  ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive,
   Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
 } from 'lucide-react';
+import type { ASTFormData, ASTFormFinalizationData } from '@/types/astForm';
 
 // =================== TYPES DE BASE ===================
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
@@ -55,15 +56,13 @@ interface GeneratedReport {
 }
 
 // =================== INTERFACE FINALISATION DONNÉES ===================
-interface FinalizationData {
+interface FinalizationData extends ASTFormFinalizationData {
   photos: Photo[];
   finalComments: string;
   documentGeneration: DocumentGeneration;
   isLocked: boolean;
   lockTimestamp?: string;
   lockReason?: string;
-  completionPercentage: number;
-  qrCodeUrl?: string;
   shareableLink?: string;
   lastSaved?: string;
   generatedReports: GeneratedReport[];
@@ -210,11 +209,11 @@ interface ASTHistoryEntry {
 }
 
 interface FinalizationStepProps {
-  formData: any; // Données complètes de ASTForm + Steps 1-5
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData; // Données complètes de ASTForm + Steps 1-5
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
 }
 
 // =================== TRADUCTIONS BILINGUES AST ===================
@@ -599,77 +598,78 @@ function Step6Finalization({
    * ✅ EXTRACTION DONNÉES COMPLÈTES AST (FONCTION CORE)
    */
   const extractCompleteASTData = useCallback((): ASTData => {
-    console.log('📊 Step6 AST - Extraction données complètes formData:', formData);
-    
+    const fd = formData as any;
+    console.log('📊 Step6 AST - Extraction données complètes formData:', fd);
+
     // Génération numéro AST unique si manquant
-    const astNumber = formData?.astNumber || 
+    const astNumber = fd?.astNumber ||
       `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-    
+
     return {
       astNumber,
       tenant,
       language,
-      createdAt: formData?.createdAt || new Date().toISOString(),
+      createdAt: fd?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: formData?.status || 'draft',
+      status: fd?.status || 'draft',
       
       // ✅ Step 1 - Informations projet (récupérées de ASTForm)
       projectInfo: {
-        client: formData?.projectInfo?.client || formData?.client || 'Non spécifié',
-        projectNumber: formData?.projectInfo?.projectNumber || formData?.projectNumber || 'Non spécifié',
-        workLocation: formData?.projectInfo?.workLocation || formData?.workLocation || 'Non spécifié',
-        date: formData?.projectInfo?.date || formData?.date || new Date().toISOString().split('T')[0],
-        time: formData?.projectInfo?.time || formData?.time || new Date().toTimeString().slice(0, 5),
-        industry: formData?.projectInfo?.industry || formData?.industry || 'other',
-        workerCount: formData?.projectInfo?.workerCount || formData?.workerCount || 0,
-        estimatedDuration: formData?.projectInfo?.estimatedDuration || formData?.estimatedDuration || 'Non spécifié',
-        workDescription: formData?.projectInfo?.workDescription || formData?.workDescription || 'Non spécifié',
-        clientContact: formData?.projectInfo?.clientContact || formData?.clientContact || 'Non spécifié',
-        emergencyContact: formData?.projectInfo?.emergencyContact || formData?.emergencyContact || 'Non spécifié',
-        lockoutPoints: formData?.projectInfo?.lockoutPoints || formData?.lockoutPoints || [],
-        weatherConditions: formData?.projectInfo?.weatherConditions || formData?.weatherConditions,
-        accessRestrictions: formData?.projectInfo?.accessRestrictions || formData?.accessRestrictions
+        client: fd.projectInfo?.client || fd.client || 'Non spécifié',
+        projectNumber: fd.projectInfo?.projectNumber || fd.projectNumber || 'Non spécifié',
+        workLocation: fd.projectInfo?.workLocation || fd.workLocation || 'Non spécifié',
+        date: fd.projectInfo?.date || fd.date || new Date().toISOString().split('T')[0],
+        time: fd.projectInfo?.time || fd.time || new Date().toTimeString().slice(0, 5),
+        industry: fd.projectInfo?.industry || fd.industry || 'other',
+        workerCount: fd.projectInfo?.workerCount || fd.workerCount || 0,
+        estimatedDuration: fd.projectInfo?.estimatedDuration || fd.estimatedDuration || 'Non spécifié',
+        workDescription: fd.projectInfo?.workDescription || fd.workDescription || 'Non spécifié',
+        clientContact: fd.projectInfo?.clientContact || fd.clientContact || 'Non spécifié',
+        emergencyContact: fd.projectInfo?.emergencyContact || fd.emergencyContact || 'Non spécifié',
+        lockoutPoints: fd.projectInfo?.lockoutPoints || fd.lockoutPoints || [],
+        weatherConditions: fd.projectInfo?.weatherConditions || fd.weatherConditions,
+        accessRestrictions: fd.projectInfo?.accessRestrictions || fd.accessRestrictions
       },
       
       // ✅ Step 2 - Équipements de sécurité
       equipment: {
-        selected: formData?.equipment?.selected || formData?.selectedEquipment || [],
-        categories: formData?.equipment?.categories || [],
-        mandatory: formData?.equipment?.mandatory || [],
-        optional: formData?.equipment?.optional || [],
-        totalCost: formData?.equipment?.totalCost || 0,
-        inspectionRequired: formData?.equipment?.inspectionRequired || false,
-        certifications: formData?.equipment?.certifications || []
+        selected: fd.equipment?.selected || fd.selectedEquipment || [],
+        categories: fd.equipment?.categories || [],
+        mandatory: fd.equipment?.mandatory || [],
+        optional: fd.equipment?.optional || [],
+        totalCost: fd.equipment?.totalCost || 0,
+        inspectionRequired: fd.equipment?.inspectionRequired || false,
+        certifications: fd.equipment?.certifications || []
       },
       
       // ✅ Step 3 - Dangers et contrôles
       hazards: {
-        identified: formData?.hazards?.identified || formData?.selectedHazards || [],
-        riskLevel: formData?.hazards?.riskLevel || 'medium',
-        controlMeasures: formData?.hazards?.controlMeasures || [],
-        residualRisk: formData?.hazards?.residualRisk || 'low',
-        emergencyProcedures: formData?.hazards?.emergencyProcedures || [],
-        monitoringRequired: formData?.hazards?.monitoringRequired || false
+        identified: fd.hazards?.identified || fd.selectedHazards || [],
+        riskLevel: fd.hazards?.riskLevel || 'medium',
+        controlMeasures: fd.hazards?.controlMeasures || [],
+        residualRisk: fd.hazards?.residualRisk || 'low',
+        emergencyProcedures: fd.hazards?.emergencyProcedures || [],
+        monitoringRequired: fd.hazards?.monitoringRequired || false
       },
       
       // ✅ Step 4 - Permis et autorisations
       permits: {
-        required: formData?.permits?.required || formData?.selectedPermits || [],
-        authorities: formData?.permits?.authorities || [],
-        validations: formData?.permits?.validations || [],
-        expiry: formData?.permits?.expiry || [],
-        documents: formData?.permits?.documents || [],
-        specialRequirements: formData?.permits?.specialRequirements || []
+        required: fd.permits?.required || fd.selectedPermits || [],
+        authorities: fd.permits?.authorities || [],
+        validations: fd.permits?.validations || [],
+        expiry: fd.permits?.expiry || [],
+        documents: fd.permits?.documents || [],
+        specialRequirements: fd.permits?.specialRequirements || []
       },
       
       // ✅ Step 5 - Validation équipe
       validation: {
-        reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
-        approvals: formData?.validation?.approvals || [],
-        signatures: formData?.validation?.signatures || [],
-        finalApproval: formData?.validation?.finalApproval || false,
-        criteria: formData?.validation?.criteria || {},
-        comments: formData?.validation?.comments || []
+        reviewers: fd.validation?.reviewers || fd.teamMembers || [],
+        approvals: fd.validation?.approvals || [],
+        signatures: fd.validation?.signatures || [],
+        finalApproval: fd.validation?.finalApproval || false,
+        criteria: fd.validation?.criteria || {},
+        comments: fd.validation?.comments || []
       },
       
       // ✅ Step 6 - Finalisation (état actuel)

@@ -3,57 +3,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
-import { AST } from '../types/ast';
+import type { ASTFormData } from '@/types/astForm';
 
 export default function ASTPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params?.tenant as string;
 
-  const [formData, setFormData] = useState<Partial<AST>>({
-    id: '',
-    tenant: tenant || '',
-    projectInfo: {
-      workType: '',
-      workTypeDetails: {
-        category: '',
-        subcategory: '',
-        complexity: 'simple',
-        frequency: 'routine',
-        criticality: 'low'
-      },
-      location: {
-        site: '',
-        building: '',
-        floor: '',
-        room: '',
-        specificArea: ''
-      },
-      estimatedDuration: '',
-      actualDuration: '',
-      equipmentRequired: [],
-      environmentalConditions: {
-        temperature: { min: 20, max: 25, units: 'celsius' },
-        humidity: 50,
-        lighting: { 
-          type: 'artificial', 
-          adequacy: 'good', 
-          requiresSupplemental: false 
-        },
-        noise: { level: 0, requiresProtection: false },
-        airQuality: { 
-          quality: 'good', 
-          requiresVentilation: false, 
-          requiresRespiratory: false 
-        },
-        weather: { 
-          condition: 'clear', 
-          impactsWork: false 
-        }
-      }
-    },
-    status: 'draft'
-  });
+  const [formData, setFormData] = useState<ASTFormData>({});
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +51,7 @@ export default function ASTPage() {
     loadData();
   }, [tenant]);
 
-  const handleDataChange = useCallback(async (section: string, data: any) => {
+  const handleDataChange = useCallback(async <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
     setSaving(true);
     
     setFormData(prev => {

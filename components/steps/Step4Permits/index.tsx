@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, 
-  Users, Clock, Eye, Zap, Wind, Flame, Construction, Building, 
+import {
+  Shield, Search, CheckCircle, AlertTriangle, FileText, Settings,
+  Users, Clock, Eye, Zap, Wind, Flame, Construction, Building,
   Activity, BarChart3, Star, Plus, Wrench, Home, Target, ChevronDown, ChevronRight,
   Camera, MapPin, Bluetooth, Battery, Signal, Play, Pause, Mic, Upload, Download, Gauge,
   ArrowRight
 } from 'lucide-react';
 import ConfinedSpace from './ConfinedSpace/index';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== DÉTECTION MOBILE ET STYLES IDENTIQUES AU CODE ORIGINAL ===================
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -134,17 +135,17 @@ const PROVINCES_DATA = {
 
 // =================== INTERFACES ===================
 interface Step4PermitsProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
   province?: string;
   userRole?: string;
   touchOptimized?: boolean;
   compactMode?: boolean;
-  onPermitChange?: (permits: any) => void;
-  initialPermits?: any[];
+  onPermitChange?: (permits: unknown) => void;
+  initialPermits?: unknown[];
 }
 
 interface PermitModule {
@@ -461,12 +462,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   // Mettre à jour les statuts des permis selon les données sauvegardées
   const [permits, setPermits] = useState<PermitModule[]>(() => {
     const modules = getPermitModules(language);
-    if (formData.permits?.completed) {
+    const pd = formData.permits;
+    if (pd?.completed) {
       return modules.map(permit => ({
         ...permit,
-        status: formData.permits.completed.includes(permit.id) ? 'completed' : 
-                formData.permits.inProgress?.includes(permit.id) ? 'in-progress' : 'available',
-        completionRate: formData.permits.completion?.[permit.id] || 0
+        status: pd.completed!.includes(permit.id) ? 'completed' :
+                pd.inProgress?.includes(permit.id) ? 'in-progress' : 'available',
+        completionRate: pd.completion?.[permit.id] || 0
       }));
     }
     return modules;
