@@ -10,141 +10,20 @@ import {
   Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import type {
+  ASTData,
+  FinalizationData,
+  GeneratedReport,
+  DocumentGeneration,
+  Photo,
+  ReportType,
+} from '../../types/ast';
 
 // =================== TYPES DE BASE ===================
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
 type LockType = 'temporary' | 'permanent' | 'review' | 'archive';
 type NotificationType = 'success' | 'error' | 'warning';
-type ReportType = 'standard' | 'executive' | 'technical' | 'compact';
 type ViewType = 'main' | 'database';
-
-// =================== INTERFACES PHOTOS ET DOCUMENTS ===================
-interface Photo {
-  id: string;
-  url: string;
-  description: string;
-  timestamp: string;
-  category: 'hazard' | 'equipment' | 'site' | 'team' | 'safety' | 'permit' | 'other';
-  location?: string;
-  tags?: string[];
-  stepSource?: string;
-}
-
-interface DocumentGeneration {
-  includePhotos: boolean;
-  includeSignatures: boolean;
-  includeQRCode: boolean;
-  includeBranding: boolean;
-  includeTimestamps: boolean;
-  includeComments: boolean;
-  includeStatistics: boolean;
-  includeValidation: boolean;
-  includePermits: boolean;
-  includeHazards: boolean;
-  includeEquipment: boolean;
-  format: 'pdf' | 'word' | 'html';
-  template: ReportType;
-}
-
-interface GeneratedReport {
-  id: string;
-  type: ReportType;
-  url: string;
-  generatedAt: string;
-  fileSize?: string;
-  astNumber: string;
-}
-
-// =================== INTERFACE FINALISATION DONNÉES ===================
-interface FinalizationData {
-  photos: Photo[];
-  finalComments: string;
-  documentGeneration: DocumentGeneration;
-  isLocked: boolean;
-  lockTimestamp?: string;
-  lockReason?: string;
-  completionPercentage: number;
-  qrCodeUrl?: string;
-  shareableLink?: string;
-  lastSaved?: string;
-  generatedReports: GeneratedReport[];
-}
-
-// =================== INTERFACES AST PRINCIPALES ===================
-interface ASTData {
-  astNumber: string;
-  tenant: string;
-  language: 'fr' | 'en';
-  createdAt: string;
-  updatedAt: string;
-  status: 'draft' | 'active' | 'completed' | 'locked' | 'archived';
-  client?: string;
-  projectNumber?: string;
-  workLocation?: string;
-  date?: string;
-  
-  // Step 1 - Informations projet
-  projectInfo: {
-    client: string;
-    projectNumber: string;
-    workLocation: string;
-    date: string;
-    time: string;
-    industry: string;
-    workerCount: number;
-    estimatedDuration: string;
-    workDescription: string;
-    clientContact: string;
-    emergencyContact: string;
-    lockoutPoints: string[];
-    weatherConditions?: string;
-    accessRestrictions?: string;
-  };
-  
-  // Step 2 - Équipements de sécurité
-  equipment: {
-    selected: string[];
-    categories: string[];
-    mandatory: string[];
-    optional: string[];
-    totalCost: number;
-    inspectionRequired: boolean;
-    certifications: string[];
-  };
-  
-  // Step 3 - Dangers et contrôles
-  hazards: {
-    identified: string[];
-    riskLevel: 'low' | 'medium' | 'high' | 'critical';
-    controlMeasures: string[];
-    residualRisk: 'low' | 'medium' | 'high';
-    emergencyProcedures: string[];
-    monitoringRequired: boolean;
-  };
-  
-  // Step 4 - Permis et autorisations
-  permits: {
-    required: string[];
-    authorities: string[];
-    validations: string[];
-    expiry: string[];
-    documents: string[];
-    specialRequirements: string[];
-  };
-  
-  // Step 5 - Validation équipe
-  validation: {
-    reviewers: string[];
-    approvals: string[];
-    signatures: string[];
-    finalApproval: boolean;
-    criteria: Record<string, boolean>;
-    comments: string[];
-  };
-  
-  // Step 6 - Finalisation
-  finalization: FinalizationData;
-}
 
 interface ASTStatistics {
   astNumber: string;
