@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import env from '@/lib/env'
 
 const requestSchema = z.object({
   tenantId: z.string(),
@@ -10,7 +11,7 @@ const requestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getToken({ req: request, secret: env.NEXTAUTH_SECRET })
     const userId = token?.sub
     if (!userId) {
       return NextResponse.json(
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    const token = await getToken({ req: request, secret: env.NEXTAUTH_SECRET })
     if (!token?.sub) {
       return NextResponse.json(
         { error: 'Authentication required' },

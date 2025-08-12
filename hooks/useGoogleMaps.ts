@@ -1,5 +1,6 @@
 // hooks/useGoogleMaps.ts
 import { useState, useEffect } from 'react';
+import env from '@/lib/env';
 
 export interface Coordinates {
   lat: number;
@@ -26,7 +27,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   const [error, setError] = useState<string | null>(null);
 
   const defaultConfig: GoogleMapsConfig = {
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
+    apiKey: env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
     libraries: ['places', 'geometry'],
     region: 'CA',
     language: 'fr',

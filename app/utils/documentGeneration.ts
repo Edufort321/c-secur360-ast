@@ -3,6 +3,7 @@
 import { AST, ASTStatus } from '../types/ast';
 import { ComplianceReport } from './compliance';
 import { RiskLevel } from '../types/index';
+import env from '@/lib/env';
 
 // =================== INTERFACES NOTIFICATIONS ===================
 export interface NotificationTemplate {
@@ -552,7 +553,7 @@ export async function sendComplianceNotification(
   const variables = {
     complianceScore: complianceReport.overallScore,
     criticalActionsCount: complianceReport.criticalActions.length,
-    complianceReportUrl: `${process.env.BASE_URL}/compliance/${complianceReport.tenantId}`,
+    complianceReportUrl: `${env.BASE_URL}/compliance/${complianceReport.tenantId}`,
     generatedAt: complianceReport.generatedAt,
     nextReviewDate: complianceReport.nextReviewDate
   };
@@ -801,7 +802,7 @@ function prepareASTVariables(ast: AST, additionalData?: Record<string, any>): Re
     plannedStartDate: astAny.plannedStartDate || new Date().toISOString(),
     plannedEndDate: astAny.plannedEndDate || new Date().toISOString(),
     status: ast.status || 'DRAFT',
-    astUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/ast/${ast.id}`,
+    astUrl: `${env.BASE_URL}/ast/${ast.id}`,
     ...additionalData
   };
 }
