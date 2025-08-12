@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { useASTValidation } from '../../hooks/useASTValidation';
 import {
   FileText, Database, QrCode, Printer, Mail, Share, Download,
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
@@ -577,9 +578,11 @@ function Step6Finalization({
     lastSaved: '',
     generatedReports: []
   }));
+  const { extractCompleteASTData, getASTValidation, getSectionValidation } =
+    useASTValidation(formData, finalizationData, tenant, language, t);
 
   // =================== FONCTIONS UTILITAIRES OPTIMISÉES ===================
-  
+
   /**
    * ✅ FONCTION NOTIFICATION SYSTÈME STABLE
    */
@@ -596,222 +599,6 @@ function Step6Finalization({
     }, 4000);
   }, []);
 
-  /**
-   * ✅ EXTRACTION DONNÉES COMPLÈTES AST (FONCTION CORE)
-   */
-  const extractCompleteASTData = useCallback((): ASTData => {
-    console.log('📊 Step6 AST - Extraction données complètes formData:', formData);
-    
-    // Génération numéro AST unique si manquant
-    const astNumber = formData?.astNumber || 
-      `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-    
-    return {
-      astNumber,
-      tenant,
-      language,
-      createdAt: formData?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: formData?.status || 'draft',
-      
-      // ✅ Step 1 - Informations projet (récupérées de ASTForm)
-      projectInfo: {
-        client: formData?.projectInfo?.client || formData?.client || 'Non spécifié',
-        projectNumber: formData?.projectInfo?.projectNumber || formData?.projectNumber || 'Non spécifié',
-        workLocation: formData?.projectInfo?.workLocation || formData?.workLocation || 'Non spécifié',
-        date: formData?.projectInfo?.date || formData?.date || new Date().toISOString().split('T')[0],
-        time: formData?.projectInfo?.time || formData?.time || new Date().toTimeString().slice(0, 5),
-        industry: formData?.projectInfo?.industry || formData?.industry || 'other',
-        workerCount: formData?.projectInfo?.workerCount || formData?.workerCount || 0,
-        estimatedDuration: formData?.projectInfo?.estimatedDuration || formData?.estimatedDuration || 'Non spécifié',
-        workDescription: formData?.projectInfo?.workDescription || formData?.workDescription || 'Non spécifié',
-        clientContact: formData?.projectInfo?.clientContact || formData?.clientContact || 'Non spécifié',
-        emergencyContact: formData?.projectInfo?.emergencyContact || formData?.emergencyContact || 'Non spécifié',
-        lockoutPoints: formData?.projectInfo?.lockoutPoints || formData?.lockoutPoints || [],
-        weatherConditions: formData?.projectInfo?.weatherConditions || formData?.weatherConditions,
-        accessRestrictions: formData?.projectInfo?.accessRestrictions || formData?.accessRestrictions
-      },
-      
-      // ✅ Step 2 - Équipements de sécurité
-      equipment: {
-        selected: formData?.equipment?.selected || formData?.selectedEquipment || [],
-        categories: formData?.equipment?.categories || [],
-        mandatory: formData?.equipment?.mandatory || [],
-        optional: formData?.equipment?.optional || [],
-        totalCost: formData?.equipment?.totalCost || 0,
-        inspectionRequired: formData?.equipment?.inspectionRequired || false,
-        certifications: formData?.equipment?.certifications || []
-      },
-      
-      // ✅ Step 3 - Dangers et contrôles
-      hazards: {
-        identified: formData?.hazards?.identified || formData?.selectedHazards || [],
-        riskLevel: formData?.hazards?.riskLevel || 'medium',
-        controlMeasures: formData?.hazards?.controlMeasures || [],
-        residualRisk: formData?.hazards?.residualRisk || 'low',
-        emergencyProcedures: formData?.hazards?.emergencyProcedures || [],
-        monitoringRequired: formData?.hazards?.monitoringRequired || false
-      },
-      
-      // ✅ Step 4 - Permis et autorisations
-      permits: {
-        required: formData?.permits?.required || formData?.selectedPermits || [],
-        authorities: formData?.permits?.authorities || [],
-        validations: formData?.permits?.validations || [],
-        expiry: formData?.permits?.expiry || [],
-        documents: formData?.permits?.documents || [],
-        specialRequirements: formData?.permits?.specialRequirements || []
-      },
-      
-      // ✅ Step 5 - Validation équipe
-      validation: {
-        reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
-        approvals: formData?.validation?.approvals || [],
-        signatures: formData?.validation?.signatures || [],
-        finalApproval: formData?.validation?.finalApproval || false,
-        criteria: formData?.validation?.criteria || {},
-        comments: formData?.validation?.comments || []
-      },
-      
-      // ✅ Step 6 - Finalisation (état actuel)
-      finalization: finalizationData
-    };
-  }, [formData, finalizationData, tenant, language]);
-
-  /**
-   * ✅ VALIDATION GLOBALE AST AVEC MÉMO OPTIMISÉ
-   */
-  const getASTValidation = useMemo(() => {
-    const astData = extractCompleteASTData();
-    
-    // Validation Step 1 - Informations projet requises
-    const step1Complete = Boolean(
-      astData.projectInfo.client !== 'Non spécifié' &&
-      astData.projectInfo.projectNumber !== 'Non spécifié' &&
-      astData.projectInfo.workLocation !== 'Non spécifié' &&
-      astData.projectInfo.workDescription !== 'Non spécifié'
-    );
-    
-    // Validation Step 2 - Au moins un équipement sélectionné
-    const step2Complete = Boolean(astData.equipment.selected.length > 0);
-    
-    // Validation Step 3 - Au moins un danger identifié
-    const step3Complete = Boolean(astData.hazards.identified.length > 0);
-    
-    // Validation Step 4 - Au moins un permis requis
-    const step4Complete = Boolean(astData.permits.required.length > 0);
-    
-    // Validation Step 5 - Au moins un reviewer dans l'équipe
-    const step5Complete = Boolean(astData.validation.reviewers.length > 0);
-    
-    // Validation Step 6 - Commentaires ou photos ajoutés
-    const step6Complete = Boolean(
-      astData.finalization.finalComments.length > 0 ||
-      astData.finalization.photos.length > 0
-    );
-    
-    const completedSteps = [step1Complete, step2Complete, step3Complete, step4Complete, step5Complete, step6Complete]
-      .filter(Boolean).length;
-    const totalSteps = 6;
-    const percentage = Math.round((completedSteps / totalSteps) * 100);
-    
-    // Construction des erreurs détaillées
-    const errors = [];
-    if (!step1Complete) errors.push(language === 'fr' ? 'Informations projet incomplètes' : 'Project information incomplete');
-    if (!step2Complete) errors.push(language === 'fr' ? 'Équipements non sélectionnés' : 'Equipment not selected');
-    if (!step3Complete) errors.push(language === 'fr' ? 'Dangers non identifiés' : 'Hazards not identified');
-    if (!step4Complete) errors.push(language === 'fr' ? 'Permis non configurés' : 'Permits not configured');
-    if (!step5Complete) errors.push(language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing');
-    if (!step6Complete) errors.push(language === 'fr' ? 'Finalisation incomplète' : 'Finalization incomplete');
-    
-    return {
-      isValid: completedSteps === totalSteps,
-      percentage,
-      completedSteps,
-      totalSteps,
-      errors,
-      sections: {
-        step1Complete,
-        step2Complete,
-        step3Complete,
-        step4Complete,
-        step5Complete,
-        step6Complete
-      }
-    };
-  }, [extractCompleteASTData, language]);
-
-  /**
-   * ✅ VALIDATION DÉTAILLÉE PAR SECTION AST
-   */
-  const getSectionValidation = useCallback((): ValidationSummary[] => {
-    const astData = extractCompleteASTData();
-    const validation = getASTValidation;
-    
-    return [
-      {
-        stepNumber: 1,
-        sectionName: t.step1ProjectInfo,
-        icon: <Building size={20} color={validation.sections.step1Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step1Complete,
-        completionPercentage: validation.sections.step1Complete ? 100 : 
-          Math.round((
-            (astData.projectInfo.client !== 'Non spécifié' ? 25 : 0) +
-            (astData.projectInfo.projectNumber !== 'Non spécifié' ? 25 : 0) +
-            (astData.projectInfo.workLocation !== 'Non spécifié' ? 25 : 0) +
-            (astData.projectInfo.workDescription !== 'Non spécifié' ? 25 : 0)
-          )),
-        errors: validation.sections.step1Complete ? [] : [language === 'fr' ? 'Informations projet incomplètes' : 'Project information incomplete'],
-        lastModified: astData.updatedAt
-      },
-      {
-        stepNumber: 2,
-        sectionName: t.step2Equipment,
-        icon: <Shield size={20} color={validation.sections.step2Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step2Complete,
-        completionPercentage: validation.sections.step2Complete ? 100 : 0,
-        errors: validation.sections.step2Complete ? [] : [language === 'fr' ? 'Équipements de sécurité non sélectionnés' : 'Safety equipment not selected'],
-        lastModified: astData.updatedAt
-      },
-      {
-        stepNumber: 3,
-        sectionName: t.step3Hazards,
-        icon: <AlertTriangle size={20} color={validation.sections.step3Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step3Complete,
-        completionPercentage: validation.sections.step3Complete ? 100 : 0,
-        errors: validation.sections.step3Complete ? [] : [language === 'fr' ? 'Dangers et contrôles non identifiés' : 'Hazards and controls not identified'],
-        lastModified: astData.updatedAt
-      },
-      {
-        stepNumber: 4,
-        sectionName: t.step4Permits,
-        icon: <FileText size={20} color={validation.sections.step4Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step4Complete,
-        completionPercentage: validation.sections.step4Complete ? 100 : 0,
-        errors: validation.sections.step4Complete ? [] : [language === 'fr' ? 'Permis et autorisations non configurés' : 'Permits and authorizations not configured'],
-        lastModified: astData.updatedAt
-      },
-      {
-        stepNumber: 5,
-        sectionName: t.step5Validation,
-        icon: <Users size={20} color={validation.sections.step5Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step5Complete,
-        completionPercentage: validation.sections.step5Complete ? 100 : 0,
-        errors: validation.sections.step5Complete ? [] : [language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing'],
-        lastModified: astData.updatedAt
-      },
-      {
-        stepNumber: 6,
-        sectionName: t.step6Finalization,
-        icon: <CheckCircle size={20} color={validation.sections.step6Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step6Complete,
-        completionPercentage: validation.sections.step6Complete ? 100 : 
-          (finalizationData.finalComments.length > 0 ? 50 : 0) + (finalizationData.photos.length > 0 ? 50 : 0),
-        errors: validation.sections.step6Complete ? [] : [language === 'fr' ? 'Finalisation AST incomplète' : 'JSA finalization incomplete'],
-        lastModified: astData.updatedAt
-      }
-    ];
-  }, [extractCompleteASTData, getASTValidation, t, language, finalizationData]);
 
   /**
    * ✅ STATISTIQUES COMPLÈTES AST OPTIMISÉES

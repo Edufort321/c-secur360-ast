@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -601,6 +602,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     endTime: ''
   });
   const [isModalSaving, setIsModalSaving] = useState(false);
+  useBodyScrollLock(showAddLocation);
 
   // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
   const stableFormDataRef = useRef(localData);
@@ -1284,28 +1286,21 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           <MapPin className="section-icon" />
           <h3 className="section-title">{t.workLocations}</h3>
         </div>
-        <button 
+        <button
           type="button"
-          className="btn-primary" 
+          className="btn-primary"
           onClick={() => {
             setShowAddLocation(true);
-            // 🚀 FORCE MODAL ON TOP INLINE
-            document.body.classList.add('modal-open');
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-            document.body.style.height = '100%';
-            
             setTimeout(() => {
               const modalOverlay = document.querySelector('.modal-overlay-ultra-critical') as HTMLElement;
               const modalContent = document.querySelector('.modal-content-ultra-critical') as HTMLElement;
-              
+
               if (modalOverlay) {
                 modalOverlay.style.zIndex = '2147483647';
                 modalOverlay.style.position = 'fixed';
                 modalOverlay.style.transform = 'translateZ(999999px)';
               }
-              
+
               if (modalContent) {
                 modalContent.style.zIndex = '2147483647';
                 modalContent.style.transform = 'translateZ(999999px)';
@@ -1396,12 +1391,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <div 
           className="modal-overlay-ultra-critical" 
           onClick={() => {
-            // 🚀 RESTORE BODY INLINE
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-            document.body.style.height = '';
             setShowAddLocation(false);
           }}
           style={{ 
@@ -1444,15 +1433,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           >
             <div className="modal-header">
               <h3>{t.addLocation}</h3>
-              <button 
+              <button
                 type="button"
-                className="modal-close" 
+                className="modal-close"
                 onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
                   setShowAddLocation(false);
                 }}
               >
@@ -1628,15 +1612,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             </div>
 
             <div className="modal-footer">
-              <button 
+              <button
                 type="button"
-                className="btn-secondary" 
+                className="btn-secondary"
                 onClick={() => {
-                  document.body.classList.remove('modal-open');
-                  document.body.style.overflow = '';
-                  document.body.style.position = '';
-                  document.body.style.width = '';
-                  document.body.style.height = '';
                   setShowAddLocation(false);
                 }}
               >
