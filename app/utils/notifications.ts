@@ -83,7 +83,7 @@ export interface RecipientPreferences {
 
 export interface NotificationCondition {
   field: string;
-  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'in';
   value: any;
 }
 
@@ -105,7 +105,7 @@ export interface TemplateVariable {
 
 export interface TriggerCondition {
   field: string;
-  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'in';
   value: any;
 }
 
@@ -233,8 +233,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
     trigger: {
       event: TriggerEvent.HIGH_RISK_DETECTED,
       conditions: [
-        { field: 'riskLevel', operator: 'equals', value: RiskLevel.HIGH },
-        { field: 'riskLevel', operator: 'equals', value: RiskLevel.CRITICAL }
+        { field: 'riskLevel', operator: 'in', value: [RiskLevel.HIGH, RiskLevel.CRITICAL] }
       ]
     },
     priority: NotificationPriority.HIGH,
