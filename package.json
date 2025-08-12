@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "postinstall": "prisma generate",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed": "node scripts/seed-tenants.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
