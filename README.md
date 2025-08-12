@@ -20,6 +20,10 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+This project uses Google Maps services. To enable them, set the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` environment variable to your Google Maps API key before running the app or building for production.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
