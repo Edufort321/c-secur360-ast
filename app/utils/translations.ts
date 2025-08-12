@@ -96,7 +96,16 @@ export const TRANSLATIONS: LanguageResources = {
       urgent: 'Urgente',
       critical: 'Critique'
     },
-    
+
+    // Tableau de bord
+    dashboard: {
+      incidents: 'Incidents',
+      incidentTypes: "Types d'Incidents",
+      photoDocumentation: 'Photos Documentation',
+      totalPhotos: 'Photos totales',
+      thisWeek: 'cette semaine'
+    },
+
     // AST spécifique
     ast: {
       title: 'Analyse Sécuritaire de Tâches',
@@ -343,7 +352,16 @@ export const TRANSLATIONS: LanguageResources = {
       urgent: 'Urgent',
       critical: 'Critical'
     },
-    
+
+    // Dashboard
+    dashboard: {
+      incidents: 'Incidents',
+      incidentTypes: 'Incident Types',
+      photoDocumentation: 'Photo Documentation',
+      totalPhotos: 'Total Photos',
+      thisWeek: 'this week'
+    },
+
     // AST specific
     ast: {
       title: 'Job Safety Analysis',
