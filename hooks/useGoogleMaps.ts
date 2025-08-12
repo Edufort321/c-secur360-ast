@@ -25,8 +25,10 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   const defaultConfig: GoogleMapsConfig = {
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
+    apiKey,
     libraries: ['places', 'geometry'],
     region: 'CA',
     language: 'fr',
@@ -35,6 +37,11 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
 
   useEffect(() => {
     const loadGoogleMaps = async () => {
+      if (!apiKey) {
+        setError('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not defined');
+        return;
+      }
+
       // Vérifier si Google Maps est déjà chargé
       if (typeof window !== 'undefined' && (window as any).google?.maps) {
         setIsLoaded(true);
@@ -53,8 +60,8 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
         if (typeof document !== 'undefined') {
           const script = document.createElement('script');
           const libraries = defaultConfig.libraries?.join(',') || 'places,geometry';
-          
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${defaultConfig.apiKey}&libraries=${libraries}&region=${defaultConfig.region}&language=${defaultConfig.language}`;
+
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries}&region=${defaultConfig.region}&language=${defaultConfig.language}`;
           script.async = true;
           script.defer = true;
 
@@ -76,7 +83,9 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
       }
     };
 
-    loadGoogleMaps();
+    if (process.env.NODE_ENV !== 'test') {
+      loadGoogleMaps();
+    }
   }, []);
 
   // Fonction pour géocoder une adresse

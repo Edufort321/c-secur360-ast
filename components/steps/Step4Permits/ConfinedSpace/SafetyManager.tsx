@@ -6,23 +6,28 @@ import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
 // =================== CONFIGURATION SUPABASE ROBUSTE ===================
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase: any = null;
 let supabaseEnabled = false;
 
-try {
-  if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
+if (!supabaseUrl || !supabaseKey) {
+  console.error(
+    'SafetyManager: Missing Supabase environment variables. Define NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+  );
+} else if (process.env.NODE_ENV !== 'test') {
+  try {
     supabase = createClient(supabaseUrl, supabaseKey);
     supabaseEnabled = true;
     console.log('✅ SafetyManager: Supabase configuré');
-  } else {
-    console.log('📝 SafetyManager: Utilisation du localStorage');
+  } catch (error) {
+    console.error('⚠️ SafetyManager: Supabase initialisation échouée', error);
   }
-} catch (error) {
-  console.log('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage');
-  supabaseEnabled = false;
+}
+
+if (!supabaseEnabled) {
+  console.log('📝 SafetyManager: Utilisation du localStorage');
 }
 
 // =================== TYPES UNIVERSELS ===================
