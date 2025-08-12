@@ -78,6 +78,10 @@ interface ASTData {
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'active' | 'completed' | 'locked' | 'archived';
+  client?: string;
+  projectNumber?: string;
+  workLocation?: string;
+  date?: string;
   
   // Step 1 - Informations projet
   projectInfo: {
@@ -211,11 +215,11 @@ interface ASTHistoryEntry {
 }
 
 interface FinalizationStepProps {
-  formData: any; // Données complètes de ASTForm + Steps 1-5
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTData; // Données complètes de ASTForm + Steps 1-5
+  onDataChange: (section: keyof ASTData, data: ASTData[keyof ASTData]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string[]>;
 }
 
 // =================== TRADUCTIONS BILINGUES AST ===================
@@ -616,20 +620,20 @@ function Step6Finalization({
       
       // ✅ Step 1 - Informations projet (récupérées de ASTForm)
       projectInfo: {
-        client: formData?.projectInfo?.client || formData?.client || 'Non spécifié',
-        projectNumber: formData?.projectInfo?.projectNumber || formData?.projectNumber || 'Non spécifié',
-        workLocation: formData?.projectInfo?.workLocation || formData?.workLocation || 'Non spécifié',
-        date: formData?.projectInfo?.date || formData?.date || new Date().toISOString().split('T')[0],
-        time: formData?.projectInfo?.time || formData?.time || new Date().toTimeString().slice(0, 5),
-        industry: formData?.projectInfo?.industry || formData?.industry || 'other',
-        workerCount: formData?.projectInfo?.workerCount || formData?.workerCount || 0,
-        estimatedDuration: formData?.projectInfo?.estimatedDuration || formData?.estimatedDuration || 'Non spécifié',
-        workDescription: formData?.projectInfo?.workDescription || formData?.workDescription || 'Non spécifié',
-        clientContact: formData?.projectInfo?.clientContact || formData?.clientContact || 'Non spécifié',
-        emergencyContact: formData?.projectInfo?.emergencyContact || formData?.emergencyContact || 'Non spécifié',
-        lockoutPoints: formData?.projectInfo?.lockoutPoints || formData?.lockoutPoints || [],
-        weatherConditions: formData?.projectInfo?.weatherConditions || formData?.weatherConditions,
-        accessRestrictions: formData?.projectInfo?.accessRestrictions || formData?.accessRestrictions
+        client: formData?.projectInfo?.client || 'Non spécifié',
+        projectNumber: formData?.projectInfo?.projectNumber || 'Non spécifié',
+        workLocation: formData?.projectInfo?.workLocation || 'Non spécifié',
+        date: formData?.projectInfo?.date || new Date().toISOString().split('T')[0],
+        time: formData?.projectInfo?.time || new Date().toTimeString().slice(0, 5),
+        industry: formData?.projectInfo?.industry || 'other',
+        workerCount: formData?.projectInfo?.workerCount || 0,
+        estimatedDuration: formData?.projectInfo?.estimatedDuration || 'Non spécifié',
+        workDescription: formData?.projectInfo?.workDescription || 'Non spécifié',
+        clientContact: formData?.projectInfo?.clientContact || 'Non spécifié',
+        emergencyContact: formData?.projectInfo?.emergencyContact || 'Non spécifié',
+        lockoutPoints: formData?.projectInfo?.lockoutPoints || [],
+        weatherConditions: formData?.projectInfo?.weatherConditions,
+        accessRestrictions: formData?.projectInfo?.accessRestrictions
       },
       
       // ✅ Step 2 - Équipements de sécurité
@@ -882,7 +886,7 @@ function Step6Finalization({
       console.log('🔧 Step6 AST - Toggle option:', option);
       
       const currentValue = finalizationData.documentGeneration[option];
-      let newValue: any = currentValue;
+      let newValue = currentValue;
       
       // Seulement toggle les booléens, pas les strings/objects
       if (typeof currentValue === 'boolean') {

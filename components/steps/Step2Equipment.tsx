@@ -17,7 +17,11 @@ interface Step2EquipmentProps {
   onDataChange: (section: 'equipment', data: Step2Data) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Step2EquipmentErrors;
+}
+
+interface Step2EquipmentErrors {
+  equipment?: string[];
 }
 
 // =================== SYSTÈME DE TRADUCTIONS COMPLET ===================

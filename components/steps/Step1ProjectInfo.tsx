@@ -22,7 +22,7 @@ interface Step1ProjectInfoProps {
   onDataChange: (section: 'projectInfo', data: Step1Data) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string[]>;
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }
@@ -615,7 +615,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [notifyParentStable]);
 
   // =================== HANDLERS SPÉCIALISÉS ===================
-  const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
+  const updateLockoutPoint = useCallback(
+    (
+      pointId: string,
+      field: keyof LockoutPoint,
+      value: LockoutPoint[keyof LockoutPoint]
+    ) => {
     console.log('🔥 Step1 - Update lockout ULTRA-STABLE:', pointId, field, value);
     
     // ✅ RÉFÉRENCE DIRECTE SANS RE-CRÉATION
@@ -636,7 +641,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     setTimeout(() => {
       notifyParentStable(updatedData);
     }, 0);
-  }, [notifyParentStable]);
+    },
+    [notifyParentStable]
+  );
 
   const addLockoutPoint = useCallback(() => {
     const newPoint: LockoutPoint = {
@@ -786,7 +793,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [localData.workLocations, notifyParentStable]);
 
   // =================== GESTION PHOTOS OPTIMISÉE ===================
-  const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
+  const handlePhotoCapture = useCallback(async (category: LockoutPhoto['category'], lockoutPointId?: string) => {
     try {
       if (fileInputRef.current) {
         fileInputRef.current.accept = 'image/*';
@@ -805,14 +812,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     }
   }, []);
 
-  const processPhoto = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
+  const processPhoto = useCallback(
+    async (
+      file: File,
+      category: LockoutPhoto['category'],
+      lockoutPointId?: string
+    ) => {
     try {
       const photoUrl = URL.createObjectURL(file);
       const newPhoto: LockoutPhoto = {
         id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         url: photoUrl,
         caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-        category: category as any,
+        category,
         timestamp: new Date().toISOString(),
         lockoutPointId
       };
@@ -1370,7 +1382,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             setShowAddLocation(false);
           }}
           style={{ 
-            position: 'fixed !important' as any,
+            position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
