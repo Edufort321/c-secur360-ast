@@ -5,12 +5,9 @@ export async function GET() {
   try {
     console.log('🔄 Testing database connection...')
 
-    // Test de connexion à la base et création des tenants de démonstration
-    await prisma.$connect()
-    console.log('✅ Connected to database')
-
-    // Vérifier combien de tenants existent déjà
+    // Exécuter une première requête pour établir la connexion si nécessaire
     const initialTenantCount = await prisma.tenant.count()
+    console.log('✅ Connected to database')
     console.log('📊 Existing tenants:', initialTenantCount)
 
     // Créer tenant démo seulement s'il n'existe pas
@@ -78,7 +75,5 @@ export async function GET() {
       error: 'Unknown error',
       details: "Vérifiez les variables d'environnement Supabase"
     }, { status: 500 })
-  } finally {
-    await prisma.$disconnect()
   }
 }

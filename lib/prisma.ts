@@ -8,3 +8,11 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+// Ensure a single client manages its own connection lifecycle
+prisma.$connect()
+prisma.$on('beforeExit', async () => {
+  await prisma.$disconnect()
+})
+
+export default prisma
