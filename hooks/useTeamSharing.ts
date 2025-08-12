@@ -80,7 +80,7 @@ export const useTeamSharing = (astId: string) => {
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
-  const currentUserId = session?.user?.id || '';
+  const currentUserId = session?.user?.id ?? '';
   const currentUserName = session?.user?.name || 'Équipe Sécurité';
 
   // Templates de notification prédéfinis
