@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
-  Zap, Activity, Star, AlertTriangle 
+import React, { useState, useEffect } from 'react';
+import {
+  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand,
+  Zap, Activity, Star, AlertTriangle
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
@@ -26,230 +27,20 @@ interface Equipment {
 }
 
 // =================== SYSTÈME DE TRADUCTIONS COMPLET ===================
-const translations = {
-  fr: {
-    // En-tête
-    title: "🛡️ Équipements de Protection Individuelle",
-    subtitle: "Sélectionnez tous les EPI requis pour ce travail en cochant les cases",
-    
-    // Statistiques
-    selected: "Sélectionnés",
-    critical: "Critiques",
-    categories: "Catégories",
-    
-    // Recherche
-    searchPlaceholder: "Rechercher un équipement...",
-    allCategories: "Toutes catégories",
-    
-    // Priorités
-    priorities: {
-      high: "🔴 Critique",
-      medium: "🟡 Important",
-      low: "🟢 Standard",
-      default: "⚪ Normal"
-    },
-    
-    // Messages
-    noResults: "Aucun équipement trouvé",
-    noResultsDescription: "Modifiez vos critères de recherche pour voir plus d'équipements",
-    validationErrors: "Erreurs de validation :",
-    debugMessage: "équipements chargés,",
-    debugDisplayed: "affichés",
-    
-    // Catégories
-    categoryNames: {
-      "Tête": "Tête",
-      "Yeux": "Yeux", 
-      "Respiratoire": "Respiratoire",
-      "Mains": "Mains",
-      "Pieds": "Pieds",
-      "Corps": "Corps",
-      "Chute": "Chute",
-      "Détection": "Détection",
-      "Auditive": "Auditive",
-      "Éclairage": "Éclairage"
-    },
-    
-    // Équipements - Protection tête
-    equipment: {
-      "helmet-class-e": "Casque classe E (20kV)",
-      "helmet-standard": "Casque de sécurité standard",
-      "bump-cap": "Casquette anti-heurt",
-      
-      // Protection oculaire
-      "safety-glasses": "Lunettes de sécurité",
-      "safety-goggles": "Lunettes-masques étanches",
-      "face-shield": "Écran facial",
-      "welding-mask": "Masque de soudage",
-      
-      // Protection respiratoire
-      "n95-mask": "Masque N95",
-      "p100-mask": "Masque P100",
-      "half-face-respirator": "Demi-masque respiratoire",
-      "full-face-respirator": "Masque respiratoire complet",
-      "scba": "Appareil respiratoire autonome",
-      
-      // Protection mains
-      "work-gloves": "Gants de travail",
-      "electrical-gloves": "Gants isolants classe 2",
-      "cut-resistant-gloves": "Gants anti-coupure",
-      "chemical-gloves": "Gants chimiques",
-      "welding-gloves": "Gants de soudage",
-      
-      // Protection pieds
-      "safety-boots": "Bottes sécurité diélectriques",
-      "steel-toe-boots": "Bottes à cap d'acier",
-      "chemical-boots": "Bottes chimiques",
-      "slip-resistant-shoes": "Chaussures antidérapantes",
-      
-      // Protection corps
-      "high-vis-vest": "Veste haute visibilité",
-      "arc-flash-suit": "Costume arc électrique",
-      "chemical-suit": "Combinaison chimique",
-      "coveralls": "Salopette de travail",
-      "lab-coat": "Sarrau de laboratoire",
-      
-      // Protection chute
-      "fall-harness": "Harnais antichute",
-      "safety-lanyard": "Longe de sécurité",
-      "self-retracting-lifeline": "Antichute à rappel automatique",
-      "positioning-belt": "Ceinture de positionnement",
-      
-      // Détection et mesure
-      "gas-detector-4": "Détecteur 4 gaz",
-      "radiation-detector": "Détecteur de radiation",
-      "noise-dosimeter": "Dosimètre de bruit",
-      "vibration-meter": "Vibromètre",
-      
-      // Protection auditive
-      "ear-plugs": "Bouchons d'oreilles",
-      "ear-muffs": "Casque antibruit",
-      "communication-headset": "Casque de communication",
-      
-      // Éclairage et signalisation
-      "flashlight": "Lampe de poche",
-      "headlamp": "Lampe frontale",
-      "emergency-beacon": "Balise d'urgence"
-    }
-  },
-  
-  en: {
-    // Header
-    title: "🛡️ Personal Protective Equipment",
-    subtitle: "Select all PPE required for this work by checking the boxes",
-    
-    // Statistics
-    selected: "Selected",
-    critical: "Critical",
-    categories: "Categories",
-    
-    // Search
-    searchPlaceholder: "Search for equipment...",
-    allCategories: "All categories",
-    
-    // Priorities
-    priorities: {
-      high: "🔴 Critical",
-      medium: "🟡 Important", 
-      low: "🟢 Standard",
-      default: "⚪ Normal"
-    },
-    
-    // Messages
-    noResults: "No equipment found",
-    noResultsDescription: "Modify your search criteria to see more equipment",
-    validationErrors: "Validation errors:",
-    debugMessage: "equipment loaded,",
-    debugDisplayed: "displayed",
-    
-    // Categories
-    categoryNames: {
-      "Tête": "Head",
-      "Yeux": "Eyes",
-      "Respiratoire": "Respiratory", 
-      "Mains": "Hands",
-      "Pieds": "Feet",
-      "Corps": "Body",
-      "Chute": "Fall",
-      "Détection": "Detection",
-      "Auditive": "Hearing",
-      "Éclairage": "Lighting"
-    },
-    
-    // Equipment - Head protection
-    equipment: {
-      "helmet-class-e": "Class E helmet (20kV)",
-      "helmet-standard": "Standard safety helmet",
-      "bump-cap": "Bump cap",
-      
-      // Eye protection
-      "safety-glasses": "Safety glasses",
-      "safety-goggles": "Safety goggles",
-      "face-shield": "Face shield",
-      "welding-mask": "Welding mask",
-      
-      // Respiratory protection
-      "n95-mask": "N95 mask",
-      "p100-mask": "P100 mask",
-      "half-face-respirator": "Half-face respirator",
-      "full-face-respirator": "Full-face respirator",
-      "scba": "Self-contained breathing apparatus",
-      
-      // Hand protection
-      "work-gloves": "Work gloves",
-      "electrical-gloves": "Class 2 insulating gloves",
-      "cut-resistant-gloves": "Cut-resistant gloves",
-      "chemical-gloves": "Chemical gloves",
-      "welding-gloves": "Welding gloves",
-      
-      // Foot protection
-      "safety-boots": "Dielectric safety boots",
-      "steel-toe-boots": "Steel toe boots",
-      "chemical-boots": "Chemical boots",
-      "slip-resistant-shoes": "Slip-resistant shoes",
-      
-      // Body protection
-      "high-vis-vest": "High-visibility vest",
-      "arc-flash-suit": "Arc flash suit",
-      "chemical-suit": "Chemical suit",
-      "coveralls": "Work coveralls",
-      "lab-coat": "Lab coat",
-      
-      // Fall protection
-      "fall-harness": "Fall arrest harness",
-      "safety-lanyard": "Safety lanyard",
-      "self-retracting-lifeline": "Self-retracting lifeline",
-      "positioning-belt": "Positioning belt",
-      
-      // Detection and measurement
-      "gas-detector-4": "4-gas detector",
-      "radiation-detector": "Radiation detector",
-      "noise-dosimeter": "Noise dosimeter",
-      "vibration-meter": "Vibration meter",
-      
-      // Hearing protection
-      "ear-plugs": "Ear plugs",
-      "ear-muffs": "Ear muffs",
-      "communication-headset": "Communication headset",
-      
-      // Lighting and signaling
-      "flashlight": "Flashlight",
-      "headlamp": "Headlamp",
-      "emergency-beacon": "Emergency beacon"
-    }
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== FONCTION POUR GÉNÉRER LA LISTE D'ÉQUIPEMENTS TRADUITE ===================
-const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
-  const t = translations[language];
+const getEquipmentList = (): Equipment[] => {
+  const t: any = getTranslations('steps.step2');
+  const eq = t.equipment || {};
+  const cat = t.categoryNames || {};
   
   return [
     // Protection tête
     { 
       id: 'helmet-class-e', 
-      name: t.equipment['helmet-class-e'], 
-      category: t.categoryNames['Tête'], 
+      name: eq['helmet-class-e'] || 'helmet-class-e',
+      category: cat['Tête'] || 'Tête',
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'high', 
@@ -257,8 +48,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'helmet-standard', 
-      name: t.equipment['helmet-standard'], 
-      category: t.categoryNames['Tête'], 
+      name: eq['helmet-standard'] || 'helmet-standard',
+      category: cat['Tête'] || 'Tête',
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'medium', 
@@ -266,8 +57,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'bump-cap', 
-      name: t.equipment['bump-cap'], 
-      category: t.categoryNames['Tête'], 
+      name: eq['bump-cap'] || 'bump-cap',
+      category: cat['Tête'] || 'Tête',
       required: false, 
       certification: 'CSA Z94.1', 
       priority: 'low', 
@@ -277,8 +68,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection oculaire
     { 
       id: 'safety-glasses', 
-      name: t.equipment['safety-glasses'], 
-      category: t.categoryNames['Yeux'], 
+      name: eq['safety-glasses'], 
+      category: cat['Yeux'], 
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'high', 
@@ -286,8 +77,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'safety-goggles', 
-      name: t.equipment['safety-goggles'], 
-      category: t.categoryNames['Yeux'], 
+      name: eq['safety-goggles'], 
+      category: cat['Yeux'], 
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'medium', 
@@ -295,8 +86,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'face-shield', 
-      name: t.equipment['face-shield'], 
-      category: t.categoryNames['Yeux'], 
+      name: eq['face-shield'], 
+      category: cat['Yeux'], 
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'medium', 
@@ -304,8 +95,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'welding-mask', 
-      name: t.equipment['welding-mask'], 
-      category: t.categoryNames['Yeux'], 
+      name: eq['welding-mask'], 
+      category: cat['Yeux'], 
       required: false, 
       certification: 'CSA Z94.3', 
       priority: 'high', 
@@ -315,8 +106,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection respiratoire
     { 
       id: 'n95-mask', 
-      name: t.equipment['n95-mask'], 
-      category: t.categoryNames['Respiratoire'], 
+      name: eq['n95-mask'], 
+      category: cat['Respiratoire'], 
       required: false, 
       certification: 'NIOSH N95', 
       priority: 'medium', 
@@ -324,8 +115,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'p100-mask', 
-      name: t.equipment['p100-mask'], 
-      category: t.categoryNames['Respiratoire'], 
+      name: eq['p100-mask'], 
+      category: cat['Respiratoire'], 
       required: false, 
       certification: 'NIOSH P100', 
       priority: 'high', 
@@ -333,8 +124,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'half-face-respirator', 
-      name: t.equipment['half-face-respirator'], 
-      category: t.categoryNames['Respiratoire'], 
+      name: eq['half-face-respirator'], 
+      category: cat['Respiratoire'], 
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
@@ -342,8 +133,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'full-face-respirator', 
-      name: t.equipment['full-face-respirator'], 
-      category: t.categoryNames['Respiratoire'], 
+      name: eq['full-face-respirator'], 
+      category: cat['Respiratoire'], 
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
@@ -351,8 +142,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'scba', 
-      name: t.equipment['scba'], 
-      category: t.categoryNames['Respiratoire'], 
+      name: eq['scba'], 
+      category: cat['Respiratoire'], 
       required: false, 
       certification: 'NIOSH', 
       priority: 'high', 
@@ -362,8 +153,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection mains
     { 
       id: 'work-gloves', 
-      name: t.equipment['work-gloves'], 
-      category: t.categoryNames['Mains'], 
+      name: eq['work-gloves'], 
+      category: cat['Mains'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
@@ -371,8 +162,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'electrical-gloves', 
-      name: t.equipment['electrical-gloves'], 
-      category: t.categoryNames['Mains'], 
+      name: eq['electrical-gloves'], 
+      category: cat['Mains'], 
       required: false, 
       certification: 'ASTM D120', 
       priority: 'high', 
@@ -380,8 +171,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'cut-resistant-gloves', 
-      name: t.equipment['cut-resistant-gloves'], 
-      category: t.categoryNames['Mains'], 
+      name: eq['cut-resistant-gloves'], 
+      category: cat['Mains'], 
       required: false, 
       certification: 'ANSI A4', 
       priority: 'high', 
@@ -389,8 +180,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'chemical-gloves', 
-      name: t.equipment['chemical-gloves'], 
-      category: t.categoryNames['Mains'], 
+      name: eq['chemical-gloves'], 
+      category: cat['Mains'], 
       required: false, 
       certification: 'EN 374', 
       priority: 'high', 
@@ -398,8 +189,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'welding-gloves', 
-      name: t.equipment['welding-gloves'], 
-      category: t.categoryNames['Mains'], 
+      name: eq['welding-gloves'], 
+      category: cat['Mains'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
@@ -409,8 +200,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection pieds
     { 
       id: 'safety-boots', 
-      name: t.equipment['safety-boots'], 
-      category: t.categoryNames['Pieds'], 
+      name: eq['safety-boots'], 
+      category: cat['Pieds'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'high', 
@@ -418,8 +209,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'steel-toe-boots', 
-      name: t.equipment['steel-toe-boots'], 
-      category: t.categoryNames['Pieds'], 
+      name: eq['steel-toe-boots'], 
+      category: cat['Pieds'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
@@ -427,8 +218,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'chemical-boots', 
-      name: t.equipment['chemical-boots'], 
-      category: t.categoryNames['Pieds'], 
+      name: eq['chemical-boots'], 
+      category: cat['Pieds'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'medium', 
@@ -436,8 +227,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'slip-resistant-shoes', 
-      name: t.equipment['slip-resistant-shoes'], 
-      category: t.categoryNames['Pieds'], 
+      name: eq['slip-resistant-shoes'], 
+      category: cat['Pieds'], 
       required: false, 
       certification: 'CSA Z195', 
       priority: 'low', 
@@ -447,8 +238,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection corps
     { 
       id: 'high-vis-vest', 
-      name: t.equipment['high-vis-vest'], 
-      category: t.categoryNames['Corps'], 
+      name: eq['high-vis-vest'], 
+      category: cat['Corps'], 
       required: false, 
       certification: 'CSA Z96', 
       priority: 'medium', 
@@ -456,8 +247,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'arc-flash-suit', 
-      name: t.equipment['arc-flash-suit'], 
-      category: t.categoryNames['Corps'], 
+      name: eq['arc-flash-suit'], 
+      category: cat['Corps'], 
       required: false, 
       certification: 'NFPA 70E', 
       priority: 'high', 
@@ -465,8 +256,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'chemical-suit', 
-      name: t.equipment['chemical-suit'], 
-      category: t.categoryNames['Corps'], 
+      name: eq['chemical-suit'], 
+      category: cat['Corps'], 
       required: false, 
       certification: 'EN 14325', 
       priority: 'high', 
@@ -474,8 +265,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'coveralls', 
-      name: t.equipment['coveralls'], 
-      category: t.categoryNames['Corps'], 
+      name: eq['coveralls'], 
+      category: cat['Corps'], 
       required: false, 
       certification: 'CSA', 
       priority: 'low', 
@@ -483,8 +274,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'lab-coat', 
-      name: t.equipment['lab-coat'], 
-      category: t.categoryNames['Corps'], 
+      name: eq['lab-coat'], 
+      category: cat['Corps'], 
       required: false, 
       certification: 'NFPA', 
       priority: 'medium', 
@@ -494,8 +285,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection chute
     { 
       id: 'fall-harness', 
-      name: t.equipment['fall-harness'], 
-      category: t.categoryNames['Chute'], 
+      name: eq['fall-harness'], 
+      category: cat['Chute'], 
       required: false, 
       certification: 'CSA Z259.10', 
       priority: 'high', 
@@ -503,8 +294,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'safety-lanyard', 
-      name: t.equipment['safety-lanyard'], 
-      category: t.categoryNames['Chute'], 
+      name: eq['safety-lanyard'], 
+      category: cat['Chute'], 
       required: false, 
       certification: 'CSA Z259.11', 
       priority: 'high', 
@@ -512,8 +303,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'self-retracting-lifeline', 
-      name: t.equipment['self-retracting-lifeline'], 
-      category: t.categoryNames['Chute'], 
+      name: eq['self-retracting-lifeline'], 
+      category: cat['Chute'], 
       required: false, 
       certification: 'CSA Z259.2.2', 
       priority: 'high', 
@@ -521,8 +312,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'positioning-belt', 
-      name: t.equipment['positioning-belt'], 
-      category: t.categoryNames['Chute'], 
+      name: eq['positioning-belt'], 
+      category: cat['Chute'], 
       required: false, 
       certification: 'CSA Z259.1', 
       priority: 'medium', 
@@ -532,8 +323,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Détection et mesure
     { 
       id: 'gas-detector-4', 
-      name: t.equipment['gas-detector-4'], 
-      category: t.categoryNames['Détection'], 
+      name: eq['gas-detector-4'], 
+      category: cat['Détection'], 
       required: false, 
       certification: 'CSA C22.2', 
       priority: 'high', 
@@ -541,8 +332,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'radiation-detector', 
-      name: t.equipment['radiation-detector'], 
-      category: t.categoryNames['Détection'], 
+      name: eq['radiation-detector'], 
+      category: cat['Détection'], 
       required: false, 
       certification: 'IEC 61526', 
       priority: 'high', 
@@ -550,8 +341,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'noise-dosimeter', 
-      name: t.equipment['noise-dosimeter'], 
-      category: t.categoryNames['Détection'], 
+      name: eq['noise-dosimeter'], 
+      category: cat['Détection'], 
       required: false, 
       certification: 'IEC 61252', 
       priority: 'medium', 
@@ -559,8 +350,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'vibration-meter', 
-      name: t.equipment['vibration-meter'], 
-      category: t.categoryNames['Détection'], 
+      name: eq['vibration-meter'], 
+      category: cat['Détection'], 
       required: false, 
       certification: 'ISO 8041', 
       priority: 'medium', 
@@ -570,8 +361,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Protection auditive
     { 
       id: 'ear-plugs', 
-      name: t.equipment['ear-plugs'], 
-      category: t.categoryNames['Auditive'], 
+      name: eq['ear-plugs'], 
+      category: cat['Auditive'], 
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'medium', 
@@ -579,8 +370,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'ear-muffs', 
-      name: t.equipment['ear-muffs'], 
-      category: t.categoryNames['Auditive'], 
+      name: eq['ear-muffs'], 
+      category: cat['Auditive'], 
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'medium', 
@@ -588,8 +379,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'communication-headset', 
-      name: t.equipment['communication-headset'], 
-      category: t.categoryNames['Auditive'], 
+      name: eq['communication-headset'], 
+      category: cat['Auditive'], 
       required: false, 
       certification: 'CSA Z94.2', 
       priority: 'low', 
@@ -599,8 +390,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     // Éclairage et signalisation
     { 
       id: 'flashlight', 
-      name: t.equipment['flashlight'], 
-      category: t.categoryNames['Éclairage'], 
+      name: eq['flashlight'], 
+      category: cat['Éclairage'], 
       required: false, 
       certification: 'Ex ia', 
       priority: 'medium', 
@@ -608,8 +399,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'headlamp', 
-      name: t.equipment['headlamp'], 
-      category: t.categoryNames['Éclairage'], 
+      name: eq['headlamp'], 
+      category: cat['Éclairage'], 
       required: false, 
       certification: 'Ex ia', 
       priority: 'medium', 
@@ -617,8 +408,8 @@ const getEquipmentList = (language: 'fr' | 'en'): Equipment[] => {
     },
     { 
       id: 'emergency-beacon', 
-      name: t.equipment['emergency-beacon'], 
-      category: t.categoryNames['Éclairage'], 
+      name: eq['emergency-beacon'], 
+      category: cat['Éclairage'], 
       required: false, 
       certification: 'Transport Canada', 
       priority: 'low', 
@@ -634,7 +425,11 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   errors
 }) => {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step2');
   
   // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
@@ -645,7 +440,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
     if (formData.equipment?.list && formData.equipment.list.length > 0) {
       // Si nous avons déjà des équipements sauvegardés, les utiliser mais mettre à jour les traductions
       const savedEquipment = formData.equipment.list;
-      const translatedEquipment = getEquipmentList(language);
+      const translatedEquipment = getEquipmentList();
       
       // Fusionner les données sauvegardées avec les nouvelles traductions
       return translatedEquipment.map(translatedItem => {
@@ -653,7 +448,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
         return savedItem ? { ...translatedItem, required: savedItem.required } : translatedItem;
       });
     }
-    return getEquipmentList(language);
+    return getEquipmentList();
   });
 
   // =================== FONCTIONS UTILITAIRES ===================
@@ -667,7 +462,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       item.name.toLowerCase().includes(searchLower) ||
       item.category.toLowerCase().includes(searchLower) ||
       (item.certification?.toLowerCase().includes(searchLower)) ||
-      (item.priority && t.priorities[item.priority].toLowerCase().includes(searchLower));
+      (item.priority && (priorities[item.priority] || '').toLowerCase().includes(searchLower));
     
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -734,7 +529,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   };
 
   const getPriorityLabel = (priority?: string) => {
-    return t.priorities[priority as keyof typeof t.priorities] || t.priorities.default;
+        return priorities[priority as keyof typeof priorities] || priorities.default;
   };
 
   // =================== HANDLERS DE RECHERCHE AVANCÉE ===================
@@ -786,7 +581,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   // =================== EFFET POUR METTRE À JOUR LES TRADUCTIONS ===================
   React.useEffect(() => {
     // Mettre à jour les traductions quand la langue change
-    const translatedEquipment = getEquipmentList(language);
+    const translatedEquipment = getEquipmentList();
     const updatedEquipment = translatedEquipment.map(translatedItem => {
       const currentItem = equipment.find(item => item.id === translatedItem.id);
       return currentItem ? { ...translatedItem, required: currentItem.required } : translatedItem;

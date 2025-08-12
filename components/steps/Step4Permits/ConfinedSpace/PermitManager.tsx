@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   FileText, Database, QrCode, Printer, Mail, Share, Download, 
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
   Wrench, Activity, Eye, Globe, Smartphone, Copy, Check,
@@ -10,6 +10,7 @@ import {
   Search, X, Plus, Edit3, Trash2, RefreshCw, Upload,
   ArrowRight, ArrowLeft, Star, Target, Zap, Wind, History
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // Import SafetyManager et styles unifiés
 import { ConfinedSpaceComponentProps, ConfinedSpaceDetails } from './SafetyManager';
@@ -75,170 +76,7 @@ function isRescuePlanComplete(rescuePlan: any): boolean {
 }
 
 // =================== TRADUCTIONS ===================
-const translations = {
-  fr: {
-    title: "Gestion et Finalisation du Permis",
-    subtitle: "Tableau de bord centralisé pour validation, sauvegarde, historique et partage",
-    
-    // Actions principales
-    savePermit: "Sauvegarder",
-    printPDF: "Imprimer PDF",
-    emailPermit: "Envoyer par Email",
-    sharePermit: "Partager",
-    generateQR: "Générer QR Code",
-    exportData: "Exporter Données",
-    searchDatabase: "Rechercher Base",
-    viewHistory: "Voir Historique",
-    newPermit: "Nouveau Permis",
-    
-    // Sections
-    summary: "Résumé du Permis",
-    validation: "Validation et Conformité",
-    actions: "Actions du Permis",
-    statistics: "Statistiques",
-    qrCode: "Code QR - Accès Mobile",
-    sharing: "Partage et Distribution",
-    history: "Historique des Permis",
-    database: "Base de Données",
-    
-    // Statuts
-    complete: "Complété",
-    incomplete: "Incomplet",
-    valid: "Valide",
-    invalid: "Non valide",
-    saving: "Sauvegarde...",
-    saved: "Sauvegardé",
-    loading: "Chargement...",
-    searching: "Recherche...",
-    
-    // Messages
-    saveSuccess: "Permis sauvegardé avec succès!",
-    validationPassed: "Toutes les validations sont réussies",
-    validationErrors: "Erreurs de validation détectées",
-    qrGenerated: "Code QR généré avec succès",
-    linkCopied: "Lien copié dans le presse-papiers",
-    pdfGenerated: "PDF généré avec succès",
-    emailSent: "Email envoyé avec succès",
-    noResults: "Aucun résultat trouvé",
-    searchPlaceholder: "Rechercher par numéro, projet, lieu...",
-    
-    // Sections du permis
-    siteInformation: "Informations du Site",
-    rescuePlan: "Plan de Sauvetage", 
-    atmosphericTesting: "Tests Atmosphériques",
-    entryRegistry: "Registre d'Entrée",
-    
-    // Statistiques
-    totalPermits: "Total Permis",
-    activePermits: "Permis Actifs",
-    completedPermits: "Permis Complétés",
-    draftPermits: "Brouillons",
-    dangerousSpaces: "Espaces Dangereux",
-    safeSpaces: "Espaces Sécuritaires",
-    avgCompletion: "Complétude Moyenne",
-    lastActivity: "Dernière Activité",
-    
-    // Status
-    draft: "Brouillon",
-    active: "Actif",
-    completed: "Complété",
-    cancelled: "Annulé",
-    
-    // Types d'espaces
-    spaceTypes: {
-      tank: "Réservoir",
-      vessel: "Cuve",
-      silo: "Silo",
-      pit: "Fosse",
-      vault: "Voûte",
-      tunnel: "Tunnel",
-      trench: "Tranchée",
-      manhole: "Regard",
-      storage: "Stockage",
-      boiler: "Chaudière",
-      duct: "Conduit",
-      chamber: "Chambre",
-      other: "Autre"
-    }
-  },
-  en: {
-    title: "Permit Management and Finalization",
-    subtitle: "Centralized dashboard for validation, saving, history and sharing",
-    
-    savePermit: "Save",
-    printPDF: "Print PDF",
-    emailPermit: "Send by Email",
-    sharePermit: "Share",
-    generateQR: "Generate QR Code",
-    exportData: "Export Data",
-    searchDatabase: "Search Database",
-    viewHistory: "View History",
-    newPermit: "New Permit",
-    
-    summary: "Permit Summary",
-    validation: "Validation and Compliance",
-    actions: "Permit Actions",
-    statistics: "Statistics",
-    qrCode: "QR Code - Mobile Access",
-    sharing: "Sharing and Distribution",
-    history: "Permit History",
-    database: "Database",
-    
-    complete: "Complete",
-    incomplete: "Incomplete",
-    valid: "Valid",
-    invalid: "Invalid",
-    saving: "Saving...",
-    saved: "Saved",
-    loading: "Loading...",
-    searching: "Searching...",
-    
-    saveSuccess: "Permit saved successfully!",
-    validationPassed: "All validations passed",
-    validationErrors: "Validation errors detected",
-    qrGenerated: "QR Code generated successfully",
-    linkCopied: "Link copied to clipboard",
-    pdfGenerated: "PDF generated successfully",
-    emailSent: "Email sent successfully",
-    noResults: "No results found",
-    searchPlaceholder: "Search by number, project, location...",
-    
-    siteInformation: "Site Information",
-    rescuePlan: "Rescue Plan",
-    atmosphericTesting: "Atmospheric Testing", 
-    entryRegistry: "Entry Registry",
-    
-    totalPermits: "Total Permits",
-    activePermits: "Active Permits",
-    completedPermits: "Completed Permits",
-    draftPermits: "Drafts",
-    dangerousSpaces: "Dangerous Spaces",
-    safeSpaces: "Safe Spaces",
-    avgCompletion: "Average Completion",
-    lastActivity: "Last Activity",
-    
-    draft: "Draft",
-    active: "Active",
-    completed: "Completed",
-    cancelled: "Cancelled",
-    
-    spaceTypes: {
-      tank: "Tank",
-      vessel: "Vessel",
-      silo: "Silo",
-      pit: "Pit",
-      vault: "Vault",
-      tunnel: "Tunnel",
-      trench: "Trench",
-      manhole: "Manhole",
-      storage: "Storage",
-      boiler: "Boiler",
-      duct: "Duct",
-      chamber: "Chamber",
-      other: "Other"
-    }
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== COMPOSANT PRINCIPAL ===================
 const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
@@ -250,7 +88,11 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   safetyManager
 }) => {
   const currentIsMobile = propIsMobile || (typeof window !== 'undefined' && window.innerWidth < 768);
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step4.permitManager');
   
   // =================== ÉTATS LOCAUX ===================
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');

@@ -272,9 +272,26 @@ export const TRANSLATIONS: LanguageResources = {
       currency: 'CAD',
       ppm: 'ppm',
       decibels: 'dB'
+    },
+    steps: {
+      step1: {
+        addLocation: 'Ajouter Emplacement',
+        removeLocation: 'Supprimer cet emplacement'
+      },
+      step2: {
+        title: '🛡️ Équipements de Protection Individuelle',
+        subtitle: 'Sélectionnez tous les EPI requis pour ce travail en cochant les cases',
+        searchPlaceholder: 'Rechercher un équipement...'
+      },
+      step5: {
+        title: 'Validation & Approbation Équipe'
+      },
+      step6: {
+        title: '🛡️ Finalisation AST Complète'
+      }
     }
   },
-  
+
   en: {
     // Navigation and interface
     nav: {
@@ -519,6 +536,23 @@ export const TRANSLATIONS: LanguageResources = {
       currency: 'CAD',
       ppm: 'ppm',
       decibels: 'dB'
+    },
+    steps: {
+      step1: {
+        addLocation: 'Add Location',
+        removeLocation: 'Remove this location'
+      },
+      step2: {
+        title: '🛡️ Personal Protective Equipment',
+        subtitle: 'Select all PPE required for this work by checking the boxes',
+        searchPlaceholder: 'Search for equipment...'
+      },
+      step5: {
+        title: 'Team Validation & Approval'
+      },
+      step6: {
+        title: '🛡️ Complete JSA Finalization'
+      }
     }
   }
 };
@@ -590,6 +624,22 @@ export class TranslationService {
     }
     
     return this.interpolate(translation, interpolations);
+  }
+
+  /**
+   * Récupère un objet de traductions pour un namespace donné
+   */
+  getTranslations(namespace: string): any {
+    const keys = namespace.split('.');
+    let current: any = this.translations[this.currentLanguage];
+    for (const k of keys) {
+      if (current && typeof current === 'object' && k in current) {
+        current = current[k];
+      } else {
+        return {};
+      }
+    }
+    return current;
   }
 
   /**
@@ -712,6 +762,13 @@ export const translationService = new TranslationService();
  */
 export const t = (key: string, interpolations?: Record<string, string | number>): string => {
   return translationService.t(key, interpolations);
+};
+
+/**
+ * Récupère un objet de traductions pour un namespace donné
+ */
+export const getTranslations = (namespace: string): any => {
+  return translationService.getTranslations(namespace);
 };
 
 /**

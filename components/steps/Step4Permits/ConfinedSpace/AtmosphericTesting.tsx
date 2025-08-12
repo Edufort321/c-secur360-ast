@@ -6,6 +6,7 @@ import {
   Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // Import des types et du hook centralisé
 import {
@@ -86,82 +87,7 @@ interface LegalAtmosphericData {
 }
 
 // =================== TRADUCTIONS COMPLÈTES ===================
-const translations = {
-  fr: {
-    title: "Tests Atmosphériques Obligatoires",
-    legalCompliance: "Conformité Réglementaire Tests Atmosphériques",
-    limits: "Limites Réglementaires",
-    newReading: "Nouvelle Mesure Atmosphérique",
-    readingHistory: "Historique des Mesures",
-    continuousMonitoring: "Surveillance Continue Obligatoire",
-    multiLevelTesting: "Tests Multi-Niveaux Obligatoires",
-    deviceCalibration: "Calibration Équipement de Mesure",
-    addReading: "Ajouter Mesure",
-    level: "Niveau dans l'espace",
-    topLevel: "Niveau supérieur",
-    middleLevel: "Niveau moyen", 
-    bottomLevel: "Niveau inférieur",
-    oxygen: "Oxygène (O₂)",
-    lel: "Limite explosive (LEL)",
-    h2s: "Sulfure d'hydrogène (H₂S)",
-    co: "Monoxyde de carbone (CO)",
-    temperature: "Température",
-    humidity: "Humidité",
-    deviceId: "ID Appareil",
-    notes: "Notes",
-    safe: "SÉCURITAIRE",
-    warning: "ATTENTION", 
-    danger: "DANGER",
-    criticalValues: "VALEURS CRITIQUES",
-    retestRequired: "RETEST OBLIGATOIRE",
-    evacuationRequired: "ÉVACUATION REQUISE",
-    startMonitoring: "Démarrer Surveillance",
-    stopMonitoring: "Arrêter Surveillance",
-    resetTimer: "Réinitialiser Timer",
-    timeRemaining: "Temps restant",
-    frequencyMinutes: "Fréquence réglementaire",
-    calibrated: "Calibré",
-    certified: "Certifié",
-    validated: "Validé"
-  },
-  en: {
-    title: "Mandatory Atmospheric Testing",
-    legalCompliance: "Atmospheric Testing Regulatory Compliance",
-    limits: "Regulatory Limits",
-    newReading: "New Atmospheric Reading",
-    readingHistory: "Reading History",
-    continuousMonitoring: "Mandatory Continuous Monitoring",
-    multiLevelTesting: "Mandatory Multi-Level Testing",
-    deviceCalibration: "Measuring Equipment Calibration",
-    addReading: "Add Reading",
-    level: "Level in space",
-    topLevel: "Top level",
-    middleLevel: "Middle level",
-    bottomLevel: "Bottom level", 
-    oxygen: "Oxygen (O₂)",
-    lel: "Lower Explosive Limit (LEL)",
-    h2s: "Hydrogen Sulfide (H₂S)",
-    co: "Carbon Monoxide (CO)",
-    temperature: "Temperature",
-    humidity: "Humidity",
-    deviceId: "Device ID",
-    notes: "Notes",
-    safe: "SAFE",
-    warning: "WARNING",
-    danger: "DANGER", 
-    criticalValues: "CRITICAL VALUES",
-    retestRequired: "RETEST REQUIRED",
-    evacuationRequired: "EVACUATION REQUIRED",
-    startMonitoring: "Start Monitoring",
-    stopMonitoring: "Stop Monitoring", 
-    resetTimer: "Reset Timer",
-    timeRemaining: "Time remaining",
-    frequencyMinutes: "Regulatory frequency",
-    calibrated: "Calibrated",
-    certified: "Certified",
-    validated: "Validated"
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
@@ -220,7 +146,11 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   const [isMonitoring, setIsMonitoring] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step4.atmosphericTesting');
 
   // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
   const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {

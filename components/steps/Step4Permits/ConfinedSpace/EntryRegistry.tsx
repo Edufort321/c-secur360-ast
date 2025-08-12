@@ -6,9 +6,10 @@ import {
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
   PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
   UserPlus, UserMinus, AlertTriangle, FileText, PenTool as Signature, 
-  Volume2, Camera, Bluetooth, Battery, Signal, MapPin, Calendar, User, 
+  Volume2, Camera, Bluetooth, Battery, Signal, MapPin, Calendar, User,
   Phone, Mail, Building, Briefcase, Award
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // Import des types et du hook centralisé
 import {
@@ -97,88 +98,7 @@ interface CommunicationLog {
 }
 
 // =================== TRADUCTIONS COMPLÈTES ===================
-const translations = {
-  fr: {
-    title: "Registre d'Entrée Obligatoire",
-    legalCompliance: "Conformité Réglementaire Entrée/Sortie",
-    currentOccupancy: "Occupation Actuelle",
-    entryLog: "Journal des Entrées/Sorties",
-    personnelManagement: "Gestion du Personnel",
-    communicationSystem: "Système de Communication",
-    emergencyProcedures: "Procédures d'Urgence",
-    addPerson: "Ajouter Personne",
-    recordEntry: "Enregistrer Entrée",
-    recordExit: "Enregistrer Sortie",
-    emergencyEvacuation: "Évacuation d'Urgence",
-    communicationCheck: "Vérification Communication",
-    personnelInside: "Personnel à l'intérieur",
-    personnelOutside: "Personnel à l'extérieur",
-    maxOccupancy: "Occupation maximale",
-    timeInside: "Temps à l'intérieur",
-    lastCommunication: "Dernière communication",
-    equipmentStatus: "État équipement",
-    entrant: "Entrant",
-    attendant: "Surveillant",
-    supervisor: "Superviseur",
-    rescuer: "Sauveteur",
-    emergency: "Urgence",
-    verified: "Vérifié",
-    needsCheck: "À vérifier",
-    expired: "Expiré",
-    inside: "À l'intérieur",
-    outside: "À l'extérieur",
-    unknown: "Inconnu",
-    signalStrength: "Force signal",
-    responseReceived: "Réponse reçue",
-    emergencySignal: "Signal d'urgence",
-    authorized: "Autorisé",
-    unauthorized: "Non autorisé",
-    attendantRequired: "Surveillant obligatoire",
-    communicationRequired: "Communication obligatoire",
-    maxTimeExceeded: "Temps maximum dépassé",
-    emergencyEvacuationInitiated: "Évacuation d'urgence déclenchée"
-  },
-  en: {
-    title: "Mandatory Entry Registry",
-    legalCompliance: "Entry/Exit Regulatory Compliance",
-    currentOccupancy: "Current Occupancy",
-    entryLog: "Entry/Exit Log",
-    personnelManagement: "Personnel Management",
-    communicationSystem: "Communication System",
-    emergencyProcedures: "Emergency Procedures",
-    addPerson: "Add Person",
-    recordEntry: "Record Entry",
-    recordExit: "Record Exit",
-    emergencyEvacuation: "Emergency Evacuation",
-    communicationCheck: "Communication Check",
-    personnelInside: "Personnel Inside",
-    personnelOutside: "Personnel Outside",
-    maxOccupancy: "Maximum occupancy",
-    timeInside: "Time inside",
-    lastCommunication: "Last communication",
-    equipmentStatus: "Equipment status",
-    entrant: "Entrant",
-    attendant: "Attendant",
-    supervisor: "Supervisor",
-    rescuer: "Rescuer",
-    emergency: "Emergency",
-    verified: "Verified",
-    needsCheck: "Needs check",
-    expired: "Expired",
-    inside: "Inside",
-    outside: "Outside",
-    unknown: "Unknown",
-    signalStrength: "Signal strength",
-    responseReceived: "Response received",
-    emergencySignal: "Emergency signal",
-    authorized: "Authorized",
-    unauthorized: "Unauthorized",
-    attendantRequired: "Attendant required",
-    communicationRequired: "Communication required",
-    maxTimeExceeded: "Maximum time exceeded",
-    emergencyEvacuationInitiated: "Emergency evacuation initiated"
-  }
-};
+// translations moved to app/utils/translations.ts
 
 // =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
@@ -243,7 +163,11 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
   const [localEntryLogs, setLocalEntryLogs] = useState<EntryLog[]>([]); // ✅ Logs locaux pour affichage
 
-  const t = translations[language];
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step4.entryRegistry');
 
   // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
   const updateEntryRegistryData = React.useCallback((updates: Partial<EntryRegistryData>) => {

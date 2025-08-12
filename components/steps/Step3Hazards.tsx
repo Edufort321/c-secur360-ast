@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye, 
+import React, { useState, useEffect } from 'react';
+import {
+  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye,
   Zap, Wrench, Wind, Thermometer, Volume2, Activity,
   Plus, BarChart3, Star
 } from 'lucide-react';
+import { getTranslations, setLanguage } from '@/utils/translations';
 
 // =================== INTERFACES ===================
 interface Step3HazardsProps {
@@ -52,100 +53,12 @@ interface Standard {
 }
 
 // =================== TRADUCTIONS BILINGUES ===================
-const getTexts = (language: 'fr' | 'en') => {
-  if (language === 'en') {
-    return {
-      title: "⚠️ Hazard & Risk Identification",
-      subtitle: "Select potential hazards and define required control measures",
-      searchPlaceholder: "Search for a hazard...",
-      allCategories: "All categories",
-      hazardsIdentified: "Hazards identified",
-      highRisks: "High risks", 
-      controlsImplemented: "Controls implemented",
-      implementationRate: "Implementation rate",
-      controlMeasures: "Control measures",
-      noHazardsFound: "No hazards found",
-      noHazardsMessage: "Modify your search criteria to see more hazards",
-      responsible: "Responsible...",
-      standardsReferences: "📋 Standards & References:",
-      mandatory: "Mandatory",
-      recommended: "Recommended",
-      riskLevels: {
-        critical: "🔴 Critical",
-        high: "🟠 High",
-        medium: "🟡 Medium",
-        low: "🟢 Low"
-      },
-      controlCategories: {
-        elimination: "❌ Elimination",
-        substitution: "🔄 Substitution", 
-        engineering: "🔧 Engineering",
-        administrative: "📋 Administrative",
-        ppe: "🛡️ PPE"
-      },
-      categories: {
-        'Électrique': 'Electrical',
-        'Mécanique': 'Mechanical',
-        'Physique': 'Physical', 
-        'Chimique': 'Chemical',
-        'Ergonomique': 'Ergonomic',
-        'Environnemental': 'Environmental',
-        'Psychosocial': 'Psychosocial',
-        'Incendie': 'Fire',
-        'Transport': 'Transport'
-      }
-    };
-  }
-  
-  return {
-    title: "⚠️ Identification des Dangers & Risques",
-    subtitle: "Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis",
-    searchPlaceholder: "Rechercher un danger...",
-    allCategories: "Toutes catégories",
-    hazardsIdentified: "Dangers identifiés",
-    highRisks: "Risques élevés",
-    controlsImplemented: "Contrôles implantés", 
-    implementationRate: "Taux d'implantation",
-    controlMeasures: "Moyens de contrôle",
-    noHazardsFound: "Aucun danger trouvé",
-    noHazardsMessage: "Modifiez vos critères de recherche pour voir plus de dangers",
-    responsible: "Responsable...",
-    standardsReferences: "📋 Normes & Références :",
-    mandatory: "Obligatoire",
-    recommended: "Recommandé",
-    riskLevels: {
-      critical: "🔴 Critique",
-      high: "🟠 Élevé",
-      medium: "🟡 Moyen", 
-      low: "🟢 Faible"
-    },
-    controlCategories: {
-      elimination: "❌ Élimination",
-      substitution: "🔄 Substitution",
-      engineering: "🔧 Ingénierie", 
-      administrative: "📋 Administrative",
-      ppe: "🛡️ EPI"
-    },
-    categories: {
-      'Électrique': 'Électrique',
-      'Mécanique': 'Mécanique',
-      'Physique': 'Physique',
-      'Chimique': 'Chimique', 
-      'Ergonomique': 'Ergonomique',
-      'Environnemental': 'Environnemental',
-      'Psychosocial': 'Psychosocial',
-      'Incendie': 'Incendie',
-      'Transport': 'Transport'
-    }
-  };
-};
-
 // =================== FONCTION POUR TRADUIRE LES DANGERS ===================
 const translateHazards = (hazards: Hazard[], language: 'fr' | 'en'): Hazard[] => {
   if (language === 'fr') return hazards; // Déjà en français
   
   // Traductions EN pour les dangers
-  const translations: { [key: string]: { name: string; description: string; category: string; controls: { [key: string]: { name: string; description: string } } } } = {
+  const hazardTranslations: { [key: string]: { name: string; description: string; category: string; controls: { [key: string]: { name: string; description: string } } } } = {
     'elec-shock': {
       name: 'Electrocution / Electric shock',
       description: 'Direct or indirect contact with live parts',
@@ -372,7 +285,7 @@ const translateHazards = (hazards: Hazard[], language: 'fr' | 'en'): Hazard[] =>
   };
 
   return hazards.map(hazard => {
-    const translation = translations[hazard.id];
+    const translation = hazardTranslations[hazard.id];
     if (translation) {
       return {
         ...hazard,
@@ -1346,7 +1259,11 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   tenant,
   errors
 }) => {
-  const texts = getTexts(language);
+  useEffect(() => {
+    setLanguage(language);
+  }, [language]);
+
+  const t: any = getTranslations('steps.step3');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -1455,7 +1372,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getRiskLabel = (level: string) => {
-    return texts.riskLevels[level as keyof typeof texts.riskLevels] || '⚪ Indéterminé';
+    return t.riskLevels[level as keyof typeof t.riskLevels] || '⚪ Indéterminé';
   };
 
   const getCategoryIcon = (category: string) => {
@@ -1485,7 +1402,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   };
 
   const getControlCategoryLabel = (category: string) => {
-    return texts.controlCategories[category as keyof typeof texts.controlCategories] || '❓ Autre';
+    return t.controlCategories[category as keyof typeof t.controlCategories] || '❓ Autre';
   };
 
   // Effet pour mettre à jour les traductions quand la langue change
@@ -1612,27 +1529,27 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
         <div className="summary-header">
           <div className="summary-title">
             <AlertTriangle size={24} />
-            {texts.title}
+            {t.title}
           </div>
           <p style={{ color: '#d97706', margin: '0 0 8px', fontSize: '14px' }}>
-            {texts.subtitle}
+            {t.subtitle}
           </p>
           
           {selectedHazards.length > 0 && (
             <div className="summary-stats">
               <div className="stat-item">
                 <div className="stat-value">{selectedHazards.length}</div>
-                <div className="stat-label">{texts.hazardsIdentified}</div>
+                <div className="stat-label">{t.hazardsIdentified}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">{selectedHazards.filter(h => h.riskLevel === 'critical' || h.riskLevel === 'high').length}</div>
-                <div className="stat-label">{texts.highRisks}</div>
+                <div className="stat-label">{t.highRisks}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">
                   {selectedHazards.reduce((sum, h) => sum + h.controlMeasures.filter(c => c.implemented).length, 0)}
                 </div>
-                <div className="stat-label">{texts.controlsImplemented}</div>
+                <div className="stat-label">{t.controlsImplemented}</div>
               </div>
               <div className="stat-item">
                 <div className="stat-value">
@@ -1641,7 +1558,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                         selectedHazards.reduce((sum, h) => sum + h.controlMeasures.length, 0)) * 100)
                     : 0}%
                 </div>
-                <div className="stat-label">{texts.implementationRate}</div>
+                <div className="stat-label">{t.implementationRate}</div>
               </div>
             </div>
           )}
@@ -1656,7 +1573,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={texts.searchPlaceholder}
+                placeholder={t.searchPlaceholder}
                 className="search-field"
               />
             </div>
@@ -1665,7 +1582,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="category-select"
             >
-              <option value="all">{texts.allCategories} ({hazards.length})</option>
+              <option value="all">{t.allCategories} ({hazards.length})</option>
               {categories.map(category => {
                 const count = hazards.filter(h => h.category === category).length;
                 return (
@@ -1724,7 +1641,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                   <div className="controls-section">
                     <div className="controls-header">
                       <Shield size={16} />
-                      {texts.controlMeasures} ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
+                      {t.controlMeasures} ({hazard.controlMeasures.filter(c => c.implemented).length}/{hazard.controlMeasures.length})
                     </div>
                     
                     <div className="controls-grid">
@@ -1770,7 +1687,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                               {/* Standards/Normes associées */}
                               {control.standards && control.standards.length > 0 && (
                                 <div className="control-standards">
-                                  <div className="standards-label">{texts.standardsReferences}</div>
+                                  <div className="standards-label">{t.standardsReferences}</div>
                                   <div className="standards-list">
                                     {control.standards.map((standard, index) => (
                                       <div key={standard.id} className="standard-item">
@@ -1790,7 +1707,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                         <div className="standard-tooltip">
                                           <strong>{standard.fullName}</strong><br/>
                                           {standard.description}<br/>
-                                          <em>{standard.mandatory ? texts.mandatory : texts.recommended}</em>
+                                          <em>{standard.mandatory ? t.mandatory : t.recommended}</em>
                                         </div>
                                       </div>
                                     ))}
@@ -1805,7 +1722,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
                                     type="text"
                                     value={control.responsible || ''}
                                     onChange={(e) => updateControlMeasure(hazard.id, control.id, 'responsible', e.target.value)}
-                                    placeholder={texts.responsible}
+                                    placeholder={t.responsible}
                                     className="control-input"
                                   />
                                   <input
@@ -1831,8 +1748,8 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
         {filteredHazards.length === 0 && (
           <div className="no-results">
             <AlertTriangle size={48} style={{ margin: '0 auto 16px', color: '#64748b' }} />
-            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{texts.noHazardsFound}</h3>
-            <p style={{ margin: 0 }}>{texts.noHazardsMessage}</p>
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 8px' }}>{t.noHazardsFound}</h3>
+            <p style={{ margin: 0 }}>{t.noHazardsMessage}</p>
           </div>
         )}
       </div>
