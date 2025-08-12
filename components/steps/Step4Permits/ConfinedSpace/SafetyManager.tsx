@@ -6,22 +6,27 @@ import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
 // =================== CONFIGURATION SUPABASE ROBUSTE ===================
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const FALLBACK_URL = 'http://localhost:54321';
+const supabaseUrlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase: any = null;
 let supabaseEnabled = false;
 
 try {
-  if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
-    supabase = createClient(supabaseUrl, supabaseKey);
+  if (!supabaseKey) {
+    console.warn('SafetyManager: NEXT_PUBLIC_SUPABASE_ANON_KEY manquant. Configurez-le dans votre fichier .env.local. Utilisation du localStorage.');
+  } else {
+    const url = new URL(supabaseUrlEnv ?? FALLBACK_URL).toString();
+    if (!supabaseUrlEnv) {
+      console.warn(`SafetyManager: NEXT_PUBLIC_SUPABASE_URL manquant. Configurez-le dans votre fichier .env.local. Utilisation de ${FALLBACK_URL}`);
+    }
+    supabase = createClient(url, supabaseKey);
     supabaseEnabled = true;
     console.log('✅ SafetyManager: Supabase configuré');
-  } else {
-    console.log('📝 SafetyManager: Utilisation du localStorage');
   }
 } catch (error) {
-  console.log('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage');
+  console.error('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage', error);
   supabaseEnabled = false;
 }
 
