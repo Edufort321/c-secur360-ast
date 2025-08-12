@@ -638,7 +638,7 @@ function Step6Finalization({
       
       // ✅ Step 2 - Équipements de sécurité
       equipment: {
-        selected: formData?.equipment?.selected || formData?.selectedEquipment || [],
+        selected: formData?.equipment?.selected || [],
         categories: formData?.equipment?.categories || [],
         mandatory: formData?.equipment?.mandatory || [],
         optional: formData?.equipment?.optional || [],
@@ -649,27 +649,27 @@ function Step6Finalization({
       
       // ✅ Step 3 - Dangers et contrôles
       hazards: {
-        identified: formData?.hazards?.identified || formData?.selectedHazards || [],
+        identified: formData?.hazards?.identified || [],
         riskLevel: formData?.hazards?.riskLevel || 'medium',
         controlMeasures: formData?.hazards?.controlMeasures || [],
         residualRisk: formData?.hazards?.residualRisk || 'low',
         emergencyProcedures: formData?.hazards?.emergencyProcedures || [],
         monitoringRequired: formData?.hazards?.monitoringRequired || false
       },
-      
+
       // ✅ Step 4 - Permis et autorisations
       permits: {
-        required: formData?.permits?.required || formData?.selectedPermits || [],
+        required: formData?.permits?.required || [],
         authorities: formData?.permits?.authorities || [],
         validations: formData?.permits?.validations || [],
         expiry: formData?.permits?.expiry || [],
         documents: formData?.permits?.documents || [],
         specialRequirements: formData?.permits?.specialRequirements || []
       },
-      
+
       // ✅ Step 5 - Validation équipe
       validation: {
-        reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
+        reviewers: formData?.validation?.reviewers || [],
         approvals: formData?.validation?.approvals || [],
         signatures: formData?.validation?.signatures || [],
         finalApproval: formData?.validation?.finalApproval || false,
