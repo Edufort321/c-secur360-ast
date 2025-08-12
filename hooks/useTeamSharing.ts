@@ -329,7 +329,7 @@ export const useTeamSharing = (astId: string) => {
 
   // Fonction pour générer un ID de session
   const generateSessionId = (): string => {
-    return `ast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `ast-${Date.now()}-${crypto.randomUUID()}`;
   };
 
   // Fonction pour générer un lien de partage
