@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { 
-  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
-  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
+import {
+  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle,
+  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building,
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
+import { ASTFormData } from '@/app/types/astForm';
 
 // =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
@@ -18,13 +19,13 @@ import Step5Validation from '@/components/steps/Step5Validation';
 import Step6Finalization from '@/components/steps/Step6Finalization';
 
 // =================== INTERFACES PRINCIPALES (CONSERVÉES) ===================
-interface ASTFormProps {
+interface ASTFormProps<T extends ASTFormData = ASTFormData> {
   tenant: string;
   language: 'fr' | 'en';
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: T;
+  onDataChange: <K extends keyof T>(section: K, data: T[K]) => void;
 }
 
 // =================== TRADUCTIONS COMPLÈTES (CONSERVÉES INTÉGRALEMENT) ===================
@@ -225,14 +226,14 @@ const useIsMobile = () => {
 };
 
 // =================== COMPOSANT PRINCIPAL ASTFORM ===================
-export default function ASTForm({ 
-  tenant, 
-  language: initialLanguage = 'fr', 
-  userId, 
+export default function ASTForm<T extends ASTFormData = ASTFormData>({
+  tenant,
+  language: initialLanguage = 'fr',
+  userId,
   userRole = 'worker',
   formData,
   onDataChange
-}: ASTFormProps) {
+}: ASTFormProps<T>) {
   
   // =================== GESTION DE LA LANGUE OPTIMISÉE (CONSERVÉE) ===================
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>(() => {
@@ -259,7 +260,7 @@ export default function ASTForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // =================== DONNÉES AST STABLES (CONSERVÉES) ===================
-  const [astData, setAstData] = useState(() => ({
+  const [astData, setAstData] = useState<T>(() => ({
     ...formData,
     id: formData.id || `ast_${Date.now()}`,
     astNumber: formData.astNumber || `AST-${tenant.toUpperCase()}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
@@ -269,18 +270,18 @@ export default function ASTForm({
     updatedAt: new Date().toISOString(),
     createdBy: userId || 'user_anonymous',
     language: currentLanguage
-  }));
+  }) as T);
 
   // =================== 🔥 FIX ANTI-BOUCLES ULTRA-STABLE ===================
-  const stableFormDataRef = useRef(astData);
+  const stableFormDataRef = useRef<T>(astData);
   const renderCountRef = useRef(0);
   const lastUpdateRef = useRef<string>('');
   
   // ✅ HANDLER ULTRA-STABLE - INITIALISÉ UNE SEULE FOIS AVEC DEBOUNCE
-  const stableHandlerRef = useRef<(section: string, data: any) => void>();
+  const stableHandlerRef = useRef<(section: keyof T, data: T[keyof T]) => void>();
   
   if (!stableHandlerRef.current) {
-    stableHandlerRef.current = (section: string, data: any) => {
+    stableHandlerRef.current = (section, data) => {
       const updateKey = `${section}-${JSON.stringify(data).slice(0, 50)}`;
       
       // ✅ ÉVITER LES DOUBLONS
@@ -293,12 +294,12 @@ export default function ASTForm({
       console.log('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
       
       // ✅ MISE À JOUR SYNCHRONE DE L'ÉTAT LOCAL
-      setAstData((prev: any) => {
+      setAstData((prev: T) => {
         const newData = {
           ...prev,
           [section]: data,
           updatedAt: new Date().toISOString()
-        };
+        } as T;
         
         // ✅ MISE À JOUR DE LA REF POUR ÉVITER LES RE-RENDERS
         stableFormDataRef.current = newData;
