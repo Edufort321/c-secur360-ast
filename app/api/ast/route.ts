@@ -51,11 +51,12 @@ export async function POST(request: NextRequest) {
       message: 'AST sauvegardé avec succès!'
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving AST:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message 
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred'
+    return NextResponse.json({
+      success: false,
+      error: message
     }, { status: 500 })
   }
 }
@@ -84,9 +85,10 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ astForms })
     
-  } catch (error: any) {
-    return NextResponse.json({ 
-      error: error.message 
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred'
+    return NextResponse.json({
+      error: message
     }, { status: 500 })
   }
 }
