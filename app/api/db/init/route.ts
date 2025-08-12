@@ -8,11 +8,11 @@ export async function GET() {
     // Test de connexion à la base et création des tenants de démonstration
     await prisma.$connect()
     console.log('✅ Connected to database')
-    
+
     // Vérifier combien de tenants existent déjà
     const initialTenantCount = await prisma.tenant.count()
     console.log('📊 Existing tenants:', initialTenantCount)
-    
+
     // Créer tenant démo seulement s'il n'existe pas
     const demoTenant = await prisma.tenant.upsert({
       where: { subdomain: 'demo' },
@@ -23,7 +23,7 @@ export async function GET() {
         plan: 'demo'
       }
     })
-    
+
     // Créer tenant futureclient seulement s'il n'existe pas
     const futureClientTenant = await prisma.tenant.upsert({
       where: { subdomain: 'futureclient' },
@@ -34,7 +34,7 @@ export async function GET() {
         plan: 'trial'
       }
     })
-    
+
     // Garder le tenant c-secur360 pour usage interne si nécessaire
     const csecurTenant = await prisma.tenant.upsert({
       where: { subdomain: 'c-secur360' },
@@ -62,7 +62,7 @@ export async function GET() {
         admin: csecurTenant.companyName
       }
     })
-    
+
   } catch (error: unknown) {
     console.error('❌ Database error:', error)
 
