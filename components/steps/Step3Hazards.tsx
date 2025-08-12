@@ -1,19 +1,20 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye, 
+import {
+  AlertTriangle, Search, Filter, CheckCircle, Shield, Eye,
   Zap, Wrench, Wind, Thermometer, Volume2, Activity,
   Plus, BarChart3, Star
 } from 'lucide-react';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== INTERFACES ===================
 interface Step3HazardsProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
 }
 
 interface Hazard {

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { 
-  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle, 
-  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building, 
+import {
+  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle,
+  AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building,
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 (CONSERVÉS INTÉGRALEMENT) ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
@@ -23,8 +24,8 @@ interface ASTFormProps {
   language: 'fr' | 'en';
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
 }
 
 // =================== TRADUCTIONS COMPLÈTES (CONSERVÉES INTÉGRALEMENT) ===================

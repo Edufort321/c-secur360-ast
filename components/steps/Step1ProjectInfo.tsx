@@ -2,20 +2,21 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { 
+import {
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
   TrendingUp, Activity, Shield
 } from 'lucide-react';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== 🔥 INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }

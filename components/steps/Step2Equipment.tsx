@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
-  Zap, Activity, Star, AlertTriangle 
+import {
+  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand,
+  Zap, Activity, Star, AlertTriangle
 } from 'lucide-react';
+import type { ASTFormData } from '@/types/astForm';
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
 }
 
 interface Equipment {

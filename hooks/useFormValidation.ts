@@ -1,5 +1,6 @@
 // hooks/useFormValidation.ts
 import { useState, useCallback, useEffect } from 'react';
+import type { ASTFormData } from '@/types/astForm';
 
 export interface ValidationRule {
   required?: boolean;
@@ -327,7 +328,7 @@ export const useFormValidation = (
 };
 
 // Hook spécialisé pour la validation AST
-export const useASTFormValidation = (initialData: any) => {
+export const useASTFormValidation = (initialData: ASTFormData) => {
   const validationSchema: ValidationSchema = {
     // Validation étape 1 - Informations projet
     'projectInfo.projectName': {

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  Users, 
-  Clock, 
-  Shield, 
+import {
+  CheckCircle,
+  AlertTriangle,
+  Users,
+  Clock,
+  Shield,
   Eye,
   MessageSquare,
   ThumbsUp,
@@ -24,51 +24,12 @@ import {
   Trash2,
   BarChart3
 } from 'lucide-react';
+import type { ASTFormData, ASTFormValidationData, ASTFormTeamMember } from '@/types/astForm';
 
 // =================== INTERFACES ===================
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  department: string;
-  certification?: string;
-  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
-  comments?: string;
-  rating?: number;
-  validatedAt?: string;
-  signature?: string;
-}
-
-interface ValidationData {
-  reviewers: TeamMember[];
-  approvalRequired: boolean;
-  minimumReviewers: number;
-  reviewDeadline?: string;
-  validationCriteria: {
-    hazardIdentification: boolean;
-    controlMeasures: boolean;
-    equipmentSelection: boolean;
-    procedural: boolean;
-    regulatory: boolean;
-  };
-  finalApproval?: {
-    approvedBy: string;
-    approvedAt: string;
-    signature: string;
-    conditions?: string;
-  };
-}
-
 interface ValidationStepProps {
-  formData: {
-    validation?: ValidationData;
-    projectInfo?: any;
-    hazards?: any;
-    equipment?: any;
-    permits?: any;
-  };
-  onDataChange: (section: string, data: ValidationData) => void;
+  formData: ASTFormData;
+  onDataChange: <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => void;
   language: 'fr' | 'en';
   tenant: string;
 }
@@ -229,7 +190,7 @@ export default function Step5Validation({
   const t = translations[language];
   
   // ✅ FIX CRITIQUE : État local stable SANS useEffect problématique
-  const [validationData, setValidationData] = useState<ValidationData>(() => ({
+  const [validationData, setValidationData] = useState<ASTFormValidationData>(() => ({
     reviewers: [],
     approvalRequired: true,
     minimumReviewers: 2,
@@ -246,16 +207,18 @@ export default function Step5Validation({
 
   const [showAddReviewer, setShowAddReviewer] = useState(false);
   
-  const [newReviewer, setNewReviewer] = useState({
+  const [newReviewer, setNewReviewer] = useState<ASTFormTeamMember>({
+    id: '',
     name: '',
     role: '',
     email: '',
     department: '',
-    certification: ''
+    certification: '',
+    status: 'pending'
   });
 
   // ✅ FIX CRITIQUE : NOTIFICATION PARENT DIRECTE SANS BOUCLE
-  const notifyParent = useCallback((newData: ValidationData) => {
+  const notifyParent = useCallback((newData: ASTFormValidationData) => {
     console.log('🔥 Step5 - Notification parent directe:', newData);
     onDataChange('validation', newData);
   }, [onDataChange]);
@@ -266,13 +229,13 @@ export default function Step5Validation({
       return;
     }
 
-    const reviewer: TeamMember = {
+    const reviewer: ASTFormTeamMember = {
       id: Date.now().toString(),
       name: newReviewer.name.trim(),
       role: newReviewer.role.trim(),
       email: newReviewer.email.trim(),
       department: newReviewer.department.trim() || 'Non spécifié',
-      certification: newReviewer.certification.trim() || undefined,
+      certification: (newReviewer.certification || '').trim() || undefined,
       status: 'pending'
     };
 
@@ -287,11 +250,13 @@ export default function Step5Validation({
 
     // Reset formulaire
     setNewReviewer({
+      id: '',
       name: '',
       role: '',
       email: '',
       department: '',
-      certification: ''
+      certification: '',
+      status: 'pending'
     });
     setShowAddReviewer(false);
     
@@ -331,7 +296,7 @@ export default function Step5Validation({
     console.log(`✅ Step5 - Statut ${status} pour réviseur:`, reviewerId);
   }, [validationData, notifyParent, language]);
 
-  const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
+  const updateCriteria = useCallback((criteria: keyof ASTFormValidationData['validationCriteria'], value: boolean) => {
     const updatedData = {
       ...validationData,
       validationCriteria: {
@@ -622,7 +587,7 @@ export default function Step5Validation({
               <input
                 type="checkbox"
                 checked={value}
-                onChange={(e) => updateCriteria(key as keyof ValidationData['validationCriteria'], e.target.checked)}
+                onChange={(e) => updateCriteria(key as keyof ASTFormValidationData['validationCriteria'], e.target.checked)}
                 style={{
                   width: '18px',
                   height: '18px',
