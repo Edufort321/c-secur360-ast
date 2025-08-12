@@ -1,5 +1,6 @@
 // hooks/useWeatherData.ts
 import { useState, useEffect } from 'react';
+import { getWeatherData } from '@/lib/weatherApi';
 
 export interface WeatherData {
   temperature: number;
@@ -45,50 +46,20 @@ export const useWeatherData = (coordinates: Coordinates) => {
     setError(null);
     
     try {
-      // En développement, utiliser des données simulées
-      const mockWeather: WeatherData = generateMockWeather();
-      
-      // En production, vous pourriez utiliser une vraie API météo
-      // const response = await fetch(`/api/weather?lat=${coordinates.lat}&lng=${coordinates.lng}`);
-      // const weatherData = await response.json();
-      
-      setWeather(mockWeather);
-      
+      const weatherData = await getWeatherData(coordinates.lat, coordinates.lng);
+      setWeather(weatherData);
+
       // Générer des alertes basées sur les conditions
-      const generatedAlerts = generateWeatherAlerts(mockWeather);
+      const generatedAlerts = generateWeatherAlerts(weatherData);
       setAlerts(generatedAlerts);
-      
+
     } catch (err) {
-      setError('Erreur lors de la récupération des données météo');
+      const message = err instanceof Error ? err.message : 'Erreur lors de la récupération des données météo';
+      setError(message);
       console.error('Erreur météo:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockWeather = (): WeatherData => {
-    const temp = Math.round(Math.random() * 40 - 15); // -15°C à 25°C
-    const humidity = Math.round(Math.random() * 100);
-    const windSpeed = Math.round(Math.random() * 60);
-    const conditions = ['ensoleillé', 'nuageux', 'pluvieux', 'neigeux', 'orageux'][Math.floor(Math.random() * 5)];
-    
-    return {
-      temperature: temp,
-      humidity,
-      windSpeed,
-      windDirection: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.floor(Math.random() * 8)],
-      precipitation: Math.round(Math.random() * 20),
-      visibility: Math.round(Math.random() * 10 + 5),
-      uvIndex: Math.round(Math.random() * 11),
-      conditions,
-      warnings: [],
-      impact: temp < -20 || temp > 35 || windSpeed > 50 ? 'high' : 
-              temp < -10 || temp > 30 || windSpeed > 30 ? 'medium' : 'low',
-      pressure: Math.round(Math.random() * 50 + 980), // 980-1030 hPa
-      feelsLike: temp + (windSpeed > 20 ? -5 : 0),
-      dewPoint: temp - Math.round(Math.random() * 15),
-      cloudCover: Math.round(Math.random() * 100)
-    };
   };
 
   const generateWeatherAlerts = (weather: WeatherData): WeatherAlert[] => {
