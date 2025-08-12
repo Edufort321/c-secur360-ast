@@ -16,6 +16,7 @@ import Step3Hazards from '@/components/steps/Step3Hazards';
 import Step4Permits from '@/components/steps/Step4Permits';
 import Step5Validation from '@/components/steps/Step5Validation';
 import Step6Finalization from '@/components/steps/Step6Finalization';
+import '@/styles/components.css';
 
 // =================== INTERFACES PRINCIPALES (CONSERVÉES) ===================
 interface ASTFormProps {
@@ -427,29 +428,42 @@ export default function ASTForm({
   // =================== STATUS BADGE MÉMORISÉ (CONSERVÉ) ===================
   const getStatusBadge = useCallback(() => {
     const statusConfig = {
-      'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
-      'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
-      'approved': { color: '#10b981', text: t.status.approved, icon: CheckCircle },
-      'auto_approved': { color: '#059669', text: t.status.auto_approved, icon: CheckCircle },
-      'rejected': { color: '#ef4444', text: t.status.rejected, icon: AlertTriangle }
-    };
+      draft: {
+        classes: 'text-slate-500 bg-slate-500/20 border-slate-500/40',
+        text: t.status.draft,
+        icon: Edit
+      },
+      pending_verification: {
+        classes: 'text-amber-500 bg-amber-500/20 border-amber-500/40',
+        text: t.status.pending_verification,
+        icon: Clock
+      },
+      approved: {
+        classes: 'text-emerald-500 bg-emerald-500/20 border-emerald-500/40',
+        text: t.status.approved,
+        icon: CheckCircle
+      },
+      auto_approved: {
+        classes: 'text-emerald-600 bg-emerald-600/20 border-emerald-600/40',
+        text: t.status.auto_approved,
+        icon: CheckCircle
+      },
+      rejected: {
+        classes: 'text-red-500 bg-red-500/20 border-red-500/40',
+        text: t.status.rejected,
+        icon: AlertTriangle
+      }
+    } as const;
 
     const config = statusConfig[astData.status as keyof typeof statusConfig] || statusConfig.draft;
     const Icon = config.icon;
 
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: isMobile ? '6px 12px' : '8px 16px',
-        background: `${config.color}20`,
-        border: `1px solid ${config.color}40`,
-        borderRadius: '20px',
-        color: config.color,
-        fontSize: isMobile ? '12px' : '14px',
-        fontWeight: '500'
-      }}>
+      <div
+        className={`flex items-center gap-2 rounded-full border font-medium ${
+          isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
+        } ${config.classes}`}
+      >
         <Icon size={isMobile ? 14 : 16} />
         {config.text}
       </div>
@@ -457,44 +471,26 @@ export default function ASTForm({
   }, [astData.status, t.status, isMobile]);
 
   // =================== 🔥 COMPOSANT LOGO EXACTEMENT COMME DASHBOARD + AUTO-AJUSTABLE ===================
-  const LogoComponent = useMemo(() => ({ 
+  const LogoComponent = useMemo(() => ({
     isMobile = false
-  }: { 
+  }: {
     isMobile?: boolean;
   }) => {
     return (
-      <div 
-        className="float-animation glow-effect"
-        style={{
-          // 🔥 EXACTEMENT COMME DASHBOARD
-          background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-          padding: isMobile ? '16px' : '32px',
-          borderRadius: isMobile ? '16px' : '32px',
-          border: '4px solid #f59e0b',
-          boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
+      <div
+        className={`float-animation glow-effect relative overflow-hidden border-4 border-amber-500 shadow-[0_0_50px_rgba(245,158,11,0.6),inset_0_0_30px_rgba(245,158,11,0.15)] bg-[linear-gradient(135deg,#000000_0%,#1a1a1a_50%,#000000_100%)] ${
+          isMobile ? 'p-4 rounded-2xl w-16 h-16' : 'p-8 rounded-[32px] w-32 h-32'
+        }`}
       >
-        <div style={{
-          width: isMobile ? '32px' : '96px',
-          height: isMobile ? '32px' : '96px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <img 
-            src="/c-secur360-logo.png" 
+        <div
+          className={`relative z-[1] flex items-center justify-center ${
+            isMobile ? 'w-8 h-8' : 'w-24 h-24'
+          }`}
+        >
+          <img
+            src="/c-secur360-logo.png"
             alt="C-Secur360"
-            className="logo-glow"
-            style={{ 
-              width: isMobile ? '50px' : '200px',
-              height: isMobile ? '50px' : '200px',
-              objectFit: 'contain',
-              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))'
-            }}
+            className={`${isMobile ? 'w-[50px] h-[50px]' : 'w-[200px] h-[200px]'} object-contain logo-glow filter brightness-125 contrast-110 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]`}
             onError={(e) => {
               console.log('❌ Erreur chargement logo:', e);
               e.currentTarget.style.display = 'none';
@@ -502,185 +498,64 @@ export default function ASTForm({
               if (fallback) fallback.style.display = 'flex';
             }}
           />
-          <div style={{ 
-            display: 'none',
-            color: '#f59e0b', 
-            fontSize: isMobile ? '16px' : '48px',
-            fontWeight: '900',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textShadow: '0 4px 8px rgba(0,0,0,0.7)',
-            width: '100%',
-            height: '100%'
-          }}>
+          <div
+            className={`hidden items-center justify-center text-amber-500 font-black text-shadow-lg ${
+              isMobile ? 'text-base' : 'text-5xl'
+            } w-full h-full`}
+          >
             🛡️
           </div>
         </div>
-        
-        {/* Effet brillance animé (exactement comme dashboard) */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: '-100%',
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-          animation: 'shine 2.5s ease-in-out infinite'
-        }} />
-        
-        {/* Effet pulse border (exactement comme dashboard) */}
-        <div style={{
-          position: 'absolute',
-          inset: '-10px',
-          border: '2px solid rgba(245, 158, 11, 0.3)',
-          borderRadius: isMobile ? '24px' : '40px',
-          animation: 'pulse 3s ease-in-out infinite'
-        }} />
+        <div className="absolute top-0 left-[-100%] h-full w-full bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.4),transparent)] animate-[shine_2.5s_ease-in-out_infinite]"></div>
+        <div
+          className={`absolute inset-[-10px] border-2 border-amber-500/30 animate-[pulse_3s_ease-in-out_infinite] ${
+            isMobile ? 'rounded-[24px]' : 'rounded-[40px]'
+          }`}
+        ></div>
       </div>
     );
   }, []);
-  {/* 🔥 Logo desktop auto-ajustable (exactement comme dashboard) */}
-          <LogoComponent isMobile={false} />// =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const MobileHeader = () => (
-    <header style={{
-      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
-      backdropFilter: 'blur(20px)',
-      padding: '12px 16px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      borderBottom: '1px solid rgba(59, 130, 246, 0.3)',
-      minHeight: '70px'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        maxWidth: '100%',
-        marginBottom: '8px'
-      }}>
-        {/* 🔥 Logo mobile auto-ajustable (exactement comme dashboard) */}
+    <header className="sticky top-0 z-[100] min-h-[4.375rem] border-b border-blue-500/30 bg-[linear-gradient(135deg,rgba(0,0,0,0.95)_0%,rgba(30,41,59,0.95)_50%,rgba(0,0,0,0.95)_100%)] backdrop-blur-xl px-4 py-3">
+      <div className="mb-2 flex items-center justify-between max-w-full">
         <LogoComponent isMobile={true} />
-        
-        {/* Titre mobile responsive (conservé) */}
-        <div style={{ 
-          flex: 1, 
-          marginLeft: '12px', 
-          marginRight: '8px',
-          minWidth: 0
-        }}>
-          <h1 style={{
-            color: '#ffffff',
-            fontSize: '16px',
-            fontWeight: '700',
-            margin: 0,
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
+        <div className="ml-3 mr-2 flex-1 min-w-0">
+          <h1 className="m-0 text-white text-base font-bold whitespace-nowrap overflow-hidden text-ellipsis text-shadow-sm">
             {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
           </h1>
-          <div style={{
-            color: '#94a3b8',
-            fontSize: '11px',
-            margin: '2px 0 0 0',
-            fontWeight: '400',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
+          <div className="mt-0.5 text-[0.6875rem] text-slate-400 font-normal whitespace-nowrap overflow-hidden text-ellipsis">
             AST #{astData.astNumber.slice(-6)} • {tenant.toUpperCase()}
           </div>
         </div>
-        
-        {/* Sélecteur de langue mobile (conservé) */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(30, 41, 59, 0.8)',
-          borderRadius: '6px',
-          padding: '4px',
-          gap: '2px',
-          flexShrink: 0
-        }}>
+        <div className="flex flex-shrink-0 gap-0.5 rounded-md bg-slate-800/80 p-1">
           <button
             onClick={() => handleLanguageChange('fr')}
-            style={{
-              padding: '4px 8px',
-              borderRadius: '4px',
-              border: 'none',
-              background: currentLanguage === 'fr' 
-                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                : 'transparent',
-              color: currentLanguage === 'fr' ? '#ffffff' : '#94a3b8',
-              fontSize: '10px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              minWidth: '24px'
-            }}
+            className={`px-2 py-1 rounded text-[0.625rem] font-semibold min-w-[1.5rem] transition-all ${
+              currentLanguage === 'fr'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white'
+                : 'bg-transparent text-slate-400'
+            }`}
           >
             FR
           </button>
           <button
             onClick={() => handleLanguageChange('en')}
-            style={{
-              padding: '4px 8px',
-              borderRadius: '4px',
-              border: 'none',
-              background: currentLanguage === 'en' 
-                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                : 'transparent',
-              color: currentLanguage === 'en' ? '#ffffff' : '#94a3b8',
-              fontSize: '10px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              minWidth: '24px'
-            }}
+            className={`px-2 py-1 rounded text-[0.625rem] font-semibold min-w-[1.5rem] transition-all ${
+              currentLanguage === 'en'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white'
+                : 'bg-transparent text-slate-400'
+            }`}
           >
             EN
           </button>
         </div>
       </div>
-      
-      {/* Status mobile compact (conservé) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '8px'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '10px'
-        }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            background: '#22c55e',
-            borderRadius: '50%',
-            animation: 'pulse 2s infinite'
-          }} />
-          <span style={{
-            color: '#22c55e',
-            fontSize: '10px',
-            fontWeight: '600'
-          }}>
-            {t.active}
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded-full text-[0.625rem]">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-emerald-500 font-semibold">{t.active}</span>
         </div>
-        
-        <div style={{ fontSize: '10px' }}>
-          {getStatusBadge()}
-        </div>
+        <div className="text-[0.625rem]">{getStatusBadge()}</div>
       </div>
     </header>
   );
