@@ -1,9 +1,9 @@
 // hooks/useLocalStorage.ts
 import { useState, useEffect, useCallback } from 'react';
 
-export interface StorageOptions {
-  serialize?: (value: any) => string;
-  deserialize?: (value: string) => any;
+export interface StorageOptions<T = unknown> {
+  serialize?: (value: T) => string;
+  deserialize?: (value: string) => T;
   syncAcrossTabs?: boolean;
 }
 
@@ -11,13 +11,13 @@ export interface StorageItem<T> {
   value: T;
   timestamp: number;
   version: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export const useLocalStorage = <T>(
   key: string,
   initialValue: T,
-  options: StorageOptions = {}
+  options: StorageOptions<T> = {}
 ) => {
   const {
     serialize = JSON.stringify,
@@ -121,7 +121,7 @@ export const useLocalStorage = <T>(
   }, [key]);
 
   // Fonction pour obtenir les métadonnées
-  const getMetadata = useCallback((): Record<string, any> | null => {
+  const getMetadata = useCallback((): Record<string, unknown> | null => {
     if (typeof window === 'undefined') return null;
 
     try {
@@ -195,9 +195,19 @@ export const useLocalStorage = <T>(
 };
 
 // Interface pour les types AST
+interface ASTData {
+  id?: string;
+  projectInfo?: {
+    projectName?: string;
+    client?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface ASTDraft {
   id: string;
-  data: any;
+  data: ASTData;
   savedAt: string;
   title: string;
 }
@@ -239,7 +249,7 @@ export const useASTLocalStorage = () => {
   const setRecentProjects = recentProjectsStorage.setValue;
 
   // Fonction pour sauvegarder un brouillon AST
-  const saveDraft = useCallback((astData: any) => {
+  const saveDraft = useCallback((astData: ASTData) => {
     const draft: ASTDraft = {
       id: astData.id || `draft_${Date.now()}`,
       data: astData,
@@ -270,7 +280,7 @@ export const useASTLocalStorage = () => {
   }, [setDrafts]);
 
   // Fonction pour ajouter aux projets récents
-  const addToRecentProjects = useCallback((project: any) => {
+  const addToRecentProjects = useCallback((project: ASTData) => {
     const recentProject: RecentProject = {
       id: project.id,
       title: project.projectInfo?.projectName || 'Projet sans titre',

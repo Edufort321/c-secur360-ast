@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { 
+import {
   CheckCircle, 
   AlertTriangle, 
   Users, 
@@ -60,15 +60,14 @@ interface ValidationData {
   };
 }
 
+interface ValidationFormData {
+  validation?: ValidationData;
+  [key: string]: unknown;
+}
+
 interface ValidationStepProps {
-  formData: {
-    validation?: ValidationData;
-    projectInfo?: any;
-    hazards?: any;
-    equipment?: any;
-    permits?: any;
-  };
-  onDataChange: (section: string, data: ValidationData) => void;
+  formData: ValidationFormData;
+  onDataChange: (section: string, data: unknown) => void;
   language: 'fr' | 'en';
   tenant: string;
 }
@@ -230,7 +229,7 @@ export default function Step5Validation({
   
   // ✅ FIX CRITIQUE : État local stable SANS useEffect problématique
   const [validationData, setValidationData] = useState<ValidationData>(() => ({
-    reviewers: [],
+    reviewers: [] as TeamMember[],
     approvalRequired: true,
     minimumReviewers: 2,
     reviewDeadline: '',

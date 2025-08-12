@@ -8,12 +8,20 @@ import {
 } from 'lucide-react';
 
 // =================== INTERFACES ===================
+interface HazardsFormData {
+  hazards?: {
+    list?: Hazard[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface Step3HazardsProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: HazardsFormData;
+  onDataChange: (section: 'hazards', data: unknown) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string[]>;
 }
 
 interface Hazard {
@@ -1403,7 +1411,12 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
     updateFormData(updatedHazards);
   };
 
-  const updateControlMeasure = (hazardId: string, controlId: string, field: keyof ControlMeasure, value: any) => {
+  const updateControlMeasure = (
+    hazardId: string,
+    controlId: string,
+    field: keyof ControlMeasure,
+    value: string | number | boolean | undefined
+  ) => {
     const updatedHazards = hazards.map(hazard => 
       hazard.id === hazardId 
         ? {

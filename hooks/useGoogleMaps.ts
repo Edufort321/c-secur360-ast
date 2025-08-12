@@ -1,6 +1,9 @@
 // hooks/useGoogleMaps.ts
+/// <reference types="google.maps" />
 import { useState, useEffect } from 'react';
 import env from '@/lib/env';
+
+type GoogleWindow = typeof window & { google?: typeof google };
 
 export interface Coordinates {
   lat: number;
@@ -37,7 +40,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   useEffect(() => {
     const loadGoogleMaps = async () => {
       // Vérifier si Google Maps est déjà chargé
-      if (typeof window !== 'undefined' && (window as any).google?.maps) {
+      if (typeof window !== 'undefined' && (window as GoogleWindow).google?.maps) {
         setIsLoaded(true);
         return;
       }
@@ -82,7 +85,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
 
   // Fonction pour géocoder une adresse
   const geocodeAddress = async (address: string): Promise<PlaceResult | null> => {
-    if (!isLoaded || typeof window === 'undefined' || !(window as any).google) {
+    if (!isLoaded || typeof window === 'undefined' || !(window as GoogleWindow).google) {
       // Version mock pour le développement
       return {
         address,
@@ -92,11 +95,11 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
     }
 
     return new Promise((resolve, reject) => {
-      const geocoder = new (window as any).google.maps.Geocoder();
+      const geocoder = new (window as GoogleWindow).google.maps.Geocoder();
       
       geocoder.geocode(
         { address, region: defaultConfig.region },
-        (results: any, status: string) => {
+        (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
           if (status === 'OK' && results && results[0]) {
             const result = results[0];
             const location = result.geometry.location;
@@ -120,7 +123,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
 
   // Fonction pour géocodage inverse
   const reverseGeocode = async (coordinates: Coordinates): Promise<PlaceResult | null> => {
-    if (!isLoaded || typeof window === 'undefined' || !(window as any).google) {
+    if (!isLoaded || typeof window === 'undefined' || !(window as GoogleWindow).google) {
       return {
         address: 'Adresse simulée',
         coordinates,
@@ -129,12 +132,12 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
     }
 
     return new Promise((resolve, reject) => {
-      const geocoder = new (window as any).google.maps.Geocoder();
-      const latLng = new (window as any).google.maps.LatLng(coordinates.lat, coordinates.lng);
+      const geocoder = new (window as GoogleWindow).google.maps.Geocoder();
+      const latLng = new (window as GoogleWindow).google.maps.LatLng(coordinates.lat, coordinates.lng);
       
       geocoder.geocode(
         { location: latLng },
-        (results: any, status: string) => {
+        (results: google.maps.GeocoderResult[], status: google.maps.GeocoderStatus) => {
           if (status === 'OK' && results && results[0]) {
             const result = results[0];
             const location = result.geometry.location;
@@ -185,16 +188,15 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   };
 
   // Fonction pour créer une carte
-  const createMap = (element: HTMLElement, options?: any) => {
-    if (!isLoaded || typeof window === 'undefined' || !(window as any).google) {
-      return {
-        setCenter: () => {},
-        setZoom: () => {},
-        addListener: () => {},
-      };
+  const createMap = (
+    element: HTMLElement,
+    options?: google.maps.MapOptions
+  ): google.maps.Map | null => {
+    if (!isLoaded || typeof window === 'undefined' || !(window as GoogleWindow).google) {
+      return null;
     }
 
-    const defaultOptions = {
+    const defaultOptions: google.maps.MapOptions = {
       center: { lat: 45.5017, lng: -73.5673 },
       zoom: 10,
       mapTypeControl: false,
@@ -203,26 +205,27 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
       ...options
     };
 
-    return new (window as any).google.maps.Map(element, defaultOptions);
+    return new (window as GoogleWindow).google.maps.Map(element, defaultOptions);
   };
 
   // Fonction pour créer un marqueur
-  const createMarker = (map: any, position: Coordinates, options?: any) => {
-    if (!isLoaded || typeof window === 'undefined' || !(window as any).google) {
-      return {
-        setPosition: () => {},
-        setMap: () => {},
-      };
+  const createMarker = (
+    map: google.maps.Map,
+    position: Coordinates,
+    options?: google.maps.MarkerOptions
+  ): google.maps.Marker | null => {
+    if (!isLoaded || typeof window === 'undefined' || !(window as GoogleWindow).google) {
+      return null;
     }
 
-    const defaultOptions = {
-      position: new (window as any).google.maps.LatLng(position.lat, position.lng),
+    const defaultOptions: google.maps.MarkerOptions = {
+      position: new (window as GoogleWindow).google.maps.LatLng(position.lat, position.lng),
       map,
       draggable: true,
       ...options
     };
 
-    return new (window as any).google.maps.Marker(defaultOptions);
+    return new (window as GoogleWindow).google.maps.Marker(defaultOptions);
   };
 
   return {
@@ -234,7 +237,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
     getCurrentPosition,
     createMap,
     createMarker,
-    google: typeof window !== 'undefined' ? (window as any).google : undefined
+    google: typeof window !== 'undefined' ? (window as GoogleWindow).google : undefined
   };
 };
 

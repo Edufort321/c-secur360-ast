@@ -1,5 +1,6 @@
 // hooks/useFormValidation.ts
 import { useState, useCallback, useEffect } from 'react';
+import type { ASTFormData } from '@/types/astForm';
 
 export interface ValidationRule {
   required?: boolean;
@@ -10,7 +11,7 @@ export interface ValidationRule {
   pattern?: RegExp;
   email?: boolean;
   phone?: boolean;
-  custom?: (value: any) => boolean | string;
+  custom?: (value: unknown) => boolean | string;
   dependsOn?: string; // Nom du champ dont dépend cette validation
 }
 
@@ -29,8 +30,8 @@ export interface ValidationSchema {
   [fieldName: string]: ValidationRule;
 }
 
-export const useFormValidation = (
-  initialValues: Record<string, any>,
+export const useFormValidation = <T extends Record<string, unknown>>(
+  initialValues: T,
   validationSchema: ValidationSchema,
   options: {
     validateOnChange?: boolean;
@@ -44,13 +45,14 @@ export const useFormValidation = (
     revalidateOnSubmit = true
   } = options;
 
-  const [values, setFormValues] = useState(initialValues);
+  const [values, setFormValues] = useState<T>(initialValues);
   const [validationState, setValidationState] = useState<FormValidationState>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   // Fonction pour valider un champ individuel
-  const validateField = useCallback((fieldName: string, value: any, allValues: Record<string, any> = values): FieldValidation => {
+  const validateField = useCallback(
+    (fieldName: string, value: unknown, allValues: T = values): FieldValidation => {
     const rule = validationSchema[fieldName];
     if (!rule) {
       return { isValid: true, touched: false };
@@ -142,10 +144,13 @@ export const useFormValidation = (
       warning,
       touched: validationState[fieldName]?.touched || false
     };
-  }, [validationSchema, values, validationState]);
+    },
+    [validationSchema, values, validationState]
+  );
 
   // Fonction pour valider tous les champs
-  const validateAllFields = useCallback((valuesToValidate: Record<string, any> = values): FormValidationState => {
+  const validateAllFields = useCallback(
+    (valuesToValidate: T = values): FormValidationState => {
     const newValidationState: FormValidationState = {};
 
     Object.keys(validationSchema).forEach(fieldName => {
@@ -153,10 +158,12 @@ export const useFormValidation = (
     });
 
     return newValidationState;
-  }, [validationSchema, validateField, values]);
+    },
+    [validationSchema, validateField, values]
+  );
 
   // Fonction pour mettre à jour une valeur
-  const setValue = useCallback((fieldName: string, value: any) => {
+  const setValue = useCallback((fieldName: string, value: unknown) => {
     setFormValues(prev => {
       const newValues = { ...prev, [fieldName]: value };
       
@@ -175,7 +182,7 @@ export const useFormValidation = (
   }, [validateOnChange, validateField]);
 
   // Fonction pour mettre à jour plusieurs valeurs
-  const setMultipleValues = useCallback((newValues: Record<string, any>) => {
+  const setMultipleValues = useCallback((newValues: Partial<T>) => {
     setFormValues(prev => {
       const updatedValues = { ...prev, ...newValues };
       
@@ -216,7 +223,7 @@ export const useFormValidation = (
   }, []);
 
   // Fonction pour réinitialiser complètement le formulaire
-  const resetForm = useCallback((newInitialValues?: Record<string, any>) => {
+  const resetForm = useCallback((newInitialValues?: T) => {
     setFormValues(newInitialValues || initialValues);
     resetValidation();
   }, [initialValues, resetValidation]);
@@ -231,7 +238,7 @@ export const useFormValidation = (
   }, [validateAllFields]);
 
   // Fonction pour soumettre le formulaire
-  const handleSubmit = useCallback((onSubmit: (values: Record<string, any>) => void) => {
+  const handleSubmit = useCallback((onSubmit: (values: T) => void) => {
     return (e?: React.FormEvent) => {
       if (e) {
         e.preventDefault();
@@ -327,7 +334,7 @@ export const useFormValidation = (
 };
 
 // Hook spécialisé pour la validation AST
-export const useASTFormValidation = (initialData: any) => {
+export const useASTFormValidation = (initialData: ASTFormData) => {
   const validationSchema: ValidationSchema = {
     // Validation étape 1 - Informations projet
     'projectInfo.projectName': {
