@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // PermitManager.tsx - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
@@ -313,7 +314,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    logger.debug(`[${type.toUpperCase()}] ${message}`);
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification('C-SECUR360', {
         body: message,

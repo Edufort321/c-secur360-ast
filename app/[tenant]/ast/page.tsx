@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -69,7 +69,7 @@ export default function ASTPage() {
         const userResponse = await fetch(`/api/${tenant}/user`);
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          console.log('User data loaded:', userData);
+          logger.debug('User data loaded:', userData);
         }
 
         const urlParams = new URLSearchParams(window.location.search);

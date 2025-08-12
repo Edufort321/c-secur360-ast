@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // app/utils/notifications.ts - Système de notifications multi-canal
 
 import { AST, ASTStatus } from '../types/ast';
@@ -265,7 +266,7 @@ export async function sendNotification(
   variables: Record<string, any>,
   tenantId: string
 ): Promise<NotificationResult> {
-  console.log('Envoi notification:', { templateId, recipients, variables, tenantId });
+  logger.debug('Envoi notification:', { templateId, recipients, variables, tenantId });
   
   return {
     id: `notif_${Date.now()}`,
@@ -310,7 +311,7 @@ export async function scheduleReminders(
   asts: AST[],
   tenantId: string
 ): Promise<void> {
-  console.log('Programmation rappels:', { astsCount: asts.length, tenantId });
+  logger.debug('Programmation rappels:', { astsCount: asts.length, tenantId });
 }
 
 export default {

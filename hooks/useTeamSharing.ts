@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // hooks/useTeamSharing.ts
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -240,7 +241,7 @@ export const useTeamSharing = (astId: string) => {
       .replace('{senderName}', currentUserName);
 
     // Simulation d'envoi email
-    console.log(`Email envoyé à ${member.email}:`, {
+    logger.debug(`Email envoyé à ${member.email}:`, {
       subject: template.subject,
       message
     });
@@ -258,7 +259,7 @@ export const useTeamSharing = (astId: string) => {
     const message = `AST - Révision requise pour "${session.astId}". Lien: ${session.shareLink}`;
 
     // Simulation d'envoi SMS
-    console.log(`SMS envoyé à ${member.phone}:`, message);
+    logger.debug(`SMS envoyé à ${member.phone}:`, message);
 
     return true;
   };
@@ -319,7 +320,7 @@ export const useTeamSharing = (astId: string) => {
       .replace('{shareLink}', session.shareLink);
 
     if (member.notificationPreferences.email) {
-      console.log(`Rappel email envoyé à ${member.email}:`, {
+      logger.debug(`Rappel email envoyé à ${member.email}:`, {
         subject: template.subject,
         message
       });
