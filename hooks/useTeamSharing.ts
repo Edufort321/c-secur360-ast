@@ -170,6 +170,7 @@ export const useTeamSharing = (astId: string) => {
       id: memberId,
       name: `Membre ${memberId}`,
       email: `membre${memberId}@company.com`,
+      phone: `+1555${memberId}`,
       role: 'Équipier',
       department: 'Production',
       status: 'invited' as const,
@@ -214,7 +215,11 @@ export const useTeamSharing = (astId: string) => {
           await sendEmailInvitation(member, session);
         }
         if (member.notificationPreferences.sms) {
-          await sendSMSInvitation(member, session);
+          if (member.phone) {
+            await sendSMSInvitation(member, session);
+          } else {
+            console.warn(`Numéro de téléphone manquant pour ${member.name}, invitation SMS ignorée.`);
+          }
         }
       } catch (err) {
         console.error(`Erreur envoi invitation à ${member.name}:`, err);
@@ -245,8 +250,13 @@ export const useTeamSharing = (astId: string) => {
 
   // Fonction pour envoyer invitation SMS
   const sendSMSInvitation = async (member: TeamMember, session: ShareSession) => {
+    if (!member.phone) {
+      console.warn(`SMS non envoyé à ${member.name}: numéro de téléphone manquant.`);
+      return false;
+    }
+
     const message = `AST - Révision requise pour "${session.astId}". Lien: ${session.shareLink}`;
-    
+
     // Simulation d'envoi SMS
     console.log(`SMS envoyé à ${member.phone}:`, message);
 
