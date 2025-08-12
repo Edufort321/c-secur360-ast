@@ -13,7 +13,6 @@ import {
 // Import des types et du hook centralisé
 import {
   ConfinedSpaceComponentProps,
-  ConfinedSpaceDetails,
   Dimensions,
   EntryPoint,
   SpacePhoto,

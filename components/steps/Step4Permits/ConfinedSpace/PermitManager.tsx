@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 
 // Import SafetyManager et styles unifiés
-import { ConfinedSpaceComponentProps, ConfinedSpaceDetails } from './SafetyManager';
+import { ConfinedSpaceComponentProps } from './SafetyManager';
+import { ConfinedSpaceDetails } from '@/types/confinedSpace';
 import { styles } from './styles';
 
 // =================== INTERFACES ===================
