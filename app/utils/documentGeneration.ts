@@ -83,7 +83,7 @@ export interface RecipientPreferences {
 
 export interface NotificationCondition {
   field: string;
-  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'in';
   value: any;
 }
 
@@ -105,7 +105,7 @@ export interface TemplateVariable {
 
 export interface TriggerCondition {
   field: string;
-  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'in';
   value: any;
 }
 
@@ -192,8 +192,7 @@ export const DEFAULT_NOTIFICATION_TEMPLATES: Record<string, NotificationTemplate
     trigger: {
       event: TriggerEvent.HIGH_RISK_DETECTED,
       conditions: [
-        { field: 'riskLevel', operator: 'equals', value: RiskLevel.HIGH },
-        { field: 'riskLevel', operator: 'equals', value: RiskLevel.CRITICAL }
+        { field: 'riskLevel', operator: 'in', value: [RiskLevel.HIGH, RiskLevel.CRITICAL] }
       ]
     },
     priority: NotificationPriority.HIGH,
@@ -806,13 +805,13 @@ function prepareASTVariables(ast: AST, additionalData?: Record<string, any>): Re
   };
 }
 
-function checkTriggerConditions(
+export function checkTriggerConditions(
   conditions: TriggerCondition[],
   data: any
 ): boolean {
   return conditions.every(condition => {
     const value = getNestedValue(data, condition.field);
-    
+
     switch (condition.operator) {
       case 'equals':
         return value === condition.value;
@@ -824,6 +823,8 @@ function checkTriggerConditions(
         return value < condition.value;
       case 'contains':
         return String(value).includes(condition.value);
+      case 'in':
+        return Array.isArray(condition.value) && condition.value.includes(value);
       default:
         return false;
     }
