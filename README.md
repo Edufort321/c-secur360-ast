@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Database Seeding
+
+Tenant creation has been extracted from the `/api/db/init` route. To populate demo tenants during deployment, run:
+
+```bash
+npm run seed
+```
+
+This script upserts the `demo`, `futureclient`, and `c-secur360` tenants.
+
 ## Running Tests
 
 To execute the unit test suite, run:
