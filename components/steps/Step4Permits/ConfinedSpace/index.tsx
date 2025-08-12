@@ -19,6 +19,7 @@ import PermitManager from './PermitManager';
 // ✅ FIX CRITIQUE: Import SafetyManager et styles - INTÉGRATION COMPLÈTE
 import { ConfinedSpaceComponentProps, useSafetyManager, ConfinedSpacePermit } from './SafetyManager';
 import { styles } from './styles';
+import { useTheme } from '@/components/ThemeProvider';
 
 // =================== TYPES ET INTERFACES UNIVERSELLES ===================
 type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
@@ -659,11 +660,14 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   readOnly = false,
   customValidators = [],
   onValidationChange,
-  theme = 'dark'
+  theme: externalTheme
 }) => {
 
   // =================== PHASE 2 : SAFETYMANAGER RÉEL AVEC VALIDATION SEULEMENT ===================
   // ✅ SafetyManager réel pour progression et validation, SANS synchronisation agressive
+  const { theme: globalTheme } = useTheme();
+  const theme = externalTheme ?? globalTheme;
+
   const safetyManager = useSafetyManager();
   const isSafetyManagerEnabled = true;
   
@@ -1235,11 +1239,13 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== RENDU PRINCIPAL ===================
   return (
-    <div style={{
-      ...actualStyles.container,
-      minHeight: isFullScreen ? '100vh' : 'auto',
-      backgroundColor: theme === 'dark' ? '#111827' : '#f9fafb'
-    }}>
+    <div
+      className="bg-primary text-primary"
+      style={{
+        ...actualStyles.container,
+        minHeight: isFullScreen ? '100vh' : 'auto',
+      }}
+    >
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
