@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Download, Share } from 'lucide-react'
@@ -8,17 +8,13 @@ interface ASTDetailPageProps {
 }
 
 export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
-  const ast = await prisma.aSTForm.findFirst({
-    where: {
-      id: params.id,
-      tenant: { subdomain: params.tenant }
-    },
-    include: {
-      tenant: true
-    }
-  })
+  const { data: ast, error } = await supabase
+    .from('ast_forms')
+    .select('*, tenant:tenants(*)')
+    .eq('id', params.id)
+    .single()
 
-  if (!ast) {
+  if (error || !ast || ast.tenant?.subdomain !== params.tenant) {
     notFound()
   }
 

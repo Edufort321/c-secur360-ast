@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { 
+import {
   FileText, Database, QrCode, Printer, Mail, Share, Download, 
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
   Eye, Globe, Smartphone, Copy, Check, BarChart3, Calendar, 
@@ -9,6 +9,7 @@ import {
   ArrowRight, ArrowLeft, Target, Zap, History, Camera, Archive, 
   Send, MessageSquare, Lock, Unlock, Award, Cog, Hash, Share2
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 // =================== TYPES DE BASE ===================
 type ShareMethod = 'email' | 'sms' | 'whatsapp' | 'teams' | 'slack';
