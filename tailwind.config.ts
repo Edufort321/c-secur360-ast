@@ -29,6 +29,10 @@ const config: Config = {
         'ast-red': '#e74c3c',
         'ast-yellow': '#f39c12',
         'ast-purple': '#9b59b6',
+        'chart-line': 'var(--color-chart-line)',
+        'chart-electrique': 'var(--color-chart-electrique)',
+        'chart-chute': 'var(--color-chart-chute)',
+        'chart-equipement': 'var(--color-chart-equipement)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

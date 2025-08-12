@@ -83,10 +83,10 @@ const getFunctionalData = (isDemo: boolean): DashboardData => {
       nearMiss: 8,
       incidentsTrend: -25,
       incidentsByType: [
-        { type: 'Électrique', count: 3, color: '#ef4444' },
-        { type: 'Chute', count: 2, color: '#f97316' },
-        { type: 'Équipement', count: 2, color: '#eab308' },
-        { type: 'Ergonomique', count: 1, color: '#22c55e' }
+        { type: 'Électrique', count: 3, color: 'var(--color-chart-electrique)' },
+        { type: 'Chute', count: 2, color: 'var(--color-chart-chute)' },
+        { type: 'Équipement', count: 2, color: 'var(--color-chart-equipement)' },
+        { type: 'Ergonomique', count: 1, color: 'var(--color-chart-line)' }
       ],
       
       hoursWorked: 12480,
@@ -119,8 +119,8 @@ const getFunctionalData = (isDemo: boolean): DashboardData => {
       nearMiss: 3,
       incidentsTrend: -100,
       incidentsByType: [
-        { type: 'Électrique', count: 1, color: '#ef4444' },
-        { type: 'Équipement', count: 2, color: '#eab308' }
+        { type: 'Électrique', count: 1, color: 'var(--color-chart-electrique)' },
+        { type: 'Équipement', count: 2, color: 'var(--color-chart-equipement)' }
       ],
       
       hoursWorked: 3240,
@@ -145,14 +145,14 @@ const getFunctionalData = (isDemo: boolean): DashboardData => {
 }
 
 // Composant Graphique Simple
-const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'bar' | 'pie' }) => {
+const SimpleChart = ({ data, type = 'line', ariaLabel }: { data: any[], type?: 'line' | 'bar' | 'pie', ariaLabel?: string }) => {
   if (type === 'pie') {
     const total = data.reduce((sum, item) => sum + item.count, 0)
     let currentAngle = 0
-    
+
     return (
-      <div style={{ width: '200px', height: '200px', position: 'relative', margin: '0 auto' }}>
-        <svg width="200" height="200" viewBox="0 0 200 200">
+      <div style={{ width: '40vw', maxWidth: '200px', height: '40vw', maxHeight: '200px', position: 'relative', margin: '0 auto' }}>
+        <svg width="100%" height="100%" viewBox="0 0 200 200" role="img" aria-label={ariaLabel} tabIndex={0}>
           {data.map((item, index) => {
             const percentage = (item.count / total) * 100
             const angle = (percentage / 100) * 360
@@ -192,15 +192,21 @@ const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'ba
     const width = 300
     const height = 150
     const padding = 20
-    
+
     return (
-      <svg width={width} height={height} style={{ overflow: 'visible' }}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ width: '60vw', height: '30vh', maxWidth: '300px', maxHeight: '150px', overflow: 'visible' }}
+        role="img"
+        aria-label={ariaLabel}
+        tabIndex={0}
+      >
         {/* Ligne de performance */}
         <polyline
           fill="none"
-          stroke="#22c55e"
+          stroke="var(--color-chart-line)"
           strokeWidth="3"
-          points={data.map((d, i) => 
+          points={data.map((d, i) =>
             `${padding + (i * (width - 2 * padding) / (data.length - 1))},${height - padding - (d.ast / maxValue) * (height - 2 * padding)}`
           ).join(' ')}
         />
@@ -211,7 +217,7 @@ const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'ba
             cx={padding + (i * (width - 2 * padding) / (data.length - 1))}
             cy={height - padding - (d.ast / maxValue) * (height - 2 * padding)}
             r="4"
-            fill="#22c55e"
+            fill="var(--color-chart-line)"
             stroke="white"
             strokeWidth="2"
           />
@@ -886,7 +892,13 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           >
             
             {/* AST Complétés - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div
+              className="glass-effect card-hover"
+              style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}
+              tabIndex={0}
+              role="group"
+              aria-label={`AST complétés ${data.astCompleted} sur ${data.totalAST}`}
+            >
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -961,7 +973,13 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             </div>
 
             {/* AST Mensuels - REMPLACE Conformité */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div
+              className="glass-effect card-hover"
+              style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}
+              tabIndex={0}
+              role="group"
+              aria-label={`AST mensuels ${data.astThisMonth}`}
+            >
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -1036,7 +1054,13 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             </div>
 
             {/* Incidents - FONCTIONNEL */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div
+              className="glass-effect card-hover"
+              style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}
+              tabIndex={0}
+              role="group"
+              aria-label={`Incidents ${data.incidents}`}
+            >
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -1114,7 +1138,13 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
             </div>
 
             {/* Heures Sécuritaires - REMPLACE Économies */}
-            <div className="glass-effect card-hover" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div
+              className="glass-effect card-hover"
+              style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}
+              tabIndex={0}
+              role="group"
+              aria-label={`Heures sécuritaires ${data.safeHours} sur ${data.hoursWorked}`}
+            >
               <div style={{ 
                 position: 'absolute', 
                 top: '-50%', 
@@ -1261,7 +1291,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   <LineChart style={{ width: '20px', height: '20px' }} />
                   Évolution AST
                 </h3>
-                <SimpleChart data={data.monthlyData} type="line" />
+                <SimpleChart data={data.monthlyData} type="line" ariaLabel="Évolution mensuelle des AST" />
                 <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
                   <span>Jan</span>
                   <span>Mar</span>
@@ -1290,7 +1320,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   <PieChart style={{ width: '20px', height: '20px' }} />
                   {t('dashboard.incidentTypes')}
                 </h3>
-                <SimpleChart data={data.incidentsByType} type="pie" />
+                <SimpleChart data={data.incidentsByType} type="pie" ariaLabel="Répartition des incidents par type" />
                 <div style={{ marginTop: '16px' }}>
                   {data.incidentsByType.map((item, index) => (
                     <div key={index} style={{ 
