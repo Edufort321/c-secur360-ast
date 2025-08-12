@@ -15,18 +15,35 @@ export default function ASTPage() {
     astNumber: '',
     projectInfo: {
       client: '',
-      workLocation: '',
-      industry: '',
+      clientPhone: '',
+      clientRepresentative: '',
+      clientRepresentativePhone: '',
       projectNumber: '',
+      astClientNumber: '',
       date: '',
       time: '',
+      workLocation: '',
+      industry: '',
+      emergencyContact: '',
+      emergencyPhone: '',
       workDescription: '',
-      workerCount: 1,
-      lockoutPoints: []
+      workLocations: [],
+      lockoutPoints: [],
+      lockoutPhotos: []
     },
     equipment: {
+      list: [],
       selected: [],
-      custom: []
+      totalSelected: 0,
+      highPriority: 0,
+      categories: [],
+      inspectionStatus: {
+        total: 0,
+        verified: 0,
+        available: 0,
+        verificationRate: 0,
+        availabilityRate: 0
+      }
     },
     hazards: {
       selected: [],
