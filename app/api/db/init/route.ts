@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   try {
@@ -61,7 +62,7 @@ export async function GET() {
     })
     
   } catch (error: unknown) {
-    console.error('❌ Database error:', error)
+    logger.error('❌ Database error:', error)
 
     if (error instanceof Error) {
       return NextResponse.json({

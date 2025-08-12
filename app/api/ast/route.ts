@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,12 +52,16 @@ export async function POST(request: NextRequest) {
       message: 'AST sauvegardé avec succès!'
     })
     
-  } catch (error: any) {
-    console.error('Error saving AST:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 })
+  } catch (error: unknown) {
+    logger.error('Error saving AST:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json(
+      {
+        success: false,
+        error: message
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -84,9 +89,9 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ astForms })
     
-  } catch (error: any) {
-    return NextResponse.json({ 
-      error: error.message 
-    }, { status: 500 })
+  } catch (error: unknown) {
+    logger.error('Error fetching AST:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
