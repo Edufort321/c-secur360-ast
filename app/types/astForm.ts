@@ -1,18 +1,104 @@
-export interface ProjectInfo {
-  client: string;
-  workLocation: string;
-  industry: string;
-  projectNumber: string;
-  date: string;
-  time: string;
-  workDescription: string;
-  workerCount: number;
-  lockoutPoints: string[];
+// =================== STEP 1 - PROJECT INFORMATION ===================
+
+export interface WorkLocation {
+  id: string;
+  name: string;
+  description: string;
+  zone: string;
+  building?: string;
+  floor?: string;
+  maxWorkersReached: number;
+  currentWorkers: number;
+  lockoutPoints: number;
+  isActive: boolean;
+  createdAt: string;
+  notes?: string;
+  estimatedDuration: string;
+  startTime?: string;
+  endTime?: string;
 }
 
-export interface EquipmentData {
-  selected: string[];
-  custom: string[];
+export interface LockoutPoint {
+  id: string;
+  energyType:
+    | 'electrical'
+    | 'mechanical'
+    | 'hydraulic'
+    | 'pneumatic'
+    | 'chemical'
+    | 'thermal'
+    | 'gravity';
+  equipmentName: string;
+  location: string;
+  lockType: string;
+  tagNumber: string;
+  isLocked: boolean;
+  verifiedBy: string;
+  verificationTime: string;
+  photos: string[];
+  notes: string;
+  completedProcedures: number[];
+  assignedLocation?: string;
+}
+
+export interface LockoutPhoto {
+  id: string;
+  url: string;
+  caption: string;
+  category:
+    | 'before_lockout'
+    | 'during_lockout'
+    | 'lockout_device'
+    | 'client_form'
+    | 'verification';
+  timestamp: string;
+  lockoutPointId?: string;
+}
+
+export interface Step1Data {
+  client: string;
+  clientPhone: string;
+  clientRepresentative: string;
+  clientRepresentativePhone: string;
+  projectNumber: string;
+  astClientNumber: string;
+  date: string;
+  time: string;
+  workLocation: string;
+  industry: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+  workDescription: string;
+  workLocations: WorkLocation[];
+  lockoutPoints: LockoutPoint[];
+  lockoutPhotos: LockoutPhoto[];
+}
+
+// =================== STEP 2 - EQUIPMENT ===================
+
+export interface Step2EquipmentItem {
+  id: string;
+  name: string;
+  category: string;
+  required: boolean;
+  certification?: string;
+  priority?: 'high' | 'medium' | 'low';
+  icon: string;
+}
+
+export interface Step2Data {
+  list: Step2EquipmentItem[];
+  selected: Step2EquipmentItem[];
+  totalSelected: number;
+  highPriority: number;
+  categories: string[];
+  inspectionStatus: {
+    total: number;
+    verified: number;
+    available: number;
+    verificationRate: number;
+    availabilityRate: number;
+  };
 }
 
 export interface HazardsData {
@@ -36,8 +122,8 @@ export interface FinalizationData {
 export interface ASTFormData {
   id: string;
   astNumber: string;
-  projectInfo: ProjectInfo;
-  equipment: EquipmentData;
+  projectInfo: Step1Data;
+  equipment: Step2Data;
   hazards: HazardsData;
   permits: PermitsData;
   validation: ValidationData;

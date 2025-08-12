@@ -2,17 +2,24 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { 
+import {
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
   TrendingUp, Activity, Shield
 } from 'lucide-react';
+import type {
+  ASTFormData,
+  Step1Data,
+  WorkLocation,
+  LockoutPoint,
+  LockoutPhoto
+} from '@/types/astForm';
 
 // =================== 🔥 INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'projectInfo', data: Step1Data) => void;
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
@@ -21,48 +28,6 @@ interface Step1ProjectInfoProps {
 }
 
 // =================== INTERFACES MÉTIER CONSERVÉES ===================
-interface WorkLocation {
-  id: string;
-  name: string;
-  description: string;
-  zone: string;
-  building?: string;
-  floor?: string;
-  maxWorkersReached: number;
-  currentWorkers: number;
-  lockoutPoints: number;
-  isActive: boolean;
-  createdAt: string;
-  notes?: string;
-  estimatedDuration: string;
-  startTime?: string;
-  endTime?: string;
-}
-
-interface LockoutPoint {
-  id: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'chemical' | 'thermal' | 'gravity';
-  equipmentName: string;
-  location: string;
-  lockType: string;
-  tagNumber: string;
-  isLocked: boolean;
-  verifiedBy: string;
-  verificationTime: string;
-  photos: string[];
-  notes: string;
-  completedProcedures: number[];
-  assignedLocation?: string;
-}
-
-interface LockoutPhoto {
-  id: string;
-  url: string;
-  caption: string;
-  category: 'before_lockout' | 'during_lockout' | 'lockout_device' | 'client_form' | 'verification';
-  timestamp: string;
-  lockoutPointId?: string;
-}
 
 interface LocationStats {
   totalWorkers: number;
@@ -553,13 +518,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const ENERGY_TYPES = getEnergyTypes(language);
   
   // =================== 🔥 EXTRACTION DONNÉES EXISTANTES - COMPATIBLE AVEC ASTFORM ===================
-  const projectInfo = useMemo(() => formData?.projectInfo || {}, [formData?.projectInfo]);
+  const projectInfo = useMemo<Step1Data>(() => formData.projectInfo || ({} as Step1Data), [formData.projectInfo]);
   const lockoutPoints = useMemo(() => projectInfo?.lockoutPoints || [], [projectInfo?.lockoutPoints]);
   const lockoutPhotos = useMemo(() => projectInfo?.lockoutPhotos || [], [projectInfo?.lockoutPhotos]);
   const workLocations = useMemo(() => projectInfo?.workLocations || [], [projectInfo?.workLocations]);
   
   // =================== 🔥 ÉTAT LOCAL ULTRA-MINIMAL (STYLE STEP5) ===================
-  const [localData, setLocalData] = useState(() => ({
+  const [localData, setLocalData] = useState<Step1Data>(() => ({
     // ✅ INITIALISATION DIRECTE SANS BOUCLE - Compatible avec formData existant
     client: projectInfo.client || '',
     clientPhone: projectInfo.clientPhone || '',
@@ -578,10 +543,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     workLocations: workLocations,
     lockoutPoints: lockoutPoints,
     lockoutPhotos: lockoutPhotos
-  }));
+  } as Step1Data));
 
   // =================== ÉTATS UI SÉPARÉS (ISOLATION CRITIQUE) ===================
-  const [astNumber, setAstNumber] = useState(() => formData?.astNumber || generateASTNumber());
+  const [astNumber, setAstNumber] = useState(() => formData.astNumber || generateASTNumber());
   const [copied, setCopied] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [currentLockoutPhotoIndex, setCurrentLockoutPhotoIndex] = useState<{[key: string]: number}>({});
@@ -603,11 +568,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const [isModalSaving, setIsModalSaving] = useState(false);
 
   // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
-  const stableFormDataRef = useRef(localData);
+  const stableFormDataRef = useRef<Step1Data>(localData);
   const lastUpdateRef = useRef<string>('');
   
   // ✅ HANDLER PARENT FIGÉ UNE SEULE FOIS
-  const notifyParentStable = useCallback((updatedData: any) => {
+  const notifyParentStable = useCallback((updatedData: Step1Data) => {
     const updateKey = JSON.stringify(updatedData).slice(0, 100);
     
     // 🛡️ ÉVITER DOUBLONS
@@ -630,7 +595,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [onDataChange]);
 
   // =================== 🔥 HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
-  const updateField = useCallback((field: string, value: any) => {
+  const updateField = useCallback(<K extends keyof Step1Data>(field: K, value: Step1Data[K]) => {
     console.log('🔥 Step1 - Update field ULTRA-STABLE:', field, value);
     
     // ✅ RÉFÉRENCE DIRECTE SANS BOUCLE
@@ -690,7 +655,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       assignedLocation: localData.workLocations.length > 0 ? localData.workLocations[0].id : undefined
     };
 
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { ...prev, lockoutPoints: [...prev.lockoutPoints, newPoint] };
       stableFormDataRef.current = updated;
       notifyParentStable(updated);
@@ -702,7 +667,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     const updatedPoints = localData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
     const updatedPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { 
         ...prev, 
         lockoutPoints: updatedPoints,
@@ -716,7 +681,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
 
   // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC) ===================
   const updateModalField = useCallback((field: string, value: string) => {
-    setNewLocation(prev => ({ ...prev, [field]: value }));
+    setNewLocation((prev: typeof newLocation) => ({ ...prev, [field]: value }));
     // ✅ PAS de sync vers parent - isolation complète
   }, []);
 
@@ -748,7 +713,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       endTime: newLocation.endTime || '16:00'
     };
 
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { ...prev, workLocations: [...prev.workLocations, location] };
       stableFormDataRef.current = updated;
       notifyParentStable(updated);
@@ -782,7 +747,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         : point
     );
     
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { 
         ...prev, 
         workLocations: updatedLocations,
@@ -810,7 +775,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return loc;
     });
     
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { ...prev, workLocations: updatedLocations };
       stableFormDataRef.current = updated;
       notifyParentStable(updated);
@@ -852,7 +817,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         lockoutPointId
       };
       
-      setLocalData(prev => {
+      setLocalData((prev: Step1Data) => {
         const updated = { ...prev, lockoutPhotos: [...prev.lockoutPhotos, newPhoto] };
         stableFormDataRef.current = updated;
         notifyParentStable(updated);
@@ -866,7 +831,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [language, notifyParentStable]);
 
   const deletePhoto = useCallback((photoId: string) => {
-    setLocalData(prev => {
+    setLocalData((prev: Step1Data) => {
       const updated = { 
         ...prev, 
         lockoutPhotos: prev.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId) 
