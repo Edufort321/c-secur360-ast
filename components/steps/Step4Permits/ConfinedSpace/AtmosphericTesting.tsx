@@ -1,7 +1,7 @@
 // AtmosphericTesting.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
@@ -234,7 +234,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateAtmosphericTesting(updates);
       } catch (error) {
-        console.warn('SafetyManager updateAtmosphericTesting failed:', error);
+        logger.warn('SafetyManager updateAtmosphericTesting failed:', error);
       }
     }
     
@@ -248,7 +248,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         const validation = safetyManager.validateSection('atmosphericTesting');
         onValidationChange(validation.isValid, validation.errors);
       } catch (error) {
-        console.warn('SafetyManager validateSection failed:', error);
+        logger.warn('SafetyManager validateSection failed:', error);
         // Fallback validation basique
         const isValid = (updates.readings && updates.readings.length > 0) || atmosphericReadings.length > 0;
         onValidationChange(isValid, isValid ? [] : ['Tests atmosphériques requis']);
@@ -483,7 +483,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager permit update failed:', error);
+        logger.warn('SafetyManager permit update failed:', error);
       }
     }
   }, [safetyManager, atmosphericData.equipment, updateAtmosphericData]);
@@ -497,7 +497,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager multi-level testing update failed:', error);
+        logger.warn('SafetyManager multi-level testing update failed:', error);
       }
     }
   }, [safetyManager]);
@@ -511,7 +511,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager atmospheric stability update failed:', error);
+        logger.warn('SafetyManager atmospheric stability update failed:', error);
       }
     }
   }, [safetyManager]);

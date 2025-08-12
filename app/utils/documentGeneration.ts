@@ -1,6 +1,6 @@
 // app/utils/documentGeneration.ts - Système de génération de documents
 
-import { AST, ASTStatus } from '../types/ast';
+import { logger } from '@/lib/logger';
 import { ComplianceReport } from './compliance';
 import { RiskLevel } from '../types/index';
 
@@ -523,7 +523,7 @@ export async function sendASTNotification(
       );
       results.push(result);
     } catch (error) {
-      console.error(`Erreur envoi notification ${template.id}:`, error);
+      logger.error(`Erreur envoi notification ${template.id}:`, error);
     }
   }
   
@@ -566,7 +566,7 @@ export async function sendComplianceNotification(
     );
     results.push(result);
   } catch (error) {
-    console.error('Erreur envoi notification conformité:', error);
+    logger.error('Erreur envoi notification conformité:', error);
   }
   
   return results;
@@ -676,7 +676,7 @@ async function sendEmail(
   tenantId: string
 ): Promise<ChannelResult> {
   // Implementation email (Resend, SendGrid, etc.)
-  console.log('Envoi email:', { recipients, subject, message });
+  logger.debug('Envoi email:', { recipients, subject, message });
   
   return {
     type: ChannelType.EMAIL,
@@ -693,7 +693,7 @@ async function sendSMS(
   tenantId: string
 ): Promise<ChannelResult> {
   // Implementation SMS (Twilio, AWS SNS, etc.)
-  console.log('Envoi SMS:', { recipients, message });
+  logger.debug('Envoi SMS:', { recipients, message });
   
   return {
     type: ChannelType.SMS,
@@ -711,7 +711,7 @@ async function sendTeamsMessage(
   tenantId: string
 ): Promise<ChannelResult> {
   // Implementation Teams webhook
-  console.log('Envoi Teams:', { subject, message });
+  logger.debug('Envoi Teams:', { subject, message });
   
   return {
     type: ChannelType.TEAMS,
@@ -729,7 +729,7 @@ async function sendSlackMessage(
   tenantId: string
 ): Promise<ChannelResult> {
   // Implementation Slack API
-  console.log('Envoi Slack:', { subject, message });
+  logger.debug('Envoi Slack:', { subject, message });
   
   return {
     type: ChannelType.SLACK,
@@ -746,7 +746,7 @@ async function sendWhatsApp(
   tenantId: string
 ): Promise<ChannelResult> {
   // Implementation WhatsApp Business API
-  console.log('Envoi WhatsApp:', { recipients, message });
+  logger.debug('Envoi WhatsApp:', { recipients, message });
   
   return {
     type: ChannelType.WHATSAPP,
@@ -763,7 +763,7 @@ async function sendInAppNotification(
   tenantId: string
 ): Promise<ChannelResult> {
   // Sauvegarde en base pour affichage in-app
-  console.log('Notification in-app:', { recipients, subject, message });
+  logger.debug('Notification in-app:', { recipients, subject, message });
   
   return {
     type: ChannelType.IN_APP,
@@ -885,7 +885,7 @@ async function scheduleNotification(
   scheduledFor: Date
 ): Promise<void> {
   // Dans un vrai système, utiliser un job scheduler (Bull, Agenda, etc.)
-  console.log('Notification programmée:', {
+  logger.debug('Notification programmée:', {
     templateId,
     scheduledFor,
     tenantId
@@ -894,7 +894,7 @@ async function scheduleNotification(
 
 async function saveNotificationResult(result: NotificationResult): Promise<void> {
   // Sauvegarder en base de données
-  console.log('Résultat notification sauvegardé:', result.id);
+  logger.debug('Résultat notification sauvegardé:', result.id);
 }
 
 function generateNotificationId(): string {

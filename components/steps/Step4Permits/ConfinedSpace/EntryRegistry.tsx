@@ -1,7 +1,7 @@
 // EntryRegistry.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
   PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
@@ -252,7 +252,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateEntryRegistry(updates);
       } catch (error) {
-        console.warn('SafetyManager updateEntryRegistry failed:', error);
+        logger.warn('SafetyManager updateEntryRegistry failed:', error);
       }
     }
     
@@ -266,7 +266,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         const validation = safetyManager.validateSection('entryRegistry');
         onValidationChange(validation.isValid, validation.errors);
       } catch (error) {
-        console.warn('SafetyManager validateSection failed:', error);
+        logger.warn('SafetyManager validateSection failed:', error);
         // ✅ FIX BUILD : Fallback validation avec ensureBoolean
         const hasAttendant = ensureBoolean(updates.attendantPresent) || ensureBoolean(entryRegistryData.attendantPresent);
         const hasPersonnel = (updates.personnel && updates.personnel.length > 0) || personnel.length > 0;
@@ -386,7 +386,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager attendant present update failed:', error);
+        logger.warn('SafetyManager attendant present update failed:', error);
       }
     }
   }, [safetyManager, updateEntryRegistryData]);
@@ -402,7 +402,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager communication system update failed:', error);
+        logger.warn('SafetyManager communication system update failed:', error);
       }
     }
   }, [safetyManager, updateEntryRegistryData]);
@@ -416,7 +416,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         safetyManager.resetPermit();
         Object.assign(safetyManager.currentPermit, updatedPermit);
       } catch (error) {
-        console.warn('SafetyManager emergency retrieval update failed:', error);
+        logger.warn('SafetyManager emergency retrieval update failed:', error);
       }
     }
   }, [safetyManager]);

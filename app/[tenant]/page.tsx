@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -69,7 +69,7 @@ export default function ASTPage() {
         const userResponse = await fetch(`/api/${tenant}/user`);
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          console.log('User data loaded:', userData);
+          logger.debug('User data loaded:', userData);
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -84,7 +84,7 @@ export default function ASTPage() {
         }
 
       } catch (err) {
-        console.error('Erreur lors du chargement:', err);
+        logger.error('Erreur lors du chargement:', err);
         setError('Erreur lors du chargement des données');
       } finally {
         setLoading(false);
@@ -112,7 +112,7 @@ export default function ASTPage() {
             body: JSON.stringify(newData)
           });
         } catch (err) {
-          console.error('Erreur sauvegarde:', err);
+          logger.error('Erreur sauvegarde:', err);
         } finally {
           setSaving(false);
         }

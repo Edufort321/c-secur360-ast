@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, 
   Users, Clock, Eye, Zap, Wind, Flame, Construction, Building, 
@@ -495,15 +495,15 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     // Import avec le bon chemin pour ConfinedSpace
     if (permitId === 'confined-space') {
       try {
-        console.log('🔄 Tentative de chargement ConfinedSpace...');
+        logger.debug('🔄 Tentative de chargement ConfinedSpace...');
         // 🔧 CORRECTION : Chemin corrigé ./ConfinedSpace/index au lieu de ./permits/ConfinedSpace/index
         const ConfinedSpaceModule = await import('./ConfinedSpace/index');
-        console.log('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
+        logger.debug('✅ Module ConfinedSpace importé avec succès:', !!ConfinedSpaceModule.default);
         
         setConfinedSpaceComponent(ConfinedSpaceModule);
         
       } catch (error) {
-        console.log('⚠️ Erreur chargement ConfinedSpace:', error);
+        logger.debug('⚠️ Erreur chargement ConfinedSpace:', error);
         setConfinedSpaceComponent(null);
       }
     }
@@ -512,7 +512,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
     
-    console.log(`Permis sélectionné: ${permitId} - Chemin corrigé`);
+    logger.debug(`Permis sélectionné: ${permitId} - Chemin corrigé`);
   };
 
   const handleBackToSelection = () => {
@@ -548,13 +548,13 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
 
   // Callbacks pour ConfinedSpace
   const handleSavePermit = useCallback((data: any) => {
-    console.log('Sauvegarde du permis:', data);
+    logger.debug('Sauvegarde du permis:', data);
     updatePermitStatus(selectedPermit!, 'in-progress', 50);
     onDataChange('permitData', { [selectedPermit!]: data });
   }, [selectedPermit, onDataChange]);
 
   const handleSubmitPermit = useCallback((data: any) => {
-    console.log('Soumission du permis:', data);
+    logger.debug('Soumission du permis:', data);
     updatePermitStatus(selectedPermit!, 'completed', 100);
     onDataChange('permitData', { [selectedPermit!]: data });
     handleBackToSelection();
@@ -564,7 +564,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
   if (selectedPermit === 'confined-space' && confinedSpaceComponent) {
     const ConfinedSpaceModule = confinedSpaceComponent.default;
     
-    console.log('Rendu ConfinedSpace avec props:', {
+    logger.debug('Rendu ConfinedSpace avec props:', {
       province: selectedProvince,
       language,
       initialData: formData?.permitData?.[selectedPermit] || {}

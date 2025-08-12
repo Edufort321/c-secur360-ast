@@ -1,7 +1,7 @@
 // SafetyManager.tsx - PARTIE 1/2 - Types et Configuration FONCTIONNEL
 "use client";
 
-import { create } from 'zustand';
+import { logger } from '@/lib/logger';
 import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
@@ -16,12 +16,12 @@ try {
   if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase.co') {
     supabase = createClient(supabaseUrl, supabaseKey);
     supabaseEnabled = true;
-    console.log('✅ SafetyManager: Supabase configuré');
+    logger.debug('✅ SafetyManager: Supabase configuré');
   } else {
-    console.log('📝 SafetyManager: Utilisation du localStorage');
+    logger.debug('📝 SafetyManager: Utilisation du localStorage');
   }
 } catch (error) {
-  console.log('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage');
+  logger.debug('⚠️ SafetyManager: Supabase non configuré, utilisation du localStorage');
   supabaseEnabled = false;
 }
 
@@ -935,7 +935,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
       // =================== ACTIONS MODE PRODUCTION - NON-INVASIVES ===================
       
       updateSiteInformation: (data) => {
-        console.log('🔄 SafetyManager: updateSiteInformation appelé', data);
+        logger.debug('🔄 SafetyManager: updateSiteInformation appelé', data);
         
         const state = get();
         
@@ -967,18 +967,18 @@ export const useSafetyManager = create<SafetyManagerState>()(
           }
           
           const timer = setTimeout(() => {
-            console.log('💾 Auto-save silencieux déclenché après débounce');
+            logger.debug('💾 Auto-save silencieux déclenché après débounce');
             get().silentSave(); // ✅ SILENCIEUX = pas de re-render
           }, 5000); // ✅ 5 secondes pour laisser le temps de taper
           
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: siteInformation mis à jour silencieusement');
+        logger.debug('✅ SafetyManager: siteInformation mis à jour silencieusement');
       },
 
       updateAtmosphericTesting: (data) => {
-        console.log('🔄 SafetyManager: updateAtmosphericTesting appelé', data);
+        logger.debug('🔄 SafetyManager: updateAtmosphericTesting appelé', data);
         
         const state = get();
         
@@ -1025,11 +1025,11 @@ export const useSafetyManager = create<SafetyManagerState>()(
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: atmosphericTesting mis à jour silencieusement');
+        logger.debug('✅ SafetyManager: atmosphericTesting mis à jour silencieusement');
       },
 
       updateEntryRegistry: (data) => {
-        console.log('🔄 SafetyManager: updateEntryRegistry appelé', data);
+        logger.debug('🔄 SafetyManager: updateEntryRegistry appelé', data);
         
         const state = get();
         
@@ -1066,11 +1066,11 @@ export const useSafetyManager = create<SafetyManagerState>()(
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: entryRegistry mis à jour silencieusement');
+        logger.debug('✅ SafetyManager: entryRegistry mis à jour silencieusement');
       },
 
       updateRescuePlan: (data) => {
-        console.log('🔄 SafetyManager: updateRescuePlan appelé', data);
+        logger.debug('🔄 SafetyManager: updateRescuePlan appelé', data);
         
         const state = get();
         
@@ -1107,17 +1107,17 @@ export const useSafetyManager = create<SafetyManagerState>()(
           set({ inputDebounceTimer: timer });
         }
         
-        console.log('✅ SafetyManager: rescuePlan mis à jour silencieusement');
+        logger.debug('✅ SafetyManager: rescuePlan mis à jour silencieusement');
       },
 
       // =================== MÉTHODES POUR ENTRYREGISTRY - OPTIMISÉES ===================
       updateRegistryData: (data) => {
-        console.log('🔄 SafetyManager: updateRegistryData appelé', data);
+        logger.debug('🔄 SafetyManager: updateRegistryData appelé', data);
         get().updateEntryRegistry(data);
       },
 
       updatePersonnel: (person) => {
-        console.log('🔄 SafetyManager: updatePersonnel appelé', person);
+        logger.debug('🔄 SafetyManager: updatePersonnel appelé', person);
         
         const state = get();
         const currentPersonnel = state.currentPermit.entryRegistry.personnel || [];
@@ -1137,12 +1137,12 @@ export const useSafetyManager = create<SafetyManagerState>()(
       },
 
       updateEquipment: (equipment) => {
-        console.log('🔄 SafetyManager: updateEquipment appelé', equipment);
+        logger.debug('🔄 SafetyManager: updateEquipment appelé', equipment);
         get().updateEntryRegistry({ equipment });
       },
 
       updateCompliance: (key: string, value: boolean) => {
-        console.log('🔄 SafetyManager: updateCompliance appelé', key, value);
+        logger.debug('🔄 SafetyManager: updateCompliance appelé', key, value);
         
         const state = get();
         const currentCompliance = state.currentPermit.entryRegistry.compliance || {};
@@ -1156,7 +1156,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
       },
 
       recordEntryExit: (personId, action) => {
-        console.log('🔄 SafetyManager: recordEntryExit appelé', personId, action);
+        logger.debug('🔄 SafetyManager: recordEntryExit appelé', personId, action);
         
         const state = get();
         const entryLog = state.currentPermit.entryRegistry.entryLog || [];
@@ -1193,22 +1193,22 @@ export const useSafetyManager = create<SafetyManagerState>()(
 
       // ✅ ALIAS DE COMPATIBILITÉ - OPTIMISÉS
       updateSiteInfo: (data: any) => {
-        console.log('🔄 SafetyManager: updateSiteInfo (alias) appelé', data);
+        logger.debug('🔄 SafetyManager: updateSiteInfo (alias) appelé', data);
         get().updateSiteInformation(data);
       },
 
       updateAtmosphericData: (data: any) => {
-        console.log('🔄 SafetyManager: updateAtmosphericData (alias) appelé', data);
+        logger.debug('🔄 SafetyManager: updateAtmosphericData (alias) appelé', data);
         get().updateAtmosphericTesting(data);
       },
 
       updateRegistryInfo: (data: any) => {
-        console.log('🔄 SafetyManager: updateRegistryInfo (alias) appelé', data);
+        logger.debug('🔄 SafetyManager: updateRegistryInfo (alias) appelé', data);
         get().updateEntryRegistry(data);
       },
 
       updateRescueData: (data: any) => {
-        console.log('🔄 SafetyManager: updateRescueData (alias) appelé', data);
+        logger.debug('🔄 SafetyManager: updateRescueData (alias) appelé', data);
         get().updateRescuePlan(data);
       },
 
@@ -1217,7 +1217,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
       flushPendingUpdates: () => {
         const state = get();
         if (Object.keys(state.pendingUpdates).length > 0) {
-          console.log('🔄 Flush des updates en attente:', state.pendingUpdates);
+          logger.debug('🔄 Flush des updates en attente:', state.pendingUpdates);
           
           // Appliquer tous les updates en une seule fois
           const updatedPermit = { ...state.currentPermit };
@@ -1243,11 +1243,11 @@ export const useSafetyManager = create<SafetyManagerState>()(
         
         // ✅ SAUVEGARDE SILENCIEUSE: Pas de changement d'état UI
         if (state.isSaving) {
-          console.log('🚫 Sauvegarde silencieuse déjà en cours');
+          logger.debug('🚫 Sauvegarde silencieuse déjà en cours');
           return;
         }
 
-        console.log('💾 Sauvegarde silencieuse en cours...');
+        logger.debug('💾 Sauvegarde silencieuse en cours...');
         
         try {
           // ✅ FLUSH: Appliquer les updates en attente
@@ -1274,23 +1274,23 @@ export const useSafetyManager = create<SafetyManagerState>()(
                   data: permit,
                   updated_at: new Date().toISOString()
                 });
-              console.log('✅ Permit sauvegardé silencieusement dans Supabase');
+              logger.debug('✅ Permit sauvegardé silencieusement dans Supabase');
             } catch (supabaseError) {
-              console.error('❌ Erreur Supabase, fallback localStorage:', supabaseError);
+              logger.error('❌ Erreur Supabase, fallback localStorage:', supabaseError);
               localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             }
           } else {
             // Fallback localStorage
             localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             localStorage.setItem('currentPermit', JSON.stringify(permit));
-            console.log('✅ Permit sauvegardé silencieusement dans localStorage');
+            logger.debug('✅ Permit sauvegardé silencieusement dans localStorage');
           }
           
           // ✅ MISE À JOUR MINIMALE: Juste le timestamp, pas de re-render
           set({ lastSaved: new Date().toISOString() });
           
         } catch (error) {
-          console.error('❌ Erreur sauvegarde silencieuse:', error);
+          logger.error('❌ Erreur sauvegarde silencieuse:', error);
         }
       },
 
@@ -1300,7 +1300,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
         
         // ✅ Éviter les sauvegardes concurrentes
         if (state.isSaving) {
-          console.log('🚫 Sauvegarde déjà en cours, ignorée');
+          logger.debug('🚫 Sauvegarde déjà en cours, ignorée');
           return null;
         }
 
@@ -1310,7 +1310,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           const permit = get().currentPermit;
           const validation = get().validatePermitCompleteness();
           
-          console.log('💾 Sauvegarde manuelle en cours...', permit.permit_number || 'nouveau');
+          logger.debug('💾 Sauvegarde manuelle en cours...', permit.permit_number || 'nouveau');
           
           // Mise à jour de la validation
           permit.validation = {
@@ -1344,16 +1344,16 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 });
                 
               if (error) throw error;
-              console.log('✅ Permit sauvegardé dans Supabase');
+              logger.debug('✅ Permit sauvegardé dans Supabase');
             } catch (supabaseError) {
-              console.error('❌ Erreur Supabase, fallback vers localStorage:', supabaseError);
+              logger.error('❌ Erreur Supabase, fallback vers localStorage:', supabaseError);
               localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             }
           } else {
             // Fallback localStorage
             localStorage.setItem(`permit_${permit.permit_number}`, JSON.stringify(permit));
             localStorage.setItem('currentPermit', JSON.stringify(permit));
-            console.log('✅ Permit sauvegardé dans localStorage');
+            logger.debug('✅ Permit sauvegardé dans localStorage');
           }
           
           set({ 
@@ -1370,7 +1370,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           
           return permit.permit_number;
         } catch (error) {
-          console.error('❌ Erreur sauvegarde:', error);
+          logger.error('❌ Erreur sauvegarde:', error);
           set({ isSaving: false });
           
           get().addNotification({
@@ -1386,7 +1386,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
         set({ isLoading: true });
         
         try {
-          console.log('📥 Chargement du permis:', permitNumber);
+          logger.debug('📥 Chargement du permis:', permitNumber);
           
           // Essayer Supabase d'abord
           if (supabaseEnabled && supabase) {
@@ -1411,7 +1411,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 return data.data;
               }
             } catch (supabaseError) {
-              console.error('❌ Erreur chargement Supabase:', supabaseError);
+              logger.error('❌ Erreur chargement Supabase:', supabaseError);
             }
           }
           
@@ -1441,7 +1441,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           
           return null;
         } catch (error) {
-          console.error('❌ Erreur chargement:', error);
+          logger.error('❌ Erreur chargement:', error);
           set({ isLoading: false });
           
           get().addNotification({
@@ -1470,7 +1470,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                 permits = data.map((item: any) => item.data);
               }
             } catch (supabaseError) {
-              console.error('❌ Erreur historique Supabase:', supabaseError);
+              logger.error('❌ Erreur historique Supabase:', supabaseError);
             }
           }
           
@@ -1490,7 +1490,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
                       permits.push(permit);
                     }
                   } catch (e) {
-                    console.warn('⚠️ Erreur parsing permit:', key);
+                    logger.warn('⚠️ Erreur parsing permit:', key);
                   }
                 }
               }
@@ -1500,7 +1500,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           set({ permits });
           return permits;
         } catch (error) {
-          console.error('❌ Erreur historique:', error);
+          logger.error('❌ Erreur historique:', error);
           return [];
         }
       },
@@ -1818,7 +1818,7 @@ Accès: ${permitUrl}`;
             message: `Permis ${permit.permit_number} importé avec succès`
           });
         } catch (error) {
-          console.error('Erreur import:', error);
+          logger.error('Erreur import:', error);
           
           get().addNotification({
             type: 'critical',

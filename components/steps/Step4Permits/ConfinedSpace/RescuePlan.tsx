@@ -1,7 +1,7 @@
 // RescuePlan.tsx - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
-import React from 'react';
+import { logger } from '@/lib/logger';
 import { 
   Shield, Wrench, Users, Clock, Plus, Trash2
 } from 'lucide-react';
@@ -90,13 +90,13 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
       try {
         safetyManager.updateRescuePlan(updates);
       } catch (error) {
-        console.warn('SafetyManager updateRescuePlan failed:', error);
+        logger.warn('SafetyManager updateRescuePlan failed:', error);
       }
     }
     
     // Fallback : si pas de SafetyManager, log les données
     if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateRescuePlan:', updates);
+      logger.warn('SafetyManager non disponible pour updateRescuePlan:', updates);
     }
   }, [safetyManager]);
 
@@ -115,7 +115,7 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
           return currentPermit.rescuePlan;
         }
       } catch (error) {
-        console.warn('SafetyManager currentPermit.rescuePlan access failed:', error);
+        logger.warn('SafetyManager currentPermit.rescuePlan access failed:', error);
       }
     }
     

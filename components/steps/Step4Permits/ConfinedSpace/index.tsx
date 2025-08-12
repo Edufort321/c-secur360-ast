@@ -1,7 +1,7 @@
 // ConfinedSpace/index.tsx - PARTIE 1/3 - Types et Configuration Build Ready
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { 
   Home, Clock, AlertTriangle, Users, Wind, Camera, MapPin, Bluetooth, Battery, Signal, 
   CheckCircle, XCircle, Play, Pause, RotateCcw, Save, Upload, Download, PenTool, Shield, 
@@ -667,7 +667,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const safetyManager = useSafetyManager();
   const isSafetyManagerEnabled = true;
   
-  console.log('🔄 SafetyManager réel activé - Mode validation seulement (pas de sync agressive)');
+  logger.debug('🔄 SafetyManager réel activé - Mode validation seulement (pas de sync agressive)');
 
   // =================== ÉTATS LOCAUX ===================
   const [currentSection, setCurrentSection] = useState<'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization'>('site');
@@ -883,7 +883,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     // ✅ PHASE 2: SEULEMENT validation pour progression et rapport final
     if (isSafetyManagerEnabled && safetyManager && permitData.permit_number) {
       try {
-        console.log('🔄 SafetyManager: Validation en cours...');
+        logger.debug('🔄 SafetyManager: Validation en cours...');
         const validation = safetyManager.validatePermitCompleteness();
         setValidationData(validation);
         
@@ -891,7 +891,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
           onValidationChange(validation);
         }
         
-        console.log('✅ SafetyManager: Validation terminée', validation);
+        logger.debug('✅ SafetyManager: Validation terminée', validation);
         
         // ⚠️ PAS de synchronisation des readings pour éviter les conflits
         // const currentPermit = safetyManager.currentPermit;
@@ -899,7 +899,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         //   setAtmosphericReadings(currentPermit.atmosphericTesting.readings);
         // }
       } catch (error) {
-        console.log('❌ Erreur SafetyManager validation:', error);
+        logger.debug('❌ Erreur SafetyManager validation:', error);
       }
     }
   }, [permitData.permit_number, isSafetyManagerEnabled, safetyManager, onValidationChange]); // ✅ Dépendances minimales
@@ -924,7 +924,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     const timer = setTimeout(() => {
       // ✅ Double vérification avant auto-save
       if (!isActuallyReadOnly && !showManager && permitData.permit_number) {
-        console.log('🔄 Auto-save sécurisé déclenché');
+        logger.debug('🔄 Auto-save sécurisé déclenché');
         savePermitData(false, true); // Auto-save silencieux
       }
     }, 60000); // ✅ FIX: Augmenté à 60 secondes pour réduire la fréquence
@@ -979,7 +979,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // =================== FONCTIONS UTILITAIRES AVEC VALIDATION SEULEMENT ===================
   const updatePermitData = useCallback((updates: Partial<PermitData>) => {
-    console.log('📝 updatePermitData appelé avec:', updates);
+    logger.debug('📝 updatePermitData appelé avec:', updates);
     
     const newData = { 
       ...permitData, 
@@ -990,7 +990,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     setPermitData(newData);
     
     // ✅ PHASE 2: SafetyManager RÉEL mais SANS synchronisation agressive
-    console.log('🔄 SafetyManager réel actif - mise à jour locale et validation');
+    logger.debug('🔄 SafetyManager réel actif - mise à jour locale et validation');
     
     // ✅ Garder tous les callbacks externes pour que les composants fonctionnent
     if (onDataChange) {
@@ -1006,24 +1006,24 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
 
   // ✅ FIX BUILD: Fonction wrapper pour compatibilité updatePermitData
   const handleSectionDataChange = useCallback((field: string, value: any) => {
-    console.log(`📊 handleSectionDataChange: ${field} =`, value);
+    logger.debug(`📊 handleSectionDataChange: ${field} =`, value);
     updatePermitData({ [field]: value });
   }, [updatePermitData]);
 
   // ✅ FIX BUILD: Fonction wrapper compatible avec le type attendu (data: any) => void
   const handleUpdatePermitData = useCallback((data: any) => {
-    console.log(`📋 handleUpdatePermitData:`, data);
+    logger.debug(`📋 handleUpdatePermitData:`, data);
     updatePermitData(data);
   }, [updatePermitData]);
 
   // ✅ FIX CRITIQUE: Fonction savePermitData sécurisée pour éviter les redirections
   const savePermitData = async (showNotification = true, isAutoSave = false) => {
     if (isActuallyReadOnly) {
-      console.log('🚫 Sauvegarde bloquée: mode lecture seule');
+      logger.debug('🚫 Sauvegarde bloquée: mode lecture seule');
       return;
     }
     
-    console.log(`💾 savePermitData: showNotification=${showNotification}, isAutoSave=${isAutoSave}`);
+    logger.debug(`💾 savePermitData: showNotification=${showNotification}, isAutoSave=${isAutoSave}`);
     
     if (showNotification) {
       setIsLoading(true);
@@ -1043,7 +1043,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       };
       
       // ⚠️ SAFETYMANAGER DÉSACTIVÉ - Pas de sauvegarde en base pour l'instant
-      console.log('🔇 SafetyManager désactivé - sauvegarde locale seulement');
+      logger.debug('🔇 SafetyManager désactivé - sauvegarde locale seulement');
       
       // ✅ Callback onSave sécurisé
       if (onSave) {
@@ -1057,9 +1057,9 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         setTimeout(() => setSaveStatus('idle'), isAutoSave ? 1000 : 3000);
       }
       
-      console.log('✅ Sauvegarde réussie');
+      logger.debug('✅ Sauvegarde réussie');
     } catch (error) {
-      console.error('❌ Erreur sauvegarde:', error);
+      logger.error('❌ Erreur sauvegarde:', error);
       if (showNotification) {
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 3000);
@@ -1072,7 +1072,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   };
 
   const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
-    console.log(`🧭 Navigation vers: ${section}`);
+    logger.debug(`🧭 Navigation vers: ${section}`);
     setCurrentSection(section);
   };
 

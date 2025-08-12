@@ -1,4 +1,4 @@
-'use client';
+import { logger } from '@/lib/logger';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
@@ -285,12 +285,12 @@ export default function ASTForm({
       
       // ✅ ÉVITER LES DOUBLONS
       if (lastUpdateRef.current === updateKey) {
-        console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
+        logger.debug('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
         return;
       }
       
       lastUpdateRef.current = updateKey;
-      console.log('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
+      logger.debug('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
       
       // ✅ MISE À JOUR SYNCHRONE DE L'ÉTAT LOCAL
       setAstData((prev: any) => {
@@ -310,7 +310,7 @@ export default function ASTForm({
         try {
           onDataChange(section, data);
         } catch (error) {
-          console.error('❌ Erreur sync parent:', error);
+          logger.error('❌ Erreur sync parent:', error);
         }
       }, 100);
       
@@ -412,7 +412,7 @@ export default function ASTForm({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Erreur lors de la copie:', err);
+      logger.error('Erreur lors de la copie:', err);
     }
   }, [astData.astNumber]);
 
@@ -496,7 +496,7 @@ export default function ASTForm({
               filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))'
             }}
             onError={(e) => {
-              console.log('❌ Erreur chargement logo:', e);
+              logger.debug('❌ Erreur chargement logo:', e);
               e.currentTarget.style.display = 'none';
               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
               if (fallback) fallback.style.display = 'flex';
@@ -1175,7 +1175,7 @@ export default function ASTForm({
       onDataChange: ultraStableHandler
     }), [currentLanguage, tenant, ultraStableHandler]);
     
-    console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
+    logger.debug('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
     
     switch (currentStep) {
       case 1:
@@ -1409,7 +1409,7 @@ export default function ASTForm({
   useEffect(() => {
     if (hasUnsavedChanges) {
       const saveTimer = setTimeout(() => {
-        console.log('🔄 Sauvegarde automatique...');
+        logger.debug('🔄 Sauvegarde automatique...');
         setHasUnsavedChanges(false);
       }, 1000);
 

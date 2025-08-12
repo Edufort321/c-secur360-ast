@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger';
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error: unknown) {
-    console.error('Error saving AST:', error)
+    logger.error('Error saving AST:', error)
     const message = error instanceof Error ? error.message : 'An unexpected error occurred'
     return NextResponse.json({
       success: false,
