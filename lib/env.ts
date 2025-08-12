@@ -13,7 +13,8 @@ export const envSchema = z.object({
   WEATHER_API_KEY: z.string(),
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().optional(),
   BASE_URL: z.string().url().default('http://localhost:3000'),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+  // Default to development unless explicitly set to production
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
 // Parse and validate the environment variables on startup
