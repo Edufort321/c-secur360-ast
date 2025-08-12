@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-chart-line: #22c55e;
+  --color-chart-electrique: #ef4444;
+  --color-chart-chute: #f97316;
+  --color-chart-equipement: #eab308;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-chart-line: #000;
+    --color-chart-electrique: #000;
+    --color-chart-chute: #000;
+    --color-chart-equipement: #000;
+  }
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
