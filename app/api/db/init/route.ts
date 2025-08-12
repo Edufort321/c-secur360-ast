@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     console.log('🔄 Testing database connection...')
-    
-    // Test simple de connexion
+
+    // Test de connexion à la base et création des tenants de démonstration
     await prisma.$connect()
     console.log('✅ Connected to database')
     
