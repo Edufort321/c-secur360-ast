@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { ASTFormData } from '@/app/types/astForm';
 import { 
   Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
   Zap, Activity, Star, AlertTriangle 
@@ -8,11 +9,11 @@ import {
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'equipment', data: ASTFormData['equipment']) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
 }
 
 interface Equipment {

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  Users, 
-  Clock, 
-  Shield, 
+import {
+  CheckCircle,
+  AlertTriangle,
+  Users,
+  Clock,
+  Shield,
   Eye,
   MessageSquare,
   ThumbsUp,
@@ -24,51 +24,11 @@ import {
   Trash2,
   BarChart3
 } from 'lucide-react';
-
-// =================== INTERFACES ===================
-interface TeamMember {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  department: string;
-  certification?: string;
-  status: 'approved' | 'pending' | 'rejected' | 'reviewing';
-  comments?: string;
-  rating?: number;
-  validatedAt?: string;
-  signature?: string;
-}
-
-interface ValidationData {
-  reviewers: TeamMember[];
-  approvalRequired: boolean;
-  minimumReviewers: number;
-  reviewDeadline?: string;
-  validationCriteria: {
-    hazardIdentification: boolean;
-    controlMeasures: boolean;
-    equipmentSelection: boolean;
-    procedural: boolean;
-    regulatory: boolean;
-  };
-  finalApproval?: {
-    approvedBy: string;
-    approvedAt: string;
-    signature: string;
-    conditions?: string;
-  };
-}
+import { ASTFormData, ValidationData, TeamMember } from '@/app/types/astForm';
 
 interface ValidationStepProps {
-  formData: {
-    validation?: ValidationData;
-    projectInfo?: any;
-    hazards?: any;
-    equipment?: any;
-    permits?: any;
-  };
-  onDataChange: (section: string, data: ValidationData) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'validation', data: ASTFormData['validation']) => void;
   language: 'fr' | 'en';
   tenant: string;
 }

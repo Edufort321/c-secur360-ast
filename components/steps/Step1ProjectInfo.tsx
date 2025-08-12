@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { ASTFormData } from '@/app/types/astForm';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -11,11 +12,11 @@ import {
 
 // =================== 🔥 INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'projectInfo', data: ASTFormData['projectInfo']) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
   userId?: string;
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }

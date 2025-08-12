@@ -515,4 +515,13 @@ export type {
   ApiResponse as APIResponse
 } from './api';
 
-export type { ASTFormData } from './astForm';
+export type {
+  ASTFormData,
+  ASTFormSection,
+  ProjectInfo,
+  EquipmentData,
+  HazardsData,
+  PermitsData,
+  ValidationData,
+  FinalizationData
+} from './astForm';

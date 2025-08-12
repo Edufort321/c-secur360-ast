@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { ASTFormData } from '@/app/types/astForm';
 import { 
   AlertTriangle, Search, Filter, CheckCircle, Shield, Eye, 
   Zap, Wrench, Wind, Thermometer, Volume2, Activity,
@@ -9,11 +10,11 @@ import {
 
 // =================== INTERFACES ===================
 interface Step3HazardsProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'hazards', data: ASTFormData['hazards']) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
 }
 
 interface Hazard {

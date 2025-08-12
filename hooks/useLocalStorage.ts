@@ -1,5 +1,6 @@
 // hooks/useLocalStorage.ts
 import { useState, useEffect, useCallback } from 'react';
+import { ASTFormData } from '@/app/types/astForm';
 
 export interface StorageOptions {
   serialize?: (value: any) => string;
@@ -197,7 +198,7 @@ export const useLocalStorage = <T>(
 // Interface pour les types AST
 interface ASTDraft {
   id: string;
-  data: any;
+  data: ASTFormData;
   savedAt: string;
   title: string;
 }
@@ -239,7 +240,7 @@ export const useASTLocalStorage = () => {
   const setRecentProjects = recentProjectsStorage.setValue;
 
   // Fonction pour sauvegarder un brouillon AST
-  const saveDraft = useCallback((astData: any) => {
+  const saveDraft = useCallback((astData: ASTFormData) => {
     const draft: ASTDraft = {
       id: astData.id || `draft_${Date.now()}`,
       data: astData,
@@ -259,7 +260,7 @@ export const useASTLocalStorage = () => {
   }, [setDrafts]);
 
   // Fonction pour charger un brouillon
-  const loadDraft = useCallback((draftId: string) => {
+  const loadDraft = useCallback((draftId: string): ASTFormData | null => {
     const draft = drafts.find(d => d.id === draftId);
     return draft ? draft.data : null;
   }, [drafts]);
@@ -270,9 +271,9 @@ export const useASTLocalStorage = () => {
   }, [setDrafts]);
 
   // Fonction pour ajouter aux projets récents
-  const addToRecentProjects = useCallback((project: any) => {
+  const addToRecentProjects = useCallback((project: ASTFormData) => {
     const recentProject: RecentProject = {
-      id: project.id,
+      id: project.id || project.astNumber,
       title: project.projectInfo?.projectName || 'Projet sans titre',
       client: project.projectInfo?.client || 'Client inconnu',
       lastAccessed: new Date().toISOString()

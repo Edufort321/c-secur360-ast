@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback, useRef, useState, useEffect } from 'react';
+import { ASTFormData, ASTFormSection } from '@/app/types/astForm';
 
 // =================== INTERFACES MULTI-TENANT ===================
 export interface TenantConfig {
@@ -27,7 +28,7 @@ export interface TenantConfig {
 }
 
 export interface ASTState {
-  formData: any;
+  formData: ASTFormData;
   currentStep: number;
   errors: Record<string, string>;
   isDirty: boolean;
@@ -36,8 +37,8 @@ export interface ASTState {
 }
 
 // =================== ACTIONS TYPES ===================
-type ASTAction = 
-  | { type: 'UPDATE_STEP_DATA'; section: string; data: any }
+type ASTAction =
+  | { type: 'UPDATE_STEP_DATA'; section: ASTFormSection; data: ASTFormData[ASTFormSection] }
   | { type: 'SET_CURRENT_STEP'; step: number }
   | { type: 'SET_LANGUAGE'; language: 'fr' | 'en' }
   | { type: 'MARK_SAVED' }
@@ -105,7 +106,7 @@ interface ASTContextValue {
   dispatch: React.Dispatch<ASTAction>;
   
   // Actions principales
-  updateStepData: (section: string, data: any) => void;
+  updateStepData: <K extends ASTFormSection>(section: K, data: ASTFormData[K]) => void;
   setCurrentStep: (step: number) => void;
   setLanguage: (language: 'fr' | 'en') => void;
   
@@ -127,16 +128,16 @@ interface ASTContextValue {
 const ASTContext = createContext<ASTContextValue | null>(null);
 
 // =================== PROVIDER ULTRA-STABLE ===================
-export function ASTProvider({ 
-  children, 
-  tenant, 
+export function ASTProvider({
+  children,
+  tenant,
   initialData = {},
   language = 'fr',
   userId
-}: { 
+}: {
   children: React.ReactNode;
   tenant: TenantConfig;
-  initialData?: any;
+  initialData?: Partial<ASTFormData>;
   language?: 'fr' | 'en';
   userId?: string;
 }) {
@@ -149,7 +150,7 @@ export function ASTProvider({
       astNumber: `AST-${tenant.id.toUpperCase()}-${Date.now()}`,
       userId: userId || 'anonymous',
       createdAt: new Date().toISOString()
-    },
+    } as ASTFormData,
     currentStep: 1,
     errors: {},
     isDirty: false,
@@ -158,7 +159,7 @@ export function ASTProvider({
   });
 
   // ✅ HANDLERS ULTRA-STABLES - Références figées
-  const updateStepData = useCallback((section: string, data: any) => {
+  const updateStepData = useCallback(<K extends ASTFormSection>(section: K, data: ASTFormData[K]) => {
     console.log('🔥 Context Update:', { section, data, tenant: tenant.id });
     
     dispatch({
@@ -171,7 +172,7 @@ export function ASTProvider({
     setTimeout(() => {
       saveToTenantDatabase(tenant.database, section, data, state.formData.astNumber);
     }, 1000);
-    
+
   }, [tenant.database, state.formData.astNumber]);
 
   const setCurrentStep = useCallback((step: number) => {
@@ -339,9 +340,9 @@ export function useAST() {
 
 // =================== API MULTI-TENANT AMÉLIORÉE ===================
 async function saveToTenantDatabase(
-  dbConfig: TenantConfig['database'], 
-  section: string, 
-  data: any,
+  dbConfig: TenantConfig['database'],
+  section: ASTFormSection | 'complete_ast',
+  data: unknown,
   astNumber: string
 ) {
   try {

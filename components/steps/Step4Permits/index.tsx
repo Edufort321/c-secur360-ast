@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ASTFormData } from '@/app/types/astForm';
 import { 
   Shield, Search, CheckCircle, AlertTriangle, FileText, Settings, 
   Users, Clock, Eye, Zap, Wind, Flame, Construction, Building, 
@@ -134,16 +135,16 @@ const PROVINCES_DATA = {
 
 // =================== INTERFACES ===================
 interface Step4PermitsProps {
-  formData: any;
-  onDataChange: (section: string, data: any) => void;
+  formData: ASTFormData;
+  onDataChange: (section: 'permits', data: ASTFormData['permits']) => void;
   language: 'fr' | 'en';
   tenant: string;
-  errors?: any;
+  errors?: Record<string, string>;
   province?: string;
   userRole?: string;
   touchOptimized?: boolean;
   compactMode?: boolean;
-  onPermitChange?: (permits: any) => void;
+  onPermitChange?: (permits: ASTFormData['permits']) => void;
   initialPermits?: any[];
 }
 
