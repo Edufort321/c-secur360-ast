@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
-import env from '@/lib/env'
+import { SERVER_ENV } from '@/lib/env'
 import { z } from 'zod'
 
 const bodySchema = z.object({
@@ -9,7 +9,7 @@ const bodySchema = z.object({
 })
 
 async function ensureUser(request: NextRequest, tenantSubdomain: string) {
-  const token = await getToken({ req: request, secret: env.NEXTAUTH_SECRET })
+  const token = await getToken({ req: request, secret: SERVER_ENV.NEXTAUTH_SECRET })
   if (!token?.sub) {
     return { error: NextResponse.json({ error: 'Authentication required' }, { status: 401 }) }
   }

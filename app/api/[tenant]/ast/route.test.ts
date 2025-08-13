@@ -13,7 +13,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 vi.mock('@/lib/env', () => ({
-  default: { NEXTAUTH_SECRET: 'test' }
+  SERVER_ENV: { NEXTAUTH_SECRET: 'test' }
 }))
 
 describe('GET /api/[tenant]/ast', () => {

@@ -1,5 +1,5 @@
 import type { WeatherData } from '../hooks/useWeatherData';
-import env from '@/lib/env';
+import { SERVER_ENV } from '@/lib/env';
 
 const API_BASE = 'https://api.openweathermap.org/data/3.0/onecall';
 const DEFAULT_TIMEOUT = 5000;
@@ -10,7 +10,7 @@ const degToCompass = (deg: number): string => {
 };
 
 export async function getWeatherData(lat: number, lng: number): Promise<WeatherData> {
-  const apiKey = env.WEATHER_API_KEY;
+  const apiKey = SERVER_ENV.WEATHER_API_KEY;
   if (!apiKey) {
     throw new Error('WEATHER_API_KEY is not defined');
   }
