@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { PUBLIC_ENV } from '@/lib/public-env'
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
@@ -7,14 +8,14 @@ export function middleware(request: NextRequest) {
   const hostname = requestHost.split(':')[0]
 
   // Récupérer dynamiquement la liste des sous-domaines valides via une variable d'environnement
-  const validTenantsEnv = process.env.VALID_TENANTS || ''
+  const validTenantsEnv = PUBLIC_ENV.VALID_TENANTS || ''
   const validTenants = validTenantsEnv
     .split(',')
     .map((tenant) => tenant.trim())
     .filter(Boolean)
 
   const defaultTenant =
-    process.env.NEXT_PUBLIC_DEFAULT_TENANT || validTenants[0] || 'demo'
+    PUBLIC_ENV.NEXT_PUBLIC_DEFAULT_TENANT || validTenants[0] || 'demo'
 
   // Extraire le sous-domaine sans le port
   const subdomain = hostname.split('.')[0]
