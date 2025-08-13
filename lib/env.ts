@@ -67,3 +67,10 @@ export const SERVER_ENV: ServerEnv = skipValidation
   ? ({ BASE_URL: 'http://localhost:3000', ...process.env } as unknown as ServerEnv)
   : parseServerEnv();
 
+export const {
+  NODE_ENV,
+  WEATHER_API_KEY,
+  NEXTAUTH_SECRET,
+  BASE_URL,
+} = SERVER_ENV;
+
