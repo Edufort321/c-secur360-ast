@@ -15,12 +15,26 @@ const formDataSchema = z.object({
   workDescription: z.string().trim().optional(),
   datetime: z.string().trim().optional(),
   language: z.string().trim().optional(),
-  teamDiscussion: z.string().trim().optional(),
-  isolation: z.string().trim().optional(),
+  teamDiscussion: z.array(z.string().trim()).optional(),
+  isolation: z
+    .object({
+      point: z.string().trim().optional(),
+      circuits: z
+        .array(
+          z.object({
+            name: z.string(),
+            padlock: z.boolean(),
+            voltage: z.boolean(),
+            grounding: z.boolean(),
+          })
+        )
+        .optional(),
+    })
+    .optional(),
   hazards: z.array(z.unknown()).optional(),
   controlMeasures: z.array(z.unknown()).optional(),
   workers: z.array(z.unknown()).optional(),
-  photos: z.array(z.unknown()).optional()
+  photos: z.array(z.unknown()).optional(),
 })
 
 const requestSchema = z.object({

@@ -33,4 +33,21 @@ describe('sanitizeFormData', () => {
     expect((clean.workers[0] as any).name).toBe('')
     expect((clean.workers[0] as any).tasks[0]).toBe('')
   })
+
+  it('sanitizes team discussion and isolation structures', () => {
+    const dirty: any = {
+      teamDiscussion: ['<script>bad()</script>'],
+      isolation: {
+        point: '<img src=x onerror=alert(1)>',
+        circuits: [
+          { name: '<script>alert(2)</script>', padlock: true, voltage: false, grounding: true }
+        ]
+      }
+    }
+
+    const clean = sanitizeFormData(dirty)
+    expect(clean.teamDiscussion?.[0]).toBe('')
+    expect(clean.isolation?.point).toBe('')
+    expect(clean.isolation?.circuits?.[0].name).toBe('')
+  })
 })
