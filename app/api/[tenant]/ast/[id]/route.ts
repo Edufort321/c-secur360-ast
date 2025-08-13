@@ -3,6 +3,9 @@ import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { SERVER_ENV } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 async function ensureUser(request: NextRequest, tenantSubdomain: string) {
   const token = await getToken({ req: request, secret: SERVER_ENV.NEXTAUTH_SECRET })
   if (!token?.sub) {

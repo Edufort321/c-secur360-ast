@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { SERVER_ENV } from '@/lib/env'
 import { z } from 'zod'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const bodySchema = z.object({
   formData: z.any()
 })

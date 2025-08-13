@@ -5,6 +5,9 @@ import { z } from 'zod'
 import { SERVER_ENV } from '@/lib/env'
 import { sanitizeFormData } from './utils'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const formDataSchema = z.object({
   projectNumber: z.string().trim().optional(),
   client: z.string().trim().optional(),
