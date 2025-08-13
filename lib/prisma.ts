@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 import env from '@/lib/env'
 
+// Cache Prisma Client instance on `globalThis` to avoid re-instantiation
+// during development hot reloads. Prisma connects lazily on first use.
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
@@ -8,11 +10,5 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-// Ensure a single client manages its own connection lifecycle
-prisma.$connect()
-process.on('beforeExit', async () => {
-  await prisma.$disconnect()
-})
 
 export default prisma
