@@ -38,6 +38,19 @@ To execute the unit test suite, run:
 npm test
 ```
 
+## AST API
+
+Tenant specific endpoints are available under `api/[tenant]/ast` and require an
+authenticated user belonging to the tenant. Main routes include:
+
+- `GET /api/[tenant]/ast` – list AST forms for the tenant
+- `POST /api/[tenant]/ast` – create a new AST form
+- `GET /api/[tenant]/ast/[id]` – fetch a specific AST form
+- `POST /api/[tenant]/ast/save` – upsert an AST form draft
+
+All requests validate that the current user has access to the tenant before
+returning data.
+
 
 ## Prisma Client
 
