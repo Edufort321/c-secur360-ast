@@ -25,7 +25,7 @@ export type ClientEnv = z.infer<typeof clientSchema>;
 export type ServerEnv = z.infer<typeof serverSchema>;
 
 const clientEnv: ClientEnv = skipValidation
-  ? (process.env as unknown as ClientEnv)
+  ? ({ ...process.env } as unknown as ClientEnv)
   : clientSchema.parse(process.env);
 
 let serverEnv: ServerEnv | null = null;
@@ -33,9 +33,9 @@ const loadServerEnv = (): ServerEnv => {
   if (serverEnv) return serverEnv;
   if (skipValidation) {
     serverEnv = {
-      BASE_URL: 'http://localhost:3000',
-      NODE_ENV: 'production',
       ...process.env,
+      BASE_URL: process.env.BASE_URL ?? 'http://localhost:3000',
+      NODE_ENV: process.env.NODE_ENV ?? 'development',
     } as unknown as ServerEnv;
     return serverEnv;
   }
