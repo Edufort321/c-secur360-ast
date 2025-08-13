@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
-import { SERVER_ENV } from '@/lib/env'
+import { serverEnv } from '@/lib/env.server'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 async function ensureUser(request: NextRequest, tenantSubdomain: string) {
-  const token = await getToken({ req: request, secret: SERVER_ENV.NEXTAUTH_SECRET })
+  const token = await getToken({ req: request, secret: serverEnv.NEXTAUTH_SECRET })
   if (!token?.sub) {
     return { error: NextResponse.json({ error: 'Authentication required' }, { status: 401 }) }
   }
