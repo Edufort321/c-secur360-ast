@@ -24,9 +24,21 @@ const serverSchema = z.object({
 export type ClientEnv = z.infer<typeof clientSchema>;
 export type ServerEnv = z.infer<typeof serverSchema>;
 
+const parseClientEnv = (): ClientEnv => {
+  const parsed = clientSchema.safeParse(process.env);
+  if (!parsed.success) {
+    parsed.error.issues
+      .filter((issue) => issue.message === 'Required')
+      .forEach((issue) => console.error(`❌ Missing environment variable: ${issue.path.join('.')}`));
+    console.error('❌ Invalid environment variables', parsed.error.flatten().fieldErrors);
+    throw new Error('Missing or invalid environment variables');
+  }
+  return parsed.data;
+};
+
 const clientEnv: ClientEnv = skipValidation
   ? (process.env as unknown as ClientEnv)
-  : clientSchema.parse(process.env);
+  : parseClientEnv();
 
 let serverEnv: ServerEnv | null = null;
 const loadServerEnv = (): ServerEnv => {
@@ -40,6 +52,9 @@ const loadServerEnv = (): ServerEnv => {
   }
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
+    parsed.error.issues
+      .filter((issue) => issue.message === 'Required')
+      .forEach((issue) => console.error(`❌ Missing environment variable: ${issue.path.join('.')}`));
     console.error('❌ Invalid environment variables', parsed.error.flatten().fieldErrors);
     throw new Error('Missing or invalid environment variables');
   }

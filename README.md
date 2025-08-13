@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+All variables listed in `.env.example` must be provided in your environment. For local development, copy the file to `.env.local` and supply the appropriate values:
+
+```
+cp .env.example .env.local
+```
+
+If any required variable is missing at startup, the application logs a detailed error and stops.
+
 ## Running Tests
 
 To execute the unit test suite, run:
