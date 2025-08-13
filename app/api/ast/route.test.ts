@@ -7,7 +7,13 @@ vi.mock('next/server', () => ({
 
 vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
 vi.mock('@/lib/prisma', () => ({ prisma: {} }))
-vi.mock('@/lib/env', () => ({ PUBLIC_ENV: {}, SERVER_ENV: {} }))
+vi.mock('@/lib/env', () => ({
+  PUBLIC_ENV: {},
+  SERVER_ENV: {},
+  NEXT_PUBLIC_SUPABASE_URL: '',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: '',
+}))
 
 import { sanitizeFormData } from './utils'
 

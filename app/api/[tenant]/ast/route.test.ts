@@ -14,7 +14,10 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/env', () => ({
   SERVER_ENV: { NEXTAUTH_SECRET: 'test' },
-  PUBLIC_ENV: {}
+  PUBLIC_ENV: {},
+  NEXT_PUBLIC_SUPABASE_URL: '',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: '',
 }))
 
 describe('GET /api/[tenant]/ast', () => {

@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
-import { PUBLIC_ENV } from '@/lib/env'
+import { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env'
 
 const FALLBACK_URL = 'http://localhost:54321'
-const supabaseUrlEnv = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrlEnv = NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseAnonKey) {
   console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Set it in your .env.local file.')
