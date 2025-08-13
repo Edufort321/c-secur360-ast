@@ -285,19 +285,17 @@ export const useASTLocalStorage = () => {
 
   // Fonction pour ajouter aux projets récents
   const addToRecentProjects = useCallback((project: ASTData) => {
-    if (!project.id) {
-      project.id = `project_${Date.now()}`;
-    }
+    const id = project.id ?? `project_${Date.now()}`;
 
     const recentProject: RecentProject = {
-      id: project.id,
+      id,
       title: project.projectInfo?.projectName || 'Projet sans titre',
       client: project.projectInfo?.client || 'Client inconnu',
       lastAccessed: new Date().toISOString()
     };
 
     setRecentProjects((prevRecent: RecentProject[]) => {
-      const filtered = prevRecent.filter(p => p.id !== project.id);
+      const filtered = prevRecent.filter(p => p.id !== id);
       return [recentProject, ...filtered].slice(0, 10); // Garder max 10 projets récents
     });
   }, [setRecentProjects]);
