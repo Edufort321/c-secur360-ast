@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Download, Share } from 'lucide-react'
+import { IsolationCircuit } from '@/types/astPayload'
 
 interface ASTDetailPageProps {
   params: { tenant: string; id: string }
@@ -126,7 +127,7 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
               )}
               {isolation.circuits && isolation.circuits.length > 0 && (
                 <div className="space-y-3">
-                  {isolation.circuits.map((circuit: any, index: number) => (
+                  {isolation.circuits.map((circuit: IsolationCircuit, index: number) => (
                     <div key={index} className="bg-slate-700/50 p-4 rounded-lg">
                       <h4 className="text-white font-semibold mb-2">{circuit.name}</h4>
                       <div className="grid grid-cols-3 gap-4 text-sm">
