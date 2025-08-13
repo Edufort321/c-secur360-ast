@@ -34,7 +34,6 @@ const loadServerEnv = (): ServerEnv => {
   if (skipValidation) {
     serverEnv = {
       BASE_URL: 'http://localhost:3000',
-      NODE_ENV: 'production',
       ...process.env,
     } as unknown as ServerEnv;
     return serverEnv;
