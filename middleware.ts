@@ -8,20 +8,28 @@ export function middleware(request: NextRequest) {
   // Extraire le sous-domaine
   const subdomain = hostname.split('.')[0]
   
-  // Liste des sous-domaines valides
-  const validTenants = ['demo', 'c-secur360', 'localhost']
-  
-  // Si c'est un sous-domaine valide, rediriger vers la route tenant
-  if (validTenants.includes(subdomain) || hostname.includes('localhost')) {
-    const currentTenant = hostname.includes('localhost') ? 'demo' : subdomain
-    
-    // Si l'URL ne commence pas déjà par le tenant
-    if (!url.pathname.startsWith(`/${currentTenant}`)) {
-      url.pathname = `/${currentTenant}${url.pathname}`
-      return NextResponse.rewrite(url)
-    }
+  // Récupérer dynamiquement la liste des sous-domaines valides via une variable d'environnement
+  const validTenantsEnv = process.env.VALID_TENANTS || ''
+  const validTenants = validTenantsEnv
+    .split(',')
+    .map((tenant) => tenant.trim())
+    .filter(Boolean)
+
+  // Gérer les tenants inconnus
+  if (!validTenants.includes(subdomain) && !hostname.includes('localhost')) {
+    return NextResponse.json({ error: 'Unknown tenant' }, { status: 404 })
   }
-  
+
+  const currentTenant = hostname.includes('localhost')
+    ? validTenants[0] || 'demo'
+    : subdomain
+
+  // Si l'URL ne commence pas déjà par le tenant
+  if (!url.pathname.startsWith(`/${currentTenant}`)) {
+    url.pathname = `/${currentTenant}${url.pathname}`
+    return NextResponse.rewrite(url)
+  }
+
   return NextResponse.next()
 }
 
