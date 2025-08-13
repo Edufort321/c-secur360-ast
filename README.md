@@ -29,6 +29,15 @@ npm test
 ```
 
 
+## Prisma Client
+
+This project uses Prisma for database access. The Prisma Client instance is
+cached on `globalThis` during development to prevent multiple instances from
+being created on hot reloads. The client connects lazily when a query is run,
+so you don't need to manually call `$connect` or handle disconnections. This
+pattern is the recommended approach when using Prisma with Next.js.
+
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
