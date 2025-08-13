@@ -3,6 +3,16 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Download, Share } from 'lucide-react'
 
+interface Hazard {
+  id: string
+  description: string
+}
+
+interface Worker {
+  name: string
+  departureTime?: string
+}
+
 interface ASTDetailPageProps {
   params: { tenant: string; id: string }
 }
@@ -25,8 +35,8 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
   const generalInfo = ast.generalInfo as any
   const teamDiscussion = ast.teamDiscussion as string[]
   const isolation = ast.isolation as any
-  const hazards = ast.hazards as string[]
-  const workers = ast.workers as any[]
+  const hazards = ast.hazards as Hazard[]
+  const workers = ast.workers as Worker[]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">

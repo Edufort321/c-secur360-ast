@@ -5,6 +5,33 @@ import { z } from 'zod'
 import sanitizeHtml from 'sanitize-html'
 import env from '@/lib/env'
 
+const controlMeasureSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  category: z.string().optional(),
+  implemented: z.boolean().optional(),
+})
+
+const hazardSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  riskLevel: z.string().optional(),
+  controlMeasures: z.array(controlMeasureSchema).optional(),
+})
+
+const workerSchema = z.object({
+  name: z.string(),
+  departureTime: z.string().optional(),
+})
+
+const photoSchema = z.object({
+  id: z.string(),
+  url: z.string().url(),
+  caption: z.string().optional(),
+  timestamp: z.string().optional(),
+  lockoutPointId: z.string().optional(),
+})
+
 const formDataSchema = z.object({
   projectNumber: z.string().trim().optional(),
   client: z.string().trim().optional(),
@@ -17,10 +44,10 @@ const formDataSchema = z.object({
   language: z.string().trim().optional(),
   teamDiscussion: z.string().trim().optional(),
   isolation: z.string().trim().optional(),
-  hazards: z.array(z.unknown()).optional(),
-  controlMeasures: z.array(z.unknown()).optional(),
-  workers: z.array(z.unknown()).optional(),
-  photos: z.array(z.unknown()).optional()
+  hazards: z.array(hazardSchema).optional(),
+  controlMeasures: z.array(controlMeasureSchema).optional(),
+  workers: z.array(workerSchema).optional(),
+  photos: z.array(photoSchema).optional(),
 })
 
 const requestSchema = z.object({
@@ -28,18 +55,25 @@ const requestSchema = z.object({
   formData: formDataSchema
 })
 
+function sanitizeValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return sanitizeHtml(value)
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item))
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, sanitizeValue(v)])
+    )
+  }
+  return value
+}
+
 function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
   const sanitized: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string') {
-      sanitized[key] = sanitizeHtml(value)
-    } else if (Array.isArray(value)) {
-      sanitized[key] = value.map((item) =>
-        typeof item === 'string' ? sanitizeHtml(item) : item
-      )
-    } else {
-      sanitized[key] = value
-    }
+    sanitized[key] = sanitizeValue(value)
   }
   return sanitized as z.infer<typeof formDataSchema>
 }
