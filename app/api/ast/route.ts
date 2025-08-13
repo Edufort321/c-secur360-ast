@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import sanitizeHtml from 'sanitize-html'
 import env from '@/lib/env'
+import { sanitizeFormData } from './utils'
 
 const formDataSchema = z.object({
   projectNumber: z.string().trim().optional(),
@@ -42,31 +42,6 @@ const requestSchema = z.object({
   formData: formDataSchema
 })
 
-export function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
-  const sanitizeValue = (value: unknown): unknown => {
-    if (typeof value === 'string') {
-      return sanitizeHtml(value)
-    }
-    if (Array.isArray(value)) {
-      return value.map(sanitizeValue)
-    }
-    if (value && typeof value === 'object') {
-      const obj: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        obj[k] = sanitizeValue(v)
-      }
-      return obj
-    }
-    return value
-  }
-
-  const sanitized: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(data)) {
-    sanitized[key] = sanitizeValue(value)
-  }
-  return sanitized as z.infer<typeof formDataSchema>
-}
-
 export async function POST(request: NextRequest) {
   try {
     const token = await getToken({ req: request, secret: env.NEXTAUTH_SECRET })
@@ -88,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { tenantId, formData } = parsed.data
-    const cleanFormData = sanitizeFormData(formData)
+    const cleanFormData = sanitizeFormData(formData) as any
     
     // Générer un numéro AST automatique
     const astCount = await prisma.aSTForm.count({ where: { tenantId } })
