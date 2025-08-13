@@ -1,7 +1,6 @@
 import type { WeatherData } from '../hooks/useWeatherData';
-import { SERVER_ENV } from '@/lib/env';
+// Consomme l'API interne /api/weather qui protège la clé OpenWeather
 
-const API_BASE = 'https://api.openweathermap.org/data/3.0/onecall';
 const DEFAULT_TIMEOUT = 5000;
 
 const degToCompass = (deg: number): string => {
@@ -10,17 +9,13 @@ const degToCompass = (deg: number): string => {
 };
 
 export async function getWeatherData(lat: number, lng: number): Promise<WeatherData> {
-  const apiKey = SERVER_ENV.WEATHER_API_KEY;
-  if (!apiKey) {
-    throw new Error('WEATHER_API_KEY is not defined');
-  }
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
 
   try {
-    const url = `${API_BASE}?lat=${lat}&lon=${lng}&units=metric&appid=${apiKey}`;
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch(`/api/weather?lat=${lat}&lon=${lng}`, {
+      signal: controller.signal,
+    });
 
     if (!response.ok) {
       throw new Error(`Weather API error: ${response.status}`);
