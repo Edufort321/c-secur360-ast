@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const skipValidation = !!process.env.SKIP_ENV_VALIDATION;
+const skipValidation = Boolean(process.env.SKIP_ENV_VALIDATION);
 
 const clientSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -17,62 +17,53 @@ const serverSchema = z.object({
   NEXTAUTH_URL: z.string().url(),
   WEATHER_API_KEY: z.string(),
   BASE_URL: z.string().url().default('http://localhost:3000'),
-  // Default to development unless explicitly set to production
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
 export type ClientEnv = z.infer<typeof clientSchema>;
 export type ServerEnv = z.infer<typeof serverSchema>;
 
-const parseClientEnv = (): ClientEnv => {
-  const parsed = clientSchema.safeParse(process.env);
+const clientVariables = {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+  NEXT_PUBLIC_DEFAULT_TENANT: process.env.NEXT_PUBLIC_DEFAULT_TENANT,
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+};
+
+const parseClientEnv = (vars: typeof clientVariables): ClientEnv => {
+  const parsed = clientSchema.safeParse(vars);
   if (!parsed.success) {
     parsed.error.issues
       .filter((issue) => issue.message === 'Required')
-      .forEach((issue) => console.error(`❌ Missing environment variable: ${issue.path.join('.')}`));
+      .forEach((issue) =>
+        console.error(`❌ Missing environment variable: ${issue.path.join('.')}`),
+      );
     console.error('❌ Invalid environment variables', parsed.error.flatten().fieldErrors);
     throw new Error('Missing or invalid environment variables');
   }
   return parsed.data;
 };
 
-const clientEnv: ClientEnv = skipValidation
-  ? (process.env as unknown as ClientEnv)
-  : parseClientEnv();
-
-let serverEnv: ServerEnv | null = null;
-const loadServerEnv = (): ServerEnv => {
-  if (serverEnv) return serverEnv;
-  if (skipValidation) {
-    serverEnv = {
-      BASE_URL: 'http://localhost:3000',
-      ...process.env,
-    } as unknown as ServerEnv;
-    return serverEnv;
-  }
+const parseServerEnv = (): ServerEnv => {
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
     parsed.error.issues
       .filter((issue) => issue.message === 'Required')
-      .forEach((issue) => console.error(`❌ Missing environment variable: ${issue.path.join('.')}`));
+      .forEach((issue) =>
+        console.error(`❌ Missing environment variable: ${issue.path.join('.')}`),
+      );
     console.error('❌ Invalid environment variables', parsed.error.flatten().fieldErrors);
     throw new Error('Missing or invalid environment variables');
   }
-  serverEnv = parsed.data;
-  return serverEnv;
+  return parsed.data;
 };
 
-export const env: ClientEnv & ServerEnv = clientEnv as ClientEnv & ServerEnv;
-for (const key of Object.keys(serverSchema.shape)) {
-  Object.defineProperty(env, key, {
-    enumerable: true,
-    get() {
-      return loadServerEnv()[key as keyof ServerEnv];
-    },
-  });
-}
+export const PUBLIC_ENV: ClientEnv = skipValidation
+  ? (clientVariables as ClientEnv)
+  : parseClientEnv(clientVariables);
 
-export const getServerEnv = loadServerEnv;
-export type Env = ClientEnv & ServerEnv;
-export default env;
+export const SERVER_ENV: ServerEnv = skipValidation
+  ? ({ BASE_URL: 'http://localhost:3000', ...process.env } as unknown as ServerEnv)
+  : parseServerEnv();
 
