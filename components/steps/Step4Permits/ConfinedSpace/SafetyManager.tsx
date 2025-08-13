@@ -255,11 +255,17 @@ export interface ValidationData {
   lastValidated: string;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 // ✅ INTERFACE SITEINFO POUR LA SAISIE - TOUTES PROPRIÉTÉS DÉFINIES
 export interface ConfinedSpaceDetails {
   // ✅ Informations principales - GARANTIES STRING DÉFINIES
   projectNumber: string;
   workLocation: string;
+  workLocationCoordinates?: Coordinates;
   contractor: string;
   supervisor: string;
   entryDate: string;
@@ -683,6 +689,7 @@ function createEmptyPermit(): ConfinedSpacePermit {
       // ✅ GARANTIE: Toutes les propriétés string sont définies (pas undefined)
       projectNumber: '',
       workLocation: '',
+      workLocationCoordinates: { lat: 45.5017, lng: -73.5673 },
       contractor: '',
       supervisor: '',
       entryDate: '',
