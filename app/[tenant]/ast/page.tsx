@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import ASTForm from '@/components/ASTForm';
 import { ASTFormData } from '../../types/astForm';
@@ -98,22 +98,20 @@ export default function ASTPage() {
     loadData();
   }, [tenant]);
 
-  const handleDataChange = useCallback(async <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
-    setSaving(true);
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    setFormData(prev => {
-      const newData: ASTFormData = {
-        ...prev,
-        [section]: data,
-        updatedAt: new Date().toISOString()
-      };
-      
-      setTimeout(async () => {
+  const debouncedSave = useCallback(
+    (data: ASTFormData) => {
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current);
+      }
+
+      saveTimeout.current = setTimeout(async () => {
         try {
-          await fetch(`/api/${tenant}/ast/save`, {
+          await fetch('/api/ast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newData)
+            body: JSON.stringify({ tenantId: tenant, formData: data })
           });
         } catch (err) {
           console.error('Erreur sauvegarde:', err);
@@ -121,10 +119,36 @@ export default function ASTPage() {
           setSaving(false);
         }
       }, 500);
-      
-      return newData;
-    });
-  }, [tenant]);
+    },
+    [tenant]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current);
+      }
+    };
+  }, []);
+
+  const handleDataChange = useCallback(
+    <K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
+      setSaving(true);
+
+      setFormData(prev => {
+        const newData: ASTFormData = {
+          ...prev,
+          [section]: data,
+          updatedAt: new Date().toISOString()
+        };
+
+        debouncedSave(newData);
+
+        return newData;
+      });
+    },
+    [debouncedSave]
+  );
 
   if (loading) {
     return (
