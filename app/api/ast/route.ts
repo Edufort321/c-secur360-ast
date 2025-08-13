@@ -2,12 +2,47 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import sanitizeHtml from 'sanitize-html'
 import env from '@/lib/env'
+
+const formDataSchema = z.object({
+  projectNumber: z.string().trim().optional(),
+  client: z.string().trim().optional(),
+  workLocation: z.string().trim().optional(),
+  clientRep: z.string().trim().optional(),
+  emergencyNumber: z.string().trim().optional(),
+  astClientNumber: z.string().trim().optional(),
+  workDescription: z.string().trim().optional(),
+  datetime: z.string().trim().optional(),
+  language: z.string().trim().optional(),
+  teamDiscussion: z.string().trim().optional(),
+  isolation: z.string().trim().optional(),
+  hazards: z.array(z.unknown()).optional(),
+  controlMeasures: z.array(z.unknown()).optional(),
+  workers: z.array(z.unknown()).optional(),
+  photos: z.array(z.unknown()).optional()
+})
 
 const requestSchema = z.object({
   tenantId: z.string(),
-  formData: z.any()
+  formData: formDataSchema
 })
+
+function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeHtml(value)
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value.map((item) =>
+        typeof item === 'string' ? sanitizeHtml(item) : item
+      )
+    } else {
+      sanitized[key] = value
+    }
+  }
+  return sanitized as z.infer<typeof formDataSchema>
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,12 +59,13 @@ export async function POST(request: NextRequest) {
     const parsed = requestSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request body' },
+        { success: false, error: parsed.error.format() },
         { status: 400 }
       )
     }
 
     const { tenantId, formData } = parsed.data
+    const cleanFormData = sanitizeFormData(formData)
     
     // Générer un numéro AST automatique
     const astCount = await prisma.aSTForm.count({ where: { tenantId } })
@@ -39,25 +75,25 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId,
         userId,
-        projectNumber: formData.projectNumber || '',
-        clientName: formData.client || '',
-        workLocation: formData.workLocation || '',
-        clientRep: formData.clientRep,
-        emergencyNumber: formData.emergencyNumber,
+        projectNumber: cleanFormData.projectNumber || '',
+        clientName: cleanFormData.client || '',
+        workLocation: cleanFormData.workLocation || '',
+        clientRep: cleanFormData.clientRep,
+        emergencyNumber: cleanFormData.emergencyNumber,
         astMdlNumber: astNumber,
-        astClientNumber: formData.astClientNumber,
-        workDescription: formData.workDescription || '',
+        astClientNumber: cleanFormData.astClientNumber,
+        workDescription: cleanFormData.workDescription || '',
         status: 'completed',
         generalInfo: {
-          datetime: formData.datetime,
-          language: formData.language
+          datetime: cleanFormData.datetime,
+          language: cleanFormData.language
         },
-        teamDiscussion: formData.teamDiscussion,
-        isolation: formData.isolation,
-        hazards: formData.hazards,
-        controlMeasures: formData.controlMeasures,
-        workers: formData.workers,
-        photos: formData.photos
+        teamDiscussion: cleanFormData.teamDiscussion,
+        isolation: cleanFormData.isolation,
+        hazards: cleanFormData.hazards,
+        controlMeasures: cleanFormData.controlMeasures,
+        workers: cleanFormData.workers,
+        photos: cleanFormData.photos
       }
     })
     
