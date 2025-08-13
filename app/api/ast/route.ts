@@ -28,18 +28,27 @@ const requestSchema = z.object({
   formData: formDataSchema
 })
 
-function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
+export function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
+  const sanitizeValue = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      return sanitizeHtml(value)
+    }
+    if (Array.isArray(value)) {
+      return value.map(sanitizeValue)
+    }
+    if (value && typeof value === 'object') {
+      const obj: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        obj[k] = sanitizeValue(v)
+      }
+      return obj
+    }
+    return value
+  }
+
   const sanitized: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string') {
-      sanitized[key] = sanitizeHtml(value)
-    } else if (Array.isArray(value)) {
-      sanitized[key] = value.map((item) =>
-        typeof item === 'string' ? sanitizeHtml(item) : item
-      )
-    } else {
-      sanitized[key] = value
-    }
+    sanitized[key] = sanitizeValue(value)
   }
   return sanitized as z.infer<typeof formDataSchema>
 }
