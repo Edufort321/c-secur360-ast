@@ -9,7 +9,7 @@ vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
 vi.mock('@/lib/prisma', () => ({ prisma: {} }))
 vi.mock('@/lib/env', () => ({ default: {} }))
 
-import { sanitizeFormData } from './route'
+import { sanitizeFormData } from './sanitize'
 
 describe('sanitizeFormData', () => {
   it('sanitizes strings nested inside objects and arrays', () => {

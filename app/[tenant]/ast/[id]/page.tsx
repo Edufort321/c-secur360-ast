@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Download, Share } from 'lucide-react'
+import type { GeneralInfo, Isolation, Worker } from '@/types/astPayload'
+import type { Hazard } from '@/types/hazards'
 
 interface ASTDetailPageProps {
   params: { tenant: string; id: string }
@@ -22,11 +24,11 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
     notFound()
   }
 
-  const generalInfo = ast.generalInfo as any
-  const teamDiscussion = ast.teamDiscussion as string[]
-  const isolation = ast.isolation as any
-  const hazards = ast.hazards as string[]
-  const workers = ast.workers as any[]
+  const generalInfo = ast.generalInfo as GeneralInfo | null
+  const teamDiscussion = ast.teamDiscussion as string[] | null
+  const isolation = ast.isolation as Isolation | null
+  const hazards = ast.hazards as Hazard[] | null
+  const workers = ast.workers as Worker[] | null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">

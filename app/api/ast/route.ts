@@ -1,11 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-import sanitizeHtml from 'sanitize-html'
+import { z, type ZodType } from 'zod'
 import env from '@/lib/env'
+import type { Prisma } from '@prisma/client'
+import type {
+  ASTFormPayload,
+  GeneralInfo,
+  Isolation,
+  IsolationCircuit,
+  Worker,
+} from '@/types/astPayload'
+import type { Hazard } from '@/types/hazards'
+import { sanitizeFormData } from './sanitize'
 
-const formDataSchema = z.object({
+const generalInfoSchema: ZodType<GeneralInfo> = z.object({
+  datetime: z.string().trim().optional(),
+  language: z.string().trim().optional(),
+})
+
+const isolationCircuitSchema: ZodType<IsolationCircuit> = z.object({
+  name: z.string().trim(),
+  padlock: z.boolean(),
+  voltage: z.boolean(),
+  grounding: z.boolean(),
+})
+
+const isolationSchema: ZodType<Isolation> = z.object({
+  point: z.string().trim().optional(),
+  circuits: z.array(isolationCircuitSchema).optional(),
+})
+
+const hazardSchema: ZodType<Hazard> = z.any()
+
+const workerSchema: ZodType<Worker> = z.object({
+  name: z.string().trim(),
+  departureTime: z.string().trim().optional(),
+})
+
+const formDataSchema: ZodType<ASTFormPayload> = z.object({
   projectNumber: z.string().trim().optional(),
   client: z.string().trim().optional(),
   workLocation: z.string().trim().optional(),
@@ -13,45 +46,19 @@ const formDataSchema = z.object({
   emergencyNumber: z.string().trim().optional(),
   astClientNumber: z.string().trim().optional(),
   workDescription: z.string().trim().optional(),
-  datetime: z.string().trim().optional(),
-  language: z.string().trim().optional(),
-  teamDiscussion: z.string().trim().optional(),
-  isolation: z.string().trim().optional(),
-  hazards: z.array(z.unknown()).optional(),
-  controlMeasures: z.array(z.unknown()).optional(),
-  workers: z.array(z.unknown()).optional(),
-  photos: z.array(z.unknown()).optional()
+  generalInfo: generalInfoSchema.optional(),
+  teamDiscussion: z.array(z.string().trim()).optional(),
+  isolation: isolationSchema.optional(),
+  hazards: z.array(hazardSchema).optional(),
+  controlMeasures: z.array(z.string().trim()).optional(),
+  workers: z.array(workerSchema).optional(),
+  photos: z.array(z.string().trim()).optional(),
 })
 
 const requestSchema = z.object({
   tenantId: z.string(),
-  formData: formDataSchema
+  formData: formDataSchema,
 })
-
-export function sanitizeFormData(data: z.infer<typeof formDataSchema>) {
-  const sanitizeValue = (value: unknown): unknown => {
-    if (typeof value === 'string') {
-      return sanitizeHtml(value)
-    }
-    if (Array.isArray(value)) {
-      return value.map(sanitizeValue)
-    }
-    if (value && typeof value === 'object') {
-      const obj: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        obj[k] = sanitizeValue(v)
-      }
-      return obj
-    }
-    return value
-  }
-
-  const sanitized: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(data)) {
-    sanitized[key] = sanitizeValue(value)
-  }
-  return sanitized as z.infer<typeof formDataSchema>
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,16 +100,13 @@ export async function POST(request: NextRequest) {
         astClientNumber: cleanFormData.astClientNumber,
         workDescription: cleanFormData.workDescription || '',
         status: 'completed',
-        generalInfo: {
-          datetime: cleanFormData.datetime,
-          language: cleanFormData.language
-        },
-        teamDiscussion: cleanFormData.teamDiscussion,
-        isolation: cleanFormData.isolation,
-        hazards: cleanFormData.hazards,
-        controlMeasures: cleanFormData.controlMeasures,
-        workers: cleanFormData.workers,
-        photos: cleanFormData.photos
+        generalInfo: cleanFormData.generalInfo as unknown as Prisma.InputJsonValue,
+        teamDiscussion: cleanFormData.teamDiscussion as unknown as Prisma.InputJsonValue,
+        isolation: cleanFormData.isolation as unknown as Prisma.InputJsonValue,
+        hazards: cleanFormData.hazards as unknown as Prisma.InputJsonValue,
+        controlMeasures: cleanFormData.controlMeasures as unknown as Prisma.InputJsonValue,
+        workers: cleanFormData.workers as unknown as Prisma.InputJsonValue,
+        photos: cleanFormData.photos as unknown as Prisma.InputJsonValue
       }
     })
     
