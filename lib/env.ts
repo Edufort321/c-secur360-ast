@@ -81,6 +81,9 @@ export const SERVER_ENV: ServerEnv = skipValidation
   ? ({ BASE_URL: 'http://localhost:3000', ...process.env } as unknown as ServerEnv)
   : parseServerEnv();
 
+// Temporary alias while migrating to `serverEnv`
+export const serverEnv: ServerEnv = SERVER_ENV;
+
 export const {
   DATABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
@@ -89,5 +92,5 @@ export const {
   WEATHER_API_KEY,
   BASE_URL,
   NODE_ENV,
-} = SERVER_ENV;
+} = serverEnv;
 

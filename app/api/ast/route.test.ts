@@ -12,7 +12,8 @@ vi.mock('@/lib/env', () => ({
   NODE_ENV: 'test',
   WEATHER_API_KEY: '',
   NEXTAUTH_SECRET: '',
-  BASE_URL: ''
+  BASE_URL: '',
+  serverEnv: { NEXTAUTH_SECRET: '' }
 }))
 
 import { sanitizeFormData } from './utils'
