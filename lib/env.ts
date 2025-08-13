@@ -66,14 +66,13 @@ export const PUBLIC_ENV: ClientEnv = skipValidation
   ? (clientVariables as ClientEnv)
   : parseClientEnv(clientVariables);
 
-export const NEXT_PUBLIC_SUPABASE_URL = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_URL;
-export const NEXT_PUBLIC_SUPABASE_ANON_KEY =
-  PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-export const NEXT_PUBLIC_APP_NAME = PUBLIC_ENV.NEXT_PUBLIC_APP_NAME;
-export const NEXT_PUBLIC_DEFAULT_TENANT =
-  PUBLIC_ENV.NEXT_PUBLIC_DEFAULT_TENANT;
-export const NEXT_PUBLIC_GOOGLE_MAPS_API_KEY =
-  PUBLIC_ENV.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+export const {
+  NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_APP_NAME,
+  NEXT_PUBLIC_DEFAULT_TENANT,
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+} = PUBLIC_ENV;
 
 /**
  * @deprecated Use named exports like {@link NODE_ENV} instead.
@@ -82,11 +81,13 @@ export const SERVER_ENV: ServerEnv = skipValidation
   ? ({ BASE_URL: 'http://localhost:3000', ...process.env } as unknown as ServerEnv)
   : parseServerEnv();
 
-export const DATABASE_URL = SERVER_ENV.DATABASE_URL;
-export const SUPABASE_SERVICE_ROLE_KEY = SERVER_ENV.SUPABASE_SERVICE_ROLE_KEY;
-export const NEXTAUTH_SECRET = SERVER_ENV.NEXTAUTH_SECRET;
-export const NEXTAUTH_URL = SERVER_ENV.NEXTAUTH_URL;
-export const WEATHER_API_KEY = SERVER_ENV.WEATHER_API_KEY;
-export const BASE_URL = SERVER_ENV.BASE_URL;
-export const NODE_ENV = SERVER_ENV.NODE_ENV;
+export const {
+  DATABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  NEXTAUTH_SECRET,
+  NEXTAUTH_URL,
+  WEATHER_API_KEY,
+  BASE_URL,
+  NODE_ENV,
+} = SERVER_ENV;
 
