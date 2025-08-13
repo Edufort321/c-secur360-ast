@@ -63,6 +63,10 @@ export const PUBLIC_ENV: ClientEnv = skipValidation
   ? (clientVariables as ClientEnv)
   : parseClientEnv(clientVariables);
 
+export const NEXT_PUBLIC_SUPABASE_URL = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_URL;
+export const NEXT_PUBLIC_SUPABASE_ANON_KEY = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = PUBLIC_ENV.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 export const SERVER_ENV: ServerEnv = skipValidation
   ? ({ BASE_URL: 'http://localhost:3000', ...process.env } as unknown as ServerEnv)
   : parseServerEnv();
