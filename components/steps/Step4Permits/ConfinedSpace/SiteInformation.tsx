@@ -1166,7 +1166,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       };
       photoInputRef.current.click();
     }
-  }, [safetyManager, siteInfo.spacePhotos, t.photoCategories, language]);
+  }, [safetyManager, siteInfo.spacePhotos, t, language]);
 
   // ✅ CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
   const handlePhotoDelete = useCallback((photoId: string) => {
