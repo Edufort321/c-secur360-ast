@@ -794,24 +794,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [localData.workLocations, notifyParentStable]);
 
   // =================== GESTION PHOTOS OPTIMISÉE ===================
-  const handlePhotoCapture = useCallback(async (category: LockoutPhoto['category'], lockoutPointId?: string) => {
-    try {
-      if (fileInputRef.current) {
-        fileInputRef.current.accept = 'image/*';
-        fileInputRef.current.capture = 'environment';
-        fileInputRef.current.multiple = true;
-        fileInputRef.current.onchange = (e) => {
-          const files = Array.from((e.target as HTMLInputElement).files || []);
-          if (files.length > 0) {
-            files.forEach(file => processPhoto(file, category, lockoutPointId));
-          }
-        };
-        fileInputRef.current.click();
-      }
-    } catch (error) {
-      console.error('Erreur capture photo:', error);
-    }
-  }, []);
+  const getCategoryLabel = useCallback((category: string): string => {
+    return t.categories[category as keyof typeof t.categories] || category;
+  }, [t]);
 
   const processPhoto = useCallback(
     async (
@@ -829,19 +814,38 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         timestamp: new Date().toISOString(),
         lockoutPointId
       };
-      
+
       setLocalData((prev: Step1Data) => {
         const updated = { ...prev, lockoutPhotos: [...prev.lockoutPhotos, newPhoto] };
         stableFormDataRef.current = updated;
         notifyParentStable(updated);
         return updated;
       });
-      
+
       console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
-  }, [language, notifyParentStable]);
+  }, [language, notifyParentStable, getCategoryLabel]);
+
+  const handlePhotoCapture = useCallback(async (category: LockoutPhoto['category'], lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.multiple = true;
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  }, [processPhoto]);
 
   const deletePhoto = useCallback((photoId: string) => {
     setLocalData((prev: Step1Data) => {
@@ -875,10 +879,6 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, []);
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const getCategoryLabel = useCallback((category: string): string => {
-    return t.categories[category as keyof typeof t.categories] || category;
-  }, [t.categories]);
-
   const toggleProcedureComplete = useCallback((pointId: string, procedureIndex: number) => {
     const point = localData.lockoutPoints.find((p: LockoutPoint) => p.id === pointId);
     if (!point) return;
