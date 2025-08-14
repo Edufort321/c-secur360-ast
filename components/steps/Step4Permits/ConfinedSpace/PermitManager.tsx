@@ -469,7 +469,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     } finally {
       setIsSearching(false);
     }
-  }, [safetyManager, qrCodeUrl]);
+  }, [safetyManager, qrCodeUrl, showNotification]);
 
   // ✅ CORRECTION 3 : Handler chargement avec vérifications SafetyManager
   const handleLoadPermit = async (permitNumber: string) => {
