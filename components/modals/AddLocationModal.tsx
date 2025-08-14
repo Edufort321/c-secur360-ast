@@ -27,7 +27,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
   const hasApiKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   const [useGeocode, setUseGeocode] = useState(hasApiKey);
   const [needsValidation, setNeedsValidation] = useState(!hasApiKey);
-  const [loc, setLoc] = useState<Location & { address?: string; needsValidation?: boolean }>({
+  const [loc, setLoc] = useState<Location & { address?: string }>({
     site: '',
     building: '',
     floor: '',
@@ -53,8 +53,9 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         accessRestrictions: initial.accessRestrictions,
         emergencyExits: initial.emergencyExits,
         address: (initial as any).address ?? '',
-        needsValidation: (initial as any).needsValidation ?? !hasApiKey,
+        needsValidation: initial.needsValidation ?? !hasApiKey,
       });
+      setNeedsValidation(initial.needsValidation ?? !hasApiKey);
     }
   }, [initial, hasApiKey]);
 
