@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { t } from '@/utils/translations'
 import LanguageSwitcher from './LanguageSwitcher'
@@ -586,13 +587,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     position: 'relative',
                     zIndex: 1
                   }}>
-                    <img 
-                      src="/c-secur360-logo.png" 
+                    <Image
+                      src="/c-secur360-logo.png"
                       alt="C-Secur360"
+                      width={200}
+                      height={200}
                       className="logo-glow"
-                      style={{ 
-                        width: '200px', 
-                        height: '200px', 
+                      style={{
+                        width: '200px',
+                        height: '200px',
                         objectFit: 'contain'
                       }}
                       onError={(e) => {

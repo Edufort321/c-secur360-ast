@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import Image from 'next/image';
 import {
   FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle,
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building,
@@ -487,11 +488,13 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
           position: 'relative',
           zIndex: 1
         }}>
-          <img 
-            src="/c-secur360-logo.png" 
+          <Image
+            src="/c-secur360-logo.png"
             alt="C-Secur360"
+            width={isMobile ? 50 : 200}
+            height={isMobile ? 50 : 200}
             className="logo-glow"
-            style={{ 
+            style={{
               width: isMobile ? '50px' : '200px',
               height: isMobile ? '50px' : '200px',
               objectFit: 'contain',
@@ -499,8 +502,8 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
             }}
             onError={(e) => {
               console.log('❌ Erreur chargement logo:', e);
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+              const fallback = (e.currentTarget.nextElementSibling as HTMLElement);
               if (fallback) fallback.style.display = 'flex';
             }}
           />

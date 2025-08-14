@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Share2, Mail, Smartphone, MessageSquare, Users, Hash, Share, QrCode } from 'lucide-react';
 import type { FinalizationData, ShareMethod, Translations } from '../Step6Finalization';
 
@@ -126,14 +127,17 @@ const SharingSection: React.FC<SharingSectionProps> = ({
               boxShadow: '0 8px 25px rgba(245, 158, 11, 0.3)',
             }}
           >
-            <img
+            <Image
               src={finalizationData.qrCodeUrl}
               alt="QR Code AST"
+              width={isMobile ? 180 : 220}
+              height={isMobile ? 180 : 220}
               style={{
                 width: isMobile ? '180px' : '220px',
                 height: isMobile ? '180px' : '220px',
                 display: 'block',
               }}
+              unoptimized
             />
           </div>
           <p

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import Image from 'next/image';
 import {
   FileText, Database, QrCode, Printer,
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
@@ -3092,17 +3093,19 @@ function Step6Finalization({
         <div className="ast-header">
           <div className="ast-header-content">
             <div className="ast-logo">
-              <img 
-                src="/c-secur360-logo.png" 
+              <Image
+                src="/c-secur360-logo.png"
                 alt="C-Secur360"
-                style={{ 
-                  width: isMobile ? '48px' : '64px', 
-                  height: isMobile ? '48px' : '64px', 
+                width={isMobile ? 48 : 64}
+                height={isMobile ? 48 : 64}
+                style={{
+                  width: isMobile ? '48px' : '64px',
+                  height: isMobile ? '48px' : '64px',
                   objectFit: 'contain',
                   filter: 'brightness(1.2) contrast(1.1)'
                 }}
                 onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
                   const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                   if (fallback) fallback.style.display = 'flex';
                 }}
