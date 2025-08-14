@@ -934,7 +934,15 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [permitData, enableAutoSave, isActuallyReadOnly, showManager, permitData.permit_number]);
+  }, [
+    permitData,
+    enableAutoSave,
+    isActuallyReadOnly,
+    showManager,
+    permitData.permit_number,
+    autoSaveTimer,
+    savePermitData,
+  ]);
 
   // =================== VALIDATION EN TEMPS RÉEL ===================
   useEffect(() => {
