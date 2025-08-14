@@ -314,7 +314,6 @@ export async function scheduleReminders(
 }
 
 const notificationUtils = {
->>>>>>> main
   sendNotification,
   sendASTNotification,
   scheduleReminders,
@@ -322,4 +321,3 @@ const notificationUtils = {
 };
 
 export default notificationUtils;
->>>>>>> main
