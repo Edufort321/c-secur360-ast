@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, useRef, useState, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import { ASTFormData } from '@/types/astForm';
 
 // =================== INTERFACES MULTI-TENANT ===================
@@ -159,6 +159,16 @@ export function ASTProvider({
     language
   });
 
+  // Toast d'erreur discret
+  const showErrorToast = useCallback((message: string) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message } }));
+    }
+  }, []);
+
+  // Référence pour debouncer sauvegarde
+  const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // ✅ HANDLERS ULTRA-STABLES - Références figées
   const updateStepData = useCallback(<K extends keyof ASTFormData>(section: K, data: ASTFormData[K]) => {
     console.log('🔥 Context Update:', { section, data, tenant: tenant.id });
@@ -169,12 +179,20 @@ export function ASTProvider({
       data
     });
 
-    // 🚀 Sauvegarde différée automatique
-    setTimeout(() => {
-      saveToTenantDatabase(tenant.database, section, data, state.formData.astNumber);
-    }, 1000);
+    // 🚀 Sauvegarde différée automatique avec debouncer
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current);
+    }
+    saveDebounceRef.current = setTimeout(async () => {
+      try {
+        await saveToTenantDatabase(tenant.database, section, data, state.formData.astNumber);
+      } catch (error) {
+        console.error('❌ Erreur sauvegarde:', error);
+        showErrorToast('Erreur lors de la sauvegarde AST');
+      }
+    }, 800);
 
-  }, [tenant.database, tenant.id, state.formData.astNumber]);
+  }, [tenant.database, tenant.id, state.formData.astNumber, showErrorToast]);
 
   const setCurrentStep = useCallback((step: number) => {
     if (step >= 1 && step <= 6) {
@@ -268,17 +286,17 @@ export function ASTProvider({
   const saveData = useCallback(async (): Promise<void> => {
     try {
       await saveToTenantDatabase(
-        tenant.database, 
-        'complete_ast', 
-        state.formData, 
+        tenant.database,
+        'complete_ast',
+        state.formData,
         state.formData.astNumber
       );
       dispatch({ type: 'MARK_SAVED' });
     } catch (error) {
       console.error('❌ Erreur sauvegarde:', error);
-      throw error;
+      showErrorToast('Erreur lors de la sauvegarde AST');
     }
-  }, [tenant.database, state.formData]);
+  }, [tenant.database, state.formData, showErrorToast]);
 
   // ✅ VALEUR CONTEXT STABLE avec useRef
   const contextValue = useRef<ASTContextValue>({
