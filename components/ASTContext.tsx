@@ -174,7 +174,7 @@ export function ASTProvider({
       saveToTenantDatabase(tenant.database, section, data, state.formData.astNumber);
     }, 1000);
 
-  }, [tenant.database, state.formData.astNumber]);
+  }, [tenant.database, tenant.id, state.formData.astNumber]);
 
   const setCurrentStep = useCallback((step: number) => {
     if (step >= 1 && step <= 6) {

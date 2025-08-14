@@ -85,7 +85,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     };
 
     initMap();
-  }, [isOpen, mounted]);
+  }, [isOpen, mounted, initial, getCurrentPosition, createMap, createMarker]);
 
   useEffect(() => {
     if (!isOpen || !isLoaded || !addressInputRef.current) return;
@@ -121,7 +121,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         google.maps.event.clearInstanceListeners(autocomplete);
       }
     };
-  }, [isOpen, isLoaded]);
+  }, [isOpen, isLoaded, createMarker]);
 
   const handleAddressBlur = async () => {
     const value = addressInputRef.current?.value;
