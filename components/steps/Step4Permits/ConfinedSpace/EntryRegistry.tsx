@@ -220,7 +220,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager?.currentPermit?.entryRegistry]);
 
-  const personnel = entryRegistryData?.personnel || [];
+  const personnel = React.useMemo(
+    () => entryRegistryData?.personnel || [],
+    [entryRegistryData?.personnel]
+  );
   const entryLogs = entryRegistryData?.entryLogs || [];
   
   // États locaux pour l'interface
@@ -341,13 +344,17 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     return personnelStatuses.filter(status => status.current_status === 'outside');
   };
 
-  const getPersonnelStatus = (personId: string): PersonnelStatus | undefined => {
-    return personnelStatuses.find(status => status.person_id === personId);
-  };
+  const getPersonnelStatus = React.useCallback(
+    (personId: string): PersonnelStatus | undefined =>
+      personnelStatuses.find(status => status.person_id === personId),
+    [personnelStatuses]
+  );
 
-  const getPersonById = (personId: string): PersonnelEntry | undefined => {
-    return personnel.find(person => person.id === personId);
-  };
+  const getPersonById = React.useCallback(
+    (personId: string): PersonnelEntry | undefined =>
+      personnel.find(person => person.id === personId),
+    [personnel]
+  );
 
   const getRoleColor = (role: SafetyRole): string => {
     const colors = {
@@ -439,20 +446,24 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
   // ✅ CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
-  const safeRegulations = regulations[selectedProvince] || {
-    name: 'Réglementation provinciale',
-    code: 'N/A',
-    authority: 'Autorité compétente',
-    permit_validity_hours: 8, // ✅ Utiliser permit_validity_hours au lieu de max_work_period_hours
-    atmosphere_testing_frequency: 30,
-    continuous_monitoring_required: true,
-    max_entrants: 2,
-    communication_check_interval: 15,
-    requirements: {
-      attendant: true,
-      min_age: 18
-    }
-  };
+  const safeRegulations = React.useMemo(
+    () =>
+      regulations[selectedProvince] || {
+        name: 'Réglementation provinciale',
+        code: 'N/A',
+        authority: 'Autorité compétente',
+        permit_validity_hours: 8, // ✅ Utiliser permit_validity_hours au lieu de max_work_period_hours
+        atmosphere_testing_frequency: 30,
+        continuous_monitoring_required: true,
+        max_entrants: 2,
+        communication_check_interval: 15,
+        requirements: {
+          attendant: true,
+          min_age: 18
+        }
+      },
+    [regulations, selectedProvince]
+  );
 
   // =================== GESTION DU PERSONNEL ===================
   const addNewPerson = React.useCallback(() => {
@@ -596,7 +607,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
     alert(`✅ Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
-  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getCurrentPersonnelInside, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+  }, [personnel, personnelStatuses, entryRegistryData, getCurrentPersonnelInside, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData, localEntryLogs]);
 
   const recordExit = React.useCallback((personId: string) => {
     const person = getPersonById(personId);
@@ -659,7 +670,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
     alert(`✅ Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
-  }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+  }, [personnel, personnelStatuses, entryRegistryData, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData, localEntryLogs]);
 
   const initiateEmergencyEvacuation = React.useCallback(() => {
     if (!confirm('⚠️ CONFIRMER L\'ÉVACUATION D\'URGENCE de tous les entrants ?')) {
@@ -735,7 +746,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     });
 
     alert(`🚨 ÉVACUATION D'URGENCE INITIÉE - ${currentInside.length} personnes évacuées - Contacts d'urgence notifiés`);
-  }, [personnelStatuses, personnel, entryLogs, getCurrentPersonnelInside, getPersonById, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
+  }, [personnelStatuses, personnel, getCurrentPersonnelInside, getPersonById, updatePersonnel, updateEntryLogs, updateEntryRegistryData, localEntryLogs]);
 
   // =================== GESTION COMMUNICATION ===================
   const performCommunicationCheck = React.useCallback(() => {
