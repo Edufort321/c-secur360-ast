@@ -338,41 +338,40 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
       }
     }
   }, [currentLanguage]);
+  const getCurrentCompletedSteps = useCallback((): number => {
+    let completed = 0;
+
+    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
+      completed++;
+    }
+
+    if (astData.equipment?.selected?.length > 0) {
+      completed++;
+    }
+
+    if (astData.hazards?.selected?.length > 0) {
+      completed++;
+    }
+
+    if (astData.permits?.permits?.length > 0) {
+      completed++;
+    }
+
+    if (astData.validation?.reviewers?.length > 0) {
+      completed++;
+    }
+
+    if (currentStep >= 6) {
+      completed++;
+    }
+
+    return completed;
+  }, [astData, currentStep]);
 
   const getCompletionPercentage = useCallback((): number => {
     const completedSteps = getCurrentCompletedSteps();
     return Math.round((completedSteps / 6) * 100);
-  }, []);
-
-  const getCurrentCompletedSteps = useCallback((): number => {
-    let completed = 0;
-    
-    if (astData.projectInfo?.client && astData.projectInfo?.workDescription) {
-      completed++;
-    }
-    
-    if (astData.equipment?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.hazards?.selected?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.permits?.permits?.length > 0) {
-      completed++;
-    }
-    
-    if (astData.validation?.reviewers?.length > 0) {
-      completed++;
-    }
-    
-    if (currentStep >= 6) {
-      completed++;
-    }
-    
-    return completed;
-  }, [astData, currentStep]);
+  }, [getCurrentCompletedSteps]);
 
   const canNavigateToNext = useCallback((): boolean => {
     switch (currentStep) {
@@ -1184,7 +1183,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
         errors: {},
         onDataChange: ultraStableHandler as (section: string, data: any) => void
       }),
-      [currentLanguage, tenant, ultraStableHandler]
+      [ultraStableHandler]
     );
     
     console.log('🔥 StepContent render - Step:', currentStep, 'RenderCount:', renderCountRef.current);
