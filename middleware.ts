@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { clientEnv } from '@/lib/env.client'
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
@@ -15,7 +16,7 @@ export function middleware(request: NextRequest) {
     .filter(Boolean)
 
   const defaultTenant =
-    process.env.NEXT_PUBLIC_DEFAULT_TENANT || validTenants[0] || 'demo'
+    clientEnv.NEXT_PUBLIC_DEFAULT_TENANT || validTenants[0] || 'demo'
 
   // Extraire le sous-domaine sans le port
   const subdomain = hostname.split('.')[0]
