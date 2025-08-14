@@ -5,6 +5,7 @@ const skipValidation = Boolean(process.env.SKIP_ENV_VALIDATION)
 const serverSchema = z.object({
   DATABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string(),
   NEXTAUTH_URL: z.string().url(),
   WEATHER_API_KEY: z.string(),
@@ -35,6 +36,7 @@ export const serverEnv: ServerEnv = skipValidation
 export const {
   DATABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  NEXT_PUBLIC_SUPABASE_URL,
   NEXTAUTH_SECRET,
   NEXTAUTH_URL,
   WEATHER_API_KEY,
