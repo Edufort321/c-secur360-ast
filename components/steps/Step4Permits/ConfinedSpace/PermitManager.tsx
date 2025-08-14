@@ -313,7 +313,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== FONCTIONS UTILITAIRES ===================
   
-  const showNotification = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     console.log(`[${type.toUpperCase()}] ${message}`);
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       new Notification('C-SECUR360', {
@@ -321,7 +321,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
         icon: '/favicon.ico'
       });
     }
-  };
+  }, []);
 
   // ✅ CORRECTION 3 : Handler sauvegarde avec vérifications SafetyManager
   const handleSave = async () => {
@@ -347,7 +347,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
   };
 
   // ✅ CORRECTION 3 : Handler QR avec vérifications SafetyManager
-  const handleGenerateQR = async () => {
+  const handleGenerateQR = useCallback(async () => {
     if (!safetyManager) {
       showNotification('SafetyManager non disponible', 'error');
       return;
@@ -364,7 +364,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     } finally {
       setIsGeneratingQR(false);
     }
-  };
+  }, [safetyManager, showNotification, t]);
 
   // ✅ CORRECTION 3 : Handler PDF avec vérifications SafetyManager
   const handleGeneratePDF = async () => {
@@ -639,10 +639,10 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== EFFETS ===================
   useEffect(() => {
-    if (permit.permit_number && !qrCodeUrl && safetyManager) {
+    if (permit.permit_number && !qrCodeUrl) {
       handleGenerateQR();
     }
-  }, [permit.permit_number, qrCodeUrl, safetyManager, handleGenerateQR]);
+  }, [permit.permit_number, qrCodeUrl, handleGenerateQR]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
