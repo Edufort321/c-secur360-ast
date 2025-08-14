@@ -313,9 +313,11 @@ export async function scheduleReminders(
   console.log('Programmation rappels:', { astsCount: asts.length, tenantId });
 }
 
-export default {
+const notificationUtils = {
   sendNotification,
   sendASTNotification,
   scheduleReminders,
   DEFAULT_NOTIFICATION_TEMPLATES
 };
+
+export default notificationUtils;
