@@ -799,7 +799,7 @@ export const useTranslation = () => {
   };
 };
 
-export default {
+const translationUtils = {
   TranslationService,
   translationService,
   t,
@@ -814,3 +814,5 @@ export default {
   TRANSLATIONS,
   DEFAULT_CONFIG
 };
+
+export default translationUtils;

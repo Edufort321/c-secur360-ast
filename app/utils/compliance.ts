@@ -553,10 +553,12 @@ export function generateTenantRecommendations(
   return recommendations;
 }
 
-export default {
+const complianceUtils = {
   checkASTCompliance,
   checkStandardCompliance,
   getTenantComplianceReport,
   generateTenantRecommendations,
   REGULATORY_STANDARDS_BY_REGION
 };
+
+export default complianceUtils;

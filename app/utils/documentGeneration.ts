@@ -904,7 +904,7 @@ function generateNotificationId(): string {
 }
 
 // =================== EXPORTS ===================
-export default {
+const documentGenerationUtils = {
   sendNotification,
   sendASTNotification,
   sendComplianceNotification,
@@ -915,3 +915,5 @@ export default {
   NotificationPriority,
   ChannelType
 };
+
+export default documentGenerationUtils;
