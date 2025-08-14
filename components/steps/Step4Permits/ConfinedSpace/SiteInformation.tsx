@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
@@ -1783,14 +1784,17 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   overflow: 'hidden',
                   border: '1px solid #374151'
                 }}>
-                  <img 
-                    src={photo.url} 
+                  <Image
+                    src={photo.url}
                     alt={photo.caption}
+                    width={300}
+                    height={isMobile ? 120 : 150}
                     style={{
                       width: '100%',
                       height: isMobile ? '120px' : '150px',
                       objectFit: 'cover'
                     }}
+                    unoptimized
                   />
                   <div style={{
                     position: 'absolute',

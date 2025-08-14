@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { 
   FileText, Database, QrCode, Printer, Mail, Share, Download, 
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users, 
@@ -1170,14 +1171,17 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
               borderRadius: '12px',
               marginBottom: '16px'
             }}>
-              <img 
-                src={qrCodeUrl} 
-                alt="QR Code du permis" 
-                style={{ 
-                  width: currentIsMobile ? '200px' : '250px', 
+              <Image
+                src={qrCodeUrl}
+                alt="QR Code du permis"
+                width={currentIsMobile ? 200 : 250}
+                height={currentIsMobile ? 200 : 250}
+                style={{
+                  width: currentIsMobile ? '200px' : '250px',
                   height: currentIsMobile ? '200px' : '250px',
                   display: 'block'
-                }} 
+                }}
+                unoptimized
               />
             </div>
             <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: 1.5 }}>

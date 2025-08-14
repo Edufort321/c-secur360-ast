@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import {
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -1032,7 +1033,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           <div className="carousel-track" style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
             {photos.map((photo: LockoutPhoto, index: number) => (
               <div key={photo.id} className="carousel-slide">
-                <img src={photo.url} alt={photo.caption} />
+                <Image
+                  src={photo.url}
+                  alt={photo.caption}
+                  width={800}
+                  height={600}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                  }}
+                  unoptimized
+                />
                 <div className="photo-info">
                   <div className="photo-caption">
                     <h4>{getCategoryLabel(photo.category)}</h4>
