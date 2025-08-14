@@ -995,11 +995,15 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const locationStats = calculateLocationStats();
 
   // =================== COMPOSANT CARROUSEL PHOTOS OPTIMISÉ ===================
-  const PhotoCarousel = React.memo(({ photos, onAddPhoto, lockoutPointId }: {
+  const PhotoCarousel = React.memo(function PhotoCarousel({
+    photos,
+    onAddPhoto,
+    lockoutPointId
+  }: {
     photos: LockoutPhoto[];
     onAddPhoto: () => void;
     lockoutPointId?: string;
-  }) => {
+  }) {
     const currentIndex = lockoutPointId ? (currentLockoutPhotoIndex[lockoutPointId] || 0) : currentPhotoIndex;
     const totalSlides = photos.length + 1;
 
@@ -1115,41 +1119,44 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   });
 
   // =================== COMPOSANT SÉLECTEUR D'INDUSTRIE OPTIMISÉ ===================
-  const IndustrySelector = React.memo(() => (
-    <select 
-      className="premium-select" 
-      value={localData.industry}
-      onChange={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateField('industry', e.target.value);
-      }}
-    >
-      <option value="electrical">{t.electrical}</option>
-      <option value="construction">{t.construction}</option>
-      <option value="industrial">{t.industrial}</option>
-      <option value="manufacturing">{t.manufacturing}</option>
-      <option value="office">{t.office}</option>
-      <option value="other">{t.other}</option>
-    </select>
-  ));
+  const IndustrySelector = React.memo(function IndustrySelector() {
+    return (
+      <select
+        className="premium-select"
+        value={localData.industry}
+        onChange={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          updateField('industry', e.target.value);
+        }}
+      >
+        <option value="electrical">{t.electrical}</option>
+        <option value="construction">{t.construction}</option>
+        <option value="industrial">{t.industrial}</option>
+        <option value="manufacturing">{t.manufacturing}</option>
+        <option value="office">{t.office}</option>
+        <option value="other">{t.other}</option>
+      </select>
+    );
+  });
 
   // =================== COMPOSANT VIDE POUR PHOTOS OPTIMISÉ ===================
-  const EmptyPhotoPlaceholder = React.memo(({ 
-    onClick, 
-    title, 
-    description, 
-    color = "#60a5fa" 
+  const EmptyPhotoPlaceholder = React.memo(function EmptyPhotoPlaceholder({
+    onClick,
+    title,
+    description,
+    color = "#60a5fa"
   }: {
     onClick: () => void;
     title: string;
     description: string;
     color?: string;
-  }) => (
-    <div 
-      className="empty-photo-placeholder"
-      style={{
-        background: `${color}20`, 
+  }) {
+    return (
+      <div
+        className="empty-photo-placeholder"
+        style={{
+          background: `${color}20`,
         border: `2px dashed ${color}50`,
         borderColor: `${color}50`,
         borderRadius: '12px',
@@ -1181,10 +1188,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         {description}
       </p>
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT DASHBOARD STATISTIQUES TEMPS RÉEL ===================
-  const LocationStatsCard = React.memo(() => (
+  const LocationStatsCard = React.memo(function LocationStatsCard() {
+    return (
     <div className="location-stats-card">
       <div className="stats-header">
         <BarChart3 size={20} />
@@ -1264,10 +1273,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT GESTION EMPLACEMENTS AVEC MODAL Z-INDEX CRITIQUE ===================
-  const WorkLocationManager = React.memo(() => (
+  const WorkLocationManager = React.memo(function WorkLocationManager() {
+    return (
     <div className="work-locations-section">
       <div className="locations-header">
         <div className="section-header">
@@ -1646,29 +1657,33 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT SÉLECTEUR EMPLACEMENT POUR LOCKOUT POINTS ===================
-  const LocationSelector = React.memo(({ currentLocationId, onLocationChange }: {
+  const LocationSelector = React.memo(function LocationSelector({ currentLocationId, onLocationChange }: {
     currentLocationId?: string;
     onLocationChange: (locationId: string) => void;
-  }) => (
-    <select 
-      className="premium-select location-selector" 
-      value={currentLocationId || ''}
-      onChange={(e) => onLocationChange(e.target.value)}
-    >
-      <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
-      {localData.workLocations.map((location: WorkLocation) => (
-        <option key={location.id} value={location.id}>
-          {location.name} - {location.zone}
-        </option>
-      ))}
-    </select>
-  ));
+  }) {
+    return (
+      <select
+        className="premium-select location-selector"
+        value={currentLocationId || ''}
+        onChange={(e) => onLocationChange(e.target.value)}
+      >
+        <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
+        {localData.workLocations.map((location: WorkLocation) => (
+          <option key={location.id} value={location.id}>
+            {location.name} - {location.zone}
+          </option>
+        ))}
+      </select>
+    );
+  });
 
   // =================== COMPOSANT CARTE AST PREMIUM ===================
-  const ASTNumberCard = React.memo(() => (
+  const ASTNumberCard = React.memo(function ASTNumberCard() {
+    return (
     <div className="ast-number-card">
       <div className="ast-number-header">
         <div className="ast-number-title">
@@ -1705,12 +1720,14 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       <div className="ast-number-value">{astNumber}</div>
       <div className="field-help">{t.astNumberGenerated}</div>
     </div>
-  ));
+    );
+  });
 
   // =================== SECTION 4/5 - COMPOSANTS LOCKOUT POINTS & SYSTÈME ÉNERGIES ===================
 
   // =================== COMPOSANT ÉNERGIE AVEC PROCÉDURES INTERACTIVES ===================
-  const EnergyTypeSelector = React.memo(({ point }: { point: LockoutPoint }) => (
+  const EnergyTypeSelector = React.memo(function EnergyTypeSelector({ point }: { point: LockoutPoint }) {
+    return (
     <div className="form-field">
       <label className="field-label">{t.energyType}<span className="required-indicator">{t.required}</span></label>
       <div className="energy-type-selector">
@@ -1774,10 +1791,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT BOUTONS TEMPS RAPIDES ===================
-  const TimeQuickButtons = React.memo(({ pointId }: { pointId: string }) => (
+  const TimeQuickButtons = React.memo(function TimeQuickButtons({ pointId }: { pointId: string }) {
+    return (
     <div className="time-quick-select">
       <button 
         type="button"
@@ -1813,12 +1832,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         +15min
       </button>
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT PHOTOS LOCKOUT POINTS ===================
-  const LockoutPhotosSection = React.memo(({ point }: { point: LockoutPoint }) => {
+  const LockoutPhotosSection = React.memo(function LockoutPhotosSection({ point }: { point: LockoutPoint }) {
     const pointPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId === point.id);
-    
+
     return (
       <div className="form-field">
         <label className="field-label">
@@ -1881,7 +1901,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   });
 
   // =================== COMPOSANT LOCKOUT POINT COMPLET ===================
-  const LockoutPointCard = React.memo(({ point, index }: { point: LockoutPoint; index: number }) => (
+  const LockoutPointCard = React.memo(function LockoutPointCard({ point, index }: { point: LockoutPoint; index: number }) {
+    return (
     <div className="lockout-point">
       <div className="lockout-point-header">
         <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
@@ -2053,12 +2074,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       {/* Photos spécifiques au point */}
       <LockoutPhotosSection point={point} />
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT PHOTOS GÉNÉRALES ===================
-  const GeneralPhotosSection = React.memo(() => {
+  const GeneralPhotosSection = React.memo(function GeneralPhotosSection() {
     const generalPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => !photo.lockoutPointId);
-    
+
     return (
       <div className="form-field">
         <label className="field-label">
@@ -2118,7 +2140,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   });
 
   // =================== SECTION LOCKOUT COMPLÈTE ===================
-  const LockoutSection = React.memo(() => (
+  const LockoutSection = React.memo(function LockoutSection() {
+    return (
     <div className="form-section lockout-section">
       <div className="section-header">
         <Lock className="section-icon lockout-icon" />
@@ -2169,10 +2192,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
     </div>
-  ));
+    );
+  });
 
   // =================== COMPOSANT VALIDATION ÉTAT LOCKOUT ===================
-  const LockoutValidationSummary = React.memo(() => {
+  const LockoutValidationSummary = React.memo(function LockoutValidationSummary() {
     const totalPoints = localData.lockoutPoints.length;
     const completedPoints = localData.lockoutPoints.filter((point: LockoutPoint) => {
       const progress = getProcedureProgress(point);
