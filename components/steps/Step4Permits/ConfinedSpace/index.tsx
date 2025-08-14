@@ -904,6 +904,73 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     }
   }, [permitData.permit_number, isSafetyManagerEnabled, safetyManager, onValidationChange]); // ✅ Dépendances minimales
 
+  // ✅ FIX CRITIQUE: Fonction savePermitData sécurisée pour éviter les redirections
+  const savePermitData = useCallback(
+    async (showNotification = true, isAutoSave = false) => {
+      if (isActuallyReadOnly) {
+        console.log('🚫 Sauvegarde bloquée: mode lecture seule');
+        return;
+      }
+
+      console.log(`💾 savePermitData: showNotification=${showNotification}, isAutoSave=${isAutoSave}`);
+
+      if (showNotification) {
+        setIsLoading(true);
+        setSaveStatus(isAutoSave ? 'autoSaving' : 'saving');
+      }
+
+      try {
+        let dataToSave = {
+          ...permitData,
+          currentSection,
+          selectedProvince,
+          last_modified: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          atmosphericReadings,
+          sectionValidation,
+          validationData
+        };
+
+        // ⚠️ SAFETYMANAGER DÉSACTIVÉ - Pas de sauvegarde en base pour l'instant
+        console.log('🔇 SafetyManager désactivé - sauvegarde locale seulement');
+
+        if (onSave) {
+          await onSave(dataToSave);
+        }
+
+        setLastSaveTime(new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA'));
+
+        if (showNotification) {
+          setSaveStatus('saved');
+          setTimeout(() => setSaveStatus('idle'), isAutoSave ? 1000 : 3000);
+        }
+
+        console.log('✅ Sauvegarde réussie');
+      } catch (error) {
+        console.error('❌ Erreur sauvegarde:', error);
+        if (showNotification) {
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+        }
+      } finally {
+        if (showNotification) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [
+      isActuallyReadOnly,
+      permitData,
+      currentSection,
+      selectedProvince,
+      atmosphericReadings,
+      sectionValidation,
+      validationData,
+      onSave,
+      language
+    ]
+  );
+
   // ✅ FIX CRITIQUE: AUTO-SAVE SÉCURISÉ POUR ÉVITER LES REDIRECTIONS
   useEffect(() => {
     // ⚠️ Auto-save désactivé si readOnly OU enableAutoSave false OU showManager actif
@@ -1023,61 +1090,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     console.log(`📋 handleUpdatePermitData:`, data);
     updatePermitData(data);
   }, [updatePermitData]);
-
-  // ✅ FIX CRITIQUE: Fonction savePermitData sécurisée pour éviter les redirections
-  const savePermitData = async (showNotification = true, isAutoSave = false) => {
-    if (isActuallyReadOnly) {
-      console.log('🚫 Sauvegarde bloquée: mode lecture seule');
-      return;
-    }
-    
-    console.log(`💾 savePermitData: showNotification=${showNotification}, isAutoSave=${isAutoSave}`);
-    
-    if (showNotification) {
-      setIsLoading(true);
-      setSaveStatus(isAutoSave ? 'autoSaving' : 'saving');
-    }
-    
-    try {
-      let dataToSave = {
-        ...permitData,
-        currentSection,
-        selectedProvince,
-        last_modified: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        atmosphericReadings,
-        sectionValidation,
-        validationData
-      };
-      
-      // ⚠️ SAFETYMANAGER DÉSACTIVÉ - Pas de sauvegarde en base pour l'instant
-      console.log('🔇 SafetyManager désactivé - sauvegarde locale seulement');
-      
-      // ✅ Callback onSave sécurisé
-      if (onSave) {
-        await onSave(dataToSave);
-      }
-      
-      setLastSaveTime(new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA'));
-      
-      if (showNotification) {
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), isAutoSave ? 1000 : 3000);
-      }
-      
-      console.log('✅ Sauvegarde réussie');
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde:', error);
-      if (showNotification) {
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      }
-    } finally {
-      if (showNotification) {
-        setIsLoading(false);
-      }
-    }
-  };
 
   const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
     console.log(`🧭 Navigation vers: ${section}`);
