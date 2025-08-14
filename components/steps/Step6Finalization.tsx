@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+/* eslint-disable @next/next/no-img-element -- Multiple <img> tags used intentionally for PDF generation and custom fallbacks */
 import {
   FileText, Database, QrCode, Printer,
   Save, CheckCircle, AlertTriangle, Clock, Shield, Users,
@@ -1877,7 +1878,17 @@ function Step6Finalization({
       showNotificationToast(language === 'fr' ? 'Erreur génération PDF' : 'Error generating PDF', 'error');
       setIsGeneratingPDF(false);
     }
-  }, [extractCompleteASTData, getASTStatistics, getSectionValidation, finalizationData, onDataChange, language, t, showNotificationToast]);
+  }, [
+    extractCompleteASTData,
+    getASTStatistics,
+    getSectionValidation,
+    finalizationData,
+    onDataChange,
+    language,
+    t,
+    showNotificationToast,
+    tenant,
+  ]);
 
   /**
    * ✅ HANDLER PARTAGE AST MULTI-CANAUX SÉCURISÉ
