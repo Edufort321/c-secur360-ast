@@ -24,16 +24,23 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
   const addressInputRef = useRef<HTMLInputElement>(null);
   const mapInstance = useRef<any>(null);
   const { getCurrentPosition, createMap, createMarker, geocodeAddress, isLoaded } = useGoogleMaps();
-  const [loc, setLoc] = useState<Location & { address?: string }>({
+  const hasApiKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const [useGeocode, setUseGeocode] = useState(hasApiKey);
+  const [needsValidation, setNeedsValidation] = useState(!hasApiKey);
+  const [loc, setLoc] = useState<Location & { address?: string; needsValidation?: boolean }>({
     site: '',
     building: '',
     floor: '',
     room: '',
     specificArea: '',
     address: '',
+    needsValidation: !hasApiKey,
   });
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    console.log('[LocationModal] open', isOpen);
+  }, [isOpen]);
   useEffect(() => {
     if (initial) {
       setLoc({
@@ -46,12 +53,13 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         accessRestrictions: initial.accessRestrictions,
         emergencyExits: initial.emergencyExits,
         address: (initial as any).address ?? '',
+        needsValidation: (initial as any).needsValidation ?? !hasApiKey,
       });
     }
-  }, [initial]);
+  }, [initial, hasApiKey]);
 
   useEffect(() => {
-    if (!isOpen || !mounted) return;
+    if (!isOpen || !mounted || !hasApiKey) return;
 
     const initMap = async () => {
       let pos = { lat: 45.5017, lng: -73.5673 };
@@ -85,10 +93,10 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     };
 
     initMap();
-  }, [isOpen, mounted, initial, getCurrentPosition, createMap, createMarker]);
+  }, [isOpen, mounted, initial, getCurrentPosition, createMap, createMarker, hasApiKey]);
 
   useEffect(() => {
-    if (!isOpen || !isLoaded || !addressInputRef.current) return;
+    if (!isOpen || !isLoaded || !addressInputRef.current || !hasApiKey) return;
 
     const google = (window as any).google;
     let autocomplete: any;
@@ -121,20 +129,31 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
         google.maps.event.clearInstanceListeners(autocomplete);
       }
     };
-  }, [isOpen, isLoaded, createMarker]);
+  }, [isOpen, isLoaded, createMarker, hasApiKey]);
 
   const handleAddressBlur = async () => {
     const value = addressInputRef.current?.value;
     if (!value) return;
+    if (!hasApiKey) {
+      setNeedsValidation(true);
+      setUseGeocode(false);
+      return;
+    }
     try {
-      const result = await geocodeAddress(value);
+      const result = await Promise.race([
+        geocodeAddress(value),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
       if (result) {
-        const { address, coordinates } = result;
+        const { address, coordinates } = result as any;
         setLoc((prev) => ({
           ...prev,
           address,
           coordinates: { latitude: coordinates.lat, longitude: coordinates.lng },
+          needsValidation: false,
         }));
+        setNeedsValidation(false);
+        setUseGeocode(true);
         if (mapInstance.current) {
           mapInstance.current.setCenter({ lat: coordinates.lat, lng: coordinates.lng });
         }
@@ -146,6 +165,8 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
       }
     } catch (err) {
       console.error(err);
+      setNeedsValidation(true);
+      setUseGeocode(false);
     }
   };
 
@@ -184,6 +205,20 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16,
   };
 
+  const badgeStyle: React.CSSProperties = {
+    background: '#fef3c7',
+    color: '#a16207',
+    borderRadius: 8,
+    padding: '2px 6px',
+    fontSize: 10,
+    marginLeft: 8,
+  };
+
+  const handleSave = () => {
+    console.log('[LocationModal] submitting', { address: loc.address, useGeocode });
+    onSave({ ...loc, needsValidation });
+  };
+
   return createPortal(
     <div style={overlay} role="dialog" aria-modal>
       <div style={panel}>
@@ -196,7 +231,10 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
 
         <div style={grid}>
           <div style={{ gridColumn: '1 / -1' }}>
-            <div style={label}>Adresse</div>
+            <div style={label}>
+              Adresse
+              {needsValidation && <span style={badgeStyle}>à valider</span>}
+            </div>
             <input
               ref={addressInputRef}
               style={input}
@@ -238,7 +276,13 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
           </div>
         </div>
 
-        <div ref={mapRef} style={{ width: '100%', height: 200, marginTop: 12, borderRadius: 10 }} />
+        {hasApiKey ? (
+          <div ref={mapRef} style={{ width: '100%', height: 200, marginTop: 12, borderRadius: 10 }} />
+        ) : (
+          <div style={{ marginTop: 12, textAlign: 'center', color: 'white', opacity: 0.8 }}>
+            Valider plus tard
+          </div>
+        )}
 
         <div style={footer}>
           <button onClick={onCancel}
@@ -246,7 +290,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
                      border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10 }}>
             Annuler
           </button>
-          <button onClick={() => onSave(loc)}
+          <button onClick={handleSave}
             style={{ padding: '10px 14px', background: '#22c55e', color: '#04111a',
                      border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontWeight: 700 }}>
             Ajouter
