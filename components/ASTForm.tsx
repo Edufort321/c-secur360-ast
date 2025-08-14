@@ -459,16 +459,18 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   }, [astData.status, t.status, isMobile]);
 
   // =================== 🔥 COMPOSANT LOGO EXACTEMENT COMME DASHBOARD + AUTO-AJUSTABLE ===================
-  const LogoComponent = useMemo(() => ({ 
-    isMobile = false
-  }: { 
-    isMobile?: boolean;
-  }) => {
-    return (
-      <div 
-        className="float-animation glow-effect"
-        style={{
-          // 🔥 EXACTEMENT COMME DASHBOARD
+  const LogoComponent = useMemo(
+    () =>
+      function LogoComponent({
+        isMobile = false
+      }: {
+        isMobile?: boolean;
+      }) {
+        return (
+          <div
+            className="float-animation glow-effect"
+            style={{
+              // 🔥 EXACTEMENT COMME DASHBOARD
           background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
           padding: isMobile ? '16px' : '32px',
           borderRadius: isMobile ? '16px' : '32px',
@@ -538,9 +540,11 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
           borderRadius: isMobile ? '24px' : '40px',
           animation: 'pulse 3s ease-in-out infinite'
         }} />
-      </div>
-    );
-  }, []);
+          </div>
+        );
+      },
+    []
+  );
   {/* 🔥 Logo desktop auto-ajustable (exactement comme dashboard) */}
           <LogoComponent isMobile={false} />// =================== 🔥 HEADER MOBILE AVEC LOGO CARRÉ ORANGE 200x200 ===================
   const MobileHeader = () => (
@@ -1164,7 +1168,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   const MemoizedStep6 = React.memo(Step6Finalization);
 
   // =================== 🔥 STEPCONTENT ANTI-BOUCLES ULTRA-STABLE ===================
-  const StepContent = React.memo(() => {
+  const StepContent = React.memo(function StepContent() {
     // ✅ HANDLER ULTRA-STABLE - RÉFÉRENCE FIGÉE
     const ultraStableHandler = stableHandlerRef.current!;
     
