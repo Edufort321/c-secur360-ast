@@ -1,6 +1,6 @@
 // hooks/useWeatherData.ts
 import { useState, useEffect } from 'react';
-import { getWeatherData } from '@/lib/weatherApi'; // Utilise la route /api/weather
+import weatherApi from '@/lib/weatherApi'; // Utilise la route /api/weather
 
 export interface WeatherData {
   temperature: number;
@@ -46,7 +46,7 @@ export const useWeatherData = (coordinates: Coordinates) => {
     setError(null);
     
     try {
-        const fetchedWeather = await getWeatherData(coordinates.lat, coordinates.lng);
+        const fetchedWeather = await weatherApi.getWeatherData(coordinates.lat, coordinates.lng);
         setWeather(fetchedWeather);
 
         // Générer des alertes basées sur les conditions
