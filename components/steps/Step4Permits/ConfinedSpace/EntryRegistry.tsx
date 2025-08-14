@@ -866,7 +866,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            ⏰ <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l'espace clos.
+            ⏰ <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l&apos;espace clos.
           </p>
         </div>
         
@@ -913,7 +913,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              👁️ <strong>SURVEILLANT PRÉSENT</strong> : Je confirme qu'un surveillant qualifié est présent et maintient une surveillance constante *
+              👁️ <strong>SURVEILLANT PRÉSENT</strong> : Je confirme qu&apos;un surveillant qualifié est présent et maintient une surveillance constante *
             </label>
           </div>
           
@@ -984,7 +984,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              🚑 <strong>SAUVETAGE PRÊT</strong> : Équipe et équipement de sauvetage d'urgence prêts à intervenir immédiatement *
+              🚑 <strong>SAUVETAGE PRÊT</strong> : Équipe et équipement de sauvetage d&apos;urgence prêts à intervenir immédiatement *
             </label>
           </div>
         </div>
@@ -1014,7 +1014,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                   🚨 {t.emergencyEvacuationInitiated}
                 </h3>
                 <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
-                  Procédures d'urgence activées - Contacts d'urgence notifiés
+                  Procédures d&apos;urgence activées - Contacts d&apos;urgence notifiés
                 </p>
               </div>
             </div>
@@ -1270,7 +1270,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 />
               </div>
               <div>
-                <label style={styles.label}>Contact d'urgence - Nom</label>
+                <label style={styles.label}>Contact d&apos;urgence - Nom</label>
                 <input
                   type="text"
                   placeholder="Ex: Marie Dupont"
@@ -1280,7 +1280,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 />
               </div>
               <div>
-                <label style={styles.label}>Contact d'urgence - Téléphone</label>
+                <label style={styles.label}>Contact d&apos;urgence - Téléphone</label>
                 <input
                   type="tel"
                   placeholder="Ex: (514) 987-6543"
@@ -1527,7 +1527,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     fontSize: '13px',
                     color: '#d1d5db'
                   }}>
-                    <div>🚑 <strong>Contact d'urgence:</strong> {person.emergencyContact?.name || 'N/A'} - {person.emergencyContact?.phone || 'N/A'}</div>
+                    <div>🚑 <strong>Contact d&apos;urgence:</strong> {person.emergencyContact?.name || 'N/A'} - {person.emergencyContact?.phone || 'N/A'}</div>
                   </div>
                 </div>
               );
@@ -1590,7 +1590,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 <option value="radio">📻 Radio</option>
                 <option value="visual">👁️ Visuel</option>
                 <option value="hand_signal">✋ Signal manuel</option>
-                <option value="emergency_signal">🚨 Signal d'urgence</option>
+                <option value="emergency_signal">🚨 Signal d&apos;urgence</option>
               </select>
             </div>
             <div>

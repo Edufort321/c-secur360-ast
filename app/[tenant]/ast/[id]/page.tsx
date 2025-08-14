@@ -87,7 +87,7 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
                 <p className="text-white">{ast.clientRep || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-slate-400">Numéro d'urgence</p>
+                <p className="text-slate-400">Numéro d&apos;urgence</p>
                 <p className="text-white">{ast.emergencyNumber || 'N/A'}</p>
               </div>
               <div>
@@ -104,7 +104,7 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
           {/* Discussion équipe */}
           {teamDiscussion && teamDiscussion.length > 0 && (
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">💬 Discussion avec l'équipe</h2>
+              <h2 className="text-xl font-bold text-white mb-4">💬 Discussion avec l&apos;équipe</h2>
               <div className="space-y-2">
                 {teamDiscussion.map((item, index) => (
                   <div key={index} className="flex items-center space-x-2">
@@ -122,7 +122,7 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
               <h2 className="text-xl font-bold text-white mb-4">⚡ Isolation Électrique</h2>
               {isolation.point && (
                 <div className="mb-4">
-                  <p className="text-slate-400 text-sm">Point d'isolement</p>
+                  <p className="text-slate-400 text-sm">Point d&apos;isolement</p>
                   <p className="text-white">{isolation.point}</p>
                 </div>
               )}
