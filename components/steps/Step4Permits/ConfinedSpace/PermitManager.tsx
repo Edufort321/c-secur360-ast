@@ -642,7 +642,7 @@ const PermitManager: React.FC<ConfinedSpaceComponentProps> = ({
     if (permit.permit_number && !qrCodeUrl && safetyManager) {
       handleGenerateQR();
     }
-  }, [permit.permit_number, qrCodeUrl, safetyManager]);
+  }, [permit.permit_number, qrCodeUrl, safetyManager, handleGenerateQR]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
