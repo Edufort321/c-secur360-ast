@@ -194,7 +194,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       },
       lastUpdated: new Date().toISOString()
     }
-  ), [safetyManager?.currentPermit?.atmosphericTesting, safetyManager?.lastUpdateTime]);
+  ), [safetyManager?.currentPermit?.atmosphericTesting]);
 
   const atmosphericReadings = useMemo(
     () => atmosphericData.readings || [],
@@ -264,26 +264,29 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   }, [updateAtmosphericData]);
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
-    const currentRegulations = regulations[selectedProvince];
-    if (!currentRegulations?.limits?.[type]) {
-      return 'safe'; // Fallback si pas de réglementation
-    }
-    
-    const limits = currentRegulations.limits[type];
-    
-    if (type === 'oxygen') {
-      const oxygenLimits = limits as AtmosphericLimits['oxygen'];
-      if (value <= oxygenLimits.critical_low || value >= oxygenLimits.critical_high) return 'danger';
-      if (value < oxygenLimits.min || value > oxygenLimits.max) return 'warning';
-    } else {
-      const gasLimits = limits as AtmosphericLimits['lel'] | AtmosphericLimits['h2s'] | AtmosphericLimits['co'];
-      if (value >= gasLimits.critical) return 'danger';
-      if (value > gasLimits.max) return 'warning';
-    }
-    
-    return 'safe';
-  };
+  const validateAtmosphericValue = useCallback(
+    (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
+      const currentRegulations = regulations[selectedProvince];
+      if (!currentRegulations?.limits?.[type]) {
+        return 'safe'; // Fallback si pas de réglementation
+      }
+
+      const limits = currentRegulations.limits[type];
+
+      if (type === 'oxygen') {
+        const oxygenLimits = limits as AtmosphericLimits['oxygen'];
+        if (value <= oxygenLimits.critical_low || value >= oxygenLimits.critical_high) return 'danger';
+        if (value < oxygenLimits.min || value > oxygenLimits.max) return 'warning';
+      } else {
+        const gasLimits = limits as AtmosphericLimits['lel'] | AtmosphericLimits['h2s'] | AtmosphericLimits['co'];
+        if (value >= gasLimits.critical) return 'danger';
+        if (value > gasLimits.max) return 'warning';
+      }
+
+      return 'safe';
+    },
+    [regulations, selectedProvince]
+  );
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
