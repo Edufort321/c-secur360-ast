@@ -1,7 +1,7 @@
 // hooks/useGoogleMaps.ts
 /// <reference types="google.maps" />
 import { useState, useEffect } from 'react';
-import { PUBLIC_ENV } from '@/lib/env';
+import { clientEnv } from '@/lib/env.client';
 
 type GoogleWindow = typeof window & { google?: typeof google };
 
@@ -30,7 +30,7 @@ export const useGoogleMaps = (config?: GoogleMapsConfig) => {
   const [error, setError] = useState<string | null>(null);
 
   const defaultConfig: GoogleMapsConfig = {
-    apiKey: PUBLIC_ENV.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
+    apiKey: clientEnv.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'demo-key',
     libraries: ['places', 'geometry'],
     region: 'CA',
     language: 'fr',
