@@ -290,7 +290,7 @@ export type {
 
 // =================== EXPORT PAR DÉFAUT ===================
 
-export default {
+const equipmentApi = {
   allEquipment,
   equipmentById,
   equipmentByCategory,
@@ -303,3 +303,5 @@ export default {
   getEquipmentRequiringAttention,
   validateAllEquipment
 };
+
+export default equipmentApi;
