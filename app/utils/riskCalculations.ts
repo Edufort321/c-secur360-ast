@@ -620,7 +620,7 @@ export function calculateTenantRiskStatistics(tenantASTs: AST[]) {
   };
 }
 
-export default {
+const riskCalculationsUtils = {
   calculateBasicRisk,
   calculateRiskWithExposure,
   calculateResidualRisk,
@@ -630,3 +630,5 @@ export default {
   STANDARD_RISK_MATRIX,
   EXPOSURE_ADJUSTED_MATRIX
 };
+
+export default riskCalculationsUtils;

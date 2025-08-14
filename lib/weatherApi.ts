@@ -60,4 +60,6 @@ export async function getWeatherData(lat: number, lng: number): Promise<WeatherD
   }
 }
 
-export default { getWeatherData };
+const weatherApi = { getWeatherData };
+
+export default weatherApi;
