@@ -1878,7 +1878,7 @@ function Step6Finalization({
       showNotificationToast(language === 'fr' ? 'Erreur génération PDF' : 'Error generating PDF', 'error');
       setIsGeneratingPDF(false);
     }
-  }, [extractCompleteASTData, getASTStatistics, getSectionValidation, finalizationData, onDataChange, language, t, showNotificationToast]);
+  }, [extractCompleteASTData, getASTStatistics, getSectionValidation, finalizationData, onDataChange, language, t, showNotificationToast, tenant]);
 
   /**
    * ✅ HANDLER PARTAGE AST MULTI-CANAUX SÉCURISÉ
