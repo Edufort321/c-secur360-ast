@@ -123,6 +123,7 @@ export interface Location {
   coordinates?: Coordinates;
   accessRestrictions?: string[];
   emergencyExits?: string[];
+  needsValidation?: boolean;
 }
 
 export interface Coordinates {
