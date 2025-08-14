@@ -515,50 +515,59 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     console.log(`Permis sélectionné: ${permitId} - Chemin corrigé`);
   };
 
-  const handleBackToSelection = () => {
+  const handleBackToSelection = useCallback(() => {
     setSelectedPermit(null);
     setConfinedSpaceComponent(null);
-  };
+  }, []);
 
-  const updatePermitStatus = (permitId: string, status: PermitModule['status'], completionRate: number = 0) => {
-    const updatedPermits = permits.map(permit => 
-      permit.id === permitId 
-        ? { ...permit, status, completionRate }
-        : permit
-    );
-    setPermits(updatedPermits);
+  const updatePermitStatus = useCallback(
+    (permitId: string, status: PermitModule['status'], completionRate: number = 0) => {
+      const updatedPermits = permits.map(permit =>
+        permit.id === permitId
+          ? { ...permit, status, completionRate }
+          : permit
+      );
+      setPermits(updatedPermits);
 
-    // Sauvegarder dans formData
-    const completedPermits = updatedPermits.filter(p => p.status === 'completed').map(p => p.id);
-    const inProgressPermits = updatedPermits.filter(p => p.status === 'in-progress').map(p => p.id);
-    const completion = Object.fromEntries(updatedPermits.map(p => [p.id, p.completionRate]));
+      // Sauvegarder dans formData
+      const completedPermits = updatedPermits.filter(p => p.status === 'completed').map(p => p.id);
+      const inProgressPermits = updatedPermits.filter(p => p.status === 'in-progress').map(p => p.id);
+      const completion = Object.fromEntries(updatedPermits.map(p => [p.id, p.completionRate]));
 
-    onDataChange('permits', {
-      completed: completedPermits,
-      inProgress: inProgressPermits,
-      completion,
-      total: permits.length
-    });
+      onDataChange('permits', {
+        completed: completedPermits,
+        inProgress: inProgressPermits,
+        completion,
+        total: permits.length
+      });
 
-    // Appeler onPermitChange si fourni
-    if (onPermitChange) {
-      onPermitChange(updatedPermits);
-    }
-  };
+      // Appeler onPermitChange si fourni
+      if (onPermitChange) {
+        onPermitChange(updatedPermits);
+      }
+    },
+    [permits, onDataChange, onPermitChange]
+  );
 
   // Callbacks pour ConfinedSpace
-  const handleSavePermit = useCallback((data: any) => {
-    console.log('Sauvegarde du permis:', data);
-    updatePermitStatus(selectedPermit!, 'in-progress', 50);
-    onDataChange('permitData', { [selectedPermit!]: data });
-  }, [selectedPermit, onDataChange]);
+  const handleSavePermit = useCallback(
+    (data: any) => {
+      console.log('Sauvegarde du permis:', data);
+      updatePermitStatus(selectedPermit!, 'in-progress', 50);
+      onDataChange('permitData', { [selectedPermit!]: data });
+    },
+    [selectedPermit, onDataChange, updatePermitStatus]
+  );
 
-  const handleSubmitPermit = useCallback((data: any) => {
-    console.log('Soumission du permis:', data);
-    updatePermitStatus(selectedPermit!, 'completed', 100);
-    onDataChange('permitData', { [selectedPermit!]: data });
-    handleBackToSelection();
-  }, [selectedPermit, onDataChange]);
+  const handleSubmitPermit = useCallback(
+    (data: any) => {
+      console.log('Soumission du permis:', data);
+      updatePermitStatus(selectedPermit!, 'completed', 100);
+      onDataChange('permitData', { [selectedPermit!]: data });
+      handleBackToSelection();
+    },
+    [selectedPermit, onDataChange, updatePermitStatus, handleBackToSelection]
+  );
 
   // 🔧 CORRECTION : Rendu conditionnel pour ConfinedSpace
   if (selectedPermit === 'confined-space' && confinedSpaceComponent) {

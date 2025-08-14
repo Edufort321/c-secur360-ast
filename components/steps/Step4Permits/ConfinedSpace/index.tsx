@@ -934,6 +934,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
     return () => {
       if (timer) clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autoSaveTimer and savePermitData intentionally excluded to prevent infinite loops and function re-creations
   }, [permitData, enableAutoSave, isActuallyReadOnly, showManager, permitData.permit_number]);
 
   // =================== VALIDATION EN TEMPS RÉEL ===================
