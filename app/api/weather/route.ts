@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SERVER_ENV } from '@/lib/env';
+import { serverEnv } from '@/lib/env.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const apiKey = SERVER_ENV.WEATHER_API_KEY;
+    const apiKey = serverEnv.WEATHER_API_KEY;
     const res = await fetch(
       `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
     );

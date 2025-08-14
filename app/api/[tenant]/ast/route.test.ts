@@ -12,9 +12,8 @@ vi.mock('@/lib/prisma', () => ({
   prisma: { tenant: {}, user: {}, aSTForm: {} }
 }))
 
-vi.mock('@/lib/env', () => ({
-  serverEnv: { NEXTAUTH_SECRET: 'test' },
-  PUBLIC_ENV: {}
+vi.mock('@/lib/env.server', () => ({
+  serverEnv: { NEXTAUTH_SECRET: 'test' }
 }))
 
 describe('GET /api/[tenant]/ast', () => {

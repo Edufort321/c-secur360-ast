@@ -4,12 +4,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_ENV } from '@/lib/env';
+import { clientEnv } from '@/lib/env.client';
 
 // =================== CONFIGURATION SUPABASE ROBUSTE ===================
 const FALLBACK_URL = 'http://localhost:54321';
-const supabaseUrlEnv = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = PUBLIC_ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrlEnv = clientEnv.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let supabase: any = null;
 let supabaseEnabled = false;
