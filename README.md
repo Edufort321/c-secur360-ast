@@ -30,6 +30,24 @@ cp .env.example .env.local
 
 If any required variable is missing at startup, the application logs a detailed error and stops.
 
+### Vercel Environment Setup
+
+When deploying on [Vercel](https://vercel.com), define the following variables in your project settings:
+
+- `DATABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `NEXT_PUBLIC_APP_NAME`
+- `NEXT_PUBLIC_DEFAULT_TENANT`
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+- `WEATHER_API_KEY`
+- `BASE_URL`
+
+Add each variable under **Settings → Environment Variables** and assign it to **Development**, **Preview**, and **Production**. Using the same variable names across all environments ensures the application behaves consistently, whether running locally or after deployment.
+
 ## Running Tests
 
 To execute the unit test suite, run:
