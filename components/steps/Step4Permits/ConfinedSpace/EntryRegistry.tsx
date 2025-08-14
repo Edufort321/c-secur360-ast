@@ -336,9 +336,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   }, [updateEntryRegistryData, entryRegistryData.entryLogs]);
 
   // =================== FONCTIONS UTILITAIRES ===================
-  const getCurrentPersonnelInside = () => {
-    return personnelStatuses.filter(status => status.current_status === 'inside');
-  };
+  const getCurrentPersonnelInside = React.useCallback(
+    () => personnelStatuses.filter(status => status.current_status === 'inside'),
+    [personnelStatuses]
+  );
 
   const getCurrentPersonnelOutside = () => {
     return personnelStatuses.filter(status => status.current_status === 'outside');
