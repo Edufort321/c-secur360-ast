@@ -20,7 +20,7 @@ export default function NearMissPage({ params }: NearMissPageProps) {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-white">⚠️ Passé proche</h1>
-              <p className="text-slate-400 text-sm">Signalement d'événements</p>
+              <p className="text-slate-400 text-sm">Signalement d&apos;événements</p>
             </div>
           </div>
         </div>
@@ -32,7 +32,7 @@ export default function NearMissPage({ params }: NearMissPageProps) {
           <div className="text-6xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-white mb-2">Module Passé proche</h2>
           <p className="text-slate-400 mb-6">Cette fonctionnalité sera disponible prochainement</p>
-          <p className="text-slate-300 text-sm">En attendant, vous pouvez signaler les événements via l'onglet "Passé proche" dans le formulaire AST.</p>
+          <p className="text-slate-300 text-sm">En attendant, vous pouvez signaler les événements via l&apos;onglet &quot;Passé proche&quot; dans le formulaire AST.</p>
         </div>
       </div>
     </div>

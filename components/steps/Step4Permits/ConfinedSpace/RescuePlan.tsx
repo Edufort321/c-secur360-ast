@@ -754,7 +754,7 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
             gap: '12px'
           }}>
             <Users style={{ width: '24px', height: '24px', color: '#fecaca' }} />
-            🎓 Certification Réglementaire de l'Équipe de Sauvetage
+            🎓 Certification Réglementaire de l&apos;Équipe de Sauvetage
           </h4>
           
           <div style={{ 
@@ -771,7 +771,7 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
               margin: '0 0 12px 0',
               fontWeight: '600'
             }}>
-              🎓 <strong>CERTIFICATION OBLIGATOIRE</strong> : L'équipe de sauvetage doit posséder les certifications réglementaires CSA Z1006-2023 et formations de premiers soins niveau 2.
+              🎓 <strong>CERTIFICATION OBLIGATOIRE</strong> : L&apos;équipe de sauvetage doit posséder les certifications réglementaires CSA Z1006-2023 et formations de premiers soins niveau 2.
             </p>
             <p style={{ 
               color: '#fca5a5', 
@@ -791,7 +791,7 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
               fontWeight: '700',
               marginBottom: '16px'
             }}>
-              Certifications Obligatoires de l'Équipe
+              Certifications Obligatoires de l&apos;Équipe
             </h5>
             
             <div style={styles.grid2}>
@@ -1020,13 +1020,13 @@ const RescuePlan: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              📅 <strong>EXERCICE ANNUEL OBLIGATOIRE</strong> : Test d'efficacité du plan de sauvetage effectué dans les 12 derniers mois *
+              📅 <strong>EXERCICE ANNUEL OBLIGATOIRE</strong> : Test d&apos;efficacité du plan de sauvetage effectué dans les 12 derniers mois *
             </label>
           </div>
           
           {rescueData.annual_drill_required && (
             <div style={{ marginTop: '16px' }}>
-              <label style={{ ...styles.label, color: '#fca5a5' }}>Date dernier test d'efficacité *</label>
+              <label style={{ ...styles.label, color: '#fca5a5' }}>Date dernier test d&apos;efficacité *</label>
               <input
                 type="date"
                 value={rescueData.last_effectiveness_test || ''}

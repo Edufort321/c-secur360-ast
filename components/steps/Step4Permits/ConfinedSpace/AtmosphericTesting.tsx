@@ -97,13 +97,13 @@ const translations = {
     multiLevelTesting: "Tests Multi-Niveaux Obligatoires",
     deviceCalibration: "Calibration Équipement de Mesure",
     addReading: "Ajouter Mesure",
-    level: "Niveau dans l'espace",
+    level: "Niveau dans l&apos;espace",
     topLevel: "Niveau supérieur",
     middleLevel: "Niveau moyen", 
     bottomLevel: "Niveau inférieur",
     oxygen: "Oxygène (O₂)",
     lel: "Limite explosive (LEL)",
-    h2s: "Sulfure d'hydrogène (H₂S)",
+    h2s: "Sulfure d&apos;hydrogène (H₂S)",
     co: "Monoxyde de carbone (CO)",
     temperature: "Température",
     humidity: "Humidité",
@@ -688,7 +688,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               flex: 1
             }}
           >
-            📊 <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l'espace clos *
+            📊 <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l&apos;espace clos *
           </label>
         </div>
         
@@ -723,7 +723,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               flex: 1
             }}
           >
-            ✅ <strong>STABILITÉ ATMOSPHÉRIQUE</strong> : Je confirme que l'atmosphère est stable et conforme aux limites de {safeRegulations.authority} *
+            ✅ <strong>STABILITÉ ATMOSPHÉRIQUE</strong> : Je confirme que l&apos;atmosphère est stable et conforme aux limites de {safeRegulations.authority} *
           </label>
         </div>
       </div>
