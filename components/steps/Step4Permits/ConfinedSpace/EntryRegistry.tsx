@@ -828,7 +828,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     } else {
       alert(`✅ Communication vérifiée avec ${person.name}`);
     }
-  }, [communicationCheck, communicationLogs, personnelStatuses, entryLogs, getPersonById, getPersonnelStatus, updateEntryLogs]);
+  }, [communicationCheck, communicationLogs, personnelStatuses, getPersonById, getPersonnelStatus]);
 
   // =================== RENDU JSX PRINCIPAL ===================
   return (
