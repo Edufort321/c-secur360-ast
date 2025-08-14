@@ -1,3 +1,4 @@
+import 'server-only';
 import type { WeatherData } from '../hooks/useWeatherData';
 // Consomme l'API interne /api/weather qui protège la clé OpenWeather
 
