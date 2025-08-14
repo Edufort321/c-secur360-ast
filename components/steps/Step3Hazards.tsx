@@ -1505,7 +1505,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   React.useEffect(() => {
     const translatedHazards = translateHazards(hazards, language);
     setHazards(translatedHazards);
-  }, [language]);
+  }, [language, hazards]);
   return (
     <>
       {/* CSS pour Step 3 - Design optimisé et responsive */}
