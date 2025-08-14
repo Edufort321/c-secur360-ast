@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import {
-  FileText, ArrowLeft, ArrowRight, Save, Eye, Download, CheckCircle,
+  FileText, ArrowLeft, ArrowRight, Eye, Download, CheckCircle,
   AlertTriangle, Clock, Shield, Users, MapPin, Calendar, Building,
   Phone, User, Briefcase, Copy, Check, Camera, HardHat, Zap, Settings,
   Plus, Trash2, Edit, Star, Wifi, WifiOff, Upload, Bell, Wrench, Wind,
@@ -56,7 +56,7 @@ const translations = {
     finished: "Terminé ✓",
     autoSave: "Sauvegarde auto",
     saving: "Modification...",
-    saved: "Sauvegardé",
+    saved: "Brouillon sauvegardé",
     active: "Actif",
     language: "Langue",
     french: "Français",
@@ -113,7 +113,7 @@ const translations = {
     finished: "Finished ✓",
     autoSave: "Auto save",
     saving: "Saving...",
-    saved: "Saved",
+    saved: "Draft saved",
     active: "Active",
     language: "Language",
     french: "Français",
@@ -259,6 +259,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   });
   const [copied, setCopied] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
 
   // =================== DONNÉES AST STABLES (CONSERVÉES) ===================
   const [astData, setAstData] = useState<T>(() => ({
@@ -277,21 +278,38 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
   const stableFormDataRef = useRef<T>(astData);
   const renderCountRef = useRef(0);
   const lastUpdateRef = useRef<string>('');
+  const fieldHashesRef = useRef<Record<string, string>>({});
+
+  const hashData = (input: unknown): string => {
+    const str = JSON.stringify(input);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const chr = str.charCodeAt(i);
+      hash = (hash << 5) - hash + chr;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString();
+  };
   
   // ✅ HANDLER ULTRA-STABLE - INITIALISÉ UNE SEULE FOIS AVEC DEBOUNCE
   const stableHandlerRef = useRef<(section: keyof T, data: T[keyof T]) => void>();
   
   if (!stableHandlerRef.current) {
     stableHandlerRef.current = (section, data) => {
-      // Convert section (which may be a symbol) to string for a stable key
-      const updateKey = `${String(section)}-${JSON.stringify(data).slice(0, 50)}`;
+      const sectionKey = String(section);
+      const newHash = hashData(data);
 
-      // ✅ ÉVITER LES DOUBLONS
+      if (fieldHashesRef.current[sectionKey] === newHash) {
+        console.log('🔁 Aucune modification détectée pour', sectionKey);
+        return;
+      }
+
+      fieldHashesRef.current[sectionKey] = newHash;
+      const updateKey = `${sectionKey}-${newHash}`;
       if (lastUpdateRef.current === updateKey) {
         console.log('🛡️ DOUBLON ÉVITÉ:', { section, updateKey });
         return;
       }
-      
       lastUpdateRef.current = updateKey;
       console.log('🔥 HANDLER ULTRA-STABLE (ANTI-BOUCLES):', { section, renderCount: renderCountRef.current });
       
@@ -1357,31 +1375,6 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
         {t.previous}
       </button>
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        color: '#94a3b8',
-        fontSize: '14px',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Save size={14} />
-          <span>{t.autoSave}</span>
-        </div>
-        <div style={{
-          width: '6px',
-          height: '6px',
-          background: hasUnsavedChanges ? '#f59e0b' : '#10b981',
-          borderRadius: '50%',
-          animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none'
-        }} />
-        <span style={{ fontSize: '12px', color: hasUnsavedChanges ? '#f59e0b' : '#10b981' }}>
-          {hasUnsavedChanges ? t.saving : t.saved}
-        </span>
-      </div>
-
       <button
         onClick={() => setCurrentStep(Math.min(steps.length, currentStep + 1))}
         disabled={currentStep === steps.length}
@@ -1422,6 +1415,8 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
       const saveTimer = setTimeout(() => {
         console.log('🔄 Sauvegarde automatique...');
         setHasUnsavedChanges(false);
+        setShowSavedToast(true);
+        setTimeout(() => setShowSavedToast(false), 1000);
       }, 1000);
 
       return () => clearTimeout(saveTimer);
@@ -1750,6 +1745,30 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
       </main>
 
       {isMobile ? <MobileNavigation /> : <DesktopFooterNavigation />}
+
+      {showSavedToast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: isMobile ? '16px' : '24px',
+            right: isMobile ? '16px' : '24px',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: isMobile ? '12px 16px' : '16px 20px',
+            borderRadius: isMobile ? '8px' : '12px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '8px' : '12px',
+            fontSize: isMobile ? '13px' : '15px',
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle size={20} />
+          <span>{t.saved}</span>
+        </div>
+      )}
     </div>
   );
 }
