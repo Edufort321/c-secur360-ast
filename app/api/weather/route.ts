@@ -1,3 +1,4 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { SERVER_ENV } from '@/lib/env';
 

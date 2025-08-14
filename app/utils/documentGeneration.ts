@@ -1,5 +1,6 @@
 // app/utils/documentGeneration.ts - Système de génération de documents
 
+import 'server-only';
 import { AST, ASTStatus } from '../types/ast';
 import { ComplianceReport } from './compliance';
 import { RiskLevel } from '../types/index';

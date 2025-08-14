@@ -1,3 +1,4 @@
+import 'server-only'
 import sanitizeHtml from 'sanitize-html'
 
 export function sanitizeFormData<T>(data: T): T {
