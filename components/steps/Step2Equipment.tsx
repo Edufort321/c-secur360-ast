@@ -794,7 +794,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       return currentItem ? { ...translatedItem, required: currentItem.required } : translatedItem;
     });
     setEquipment(updatedEquipment);
-  }, [language]);
+  }, [language, equipment]);
 
   // =================== COMPOSANTS UTILITAIRES ===================
   
