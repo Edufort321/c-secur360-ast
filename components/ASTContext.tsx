@@ -442,7 +442,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     id: 'hydro-quebec',
     name: 'Hydro-Québec',
     domain: 'hydro.c-secur360.com',
-    logo: '/logos/hydro-quebec.png',
+    logo: '/c-secur360-logo.png',
     theme: {
       primary: '#1e40af',
       secondary: '#1e3a8a',
@@ -465,7 +465,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     id: 'energir',
     name: 'Énergir',
     domain: 'energir.c-secur360.com',
-    logo: '/logos/energir.png',
+    logo: '/c-secur360-logo.png',
     theme: {
       primary: '#dc2626',
       secondary: '#991b1b',
@@ -495,7 +495,7 @@ export function createTenantConfig(
     id,
     name,
     domain: `${id}.c-secur360.com`,
-    logo: `/logos/${id}.png`,
+    logo: '/c-secur360-logo.png',
     theme: {
       primary: '#3b82f6',
       secondary: '#1e40af',
