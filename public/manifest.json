@@ -1,6 +1,6 @@
 {
-  "name": "AST MDL",
-  "short_name": "AST MDL",
+  "name": "AST CLIENT",
+  "short_name": "AST CLIENT",
   "description": "Analyse Sécuritaire de Tâches",
   "start_url": "/",
   "display": "standalone",
