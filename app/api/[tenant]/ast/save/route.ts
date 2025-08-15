@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: { tenant:
         projectNumber: data.projectNumber ?? '',
         clientName: data.clientName ?? '',
         workLocation: data.workLocation ?? '',
-        astMdlNumber: data.astMdlNumber ?? '',
+        astNumber: data.astNumber ?? '',
         astClientNumber: data.astClientNumber ?? '',
         workDescription: data.workDescription ?? ''
       },
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { tenant:
         workLocation: data.workLocation ?? '',
         clientRep: data.clientRep,
         emergencyNumber: data.emergencyNumber,
-        astMdlNumber: data.astMdlNumber ?? '',
+        astNumber: data.astNumber ?? '',
         astClientNumber: data.astClientNumber,
         workDescription: data.workDescription ?? '',
         status: 'draft',

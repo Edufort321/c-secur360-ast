@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: NEXT_PUBLIC_APP_NAME,
     template: `%s - ${NEXT_PUBLIC_APP_NAME}`,
   },
-  description: "Application d'analyse sécuritaire de tâches pour MDL",
+  description: "Application d'analyse sécuritaire de tâches",
   manifest: '/manifest.json',
   themeColor: '#3498db',
 }

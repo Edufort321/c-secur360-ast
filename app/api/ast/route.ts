@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         workLocation: cleanFormData.workLocation || '',
         clientRep: cleanFormData.clientRep,
         emergencyNumber: cleanFormData.emergencyNumber,
-        astMdlNumber: astNumber,
+        astNumber: astNumber,
         astClientNumber: cleanFormData.astClientNumber,
         workDescription: cleanFormData.workDescription || '',
         status: 'completed',
