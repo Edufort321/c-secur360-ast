@@ -49,7 +49,7 @@ model ASTForm {
   workLocation      String
   clientRep         String?
   emergencyNumber   String?
-  astMdlNumber      String
+  astNumber         String
   astClientNumber   String?
   workDescription   String
   status            String   @default("draft")

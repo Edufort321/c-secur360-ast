@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['localhost', 'mdl.ca', 'vercel.app'],
+    domains: ['localhost', 'vercel.app', 'csecur360.com'],
   },
   async rewrites() {
     return [
@@ -11,7 +11,7 @@ const nextConfig = {
         has: [
           {
             type: 'host',
-            value: '(?<tenant>.*)\\.mdl\\.ca',
+            value: '(?<tenant>.*)\\.csecur360\\.com',
           },
         ],
         destination: '/:tenant/:path*',

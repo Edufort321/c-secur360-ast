@@ -44,7 +44,7 @@ export default async function ASTDetailPage({ params }: ASTDetailPageProps) {
                 <ArrowLeft className="w-6 h-6" />
               </Link>
               <div>
-                <h1 className="text-2xl font-bold text-white">{ast.astMdlNumber}</h1>
+                <h1 className="text-2xl font-bold text-white">{ast.astNumber}</h1>
                 <p className="text-slate-400 text-sm">{ast.clientName} - {ast.tenant.companyName}</p>
               </div>
             </div>

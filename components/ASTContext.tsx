@@ -418,7 +418,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
   'demo': {
     id: 'demo',
     name: 'C-Secur360 Demo',
-    domain: 'demo.c-secur360.com',
+    domain: 'demo.csecur360.com',
     logo: '/c-secur360-logo.png',
     theme: {
       primary: '#3b82f6',
@@ -427,7 +427,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     },
     modules: ['ast'],
     database: {
-      host: 'https://api.c-secur360.com',
+      host: 'https://api.csecur360.com',
       schema: 'demo',
       apiKey: 'demo_key_123'
     },
@@ -441,7 +441,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
   'hydro-quebec': {
     id: 'hydro-quebec',
     name: 'Hydro-Québec',
-    domain: 'hydro.c-secur360.com',
+    domain: 'hydro.csecur360.com',
     logo: '/logos/hydro-quebec.png',
     theme: {
       primary: '#1e40af',
@@ -450,7 +450,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     },
     modules: ['ast', 'incidents', 'inspections'],
     database: {
-      host: 'https://api.c-secur360.com',
+      host: 'https://api.csecur360.com',
       schema: 'hydro_quebec',
       apiKey: 'hq_prod_key_123'
     },
@@ -464,7 +464,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
   'energir': {
     id: 'energir',
     name: 'Énergir',
-    domain: 'energir.c-secur360.com',
+    domain: 'energir.csecur360.com',
     logo: '/logos/energir.png',
     theme: {
       primary: '#dc2626',
@@ -473,7 +473,7 @@ export const DEFAULT_TENANT_CONFIGS: Record<string, TenantConfig> = {
     },
     modules: ['ast', 'vehicles', 'improvements'],
     database: {
-      host: 'https://api.c-secur360.com',
+      host: 'https://api.csecur360.com',
       schema: 'energir',
       apiKey: 'en_prod_key_456'
     },
@@ -494,7 +494,7 @@ export function createTenantConfig(
   return {
     id,
     name,
-    domain: `${id}.c-secur360.com`,
+    domain: `${id}.csecur360.com`,
     logo: `/logos/${id}.png`,
     theme: {
       primary: '#3b82f6',
@@ -503,7 +503,7 @@ export function createTenantConfig(
     },
     modules: ['ast'],
     database: {
-      host: 'https://api.c-secur360.com',
+      host: 'https://api.csecur360.com',
       schema: id,
       apiKey: `${id}_key_${Date.now()}`
     },

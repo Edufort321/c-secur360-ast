@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: { params: { tenant:
         workLocation: formData.workLocation || '',
         clientRep: formData.clientRep,
         emergencyNumber: formData.emergencyNumber,
-        astMdlNumber: astNumber,
+        astNumber: astNumber,
         astClientNumber: formData.astClientNumber,
         workDescription: formData.workDescription || '',
         status: 'completed',

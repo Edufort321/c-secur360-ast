@@ -1,6 +1,6 @@
 {
-  "name": "AST CLIENT",
-  "short_name": "AST CLIENT",
+  "name": "C-Secur360 AST",
+  "short_name": "C-Secur360",
   "description": "Analyse Sécuritaire de Tâches",
   "start_url": "/",
   "display": "standalone",
@@ -8,8 +8,8 @@
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
+      "src": "/c-secur360-logo.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
