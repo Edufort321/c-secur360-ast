@@ -1,0 +1,15 @@
+import 'server-only'
+import { PrismaClient } from '@prisma/client'
+import { serverEnv } from '@/lib/env.server'
+
+// Cache Prisma Client instance on `globalThis` to avoid re-instantiation
+// during development hot reloads. Prisma connects lazily on first use.
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (serverEnv.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+export default prisma
