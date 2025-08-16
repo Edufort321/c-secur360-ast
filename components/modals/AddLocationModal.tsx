@@ -215,14 +215,16 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     marginLeft: 8,
   };
 
-  const handleSave = () => {
+const handleSave = () => {
   if (!loc.address) {
     console.error('[LocationModal] Address is required');
     return;
   }
-    console.log('[LocationModal] submitting', { address: loc.address, useGeocode });
-    onSave({ ...loc, needsValidation });
-  };
+  console.log('[LocationModal] submitting', { address: loc.address, useGeocode });
+  onSave({ ...loc, needsValidation });
+  // Ajout d'un log pour vérifier que la fonction est appelée
+  console.log('Emplacement ajouté:', loc);
+};
 
   return createPortal(
     <div style={overlay} role="dialog" aria-modal>

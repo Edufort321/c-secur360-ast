@@ -418,7 +418,7 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
 const handleNext = useCallback(() => {
   if (canNavigateToNext() && currentStep < 6) {
     setCurrentStep(prev => prev + 1);
-    const nextInput = document.querySelector('input'); // Assurez-vous que le champ d'entrée est sélectionné
+    const nextInput = document.querySelector('input:focus') as HTMLInputElement; // Assurez-vous que le champ d'entrée est sélectionné
     if (nextInput) {
       nextInput.focus(); // Maintenir le focus sur le champ d'entrée
     }
@@ -427,7 +427,7 @@ const handleNext = useCallback(() => {
 
 const handleStepClick = useCallback((step: number) => {
   setCurrentStep(step);
-  const nextInput = document.querySelector('input'); // Assurez-vous que le champ d'entrée est sélectionné
+  const nextInput = document.querySelector('input:focus') as HTMLInputElement; // Assurez-vous que le champ d'entrée est sélectionné
   if (nextInput) {
     nextInput.focus(); // Maintenir le focus sur le champ d'entrée
   }
