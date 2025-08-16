@@ -216,6 +216,10 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
   };
 
   const handleSave = () => {
+  if (!loc.address) {
+    console.error('[LocationModal] Address is required');
+    return;
+  }
     console.log('[LocationModal] submitting', { address: loc.address, useGeocode });
     onSave({ ...loc, needsValidation });
   };
