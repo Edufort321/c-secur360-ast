@@ -171,7 +171,10 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
     }
   };
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen || !mounted) {
+  addressInputRef.current?.focus(); // Ajout du focus sur le champ d'adresse lors de l'ouverture
+  return null;
+}
 
   const overlay: React.CSSProperties = {
     position: 'fixed', inset: 0, zIndex: 1000,
@@ -220,6 +223,8 @@ const handleSave = () => {
     console.error('[LocationModal] Address is required');
     return;
   }
+  onSave({ ...loc, needsValidation }); // Appel de la fonction de sauvegarde
+  addressInputRef.current?.focus(); // Ajout du focus sur le champ d'adresse
   console.log('[LocationModal] submitting', { address: loc.address, useGeocode });
   onSave({ ...loc, needsValidation });
   // Ajout d'un log pour vérifier que la fonction est appelée
