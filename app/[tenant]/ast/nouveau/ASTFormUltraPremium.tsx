@@ -23,6 +23,7 @@ interface WorkType {
   category: string;
   description: string;
   baseHazards: string[];
+  requiredPermits: string[]; // Ajout de la propriété requise
 }
 
 interface WeatherData {
@@ -228,18 +229,21 @@ interface SafetyEquipment {
   certifications?: string[];
   inspectionFrequency?: string;
   lifespan?: string;
-  cost?: string;
-  supplier?: string;
+  cost: number; // Changement pour rendre le coût obligatoire
+  supplier: string; // Changement pour rendre le fournisseur obligatoire
 }
 
 interface TeamDiscussion {
   id: string;
   topic: string;
+  description: string; // Changement pour ajouter la description
   notes: string;
   completed: boolean;
   discussedBy: string;
   discussedAt?: string;
   priority: 'low' | 'medium' | 'high';
+  keyQuestions: string[]; // Ajout de la propriété keyQuestions
+  targetRoles: string[]; // Ajout de la propriété targetRoles
 }
 
 interface EmergencyProcedure {
@@ -472,7 +476,7 @@ const WORK_TYPES: WorkType[] = [
 // =================== CONFIGURATIONS CLIENTS ===================
 const CLIENT_CONFIGURATIONS = {
   'hydro-quebec': {
-    logo: '⚡ Hydro-Québec',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#1e40af',
     secondaryColor: '#3b82f6',
     requiredFields: ['permit_number', 'safety_officer', 'emergency_contacts'],
@@ -480,7 +484,7 @@ const CLIENT_CONFIGURATIONS = {
     templates: ['electrical_maintenance', 'emergency_response', 'storm_restoration']
   },
   'energir': {
-    logo: '🔥 Énergir',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#dc2626',
     secondaryColor: '#ef4444',
     requiredFields: ['gas_permit', 'excavation_permit', 'pipeline_clearance'],
@@ -488,7 +492,7 @@ const CLIENT_CONFIGURATIONS = {
     templates: ['gas_maintenance', 'pipeline_inspection', 'gas_installation']
   },
   'bell': {
-    logo: '📡 Bell Canada',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#7c3aed',
     secondaryColor: '#8b5cf6',
     requiredFields: ['telecom_permit', 'fiber_clearance', 'rf_safety'],
@@ -496,7 +500,7 @@ const CLIENT_CONFIGURATIONS = {
     templates: ['telecom_installation', 'fiber_optic']
   },
   'rogers': {
-    logo: '📱 Rogers',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#dc2626',
     secondaryColor: '#ef4444',
     requiredFields: ['telecom_permit', 'antenna_clearance', 'rf_compliance'],
@@ -3666,7 +3670,7 @@ const clientConfigurations: ClientConfiguration[] = [
   {
     id: 'hydro-quebec',
     name: 'Hydro-Québec',
-    logo: '⚡',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#0066CC',
     emergencyProtocol: 'Composez le 911 puis Hydro-Québec au 1-800-790-2424',
     requiredDocuments: ['electrical', 'environmental'],
@@ -3679,7 +3683,7 @@ const clientConfigurations: ClientConfiguration[] = [
   {
     id: 'energir',
     name: 'Énergir',
-    logo: '🔥',
+    logo: '/c-secur360-logo.png',
     primaryColor: '#FF6600',
     emergencyProtocol: 'Composez le 911 puis Énergir au 1-800-361-8003',
     requiredDocuments: ['gas', 'excavation'],

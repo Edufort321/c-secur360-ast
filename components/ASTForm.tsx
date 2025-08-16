@@ -415,15 +415,23 @@ export default function ASTForm<T extends ASTFormData = ASTFormData>({
     setCurrentStep(prev => Math.max(1, prev - 1));
   }, []);
 
-  const handleNext = useCallback(() => {
-    if (canNavigateToNext() && currentStep < 6) {
-      setCurrentStep(prev => prev + 1);
+const handleNext = useCallback(() => {
+  if (canNavigateToNext() && currentStep < 6) {
+    setCurrentStep(prev => prev + 1);
+    const nextInput = document.querySelector('input'); // Assurez-vous que le champ d'entrée est sélectionné
+    if (nextInput) {
+      nextInput.focus(); // Maintenir le focus sur le champ d'entrée
     }
-  }, [canNavigateToNext, currentStep]);
+  }
+}, [canNavigateToNext, currentStep]);
 
-  const handleStepClick = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
+const handleStepClick = useCallback((step: number) => {
+  setCurrentStep(step);
+  const nextInput = document.querySelector('input'); // Assurez-vous que le champ d'entrée est sélectionné
+  if (nextInput) {
+    nextInput.focus(); // Maintenir le focus sur le champ d'entrée
+  }
+}, []);
 
   // =================== FONCTIONS UTILITAIRES SUPPLÉMENTAIRES (CONSERVÉES) ===================
   const handleCopyAST = useCallback(async () => {
