@@ -176,6 +176,7 @@ export default function AddLocationModal({ isOpen, initial, onCancel, onSave }: 
   }
 
   addressInputRef.current?.focus(); // Ajout du focus sur le champ d'adresse lors de l'ouverture
+// Assurer le focus sur le champ d'adresse après la sauvegarde
 
   const overlay: React.CSSProperties = {
     position: 'fixed', inset: 0, zIndex: 1000,

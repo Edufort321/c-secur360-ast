@@ -1282,7 +1282,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   });
 
   // =================== COMPOSANT GESTION EMPLACEMENTS AVEC MODAL Z-INDEX CRITIQUE ===================
-  const WorkLocationManager = React.memo(function WorkLocationManager() {
+  const addressInputRef = useRef<HTMLInputElement>(null); // Déclaration de la référence pour le champ d'adresse
+const WorkLocationManager = React.memo(function WorkLocationManager() {
     return (
     <div className="work-locations-section">
       <div className="locations-header">
@@ -1295,6 +1296,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           className="btn-primary" 
           onClick={() => {
             setShowAddLocation(true);
+addressInputRef.current?.focus(); // Assurer le focus sur le champ d'adresse après l'ouverture du modal
             // 🚀 FORCE MODAL ON TOP INLINE
             document.body.classList.add('modal-open');
             document.body.style.overflow = 'hidden';
