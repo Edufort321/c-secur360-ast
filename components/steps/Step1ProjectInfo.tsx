@@ -571,6 +571,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
   const stableFormDataRef = useRef<Step1Data>(localData);
   const lastUpdateRef = useRef<string>('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // ✅ HANDLER PARENT FIGÉ UNE SEULE FOIS
   const notifyParentStable = useCallback((updatedData: Step1Data) => {
@@ -585,14 +586,18 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     lastUpdateRef.current = updateKey;
     console.log('🔥 Step1 - Notification parent stable:', Object.keys(updatedData));
     
-    // ✅ SYNC DIFFÉRÉE POUR ÉVITER BOUCLES
-    setTimeout(() => {
-      try {
-        onDataChange('projectInfo', updatedData);
-      } catch (error) {
-        console.error('❌ Step1 - Erreur sync parent:', error);
-      }
-    }, 50);
+  // 🔥 DEBOUNCE CRITIQUE - ÉVITE LES RE-RENDERS EXCESSIFS
+  if (debounceTimeoutRef.current) {
+    clearTimeout(debounceTimeoutRef.current);
+  }
+  
+  debounceTimeoutRef.current = setTimeout(() => {
+    try {
+      onDataChange('projectInfo', updatedData);
+    } catch (error) {
+      console.error('❌ Step1 - Erreur sync parent:', error);
+    }
+  }, 300);
   }, [onDataChange]);
 
   // =================== 🔥 HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
