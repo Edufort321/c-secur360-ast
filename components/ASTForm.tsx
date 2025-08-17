@@ -193,4 +193,13 @@ const steps = [
   }
 ];
 
-// =================== HOOK
+// =================== EXPORTATION PAR DÉFAUT ===================
+const ASTFormComponent = (props: ASTFormProps) => {
+  // Logique du composant ici
+};
+export default ASTFormComponent;
+
+const ASTFormComponent = (props: ASTFormProps) => {
+  // Logique du composant ici
+};
+export default ASTFormComponent;

@@ -229,7 +229,7 @@ interface SafetyEquipment {
   certifications?: string[];
   inspectionFrequency?: string;
   lifespan?: string;
-  cost: number; // Changement pour rendre le coût obligatoire
+  cost: 'low' | 'medium' | 'high'; // Changement pour rendre le coût obligatoire
   supplier: string; // Changement pour rendre le fournisseur obligatoire
 }
 
@@ -302,7 +302,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Maintenance électrique',
     icon: '⚡',
     category: 'Électricité',
-    description: 'Travaux de maintenance sur installations électriques',
+description: 'Travaux de maintenance sur installations électriques',
     baseHazards: ['electrical_shock', 'arc_flash', 'electrical_burns', 'falls']
   },
   {
@@ -310,7 +310,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Installation électrique',
     icon: '🔌',
     category: 'Électricité',
-    description: 'Installation de nouveaux équipements électriques',
+description: 'Installation de nouveaux équipements électriques',
     baseHazards: ['electrical_shock', 'arc_flash', 'cuts_lacerations', 'falls']
   },
   {
@@ -318,7 +318,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Inspection électrique',
     icon: '🔍',
     category: 'Électricité',
-    description: 'Inspection et tests d\'équipements électriques',
+description: 'Inspection et tests d&rsquo;équipements électriques',
     baseHazards: ['electrical_shock', 'arc_flash', 'asphyxiation']
   },
 
@@ -362,7 +362,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Excavation',
     icon: '⛏️',
     category: 'Construction',
-    description: 'Travaux d\'excavation et terrassement',
+description: 'Travaux d&#39;excavation et terrassement',
     baseHazards: ['cave_in', 'struck_by_objects', 'heavy_equipment', 'underground_utilities', 'falls']
   },
   {
@@ -432,7 +432,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Élagage',
     icon: '🌳',
     category: 'Environnement',
-    description: 'Travaux d\'élagage et abattage',
+description: 'Travaux d&#39;élagage et abattage',
     baseHazards: ['falls', 'cuts_lacerations', 'struck_by_objects', 'electrical_lines']
   },
 
@@ -442,7 +442,7 @@ const WORK_TYPES: WorkType[] = [
     name: 'Installation télécom',
     icon: '📡',
     category: 'Télécommunications',
-    description: 'Installation d\'équipements de télécommunication',
+description: 'Installation d&#39;équipements de télécommunication',
     baseHazards: ['falls', 'electrical_shock', 'electromagnetic_fields', 'weather_exposure']
   },
   {
@@ -670,7 +670,12 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'DDFT de classe A (5mA) pour protection personnelle',
       responsible: 'Électricien qualifié',
       timeline: 'Installation permanente',
-      cost: 'medium',
+cost: 'medium',
+name: 'Protection par disjoncteur différentiel',
+hierarchy: 'engineering',
+timeToImplement: 'Installation permanente',
+applicableHazards: ['electrical_shock'],
+certification: 'CSA Z94.1, ANSI Z89.1 Classe E',
       effectiveness: 85,
       compliance: ['Code électrique canadien Section 26', 'CSA C22.1'],
       isSelected: false,
@@ -686,7 +691,11 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Sélection selon tension et conditions de travail',
       responsible: 'Travailleur qualifié',
       timeline: 'Port obligatoire',
-      cost: 'medium',
+cost: 'medium',
+name: 'Équipement de protection individuelle',
+hierarchy: 'ppe',
+timeToImplement: 'Port obligatoire',
+applicableHazards: ['electrical_shock'],
       effectiveness: 70,
       compliance: ['CSA Z462 Annexe H', 'CSA Z94.4', 'RSST Article 2.10.12'],
       isSelected: false,
@@ -705,7 +714,8 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Consignation selon CSA Z462 avec vérification',
       responsible: 'Personne qualifiée',
       timeline: 'Obligatoire si possible',
-      cost: 'low',
+cost: 'low',
+certification: 'CSA Z94.1, ANSI Z89.1 Classe G',
       effectiveness: 100,
       compliance: ['CSA Z462 Clause 4.1', 'RSST Article 185'],
       isSelected: false,
@@ -721,7 +731,11 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Analyse par ingénieur selon IEEE 1584',
       responsible: 'Ingénieur électrique',
       timeline: 'Avant travaux sous tension',
-      cost: 'high',
+cost: 'high',
+name: 'Vêtements résistants à l\'arc',
+hierarchy: 'ppe',
+timeToImplement: 'Port obligatoire',
+applicableHazards: ['arc_flash'],
       effectiveness: 85,
       compliance: ['CSA Z462 Clause 4.2', 'IEEE 1584'],
       isSelected: false,
@@ -757,7 +771,11 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Procédure de purge avec gaz inerte (azote)',
       responsible: 'Technicien gazier qualifié',
       timeline: 'Avant début travaux',
-      cost: 'medium',
+cost: 'medium',
+name: 'Protection par disjoncteur différentiel',
+hierarchy: 'engineering',
+timeToImplement: 'Installation permanente',
+applicableHazards: ['electrical_shock'],
       effectiveness: 95,
       compliance: ['CSA Z662', 'Règlement sur la sécurité des pipelines'],
       isSelected: false,
@@ -773,7 +791,11 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Détecteurs fixes et portables avec seuils LIE',
       responsible: 'Technicien instrumentation',
       timeline: 'Surveillance continue',
-      cost: 'high',
+cost: 'high',
+name: 'Équipements de protection individuelle',
+hierarchy: 'ppe',
+timeToImplement: 'Port obligatoire',
+applicableHazards: ['electrical_shock'],
       effectiveness: 90,
       compliance: ['CSA Z662 Clause 10', 'CSA Z1611'],
       isSelected: false,
@@ -893,7 +915,8 @@ const predefinedControlMeasures: Record<string, ControlMeasure[]> = {
       implementation: 'Rédaction procédures, formation personnel',
       responsible: 'Responsable sécurité',
       timeline: 'Avant début travaux',
-      cost: 'low',
+cost: 'low',
+certification: 'CSA Z94.3, ANSI Z87.1',
       effectiveness: 60,
       compliance: ['Système de gestion SST'],
       isSelected: false,
@@ -1414,7 +1437,8 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z94.1', 'ANSI Z89.1 Classe E'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '5 ans ou selon usure',
-    cost: '50-150 CAD',
+cost: 'medium',
+certification: 'CSA Z94.3, ANSI Z87.1, CSA W117.2',
     supplier: 'MSA, 3M, Honeywell'
   },
   {
@@ -1429,7 +1453,8 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z94.1', 'ANSI Z89.1 Classe G'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '5 ans ou selon usure',
-    cost: '25-75 CAD',
+cost: 'low',
+certification: 'CSA Z94.3, ANSI Z87.1',
     supplier: 'MSA, 3M, Honeywell, Bullard'
   },
 
@@ -1446,7 +1471,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z94.3', 'ANSI Z87.1'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '2 ans ou selon rayures',
-    cost: '10-50 CAD',
+cost: 'low',
     supplier: 'Uvex, 3M, Honeywell, Jackson Safety'
   },
   {
@@ -1461,7 +1486,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z94.3', 'ANSI Z87.1', 'CSA W117.2'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: '3-5 ans selon usage',
-    cost: '100-500 CAD',
+cost: 'medium',
     supplier: 'Lincoln Electric, Miller, ESAB, 3M'
   },
   {
@@ -1476,7 +1501,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z94.3', 'ANSI Z87.1'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '2 ans ou selon dommages',
-    cost: '15-75 CAD',
+cost: 'low',
     supplier: '3M, Honeywell, Uvex'
   },
 
@@ -1493,7 +1518,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['NIOSH N95', 'CSA Z94.4'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: 'Usage unique ou selon contamination',
-    cost: '2-5 CAD',
+cost: 'low',
     supplier: '3M, Honeywell, Moldex'
   },
   {
@@ -1508,7 +1533,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['NIOSH', 'CSA Z94.4'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: '5 ans (masque), cartouches selon exposition',
-    cost: '50-200 CAD',
+cost: 'medium',
     supplier: '3M, Honeywell, MSA, Moldex'
   },
   {
@@ -1523,7 +1548,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['NIOSH', 'CSA Z94.4', 'NFPA 1981'],
     inspectionFrequency: 'Quotidienne et après chaque usage',
     lifespan: '15 ans selon maintenance',
-    cost: '3000-8000 CAD',
+cost: 'high',
     supplier: 'MSA, Scott Safety, Dräger'
   },
 
@@ -1540,7 +1565,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ASTM D120', 'IEC 60903', 'CSA Z462'],
     inspectionFrequency: 'Avant chaque utilisation + test 6 mois',
     lifespan: '3 ans ou selon tests',
-    cost: '100-300 CAD',
+cost: 'medium',
     supplier: 'Salisbury, Cementex, Regeltex'
   },
   {
@@ -1555,7 +1580,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ANSI/ISEA 105', 'EN 388', 'CSA Z94.4'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '3-6 mois selon usage',
-    cost: '15-50 CAD',
+cost: 'low',
     supplier: 'Ansell, HexArmor, MCR Safety, Superior Glove'
   },
   {
@@ -1570,7 +1595,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ASTM F739', 'EN 374', 'CSA Z94.4'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: 'Selon tableau perméation',
-    cost: '5-30 CAD',
+cost: 'low',
     supplier: 'Ansell, Showa, Mapa, MCR Safety'
   },
 
@@ -1587,7 +1612,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z195', 'ASTM F2413'],
     inspectionFrequency: 'Hebdomadaire',
     lifespan: '12-18 mois selon usage',
-    cost: '150-400 CAD',
+cost: 'medium',
     supplier: 'Dakota, Terra, Timberland PRO, Caterpillar'
   },
   {
@@ -1602,7 +1627,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ASTM F2413 EH', 'CSA Z195', 'ASTM F1117'],
     inspectionFrequency: 'Quotidienne + test annuel',
     lifespan: '2-3 ans selon tests',
-    cost: '200-500 CAD',
+cost: 'high',
     supplier: 'Salisbury, Cementex, NASCO'
   },
 
@@ -1619,7 +1644,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z96', 'ANSI/ISEA 107'],
     inspectionFrequency: 'Quotidienne',
     lifespan: '2-3 ans selon lavages',
-    cost: '25-75 CAD',
+cost: 'low',
     supplier: 'Forcefield, ML Kishigo, PIP, Radians'
   },
   {
@@ -1634,7 +1659,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ASTM F1506', 'NFPA 70E', 'CSA Z462'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: '5 ans ou selon dommages',
-    cost: '500-2000 CAD',
+cost: 'high',
     supplier: 'Salisbury, Oberon, National Safety Apparel'
   },
   {
@@ -1696,7 +1721,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['CSA Z259.15', 'ANSI Z359.18'],
     inspectionFrequency: 'Avant installation',
     lifespan: '10 ans selon inspection',
-    cost: '200-800 CAD',
+cost: 'high',
     supplier: '3M, MSA, Miller, Guardian Fall'
   },
 
@@ -1728,7 +1753,7 @@ const requiredSafetyEquipment: SafetyEquipment[] = [
     certifications: ['ASTM F711', 'IEC 60855'],
     inspectionFrequency: 'Avant chaque utilisation',
     lifespan: '10 ans selon tests',
-    cost: '300-1000 CAD',
+cost: 'high',
     supplier: 'Salisbury, Cementex, NASCO'
   },
   {
@@ -2269,9 +2294,9 @@ const useWeatherData = (coordinates: { lat: number; lng: number }) => {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     fetchWeather();
-  }, [coordinates.lat, coordinates.lng]);
+  }, [coordinates.lat, coordinates.lng, fetchWeather]);
 
   return { weather, loading, refetch: fetchWeather };
 };
