@@ -23,7 +23,7 @@ export default function NouvellePage({ params }: PageProps) {
       time: '',
       workDescription: '',
       workerCount: 1,
-      lockoutPoints: []
+      lockoutPoints: [],
     },
     equipment: {
       selected: [],
@@ -39,10 +39,12 @@ export default function NouvellePage({ params }: PageProps) {
     validation: {
       reviewers: []
     },
-    finalization: {
-      consent: false,
-      signatures: []
-    }
+finalization: {
+  consent: false,
+  signatures: [],
+  // Ajout d'une logique pour compiler les champs remplis
+  fieldsCompiled: false
+},
   });
 
   const [userId, setUserId] = useState<string>('');
@@ -78,6 +80,10 @@ export default function NouvellePage({ params }: PageProps) {
 
   // ✅ HANDLER POUR SYNC DONNÉES
   const handleDataChange = (section: string, data: any) => {
+  if (section === 'projectInfo') {
+    // Logique pour gérer les points de verrouillage
+    console.log('Points de verrouillage:', data.lockoutPoints);
+  }
     console.log('📝 Page - Data changed:', { section, data });
     setAstData(prev => ({
       ...prev,

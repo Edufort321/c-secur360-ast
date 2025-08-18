@@ -3,7 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { tenantId, formData } = await request.json()
+    const jsonData = await request.json();
+if (!jsonData || !jsonData.tenantId || !jsonData.formData) {
+  return NextResponse.json({ error: 'tenantId and formData are required' }, { status: 400 });
+}
+const { tenantId, formData } = jsonData;
     
     // Générer un numéro AST automatique
     const astCount = await prisma.aSTForm.count({ where: { tenantId } })
@@ -12,7 +16,7 @@ export async function POST(request: NextRequest) {
     const astForm = await prisma.aSTForm.create({
       data: {
         tenantId,
-        userId: 'temp-user', // À remplacer par l'authentification
+        userId: '', // À remplacer par l'authentification
         projectNumber: formData.projectNumber || '',
         clientName: formData.client || '',
         workLocation: formData.workLocation || '',
@@ -35,18 +39,19 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    return NextResponse.json({ 
-      success: true, 
-      astForm,
-      message: 'AST sauvegardé avec succès!'
-    })
+return NextResponse.json({ 
+  success: true, 
+  astForm,
+  message: 'AST sauvegardé avec succès!',
+  astNumber 
+});
     
-  } catch (error: any) {
-    console.error('Error saving AST:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 })
+  } catch (error: unknown) {
+    console.error('Error saving AST:', error instanceof Error ? error.message : 'Unknown error');
+return NextResponse.json({
+  success: false,
+  error: error instanceof Error ? error.message : 'Unknown error'
+}, { status: 500 });
   }
 }
 
@@ -56,7 +61,7 @@ export async function GET(request: NextRequest) {
     const tenantId = searchParams.get('tenantId')
     
     if (!tenantId) {
-      return NextResponse.json({ error: 'tenantId required' }, { status: 400 })
+  return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
     }
     
     const astForms = await prisma.aSTForm.findMany({
@@ -66,9 +71,9 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ astForms })
     
-  } catch (error: any) {
-    return NextResponse.json({ 
-      error: error.message 
-    }, { status: 500 })
+  } catch (error: unknown) {
+return NextResponse.json({
+  error: error instanceof Error ? error.message : 'Unknown error'
+}, { status: 500 });
   }
 }
