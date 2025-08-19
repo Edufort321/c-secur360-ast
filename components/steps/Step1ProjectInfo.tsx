@@ -605,8 +605,9 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   // =================== 🔥 NOTIFICATION PARENT ULTRA-STABLE (COMPATIBLE ASTFORM) ===================
   const stableFormDataRef = useRef(localData);
   const lastUpdateRef = useRef<string>('');
+  const parentSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // ✅ HANDLER PARENT FIGÉ UNE SEULE FOIS
+  // ✅ HANDLER PARENT FIGÉ UNE SEULE FOIS AVEC DEBOUNCE PROPER
   const notifyParentStable = useCallback((updatedData: any) => {
     const updateKey = JSON.stringify(updatedData).slice(0, 100);
     
@@ -619,14 +620,19 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     lastUpdateRef.current = updateKey;
     console.log('🔥 Step1 - Notification parent stable:', Object.keys(updatedData));
     
-    // ✅ SYNC DIFFÉRÉE POUR ÉVITER BOUCLES
-    setTimeout(() => {
+    // ✅ CLEAR TIMEOUT PRÉCÉDENT ET CRÉER NOUVEAU DEBOUNCE
+    if (parentSyncTimeoutRef.current) {
+      clearTimeout(parentSyncTimeoutRef.current);
+    }
+    
+    parentSyncTimeoutRef.current = setTimeout(() => {
       try {
         onDataChange('projectInfo', updatedData);
+        parentSyncTimeoutRef.current = null;
       } catch (error) {
         console.error('❌ Step1 - Erreur sync parent:', error);
       }
-    }, 50);
+    }, 300);
   }, [onDataChange]);
 
   // =================== 🔥 HANDLERS ULTRA-STABLES ANTI-ÉJECTION ===================
@@ -640,13 +646,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     const updatedData = { ...currentData, [field]: value };
     stableFormDataRef.current = updatedData;
     
-    // ✅ BATCH UPDATE REACT
+    // ✅ BATCH UPDATE REACT - IMMÉDIAT POUR UI RESPONSIVE
     setLocalData(updatedData);
     
-    // ✅ SYNC PARENT AVEC TIMEOUT ULTRA-COURT
-    setTimeout(() => {
-      notifyParentStable(updatedData);
-    }, 0);
+    // ✅ SYNC PARENT AVEC DEBOUNCE - PAS DE TIMEOUT IMMÉDIAT
+    notifyParentStable(updatedData);
   }, [notifyParentStable]);
 
   // =================== HANDLERS SPÉCIALISÉS ===================
@@ -667,10 +671,8 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     // ✅ BATCH UPDATE
     setLocalData(updatedData);
     
-    // ✅ SYNC PARENT IMMÉDIATE
-    setTimeout(() => {
-      notifyParentStable(updatedData);
-    }, 0);
+    // ✅ SYNC PARENT AVEC DEBOUNCE
+    notifyParentStable(updatedData);
   }, [notifyParentStable]);
 
   const addLockoutPoint = useCallback(() => {
@@ -690,29 +692,31 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       assignedLocation: localData.workLocations.length > 0 ? localData.workLocations[0].id : undefined
     };
 
-    setLocalData(prev => {
-      const updated = { ...prev, lockoutPoints: [...prev.lockoutPoints, newPoint] };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const currentData = stableFormDataRef.current;
+    const updated = { ...currentData, lockoutPoints: [...currentData.lockoutPoints, newPoint] };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
   }, [localData.workLocations, notifyParentStable]);
 
   const deleteLockoutPoint = useCallback((pointId: string) => {
-    const updatedPoints = localData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
-    const updatedPhotos = localData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
+    const currentData = stableFormDataRef.current;
+    const updatedPoints = currentData.lockoutPoints.filter((point: LockoutPoint) => point.id !== pointId);
+    const updatedPhotos = currentData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.lockoutPointId !== pointId);
     
-    setLocalData(prev => {
-      const updated = { 
-        ...prev, 
-        lockoutPoints: updatedPoints,
-        lockoutPhotos: updatedPhotos 
-      };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
-  }, [localData.lockoutPoints, localData.lockoutPhotos, notifyParentStable]);
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const updated = { 
+      ...currentData, 
+      lockoutPoints: updatedPoints,
+      lockoutPhotos: updatedPhotos 
+    };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
+  }, [notifyParentStable]);
 
   // =================== 🔥 HANDLER MODAL ISOLÉ (SANS SYNC) ===================
   const updateModalField = useCallback((field: string, value: string) => {
@@ -748,12 +752,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       endTime: newLocation.endTime || '16:00'
     };
 
-    setLocalData(prev => {
-      const updated = { ...prev, workLocations: [...prev.workLocations, location] };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const currentData = stableFormDataRef.current;
+    const updated = { ...currentData, workLocations: [...currentData.workLocations, location] };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
 
     // Reset formulaire modal
     setNewLocation({
@@ -773,32 +778,34 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [newLocation, notifyParentStable, isModalSaving]);
 
   const removeWorkLocation = useCallback((locationId: string) => {
-    const updatedLocations = localData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
+    const currentData = stableFormDataRef.current;
+    const updatedLocations = currentData.workLocations.filter((loc: WorkLocation) => loc.id !== locationId);
     
     // Retirer l'assignation des lockout points
-    const updatedLockouts = localData.lockoutPoints.map((point: LockoutPoint) => 
+    const updatedLockouts = currentData.lockoutPoints.map((point: LockoutPoint) => 
       point.assignedLocation === locationId 
         ? { ...point, assignedLocation: undefined }
         : point
     );
     
-    setLocalData(prev => {
-      const updated = { 
-        ...prev, 
-        workLocations: updatedLocations,
-        lockoutPoints: updatedLockouts 
-      };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const updated = { 
+      ...currentData, 
+      workLocations: updatedLocations,
+      lockoutPoints: updatedLockouts 
+    };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
     
     console.log('✅ Step1 - Emplacement supprimé:', locationId);
-  }, [localData.workLocations, localData.lockoutPoints, notifyParentStable]);
+  }, [notifyParentStable]);
 
   // =================== MISE À JOUR STATISTIQUES WORKERS ===================
   const updateLocationWorkerCount = useCallback((locationId: string, newWorkerCount: number) => {
-    const updatedLocations = localData.workLocations.map((loc: WorkLocation) => {
+    const currentData = stableFormDataRef.current;
+    const updatedLocations = currentData.workLocations.map((loc: WorkLocation) => {
       if (loc.id === locationId) {
         const updatedMaxReached = Math.max(loc.maxWorkersReached, newWorkerCount);
         return { 
@@ -810,71 +817,100 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return loc;
     });
     
-    setLocalData(prev => {
-      const updated = { ...prev, workLocations: updatedLocations };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const updated = { ...currentData, workLocations: updatedLocations };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
     
     console.log(`✅ Step1 - Emplacement ${locationId} - Travailleurs: ${newWorkerCount}`);
-  }, [localData.workLocations, notifyParentStable]);
+  }, [notifyParentStable]);
 
-  // =================== GESTION PHOTOS OPTIMISÉE ===================
+  // =================== 🔥 GESTION PHOTOS STABILISÉE ===================
+  const currentPhotoCaptureRef = useRef<{category: string; lockoutPointId?: string} | null>(null);
+  
+  // ✅ HANDLER STABLE UNE SEULE FOIS
+  useEffect(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.onchange = (e) => {
+        const files = Array.from((e.target as HTMLInputElement).files || []);
+        const captureContext = currentPhotoCaptureRef.current;
+        
+        if (files.length > 0 && captureContext) {
+          files.forEach(file => processPhoto(file, captureContext.category, captureContext.lockoutPointId));
+        }
+        
+        // Reset après traitement
+        currentPhotoCaptureRef.current = null;
+      };
+    }
+  }, []);
+
+  // ✅ CLEANUP TIMEOUT LORS DU DÉMONTAGE
+  useEffect(() => {
+    return () => {
+      if (parentSyncTimeoutRef.current) {
+        clearTimeout(parentSyncTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
     try {
       if (fileInputRef.current) {
+        // ✅ CONFIGURAR CONTEXTE AVANT CAPTURE
+        currentPhotoCaptureRef.current = { category, lockoutPointId };
+        
         fileInputRef.current.accept = 'image/*';
         fileInputRef.current.capture = 'environment';
         fileInputRef.current.multiple = true;
-        fileInputRef.current.onchange = (e) => {
-          const files = Array.from((e.target as HTMLInputElement).files || []);
-          if (files.length > 0) {
-            files.forEach(file => processPhoto(file, category, lockoutPointId));
-          }
-        };
         fileInputRef.current.click();
       }
     } catch (error) {
       console.error('Erreur capture photo:', error);
+      currentPhotoCaptureRef.current = null;
     }
   }, []);
 
   const processPhoto = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
     try {
       const photoUrl = URL.createObjectURL(file);
+      const categoryLabel = t.categories[category as keyof typeof t.categories] || category;
       const newPhoto: LockoutPhoto = {
         id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         url: photoUrl,
-        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+        caption: `${categoryLabel} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
         category: category as any,
         timestamp: new Date().toISOString(),
         lockoutPointId
       };
       
-      setLocalData(prev => {
-        const updated = { ...prev, lockoutPhotos: [...prev.lockoutPhotos, newPhoto] };
-        stableFormDataRef.current = updated;
-        notifyParentStable(updated);
-        return updated;
-      });
+      // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+      const currentData = stableFormDataRef.current;
+      const updated = { ...currentData, lockoutPhotos: [...currentData.lockoutPhotos, newPhoto] };
+      stableFormDataRef.current = updated;
+      
+      setLocalData(updated);
+      notifyParentStable(updated);
       
       console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
       console.error('Erreur traitement photo:', error);
     }
-  }, [language, notifyParentStable]);
+  }, [language, t.categories, notifyParentStable]);
 
   const deletePhoto = useCallback((photoId: string) => {
-    setLocalData(prev => {
-      const updated = { 
-        ...prev, 
-        lockoutPhotos: prev.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId) 
-      };
-      stableFormDataRef.current = updated;
-      notifyParentStable(updated);
-      return updated;
-    });
+    // ✅ MISE À JOUR AVEC PATTERN CONSISTENT
+    const currentData = stableFormDataRef.current;
+    const updated = { 
+      ...currentData, 
+      lockoutPhotos: currentData.lockoutPhotos.filter((photo: LockoutPhoto) => photo.id !== photoId) 
+    };
+    stableFormDataRef.current = updated;
+    
+    setLocalData(updated);
+    notifyParentStable(updated);
     
     console.log('✅ Step1 - Photo supprimée:', photoId);
   }, [notifyParentStable]);
