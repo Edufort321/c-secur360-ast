@@ -13,7 +13,7 @@ interface FormDataType {
 }
 interface Step1ProjectInfoProps {
   formData: FormDataType;
-  onDataChange: (data: FormDataType) => void;
+  onDataChange: (section: string, data: FormDataType) => void;
   errors: Record<string, string>;
 }
 
@@ -31,7 +31,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({ formData, onDataCha
         ...formData,
         workLocations: [...formData.workLocations, { name: newLocation }],
       };
-      onDataChange(updated);
+      onDataChange('projectInfo', updated);
       setNewLocation('');
       setIsLocationModalOpen(false);
     }
@@ -43,7 +43,7 @@ const Step1ProjectInfo: React.FC<Step1ProjectInfoProps> = ({ formData, onDataCha
         ...formData,
         lockoutPoints: [...formData.lockoutPoints, { name: newLockout }],
       };
-      onDataChange(updated);
+      onDataChange('projectInfo', updated);
       setNewLockout('');
       setIsLockoutModalOpen(false);
     }
