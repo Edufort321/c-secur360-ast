@@ -30,7 +30,9 @@ import {
   Unlock,
   PenTool,
   Timer,
-  UserCheck
+  UserCheck,
+  PlayCircle,
+  StopCircle
 } from 'lucide-react';
 
 // =================== INTERFACES ===================
@@ -41,20 +43,22 @@ interface Worker {
   phoneNumber: string;
   location: string;
   signature: string;
+  signatureTimestamp: string; // Horodatage de la signature
   acknowledgedAST: boolean;
-  startTime: string;
-  endTime?: string;
-  workDuration?: number; // en minutes
+  lockApplied: boolean; // Cadenas apposé par ce travailleur
+  lockRemovedAt?: string; // Quand le cadenas a été enlevé
+  workStartTime?: string; // Début des travaux
+  workEndTime?: string; // Fin des travaux
+  workDuration?: number; // Durée en minutes
   createdAt: string;
 }
 
 interface LockoutStatus {
-  applied: boolean;
-  removed: boolean;
-  notApplicable: boolean;
+  totalLocks: number; // Nombre total de cadenas
+  locksApplied: number; // Cadenas apposés
+  locksRemoved: number; // Cadenas enlevés
   verifiedBy?: string;
   verifiedAt?: string;
-  lockoutPoints?: string[];
   notes?: string;
 }
 
@@ -95,6 +99,7 @@ interface ValidationData {
   // Nouvelles données
   workers: Worker[];
   lockoutStatus: LockoutStatus;
+  totalWorkTime?: number; // Temps total de travail en minutes
 }
 
 interface ValidationStepProps {
@@ -121,7 +126,7 @@ const translations = {
     validationCriteria: "Critères de Validation",
     validationSummary: "Résumé de Validation",
     workersSection: "Vérification des Travailleurs",
-    lockoutSection: "Statut du Verrouillage LOTO",
+    lockoutSection: "Statut des Cadenas LOTO",
     
     // Workers
     addWorker: "Ajouter un Travailleur",
@@ -131,21 +136,25 @@ const translations = {
     location: "Emplacement de Travail",
     signature: "Signature",
     acknowledgeAST: "J'ai pris connaissance de l'AST",
-    startTime: "Heure de Début",
-    endTime: "Heure de Fin",
+    startWork: "Début Travaux",
+    endWork: "Fin Travaux",
     duration: "Durée",
     removeWorker: "Retirer ce travailleur",
     noWorkersYet: "Aucun travailleur enregistré",
-    signHere: "Signer ici",
+    signHere: "Signature automatique",
     workerVerified: "Travailleur vérifié",
+    workInProgress: "Travaux en cours",
+    workCompleted: "Travaux terminés",
     
     // Lockout
     lockoutApplied: "Cadenas Apposé",
     lockoutRemoved: "Cadenas Enlevé",
-    lockoutNA: "Non Applicable (N/A)",
-    lockoutVerification: "Vérification du Verrouillage",
-    lockoutNotes: "Notes sur le verrouillage",
-    lockoutPoints: "Points de verrouillage",
+    lockoutPending: "En attente",
+    lockoutSummary: "Résumé des Cadenas",
+    totalLocks: "Total Cadenas",
+    locksApplied: "Cadenas Apposés",
+    locksRemoved: "Cadenas Enlevés",
+    locksPending: "En Attente",
     
     // Reviewers
     addReviewer: "Ajouter un Réviseur",
@@ -183,6 +192,7 @@ const translations = {
     documentApproved: "Document Approuvé",
     workerAdded: "Travailleur ajouté avec succès",
     mustAcknowledgeAST: "Le travailleur doit confirmer avoir pris connaissance de l'AST",
+    signatureRecorded: "Signature enregistrée",
     
     // Form fields
     enterName: "Entrer le nom complet",
@@ -195,18 +205,20 @@ const translations = {
     totalWorkers: "Travailleurs Présents",
     activeWorkers: "Travailleurs Actifs",
     completedWork: "Travaux Terminés",
+    totalWorkTime: "Temps Total",
     averageDuration: "Durée Moyenne",
     
     // Buttons
     add: "Ajouter",
     cancel: "Annuler",
     close: "Fermer",
-    startWork: "Débuter",
-    endWork: "Terminer",
+    startWorkBtn: "Débuter Travaux",
+    endWorkBtn: "Terminer Travaux",
     
     // Time
     hours: "heures",
-    minutes: "minutes"
+    minutes: "minutes",
+    signedAt: "Signé le"
   },
   en: {
     title: "Team Validation & Verification",
@@ -227,21 +239,25 @@ const translations = {
     location: "Work Location",
     signature: "Signature",
     acknowledgeAST: "I acknowledge the JSA",
-    startTime: "Start Time",
-    endTime: "End Time",
+    startWork: "Work Start",
+    endWork: "Work End",
     duration: "Duration",
     removeWorker: "Remove this worker",
     noWorkersYet: "No workers registered yet",
-    signHere: "Sign here",
+    signHere: "Automatic signature",
     workerVerified: "Worker verified",
+    workInProgress: "Work in progress",
+    workCompleted: "Work completed",
     
     // Lockout
     lockoutApplied: "Lock Applied",
     lockoutRemoved: "Lock Removed",
-    lockoutNA: "Not Applicable (N/A)",
-    lockoutVerification: "Lockout Verification",
-    lockoutNotes: "Lockout notes",
-    lockoutPoints: "Lockout points",
+    lockoutPending: "Pending",
+    lockoutSummary: "Lockout Summary",
+    totalLocks: "Total Locks",
+    locksApplied: "Locks Applied",
+    locksRemoved: "Locks Removed",
+    locksPending: "Pending",
     
     // Reviewers
     addReviewer: "Add Reviewer",
@@ -279,6 +295,7 @@ const translations = {
     documentApproved: "Document Approved",
     workerAdded: "Worker added successfully",
     mustAcknowledgeAST: "Worker must acknowledge the JSA",
+    signatureRecorded: "Signature recorded",
     
     // Form fields
     enterName: "Enter full name",
@@ -291,18 +308,20 @@ const translations = {
     totalWorkers: "Workers Present",
     activeWorkers: "Active Workers",
     completedWork: "Work Completed",
+    totalWorkTime: "Total Time",
     averageDuration: "Average Duration",
     
     // Buttons
     add: "Add",
     cancel: "Cancel",
     close: "Close",
-    startWork: "Start",
-    endWork: "End",
+    startWorkBtn: "Start Work",
+    endWorkBtn: "End Work",
     
     // Time
     hours: "hours",
-    minutes: "minutes"
+    minutes: "minutes",
+    signedAt: "Signed on"
   }
 };
 
@@ -330,16 +349,16 @@ export default function Step5Validation({
     },
     workers: [],
     lockoutStatus: {
-      applied: false,
-      removed: false,
-      notApplicable: false
+      totalLocks: 0,
+      locksApplied: 0,
+      locksRemoved: 0
     },
+    totalWorkTime: 0,
     ...formData.validation
   }));
 
   const [showAddReviewer, setShowAddReviewer] = useState(false);
   const [showAddWorker, setShowAddWorker] = useState(false);
-  const [showSignature, setShowSignature] = useState<string | null>(null);
   
   const [newReviewer, setNewReviewer] = useState({
     name: '',
@@ -354,11 +373,35 @@ export default function Step5Validation({
     company: '',
     phoneNumber: '',
     location: '',
-    acknowledgedAST: false
+    acknowledgedAST: false,
+    lockApplied: false
   });
 
   // Récupérer les emplacements de Step1
   const workLocations = formData.projectInfo?.workLocations || [];
+
+  // =================== CALCUL TEMPS TOTAL ===================
+  useEffect(() => {
+    const calculateTotalTime = () => {
+      const total = validationData.workers.reduce((sum, worker) => {
+        if (worker.workDuration) {
+          return sum + worker.workDuration;
+        }
+        return sum;
+      }, 0);
+      
+      if (total !== validationData.totalWorkTime) {
+        const updatedData = {
+          ...validationData,
+          totalWorkTime: total
+        };
+        setValidationData(updatedData);
+        notifyParent(updatedData);
+      }
+    };
+    
+    calculateTotalTime();
+  }, [validationData.workers]);
 
   // =================== NOTIFICATION PARENT ===================
   const notifyParent = useCallback((newData: ValidationData) => {
@@ -377,21 +420,39 @@ export default function Step5Validation({
       return;
     }
 
+    const now = new Date();
+    const signatureTimestamp = now.toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
     const worker: Worker = {
       id: Date.now().toString(),
       name: newWorker.name.trim(),
       company: newWorker.company.trim(),
       phoneNumber: newWorker.phoneNumber.trim(),
       location: newWorker.location || workLocations[0]?.name || 'Non spécifié',
-      signature: `${newWorker.name} - Signé électroniquement`,
+      signature: `${newWorker.name.trim()} - Signé électroniquement`,
+      signatureTimestamp: signatureTimestamp,
       acknowledgedAST: true,
-      startTime: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      lockApplied: newWorker.lockApplied,
+      createdAt: now.toISOString()
     };
 
     const updatedData = {
       ...validationData,
-      workers: [...validationData.workers, worker]
+      workers: [...validationData.workers, worker],
+      lockoutStatus: {
+        ...validationData.lockoutStatus,
+        totalLocks: validationData.lockoutStatus.totalLocks + 1,
+        locksApplied: newWorker.lockApplied 
+          ? validationData.lockoutStatus.locksApplied + 1 
+          : validationData.lockoutStatus.locksApplied
+      }
     };
 
     setValidationData(updatedData);
@@ -403,17 +464,49 @@ export default function Step5Validation({
       company: '',
       phoneNumber: '',
       location: '',
-      acknowledgedAST: false
+      acknowledgedAST: false,
+      lockApplied: false
     });
     setShowAddWorker(false);
     
     console.log('✅ Travailleur ajouté:', worker.name);
-  }, [newWorker, validationData, notifyParent, workLocations, t.mustAcknowledgeAST]);
+  }, [newWorker, validationData, notifyParent, workLocations, t.mustAcknowledgeAST, language]);
 
   const removeWorker = useCallback((workerId: string) => {
+    const worker = validationData.workers.find(w => w.id === workerId);
+    if (!worker) return;
+
     const updatedData = {
       ...validationData,
-      workers: validationData.workers.filter(w => w.id !== workerId)
+      workers: validationData.workers.filter(w => w.id !== workerId),
+      lockoutStatus: {
+        ...validationData.lockoutStatus,
+        totalLocks: validationData.lockoutStatus.totalLocks - 1,
+        locksApplied: worker.lockApplied 
+          ? validationData.lockoutStatus.locksApplied - 1 
+          : validationData.lockoutStatus.locksApplied,
+        locksRemoved: worker.lockRemovedAt 
+          ? validationData.lockoutStatus.locksRemoved - 1 
+          : validationData.lockoutStatus.locksRemoved
+      }
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+  }, [validationData, notifyParent]);
+
+  const startWorkerShift = useCallback((workerId: string) => {
+    const updatedData = {
+      ...validationData,
+      workers: validationData.workers.map(worker => {
+        if (worker.id === workerId && !worker.workStartTime) {
+          return {
+            ...worker,
+            workStartTime: new Date().toISOString()
+          };
+        }
+        return worker;
+      })
     };
     
     setValidationData(updatedData);
@@ -424,14 +517,14 @@ export default function Step5Validation({
     const updatedData = {
       ...validationData,
       workers: validationData.workers.map(worker => {
-        if (worker.id === workerId && !worker.endTime) {
+        if (worker.id === workerId && worker.workStartTime && !worker.workEndTime) {
           const endTime = new Date().toISOString();
-          const startTime = new Date(worker.startTime);
+          const startTime = new Date(worker.workStartTime);
           const duration = Math.round((new Date(endTime).getTime() - startTime.getTime()) / 60000); // en minutes
           
           return {
             ...worker,
-            endTime,
+            workEndTime: endTime,
             workDuration: duration
           };
         }
@@ -443,17 +536,25 @@ export default function Step5Validation({
     notifyParent(updatedData);
   }, [validationData, notifyParent]);
 
-  // =================== HANDLERS LOCKOUT ===================
-  const updateLockoutStatus = useCallback((field: 'applied' | 'removed' | 'notApplicable') => {
+  const toggleWorkerLock = useCallback((workerId: string) => {
     const updatedData = {
       ...validationData,
+      workers: validationData.workers.map(worker => {
+        if (worker.id === workerId) {
+          const isRemoving = worker.lockApplied && !worker.lockRemovedAt;
+          return {
+            ...worker,
+            lockRemovedAt: isRemoving ? new Date().toISOString() : undefined
+          };
+        }
+        return worker;
+      }),
       lockoutStatus: {
         ...validationData.lockoutStatus,
-        applied: field === 'applied',
-        removed: field === 'removed',
-        notApplicable: field === 'notApplicable',
-        verifiedBy: 'Superviseur',
-        verifiedAt: new Date().toISOString()
+        locksRemoved: validationData.workers.find(w => w.id === workerId)?.lockApplied && 
+                      !validationData.workers.find(w => w.id === workerId)?.lockRemovedAt
+          ? validationData.lockoutStatus.locksRemoved + 1
+          : validationData.lockoutStatus.locksRemoved - 1
       }
     };
     
@@ -495,16 +596,6 @@ export default function Step5Validation({
     setShowAddReviewer(false);
   }, [newReviewer, validationData, notifyParent]);
 
-  const removeReviewer = useCallback((reviewerId: string) => {
-    const updatedData = {
-      ...validationData,
-      reviewers: validationData.reviewers.filter(r => r.id !== reviewerId)
-    };
-    
-    setValidationData(updatedData);
-    notifyParent(updatedData);
-  }, [validationData, notifyParent]);
-
   const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
     const updatedData = {
       ...validationData,
@@ -533,8 +624,11 @@ export default function Step5Validation({
     return formatDuration(Math.round(totalMinutes / completedWorkers.length));
   };
 
-  const activeWorkers = validationData.workers.filter(w => !w.endTime).length;
-  const completedWorkers = validationData.workers.filter(w => w.endTime).length;
+  const activeWorkers = validationData.workers.filter(w => w.workStartTime && !w.workEndTime).length;
+  const completedWorkers = validationData.workers.filter(w => w.workEndTime).length;
+  const locksPending = validationData.lockoutStatus.totalLocks - 
+                      validationData.lockoutStatus.locksApplied - 
+                      validationData.lockoutStatus.locksRemoved;
 
   // =================== RENDU ===================
   return (
@@ -588,6 +682,103 @@ export default function Step5Validation({
         </p>
       </div>
 
+      {/* Dashboard Sommaire Global */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(148, 163, 184, 0.2)',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          fontWeight: '600',
+          color: '#ffffff',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <BarChart3 size={20} />
+          Dashboard - Vue d'ensemble
+        </h3>
+        
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: '12px'
+        }}>
+          {/* Cadenas */}
+          <div style={{
+            textAlign: 'center',
+            padding: '16px 12px',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))',
+            borderRadius: '12px',
+            border: '1px solid rgba(16, 185, 129, 0.3)'
+          }}>
+            <Lock size={20} style={{ margin: '0 auto 8px', color: '#10b981' }} />
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+              {validationData.lockoutStatus.locksApplied}/{validationData.lockoutStatus.totalLocks}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
+              {t.locksApplied}
+            </div>
+          </div>
+          
+          {/* Travailleurs */}
+          <div style={{
+            textAlign: 'center',
+            padding: '16px 12px',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(29, 78, 216, 0.1))',
+            borderRadius: '12px',
+            border: '1px solid rgba(59, 130, 246, 0.3)'
+          }}>
+            <Users size={20} style={{ margin: '0 auto 8px', color: '#3b82f6' }} />
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#3b82f6' }}>
+              {validationData.workers.length}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
+              {t.totalWorkers}
+            </div>
+          </div>
+          
+          {/* Travaux actifs */}
+          <div style={{
+            textAlign: 'center',
+            padding: '16px 12px',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))',
+            borderRadius: '12px',
+            border: '1px solid rgba(245, 158, 11, 0.3)'
+          }}>
+            <PlayCircle size={20} style={{ margin: '0 auto 8px', color: '#f59e0b' }} />
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>
+              {activeWorkers}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
+              {t.activeWorkers}
+            </div>
+          </div>
+          
+          {/* Temps total */}
+          <div style={{
+            textAlign: 'center',
+            padding: '16px 12px',
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1))',
+            borderRadius: '12px',
+            border: '1px solid rgba(139, 92, 246, 0.3)'
+          }}>
+            <Timer size={20} style={{ margin: '0 auto 8px', color: '#8b5cf6' }} />
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#8b5cf6' }}>
+              {formatDuration(validationData.totalWorkTime || 0)}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
+              {t.totalWorkTime}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Section Vérification des Travailleurs */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.8)',
@@ -639,74 +830,6 @@ export default function Step5Validation({
           </button>
         </div>
 
-        {/* Statistiques des travailleurs */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-          gap: '12px',
-          marginBottom: '16px'
-        }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
-              {validationData.workers.length}
-            </div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-              {t.totalWorkers}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
-              {activeWorkers}
-            </div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-              {t.activeWorkers}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f59e0b' }}>
-              {completedWorkers}
-            </div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-              {t.completedWork}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#8b5cf6' }}>
-              {getAverageDuration()}
-            </div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-              {t.averageDuration}
-            </div>
-          </div>
-        </div>
-
         {/* Liste des travailleurs */}
         {validationData.workers.length > 0 ? (
           validationData.workers.map(worker => (
@@ -729,12 +852,16 @@ export default function Step5Validation({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    marginBottom: '8px'
+                    marginBottom: '12px'
                   }}>
                     <div style={{
-                      width: '36px',
-                      height: '36px',
-                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      width: '40px',
+                      height: '40px',
+                      background: worker.workStartTime && !worker.workEndTime 
+                        ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                        : worker.workEndTime
+                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                        : 'linear-gradient(135deg, #64748b, #475569)',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -745,7 +872,7 @@ export default function Step5Validation({
                     }}>
                       {worker.name.charAt(0).toUpperCase()}
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h4 style={{ margin: 0, fontSize: '14px', color: '#ffffff' }}>
                         {worker.name}
                       </h4>
@@ -760,7 +887,8 @@ export default function Step5Validation({
                     gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                     gap: '8px',
                     fontSize: '12px',
-                    color: '#94a3b8'
+                    color: '#94a3b8',
+                    marginBottom: '12px'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Phone size={12} />
@@ -770,36 +898,90 @@ export default function Step5Validation({
                       <MapPin size={12} />
                       {worker.location}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} />
-                      {new Date(worker.startTime).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </div>
-                    {worker.endTime && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Timer size={12} />
-                        {formatDuration(worker.workDuration || 0)}
-                      </div>
-                    )}
                   </div>
 
+                  {/* Signature avec horodatage */}
                   {worker.acknowledgedAST && (
                     <div style={{
-                      marginTop: '8px',
-                      padding: '6px 10px',
+                      padding: '8px 12px',
                       background: 'rgba(16, 185, 129, 0.1)',
                       border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '8px',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '4px'
+                      }}>
+                        <PenTool size={14} color="#10b981" />
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#10b981' }}>
+                          {t.signatureRecorded}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {worker.signature}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+                        {t.signedAt}: {worker.signatureTimestamp}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Statut cadenas */}
+                  {worker.lockApplied && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      background: worker.lockRemovedAt 
+                        ? 'rgba(245, 158, 11, 0.1)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      border: `1px solid ${worker.lockRemovedAt 
+                        ? 'rgba(245, 158, 11, 0.3)' 
+                        : 'rgba(16, 185, 129, 0.3)'}`,
                       borderRadius: '6px',
                       fontSize: '11px',
-                      color: '#10b981',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
+                      color: worker.lockRemovedAt ? '#f59e0b' : '#10b981',
+                      marginBottom: '8px'
                     }}>
-                      <CheckCircle size={12} />
-                      {t.workerVerified}
+                      {worker.lockRemovedAt ? <Unlock size={12} /> : <Lock size={12} />}
+                      {worker.lockRemovedAt ? t.lockoutRemoved : t.lockoutApplied}
+                    </div>
+                  )}
+
+                  {/* Temps de travail */}
+                  {worker.workStartTime && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      fontSize: '11px',
+                      color: '#94a3b8'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} />
+                        {t.startWork}: {new Date(worker.workStartTime).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                      {worker.workEndTime && (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <StopCircle size={12} />
+                            {t.endWork}: {new Date(worker.workEndTime).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#8b5cf6' }}>
+                            <Timer size={12} />
+                            {formatDuration(worker.workDuration || 0)}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -809,7 +991,29 @@ export default function Step5Validation({
                   flexDirection: 'column',
                   gap: '8px'
                 }}>
-                  {!worker.endTime ? (
+                  {/* Boutons travaux */}
+                  {!worker.workStartTime ? (
+                    <button
+                      onClick={() => startWorkerShift(worker.id)}
+                      style={{
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <PlayCircle size={14} />
+                      {t.startWorkBtn}
+                    </button>
+                  ) : !worker.workEndTime ? (
                     <button
                       onClick={() => endWorkerShift(worker.id)}
                       style={{
@@ -821,28 +1025,56 @@ export default function Step5Validation({
                         fontSize: '12px',
                         fontWeight: '600',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      {t.endWork}
+                      <StopCircle size={14} />
+                      {t.endWorkBtn}
                     </button>
                   ) : (
                     <span style={{
                       padding: '8px 12px',
-                      background: 'rgba(100, 116, 139, 0.2)',
+                      background: 'rgba(16, 185, 129, 0.2)',
                       borderRadius: '6px',
                       fontSize: '12px',
-                      color: '#94a3b8',
-                      textAlign: 'center'
+                      color: '#10b981',
+                      textAlign: 'center',
+                      fontWeight: '600'
                     }}>
-                      {t.completed}
+                      {t.workCompleted}
                     </span>
+                  )}
+
+                  {/* Bouton cadenas */}
+                  {worker.lockApplied && !worker.lockRemovedAt && worker.workEndTime && (
+                    <button
+                      onClick={() => toggleWorkerLock(worker.id)}
+                      style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Unlock size={12} />
+                      Enlever cadenas
+                    </button>
                   )}
                   
                   <button
                     onClick={() => removeWorker(worker.id)}
                     style={{
-                      background: '#ef4444',
+                      background: '#6b7280',
                       color: 'white',
                       border: 'none',
                       padding: '6px',
@@ -871,146 +1103,7 @@ export default function Step5Validation({
         )}
       </div>
 
-      {/* Section Statut du Verrouillage LOTO */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{
-          fontSize: '18px',
-          fontWeight: '600',
-          color: '#ffffff',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <Lock size={20} />
-          {t.lockoutSection}
-        </h3>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '12px'
-        }}>
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            border: `2px solid ${validationData.lockoutStatus.applied ? 'rgba(16, 185, 129, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
-            borderRadius: '12px',
-            cursor: 'pointer',
-            background: validationData.lockoutStatus.applied ? 'rgba(16, 185, 129, 0.1)' : 'rgba(30, 41, 59, 0.6)',
-            transition: 'all 0.3s'
-          }}>
-            <input
-              type="radio"
-              name="lockoutStatus"
-              checked={validationData.lockoutStatus.applied}
-              onChange={() => updateLockoutStatus('applied')}
-              style={{
-                width: '18px',
-                height: '18px',
-                accentColor: '#10b981'
-              }}
-            />
-            <Lock size={18} color={validationData.lockoutStatus.applied ? '#10b981' : '#94a3b8'} />
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '500',
-              color: validationData.lockoutStatus.applied ? '#10b981' : '#e2e8f0'
-            }}>
-              {t.lockoutApplied}
-            </span>
-          </label>
-
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            border: `2px solid ${validationData.lockoutStatus.removed ? 'rgba(245, 158, 11, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
-            borderRadius: '12px',
-            cursor: 'pointer',
-            background: validationData.lockoutStatus.removed ? 'rgba(245, 158, 11, 0.1)' : 'rgba(30, 41, 59, 0.6)',
-            transition: 'all 0.3s'
-          }}>
-            <input
-              type="radio"
-              name="lockoutStatus"
-              checked={validationData.lockoutStatus.removed}
-              onChange={() => updateLockoutStatus('removed')}
-              style={{
-                width: '18px',
-                height: '18px',
-                accentColor: '#f59e0b'
-              }}
-            />
-            <Unlock size={18} color={validationData.lockoutStatus.removed ? '#f59e0b' : '#94a3b8'} />
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '500',
-              color: validationData.lockoutStatus.removed ? '#f59e0b' : '#e2e8f0'
-            }}>
-              {t.lockoutRemoved}
-            </span>
-          </label>
-
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px',
-            border: `2px solid ${validationData.lockoutStatus.notApplicable ? 'rgba(100, 116, 139, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
-            borderRadius: '12px',
-            cursor: 'pointer',
-            background: validationData.lockoutStatus.notApplicable ? 'rgba(100, 116, 139, 0.2)' : 'rgba(30, 41, 59, 0.6)',
-            transition: 'all 0.3s'
-          }}>
-            <input
-              type="radio"
-              name="lockoutStatus"
-              checked={validationData.lockoutStatus.notApplicable}
-              onChange={() => updateLockoutStatus('notApplicable')}
-              style={{
-                width: '18px',
-                height: '18px',
-                accentColor: '#94a3b8'
-              }}
-            />
-            <X size={18} color={validationData.lockoutStatus.notApplicable ? '#94a3b8' : '#64748b'} />
-            <span style={{
-              fontSize: '14px',
-              fontWeight: '500',
-              color: validationData.lockoutStatus.notApplicable ? '#94a3b8' : '#e2e8f0'
-            }}>
-              {t.lockoutNA}
-            </span>
-          </label>
-        </div>
-
-        {validationData.lockoutStatus.verifiedAt && (
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: '#94a3b8'
-          }}>
-            {t.lockoutVerification}: {validationData.lockoutStatus.verifiedBy} - {' '}
-            {new Date(validationData.lockoutStatus.verifiedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-          </div>
-        )}
-      </div>
-
-      {/* Section Critères de Validation (existante) */}
+      {/* Section Critères de Validation */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.8)',
         backdropFilter: 'blur(20px)',
@@ -1251,6 +1344,7 @@ export default function Step5Validation({
                 </select>
               </div>
 
+              {/* Case consentement AST */}
               <div style={{
                 padding: '16px',
                 background: 'rgba(30, 41, 59, 0.6)',
@@ -1274,23 +1368,69 @@ export default function Step5Validation({
                       accentColor: '#10b981'
                     }}
                   />
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <span style={{
                       fontSize: '14px',
                       fontWeight: '600',
                       color: '#ffffff',
                       display: 'block',
-                      marginBottom: '4px'
+                      marginBottom: '8px'
                     }}>
                       {t.acknowledgeAST} *
                     </span>
-                    <span style={{
-                      fontSize: '12px',
-                      color: '#94a3b8'
-                    }}>
-                      {t.signature}: {newWorker.name || '_______________'}
-                    </span>
+                    {newWorker.acknowledgedAST && newWorker.name && (
+                      <div style={{
+                        padding: '8px',
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        color: '#10b981'
+                      }}>
+                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                          {t.signHere}:
+                        </div>
+                        <div>{newWorker.name} - Signé électroniquement</div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
+                          {new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                </label>
+              </div>
+
+              {/* Case cadenas */}
+              <div style={{
+                padding: '16px',
+                background: 'rgba(30, 41, 59, 0.6)',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={newWorker.lockApplied}
+                    onChange={(e) => setNewWorker(prev => ({...prev, lockApplied: e.target.checked}))}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#f59e0b'
+                    }}
+                  />
+                  <Lock size={18} color={newWorker.lockApplied ? '#f59e0b' : '#64748b'} />
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: newWorker.lockApplied ? '#f59e0b' : '#e2e8f0'
+                  }}>
+                    {t.lockoutApplied}
+                  </span>
                 </label>
               </div>
             </div>
