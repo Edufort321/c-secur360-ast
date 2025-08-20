@@ -731,6 +731,33 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           >
             {[
               { 
+                href: `/${tenant.subdomain}/new-dashboard`, 
+                icon: BarChart3, 
+                title: 'Dashboard Pro', 
+                desc: 'Dashboard avec données réelles', 
+                color: '#10b981',
+                gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                priority: true
+              },
+              { 
+                href: `/${tenant.subdomain}/admin`, 
+                icon: Database, 
+                title: 'Administration', 
+                desc: 'Gestion facturation & clients', 
+                color: '#8b5cf6',
+                gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                priority: true
+              },
+              { 
+                href: `/${tenant.subdomain}/sites`, 
+                icon: MapPin, 
+                title: 'Multi-Sites', 
+                desc: 'Gestion emplacements multiples', 
+                color: '#f59e0b',
+                gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                priority: true
+              },
+              { 
                 href: `/${tenant.subdomain}/ast/nouveau`, 
                 icon: FileText, 
                 title: 'Nouveau AST', 

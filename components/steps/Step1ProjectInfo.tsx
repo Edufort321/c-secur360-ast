@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
 
-// =================== ?? INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
+// =================== INTERFACES COMPATIBLES AVEC ASTFORM EXISTANT ===================
 interface Step1ProjectInfoProps {
   formData: any;
   onDataChange: (section: string, data: any) => void;
@@ -21,7 +21,7 @@ interface Step1ProjectInfoProps {
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
 }
 
-// =================== INTERFACES M�TIER CONSERV�ES ===================
+// =================== INTERFACES MÉTIER CONSERVÉES ===================
 interface WorkLocation {
   id: string;
   name: string;
@@ -84,74 +84,74 @@ interface LocationStats {
 // =================== TRADUCTIONS COMPLETES CONSERVEES ===================
 const translations = {
   fr: {
-    // G�n�rateur AST
-    astNumberTitle: "?? Num�ro AST Unique",
-    astNumberGenerated: "Num�ro g�n�r� automatiquement - Usage unique pour cette AST",
-    copyNumber: "Copier le num�ro",
-    generateNew: "G�n�rer un nouveau num�ro",
+    // Générateur AST
+    astNumberTitle: "Numéro AST Unique",
+    astNumberGenerated: "Numéro généré automatiquement - Usage unique pour cette AST",
+    copyNumber: "Copier le numéro",
+    generateNew: "Générer un nouveau numéro",
     
     // Sections principales
     clientInfo: "Informations Client",
     projectDetails: "Détails du Projet",
     location: "Localisation",
     workLocations: "Emplacements de Travail",
-    locationStats: "Statistiques Temps R�el",
-    emergency: "?? Contacts d'Urgence",
-    workDescription: "Description D�taill�e des Travaux",
+    locationStats: "Statistiques Temps Réel",
+    emergency: "Contacts d'Urgence",
+    workDescription: "Description Détaillée des Travaux",
     lockoutSection: "Verrouillage / Cadenassage (LOTO)",
     
     // Notifications LOTO
     notifyWorkers: "Notifier les travailleurs",
     notifyWorkersDesc: "Envoyer une notification SMS des modifications LOTO",
     sendNotification: "Envoyer notification",
-    notificationSent: "Notification envoy�e",
+    notificationSent: "Notification envoyée",
     
     // Champs client
     clientName: "Nom du Client",
-    clientNamePlaceholder: "Ex: Hydro-Qu�bec, Bell Canada...",
-    clientPhone: "T�l�phone Client",
+    clientNamePlaceholder: "Ex: Hydro-Québec, Bell Canada...",
+    clientPhone: "Téléphone Client",
     clientPhonePlaceholder: "Ex: (514) 555-0123",
-    clientRepresentative: "Repr�sentant Client",
+    clientRepresentative: "Représentant Client",
     clientRepPlaceholder: "Nom du responsable projet",
-    repPhone: "T�l�phone Repr�sentant",
+    repPhone: "Téléphone Représentant",
     repPhonePlaceholder: "Ex: (514) 555-0456",
     
     // Champs projet
-    projectNumber: "Num�ro de Projet",
+    projectNumber: "Numéro de Projet",
     projectNumberPlaceholder: "Ex: PRJ-2025-001",
     astClientNumber: "# AST Client (Optionnel)",
-    astClientPlaceholder: "Num�ro fourni par le client",
-    astClientHelp: "Num�ro de r�f�rence du client (si applicable)",
+    astClientPlaceholder: "Numéro fourni par le client",
+    astClientHelp: "Numéro de référence du client (si applicable)",
     date: "Date",
     time: "Heure",
     
     // Localisation
     workLocation: "Lieu des Travaux",
-    workLocationPlaceholder: "Adresse compl�te du site de travail",
+    workLocationPlaceholder: "Adresse complète du site de travail",
     industryType: "Type d'Industrie",
     
     // Emplacements multiples
     addLocation: "Ajouter Emplacement",
     locationName: "Nom de l'Emplacement",
-    locationNamePlaceholder: "Ex: B�timent A - �tage 2",
+    locationNamePlaceholder: "Ex: Bâtiment A - Étage 2",
     locationDescription: "Description",
-    locationDescriptionPlaceholder: "Ex: Zone des �quipements �lectriques",
+    locationDescriptionPlaceholder: "Ex: Zone des équipements électriques",
     zone: "Zone",
     zonePlaceholder: "Ex: Production, Bureau, Maintenance",
-    building: "B�timent",
-    buildingPlaceholder: "Ex: B�timent A",
-    floor: "�tage",
-    floorPlaceholder: "Ex: Sous-sol, RDC, �tage 2",
-    workDuration: "Dur�e des Travaux",
+    building: "Bâtiment",
+    buildingPlaceholder: "Ex: Bâtiment A",
+    floor: "Étage",
+    floorPlaceholder: "Ex: Sous-sol, RDC, Étage 2",
+    workDuration: "Durée des Travaux",
     workDurationPlaceholder: "Ex: 8 heures, 2 jours",
-    startTime: "Heure D�but",
+    startTime: "Heure Début",
     endTime: "Heure Fin",
     removeLocation: "Supprimer cet emplacement",
-    noLocations: "Aucun emplacement d�fini",
-    noLocationsDescription: "Ajoutez des emplacements pour organiser vos �quipes",
+    noLocations: "Aucun emplacement défini",
+    noLocationsDescription: "Ajoutez des emplacements pour organiser vos équipes",
     
     // Industries
-    electrical: "�lectrique",
+    electrical: "Électrique",
     construction: "Construction",
     industrial: "Industriel",
     manufacturing: "⚙️ Manufacturier",
@@ -161,20 +161,20 @@ const translations = {
     // Urgence
     emergencyContact: "Contact d'Urgence",
     emergencyContactPlaceholder: "Nom du contact d'urgence",
-    emergencyPhone: "T�l�phone d'Urgence",
-    emergencyPhonePlaceholder: "911 ou num�ro sp�cifique",
+    emergencyPhone: "Téléphone d'Urgence",
+    emergencyPhonePlaceholder: "911 ou numéro spécifique",
     
     // Description
-    workDescriptionLabel: "Description Compl�te",
-    workDescriptionPlaceholder: "D�crivez en d�tail les travaux à effectuer :\n\n� M�thodes utilis�es\n� Équipements impliqu�s\n� Zones d'intervention\n� Proc�dures sp�ciales\n� Conditions particulières\n\nPlus la description est d�taill�e, plus l'analyse de s�curit� sera pr�cise.",
-    workDescriptionHelp: "Une Description Compl�te aide à identifier tous les risques potentiels et à choisir les mesures de s�curit� appropri�es.",
+    workDescriptionLabel: "Description Complète",
+    workDescriptionPlaceholder: "Décrivez en détail les travaux à effectuer :\n\n• Méthodes utilisées\n• Équipements impliqués\n• Zones d'intervention\n• Procédures spéciales\n• Conditions particulières\n\nPlus la description est détaillée, plus l'analyse de sécurité sera précise.",
+    workDescriptionHelp: "Une Description Complète aide à identifier tous les risques potentiels et à choisir les mesures de sécurité appropriées.",
     
     // Lockout
-    lockoutDescription: "Documentation des proc�dures de verrouillage/�tiquetage des �nergies dangereuses selon les normes RSST. Photographiez chaque �tape pour assurer une tra�abilit� compl�te.",
-    generalPhotos: "Photos G�n�rales de Verrouillage",
+    lockoutDescription: "Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.",
+    generalPhotos: "Photos Générales de Verrouillage",
     beforeLockout: "Avant verrouillage",
     clientForm: "Fiche client",
-    verification: "V�rification finale",
+    verification: "Vérification finale",
     duringLockout: "Pendant verrouillage",
     lockoutDevice: "Dispositif",
     
@@ -185,32 +185,32 @@ const translations = {
     equipmentName: "Nom de l'Équipement",
     equipmentPlaceholder: "Ex: Disjoncteur principal",
     locationLabel: "Localisation",
-    locationPlaceholder: "Ex: Panneau �lectrique B-2",
+    locationPlaceholder: "Ex: Panneau électrique B-2",
     lockType: "Type de Cadenas/Dispositif",
     lockTypePlaceholder: "Ex: Cadenas rouge C-Secur360",
-    tagNumber: "Num�ro d'Étiquette",
+    tagNumber: "Numéro d'Étiquette",
     tagPlaceholder: "TAG-123456",
-    verifiedBy: "V�rifi� par",
+    verifiedBy: "Vérifié par",
     verifiedByPlaceholder: "Nom de la personne",
-    verificationTime: "Heure de V�rification",
+    verificationTime: "Heure de Vérification",
     now: "Maintenant",
     notes: "Notes et Observations",
-    notesPlaceholder: "Observations particulières, difficult�s rencontr�es, modifications apport�es...",
+    notesPlaceholder: "Observations particulières, difficultés rencontrées, modifications apportées...",
     pointPhotos: "Photos de ce Point de Verrouillage",
     addLockoutPoint: "Ajouter Point de Verrouillage",
     
     // Photos
     noPhotos: "Aucune photo",
     addPhoto: "Ajouter une photo",
-    addPhotoDescription: "Documentez cette �tape avec une photo",
+    addPhotoDescription: "Documentez cette étape avec une photo",
     clickToPhoto: "Cliquez pour prendre votre première photo de verrouillage",
     clickToPhotoDevice: "Cliquez pour prendre une photo avec l'appareil",
     noLockoutPoints: "Aucun Point de Verrouillage",
-    noLockoutDescription: "Cliquez sur \"Ajouter Point de Verrouillage\" pour documenter les proc�dures LOTO",
+    noLockoutDescription: "Cliquez sur \"Ajouter Point de Verrouillage\" pour documenter les procédures LOTO",
     
-    // Proc�dures
-    proceduresToFollow: "🔧 Proc�dures à Suivre:",
-    stepsCompleted: "�tapes compl�t�es",
+    // Procédures
+    proceduresToFollow: "🔧 Procédures à Suivre:",
+    stepsCompleted: "Étapes complétées",
     
     // Messages d'erreur
     required: "*",
@@ -225,27 +225,27 @@ const translations = {
     // Statistiques
     totalWorkers: "Total Travailleurs",
     totalLocations: "Emplacements Actifs",
-    totalLockouts: "Cadenas Appos�s",
+    totalLockouts: "Cadenas Apposés",
     peakUtilization: "Pic d'Utilisation",
-    locationBreakdown: "R�partition par Emplacement",
+    locationBreakdown: "Répartition par Emplacement",
     workersCount: "travailleurs",
     lockoutsCount: "cadenas",
     currentWorkers: "actuels",
     maxReached: "max atteint",
     
-    // Cat�gories photo
+    // Catégories photo
     categories: {
       before_lockout: "Avant verrouillage",
       during_lockout: "Pendant verrouillage",
       lockout_device: "Dispositif de verrouillage",
       client_form: "Fiche client",
-      verification: "V�rification"
+      verification: "Vérification"
     }
   },
   
   en: {
     // AST Generator
-    astNumberTitle: "?? Unique JSA Number",
+    astNumberTitle: "Unique JSA Number",
     astNumberGenerated: "Automatically generated number - Single use for this JSA",
     copyNumber: "Copy number",
     generateNew: "Generate new number",
@@ -256,7 +256,7 @@ const translations = {
     location: "Location",
     workLocations: "Locations",
     locationStats: "Real-Time Statistics",
-    emergency: "?? Emergency Contacts",
+    emergency: "Emergency Contacts",
     workDescription: "Detailed Work Description",
     lockoutSection: "Lockout / Tagout (LOTO)",
     
@@ -326,7 +326,7 @@ const translations = {
     
     // Description
     workDescriptionLabel: "Complete Description",
-    workDescriptionPlaceholder: "Describe in detail the work to be performed:\n\n� Methods used\n� Equipment involved\n� Work areas\n� Special procedures\n� Particular conditions\n\nThe more detailed the description, the more accurate the safety analysis.",
+    workDescriptionPlaceholder: "Describe in detail the work to be performed:\n\n• Methods used\n• Equipment involved\n• Work areas\n• Special procedures\n• Particular conditions\n\nThe more detailed the description, the more accurate the safety analysis.",
     workDescriptionHelp: "A complete description helps identify all potential risks and choose appropriate safety measures.",
     
     // Lockout
@@ -412,10 +412,10 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     color: '#fbbf24',
     procedures: language === 'fr' ? [
       'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
-      'Couper l\'alimentation �lectrique', 
+      'Couper l\'alimentation électrique', 
       'Verrouiller la source d\'alimentation',
       'Tester l\'absence de tension',
-      'Poser les �tiquettes de s�curit�',
+      'Poser les étiquettes de sécurité',
       'Installation des mises à la terre'
     ] : [
       'Identify power source (breaker, disconnect, etc...)',
@@ -427,14 +427,14 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     ]
   },
   mechanical: { 
-    name: language === 'fr' ? 'M�canique' : 'Mechanical', 
+    name: language === 'fr' ? 'Mécanique' : 'Mechanical', 
     icon: Settings, 
     color: '#6b7280',
     procedures: language === 'fr' ? [
-      'Arrêter les �quipements m�caniques', 
+      'Arrêter les équipements mécaniques', 
       'Bloquer les parties mobiles',
       'Verrouiller les commandes', 
-      'V�rifier l\'immobilisation',
+      'Vérifier l\'immobilisation',
       'Signaler la zone', 
       'Installer les dispositifs de blocage'
     ] : [
@@ -452,11 +452,11 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     color: '#3b82f6',
     procedures: language === 'fr' ? [
       'Fermer les vannes principales', 
-      'Purger la pression r�siduelle',
+      'Purger la pression résiduelle',
       'Verrouiller les vannes', 
-      'V�rifier la d�pressurisation',
-      'Installer des bouchons de s�curit�', 
-      'Tester l\'�tanch�it� du système'
+      'Vérifier la dépressurisation',
+      'Installer des bouchons de sécurité', 
+      'Tester l\'étanchéité du système'
     ] : [
       'Close main valves',
       'Bleed residual pressure',
@@ -472,9 +472,9 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     color: '#10b981',
     procedures: language === 'fr' ? [
       'Couper l\'alimentation en air', 
-      'Purger les r�servoirs d\'air',
+      'Purger les réservoirs d\'air',
       'Verrouiller les vannes', 
-      'V�rifier la d�pressurisation',
+      'Vérifier la dépressurisation',
       'Isoler les circuits', 
       'Contrôler l\'absence de pression'
     ] : [
@@ -493,10 +493,10 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     procedures: language === 'fr' ? [
       'Fermer les vannes d\'alimentation', 
       'Purger les conduites',
-      'Neutraliser les r�sidus', 
+      'Neutraliser les résidus', 
       'Verrouiller les accès',
       'Installer la signalisation', 
-      'V�rifier l\'absence de vapeurs'
+      'Vérifier l\'absence de vapeurs'
     ] : [
       'Close supply valves',
       'Purge lines',
@@ -512,9 +512,9 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     color: '#ef4444',
     procedures: language === 'fr' ? [
       'Couper l\'alimentation de chauffage', 
-      'Laisser refroidir les �quipements',
+      'Laisser refroidir les équipements',
       'Isoler les sources de chaleur', 
-      'V�rifier la temp�rature',
+      'Vérifier la température',
       'Signaler les zones chaudes', 
       'Installer les protections thermiques'
     ] : [
@@ -527,14 +527,14 @@ const getEnergyTypes = (language: 'fr' | 'en') => ({
     ]
   },
   gravity: { 
-    name: language === 'fr' ? 'Gravit�' : 'Gravity', 
+    name: language === 'fr' ? 'Gravité' : 'Gravity', 
     icon: Wrench, 
     color: '#8b5cf6',
     procedures: language === 'fr' ? [
       'Supporter les charges suspendues', 
-      'Bloquer les m�canismes de levage',
-      'Installer des supports de s�curit�', 
-      'V�rifier la stabilit�',
+      'Bloquer les mécanismes de levage',
+      'Installer des supports de sécurité', 
+      'Vérifier la stabilité',
       'Baliser la zone', 
       'Contrôler les points d\'ancrage'
     ] : [
@@ -592,7 +592,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       lockoutPhotos: lockoutPhotos
     };
     
-    console.log('?? Step1 - État initial local:', Object.keys(initialData));
+    console.log('Step1 - État initial local:', Object.keys(initialData));
     return initialData;
   });
 
@@ -619,7 +619,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     }
   });
 
-  // �tat pour les notifications LOTO
+  // État pour les notifications LOTO
   const [notificationState, setNotificationState] = useState({
     isEnabled: false,
     isSending: false,
@@ -649,7 +649,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     
     // 🛡️ ÉVITER DOUBLONS EXACTS
     if (lastUpdateRef.current === updateKey) {
-      console.log(`🛡️ Step1 - Update #${updateId} doublon �vit�`);
+      console.log(`🛡️ Step1 - Update #${updateId} doublon évité`);
       return;
     }
     
@@ -663,13 +663,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     
     const newTimer = setTimeout(() => {
       try {
-        console.log(`✅ Step1 - Update #${updateId} envoy� au parent`);
+        console.log(`✅ Step1 - Update #${updateId} envoyé au parent`);
         onDataChange('projectInfo', updatedData);
         debounceTimerRef.current.delete(source);
       } catch (error) {
         console.error(`❌ Step1 - Update #${updateId} erreur:`, error);
       }
-    }, 500); // 500ms pour �viter tous conflits
+    }, 500); // 500ms pour éviter tous conflits
     
     debounceTimerRef.current.set(source, newTimer);
   }, [onDataChange]);
@@ -689,13 +689,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     });
   }, [notifyParentStable]);
 
-  // =================== ?? HANDLERS LOCKOUT POINTS STABILIS�S ===================
+  // =================== HANDLERS LOCKOUT POINTS STABILISÉS ===================
   const updateLockoutPointDebounced = useRef<{[key: string]: NodeJS.Timeout}>({});
 
   const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
     console.log(`🔥 Step1 - updateLockoutPoint: ${pointId}.${field} = "${value}"`);
     
-    // Mise à jour immédiate SANS debounce pour éviter l'éjection
+    // Mise à jour immédiate de l'état local SEULEMENT
     setLocalData(prev => {
       const updatedPoints = prev.lockoutPoints.map((point: LockoutPoint) => 
         point.id === pointId ? { ...point, [field]: value } : point
@@ -703,14 +703,22 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       
       const updated = { ...prev, lockoutPoints: updatedPoints };
       stableFormDataRef.current = updated;
-      
-      // Sync immédiat pour éviter l'éjection des champs
-      setTimeout(() => {
-        notifyParentStable(updated, `lockout_${pointId}`);
-      }, 0);
-      
       return updated;
     });
+
+    // Debounce SEULEMENT pour le parent, pas pour l'UI locale
+    const debounceKey = `${pointId}_${field}`;
+    if (updateLockoutPointDebounced.current[debounceKey]) {
+      clearTimeout(updateLockoutPointDebounced.current[debounceKey]);
+    }
+
+    updateLockoutPointDebounced.current[debounceKey] = setTimeout(() => {
+      const currentData = stableFormDataRef.current;
+      if (currentData) {
+        notifyParentStable(currentData, `lockout_${pointId}`);
+      }
+      delete updateLockoutPointDebounced.current[debounceKey];
+    }, 1000); // 1 seconde de délai pour le parent seulement
 
   }, [notifyParentStable]);
 
@@ -735,7 +743,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       const updated = { ...prev, lockoutPoints: [...prev.lockoutPoints, newPoint] };
       stableFormDataRef.current = updated;
       
-      // ? SYNC AVEC SOURCE SP�CIFIQUE
+      // SYNC AVEC SOURCE SPÉCIFIQUE
       notifyParentStable(updated, 'add_lockout_point');
       
       return updated;
@@ -743,13 +751,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, [notifyParentStable]);
 
   const deleteLockoutPoint = useCallback((pointId: string) => {
-    // Trouver le point � supprimer pour afficher son nom
+    // Trouver le point à supprimer pour afficher son nom
     const pointToDelete = localData.lockoutPoints.find((point: LockoutPoint) => point.id === pointId);
     const pointName = pointToDelete?.equipmentName || pointToDelete?.id || 'ce point';
     
     // Confirmation de suppression
     const confirmMessage = language === 'fr' 
-      ? `�tes-vous s�r de vouloir supprimer le point de verrouillage "${pointName}" ? Cette action est irr�versible et supprimera aussi toutes les photos associ�es.`
+      ? `Êtes-vous sûr de vouloir supprimer le point de verrouillage "${pointName}" ? Cette action est irréversible et supprimera aussi toutes les photos associées.`
       : `Are you sure you want to delete the lockout point "${pointName}"? This action is irreversible and will also delete all associated photos.`;
     
     if (!window.confirm(confirmMessage)) {
@@ -767,7 +775,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       };
       stableFormDataRef.current = updated;
       
-      // ? SYNC AVEC SOURCE SP�CIFIQUE
+      // SYNC AVEC SOURCE SPÉCIFIQUE
       notifyParentStable(updated, `delete_lockout_${pointId}`);
       
       return updated;
@@ -786,7 +794,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   }, []);
 
   const openModal = useCallback(() => {
-    console.log('?? Step1 - Ouverture modal ULTRA-FORCE');
+    console.log('Step1 - Ouverture modal ULTRA-FORCE');
     
     setModalState(prev => ({ ...prev, isOpen: true }));
     
@@ -815,7 +823,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           content.style.transform = 'translateZ(999999px)';
         }
         
-        console.log('✅ Step1 - Modal forc�e z-index maximum');
+        console.log('✅ Step1 - Modal forcée z-index maximum');
       }, 100);
     });
   }, []);
@@ -936,7 +944,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
     
-    console.log('✅ Step1 - Emplacement supprim�:', locationId);
+    console.log('✅ Step1 - Emplacement supprimé:', locationId);
   }, [notifyParentStable]);
 
   // =================== MISE À JOUR STATISTIQUES WORKERS ===================
@@ -979,7 +987,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       const files = Array.from(target.files || []);
       const captureContext = photoCaptureRef.current;
       
-      console.log(`🔥 Step1 - Photos s�lectionn�es: ${files.length}, contexte:`, captureContext);
+      console.log(`🔥 Step1 - Photos sélectionnées: ${files.length}, contexte:`, captureContext);
       
       if (files.length > 0 && captureContext) {
         files.forEach(file => processPhoto(file, captureContext.category, captureContext.lockoutPointId));
@@ -1053,7 +1061,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         return updated;
       });
       
-      console.log('✅ Step1 - Photo ajout�e:', newPhoto.id);
+      console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
     } catch (error) {
       console.error('❌ Step1 - Erreur traitement photo:', error);
     }
@@ -1073,7 +1081,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       return updated;
     });
     
-    console.log('✅ Step1 - Photo supprim�e:', photoId);
+    console.log('✅ Step1 - Photo supprimée:', photoId);
   }, [notifyParentStable]);
 
   // =================== HANDLERS AST ET UTILITAIRES ===================
@@ -1090,7 +1098,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   const regenerateASTNumber = useCallback(() => {
     const newNumber = generateASTNumber();
     setAstNumber(newNumber);
-    console.log('✅ Step1 - Nouveau num�ro AST:', newNumber);
+    console.log('✅ Step1 - Nouveau numéro AST:', newNumber);
   }, []);
 
   // =================== FONCTIONS UTILITAIRES ===================
@@ -1137,12 +1145,12 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     updateLockoutPoint(pointId, 'energyType', energyType);
   }, [updateLockoutPoint]);
 
-  // =================== ??? VALIDATION DES LOCKOUT POINTS ===================
+  // =================== VALIDATION DES LOCKOUT POINTS ===================
   const validateLockoutPoint = useCallback((point: LockoutPoint): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     
     if (!point.equipmentName?.trim()) {
-      errors.push(language === 'fr' ? 'Le nom de l\'�quipement est requis' : 'Equipment name is required');
+      errors.push(language === 'fr' ? 'Le nom de l\'équipement est requis' : 'Equipment name is required');
     }
     
     if (!point.location?.trim()) {
@@ -1154,20 +1162,20 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     }
     
     if (!point.tagNumber?.trim()) {
-      errors.push(language === 'fr' ? 'Le num�ro d\'�tiquette est requis' : 'Tag number is required');
+      errors.push(language === 'fr' ? 'Le numéro d\'étiquette est requis' : 'Tag number is required');
     }
     
     if (!point.verifiedBy?.trim()) {
-      errors.push(language === 'fr' ? 'Le nom du v�rificateur est requis' : 'Verifier name is required');
+      errors.push(language === 'fr' ? 'Le nom du vérificateur est requis' : 'Verifier name is required');
     }
     
     if (!point.verificationTime?.trim()) {
-      errors.push(language === 'fr' ? 'L\'heure de v�rification est requise' : 'Verification time is required');
+      errors.push(language === 'fr' ? 'L\'heure de vérification est requise' : 'Verification time is required');
     }
     
-    // Validation du format du num�ro d'�tiquette
+    // Validation du format du numéro d'étiquette
     if (point.tagNumber && !/^TAG-\d{6}$/.test(point.tagNumber)) {
-      errors.push(language === 'fr' ? 'Format du num�ro d\'�tiquette invalide (ex: TAG-123456)' : 'Invalid tag number format (ex: TAG-123456)');
+      errors.push(language === 'fr' ? 'Format du numéro d\'étiquette invalide (ex: TAG-123456)' : 'Invalid tag number format (ex: TAG-123456)');
     }
     
     return { isValid: errors.length === 0, errors };
@@ -1262,7 +1270,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   // =================== 🔥 CLEANUP ULTRA-COMPLET ===================
   useEffect(() => {
     return () => {
-      console.log('?? Step1 - Cleanup complet');
+      console.log('Step1 - Cleanup complet');
       
       // ✅ CLEAR TOUS LES TIMERS
       debounceTimerRef.current.forEach((timer) => {
@@ -1285,7 +1293,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
   // =================== 🔥 DEBUG SYSTÈME COMPLET ===================
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      console.error('?? Step1 - Erreur JavaScript:', {
+      console.error('Step1 - Erreur JavaScript:', {
         message: event.message,
         filename: event.filename,
         lineno: event.lineno,
@@ -1296,7 +1304,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('?? Step1 - Promise rejet�e:', {
+      console.error('Step1 - Promise rejetée:', {
         reason: event.reason,
         promise: event.promise
       });
@@ -1305,7 +1313,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest('.modal-overlay-ultra-critical') || target.closest('.btn-primary')) {
-        console.log('🔍 Step1 - Click d�tect�:', {
+        console.log('🔍 Step1 - Click détecté:', {
           target: target.tagName,
           classes: target.className,
           modalOpen: modalState.isOpen,
@@ -1343,7 +1351,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         const response = await originalFetch(...args);
         const duration = Date.now() - startTime;
         
-        console.log('✅ Step1 - R�ponse DB:', {
+        console.log('✅ Step1 - Réponse DB:', {
           status: response.status,
           statusText: response.statusText,
           duration: `${duration}ms`,
@@ -1597,7 +1605,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       </div>
 
-      {/* D�tail par emplacement */}
+      {/* Détail par emplacement */}
       {locationStats.locationBreakdown.length > 0 && (
         <div className="location-breakdown">
           <h4 className="breakdown-title">{t.locationBreakdown}</h4>
@@ -1607,7 +1615,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 <div className="breakdown-info">
                   <span className="location-name">{loc.name}</span>
                   <span className="location-details">
-                    {loc.currentWorkers}/{loc.maxReached} {t.workersCount} � {loc.lockouts} {t.lockoutsCount}
+                    {loc.currentWorkers}/{loc.maxReached} {t.workersCount} • {loc.lockouts} {t.lockoutsCount}
                   </span>
                 </div>
                 <div className="breakdown-utilization">
@@ -1692,7 +1700,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
                 </button>
               </div>
               
-              {/* Barre de capacit� */}
+              {/* Barre de capacité */}
               <div className="location-capacity-bar">
                 <div 
                   className="capacity-fill" 
@@ -1994,7 +2002,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       value={currentLocationId || ''}
       onChange={(e) => onLocationChange(e.target.value)}
     >
-      <option value="">{language === 'fr' ? 'S�lectionner un emplacement' : 'Select a location'}</option>
+      <option value="">{language === 'fr' ? 'Sélectionner un emplacement' : 'Select a location'}</option>
       {localData.workLocations.map((location: WorkLocation) => (
         <option key={location.id} value={location.id}>
           {location.name} - {location.zone}
@@ -2072,7 +2080,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         })}
       </div>
 
-      {/* Proc�dures recommand�es */}
+      {/* Procédures recommandées */}
       {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
         <div className="procedures-list">
           <h4>{t.proceduresToFollow}</h4>
@@ -2241,7 +2249,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <div className="form-field">
           <label className="field-label">
             <MapPin style={{ width: '18px', height: '18px' }} />
-            {language === 'fr' ? 'Emplacement Assign�' : 'Assigned Location'}
+            {language === 'fr' ? 'Emplacement Assigné' : 'Assigned Location'}
           </label>
           <LocationSelector 
             currentLocationId={point.assignedLocation}
@@ -2250,10 +2258,10 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       )}
 
-      {/* Type d'�nergie avec proc�dures */}
+      {/* Type d'énergie avec procédures */}
       <EnergyTypeSelector point={point} />
 
-      {/* D�tails �quipement */}
+      {/* Détails équipement */}
       <div className="two-column">
         <div className="form-field">
           <label className="field-label">
@@ -2324,7 +2332,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         </div>
       </div>
 
-      {/* V�rification avec boutons temps */}
+      {/* Vérification avec boutons temps */}
       <div className="two-column">
         <div className="form-field">
           <label className="field-label">
@@ -2378,7 +2386,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         />
       </div>
 
-      {/* Photos sp�cifiques au point */}
+      {/* Photos spécifiques au point */}
       <LockoutPhotosSection point={point} />
     </div>
   ));
@@ -2456,7 +2464,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         {t.lockoutDescription}
       </div>
 
-      {/* Photos g�n�rales de verrouillage */}
+      {/* Photos générales de verrouillage */}
       <GeneralPhotosSection />
 
       {/* Points de verrouillage dynamiques */}
@@ -2526,7 +2534,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           </h4>
         </div>
         <div style={{ fontSize: '14px', color: '#e2e8f0', marginBottom: '8px' }}>
-          {completedPoints}/{totalPoints} points compl�t�s ({completionPercentage}%)
+          {completedPoints}/{totalPoints} points complétés ({completionPercentage}%)
         </div>
         <div style={{
           background: 'rgba(15, 23, 42, 0.8)',
@@ -2568,7 +2576,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           }}
         >
           <Lock size={16} />
-          {language === 'fr' ? 'Verrouill�' : 'Locked'}
+          {language === 'fr' ? 'Verrouillé' : 'Locked'}
         </button>
         <button
           type="button"
@@ -2585,7 +2593,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           }}
         >
           <Eye size={16} />
-          {language === 'fr' ? 'D�verrouill�' : 'Unlocked'}
+          {language === 'fr' ? 'Déverrouillé' : 'Unlocked'}
         </button>
       </div>
     </div>
@@ -2624,11 +2632,11 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
           </div>
           <div className={`indicator ${point.verifiedBy ? 'valid' : 'invalid'}`}>
             {point.verifiedBy ? <Check size={12} /> : <X size={12} />}
-            <span>{language === 'fr' ? 'V�rificateur' : 'Verifier'}</span>
+            <span>{language === 'fr' ? 'Vérificateur' : 'Verifier'}</span>
           </div>
           <div className={`indicator ${progress.percentage >= 50 ? 'valid' : 'invalid'}`}>
             {progress.percentage >= 50 ? <Check size={12} /> : <X size={12} />}
-            <span>{language === 'fr' ? 'Proc�dures' : 'Procedures'}</span>
+            <span>{language === 'fr' ? 'Procédures' : 'Procedures'}</span>
           </div>
         </div>
       </div>
@@ -3024,7 +3032,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
             color: #64748b;
           }
 
-          /* =================== ?? MODAL Z-INDEX ULTRA-MAXIMUM ABSOLU - FORCE SUPRÊME =================== */
+          /* =================== MODAL Z-INDEX ULTRA-MAXIMUM ABSOLU - FORCE SUPRÊME =================== */
           .modal-overlay-ultra-critical {
             position: fixed !important;
             top: 0 !important;
@@ -4106,7 +4114,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         `
       }} />
 
-      {/* Input cach� pour capture photo avec REF STABLE */}
+      {/* Input caché pour capture photo avec REF STABLE */}
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
       
       <div className="step1-container">
@@ -4363,13 +4371,13 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
         <LockoutValidationSummary />
       </div>
 
-      {/* =================== SYST�ME DE NOTIFICATIONS LOTO =================== */}
+      {/* =================== SYSTÈME DE NOTIFICATIONS LOTO =================== */}
       <LOTONotificationSystem
         lockoutPoints={localData.lockoutPoints || []}
         projectNumber={projectInfo.projectNumber || 'XXX'}
         language={language}
         onNotificationSent={(pointId) => {
-          console.log(`? Notification envoy�e pour le point LOTO: ${pointId}`);
+          console.log(`Notification envoyée pour le point LOTO: ${pointId}`);
         }}
       />
     </>
