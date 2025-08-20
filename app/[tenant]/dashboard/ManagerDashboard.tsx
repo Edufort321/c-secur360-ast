@@ -768,12 +768,12 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 priority: true
               },
               { 
-                href: `/${tenant.subdomain}/near-miss/nouveau`, 
+                href: `/${tenant.subdomain}/accidents`, 
                 icon: AlertTriangle, 
-                title: 'Passé Proche', 
-                desc: 'Signaler un incident/accident', 
-                color: '#f97316',
-                gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                title: 'Déclarations d\'Accidents', 
+                desc: 'Système multi-provincial conforme', 
+                color: '#ef4444',
+                gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 priority: true
               },
               { 

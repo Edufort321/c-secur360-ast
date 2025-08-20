@@ -71,8 +71,8 @@ const BillingDashboard: React.FC = () => {
       const mockSubscriptions: Subscription[] = [
         {
           id: 'sub_1',
-          organizationName: 'Hydro-Québec',
-          contactEmail: 'facturation@hydroquebec.com',
+          organizationName: 'Électrique ABC',
+          contactEmail: 'facturation@electrique-abc.com',
           plan: 'enterprise',
           status: 'active',
           currentPeriodStart: new Date('2024-01-01'),

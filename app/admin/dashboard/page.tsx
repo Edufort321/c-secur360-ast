@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CANADIAN_PROVINCES, getProvinceByCode } from '../../../data/provinces';
 import { 
   Users,
   Building,
@@ -45,6 +46,8 @@ interface Client {
   status: 'active' | 'pending' | 'suspended';
   lastActivity: string;
   domain?: string;
+  provinces: string[]; // Codes des provinces (ex: ['QC', 'ON'])
+  currentProvince?: string; // Province actuelle basée sur géolocalisation
 }
 
 export default function AdminDashboard() {
@@ -69,6 +72,8 @@ export default function AdminDashboard() {
       monthlyFee: 0,
       status: 'active',
       lastActivity: new Date().toISOString().split('T')[0],
+      provinces: ['QC', 'ON'],
+      currentProvince: 'QC',
       domain: 'demo.csecur360.ca'
     }
   ]);
@@ -80,7 +85,9 @@ export default function AdminDashboard() {
     plan: 'Professional',
     email: '',
     phone: '',
-    tempPassword: ''
+    tempPassword: '',
+    provinces: [] as string[],
+    currentProvince: ''
   });
 
   useEffect(() => {
@@ -128,14 +135,17 @@ export default function AdminDashboard() {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
     }
+    
+    if (newClient.provinces.length === 0) {
+      alert('Veuillez sélectionner au moins une province d\'opération');
+      return;
+    }
 
     // Generate temp password if not provided
     const tempPassword = newClient.tempPassword || generateTempPassword();
 
     const planPricing = {
-      'Starter': 29,
-      'Professional': 79,
-      'Enterprise': 199,
+      'Professional': 3000, // Plan unique annuel
       'Demo': 0
     };
 
@@ -145,21 +155,29 @@ export default function AdminDashboard() {
       subdomain: newClient.subdomain.trim().toLowerCase(),
       plan: newClient.plan,
       sites: 1,
-      monthlyFee: planPricing[newClient.plan as keyof typeof planPricing] || 79,
+      monthlyFee: Math.round((planPricing[newClient.plan as keyof typeof planPricing] || 3000) / 12),
       status: 'active',
       lastActivity: new Date().toISOString().split('T')[0],
-      domain: `${newClient.subdomain.trim().toLowerCase()}.csecur360.ca`
+      domain: `${newClient.subdomain.trim().toLowerCase()}.csecur360.ca`,
+      provinces: newClient.provinces,
+      currentProvince: newClient.provinces[0] // Par défaut, première province sélectionnée
     };
 
     setClients(prev => [...prev, client]);
     
     // Show client credentials
+    const provincesNames = client.provinces.map(code => {
+      const province = getProvinceByCode(code);
+      return province ? province.nameFr : code;
+    }).join(', ');
+    
     alert(`Client créé avec succès!
     
 Nom: ${client.name}
 URL: https://csecur360.com/${client.subdomain}
 Domaine: ${client.domain}
 Plan: ${client.plan} (${client.monthlyFee}$/mois)
+Provinces: ${provincesNames}
 Mot de passe temporaire: ${tempPassword}
 
 Email de bienvenue envoyé à: ${newClient.email}`);
@@ -171,7 +189,9 @@ Email de bienvenue envoyé à: ${newClient.email}`);
       plan: 'Professional',
       email: '',
       phone: '',
-      tempPassword: ''
+      tempPassword: '',
+      provinces: [],
+      currentProvince: ''
     });
     setShowCreateClient(false);
 
@@ -644,7 +664,7 @@ Email de bienvenue envoyé à: ${newClient.email}`);
                       type="text"
                       value={newClient.subdomain}
                       onChange={(e) => setNewClient(prev => ({ ...prev, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
-                      placeholder="hydroquebec"
+                      placeholder="entrepriseabc"
                       style={{
                         width: '100%',
                         padding: '12px',
@@ -687,11 +707,101 @@ Email de bienvenue envoyé à: ${newClient.email}`);
                       boxSizing: 'border-box'
                     }}
                   >
-                    <option value="Starter">Starter - 29$/mois</option>
-                    <option value="Professional">Professional - 79$/mois</option>
-                    <option value="Enterprise">Enterprise - 199$/mois</option>
+                    <option value="Professional">Plan Unique - 3000$/année (250$/mois)</option>
                     <option value="Demo">Demo - Gratuit</option>
                   </select>
+                </div>
+
+                {/* Sélection des provinces */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>
+                    Provinces d'opération *
+                  </label>
+                  <div style={{
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#10b981',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={newClient.provinces.length === CANADIAN_PROVINCES.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewClient(prev => ({ 
+                                ...prev, 
+                                provinces: CANADIAN_PROVINCES.map(p => p.code) 
+                              }));
+                            } else {
+                              setNewClient(prev => ({ ...prev, provinces: [] }));
+                            }
+                          }}
+                          style={{ marginRight: '4px' }}
+                        />
+                        Toutes les provinces du Canada
+                      </label>
+                    </div>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '8px',
+                      fontSize: '14px'
+                    }}>
+                      {CANADIAN_PROVINCES.map((province) => (
+                        <label key={province.code} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#e2e8f0',
+                          cursor: 'pointer',
+                          padding: '4px'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={newClient.provinces.includes(province.code)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewClient(prev => ({
+                                  ...prev,
+                                  provinces: [...prev.provinces, province.code]
+                                }));
+                              } else {
+                                setNewClient(prev => ({
+                                  ...prev,
+                                  provinces: prev.provinces.filter(p => p !== province.code)
+                                }));
+                              }
+                            }}
+                          />
+                          <span style={{ fontSize: '12px', color: province.color }}>
+                            {province.code}
+                          </span>
+                          <span>{province.nameFr}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                    Les formulaires s'adapteront automatiquement aux normes de chaque province sélectionnée
+                  </p>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -814,7 +924,9 @@ Email de bienvenue envoyé à: ${newClient.email}`);
                         plan: 'Professional',
                         email: '',
                         phone: '',
-                        tempPassword: ''
+                        tempPassword: '',
+                        provinces: [],
+                        currentProvince: ''
                       });
                     }}
                     style={{

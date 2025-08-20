@@ -3,9 +3,9 @@ import type { NextRequest } from 'next/server'
 
 // Configuration des clients avec domaines personnalisés
 const CLIENT_DOMAINS: Record<string, string> = {
-  'hydroquebec.csecur360.ca': 'hydroquebec',
-  'bell.csecur360.ca': 'bell',
-  'bombardier.csecur360.ca': 'bombardier',
+  'entrepriseabc.csecur360.ca': 'entrepriseabc',
+  'companyxyz.csecur360.ca': 'companyxyz',
+  'corpdef.csecur360.ca': 'corpdef',
   'demo.csecur360.ca': 'demo'
 };
 
@@ -34,7 +34,7 @@ export function middleware(request: NextRequest) {
   
   // Gestion des sous-domaines classiques
   const subdomain = hostname.split('.')[0];
-  const validTenants = ['demo', 'c-secur360', 'admin', 'localhost', 'hydroquebec', 'bell', 'bombardier'];
+  const validTenants = ['demo', 'c-secur360', 'admin', 'localhost', 'entrepriseabc', 'companyxyz', 'corpdef'];
   
   // Admin access
   if (url.pathname.startsWith('/admin')) {
