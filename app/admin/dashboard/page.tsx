@@ -51,58 +51,37 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [stats, setStats] = useState<AdminStats>({
-    totalClients: 42,
-    totalSites: 156,
-    monthlyRevenue: 28750,
-    activeASTs: 234,
-    pendingApprovals: 8,
-    complianceScore: 97.5
+    totalClients: 1,
+    totalSites: 1,
+    monthlyRevenue: 0,
+    activeASTs: 0,
+    pendingApprovals: 0,
+    complianceScore: 100
   });
 
-  const [clients] = useState<Client[]>([
+  const [clients, setClients] = useState<Client[]>([
     {
       id: '1',
-      name: 'Hydro-Québec',
-      subdomain: 'hydroquebec',
-      plan: 'Enterprise',
-      sites: 15,
-      monthlyFee: 2995,
-      status: 'active',
-      lastActivity: '2024-01-15',
-      domain: 'hydroquebec.csecur360.ca'
-    },
-    {
-      id: '2', 
-      name: 'Bell Canada',
-      subdomain: 'bell',
-      plan: 'Professional',
-      sites: 8,
-      monthlyFee: 1195,
-      status: 'active',
-      lastActivity: '2024-01-14',
-      domain: 'bell.csecur360.ca'
-    },
-    {
-      id: '3',
-      name: 'Bombardier',
-      subdomain: 'bombardier',
-      plan: 'Professional',
-      sites: 6,
-      monthlyFee: 895,
-      status: 'active',
-      lastActivity: '2024-01-13'
-    },
-    {
-      id: '4',
       name: 'Demo Client',
       subdomain: 'demo',
       plan: 'Demo',
-      sites: 3,
+      sites: 1,
       monthlyFee: 0,
       status: 'active',
-      lastActivity: '2024-01-15'
+      lastActivity: new Date().toISOString().split('T')[0],
+      domain: 'demo.csecur360.ca'
     }
   ]);
+
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    subdomain: '',
+    plan: 'Professional',
+    email: '',
+    phone: '',
+    tempPassword: ''
+  });
 
   useEffect(() => {
     // Check if already authenticated
@@ -114,7 +93,7 @@ export default function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin2024') {
+    if (password === 'CGEstion321$') {
       setIsAuthenticated(true);
       sessionStorage.setItem('adminAuth', 'true');
     } else {
@@ -130,8 +109,92 @@ export default function AdminDashboard() {
 
   const generateQRCode = (clientSubdomain: string) => {
     const url = `https://csecur360.com/${clientSubdomain}`;
-    // In production, use a proper QR code library
-    alert(`Code QR généré pour: ${url}`);
+    window.open(`/api/qr/generate?client=${clientSubdomain}`, '_blank');
+  };
+
+  const generateTempPassword = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
+  const handleCreateClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newClient.name.trim() || !newClient.subdomain.trim() || !newClient.email.trim()) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    // Generate temp password if not provided
+    const tempPassword = newClient.tempPassword || generateTempPassword();
+
+    const planPricing = {
+      'Starter': 29,
+      'Professional': 79,
+      'Enterprise': 199,
+      'Demo': 0
+    };
+
+    const client: Client = {
+      id: Date.now().toString(),
+      name: newClient.name.trim(),
+      subdomain: newClient.subdomain.trim().toLowerCase(),
+      plan: newClient.plan,
+      sites: 1,
+      monthlyFee: planPricing[newClient.plan as keyof typeof planPricing] || 79,
+      status: 'active',
+      lastActivity: new Date().toISOString().split('T')[0],
+      domain: `${newClient.subdomain.trim().toLowerCase()}.csecur360.ca`
+    };
+
+    setClients(prev => [...prev, client]);
+    
+    // Show client credentials
+    alert(`Client créé avec succès!
+    
+Nom: ${client.name}
+URL: https://csecur360.com/${client.subdomain}
+Domaine: ${client.domain}
+Plan: ${client.plan} (${client.monthlyFee}$/mois)
+Mot de passe temporaire: ${tempPassword}
+
+Email de bienvenue envoyé à: ${newClient.email}`);
+
+    // Reset form
+    setNewClient({
+      name: '',
+      subdomain: '',
+      plan: 'Professional',
+      email: '',
+      phone: '',
+      tempPassword: ''
+    });
+    setShowCreateClient(false);
+
+    // Update stats
+    setStats(prev => ({
+      ...prev,
+      totalClients: prev.totalClients + 1,
+      monthlyRevenue: prev.monthlyRevenue + client.monthlyFee
+    }));
+  };
+
+  const deleteClient = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le client "${client.name}" ? Cette action est irréversible.`)) {
+      setClients(prev => prev.filter(c => c.id !== clientId));
+      setStats(prev => ({
+        ...prev,
+        totalClients: prev.totalClients - 1,
+        monthlyRevenue: prev.monthlyRevenue - client.monthlyFee
+      }));
+    }
   };
 
   if (!isAuthenticated) {
@@ -312,18 +375,21 @@ export default function AdminDashboard() {
             alignItems: 'center'
           }}>
             <h2 style={{ margin: 0, fontSize: '20px' }}>Gestion des Clients</h2>
-            <button style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
+            <button 
+              onClick={() => setShowCreateClient(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
               <Plus size={16} />
               Nouveau Client
             </button>
@@ -443,6 +509,7 @@ export default function AdminDashboard() {
                           <Edit size={14} />
                         </button>
                         <button
+                          onClick={() => deleteClient(client.id)}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
                             border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -494,7 +561,329 @@ export default function AdminDashboard() {
             </Link>
           ))}
         </div>
+
+        {/* Modal Création Client */}
+        {showCreateClient && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.95)',
+              padding: '32px',
+              borderRadius: '16px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }}>
+              <h3 style={{
+                margin: '0 0 24px 0',
+                color: '#ffffff',
+                fontSize: '20px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <Plus style={{ color: '#10b981' }} size={24} />
+                Créer un Nouveau Client
+              </h3>
+
+              <form onSubmit={handleCreateClient} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#e2e8f0'
+                    }}>
+                      Nom de l'entreprise *
+                    </label>
+                    <input
+                      type="text"
+                      value={newClient.name}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Ex: Hydro-Québec"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#e2e8f0'
+                    }}>
+                      Sous-domaine *
+                    </label>
+                    <input
+                      type="text"
+                      value={newClient.subdomain}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
+                      placeholder="hydroquebec"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                      URL: csecur360.com/{newClient.subdomain || 'nomclient'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>
+                    Plan tarifaire
+                  </label>
+                  <select
+                    value={newClient.plan}
+                    onChange={(e) => setNewClient(prev => ({ ...prev, plan: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      color: '#ffffff',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="Starter">Starter - 29$/mois</option>
+                    <option value="Professional">Professional - 79$/mois</option>
+                    <option value="Enterprise">Enterprise - 199$/mois</option>
+                    <option value="Demo">Demo - Gratuit</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#e2e8f0'
+                    }}>
+                      Email contact *
+                    </label>
+                    <input
+                      type="email"
+                      value={newClient.email}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="contact@entreprise.com"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '6px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#e2e8f0'
+                    }}>
+                      Téléphone
+                    </label>
+                    <input
+                      type="tel"
+                      value={newClient.phone}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="514-555-0123"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>
+                    Mot de passe temporaire (optionnel)
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={newClient.tempPassword}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, tempPassword: e.target.value }))}
+                      placeholder="Généré automatiquement si vide"
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewClient(prev => ({ ...prev, tempPassword: generateTempPassword() }))}
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        color: '#60a5fa',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Générer
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginTop: '24px',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateClient(false);
+                      setNewClient({
+                        name: '',
+                        subdomain: '',
+                        plan: 'Professional',
+                        email: '',
+                        phone: '',
+                        tempPassword: ''
+                      });
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(100, 116, 139, 0.6)',
+                      color: 'white',
+                      border: '1px solid rgba(148, 163, 184, 0.3)',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Plus size={16} />
+                    Créer le Client
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Footer avec mention CERDIA */}
+      <footer style={{
+        padding: '20px 0',
+        borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+        textAlign: 'center',
+        background: 'rgba(15, 23, 42, 0.8)'
+      }}>
+        <p style={{ 
+          color: '#64748b', 
+          margin: 0,
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
+        }}>
+          © 2024 C-SECUR360 - Propulsé par
+          <img 
+            src="/c-secur360-logo.png" 
+            alt="CERDIA" 
+            style={{ height: '16px', width: 'auto' }}
+          />
+          CERDIA - Contact: eric.dufort@cerdia.ai | 514-603-4519
+        </p>
+      </footer>
     </div>
   );
 }

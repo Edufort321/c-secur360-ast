@@ -29,8 +29,8 @@ export default function LandingPage() {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple password check - in production, use proper authentication
-    if (adminPassword === 'admin2024') {
+    // Production password for development
+    if (adminPassword === 'CGEstion321$') {
       window.location.href = '/admin/dashboard';
     } else {
       alert('Mot de passe incorrect');
@@ -445,7 +445,7 @@ export default function LandingPage() {
               color: '#64748b',
               textAlign: 'center'
             }}>
-              Demo: admin2024
+              Développement: CGEstion321$
             </p>
           </div>
         </div>
@@ -469,10 +469,10 @@ export default function LandingPage() {
               <h4 style={{ color: '#10b981', margin: '0 0 16px 0' }}>Contact</h4>
               <div style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
                 <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Phone size={16} /> +1 (514) 555-0123
+                  <Phone size={16} /> +1 (514) 603-4519
                 </p>
                 <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Mail size={16} /> contact@csecur360.ca
+                  <Mail size={16} /> eric.dufort@cerdia.ai
                 </p>
                 <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MapPin size={16} /> Montréal, QC, Canada
@@ -523,6 +523,24 @@ export default function LandingPage() {
             fontSize: '14px'
           }}>
             © 2024 C-SECUR360. Tous droits réservés. Plateforme SaaS de sécurité industrielle.
+            <br />
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              marginTop: '8px',
+              fontSize: '12px',
+              color: '#94a3b8'
+            }}>
+              Propulsé par 
+              <img 
+                src="/c-secur360-logo.png" 
+                alt="CERDIA" 
+                style={{ height: '16px', width: 'auto' }}
+              />
+              CERDIA
+            </span>
           </p>
         </div>
       </footer>
