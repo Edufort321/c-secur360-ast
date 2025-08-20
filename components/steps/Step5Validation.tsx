@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -22,10 +22,42 @@ import {
   Edit,
   Save,
   Trash2,
-  BarChart3
+  BarChart3,
+  Phone,
+  Building,
+  MapPin,
+  Lock,
+  Unlock,
+  PenTool,
+  Timer,
+  UserCheck
 } from 'lucide-react';
 
 // =================== INTERFACES ===================
+interface Worker {
+  id: string;
+  name: string;
+  company: string;
+  phoneNumber: string;
+  location: string;
+  signature: string;
+  acknowledgedAST: boolean;
+  startTime: string;
+  endTime?: string;
+  workDuration?: number; // en minutes
+  createdAt: string;
+}
+
+interface LockoutStatus {
+  applied: boolean;
+  removed: boolean;
+  notApplicable: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  lockoutPoints?: string[];
+  notes?: string;
+}
+
 interface TeamMember {
   id: string;
   name: string;
@@ -41,6 +73,7 @@ interface TeamMember {
 }
 
 interface ValidationData {
+  // Données existantes
   reviewers: TeamMember[];
   approvalRequired: boolean;
   minimumReviewers: number;
@@ -58,6 +91,10 @@ interface ValidationData {
     signature: string;
     conditions?: string;
   };
+  
+  // Nouvelles données
+  workers: Worker[];
+  lockoutStatus: LockoutStatus;
 }
 
 interface ValidationStepProps {
@@ -76,13 +113,39 @@ interface ValidationStepProps {
 // =================== TRADUCTIONS ===================
 const translations = {
   fr: {
-    title: "Validation & Approbation Équipe",
-    subtitle: "Processus de validation collaborative et approbation finale",
+    title: "Validation & Vérification Équipe",
+    subtitle: "Processus de validation collaborative et vérification des travailleurs",
     
     // Sections
     reviewersSection: "Réviseurs Désignés",
     validationCriteria: "Critères de Validation",
     validationSummary: "Résumé de Validation",
+    workersSection: "Vérification des Travailleurs",
+    lockoutSection: "Statut du Verrouillage LOTO",
+    
+    // Workers
+    addWorker: "Ajouter un Travailleur",
+    workerName: "Nom du Travailleur",
+    company: "Compagnie",
+    phoneNumber: "Numéro de Cellulaire",
+    location: "Emplacement de Travail",
+    signature: "Signature",
+    acknowledgeAST: "J'ai pris connaissance de l'AST",
+    startTime: "Heure de Début",
+    endTime: "Heure de Fin",
+    duration: "Durée",
+    removeWorker: "Retirer ce travailleur",
+    noWorkersYet: "Aucun travailleur enregistré",
+    signHere: "Signer ici",
+    workerVerified: "Travailleur vérifié",
+    
+    // Lockout
+    lockoutApplied: "Cadenas Apposé",
+    lockoutRemoved: "Cadenas Enlevé",
+    lockoutNA: "Non Applicable (N/A)",
+    lockoutVerification: "Vérification du Verrouillage",
+    lockoutNotes: "Notes sur le verrouillage",
+    lockoutPoints: "Points de verrouillage",
     
     // Reviewers
     addReviewer: "Ajouter un Réviseur",
@@ -98,10 +161,14 @@ const translations = {
     reviewing: "En Révision",
     approved: "Approuvé",
     rejected: "Rejeté",
+    active: "Actif",
+    completed: "Terminé",
     
     // Actions
     approve: "Approuver",
     reject: "Rejeter",
+    sign: "Signer",
+    verify: "Vérifier",
     
     // Validation criteria
     hazardIdentification: "Identification des Dangers",
@@ -114,46 +181,67 @@ const translations = {
     allCriteriaRequired: "Tous les critères doivent être validés",
     readyForApproval: "Prêt pour l'approbation finale",
     documentApproved: "Document Approuvé",
-    
-    // Comments
-    comments: "Commentaires",
-    rating: "Évaluation",
-    needsModifications: "Nécessite des modifications",
-    
-    // Final approval
-    approvedBy: "Approuvé par",
-    approvedAt: "Approuvé le",
-    signDocument: "Signer le Document",
-    
-    // Summary
-    totalReviewers: "Réviseurs Assignés",
-    approvals: "Approbations",
-    rejections: "Rejets",
-    pendingReviews: "En Attente",
-    noReviewersAssigned: "Aucun réviseur assigné pour le moment",
-    additionalReviewersRequired: "réviseur(s) supplémentaire(s) requis",
-    completionRate: "Taux de Complétion",
+    workerAdded: "Travailleur ajouté avec succès",
+    mustAcknowledgeAST: "Le travailleur doit confirmer avoir pris connaissance de l'AST",
     
     // Form fields
     enterName: "Entrer le nom complet",
-    enterRole: "Entrer le rôle/poste",
-    enterEmail: "Entrer l'adresse email",
-    enterDepartment: "Entrer le département",
-    enterCertification: "Certification (optionnel)",
+    enterCompany: "Entrer le nom de la compagnie",
+    enterPhone: "Ex: 514-555-0123",
+    selectLocation: "Sélectionner l'emplacement",
+    enterNotes: "Entrer des notes (optionnel)",
+    
+    // Summary
+    totalWorkers: "Travailleurs Présents",
+    activeWorkers: "Travailleurs Actifs",
+    completedWork: "Travaux Terminés",
+    averageDuration: "Durée Moyenne",
     
     // Buttons
     add: "Ajouter",
     cancel: "Annuler",
-    close: "Fermer"
+    close: "Fermer",
+    startWork: "Débuter",
+    endWork: "Terminer",
+    
+    // Time
+    hours: "heures",
+    minutes: "minutes"
   },
   en: {
-    title: "Team Validation & Approval",
-    subtitle: "Collaborative validation process and final approval",
+    title: "Team Validation & Verification",
+    subtitle: "Collaborative validation process and worker verification",
     
     // Sections
     reviewersSection: "Designated Reviewers",
     validationCriteria: "Validation Criteria",
     validationSummary: "Validation Summary",
+    workersSection: "Worker Verification",
+    lockoutSection: "LOTO Lockout Status",
+    
+    // Workers
+    addWorker: "Add Worker",
+    workerName: "Worker Name",
+    company: "Company",
+    phoneNumber: "Cell Phone Number",
+    location: "Work Location",
+    signature: "Signature",
+    acknowledgeAST: "I acknowledge the JSA",
+    startTime: "Start Time",
+    endTime: "End Time",
+    duration: "Duration",
+    removeWorker: "Remove this worker",
+    noWorkersYet: "No workers registered yet",
+    signHere: "Sign here",
+    workerVerified: "Worker verified",
+    
+    // Lockout
+    lockoutApplied: "Lock Applied",
+    lockoutRemoved: "Lock Removed",
+    lockoutNA: "Not Applicable (N/A)",
+    lockoutVerification: "Lockout Verification",
+    lockoutNotes: "Lockout notes",
+    lockoutPoints: "Lockout points",
     
     // Reviewers
     addReviewer: "Add Reviewer",
@@ -169,10 +257,14 @@ const translations = {
     reviewing: "Reviewing",
     approved: "Approved",
     rejected: "Rejected",
+    active: "Active",
+    completed: "Completed",
     
     // Actions
     approve: "Approve",
     reject: "Reject",
+    sign: "Sign",
+    verify: "Verify",
     
     // Validation criteria
     hazardIdentification: "Hazard Identification",
@@ -185,37 +277,32 @@ const translations = {
     allCriteriaRequired: "All criteria must be validated",
     readyForApproval: "Ready for final approval",
     documentApproved: "Document Approved",
-    
-    // Comments
-    comments: "Comments",
-    rating: "Rating",
-    needsModifications: "Needs modifications",
-    
-    // Final approval
-    approvedBy: "Approved by",
-    approvedAt: "Approved on",
-    signDocument: "Sign Document",
-    
-    // Summary
-    totalReviewers: "Assigned Reviewers",
-    approvals: "Approvals",
-    rejections: "Rejections",
-    pendingReviews: "Pending",
-    noReviewersAssigned: "No reviewers assigned yet",
-    additionalReviewersRequired: "additional reviewer(s) required",
-    completionRate: "Completion Rate",
+    workerAdded: "Worker added successfully",
+    mustAcknowledgeAST: "Worker must acknowledge the JSA",
     
     // Form fields
     enterName: "Enter full name",
-    enterRole: "Enter role/position",
-    enterEmail: "Enter email address",
-    enterDepartment: "Enter department",
-    enterCertification: "Certification (optional)",
+    enterCompany: "Enter company name",
+    enterPhone: "Ex: 514-555-0123",
+    selectLocation: "Select location",
+    enterNotes: "Enter notes (optional)",
+    
+    // Summary
+    totalWorkers: "Workers Present",
+    activeWorkers: "Active Workers",
+    completedWork: "Work Completed",
+    averageDuration: "Average Duration",
     
     // Buttons
     add: "Add",
     cancel: "Cancel",
-    close: "Close"
+    close: "Close",
+    startWork: "Start",
+    endWork: "End",
+    
+    // Time
+    hours: "hours",
+    minutes: "minutes"
   }
 };
 
@@ -228,7 +315,7 @@ export default function Step5Validation({
 }: ValidationStepProps) {
   const t = translations[language];
   
-  // ✅ FIX CRITIQUE : État local stable SANS useEffect problématique
+  // =================== ÉTATS ===================
   const [validationData, setValidationData] = useState<ValidationData>(() => ({
     reviewers: [],
     approvalRequired: true,
@@ -241,10 +328,18 @@ export default function Step5Validation({
       procedural: false,
       regulatory: false
     },
+    workers: [],
+    lockoutStatus: {
+      applied: false,
+      removed: false,
+      notApplicable: false
+    },
     ...formData.validation
   }));
 
   const [showAddReviewer, setShowAddReviewer] = useState(false);
+  const [showAddWorker, setShowAddWorker] = useState(false);
+  const [showSignature, setShowSignature] = useState<string | null>(null);
   
   const [newReviewer, setNewReviewer] = useState({
     name: '',
@@ -254,13 +349,119 @@ export default function Step5Validation({
     certification: ''
   });
 
-  // ✅ FIX CRITIQUE : NOTIFICATION PARENT DIRECTE SANS BOUCLE
+  const [newWorker, setNewWorker] = useState({
+    name: '',
+    company: '',
+    phoneNumber: '',
+    location: '',
+    acknowledgedAST: false
+  });
+
+  // Récupérer les emplacements de Step1
+  const workLocations = formData.projectInfo?.workLocations || [];
+
+  // =================== NOTIFICATION PARENT ===================
   const notifyParent = useCallback((newData: ValidationData) => {
-    console.log('🔥 Step5 - Notification parent directe:', newData);
+    console.log('🔄 Step5 - Mise à jour:', newData);
     onDataChange('validation', newData);
   }, [onDataChange]);
 
-  // =================== HANDLERS OPTIMISÉS SANS BOUCLES ===================
+  // =================== HANDLERS WORKERS ===================
+  const addWorker = useCallback(() => {
+    if (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.phoneNumber.trim()) {
+      return;
+    }
+
+    if (!newWorker.acknowledgedAST) {
+      alert(t.mustAcknowledgeAST);
+      return;
+    }
+
+    const worker: Worker = {
+      id: Date.now().toString(),
+      name: newWorker.name.trim(),
+      company: newWorker.company.trim(),
+      phoneNumber: newWorker.phoneNumber.trim(),
+      location: newWorker.location || workLocations[0]?.name || 'Non spécifié',
+      signature: `${newWorker.name} - Signé électroniquement`,
+      acknowledgedAST: true,
+      startTime: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedData = {
+      ...validationData,
+      workers: [...validationData.workers, worker]
+    };
+
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+
+    // Reset formulaire
+    setNewWorker({
+      name: '',
+      company: '',
+      phoneNumber: '',
+      location: '',
+      acknowledgedAST: false
+    });
+    setShowAddWorker(false);
+    
+    console.log('✅ Travailleur ajouté:', worker.name);
+  }, [newWorker, validationData, notifyParent, workLocations, t.mustAcknowledgeAST]);
+
+  const removeWorker = useCallback((workerId: string) => {
+    const updatedData = {
+      ...validationData,
+      workers: validationData.workers.filter(w => w.id !== workerId)
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+  }, [validationData, notifyParent]);
+
+  const endWorkerShift = useCallback((workerId: string) => {
+    const updatedData = {
+      ...validationData,
+      workers: validationData.workers.map(worker => {
+        if (worker.id === workerId && !worker.endTime) {
+          const endTime = new Date().toISOString();
+          const startTime = new Date(worker.startTime);
+          const duration = Math.round((new Date(endTime).getTime() - startTime.getTime()) / 60000); // en minutes
+          
+          return {
+            ...worker,
+            endTime,
+            workDuration: duration
+          };
+        }
+        return worker;
+      })
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+  }, [validationData, notifyParent]);
+
+  // =================== HANDLERS LOCKOUT ===================
+  const updateLockoutStatus = useCallback((field: 'applied' | 'removed' | 'notApplicable') => {
+    const updatedData = {
+      ...validationData,
+      lockoutStatus: {
+        ...validationData.lockoutStatus,
+        applied: field === 'applied',
+        removed: field === 'removed',
+        notApplicable: field === 'notApplicable',
+        verifiedBy: 'Superviseur',
+        verifiedAt: new Date().toISOString()
+      }
+    };
+    
+    setValidationData(updatedData);
+    notifyParent(updatedData);
+  }, [validationData, notifyParent]);
+
+  // =================== HANDLERS REVIEWERS (existants) ===================
   const addReviewer = useCallback(() => {
     if (!newReviewer.name.trim() || !newReviewer.email.trim() || !newReviewer.role.trim()) {
       return;
@@ -281,11 +482,9 @@ export default function Step5Validation({
       reviewers: [...validationData.reviewers, reviewer]
     };
 
-    // ✅ Mise à jour locale + notification parent en une seule fois
     setValidationData(updatedData);
     notifyParent(updatedData);
-
-    // Reset formulaire
+    
     setNewReviewer({
       name: '',
       role: '',
@@ -294,8 +493,6 @@ export default function Step5Validation({
       certification: ''
     });
     setShowAddReviewer(false);
-    
-    console.log('✅ Step5 - Réviseur ajouté:', reviewer.name);
   }, [newReviewer, validationData, notifyParent]);
 
   const removeReviewer = useCallback((reviewerId: string) => {
@@ -306,30 +503,7 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log('✅ Step5 - Réviseur supprimé:', reviewerId);
   }, [validationData, notifyParent]);
-
-  const updateReviewerStatus = useCallback((reviewerId: string, status: 'approved' | 'rejected', comment?: string, rating?: number) => {
-    const updatedData = {
-      ...validationData,
-      reviewers: validationData.reviewers.map(reviewer => 
-        reviewer.id === reviewerId 
-          ? { 
-              ...reviewer, 
-              status, 
-              comments: comment,
-              rating,
-              validatedAt: new Date().toISOString(),
-              signature: `${reviewer.name} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`
-            }
-          : reviewer
-      )
-    };
-    
-    setValidationData(updatedData);
-    notifyParent(updatedData);
-    console.log(`✅ Step5 - Statut ${status} pour réviseur:`, reviewerId);
-  }, [validationData, notifyParent, language]);
 
   const updateCriteria = useCallback((criteria: keyof ValidationData['validationCriteria'], value: boolean) => {
     const updatedData = {
@@ -342,57 +516,27 @@ export default function Step5Validation({
     
     setValidationData(updatedData);
     notifyParent(updatedData);
-    console.log(`✅ Step5 - Critère ${criteria} mis à jour:`, value);
   }, [validationData, notifyParent]);
 
-  const finalizeApproval = useCallback(() => {
-    const updatedData = {
-      ...validationData,
-      finalApproval: {
-        approvedBy: 'Superviseur HSE',
-        approvedAt: new Date().toISOString(),
-        signature: 'Signature électronique - ' + new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')
-      }
-    };
-    
-    setValidationData(updatedData);
-    notifyParent(updatedData);
-    console.log('✅ Step5 - Approbation finalisée');
-  }, [validationData, notifyParent, language]);
-
   // =================== FONCTIONS UTILITAIRES ===================
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', text: '#10b981' };
-      case 'rejected': return { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)', text: '#ef4444' };
-      case 'reviewing': return { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: '#3b82f6' };
-      default: return { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', text: '#f59e0b' };
-    }
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return <CheckCircle size={14} />;
-      case 'rejected': return <ThumbsDown size={14} />;
-      case 'reviewing': return <Eye size={14} />;
-      default: return <Clock size={14} />;
-    }
+  const getAverageDuration = () => {
+    const completedWorkers = validationData.workers.filter(w => w.workDuration);
+    if (completedWorkers.length === 0) return '0m';
+    
+    const totalMinutes = completedWorkers.reduce((sum, w) => sum + (w.workDuration || 0), 0);
+    return formatDuration(Math.round(totalMinutes / completedWorkers.length));
   };
 
-  // =================== VALEURS CALCULÉES ===================
-  const allCriteriaValidated = Object.values(validationData.validationCriteria).every(Boolean);
-  const sufficientReviewers = validationData.reviewers.length >= validationData.minimumReviewers;
-  const allReviewersResponded = validationData.reviewers.every(r => r.status !== 'pending');
-  const approvedReviewers = validationData.reviewers.filter(r => r.status === 'approved').length;
-  const rejectedReviewers = validationData.reviewers.filter(r => r.status === 'rejected').length;
-  const pendingReviewers = validationData.reviewers.filter(r => r.status === 'pending').length;
-  const completionRate = validationData.reviewers.length > 0 
-    ? Math.round(((approvedReviewers + rejectedReviewers) / validationData.reviewers.length) * 100)
-    : 0;
+  const activeWorkers = validationData.workers.filter(w => !w.endTime).length;
+  const completedWorkers = validationData.workers.filter(w => w.endTime).length;
 
-  const criteriaCount = Object.values(validationData.validationCriteria).filter(Boolean).length;
-  const totalCriteria = Object.keys(validationData.validationCriteria).length;
-
+  // =================== RENDU ===================
   return (
     <div style={{ 
       background: 'transparent', 
@@ -444,7 +588,290 @@ export default function Step5Validation({
         </p>
       </div>
 
-      {/* Validation Summary */}
+      {/* Section Vérification des Travailleurs */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(148, 163, 184, 0.2)',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '20px'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#ffffff',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <UserCheck size={20} />
+            {t.workersSection}
+          </h3>
+          <button
+            onClick={() => setShowAddWorker(true)}
+            style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white',
+              border: 'none',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '14px',
+              minHeight: '40px'
+            }}
+          >
+            <Plus size={16} />
+            {t.addWorker}
+          </button>
+        </div>
+
+        {/* Statistiques des travailleurs */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+          gap: '12px',
+          marginBottom: '16px'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '12px',
+            background: 'rgba(30, 41, 59, 0.6)',
+            borderRadius: '12px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6' }}>
+              {validationData.workers.length}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+              {t.totalWorkers}
+            </div>
+          </div>
+          
+          <div style={{
+            textAlign: 'center',
+            padding: '12px',
+            background: 'rgba(30, 41, 59, 0.6)',
+            borderRadius: '12px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
+              {activeWorkers}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+              {t.activeWorkers}
+            </div>
+          </div>
+          
+          <div style={{
+            textAlign: 'center',
+            padding: '12px',
+            background: 'rgba(30, 41, 59, 0.6)',
+            borderRadius: '12px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#f59e0b' }}>
+              {completedWorkers}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+              {t.completedWork}
+            </div>
+          </div>
+          
+          <div style={{
+            textAlign: 'center',
+            padding: '12px',
+            background: 'rgba(30, 41, 59, 0.6)',
+            borderRadius: '12px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#8b5cf6' }}>
+              {getAverageDuration()}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+              {t.averageDuration}
+            </div>
+          </div>
+        </div>
+
+        {/* Liste des travailleurs */}
+        {validationData.workers.length > 0 ? (
+          validationData.workers.map(worker => (
+            <div key={worker.id} style={{
+              background: 'rgba(30, 41, 59, 0.6)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '8px'
+                  }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: '600',
+                      fontSize: '14px'
+                    }}>
+                      {worker.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '14px', color: '#ffffff' }}>
+                        {worker.name}
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+                        {worker.company}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                    gap: '8px',
+                    fontSize: '12px',
+                    color: '#94a3b8'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Phone size={12} />
+                      {worker.phoneNumber}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={12} />
+                      {worker.location}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={12} />
+                      {new Date(worker.startTime).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                    {worker.endTime && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Timer size={12} />
+                        {formatDuration(worker.workDuration || 0)}
+                      </div>
+                    )}
+                  </div>
+
+                  {worker.acknowledgedAST && (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '6px 10px',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      color: '#10b981',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <CheckCircle size={12} />
+                      {t.workerVerified}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  {!worker.endTime ? (
+                    <button
+                      onClick={() => endWorkerShift(worker.id)}
+                      style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {t.endWork}
+                    </button>
+                  ) : (
+                    <span style={{
+                      padding: '8px 12px',
+                      background: 'rgba(100, 116, 139, 0.2)',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#94a3b8',
+                      textAlign: 'center'
+                    }}>
+                      {t.completed}
+                    </span>
+                  )}
+                  
+                  <button
+                    onClick={() => removeWorker(worker.id)}
+                    style={{
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            padding: '32px',
+            color: '#94a3b8'
+          }}>
+            <UserCheck size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+            <p>{t.noWorkersYet}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Section Statut du Verrouillage LOTO */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.8)',
         backdropFilter: 'blur(20px)',
@@ -462,124 +889,128 @@ export default function Step5Validation({
           alignItems: 'center',
           gap: '8px'
         }}>
-          <BarChart3 size={20} />
-          {t.validationSummary}
+          <Lock size={20} />
+          {t.lockoutSection}
         </h3>
-        
+
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          gap: '12px',
-          marginBottom: '16px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px'
         }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            border: `2px solid ${validationData.lockoutStatus.applied ? 'rgba(16, 185, 129, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
             borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
+            cursor: 'pointer',
+            background: validationData.lockoutStatus.applied ? 'rgba(16, 185, 129, 0.1)' : 'rgba(30, 41, 59, 0.6)',
+            transition: 'all 0.3s'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#3b82f6' }}>
-              {validationData.reviewers.length}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              {t.totalReviewers}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
+            <input
+              type="radio"
+              name="lockoutStatus"
+              checked={validationData.lockoutStatus.applied}
+              onChange={() => updateLockoutStatus('applied')}
+              style={{
+                width: '18px',
+                height: '18px',
+                accentColor: '#10b981'
+              }}
+            />
+            <Lock size={18} color={validationData.lockoutStatus.applied ? '#10b981' : '#94a3b8'} />
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: validationData.lockoutStatus.applied ? '#10b981' : '#e2e8f0'
+            }}>
+              {t.lockoutApplied}
+            </span>
+          </label>
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            border: `2px solid ${validationData.lockoutStatus.removed ? 'rgba(245, 158, 11, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
             borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
+            cursor: 'pointer',
+            background: validationData.lockoutStatus.removed ? 'rgba(245, 158, 11, 0.1)' : 'rgba(30, 41, 59, 0.6)',
+            transition: 'all 0.3s'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#10b981' }}>
-              {approvedReviewers}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              {t.approvals}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
+            <input
+              type="radio"
+              name="lockoutStatus"
+              checked={validationData.lockoutStatus.removed}
+              onChange={() => updateLockoutStatus('removed')}
+              style={{
+                width: '18px',
+                height: '18px',
+                accentColor: '#f59e0b'
+              }}
+            />
+            <Unlock size={18} color={validationData.lockoutStatus.removed ? '#f59e0b' : '#94a3b8'} />
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: validationData.lockoutStatus.removed ? '#f59e0b' : '#e2e8f0'
+            }}>
+              {t.lockoutRemoved}
+            </span>
+          </label>
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px',
+            border: `2px solid ${validationData.lockoutStatus.notApplicable ? 'rgba(100, 116, 139, 0.5)' : 'rgba(100, 116, 139, 0.3)'}`,
             borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
+            cursor: 'pointer',
+            background: validationData.lockoutStatus.notApplicable ? 'rgba(100, 116, 139, 0.2)' : 'rgba(30, 41, 59, 0.6)',
+            transition: 'all 0.3s'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#ef4444' }}>
-              {rejectedReviewers}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              {t.rejections}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#f59e0b' }}>
-              {pendingReviewers}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              {t.pendingReviews}
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#ffffff' }}>
-              {criteriaCount}/{totalCriteria}
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              Critères
-            </div>
-          </div>
-          
-          <div style={{
-            textAlign: 'center',
-            padding: '16px 12px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#3b82f6' }}>
-              {completionRate}%
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>
-              {t.completionRate}
-            </div>
-          </div>
+            <input
+              type="radio"
+              name="lockoutStatus"
+              checked={validationData.lockoutStatus.notApplicable}
+              onChange={() => updateLockoutStatus('notApplicable')}
+              style={{
+                width: '18px',
+                height: '18px',
+                accentColor: '#94a3b8'
+              }}
+            />
+            <X size={18} color={validationData.lockoutStatus.notApplicable ? '#94a3b8' : '#64748b'} />
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: validationData.lockoutStatus.notApplicable ? '#94a3b8' : '#e2e8f0'
+            }}>
+              {t.lockoutNA}
+            </span>
+          </label>
         </div>
 
-        <div style={{
-          width: '100%',
-          height: '8px',
-          background: 'rgba(100, 116, 139, 0.3)',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}>
+        {validationData.lockoutStatus.verifiedAt && (
           <div style={{
-            height: '100%',
-            background: 'linear-gradient(90deg, #10b981, #059669)',
-            width: `${completionRate}%`,
-            transition: 'width 0.5s ease'
-          }} />
-        </div>
+            marginTop: '12px',
+            padding: '8px 12px',
+            background: 'rgba(30, 41, 59, 0.6)',
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#94a3b8'
+          }}>
+            {t.lockoutVerification}: {validationData.lockoutStatus.verifiedBy} - {' '}
+            {new Date(validationData.lockoutStatus.verifiedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+          </div>
+        )}
       </div>
 
-      {/* Validation Criteria */}
+      {/* Section Critères de Validation (existante) */}
       <div style={{
         background: 'rgba(15, 23, 42, 0.8)',
         backdropFilter: 'blur(20px)',
@@ -643,383 +1074,10 @@ export default function Step5Validation({
             </label>
           ))}
         </div>
-
-        {!allCriteriaValidated && (
-          <div style={{
-            background: 'rgba(251, 191, 36, 0.1)',
-            border: '1px solid rgba(251, 191, 36, 0.3)',
-            borderRadius: '8px',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginTop: '16px',
-            color: '#fbbf24'
-          }}>
-            <AlertTriangle size={18} />
-            <span style={{ fontSize: '14px' }}>{t.allCriteriaRequired}</span>
-          </div>
-        )}
       </div>
 
-      {/* Reviewers Section */}
-      <div style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '20px'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: '#ffffff',
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Users size={20} />
-            {t.reviewersSection}
-          </h3>
-          <button
-            onClick={() => setShowAddReviewer(true)}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: 'white',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              minHeight: '40px'
-            }}
-          >
-            <Plus size={16} />
-            {t.addReviewer}
-          </button>
-        </div>
-
-        {/* Reviewers List */}
-        {validationData.reviewers.length > 0 ? (
-          validationData.reviewers.map(reviewer => {
-            const statusColors = getStatusColor(reviewer.status);
-            return (
-              <div key={reviewer.id} style={{
-                background: 'rgba(30, 41, 59, 0.6)',
-                border: '1px solid rgba(100, 116, 139, 0.3)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '12px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  marginBottom: '12px',
-                  gap: '12px'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    flex: 1,
-                    minWidth: 0
-                  }}>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: '600',
-                      fontSize: '14px',
-                      flexShrink: 0
-                    }}>
-                      {reviewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{
-                        margin: '0 0 4px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        color: '#ffffff',
-                        wordBreak: 'break-word'
-                      }}>
-                        {reviewer.name}
-                      </h4>
-                      <p style={{
-                        margin: '0 0 2px',
-                        fontSize: '12px',
-                        color: '#94a3b8',
-                        wordBreak: 'break-word'
-                      }}>
-                        {reviewer.role} - {reviewer.department}
-                      </p>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '11px',
-                        color: '#9ca3af',
-                        wordBreak: 'break-word'
-                      }}>
-                        {reviewer.email}
-                      </p>
-                      {reviewer.certification && (
-                        <span style={{
-                          fontSize: '10px',
-                          background: 'rgba(59, 130, 246, 0.1)',
-                          color: '#3b82f6',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          display: 'inline-block',
-                          marginTop: '4px'
-                        }}>
-                          {reviewer.certification}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    gap: '8px',
-                    flexShrink: 0
-                  }}>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      background: statusColors.bg,
-                      border: `1px solid ${statusColors.border}`,
-                      color: statusColors.text,
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {getStatusIcon(reviewer.status)}
-                      <span>{t[reviewer.status as keyof typeof t]}</span>
-                    </div>
-                    <button
-                      onClick={() => removeReviewer(reviewer.id)}
-                      title={t.removeReviewer}
-                      style={{
-                        background: '#6b7280',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        minHeight: '28px',
-                        minWidth: '28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                {reviewer.status === 'pending' && (
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <button
-                      onClick={() => updateReviewerStatus(reviewer.id, 'approved', '', 5)}
-                      style={{
-                        background: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        minHeight: '32px'
-                      }}
-                    >
-                      <ThumbsUp size={12} />
-                      {t.approve}
-                    </button>
-                    <button
-                      onClick={() => updateReviewerStatus(reviewer.id, 'rejected', t.needsModifications)}
-                      style={{
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        minHeight: '32px'
-                      }}
-                    >
-                      <ThumbsDown size={12} />
-                      {t.reject}
-                    </button>
-                  </div>
-                )}
-
-                {reviewer.comments && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '12px',
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(100, 116, 139, 0.3)'
-                  }}>
-                    <strong style={{ fontSize: '12px', color: '#e2e8f0' }}>{t.comments}:</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                      {reviewer.comments}
-                    </p>
-                    {reviewer.rating && (
-                      <div style={{ display: 'flex', gap: '2px', margin: '6px 0' }}>
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            size={12}
-                            style={{ color: i < reviewer.rating! ? '#fbbf24' : '#64748b' }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    {reviewer.validatedAt && (
-                      <p style={{ fontSize: '9px', color: '#9ca3af', margin: '4px 0 0' }}>
-                        {new Date(reviewer.validatedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '32px 16px',
-            color: '#94a3b8'
-          }}>
-            <Users size={40} style={{ margin: '0 auto 12px', color: '#64748b' }} />
-            <p style={{ margin: 0, fontSize: '14px' }}>{t.noReviewersAssigned}</p>
-          </div>
-        )}
-
-        {/* Validation Messages */}
-        {!sufficientReviewers && (
-          <div style={{
-            background: 'rgba(251, 191, 36, 0.1)',
-            border: '1px solid rgba(251, 191, 36, 0.3)',
-            borderRadius: '8px',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginTop: '16px',
-            color: '#fbbf24'
-          }}>
-            <Users size={18} />
-            <span style={{ fontSize: '14px' }}>
-              {validationData.minimumReviewers - validationData.reviewers.length} {t.additionalReviewersRequired}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Final Approval */}
-      {allCriteriaValidated && sufficientReviewers && allReviewersResponded && (
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.8)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          borderRadius: '16px',
-          padding: '20px'
-        }}>
-          {!validationData.finalApproval ? (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#ffffff',
-              padding: '20px',
-              borderRadius: '12px',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{t.readyForApproval}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '14px', opacity: 0.9 }}>
-                Tous les critères sont validés et les réviseurs ont répondu
-              </p>
-              <button 
-                onClick={finalizeApproval}
-                style={{
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  minHeight: '48px',
-                  fontSize: '14px'
-                }}
-              >
-                {t.signDocument}
-              </button>
-            </div>
-          ) : (
-            <div style={{
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#10b981'
-            }}>
-              <CheckCircle size={18} />
-              <div>
-                <strong>{t.documentApproved}</strong>
-                <p style={{ margin: '4px 0 0', fontSize: '12px' }}>
-                  {t.approvedBy}: {validationData.finalApproval.approvedBy} - 
-                  {new Date(validationData.finalApproval.approvedAt).toLocaleDateString(language === 'fr' ? 'fr-CA' : 'en-CA')}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Add Reviewer Modal */}
-      {showAddReviewer && (
+      {/* Modal Ajouter Travailleur */}
+      {showAddWorker && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1056,17 +1114,16 @@ export default function Step5Validation({
                 color: '#ffffff',
                 margin: 0
               }}>
-                {t.addReviewer}
+                {t.addWorker}
               </h3>
               <button
-                onClick={() => setShowAddReviewer(false)}
+                onClick={() => setShowAddWorker(false)}
                 style={{
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
                   padding: '8px',
-                  color: '#94a3b8',
-                  borderRadius: '6px'
+                  color: '#94a3b8'
                 }}
               >
                 <X size={20} />
@@ -1075,7 +1132,6 @@ export default function Step5Validation({
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr',
               gap: '16px'
             }}>
               <div>
@@ -1086,12 +1142,12 @@ export default function Step5Validation({
                   fontWeight: '500',
                   color: '#e2e8f0'
                 }}>
-                  {t.reviewerName} *
+                  {t.workerName} *
                 </label>
                 <input
                   type="text"
-                  value={newReviewer.name}
-                  onChange={(e) => setNewReviewer(prev => ({...prev, name: e.target.value}))}
+                  value={newWorker.name}
+                  onChange={(e) => setNewWorker(prev => ({...prev, name: e.target.value}))}
                   placeholder={t.enterName}
                   style={{
                     width: '100%',
@@ -1101,8 +1157,7 @@ export default function Step5Validation({
                     fontSize: '16px',
                     background: 'rgba(15, 23, 42, 0.8)',
                     color: '#ffffff',
-                    boxSizing: 'border-box',
-                    minHeight: '48px'
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1115,13 +1170,13 @@ export default function Step5Validation({
                   fontWeight: '500',
                   color: '#e2e8f0'
                 }}>
-                  {t.reviewerRole} *
+                  {t.company} *
                 </label>
                 <input
                   type="text"
-                  value={newReviewer.role}
-                  onChange={(e) => setNewReviewer(prev => ({...prev, role: e.target.value}))}
-                  placeholder={t.enterRole}
+                  value={newWorker.company}
+                  onChange={(e) => setNewWorker(prev => ({...prev, company: e.target.value}))}
+                  placeholder={t.enterCompany}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -1130,8 +1185,7 @@ export default function Step5Validation({
                     fontSize: '16px',
                     background: 'rgba(15, 23, 42, 0.8)',
                     color: '#ffffff',
-                    boxSizing: 'border-box',
-                    minHeight: '48px'
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1144,13 +1198,13 @@ export default function Step5Validation({
                   fontWeight: '500',
                   color: '#e2e8f0'
                 }}>
-                  {t.reviewerEmail} *
+                  {t.phoneNumber} *
                 </label>
                 <input
-                  type="email"
-                  value={newReviewer.email}
-                  onChange={(e) => setNewReviewer(prev => ({...prev, email: e.target.value}))}
-                  placeholder={t.enterEmail}
+                  type="tel"
+                  value={newWorker.phoneNumber}
+                  onChange={(e) => setNewWorker(prev => ({...prev, phoneNumber: e.target.value}))}
+                  placeholder={t.enterPhone}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -1159,8 +1213,7 @@ export default function Step5Validation({
                     fontSize: '16px',
                     background: 'rgba(15, 23, 42, 0.8)',
                     color: '#ffffff',
-                    boxSizing: 'border-box',
-                    minHeight: '48px'
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -1173,13 +1226,11 @@ export default function Step5Validation({
                   fontWeight: '500',
                   color: '#e2e8f0'
                 }}>
-                  {t.department}
+                  {t.location}
                 </label>
-                <input
-                  type="text"
-                  value={newReviewer.department}
-                  onChange={(e) => setNewReviewer(prev => ({...prev, department: e.target.value}))}
-                  placeholder={t.enterDepartment}
+                <select
+                  value={newWorker.location}
+                  onChange={(e) => setNewWorker(prev => ({...prev, location: e.target.value}))}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -1188,39 +1239,59 @@ export default function Step5Validation({
                     fontSize: '16px',
                     background: 'rgba(15, 23, 42, 0.8)',
                     color: '#ffffff',
-                    boxSizing: 'border-box',
-                    minHeight: '48px'
+                    boxSizing: 'border-box'
                   }}
-                />
+                >
+                  <option value="">{t.selectLocation}</option>
+                  {workLocations.map((loc: any) => (
+                    <option key={loc.id} value={loc.name}>
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div>
+              <div style={{
+                padding: '16px',
+                background: 'rgba(30, 41, 59, 0.6)',
+                borderRadius: '12px',
+                border: '1px solid rgba(100, 116, 139, 0.3)'
+              }}>
                 <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#e2e8f0'
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  cursor: 'pointer'
                 }}>
-                  {t.certification}
+                  <input
+                    type="checkbox"
+                    checked={newWorker.acknowledgedAST}
+                    onChange={(e) => setNewWorker(prev => ({...prev, acknowledgedAST: e.target.checked}))}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      marginTop: '2px',
+                      accentColor: '#10b981'
+                    }}
+                  />
+                  <div>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#ffffff',
+                      display: 'block',
+                      marginBottom: '4px'
+                    }}>
+                      {t.acknowledgeAST} *
+                    </span>
+                    <span style={{
+                      fontSize: '12px',
+                      color: '#94a3b8'
+                    }}>
+                      {t.signature}: {newWorker.name || '_______________'}
+                    </span>
+                  </div>
                 </label>
-                <input
-                  type="text"
-                  value={newReviewer.certification}
-                  onChange={(e) => setNewReviewer(prev => ({...prev, certification: e.target.value}))}
-                  placeholder={t.enterCertification}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    color: '#ffffff',
-                    boxSizing: 'border-box',
-                    minHeight: '48px'
-                  }}
-                />
               </div>
             </div>
 
@@ -1230,11 +1301,11 @@ export default function Step5Validation({
               marginTop: '24px'
             }}>
               <button
-                onClick={addReviewer}
-                disabled={!newReviewer.name.trim() || !newReviewer.email.trim() || !newReviewer.role.trim()}
+                onClick={addWorker}
+                disabled={!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.phoneNumber.trim() || !newWorker.acknowledgedAST}
                 style={{
                   flex: 1,
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
                   color: 'white',
                   border: 'none',
                   padding: '12px 16px',
@@ -1243,13 +1314,13 @@ export default function Step5Validation({
                   cursor: 'pointer',
                   minHeight: '48px',
                   fontSize: '14px',
-                  opacity: (!newReviewer.name.trim() || !newReviewer.email.trim() || !newReviewer.role.trim()) ? 0.5 : 1
+                  opacity: (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.phoneNumber.trim() || !newWorker.acknowledgedAST) ? 0.5 : 1
                 }}
               >
                 {t.add}
               </button>
               <button
-                onClick={() => setShowAddReviewer(false)}
+                onClick={() => setShowAddWorker(false)}
                 style={{
                   flex: 1,
                   background: 'rgba(100, 116, 139, 0.6)',
