@@ -1,7 +1,7 @@
 ﻿// SiteInformation.tsx - PARTIE 1/2 - Version ComplÃ¨te CorrigÃ©e Compatible SafetyManager Build Ready
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
   AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 

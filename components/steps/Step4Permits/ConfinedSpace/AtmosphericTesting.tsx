@@ -1,7 +1,7 @@
 ﻿// AtmosphericTesting.tsx - PARTIE 1/2 - Version CorrigÃ©e Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
   Wind, Activity, Shield, Plus, AlertTriangle, FileText, Thermometer,
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock

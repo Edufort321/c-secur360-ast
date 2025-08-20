@@ -1,7 +1,7 @@
 // =================== SECTION 1/5 - IMPORTS & INTERFACES COMPATIBLES ===================
 'use client';
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -4014,7 +4014,7 @@ function Step1ProjectInfo({ formData, onDataChange, language, tenant, errors = {
       }} />
 
       {/* Input caché pour capture photo avec REF STABLE */}
-      <input ref={stableFileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
       
       <div className="step1-container">
         {/* =================== CARTE NUMÉRO AST PREMIUM =================== */}

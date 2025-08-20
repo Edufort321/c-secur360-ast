@@ -1,7 +1,7 @@
 ﻿// EntryRegistry.tsx - PARTIE 1/2 - Version CorrigÃ©e Fix Runtime Error
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { 
   UserCheck, Eye, LogIn, LogOut, Shield, Plus, Trash2, Timer, Users, 
   PenTool, CheckCircle, X, Edit3, Copy, Wrench, Clock, History, 
