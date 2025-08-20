@@ -26,8 +26,6 @@ import {
   Trash2,
   BarChart3,
   Phone,
-  Building,
-  MapPin,
   Lock,
   Unlock,
   PenTool,
@@ -520,9 +518,7 @@ export default function Step5Validation({
     };
 
     // Notifier le parent pour synchroniser Step1
-    notifyParent({
-      projectInfo: updatedStep1
-    });
+    onDataChange('projectInfo', updatedStep1);
 
     // Sélectionner automatiquement le nouvel emplacement pour le travailleur
     setNewWorker(prev => ({ ...prev, location: location.name }));
@@ -536,7 +532,7 @@ export default function Step5Validation({
     setShowCreateLocation(false);
     
     console.log('✅ Emplacement créé et synchronisé:', location.name);
-  }, [newLocation, formData.projectInfo, notifyParent]);
+  }, [newLocation, formData.projectInfo, onDataChange]);
 
   const removeWorker = useCallback((workerId: string) => {
     const worker = validationData.workers.find(w => w.id === workerId);

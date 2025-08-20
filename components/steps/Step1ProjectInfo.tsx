@@ -92,7 +92,7 @@ const translations = {
     
     // Sections principales
     clientInfo: "Informations Client",
-    projectDetails: "D�tails du Projet",",
+    projectDetails: "Détails du Projet",
     location: "Localisation",
     workLocations: "Emplacements de Travail",
     locationStats: "Statistiques Temps R�el",
