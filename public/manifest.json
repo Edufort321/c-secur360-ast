@@ -1,0 +1,16 @@
+{
+  "name": "AST MDL",
+  "short_name": "AST MDL",
+  "description": "Analyse Sécuritaire de Tâches",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f23",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
