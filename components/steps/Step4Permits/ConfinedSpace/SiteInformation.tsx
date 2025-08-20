@@ -25,7 +25,7 @@ import { styles, isMobile } from './styles';
 // =================== TYPES LOCAUX ===================
 type UnitSystem = 'metric' | 'imperial';
 
-// =================== TRADUCTIONS COMPLàˆTES ===================
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     title: "Informations du Site - Espace Clos",
@@ -333,7 +333,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // âœ… CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
+  // ✅ CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
   const siteInfo = React.useMemo(() => {
     // Essai avec permitData fourni en props
     if (permitData?.siteInformation) {
@@ -397,7 +397,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   const t = translations[language];
 
   // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
-  // âœ… CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager
+  // ✅ CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager
   const updateSiteInfo = useCallback((field: string, value: any) => {
     const updates = { [field]: value };
     
@@ -415,7 +415,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       onUpdate('siteInformation', updates);
     }
     
-    // âœ… CORRECTION 4 : Validation avec vérifications SafetyManager
+    // ✅ CORRECTION 4 : Validation avec vérifications SafetyManager
     if (onValidationChange && safetyManager) {
       try {
         const validation = safetyManager.validateSection('siteInformation');
@@ -435,7 +435,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
 
-  // âœ… CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
+  // ✅ CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
   const updateDimensions = useCallback((dimensionUpdates: Partial<Dimensions>) => {
     const updatedDimensions = { ...siteInfo.dimensions, ...dimensionUpdates };
     
@@ -456,13 +456,13 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.dimensions, onUpdate]);
 
-  // âœ… CORRECTION BUILD CRITIQUE 6 : Handler updateEnvironmentalCondition avec conversion des types undefined -> boolean
+  // ✅ CORRECTION BUILD CRITIQUE 6 : Handler updateEnvironmentalCondition avec conversion des types undefined -> boolean
   const updateEnvironmentalCondition = useCallback((field: string, value: any) => {
-    // âœ… SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des booléens par défaut
+    // ✅ SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des booléens par défaut
     const sanitizedValue = value === undefined ? false : value;
     const currentConditions = siteInfo.environmentalConditions || {};
     
-    // âœ… TYPE ASSERTION EXPLICITE pour éviter l'erreur Property does not exist on type '{}'
+    // ✅ TYPE ASSERTION EXPLICITE pour éviter l'erreur Property does not exist on type '{}'
     const typedCurrentConditions = currentConditions as {
       ventilationRequired?: boolean;
       ventilationType?: string;
@@ -473,13 +473,13 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       weatherConditions?: string;
     };
     
-    // âœ… Construire updatedConditions avec type assertion
+    // ✅ Construire updatedConditions avec type assertion
     const updatedConditions = { 
       ...typedCurrentConditions, 
       [field]: sanitizedValue 
     };
     
-    // âœ… CONVERSION EXPLICITE pour respecter l'interface EnvironmentalConditions stricte
+    // ✅ CONVERSION EXPLICITE pour respecter l'interface EnvironmentalConditions stricte
     const typeSafeConditions = {
       ventilationRequired: Boolean(updatedConditions.ventilationRequired ?? false),
       ventilationType: String(updatedConditions.ventilationType ?? ''),
@@ -492,7 +492,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     
     if (safetyManager) {
       try {
-        // âœ… UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
+        // ✅ UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
         safetyManager.updateSiteInformation({ environmentalConditions: typeSafeConditions });
       } catch (error) {
         console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
@@ -864,7 +864,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           >
             <option value="rectangular">ðŸ“ {t.rectangular}</option>
             <option value="cylindrical">ðŸ”µ {t.cylindrical}</option>
-            <option value="spherical">âšª {t.spherical}</option>
+            <option value="spherical">⚠ª {t.spherical}</option>
             <option value="irregular">ðŸ”· {t.irregular}</option>
           </select>
         </div>
@@ -1003,7 +1003,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
             {siteInfo.dimensions.volume}
           </div>
           <div style={{ fontSize: '14px', color: '#6ee7b7' }}>
-            {siteInfo.unitSystem === 'metric' ? 'mÂ³' : 'ftÂ³'} - {t.volume}
+            {siteInfo.unitSystem === 'metric' ? 'm³' : 'ft³'} - {t.volume}
           </div>
         </div>
       )}
@@ -1011,7 +1011,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   );
 
   // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
-  // âœ… CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
+  // ✅ CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
     const currentHazards = (siteInfo.atmosphericHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
@@ -1031,7 +1031,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.atmosphericHazards]);
 
-  // âœ… CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
+  // ✅ CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
   const togglePhysicalHazard = useCallback((hazardType: string) => {
     const currentHazards = (siteInfo.physicalHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
@@ -1052,7 +1052,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager, siteInfo.physicalHazards]);
 
   // =================== GESTION DES PHOTOS AVEC SAFETYMANAGER SÉCURISÉ ===================
-  // âœ… CORRECTION 9 : handlePhotoCapture avec vérifications SafetyManager
+  // ✅ CORRECTION 9 : handlePhotoCapture avec vérifications SafetyManager
   const handlePhotoCapture = useCallback(async (category: string) => {
     if (photoInputRef.current) {
       photoInputRef.current.accept = "image/*";
@@ -1084,7 +1084,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   const currentPhotos = siteInfo.spacePhotos || [];
                   const updatedPhotos = [...currentPhotos, newPhoto];
                   
-                  // âœ… Vérification SafetyManager pour photos
+                  // ✅ Vérification SafetyManager pour photos
                   if (safetyManager) {
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1102,7 +1102,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   const currentPhotos = siteInfo.spacePhotos || [];
                   const updatedPhotos = [...currentPhotos, newPhoto];
                   
-                  // âœ… Vérification SafetyManager pour photos sans GPS
+                  // ✅ Vérification SafetyManager pour photos sans GPS
                   if (safetyManager) {
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1120,7 +1120,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               const currentPhotos = siteInfo.spacePhotos || [];
               const updatedPhotos = [...currentPhotos, newPhoto];
               
-              // âœ… Vérification SafetyManager pour photos sans géolocalisation
+              // ✅ Vérification SafetyManager pour photos sans géolocalisation
               if (safetyManager) {
                 try {
                   safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1141,7 +1141,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.spacePhotos, t.photoCategories, language]);
 
-  // âœ… CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
+  // ✅ CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
   const handlePhotoDelete = useCallback((photoId: string) => {
     if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
       const updatedPhotos = (siteInfo.spacePhotos || []).filter(p => p.id !== photoId);
@@ -1311,7 +1311,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   color: '#9ca3af', 
                   fontSize: isMobile ? '12px' : '14px'
                 }}>
-                  {siteInfo.unitSystem === 'metric' ? 'mÂ³' : 'ftÂ³'}
+                  {siteInfo.unitSystem === 'metric' ? 'm³' : 'ft³'}
                 </div>
               </div>
             </div>
@@ -1478,7 +1478,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   onClick={() => updateSiteInfo('spaceType', key)}
                 >
                   <div style={{ fontSize: '24px' }}>
-                    {key === 'tank' ? 'ðŸ—ï¸' : key === 'vessel' ? 'âš—ï¸' : key === 'silo' ? 'ðŸŒ¾' : 
+                    {key === 'tank' ? 'ðŸ—ï¸' : key === 'vessel' ? '⚠—ï¸' : key === 'silo' ? 'ðŸŒ¾' : 
                      key === 'pit' ? 'ðŸ•³ï¸' : key === 'vault' ? 'ðŸ›ï¸' : key === 'tunnel' ? 'ðŸš‡' : 
                      key === 'trench' ? 'ðŸš§' : key === 'manhole' ? 'ðŸ”§' : key === 'storage' ? 'ðŸ“¦' : 
                      key === 'boiler' ? 'ðŸ”¥' : key === 'duct' ? 'ðŸŒªï¸' : key === 'chamber' ? 'ðŸ¢' : 'â“'}
@@ -1710,7 +1710,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     fontWeight: '500',
                     lineHeight: 1.4
                   }}>
-                    âš¡ {label}
+                    ⚠¡ {label}
                   </span>
                 </div>
               ))}

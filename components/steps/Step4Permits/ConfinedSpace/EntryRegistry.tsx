@@ -25,20 +25,20 @@ import { styles, isMobile } from './styles';
 // =================== FONCTION UTILITAIRE POUR FIX BUILD ===================
 /**
  * Fonction utilitaire pour convertir boolean | undefined en boolean
- * Ã‰vite l'erreur TypeScript: "Type 'boolean | undefined' is not assignable to parameter of type 'boolean'"
+ * Évite l'erreur TypeScript: "Type 'boolean | undefined' is not assignable to parameter of type 'boolean'"
  */
 function ensureBoolean(value: boolean | undefined, defaultValue: boolean = false): boolean {
   return value ?? defaultValue;
 }
 
-// =================== TYPES LOCAUX Ã‰TENDUS COMPATIBLES ===================
+// =================== TYPES LOCAUX ÉTENDUS COMPATIBLES ===================
 interface EntryLog {
   id: string;
   timestamp: string;
-  action: 'entry' | 'exit' | 'emergency_exit'; // âœ… CORRECTION: Aligné avec EntryLogEntry du SafetyManager
+  action: 'entry' | 'exit' | 'emergency_exit'; // ✅ CORRECTION: Aligné avec EntryLogEntry du SafetyManager
   // Propriétés requises par EntryLogEntry du SafetyManager
-  personnelId: string; // âœ… REQUIS pour compatibilité SafetyManager
-  authorizedBy: string; // âœ… REQUIS pour compatibilité SafetyManager
+  personnelId: string; // ✅ REQUIS pour compatibilité SafetyManager
+  authorizedBy: string; // ✅ REQUIS pour compatibilité SafetyManager
   // Propriétés étendues locales
   person_id: string;
   person_name: string;
@@ -109,7 +109,7 @@ const translations = {
     addPerson: "Ajouter Personne",
     recordEntry: "Enregistrer Entrée",
     recordExit: "Enregistrer Sortie",
-    emergencyEvacuation: "Ã‰vacuation d'Urgence",
+    emergencyEvacuation: "Évacuation d'Urgence",
     communicationCheck: "Vérification Communication",
     personnelInside: "Personnel Ã  l'intérieur",
     personnelOutside: "Personnel Ã  l'extérieur",
@@ -192,7 +192,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // âœ… CORRECTION CRASH : Accès sécurisé aux données depuis permitData
+  // ✅ CORRECTION CRASH : Accès sécurisé aux données depuis permitData
   const entryRegistryData = permitData?.entryRegistry || {
     personnel: [],
     entryLogs: [],
@@ -240,14 +240,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // Ã‰tats monitoring personnel
   const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
-  const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // âœ… Logs locaux pour communication
-  const [localEntryLogs, setLocalEntryLogs] = useState<EntryLog[]>([]); // âœ… Logs locaux pour affichage
+  const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
+  const [localEntryLogs, setLocalEntryLogs] = useState<EntryLog[]>([]); // ✅ Logs locaux pour affichage
 
   const t = translations[language];
 
   // =================== HANDLERS SAFETYMANAGER CORRIGÃ‰S ===================
   const updateEntryRegistryData = React.useCallback((updates: Partial<EntryRegistryData>) => {
-    // âœ… CORRECTION 1 : Vérification SafetyManager
+    // ✅ CORRECTION 1 : Vérification SafetyManager
     if (safetyManager) {
       try {
         safetyManager.updateEntryRegistry(updates);
@@ -260,14 +260,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       onUpdate('entryRegistry', updates);
     }
     
-    // âœ… CORRECTION 2 : Vérification SafetyManager pour validation + FIX BUILD
+    // ✅ CORRECTION 2 : Vérification SafetyManager pour validation + FIX BUILD
     if (onValidationChange && safetyManager) {
       try {
         const validation = safetyManager.validateSection('entryRegistry');
         onValidationChange(validation.isValid, validation.errors);
       } catch (error) {
         console.warn('SafetyManager validateSection failed:', error);
-        // âœ… FIX BUILD : Fallback validation avec ensureBoolean
+        // ✅ FIX BUILD : Fallback validation avec ensureBoolean
         const hasAttendant = ensureBoolean(updates.attendantPresent) || ensureBoolean(entryRegistryData.attendantPresent);
         const hasPersonnel = (updates.personnel && updates.personnel.length > 0) || personnel.length > 0;
         const isValid = Boolean(hasAttendant && hasPersonnel); // Assure un boolean strict
@@ -302,7 +302,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     // Mettre Ã  jour les logs locaux pour l'affichage
     setLocalEntryLogs(newLogs);
     
-    // âœ… Convertir et envoyer au SafetyManager
+    // ✅ Convertir et envoyer au SafetyManager
     const currentSafetyManagerLogs = entryRegistryData.entryLogs || [];
     const convertedNewLogs = newLogs.filter(log => 
       !currentSafetyManagerLogs.some(existing => existing.id === log.id)
@@ -338,7 +338,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       entrant: '#3b82f6',
       attendant: '#10b981',
       supervisor: '#f59e0b',
-      rescue: '#ef4444', // âœ… CORRECTION: 'rescue' au lieu de 'rescuer'
+      rescue: '#ef4444', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
       admin: '#dc2626'
     };
     return colors[role] || '#6b7280';
@@ -349,7 +349,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       entrant: 'ðŸ‘·',
       attendant: 'ðŸ‘ï¸',
       supervisor: 'ðŸ‘¨â€ðŸ’¼',
-      rescue: 'ðŸš‘', // âœ… CORRECTION: 'rescue' au lieu de 'rescuer'
+      rescue: 'ðŸš‘', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
       admin: '🚨'
     };
     return emojis[role] || '👤';
@@ -378,7 +378,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const handleAttendantPresent = React.useCallback((checked: boolean) => {
     updateEntryRegistryData({ attendantPresent: checked });
     
-    // âœ… CORRECTION 3 : Vérification SafetyManager pour mise Ã  jour permis
+    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise Ã  jour permis
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -394,7 +394,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const handleCommunicationSystemTested = React.useCallback((checked: boolean) => {
     updateEntryRegistryData({ communicationSystemActive: checked });
     
-    // âœ… CORRECTION 4 : Vérification SafetyManager pour communication system
+    // ✅ CORRECTION 4 : Vérification SafetyManager pour communication system
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -408,7 +408,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager, updateEntryRegistryData]);
 
   const handleEmergencyRetrievalReady = React.useCallback((checked: boolean) => {
-    // âœ… CORRECTION 5 : Vérification SafetyManager pour emergency retrieval
+    // ✅ CORRECTION 5 : Vérification SafetyManager pour emergency retrieval
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -422,12 +422,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager]);
 
   // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
-  // âœ… CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
+  // ✅ CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
   const safeRegulations = regulations[selectedProvince] || {
     name: 'Réglementation provinciale',
     code: 'N/A',
     authority: 'Autorité compétente',
-    permit_validity_hours: 8, // âœ… Utiliser permit_validity_hours au lieu de max_work_period_hours
+    permit_validity_hours: 8, // ✅ Utiliser permit_validity_hours au lieu de max_work_period_hours
     atmosphere_testing_frequency: 30,
     continuous_monitoring_required: true,
     max_entrants: 2,
@@ -441,7 +441,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== GESTION DU PERSONNEL ===================
   const addNewPerson = React.useCallback(() => {
     if (!newPerson.name || !newPerson.role || !newPerson.phone) {
-      alert('âš ï¸ Veuillez remplir tous les champs obligatoires (nom, rÃ´le, téléphone)');
+      alert('⚠ ï¸ Veuillez remplir tous les champs obligatoires (nom, rÃ´le, téléphone)');
       return;
     }
 
@@ -465,7 +465,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       person_id: newPersonnelEntry.id,
       current_status: 'outside',
       total_time_inside: 0,
-      // âœ… CORRECTION RUNTIME ERROR : Utiliser permit_validity_hours au lieu de max_work_period_hours
+      // ✅ CORRECTION RUNTIME ERROR : Utiliser permit_validity_hours au lieu de max_work_period_hours
       max_allowed_time: safeRegulations.permit_validity_hours ? 
         safeRegulations.permit_validity_hours * 60 : 480, // 8h par défaut
       equipment_status: 'needs_check'
@@ -491,7 +491,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     });
     setShowAddPersonForm(false);
 
-    alert(`âœ… Personnel ajouté : ${newPersonnelEntry.name} (${newPersonnelEntry.role})`);
+    alert(`✅ Personnel ajouté : ${newPersonnelEntry.name} (${newPersonnelEntry.role})`);
   }, [newPerson, personnel, personnelStatuses, updatePersonnel, safeRegulations]);
 
   const removePerson = React.useCallback((personId: string) => {
@@ -499,7 +499,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const status = getPersonnelStatus(personId);
     
     if (status?.current_status === 'inside') {
-      alert('âš ï¸ Impossible de supprimer : cette personne est actuellement Ã  l\'intérieur de l\'espace clos');
+      alert('⚠ ï¸ Impossible de supprimer : cette personne est actuellement Ã  l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -519,12 +519,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const status = getPersonnelStatus(personId);
     
     if (!person) {
-      alert('âš ï¸ Personne non trouvée dans le registre');
+      alert('⚠ ï¸ Personne non trouvée dans le registre');
       return;
     }
 
     if (status?.current_status === 'inside') {
-      alert('âš ï¸ Cette personne est déjÃ  Ã  l\'intérieur de l\'espace clos');
+      alert('⚠ ï¸ Cette personne est déjÃ  Ã  l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -537,7 +537,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Vérification surveillant présent
     if (!ensureBoolean(entryRegistryData.attendantPresent) && person.role !== 'attendant') {
-      alert('âš ï¸ Un surveillant doit Ãªtre présent avant toute entrée d\'entrant');
+      alert('⚠ ï¸ Un surveillant doit Ãªtre présent avant toute entrée d\'entrant');
       return;
     }
 
@@ -547,8 +547,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       id: generatePermitId(),
       timestamp: now,
       action: 'entry',
-      personnelId: personId, // âœ… REQUIS pour SafetyManager
-      authorizedBy: 'Surveillant', // âœ… REQUIS pour SafetyManager
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
       person_id: personId,
       person_name: person.name,
       role: person.role,
@@ -576,10 +576,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...localEntryLogs, entryLog]); // âœ… Utiliser logs locaux
+    updateEntryLogs([...localEntryLogs, entryLog]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
-    alert(`âœ… Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+    alert(`✅ Entrée enregistrée : ${person.name} - Occupation actuelle : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
   }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getCurrentPersonnelInside, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
 
   const recordExit = React.useCallback((personId: string) => {
@@ -587,12 +587,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const status = getPersonnelStatus(personId);
     
     if (!person) {
-      alert('âš ï¸ Personne non trouvée dans le registre');
+      alert('⚠ ï¸ Personne non trouvée dans le registre');
       return;
     }
 
     if (status?.current_status !== 'inside') {
-      alert('âš ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
+      alert('⚠ ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -605,8 +605,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       id: generatePermitId(),
       timestamp: now,
       action: 'exit',
-      personnelId: personId, // âœ… REQUIS pour SafetyManager
-      authorizedBy: 'Surveillant', // âœ… REQUIS pour SafetyManager
+      personnelId: personId, // ✅ REQUIS pour SafetyManager
+      authorizedBy: 'Surveillant', // ✅ REQUIS pour SafetyManager
       person_id: personId,
       person_name: person.name,
       role: person.role,
@@ -639,14 +639,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...localEntryLogs, exitLog]); // âœ… Utiliser logs locaux
+    updateEntryLogs([...localEntryLogs, exitLog]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ currentOccupancy: newOccupancy });
 
-    alert(`âœ… Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
+    alert(`✅ Sortie enregistrée : ${person.name} - Durée session : ${formatDuration(sessionDuration)} - Occupation : ${newOccupancy}/${entryRegistryData.maxOccupancy}`);
   }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
 
   const initiateEmergencyEvacuation = React.useCallback(() => {
-    if (!confirm('âš ï¸ CONFIRMER L\'Ã‰VACUATION D\'URGENCE de tous les entrants ?')) {
+    if (!confirm('⚠ ï¸ CONFIRMER L\'Ã‰VACUATION D\'URGENCE de tous les entrants ?')) {
       return;
     }
 
@@ -674,8 +674,8 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           id: generatePermitId(),
           timestamp: now,
           action: 'emergency_exit',
-          personnelId: person.id, // âœ… REQUIS pour SafetyManager
-          authorizedBy: 'Ã‰VACUATION D\'URGENCE', // âœ… REQUIS pour SafetyManager
+          personnelId: person.id, // ✅ REQUIS pour SafetyManager
+          authorizedBy: 'Ã‰VACUATION D\'URGENCE', // ✅ REQUIS pour SafetyManager
           person_id: person.id,
           person_name: person.name,
           role: person.role,
@@ -712,7 +712,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     setEmergencyMode(true);
     setPersonnelStatuses(updatedStatuses);
     updatePersonnel(updatedPersonnel);
-    updateEntryLogs([...localEntryLogs, ...emergencyLogs]); // âœ… Utiliser logs locaux
+    updateEntryLogs([...localEntryLogs, ...emergencyLogs]); // ✅ Utiliser logs locaux
     updateEntryRegistryData({ 
       currentOccupancy: 0,
       emergencyContactsNotified: true 
@@ -724,19 +724,19 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== GESTION COMMUNICATION ===================
   const performCommunicationCheck = React.useCallback(() => {
     if (!communicationCheck.person_id) {
-      alert('âš ï¸ Veuillez sélectionner une personne pour la vérification');
+      alert('⚠ ï¸ Veuillez sélectionner une personne pour la vérification');
       return;
     }
 
     const person = getPersonById(communicationCheck.person_id);
     if (!person) {
-      alert('âš ï¸ Personne non trouvée');
+      alert('⚠ ï¸ Personne non trouvée');
       return;
     }
 
     const status = getPersonnelStatus(communicationCheck.person_id);
     if (status?.current_status !== 'inside') {
-      alert('âš ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
+      alert('⚠ ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -799,7 +799,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       alert('URGENCE: Signal d\'urgence détecté!');
       setEmergencyMode(true);
     } else {
-      alert(`âœ… Communication vérifiée avec ${person.name}`);
+      alert(`✅ Communication vérifiée avec ${person.name}`);
     }
   }, [communicationCheck, communicationLogs, personnelStatuses, entryLogs, getPersonById, getPersonnelStatus, updateEntryLogs]);
 
@@ -1637,7 +1637,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                âœ… {t.responseReceived}
+                ✅ {t.responseReceived}
               </label>
             </div>
             
@@ -1826,7 +1826,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                         color: log.communication_verified ? '#86efac' : '#fca5a5', 
                         fontWeight: '600' 
                       }}>
-                        {log.communication_verified ? 'âœ… OK' : 'âŒ NON'}
+                        {log.communication_verified ? '✅ OK' : 'âŒ NON'}
                       </span>
                     </div>
                     <div>
@@ -1836,7 +1836,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                         color: log.equipment_verified ? '#86efac' : '#fca5a5', 
                         fontWeight: '600' 
                       }}>
-                        {log.equipment_verified ? 'âœ… OK' : 'âŒ NON'}
+                        {log.equipment_verified ? '✅ OK' : 'âŒ NON'}
                       </span>
                     </div>
                   </div>

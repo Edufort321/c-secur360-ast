@@ -17,6 +17,8 @@ import {
   Badge,
   Plus,
   Send,
+  MapPin,
+  Building,
   Award,
   X,
   Edit,
@@ -199,6 +201,10 @@ const translations = {
     enterCompany: "Entrer le nom de la compagnie",
     enterPhone: "Ex: 514-555-0123",
     selectLocation: "Sélectionner l'emplacement",
+    createNewLocation: "Créer nouvel emplacement",
+    newLocationName: "Nom de l'emplacement",
+    newLocationZone: "Zone de travail",
+    newLocationDescription: "Description (optionnel)",
     enterNotes: "Entrer des notes (optionnel)",
     
     // Summary
@@ -302,6 +308,10 @@ const translations = {
     enterCompany: "Enter company name",
     enterPhone: "Ex: 514-555-0123",
     selectLocation: "Select location",
+    createNewLocation: "Create new location",
+    newLocationName: "Location name",
+    newLocationZone: "Work zone",
+    newLocationDescription: "Description (optional)",
     enterNotes: "Enter notes (optional)",
     
     // Summary
@@ -359,6 +369,7 @@ export default function Step5Validation({
 
   const [showAddReviewer, setShowAddReviewer] = useState(false);
   const [showAddWorker, setShowAddWorker] = useState(false);
+  const [showCreateLocation, setShowCreateLocation] = useState(false);
   
   const [newReviewer, setNewReviewer] = useState({
     name: '',
@@ -375,6 +386,12 @@ export default function Step5Validation({
     location: '',
     acknowledgedAST: false,
     lockApplied: false
+  });
+
+  const [newLocation, setNewLocation] = useState({
+    name: '',
+    zone: '',
+    description: ''
   });
 
   // Récupérer les emplacements de Step1
@@ -471,6 +488,55 @@ export default function Step5Validation({
     
     console.log('✅ Travailleur ajouté:', worker.name);
   }, [newWorker, validationData, notifyParent, workLocations, t.mustAcknowledgeAST, language]);
+
+  const createNewLocationAndSync = useCallback(() => {
+    if (!newLocation.name.trim() || !newLocation.zone.trim()) {
+      console.log('Nom et zone requis pour créer un emplacement');
+      return;
+    }
+
+    // Créer le nouvel emplacement
+    const location = {
+      id: `location_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newLocation.name.trim(),
+      description: newLocation.description?.trim() || '',
+      zone: newLocation.zone.trim(),
+      building: undefined,
+      floor: undefined,
+      maxWorkersReached: 0,
+      currentWorkers: 0,
+      lockoutPoints: 0,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      estimatedDuration: '8 hours',
+      startTime: '08:00',
+      endTime: '16:00'
+    };
+
+    // Mettre à jour Step1 - ajouter à la liste des emplacements
+    const updatedStep1 = {
+      ...formData.projectInfo,
+      workLocations: [...(formData.projectInfo?.workLocations || []), location]
+    };
+
+    // Notifier le parent pour synchroniser Step1
+    notifyParent({
+      projectInfo: updatedStep1
+    });
+
+    // Sélectionner automatiquement le nouvel emplacement pour le travailleur
+    setNewWorker(prev => ({ ...prev, location: location.name }));
+
+    // Réinitialiser le formulaire
+    setNewLocation({
+      name: '',
+      zone: '',
+      description: ''
+    });
+    setShowCreateLocation(false);
+    
+    console.log('✅ Emplacement créé et synchronisé:', location.name);
+  }, [newLocation, formData.projectInfo, notifyParent]);
 
   const removeWorker = useCallback((workerId: string) => {
     const worker = validationData.workers.find(w => w.id === workerId);
@@ -1342,6 +1408,38 @@ export default function Step5Validation({
                     </option>
                   ))}
                 </select>
+                
+                {/* Bouton créer nouvel emplacement */}
+                <button
+                  type="button"
+                  onClick={() => setShowCreateLocation(true)}
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    width: '100%',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                  }}
+                >
+                  <Plus size={16} />
+                  {t.createNewLocation}
+                </button>
               </div>
 
               {/* Case consentement AST */}
@@ -1461,6 +1559,190 @@ export default function Step5Validation({
               </button>
               <button
                 onClick={() => setShowAddWorker(false)}
+                style={{
+                  flex: 1,
+                  background: 'rgba(100, 116, 139, 0.6)',
+                  color: 'white',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  minHeight: '48px',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de création d'emplacement */}
+      {showCreateLocation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.95)',
+            padding: '32px',
+            borderRadius: '16px',
+            border: '1px solid rgba(100, 116, 139, 0.3)',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{
+              margin: '0 0 24px 0',
+              color: '#ffffff',
+              fontSize: '20px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <MapPin style={{ color: '#10b981' }} size={24} />
+              {t.createNewLocation}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Nom de l'emplacement */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#e2e8f0'
+                }}>
+                  {t.newLocationName} *
+                </label>
+                <input
+                  type="text"
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ex: Atelier de soudure"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Zone de travail */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#e2e8f0'
+                }}>
+                  {t.newLocationZone} *
+                </label>
+                <input
+                  type="text"
+                  value={newLocation.zone}
+                  onChange={(e) => setNewLocation(prev => ({ ...prev, zone: e.target.value }))}
+                  placeholder="Ex: Zone industrielle A"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#e2e8f0'
+                }}>
+                  {t.newLocationDescription}
+                </label>
+                <textarea
+                  value={newLocation.description}
+                  onChange={(e) => setNewLocation(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Description détaillée de l'emplacement..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#ffffff',
+                    boxSizing: 'border-box',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Boutons d'action */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: '24px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={createNewLocationAndSync}
+                disabled={!newLocation.name.trim() || !newLocation.zone.trim()}
+                style={{
+                  flex: 1,
+                  background: (!newLocation.name.trim() || !newLocation.zone.trim()) 
+                    ? 'rgba(100, 116, 139, 0.6)' 
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: (!newLocation.name.trim() || !newLocation.zone.trim()) ? 'not-allowed' : 'pointer',
+                  minHeight: '48px',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Building size={16} />
+                Créer l'emplacement
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreateLocation(false);
+                  setNewLocation({ name: '', zone: '', description: '' });
+                }}
                 style={{
                   flex: 1,
                   background: 'rgba(100, 116, 139, 0.6)',

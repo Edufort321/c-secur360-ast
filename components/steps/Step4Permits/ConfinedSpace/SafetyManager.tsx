@@ -969,7 +969,7 @@ export const useSafetyManager = create<SafetyManagerState>()(
           const timer = setTimeout(() => {
             console.log('💾 Auto-save silencieux déclenché après débounce');
             get().silentSave(); // ✅ SILENCIEUX = pas de re-render
-          }, 5000); // ✅ 5 secondes pour laisser le temps de taper
+          }, 1000); // ✅ 1 seconde pour réduire l'ejection des champs
           
           set({ inputDebounceTimer: timer });
         }
