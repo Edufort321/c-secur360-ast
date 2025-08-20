@@ -64,7 +64,7 @@ export async function GET() {
     console.error('❌ Database error:', error)
     return NextResponse.json({ 
       success: false, 
-      error: error.message,
+      error: (error instanceof Error ? error.message : "Unknown error"),
       code: error.code,
       details: 'Vérifiez les variables d\'environnement Supabase'
     }, { status: 500 })

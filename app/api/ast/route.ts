@@ -47,10 +47,10 @@ return NextResponse.json({
 });
     
   } catch (error: unknown) {
-    console.error('Error saving AST:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error saving AST:', error instanceof Error ? (error instanceof Error ? error.message : "Unknown error") : 'Unknown error');
 return NextResponse.json({
   success: false,
-  error: error instanceof Error ? error.message : 'Unknown error'
+  error: error instanceof Error ? (error instanceof Error ? error.message : "Unknown error") : 'Unknown error'
 }, { status: 500 });
   }
 }
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error: unknown) {
 return NextResponse.json({
-  error: error instanceof Error ? error.message : 'Unknown error'
+  error: error instanceof Error ? (error instanceof Error ? error.message : "Unknown error") : 'Unknown error'
 }, { status: 500 });
   }
 }

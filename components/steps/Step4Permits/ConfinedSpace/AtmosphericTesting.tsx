@@ -1,4 +1,4 @@
-﻿// AtmosphericTesting.tsx - PARTIE 1/2 - Version CorrigÃ©e Fix Runtime Error
+﻿// AtmosphericTesting.tsx - PARTIE 1/2 - Version Corrigée Fix Runtime Error
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
@@ -7,7 +7,7 @@ import {
   Volume2, Gauge, Play, Pause, RotateCcw, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 
-// Import des types et du hook centralisÃ©
+// Import des types et du hook centralisé
 import {
   ConfinedSpaceComponentProps,
   AtmosphericTestingData,
@@ -59,10 +59,10 @@ interface RegulationData {
     rescue_plan_required?: boolean;
     competent_person_required?: boolean;
   };
-  // âœ… CORRECTION RUNTIME ERROR : Utiliser les propriÃ©tÃ©s qui existent rÃ©ellement
-  permit_validity_hours: number; // âœ… Cette propriÃ©tÃ© existe dans PROVINCIAL_REGULATIONS
-  atmosphere_testing_frequency: number; // âœ… Cette propriÃ©tÃ© existe
-  continuous_monitoring_required: boolean; // âœ… Cette propriÃ©tÃ© existe
+  // âœ… CORRECTION RUNTIME ERROR : Utiliser les propriétés qui existent réellement
+  permit_validity_hours: number; // âœ… Cette propriété existe dans PROVINCIAL_REGULATIONS
+  atmosphere_testing_frequency: number; // âœ… Cette propriété existe
+  continuous_monitoring_required: boolean; // âœ… Cette propriété existe
   emergency_contacts: Array<{
     name: string;
     role: string;
@@ -88,25 +88,25 @@ interface LegalAtmosphericData {
 // =================== TRADUCTIONS COMPLÃˆTES ===================
 const translations = {
   fr: {
-    title: "Tests AtmosphÃ©riques Obligatoires",
-    legalCompliance: "ConformitÃ© RÃ©glementaire Tests AtmosphÃ©riques",
-    limits: "Limites RÃ©glementaires",
-    newReading: "Nouvelle Mesure AtmosphÃ©rique",
+    title: "Tests Atmosphériques Obligatoires",
+    legalCompliance: "Conformité Réglementaire Tests Atmosphériques",
+    limits: "Limites Réglementaires",
+    newReading: "Nouvelle Mesure Atmosphérique",
     readingHistory: "Historique des Mesures",
     continuousMonitoring: "Surveillance Continue Obligatoire",
     multiLevelTesting: "Tests Multi-Niveaux Obligatoires",
     deviceCalibration: "Calibration Ã‰quipement de Mesure",
     addReading: "Ajouter Mesure",
     level: "Niveau dans l'espace",
-    topLevel: "Niveau supÃ©rieur",
+    topLevel: "Niveau supérieur",
     middleLevel: "Niveau moyen", 
-    bottomLevel: "Niveau infÃ©rieur",
-    oxygen: "OxygÃ¨ne (Oâ‚‚)",
+    bottomLevel: "Niveau inférieur",
+    oxygen: "Oxygène (Oâ‚‚)",
     lel: "Limite explosive (LEL)",
-    h2s: "Sulfure d'hydrogÃ¨ne (Hâ‚‚S)",
+    h2s: "Sulfure d'hydrogène (Hâ‚‚S)",
     co: "Monoxyde de carbone (CO)",
-    temperature: "TempÃ©rature",
-    humidity: "HumiditÃ©",
+    temperature: "Température",
+    humidity: "Humidité",
     deviceId: "ID Appareil",
     notes: "Notes",
     safe: "SÃ‰CURITAIRE",
@@ -115,14 +115,14 @@ const translations = {
     criticalValues: "VALEURS CRITIQUES",
     retestRequired: "RETEST OBLIGATOIRE",
     evacuationRequired: "Ã‰VACUATION REQUISE",
-    startMonitoring: "DÃ©marrer Surveillance",
+    startMonitoring: "Démarrer Surveillance",
     stopMonitoring: "ArrÃªter Surveillance",
-    resetTimer: "RÃ©initialiser Timer",
+    resetTimer: "Réinitialiser Timer",
     timeRemaining: "Temps restant",
-    frequencyMinutes: "FrÃ©quence rÃ©glementaire",
-    calibrated: "CalibrÃ©",
-    certified: "CertifiÃ©",
-    validated: "ValidÃ©"
+    frequencyMinutes: "Fréquence réglementaire",
+    calibrated: "Calibré",
+    certified: "Certifié",
+    validated: "Validé"
   },
   en: {
     title: "Mandatory Atmospheric Testing",
@@ -175,7 +175,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // AccÃ¨s direct aux donnÃ©es depuis permitData
+  // Accès direct aux données depuis permitData
   const atmosphericData = permitData.atmosphericTesting || {
     equipment: {
       deviceModel: '',
@@ -224,7 +224,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
 
   // =================== HANDLERS SAFETYMANAGER CORRIGÃ‰S ===================
   const updateAtmosphericData = useCallback((updates: Partial<AtmosphericTestingData>) => {
-    // âœ… CORRECTION 1 : VÃ©rification SafetyManager
+    // âœ… CORRECTION 1 : Vérification SafetyManager
     if (safetyManager) {
       try {
         safetyManager.updateAtmosphericTesting(updates);
@@ -237,7 +237,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       onUpdate('atmosphericTesting', updates);
     }
     
-    // âœ… CORRECTION 2 : VÃ©rification SafetyManager pour validation
+    // âœ… CORRECTION 2 : Vérification SafetyManager pour validation
     if (onValidationChange && safetyManager) {
       try {
         const validation = safetyManager.validateSection('atmosphericTesting');
@@ -246,7 +246,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         console.warn('SafetyManager validateSection failed:', error);
         // Fallback validation basique
         const isValid = (updates.readings && updates.readings.length > 0) || atmosphericReadings.length > 0;
-        onValidationChange(isValid, isValid ? [] : ['Tests atmosphÃ©riques requis']);
+        onValidationChange(isValid, isValid ? [] : ['Tests atmosphériques requis']);
       }
     }
   }, [safetyManager, onUpdate, onValidationChange, atmosphericReadings.length]);
@@ -262,7 +262,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   const validateAtmosphericValue = (type: keyof AtmosphericLimits, value: number): 'safe' | 'warning' | 'danger' => {
     const currentRegulations = regulations[selectedProvince];
     if (!currentRegulations?.limits?.[type]) {
-      return 'safe'; // Fallback si pas de rÃ©glementation
+      return 'safe'; // Fallback si pas de réglementation
     }
     
     const limits = currentRegulations.limits[type];
@@ -313,7 +313,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         setRetestTimer(prev => {
           if (prev <= 1) {
             setRetestActive(false);
-            alert('ðŸš¨ RETEST OBLIGATOIRE: 15 minutes Ã©coulÃ©es. Effectuez immÃ©diatement de nouveaux tests atmosphÃ©riques!');
+            alert('ðŸš¨ RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
             return 0;
           }
           return prev - 1;
@@ -335,7 +335,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           if (prev <= 1) {
             // âœ… CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
             const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
-            alert(`â° SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes Ã©coulÃ©es. Nouveau test atmosphÃ©rique requis selon ${regulations[selectedProvince]?.code || 'rÃ©glementation'}!`);
+            alert(`â° SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
             return frequencyMinutes * 60;
           }
           return prev - 1;
@@ -379,7 +379,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     const co = parseFloat(manualReading.co);
 
     if (oxygen < 0 || oxygen > 30 || lel < 0 || lel > 100 || h2s < 0 || h2s > 1000 || co < 0 || co > 1000) {
-      alert('âš ï¸ Valeurs hors plage acceptable. VÃ©rifiez vos mesures.');
+      alert('âš ï¸ Valeurs hors plage acceptable. Vérifiez vos mesures.');
       return;
     }
 
@@ -405,7 +405,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         humidity: manualReading.humidity ? parseFloat(manualReading.humidity) : 50
       },
       status: overallStatus,
-      testedBy: 'OpÃ©rateur Manuel',
+      testedBy: 'Opérateur Manuel',
       notes: manualReading.notes || undefined
     };
 
@@ -425,9 +425,9 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     });
 
     if (overallStatus === 'danger') {
-      alert('ðŸš¨ DANGER CRITIQUE: Les valeurs atmosphÃ©riques sont dangereuses! Ã‰vacuation immÃ©diate requise!');
+      alert('ðŸš¨ DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Ã‰vacuation immédiate requise!');
     } else if (overallStatus === 'caution') {
-      alert('âš ï¸ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcÃ©e requise.');
+      alert('âš ï¸ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
     }
   }, [manualReading, atmosphericReadings, updateReadings, t, validateAtmosphericValue]);
 
@@ -470,7 +470,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       }
     });
     
-    // âœ… CORRECTION 3 : VÃ©rification SafetyManager pour mise Ã  jour permis
+    // âœ… CORRECTION 3 : Vérification SafetyManager pour mise Ã  jour permis
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -484,7 +484,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager, atmosphericData.equipment, updateAtmosphericData]);
 
   const handleMultiLevelTestingCompleted = useCallback((checked: boolean) => {
-    // âœ… CORRECTION 4 : VÃ©rification SafetyManager pour multi-level testing
+    // âœ… CORRECTION 4 : Vérification SafetyManager pour multi-level testing
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -498,7 +498,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   }, [safetyManager]);
 
   const handleAtmosphericStabilityConfirmed = useCallback((checked: boolean) => {
-    // âœ… CORRECTION 5 : VÃ©rification SafetyManager pour atmospheric stability
+    // âœ… CORRECTION 5 : Vérification SafetyManager pour atmospheric stability
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -514,9 +514,9 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== PROTECTION CONTRE REGULATIONS UNDEFINED ===================
   // âœ… CORRECTION RUNTIME ERROR : Structure compatible avec PROVINCIAL_REGULATIONS de index.tsx
   const safeRegulations = regulations[selectedProvince] || {
-    name: 'RÃ©glementation provinciale',
+    name: 'Réglementation provinciale',
     code: 'N/A',
-    authority: 'AutoritÃ© compÃ©tente',
+    authority: 'Autorité compétente',
     atmosphere_testing_frequency: 30,
     continuous_monitoring_required: true,
     permit_validity_hours: 8,
@@ -531,7 +531,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '28px' }}>
       
-      {/* Section ConformitÃ© RÃ©glementaire Tests AtmosphÃ©riques */}
+      {/* Section Conformité Réglementaire Tests Atmosphériques */}
       <div style={{
         backgroundColor: '#dc2626',
         borderRadius: '16px',
@@ -566,7 +566,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: '0 0 12px 0',
             fontWeight: '600'
           }}>
-            ðŸŒ¬ï¸ <strong>TESTS OBLIGATOIRES</strong> : Tests atmosphÃ©riques multi-niveaux requis avant entrÃ©e + surveillance continue selon {safeRegulations.code}.
+            🌬️ <strong>TESTS OBLIGATOIRES</strong> : Tests atmosphériques multi-niveaux requis avant entrée + surveillance continue selon {safeRegulations.code}.
           </p>
           <p style={{ 
             color: '#fca5a5', 
@@ -574,11 +574,11 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            â° <strong>FrÃ©quence rÃ©glementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immÃ©diat si valeurs critiques.
+            â° <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immédiat si valeurs critiques.
           </p>
         </div>
         
-        {/* Calibration Ã©quipement obligatoire */}
+        {/* Calibration équipement obligatoire */}
         <div style={{ marginBottom: '20px' }}>
           <h4 style={{
             fontSize: isMobile ? '16px' : '18px',
@@ -591,7 +591,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           
           <div style={styles.grid2}>
             <div>
-              <label style={{ ...styles.label, color: '#fca5a5' }}>Date calibration dÃ©tecteur *</label>
+              <label style={{ ...styles.label, color: '#fca5a5' }}>Date calibration détecteur *</label>
               <input
                 type="date"
                 value={atmosphericData.equipment?.calibrationDate || ''}
@@ -645,7 +645,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              ðŸ”§ <strong>DÃ‰TECTEUR CALIBRÃ‰</strong> : Je certifie que le dÃ©tecteur multi-gaz est calibrÃ© dans les 24h selon les spÃ©cifications du fabricant *
+              ðŸ”§ <strong>DÃ‰TECTEUR CALIBRÃ‰</strong> : Je certifie que le détecteur multi-gaz est calibré dans les 24h selon les spécifications du fabricant *
             </label>
           </div>
         </div>
@@ -683,7 +683,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               flex: 1
             }}
           >
-            ðŸ“Š <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphÃ©riques effectuÃ©s aux niveaux supÃ©rieur, moyen et infÃ©rieur de l'espace clos *
+            ðŸ“Š <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l'espace clos *
           </label>
         </div>
         
@@ -718,12 +718,12 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               flex: 1
             }}
           >
-            âœ… <strong>STABILITÃ‰ ATMOSPHÃ‰RIQUE</strong> : Je confirme que l'atmosphÃ¨re est stable et conforme aux limites de {safeRegulations.authority} *
+            âœ… <strong>STABILITÃ‰ ATMOSPHÃ‰RIQUE</strong> : Je confirme que l'atmosphère est stable et conforme aux limites de {safeRegulations.authority} *
           </label>
         </div>
       </div>
 
-      {/* Section Limites RÃ©glementaires */}
+      {/* Section Limites Réglementaires */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>
           <Shield style={{ width: '20px', height: '20px' }} />
@@ -922,7 +922,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               fontSize: '14px',
               fontWeight: '600'
             }}>
-              Tests effectuÃ©s
+              Tests effectués
             </div>
           </div>
         </div>
@@ -978,7 +978,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           {t.newReading}
         </h3>
         
-        {/* SÃ©lection niveau */}
+        {/* Sélection niveau */}
         <div style={{ marginBottom: '20px' }}>
           <label style={styles.label}>{t.level} *</label>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -1006,7 +1006,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         </div>
         
-        {/* Valeurs atmosphÃ©riques */}
+        {/* Valeurs atmosphériques */}
         <div style={styles.grid4}>
           <div>
             <label style={styles.label}>{t.oxygen} (%) *</label>
@@ -1066,7 +1066,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         </div>
         
-        {/* Valeurs supplÃ©mentaires */}
+        {/* Valeurs supplémentaires */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
@@ -1127,7 +1127,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         <div style={{ marginTop: '20px' }}>
           <label style={styles.label}>{t.notes}</label>
           <textarea
-            placeholder="Observations, conditions particuliÃ¨res..."
+            placeholder="Observations, conditions particulières..."
             value={manualReading.notes}
             onChange={(e) => setManualReading(prev => ({ ...prev, notes: e.target.value }))}
             style={{ ...styles.input, height: '80px', resize: 'vertical' }}
@@ -1158,10 +1158,10 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               color: '#4b5563'
             }} />
             <p style={{ fontSize: isMobile ? '18px' : '20px', marginBottom: '12px', fontWeight: '600' }}>
-              Aucune mesure enregistrÃ©e
+              Aucune mesure enregistrée
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Effectuez votre premiÃ¨re mesure atmosphÃ©rique ci-dessus pour commencer la surveillance.
+              Effectuez votre première mesure atmosphérique ci-dessus pour commencer la surveillance.
             </p>
           </div>
         ) : (

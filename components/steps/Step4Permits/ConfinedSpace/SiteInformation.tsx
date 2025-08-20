@@ -1,4 +1,4 @@
-﻿// SiteInformation.tsx - PARTIE 1/2 - Version ComplÃ¨te CorrigÃ©e Compatible SafetyManager Build Ready
+﻿// SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
 "use client";
 
 import React, { useState, useRef, useCallback, memo } from 'react';
@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronUp, Info, Star, Globe, Wifi, Navigation, Check
 } from 'lucide-react';
 
-// Import des types et du hook centralisÃ©
+// Import des types et du hook centralisé
 import {
   ConfinedSpaceComponentProps,
   ConfinedSpaceDetails,
@@ -25,59 +25,59 @@ import { styles, isMobile } from './styles';
 // =================== TYPES LOCAUX ===================
 type UnitSystem = 'metric' | 'imperial';
 
-// =================== TRADUCTIONS COMPLÃˆTES ===================
+// =================== TRADUCTIONS COMPLàˆTES ===================
 const translations = {
   fr: {
     title: "Informations du Site - Espace Clos",
-    subtitle: "Identification et Ã©valuation complÃ¨te de l'espace de travail confinÃ©",
+    subtitle: "Identification et évaluation complète de l'espace de travail confiné",
     
     // Sections principales
     projectInfo: "Informations du Projet",
     planning: "Planification",
     spaceIdentification: "Identification de l'Espace Clos",
     spaceDimensions: "Dimensions et Volume",
-    entryPoints: "Points d'EntrÃ©e et AccÃ¨s",
-    hazardAssessment: "Ã‰valuation des Dangers",
+    entryPoints: "Points d'Entrée et Accès",
+    hazardAssessment: "Évaluation des Dangers",
     environmentalConditions: "Conditions Environnementales",
     spaceContent: "Contenu et Historique",
-    safetyMeasures: "Mesures de SÃ©curitÃ©",
+    safetyMeasures: "Mesures de Sécurité",
     photoDocumentation: "Documentation Photographique",
     
     // Champs du formulaire
-    projectNumber: "NumÃ©ro de projet",
+    projectNumber: "Numéro de projet",
     workLocation: "Lieu des travaux",
     contractor: "Entrepreneur",
     supervisor: "Superviseur",
-    entryDate: "Date d'entrÃ©e prÃ©vue",
-    duration: "DurÃ©e estimÃ©e",
+    entryDate: "Date d'entrée prévue",
+    duration: "Durée estimée",
     workerCount: "Nombre de travailleurs",
     workDescription: "Description des travaux",
     
-    // UnitÃ©s
-    unitSystem: "SystÃ¨me d'unitÃ©s",
-    metric: "MÃ©trique (m)",
-    imperial: "ImpÃ©rial (ft)",
+    // Unités
+    unitSystem: "Système d'unités",
+    metric: "Métrique (m)",
+    imperial: "Impérial (ft)",
     
     // Formes d'espaces
     spaceShape: "Forme de l'espace",
     rectangular: "Rectangulaire",
     cylindrical: "Cylindrique",
-    spherical: "SphÃ©rique",
-    irregular: "IrrÃ©gulier",
+    spherical: "Sphérique",
+    irregular: "Irrégulier",
     
     // Types d'espaces
     spaceType: "Type d'espace",
     spaceTypes: {
-      tank: "RÃ©servoir",
-      vessel: "Cuve/RÃ©cipient", 
+      tank: "Réservoir",
+      vessel: "Cuve/Récipient", 
       silo: "Silo",
       pit: "Fosse",
-      vault: "VoÃ»te",
+      vault: "Voà»te",
       tunnel: "Tunnel",
-      trench: "TranchÃ©e",
-      manhole: "Regard d'Ã©gout",
+      trench: "Tranchée",
+      manhole: "Regard d'égout",
       storage: "Espace de stockage",
-      boiler: "ChaudiÃ¨re",
+      boiler: "Chaudière",
       duct: "Conduit",
       chamber: "Chambre",
       other: "Autre"
@@ -86,7 +86,7 @@ const translations = {
     // Classifications CSA
     csaClass: "Classification CSA",
     csaClasses: {
-      class1: "Classe 1 - Danger immÃ©diat pour la vie",
+      class1: "Classe 1 - Danger immédiat pour la vie",
       class2: "Classe 2 - Risque potentiel",
       class3: "Classe 3 - Risque minimal"
     },
@@ -95,63 +95,63 @@ const translations = {
     length: "Longueur",
     width: "Largeur", 
     height: "Hauteur",
-    diameter: "DiamÃ¨tre",
-    volume: "Volume calculÃ©",
+    diameter: "Diamètre",
+    volume: "Volume calculé",
     calculateVolume: "Calculer Volume",
     
-    // Points d'entrÃ©e
-    entryPoint: "Point d'entrÃ©e",
-    entryType: "Type d'entrÃ©e",
+    // Points d'entrée
+    entryPoint: "Point d'entrée",
+    entryType: "Type d'entrée",
     entryDimensions: "Dimensions",
     entryLocation: "Localisation",
-    entryCondition: "Ã‰tat",
-    entryAccessibility: "AccessibilitÃ©",
-    addEntryPoint: "Ajouter point d'entrÃ©e",
+    entryCondition: "État",
+    entryAccessibility: "Accessibilité",
+    addEntryPoint: "Ajouter point d'entrée",
     
     // Dangers
-    atmosphericHazards: "Dangers AtmosphÃ©riques",
+    atmosphericHazards: "Dangers Atmosphériques",
     physicalHazards: "Dangers Physiques",
-    selectHazards: "SÃ©lectionnez tous les dangers prÃ©sents",
+    selectHazards: "Sélectionnez tous les dangers présents",
     
     // Photos
     addPhoto: "Ajouter photo",
     takePhoto: "Prendre photo",
     noPhotos: "Aucune photo",
     photoCategories: {
-      exterior: "ExtÃ©rieur",
-      interior: "IntÃ©rieur",
-      entry: "Points d'entrÃ©e",
+      exterior: "Extérieur",
+      interior: "Intérieur",
+      entry: "Points d'entrée",
       hazards: "Dangers",
-      equipment: "Ã‰quipement",
-      safety: "SÃ©curitÃ©"
+      equipment: "Équipement",
+      safety: "Sécurité"
     },
     
-    // Dangers atmosphÃ©riques
+    // Dangers atmosphériques
     atmosphericHazardTypes: {
-      oxygen_deficiency: "DÃ©ficience en oxygÃ¨ne (<19.5%)",
-      oxygen_enrichment: "Enrichissement en oxygÃ¨ne (>23%)",
+      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
+      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
       flammable_gases: "Gaz inflammables/combustibles",
       toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogÃ¨ne (H2S)",
+      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
       carbon_monoxide: "Monoxyde de carbone (CO)",
       carbon_dioxide: "Dioxyde de carbone (CO2)",
-      methane: "MÃ©thane (CH4)",
+      methane: "Méthane (CH4)",
       ammonia: "Ammoniac (NH3)",
       chlorine: "Chlore (Cl2)",
       nitrogen: "Azote (N2)",
       argon: "Argon (Ar)",
-      welding_fumes: "FumÃ©es de soudage"
+      welding_fumes: "Fumées de soudage"
     },
 
     // Dangers physiques
     physicalHazardTypes: {
       engulfment: "Ensevelissement/Engloutissement",
-      crushing: "Ã‰crasement par Ã©quipement",
-      electrical: "Dangers Ã©lectriques",
-      mechanical: "Dangers mÃ©caniques",
+      crushing: "Écrasement par équipement",
+      electrical: "Dangers électriques",
+      mechanical: "Dangers mécaniques",
       structural_collapse: "Effondrement structural",
       falls: "Chutes de hauteur",
-      temperature_extreme: "TempÃ©ratures extrÃªmes",
+      temperature_extreme: "Températures extrêmes",
       noise: "Bruit excessif",
       vibration: "Vibrations",
       radiation: "Radiation",
@@ -167,7 +167,7 @@ const translations = {
     edit: "Modifier",
     add: "Ajouter",
     remove: "Retirer",
-    select: "SÃ©lectionner",
+    select: "Sélectionner",
     required: "Requis",
     optional: "Optionnel",
     yes: "Oui",
@@ -199,7 +199,7 @@ const translations = {
     workerCount: "Number of workers",
     workDescription: "Work description",
     
-    // UnitÃ©s
+    // Unités
     unitSystem: "Unit system",
     metric: "Metric (m)",
     imperial: "Imperial (ft)",
@@ -245,7 +245,7 @@ const translations = {
     volume: "Calculated volume",
     calculateVolume: "Calculate Volume",
     
-    // Points d'entrÃ©e
+    // Points d'entrée
     entryPoint: "Entry point",
     entryType: "Entry type",
     entryDimensions: "Dimensions",
@@ -272,7 +272,7 @@ const translations = {
       safety: "Safety"
     },
     
-    // Dangers atmosphÃ©riques
+    // Dangers atmosphériques
     atmosphericHazardTypes: {
       oxygen_deficiency: "Oxygen deficiency (<19.5%)",
       oxygen_enrichment: "Oxygen enrichment (>23%)",
@@ -321,7 +321,7 @@ const translations = {
   }
 };
 
-// =================== COMPOSANT PRINCIPAL REFACTORISÃ‰ ===================
+// =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   language,
   permitData,
@@ -333,7 +333,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   onSectionComplete,
   onValidationChange
 }) => {
-  // âœ… CORRECTION 1 & 2 : AccÃ¨s sÃ©curisÃ© aux donnÃ©es avec fallbacks SafetyManager
+  // âœ… CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
   const siteInfo = React.useMemo(() => {
     // Essai avec permitData fourni en props
     if (permitData?.siteInformation) {
@@ -352,7 +352,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       }
     }
     
-    // Fallback : objet vide avec structure par dÃ©faut
+    // Fallback : objet vide avec structure par défaut
     return {
       projectNumber: '',
       workLocation: '',
@@ -389,19 +389,19 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     };
   }, [permitData, safetyManager]);
   
-  // Ã‰tats pour l'interface seulement
+  // États pour l'interface seulement
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photoInputRef = useRef<HTMLInputElement>(null);
   
   const t = translations[language];
 
-  // =================== HANDLERS CORRIGÃ‰S - UTILISENT SAFETYMANAGER SÃ‰CURISÃ‰ ===================
-  // âœ… CORRECTION 3 : Handler updateSiteInfo avec vÃ©rifications SafetyManager
+  // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
+  // âœ… CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager
   const updateSiteInfo = useCallback((field: string, value: any) => {
     const updates = { [field]: value };
     
-    // VÃ©rification SafetyManager disponible
+    // Vérification SafetyManager disponible
     if (safetyManager) {
       try {
         safetyManager.updateSiteInformation(updates);
@@ -415,7 +415,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       onUpdate('siteInformation', updates);
     }
     
-    // âœ… CORRECTION 4 : Validation avec vÃ©rifications SafetyManager
+    // âœ… CORRECTION 4 : Validation avec vérifications SafetyManager
     if (onValidationChange && safetyManager) {
       try {
         const validation = safetyManager.validateSection('siteInformation');
@@ -429,13 +429,13 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       }
     }
     
-    // Fallback : si pas de SafetyManager, log des donnÃ©es
+    // Fallback : si pas de SafetyManager, log des données
     if (!safetyManager) {
       console.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
     }
   }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
 
-  // âœ… CORRECTION 5 : Handler updateDimensions avec vÃ©rifications SafetyManager
+  // âœ… CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
   const updateDimensions = useCallback((dimensionUpdates: Partial<Dimensions>) => {
     const updatedDimensions = { ...siteInfo.dimensions, ...dimensionUpdates };
     
@@ -458,11 +458,11 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
 
   // âœ… CORRECTION BUILD CRITIQUE 6 : Handler updateEnvironmentalCondition avec conversion des types undefined -> boolean
   const updateEnvironmentalCondition = useCallback((field: string, value: any) => {
-    // âœ… SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des boolÃ©ens par dÃ©faut
+    // âœ… SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des booléens par défaut
     const sanitizedValue = value === undefined ? false : value;
     const currentConditions = siteInfo.environmentalConditions || {};
     
-    // âœ… TYPE ASSERTION EXPLICITE pour Ã©viter l'erreur Property does not exist on type '{}'
+    // âœ… TYPE ASSERTION EXPLICITE pour éviter l'erreur Property does not exist on type '{}'
     const typedCurrentConditions = currentConditions as {
       ventilationRequired?: boolean;
       ventilationType?: string;
@@ -492,7 +492,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     
     if (safetyManager) {
       try {
-        // âœ… UTILISER typeSafeConditions au lieu de updatedConditions pour Ã©liminer l'erreur de build
+        // âœ… UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
         safetyManager.updateSiteInformation({ environmentalConditions: typeSafeConditions });
       } catch (error) {
         console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
@@ -507,7 +507,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value: sanitizedValue });
     }
   }, [safetyManager, siteInfo.environmentalConditions, onUpdate]);
-  // SiteInformation.tsx - PARTIE 2/2 - Fonctions AvancÃ©es et Rendu JSX Complet
+  // SiteInformation.tsx - PARTIE 2/2 - Fonctions Avancées et Rendu JSX Complet
 
   // =================== CALCUL VOLUME ===================
   const calculateVolume = useCallback(() => {
@@ -542,7 +542,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     updateDimensions({ volume: Math.round(volume * 100) / 100 });
   }, [siteInfo.dimensions, updateDimensions]);
 
-  // =================== CONVERSION D'UNITÃ‰S ===================
+  // =================== CONVERSION D'UNITÉS ===================
   const convertUnits = useCallback((fromSystem: UnitSystem, toSystem: UnitSystem) => {
     if (fromSystem === toSystem) return;
     
@@ -574,7 +574,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo]);
 
-  // =================== GESTION DES POINTS D'ENTRÃ‰E ===================
+  // =================== GESTION DES POINTS D'ENTRÉE ===================
   const addEntryPoint = useCallback(() => {
     const newEntryPoint = {
       id: generatePermitId(),
@@ -604,7 +604,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
   const removeEntryPoint = useCallback((entryId: string) => {
     const currentEntryPoints = siteInfo.entryPoints || [];
     if (currentEntryPoints.length <= 1) {
-      alert(language === 'fr' ? 'Au moins un point d\'entrÃ©e est requis' : 'At least one entry point is required');
+      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
       return;
     }
     
@@ -732,18 +732,18 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     );
   };
 
-  // =================== COMPOSANT SÃ‰LECTEUR CSA ===================
+  // =================== COMPOSANT SÉLECTEUR CSA ===================
   const CSAClassificationSelector = () => {
     const csaClassifications = {
       fr: {
         class1: {
-          title: "Classe 1 - Danger immÃ©diat pour la vie",
-          description: "AtmosphÃ¨re dangereuse ou risque immÃ©diat de mort",
+          title: "Classe 1 - Danger immédiat pour la vie",
+          description: "Atmosphère dangereuse ou risque immédiat de mort",
           color: '#dc2626'
         },
         class2: {
           title: "Classe 2 - Risque potentiel", 
-          description: "Conditions dangereuses possibles nÃ©cessitant prÃ©cautions",
+          description: "Conditions dangereuses possibles nécessitant précautions",
           color: '#f59e0b'
         },
         class3: {
@@ -839,7 +839,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     );
   };
 
-  // =================== COMPOSANT SÃ‰LECTEUR DIMENSIONS ===================
+  // =================== COMPOSANT SÉLECTEUR DIMENSIONS ===================
   const DimensionsSelector = () => (
     <div style={{
       background: 'rgba(16, 185, 129, 0.1)',
@@ -847,7 +847,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
       borderRadius: '16px',
       padding: '20px'
     }}>
-      {/* SÃ©lecteurs de forme et unitÃ©s */}
+      {/* Sélecteurs de forme et unités */}
       <div style={styles.grid2}>
         <div style={{ marginBottom: '16px' }}>
           <label style={styles.label}>
@@ -890,7 +890,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
 
       {/* Champs de dimensions adaptatifs */}
       <div style={styles.grid4}>
-        {/* Longueur - toujours visible sauf pour sphÃ©rique */}
+        {/* Longueur - toujours visible sauf pour sphérique */}
         {siteInfo.dimensions.spaceShape !== 'spherical' && (
           <div style={{ marginBottom: '16px' }}>
             <label style={styles.label}>
@@ -909,7 +909,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         )}
 
-        {/* Largeur - seulement pour rectangulaire et irrÃ©gulier */}
+        {/* Largeur - seulement pour rectangulaire et irrégulier */}
         {(siteInfo.dimensions.spaceShape === 'rectangular' || 
           siteInfo.dimensions.spaceShape === 'irregular') && (
           <div style={{ marginBottom: '16px' }}>
@@ -929,7 +929,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         )}
 
-        {/* Hauteur - pour toutes les formes sauf sphÃ©rique */}
+        {/* Hauteur - pour toutes les formes sauf sphérique */}
         {siteInfo.dimensions.spaceShape !== 'spherical' && (
           <div style={{ marginBottom: '16px' }}>
             <label style={styles.label}>
@@ -948,7 +948,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         )}
 
-        {/* DiamÃ¨tre - pour cylindrique et sphÃ©rique */}
+        {/* Diamètre - pour cylindrique et sphérique */}
         {(siteInfo.dimensions.spaceShape === 'cylindrical' || 
           siteInfo.dimensions.spaceShape === 'spherical') && (
           <div style={{ marginBottom: '16px' }}>
@@ -985,7 +985,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
         </button>
       </div>
 
-      {/* Affichage du volume calculÃ© */}
+      {/* Affichage du volume calculé */}
       {siteInfo.dimensions.volume > 0 && (
         <div style={{
           background: 'rgba(16, 185, 129, 0.2)',
@@ -1010,8 +1010,8 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     </div>
   );
 
-  // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÃ‰CURISÃ‰ ===================
-  // âœ… CORRECTION 7 : toggleAtmosphericHazard avec vÃ©rifications SafetyManager
+  // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
+  // âœ… CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
   const toggleAtmosphericHazard = useCallback((hazardType: string) => {
     const currentHazards = (siteInfo.atmosphericHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
@@ -1031,7 +1031,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.atmosphericHazards]);
 
-  // âœ… CORRECTION 8 : togglePhysicalHazard avec vÃ©rifications SafetyManager
+  // âœ… CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
   const togglePhysicalHazard = useCallback((hazardType: string) => {
     const currentHazards = (siteInfo.physicalHazards || []) as string[];
     const updatedHazards = currentHazards.includes(hazardType)
@@ -1051,8 +1051,8 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.physicalHazards]);
 
-  // =================== GESTION DES PHOTOS AVEC SAFETYMANAGER SÃ‰CURISÃ‰ ===================
-  // âœ… CORRECTION 9 : handlePhotoCapture avec vÃ©rifications SafetyManager
+  // =================== GESTION DES PHOTOS AVEC SAFETYMANAGER SÉCURISÉ ===================
+  // âœ… CORRECTION 9 : handlePhotoCapture avec vérifications SafetyManager
   const handlePhotoCapture = useCallback(async (category: string) => {
     if (photoInputRef.current) {
       photoInputRef.current.accept = "image/*";
@@ -1071,7 +1071,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               location: 'Localisation en cours...'
             };
 
-            // GÃ©olocalisation
+            // Géolocalisation
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -1084,7 +1084,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   const currentPhotos = siteInfo.spacePhotos || [];
                   const updatedPhotos = [...currentPhotos, newPhoto];
                   
-                  // âœ… VÃ©rification SafetyManager pour photos
+                  // âœ… Vérification SafetyManager pour photos
                   if (safetyManager) {
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1102,7 +1102,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   const currentPhotos = siteInfo.spacePhotos || [];
                   const updatedPhotos = [...currentPhotos, newPhoto];
                   
-                  // âœ… VÃ©rification SafetyManager pour photos sans GPS
+                  // âœ… Vérification SafetyManager pour photos sans GPS
                   if (safetyManager) {
                     try {
                       safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1120,7 +1120,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               const currentPhotos = siteInfo.spacePhotos || [];
               const updatedPhotos = [...currentPhotos, newPhoto];
               
-              // âœ… VÃ©rification SafetyManager pour photos sans gÃ©olocalisation
+              // âœ… Vérification SafetyManager pour photos sans géolocalisation
               if (safetyManager) {
                 try {
                   safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
@@ -1141,7 +1141,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
     }
   }, [safetyManager, siteInfo.spacePhotos, t.photoCategories, language]);
 
-  // âœ… CORRECTION 10 : handlePhotoDelete avec vÃ©rifications SafetyManager
+  // âœ… CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
   const handlePhotoDelete = useCallback((photoId: string) => {
     if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
       const updatedPhotos = (siteInfo.spacePhotos || []).filter(p => p.id !== photoId);
@@ -1347,7 +1347,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               <input 
                 type="text" 
                 style={styles.input}
-                placeholder={language === 'fr' ? 'Adresse complÃ¨te du site' : 'Complete site address'}
+                placeholder={language === 'fr' ? 'Adresse complète du site' : 'Complete site address'}
                 value={siteInfo.workLocation}
                 onChange={(e) => updateSiteInfo('workLocation', e.target.value)}
               />
@@ -1438,7 +1438,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               </label>
               <textarea 
                 style={styles.textarea}
-                placeholder={language === 'fr' ? 'Description dÃ©taillÃ©e des travaux' : 'Detailed work description'}
+                placeholder={language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description'}
                 value={siteInfo.workDescription}
                 onChange={(e) => updateSiteInfo('workDescription', e.target.value)}
               />
@@ -1509,7 +1509,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           <DimensionsSelector />
         </CollapsibleSection>
 
-        {/* Section Points d'EntrÃ©e */}
+        {/* Section Points d'Entrée */}
         <CollapsibleSection
           id="entry-points"
           title={t.entryPoints}
@@ -1566,10 +1566,10 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
                   >
                     <option value="circular">ðŸ”µ {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
-                    <option value="rectangular">ðŸŸ¨ {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
-                    <option value="square">ðŸŸ« {language === 'fr' ? 'CarrÃ©' : 'Square'}</option>
-                    <option value="oval">ðŸ¥š {language === 'fr' ? 'Ovale' : 'Oval'}</option>
-                    <option value="irregular">ðŸ”· {language === 'fr' ? 'IrrÃ©gulier' : 'Irregular'}</option>
+                    <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
+                    <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
+                    <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
+                    <option value="irregular">ðŸ”· {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
                   </select>
                 </div>
 
@@ -1578,7 +1578,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   <input 
                     type="text" 
                     style={styles.input}
-                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou Ã˜80cm' : 'Ex: 60cm x 40cm or Ã˜80cm'}
+                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou ø80cm' : 'Ex: 60cm x 40cm or ø80cm'}
                     value={entry.dimensions}
                     onChange={(e) => updateEntryPoint(entry.id, 'dimensions', e.target.value)}
                   />
@@ -1589,7 +1589,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   <input 
                     type="text" 
                     style={styles.input}
-                    placeholder={language === 'fr' ? 'Ex: Partie supÃ©rieure, cÃ´tÃ© nord' : 'Ex: Top section, north side'}
+                    placeholder={language === 'fr' ? 'Ex: Partie supérieure, côté nord' : 'Ex: Top section, north side'}
                     value={entry.location}
                     onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
                   />
@@ -1613,7 +1613,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           </div>
         </CollapsibleSection>
 
-        {/* Section Ã‰valuation des Dangers */}
+        {/* Section Évaluation des Dangers */}
         <CollapsibleSection
           id="hazard-assessment"
           title={t.hazardAssessment}
@@ -1837,7 +1837,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
           )}
         </CollapsibleSection>
 
-        {/* Footer avec informations lÃ©gales */}
+        {/* Footer avec informations légales */}
         <div style={{
           ...styles.card,
           textAlign: 'center',
@@ -1878,17 +1878,17 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
             lineHeight: 1.5 
           }}>
             {language === 'fr' ? 
-              'SystÃ¨me de Gestion de SÃ©curitÃ© Industrielle - ConformitÃ© RÃ©glementaire Provinciale' :
+              'Système de Gestion de Sécurité Industrielle - Conformité Réglementaire Provinciale' :
               'Industrial Safety Management System - Provincial Regulatory Compliance'
             }
             <br />
             {language === 'fr' ? 
-              `Province: ${selectedProvince} - ${regulations[selectedProvince]?.authority || 'AutoritÃ© CompÃ©tente'}` :
+              `Province: ${selectedProvince} - ${regulations[selectedProvince]?.authority || 'Autorité Compétente'}` :
               `Province: ${selectedProvince} - ${regulations[selectedProvince]?.authority || 'Competent Authority'}`
             }
             <br />
             {language === 'fr' ? 
-              'Gestion complÃ¨te via SafetyManager - Sauvegarde automatique activÃ©e' :
+              'Gestion complète via SafetyManager - Sauvegarde automatique activée' :
               'Complete management via SafetyManager - Auto-save enabled'
             }
           </p>
