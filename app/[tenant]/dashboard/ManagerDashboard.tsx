@@ -36,6 +36,7 @@ import {
   PieChart,
   LineChart
 } from 'lucide-react'
+import PWAInstaller from '../../../components/pwa/PWAInstaller'
 
 interface DashboardData {
   // KPI Fonctionnels
@@ -1567,6 +1568,12 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           </div>
         </footer>
       </div>
+
+      {/* PWA Installer Component */}
+      <PWAInstaller 
+        clientName={tenant.subdomain}
+        customDomain={tenant.subdomain !== 'demo' ? `${tenant.subdomain}.csecur360.ca` : undefined}
+      />
     </>
   )
 }
