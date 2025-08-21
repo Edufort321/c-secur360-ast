@@ -40,17 +40,17 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     {
       id: 'monthly',
       name: 'Plan Mensuel',
-      price: 49,
+      price: 250,
       interval: 'mois',
       description: 'Facturation mensuelle, annulation à tout moment'
     },
     {
       id: 'annual',
       name: 'Plan Annuel',
-      price: 490,
+      price: 3000,
       interval: 'année',
       description: 'Facturation annuelle, économie de 2 mois',
-      savings: 'Économie de 98$ par année',
+      savings: 'Économie de 1000$ par année',
       popular: true
     }
   ];

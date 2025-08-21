@@ -11,16 +11,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Plans C-Secur360 selon specs handoff
+// Plans C-Secur360 selon specs originales
 const PLANS = {
   monthly: {
     price_id: process.env.STRIPE_PRICE_MONTHLY!,
-    amount: 4900, // 49$ CAD en cents
+    amount: 25000, // 250$ CAD en cents
     interval: 'month'
   },
   annual: {
     price_id: process.env.STRIPE_PRICE_ANNUAL!,
-    amount: 49000, // 490$ CAD en cents (économie de 2 mois)
+    amount: 300000, // 3000$ CAD en cents (économie de 2 mois)
     interval: 'year'
   }
 };
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
           customer_id: customerData.id,
           plan_type: planType,
           additional_sites: 0,
-          amount_total: finalPriceId === PLANS.monthly.price_id ? 4900 : 49000,
+          amount_total: finalPriceId === PLANS.monthly.price_id ? 25000 : 300000,
           status: 'pending',
           created_at: new Date().toISOString()
         }
