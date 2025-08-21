@@ -11,21 +11,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Plans C-Secur360
+// Plans C-Secur360 selon specs handoff
 const PLANS = {
   monthly: {
-    price_id: process.env.STRIPE_MONTHLY_PRICE_ID!,
-    amount: 25000, // 250$ CAD en cents
+    price_id: process.env.STRIPE_PRICE_MONTHLY!,
+    amount: 4900, // 49$ CAD en cents
     interval: 'month'
   },
   annual: {
-    price_id: process.env.STRIPE_ANNUAL_PRICE_ID!,
-    amount: 300000, // 3000$ CAD en cents (économie de 2 mois)
-    interval: 'year'
-  },
-  additional_site: {
-    price_id: process.env.STRIPE_ADDITIONAL_SITE_PRICE_ID!,
-    amount: 50000, // 500$ CAD en cents par année
+    price_id: process.env.STRIPE_PRICE_ANNUAL!,
+    amount: 49000, // 490$ CAD en cents (économie de 2 mois)
     interval: 'year'
   }
 };
@@ -34,17 +29,17 @@ export async function POST(request: NextRequest) {
   try {
     const { 
       customerId, 
+      priceId,
       planType, 
-      additionalSites = 0,
       successUrl, 
       cancelUrl,
       trialDays = 14 
     } = await request.json();
 
-    // Validation
-    if (!customerId || !planType || !PLANS[planType as keyof typeof PLANS]) {
+    // Validation selon specs handoff
+    if (!customerId || (!priceId && !planType)) {
       return NextResponse.json(
-        { error: 'Paramètres invalides' },
+        { error: 'customerId et priceId/planType requis' },
         { status: 400 }
       );
     }
@@ -63,23 +58,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const plan = PLANS[planType as keyof typeof PLANS];
+    // Utiliser priceId direct ou dériver du planType
+    const finalPriceId = priceId || (planType ? PLANS[planType as keyof typeof PLANS]?.price_id : null);
     
-    // Construire les line items
+    if (!finalPriceId) {
+      return NextResponse.json(
+        { error: 'Prix non trouvé pour ce plan' },
+        { status: 400 }
+      );
+    }
+
+    // Line items selon specs (simple)
     const lineItems = [
       {
-        price: plan.price_id,
+        price: finalPriceId,
         quantity: 1,
       }
     ];
-
-    // Ajouter sites additionnels si nécessaire
-    if (additionalSites > 0 && PLANS.additional_site) {
-      lineItems.push({
-        price: PLANS.additional_site.price_id,
-        quantity: additionalSites,
-      });
-    }
 
     // Déterminer le taux de taxe selon la province
     const taxRate = getTaxRateByProvince(customerData.province);
@@ -95,7 +90,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         customer_supabase_id: customerData.id,
         plan_type: planType,
-        additional_sites: additionalSites.toString(),
+        additional_sites: '0',
         province: customerData.province
       },
       subscription_data: {
@@ -133,8 +128,8 @@ export async function POST(request: NextRequest) {
           stripe_session_id: session.id,
           customer_id: customerData.id,
           plan_type: planType,
-          additional_sites: additionalSites,
-          amount_total: plan.amount + (additionalSites * (PLANS.additional_site?.amount || 0)),
+          additional_sites: 0,
+          amount_total: finalPriceId === PLANS.monthly.price_id ? 4900 : 49000,
           status: 'pending',
           created_at: new Date().toISOString()
         }

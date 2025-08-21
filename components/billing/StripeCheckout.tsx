@@ -40,23 +40,23 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     {
       id: 'monthly',
       name: 'Plan Mensuel',
-      price: 250,
+      price: 49,
       interval: 'mois',
       description: 'Facturation mensuelle, annulation à tout moment'
     },
     {
       id: 'annual',
       name: 'Plan Annuel',
-      price: 3000,
+      price: 490,
       interval: 'année',
       description: 'Facturation annuelle, économie de 2 mois',
-      savings: 'Économie de 1000$ par année',
+      savings: 'Économie de 98$ par année',
       popular: true
     }
   ];
 
   // =================== CALCULS ===================
-  const additionalSiteCost = 500; // 500$ par site additionnel par année
+  const additionalSiteCost = 600; // 600$ par site additionnel par année
   const selectedPlanData = plans.find(p => p.id === selectedPlan)!;
   const additionalSitesTotal = additionalSites * additionalSiteCost;
   const subtotal = selectedPlanData.price + additionalSitesTotal;
@@ -249,7 +249,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                 +
               </button>
               <span className="text-sm text-gray-600">
-                × 500$ CAD/année par site
+                × 600$ CAD/année par site
               </span>
             </div>
           </div>

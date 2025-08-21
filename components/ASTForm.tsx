@@ -9,13 +9,12 @@ import {
   Droplets, Flame, Activity, Search, Filter, Hand, MessageSquare
 } from 'lucide-react';
 
-// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-6 ===================
+// =================== ✅ IMPORTS DES COMPOSANTS STEPS 1-5 ===================
 import Step1ProjectInfo from '@/components/steps/Step1ProjectInfo';
 import Step2Equipment from '@/components/steps/Step2Equipment';
 import Step3Hazards from '@/components/steps/Step3Hazards';
-import Step4Permits from '@/components/steps/Step4Permits';
-import Step5Validation from '@/components/steps/Step5Validation';
-import Step6Finalization from '@/components/steps/Step6Finalization';
+import Step4Validation from '@/components/steps/Step4Validation';
+import Step5Finalization from '@/components/steps/Step5Finalization';
 
 // =================== INTERFACES PRINCIPALES ===================
 interface ASTFormProps {
@@ -94,12 +93,8 @@ const translations = {
         subtitle: "Conformité réglementaire"
       },
       step5: {
-        title: "Validation Équipe",
-        subtitle: "Signatures & Approbations"
-      },
-      step6: {
         title: "Finalisation",
-        subtitle: "Consentement & Archive"
+        subtitle: "Signatures & Archive"
       }
     }
   },
@@ -151,12 +146,8 @@ const translations = {
         subtitle: "Regulatory compliance"
       },
       step5: {
-        title: "Team Validation",
-        subtitle: "Signatures & Approvals"
-      },
-      step6: {
         title: "Finalization",
-        subtitle: "Consent & Archive"
+        subtitle: "Signatures & Archive"
       }
     }
   }
@@ -195,13 +186,6 @@ const steps = [
   {
     id: 5,
     titleKey: 'step5',
-    icon: Users,
-    color: '#06b6d4',
-    required: false
-  },
-  {
-    id: 6,
-    titleKey: 'step6',
     icon: CheckCircle,
     color: '#10b981',
     required: false
@@ -414,7 +398,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
 
   const getCompletionPercentage = useCallback((): number => {
     const completedSteps = getCurrentCompletedSteps();
-    return Math.round((completedSteps / 6) * 100);
+    return Math.round((completedSteps / 5) * 100);
   }, []);
 
   const getCurrentCompletedSteps = useCallback((): number => {
@@ -450,8 +434,8 @@ const ASTForm: React.FC<ASTFormProps> = ({
       completed++;
     }
     
-    // Step 6 - Finalisation
-    if (currentStep >= 6) {
+    // Step 5 - Finalisation
+    if (currentStep >= 5) {
       completed++;
     }
     
@@ -480,9 +464,6 @@ const ASTForm: React.FC<ASTFormProps> = ({
         // Step 4 est optionnel, toujours autorisé
         return true;
       case 5:
-        // Step 5 est optionnel, toujours autorisé
-        return true;
-      case 6:
         // Dernière étape
         return false;
       default:
@@ -496,7 +477,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
   }, []);
 
   const handleNext = useCallback(() => {
-    if (canNavigateToNext() && currentStep < 6) {
+    if (canNavigateToNext() && currentStep < 5) {
       setCurrentStep(prev => prev + 1);
     }
   }, [canNavigateToNext, currentStep]);
@@ -1129,7 +1110,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
           marginTop: '4px',
           fontWeight: '500'
         }}>
-          {t.astStep.replace('AST •', '').replace('JSA •', '')} {currentStep}/6 • {Math.round(getCompletionPercentage())}% {t.completed}
+          {t.astStep.replace('AST •', '').replace('JSA •', '')} {currentStep}/5 • {Math.round(getCompletionPercentage())}% {t.completed}
         </div>
       </div>
     </div>
@@ -1253,9 +1234,8 @@ const ASTForm: React.FC<ASTFormProps> = ({
   const MemoizedStep1 = useMemo(() => memo(Step1ProjectInfo), []);
   const MemoizedStep2 = useMemo(() => memo(Step2Equipment), []);
   const MemoizedStep3 = useMemo(() => memo(Step3Hazards), []);
-  const MemoizedStep4 = useMemo(() => memo(Step4Permits), []);
-  const MemoizedStep5 = useMemo(() => memo(Step5Validation), []);
-  const MemoizedStep6 = useMemo(() => memo(Step6Finalization), []);
+  const MemoizedStep4 = useMemo(() => memo(Step4Validation), []);
+  const MemoizedStep5 = useMemo(() => memo(Step5Finalization), []);
 
   // =================== STEPCONTENT ULTRA-STABLE ===================
   const StepContent = useCallback(() => {
@@ -1309,6 +1289,13 @@ const ASTForm: React.FC<ASTFormProps> = ({
             initialPermits={astData.permits?.permits || []}
           />
         );
+      case 4:
+        return (
+          <MemoizedStep4
+            key="step4-ultra-stable"
+            {...stepProps}
+          />
+        );
       case 5:
         return (
           <MemoizedStep5
@@ -1316,17 +1303,10 @@ const ASTForm: React.FC<ASTFormProps> = ({
             {...stepProps}
           />
         );
-      case 6:
-        return (
-          <MemoizedStep6
-            key="step6-ultra-stable"
-            {...stepProps}
-          />
-        );
       default:
         return null;
     }
-  }, [currentStep, currentLanguage, tenant, userId, userRole, astData.permits?.permits, MemoizedStep1, MemoizedStep2, MemoizedStep3, MemoizedStep4, MemoizedStep5, MemoizedStep6]);
+  }, [currentStep, currentLanguage, tenant, userId, userRole, astData.permits?.permits, MemoizedStep1, MemoizedStep2, MemoizedStep3, MemoizedStep4, MemoizedStep5]);
 
   // =================== NAVIGATION MOBILE FIXE ===================
   const MobileNavigation = () => (
@@ -1375,7 +1355,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
         
         <button
           onClick={handleNext}
-          disabled={currentStep === 6 || !canNavigateToNext()}
+          disabled={currentStep === 5 || !canNavigateToNext()}
           style={{
             flex: 1,
             padding: '14px 20px',
@@ -1383,22 +1363,22 @@ const ASTForm: React.FC<ASTFormProps> = ({
             fontWeight: '600',
             fontSize: '14px',
             border: 'none',
-            cursor: (currentStep === 6 || !canNavigateToNext()) ? 'not-allowed' : 'pointer',
+            cursor: (currentStep === 5 || !canNavigateToNext()) ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             minHeight: '48px',
-            background: (currentStep === 6 || !canNavigateToNext()) 
+            background: (currentStep === 5 || !canNavigateToNext()) 
               ? 'rgba(100, 116, 139, 0.3)' 
               : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             color: '#ffffff',
-            opacity: (currentStep === 6 || !canNavigateToNext()) ? 0.5 : 1
+            opacity: (currentStep === 5 || !canNavigateToNext()) ? 0.5 : 1
           }}
         >
-          {currentStep === 6 ? t.finished : t.next}
-          {currentStep !== 6 && <ArrowRight size={16} />}
+          {currentStep === 5 ? t.finished : t.next}
+          {currentStep !== 5 && <ArrowRight size={16} />}
         </button>
       </div>
     </div>

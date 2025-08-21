@@ -305,8 +305,8 @@ BEGIN
     c.province,
     SUM(
       CASE 
-        WHEN s.plan_type = 'monthly' THEN 25000 + (s.additional_sites * 4166) -- 500$/12 par site additionnel
-        WHEN s.plan_type = 'annual' THEN 25000 + (s.additional_sites * 4166) -- 3000$/12 + 500$/12 par site
+        WHEN s.plan_type = 'monthly' THEN 4900 + (s.additional_sites * 5000) -- 49$ + 600$/12 par site additionnel
+        WHEN s.plan_type = 'annual' THEN 4083 + (s.additional_sites * 5000) -- 490$/12 + 600$/12 par site
         ELSE 0
       END
     ) as mrr_cents,
