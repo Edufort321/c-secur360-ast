@@ -37,6 +37,9 @@ import {
   LineChart
 } from 'lucide-react'
 import PWAInstaller from '../../../components/pwa/PWAInstaller'
+import UniversalLayout from '../../../components/layout/UniversalLayout'
+import DashboardSidebar from '../../../components/layout/DashboardSidebar'
+import { useTheme } from '../../../components/layout/UniversalLayout'
 
 interface DashboardData {
   // KPI Fonctionnels
@@ -222,11 +225,115 @@ const SimpleChart = ({ data, type = 'line' }: { data: any[], type?: 'line' | 'ba
   return <div>Graphique en développement</div>
 }
 
-export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' } }: { tenant?: Tenant }) {
+export default function ManagerDashboard({ 
+  tenant = { id: '1', subdomain: 'demo', companyName: 'Demo Company' },
+  user = { name: 'Gestionnaire', email: 'manager@example.com', role: 'Gestionnaire SST' }
+}: { 
+  tenant?: Tenant;
+  user?: { name: string; email: string; role: string; avatar?: string }
+}) {
   const [timeFilter, setTimeFilter] = useState('30d')
   const [isVisible, setIsVisible] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [showArchiveMenu, setShowArchiveMenu] = useState(false)
+
+  // Translations for bilingual support
+  const translations = {
+    fr: {
+      dashboard: 'Tableau de bord',
+      managerDashboard: 'Dashboard Gestionnaire SST',
+      systemOperational: 'Système opérationnel',
+      demoVersion: 'VERSION DÉMO',
+      dashboardPro: 'Dashboard Pro',
+      dashboardProDesc: 'Dashboard avec données réelles',
+      administration: 'Administration',
+      adminDesc: 'Gestion facturation & clients',
+      multiSites: 'Multi-Sites',
+      multiSitesDesc: 'Gestion emplacements multiples',
+      newAST: 'Nouveau AST',
+      newASTDesc: 'Créer une analyse complète',
+      accidentReports: 'Déclarations d\'Accidents',
+      accidentReportsDesc: 'Système multi-provincial conforme',
+      permitManagement: 'Gestion des Permis',
+      permitDesc: 'Permis de travail et autorisations',
+      improvement: 'Amélioration',
+      improvementDesc: 'Suggérer une amélioration',
+      astCompleted: 'AST Complétés',
+      monthlyAST: 'AST Mensuels',
+      incidents: 'Incidents',
+      safeHours: 'Heures Sécuritaires',
+      performanceGraphs: 'Graphiques de Performance',
+      analyticsReports: 'Rapports Analytics',
+      astPhotos: 'Photos AST',
+      archives: 'Archives',
+      lastUpdate: 'Dernière mise à jour',
+      executiveReport: 'Rapport Exécutif',
+      priority: 'Priorité',
+      start: 'Commencer',
+      thisMonth: 'ce mois',
+      reduction: 'réduction',
+      increase: 'augmentation',
+      objective: 'Objectif',
+      safetyRate: 'taux sécurité',
+      simulatedData: 'Données simulées',
+      astEvolution: 'Évolution AST',
+      incidentTypes: 'Types d\'Incidents',
+      photoDocumentation: 'Photos Documentation',
+      totalPhotos: 'Photos totales',
+      thisWeek: 'cette semaine',
+      photosPerAST: 'photos/AST',
+      detailedGraphics: 'Graphiques détaillés',
+      documentationGallery: 'Galerie documentation',
+      dataHistory: 'Historique des données'
+    },
+    en: {
+      dashboard: 'Dashboard',
+      managerDashboard: 'HSE Manager Dashboard',
+      systemOperational: 'System operational',
+      demoVersion: 'DEMO VERSION',
+      dashboardPro: 'Dashboard Pro',
+      dashboardProDesc: 'Dashboard with real data',
+      administration: 'Administration',
+      adminDesc: 'Billing & client management',
+      multiSites: 'Multi-Sites',
+      multiSitesDesc: 'Multiple locations management',
+      newAST: 'New JSA',
+      newASTDesc: 'Create complete analysis',
+      accidentReports: 'Incident Reports',
+      accidentReportsDesc: 'Multi-provincial compliant system',
+      permitManagement: 'Permit Management',
+      permitDesc: 'Work permits and authorizations',
+      improvement: 'Improvement',
+      improvementDesc: 'Suggest improvement',
+      astCompleted: 'JSA Completed',
+      monthlyAST: 'Monthly JSA',
+      incidents: 'Incidents',
+      safeHours: 'Safe Hours',
+      performanceGraphs: 'Performance Graphs',
+      analyticsReports: 'Analytics Reports',
+      astPhotos: 'JSA Photos',
+      archives: 'Archives',
+      lastUpdate: 'Last update',
+      executiveReport: 'Executive Report',
+      priority: 'Priority',
+      start: 'Start',
+      thisMonth: 'this month',
+      reduction: 'reduction',
+      increase: 'increase',
+      objective: 'Objective',
+      safetyRate: 'safety rate',
+      simulatedData: 'Simulated data',
+      astEvolution: 'JSA Evolution',
+      incidentTypes: 'Incident Types',
+      photoDocumentation: 'Photo Documentation',
+      totalPhotos: 'Total photos',
+      thisWeek: 'this week',
+      photosPerAST: 'photos/JSA',
+      detailedGraphics: 'Detailed graphics',
+      documentationGallery: 'Documentation gallery',
+      dataHistory: 'Data history'
+    }
+  }
   
   const isDemo = tenant.subdomain === 'demo'
   const data = getFunctionalData(isDemo)
@@ -243,8 +350,34 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
     return () => window.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
+  // Mock user pour démo
+  const mockUser = {
+    name: user?.name || 'Gestionnaire Demo',
+    email: user?.email || 'gestionnaire@demo.com', 
+    role: user?.role || 'Gestionnaire SST',
+    avatar: user?.avatar
+  }
+
+  // Detect language from the layout context or default to French
+  let currentLanguage: 'fr' | 'en' = 'fr'
+  try {
+    const themeContext = useTheme()
+    currentLanguage = themeContext?.language || 'fr'
+  } catch {
+    // Fallback if not in theme context
+    currentLanguage = 'fr'
+  }
+
+  const t = translations[currentLanguage]
+
   return (
-    <>
+    <UniversalLayout
+      tenant={tenant.subdomain}
+      user={mockUser}
+      notifications={3}
+      isAdmin={false}
+      sidebar={<DashboardSidebar tenant={tenant.subdomain} userRole="manager" />}
+    >
       {/* CSS Animations Global */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -527,189 +660,6 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
           zIndex: 1
         }} />
 
-        {/* Header Ultra Premium avec Logo Ultra Grossi */}
-        <header style={{
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
-          position: 'relative',
-          zIndex: 10
-        }}>
-          <div style={{ 
-            maxWidth: '1400px', 
-            margin: '0 auto', 
-            padding: '24px 20px',
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? 'translateY(0)' : 'translateY(-20px)',
-            transition: 'all 0.8s ease'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '20px'
-            }}>
-              
-              {/* Logo Premium Ultra Grossi */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div 
-                  className="float-animation glow-effect"
-                  style={{
-                    background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-                    padding: '32px',
-                    borderRadius: '32px',
-                    border: '4px solid #f59e0b',
-                    boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div style={{
-                    width: '96px',
-                    height: '96px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    zIndex: 1
-                  }}>
-                    <img 
-                      src="/c-secur360-logo.png" 
-                      alt="C-Secur360"
-                      className="logo-glow"
-                      style={{ 
-                        width: '200px', 
-                        height: '200px', 
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fallback) fallback.style.display = 'block';
-                      }}
-                    />
-                    <BarChart3 style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      display: 'none',
-                      color: '#f59e0b'
-                    }} />
-                  </div>
-                  
-                  {/* Effet brillance animé renforcé */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-                    animation: 'shine 2.5s ease-in-out infinite'
-                  }} />
-                  
-                  {/* Effet de pulse en arrière-plan */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: '-10px',
-                    border: '2px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '40px',
-                    animation: 'pulse 3s ease-in-out infinite'
-                  }} />
-                </div>
-                
-                <div className="slide-in-right">
-                  <h1 className="text-gradient" style={{
-                    fontSize: '40px',
-                    margin: 0,
-                    lineHeight: 1.2,
-                    fontWeight: '900',
-                    letterSpacing: '-0.025em'
-                  }}>
-                    🛡️ C-Secur360
-                  </h1>
-                  <p style={{
-                    color: 'rgba(251, 191, 36, 0.9)',
-                    fontSize: '20px',
-                    margin: 0,
-                    fontWeight: '600'
-                  }}>
-                    Dashboard Gestionnaire SST • {tenant.companyName}
-                  </p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginTop: '12px'
-                  }}>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: '#22c55e'
-                    }} className="pulse-animation" />
-                    <span style={{
-                      color: '#22c55e',
-                      fontSize: '16px',
-                      fontWeight: '600'
-                    }}>
-                      Système opérationnel
-                    </span>
-                    {isDemo && (
-                      <span style={{
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        color: '#f59e0b',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        marginLeft: '8px'
-                      }}>
-                        VERSION DÉMO
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Contrôles premium */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '20px',
-                flexWrap: 'wrap'
-              }}>
-                <select 
-                  value={timeFilter} 
-                  onChange={(e) => setTimeFilter(e.target.value)}
-                  style={{
-                    background: 'rgba(30, 41, 59, 0.8)',
-                    color: 'white',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    backdropFilter: 'blur(10px)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <option value="7d">7 derniers jours</option>
-                  <option value="30d">30 derniers jours</option>
-                  <option value="90d">3 derniers mois</option>
-                  <option value="1y">Dernière année</option>
-                </select>
-                
-                <button className="btn-premium">
-                  <Download style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Rapport Exécutif
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
 
                   {/* Container principal */}
         <div style={{ 
@@ -734,8 +684,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/new-dashboard`, 
                 icon: BarChart3, 
-                title: 'Dashboard Pro', 
-                desc: 'Dashboard avec données réelles', 
+                title: t.dashboardPro, 
+                desc: t.dashboardProDesc, 
                 color: '#10b981',
                 gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 priority: true
@@ -743,8 +693,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/admin`, 
                 icon: Database, 
-                title: 'Administration', 
-                desc: 'Gestion facturation & clients', 
+                title: t.administration, 
+                desc: t.adminDesc, 
                 color: '#8b5cf6',
                 gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 priority: true
@@ -752,8 +702,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/sites`, 
                 icon: MapPin, 
-                title: 'Multi-Sites', 
-                desc: 'Gestion emplacements multiples', 
+                title: t.multiSites, 
+                desc: t.multiSitesDesc, 
                 color: '#f59e0b',
                 gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 priority: true
@@ -761,8 +711,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/ast/nouveau`, 
                 icon: FileText, 
-                title: 'Nouveau AST', 
-                desc: 'Créer une analyse complète', 
+                title: t.newAST, 
+                desc: t.newASTDesc, 
                 color: '#3b82f6',
                 gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 priority: true
@@ -770,8 +720,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/accidents`, 
                 icon: AlertTriangle, 
-                title: 'Déclarations d\'Accidents', 
-                desc: 'Système multi-provincial conforme', 
+                title: t.accidentReports, 
+                desc: t.accidentReportsDesc, 
                 color: '#ef4444',
                 gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 priority: true
@@ -779,8 +729,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/permits`, 
                 icon: Shield, 
-                title: 'Gestion des Permis', 
-                desc: 'Permis de travail et autorisations', 
+                title: t.permitManagement, 
+                desc: t.permitDesc, 
                 color: '#8b5cf6',
                 gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 priority: true
@@ -788,8 +738,8 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/improvements/nouveau`, 
                 icon: Target, 
-                title: 'Amélioration', 
-                desc: 'Suggérer une amélioration', 
+                title: t.improvement, 
+                desc: t.improvementDesc, 
                 color: '#22c55e',
                 gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                 priority: true
@@ -844,7 +794,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em'
                     }}>
-                      Priorité
+                      {t.priority}
                     </div>
                     
                     {/* Icône principale */}
@@ -903,7 +853,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       border: `1px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.2)`
                     }}>
                       <Play style={{ width: '12px', height: '12px' }} />
-                      Commencer
+                      {t.start}
                     </div>
                   </div>
                 </Link>
@@ -943,7 +893,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    AST Complétés
+                    {t.astCompleted}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -965,7 +915,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    +{data.astThisMonth} ce mois
+                    +{data.astThisMonth} {t.thisMonth}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -1018,7 +968,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    AST Mensuels
+                    {t.monthlyAST}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -1040,7 +990,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <Calendar style={{ width: '12px', height: '12px' }} />
-                    Objectif: {Math.round(data.totalAST / 12)}/mois
+                    {t.objective}: {Math.round(data.totalAST / 12)}/{currentLanguage === 'fr' ? 'mois' : 'month'}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -1093,7 +1043,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    Incidents
+                    {t.incidents}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -1115,7 +1065,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <TrendingUp style={{ width: '12px', height: '12px' }} />
-                    {Math.abs(data.incidentsTrend)}% {data.incidentsTrend < 0 ? 'réduction' : 'augmentation'}
+                    {Math.abs(data.incidentsTrend)}% {data.incidentsTrend < 0 ? t.reduction : t.increase}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -1171,7 +1121,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     textTransform: 'uppercase', 
                     letterSpacing: '0.1em' 
                   }}>
-                    Heures Sécuritaires
+                    {t.safeHours}
                   </p>
                   <p style={{ 
                     color: 'white', 
@@ -1193,7 +1143,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     gap: '4px'
                   }}>
                     <Timer style={{ width: '12px', height: '12px' }} />
-                    {data.safetyRate}% taux sécurité
+                    {data.safetyRate}% {t.safetyRate}
                   </p>
                   <div style={{
                     marginTop: '10px',
@@ -1257,7 +1207,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               fontWeight: '700'
             }}>
               <BarChart3 className="pulse-animation" style={{ width: '28px', height: '28px', color: '#3b82f6' }} />
-              Graphiques de Performance
+              {t.performanceGraphs}
               {isDemo && (
                 <span style={{
                   background: 'rgba(245, 158, 11, 0.2)',
@@ -1267,7 +1217,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   fontSize: '12px',
                   fontWeight: '600'
                 }}>
-                  Données simulées
+                  {t.simulatedData}
                 </span>
               )}
             </h2>
@@ -1296,7 +1246,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   gap: '8px'
                 }}>
                   <LineChart style={{ width: '20px', height: '20px' }} />
-                  Évolution AST
+                  {t.astEvolution}
                 </h3>
                 <SimpleChart data={data.monthlyData} type="line" />
                 <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8' }}>
@@ -1325,7 +1275,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   gap: '8px'
                 }}>
                   <PieChart style={{ width: '20px', height: '20px' }} />
-                  Types d'Incidents
+                  {t.incidentTypes}
                 </h3>
                 <SimpleChart data={data.incidentsByType} type="pie" />
                 <div style={{ marginTop: '16px' }}>
@@ -1368,7 +1318,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                   gap: '8px'
                 }}>
                   <Camera style={{ width: '20px', height: '20px' }} />
-                  Photos Documentation
+                  {t.photoDocumentation}
                 </h3>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ 
@@ -1381,10 +1331,10 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     {data.photosCount}
                   </div>
                   <div style={{ color: '#22c55e', fontSize: '14px', fontWeight: '600' }}>
-                    Photos totales
+                    {t.totalPhotos}
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
-                    +{data.photosThisWeek} cette semaine
+                    +{data.photosThisWeek} {t.thisWeek}
                   </div>
                   
                   <div style={{
@@ -1403,7 +1353,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     }} />
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '8px' }}>
-                    Objectif: 3 photos/AST
+                    {t.objective}: 3 {t.photosPerAST}
                   </div>
                 </div>
               </div>
@@ -1424,24 +1374,24 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
               { 
                 href: `/${tenant.subdomain}/reports`, 
                 icon: BarChart3, 
-                title: 'Rapports Analytics', 
-                desc: 'Graphiques détaillés', 
+                title: t.analyticsReports, 
+                desc: t.detailedGraphics, 
                 color: '#9333ea',
                 gradient: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)'
               },
               { 
                 href: `/${tenant.subdomain}/photos`, 
                 icon: Camera, 
-                title: 'Photos AST', 
-                desc: 'Galerie documentation', 
+                title: t.astPhotos, 
+                desc: t.documentationGallery, 
                 color: '#22c55e',
                 gradient: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
               },
               { 
                 href: `/${tenant.subdomain}/archives`, 
                 icon: Archive, 
-                title: 'Archives', 
-                desc: 'Historique des données', 
+                title: t.archives, 
+                desc: t.dataHistory, 
                 color: '#f59e0b',
                 gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
               }
@@ -1558,7 +1508,7 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 color: '#94a3b8',
                 flexWrap: 'wrap'
               }}>
-                <span>Dernière mise à jour: {new Date().toLocaleDateString('fr-CA')}</span>
+                <span>{t.lastUpdate}: {new Date().toLocaleDateString(currentLanguage === 'fr' ? 'fr-CA' : 'en-CA')}</span>
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -1571,11 +1521,11 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                     borderRadius: '50%', 
                     background: '#22c55e' 
                   }} className="pulse-animation" />
-                  Système opérationnel
+                  {t.systemOperational}
                 </div>
                 {isDemo && (
                   <span style={{ color: '#f59e0b', fontWeight: '600' }}>
-                    MODE DÉMONSTRATION
+                    {t.demoVersion}
                   </span>
                 )}
               </div>
@@ -1589,6 +1539,6 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
         clientName={tenant.subdomain}
         customDomain={tenant.subdomain !== 'demo' ? `${tenant.subdomain}.csecur360.ca` : undefined}
       />
-    </>
+    </UniversalLayout>
   )
 }

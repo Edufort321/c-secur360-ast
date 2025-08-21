@@ -1,8 +1,88 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { TRANSLATIONS } from '../../../app/utils/translations';
+import UniversalLayout from '../../../components/layout/UniversalLayout';
+import DashboardSidebar from '../../../components/layout/DashboardSidebar';
+import LOTOPhotoCarousel from '../../../components/loto/LOTOPhotoCarousel';
+import { 
+  Shield, Users, MapPin, Clock, AlertTriangle, CheckCircle, 
+  Zap, Flame, Wind, Wrench, Settings, Camera, Lock,
+  Eye, Phone, FileText, Plus, X, Edit, Save, Download,
+  QrCode, Scan, UserCheck, Activity, Timer, Upload,
+  Trash2, ZoomIn, ChevronLeft, ChevronRight, Star,
+  Archive, Filter, Search, Calendar, Award, Target
+} from 'lucide-react';
+
+// =================== INTERFACES ÉTENDUES ===================
+
+interface Worker {
+  id: string;
+  name: string;
+  role: string;
+  certification: string[];
+  present: boolean;
+  checkedInAt?: string;
+  emergencyContact?: string;
+  badgeNumber?: string;
+  qrCode?: string;
+  permitIds: string[];
+}
+
+interface Photo {
+  id: string;
+  url: string;
+  thumbnail: string;
+  timestamp: string;
+  gpsLocation?: Coordinates;
+  description: { fr: string; en: string };
+  mandatory: boolean;
+  validated: boolean;
+  validatedBy?: string;
+  permitId: string;
+  metadata: PhotoMetadata;
+}
+
+interface PhotoMetadata {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  deviceInfo?: string;
+  quality: number;
+}
+
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+
+interface LOTOProcedure {
+  id: string;
+  permitId: string;
+  points: LOTOPoint[];
+  sequence: string[];
+  validated: boolean;
+  validatedBy?: string;
+  validatedAt?: string;
+  photos: Photo[];
+}
+
+interface LOTOPoint {
+  id: string;
+  equipmentName: string;
+  location: string;
+  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical';
+  isolationMethod: string;
+  lockNumber?: string;
+  appliedBy?: string;
+  verifiedBy?: string;
+  status: 'pending' | 'isolated' | 'verified' | 'completed';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  photos: string[];
+  notes?: string;
+}
 
 interface Permit {
   id: string;
@@ -11,13 +91,57 @@ interface Permit {
   description: string;
   requirements: string[];
   validityPeriod: string;
-  status: 'active' | 'expired' | 'pending';
+  status: 'active' | 'expired' | 'pending' | 'completed' | 'cancelled';
   issueDate: Date;
   expiryDate: Date;
   issuedBy: string;
   holder: string;
   workLocation: string;
   attachments: string[];
+  
+  // Nouvelles propriétés avancées
+  workers: string[]; // Worker IDs
+  photos: string[]; // Photo IDs
+  lotoProcedure?: string; // LOTO Procedure ID
+  qrCode?: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  emergencyContacts: string[];
+  supervisorApproval: boolean;
+  safetyBriefing: boolean;
+  equipmentInspection: boolean;
+  environmentalConditions: {
+    weather?: string;
+    temperature?: number;
+    windSpeed?: number;
+    visibility?: string;
+  };
+  specialRequirements: string[];
+  communicationPlan: string;
+  contingencyPlan: string;
+  completionReport?: string;
+  incidentReports: string[];
+  extensions: Extension[];
+  auditTrail: AuditEntry[];
+}
+
+interface Extension {
+  id: string;
+  reason: string;
+  originalEndDate: string;
+  newEndDate: string;
+  requestedBy: string;
+  approvedBy?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  performedBy: string;
+  timestamp: string;
+  details?: string;
+  ipAddress?: string;
 }
 
 interface NewPermit {
@@ -66,7 +190,29 @@ export default function PermitsPage() {
         issuedBy: 'Superviseur Jean Dupont',
         holder: 'Soudeur Marie Tremblay',
         workLocation: 'Zone A - Pipeline principal',
-        attachments: ['certificat-soudage.pdf', 'plan-securite.pdf']
+        attachments: ['certificat-soudage.pdf', 'plan-securite.pdf'],
+        workers: ['worker-001', 'worker-002'],
+        photos: ['photo-001', 'photo-002'],
+        lotoProcedure: 'loto-001',
+        qrCode: 'QR-PERMIT-001',
+        riskLevel: 'high',
+        emergencyContacts: ['911', 'Superviseur: +1-514-123-4567'],
+        supervisorApproval: true,
+        safetyBriefing: true,
+        equipmentInspection: true,
+        environmentalConditions: {
+          weather: 'clear',
+          temperature: 15,
+          windSpeed: 5,
+          visibility: 'excellent'
+        },
+        specialRequirements: ['Ventilation forcée', 'Détecteur de gaz'],
+        communicationPlan: 'Radio VHF canal 12',
+        contingencyPlan: 'Évacuation zone en cas d\'incident',
+        completionReport: undefined,
+        incidentReports: [],
+        extensions: [],
+        auditTrail: []
       },
       {
         id: 'permit-002',
@@ -81,7 +227,29 @@ export default function PermitsPage() {
         issuedBy: 'Superviseur Paul Martin',
         holder: 'Inspecteur Claude Lavoie',
         workLocation: 'Réservoir R-12',
-        attachments: ['formation-espaces-confines.pdf']
+        attachments: ['formation-espaces-confines.pdf'],
+        workers: ['worker-003'],
+        photos: [],
+        lotoProcedure: 'loto-002',
+        qrCode: 'QR-PERMIT-002',
+        riskLevel: 'critical',
+        emergencyContacts: ['911', 'Superviseur: +1-514-987-6543'],
+        supervisorApproval: false,
+        safetyBriefing: true,
+        equipmentInspection: false,
+        environmentalConditions: {
+          weather: 'clear',
+          temperature: 12,
+          windSpeed: 2,
+          visibility: 'good'
+        },
+        specialRequirements: ['Test atmosphérique', 'Ventilation assistée', 'Équipe de secours'],
+        communicationPlan: 'Radio portative + système de surveillance',
+        contingencyPlan: 'Évacuation immédiate en cas de détection de gaz',
+        completionReport: undefined,
+        incidentReports: [],
+        extensions: [],
+        auditTrail: []
       }
     ];
     setPermits(mockPermits);
@@ -96,7 +264,21 @@ export default function PermitsPage() {
       issueDate: new Date(),
       expiryDate: new Date(Date.now() + getValidityMs(newPermit.validityPeriod)),
       issuedBy: 'Système automatique',
-      attachments: []
+      attachments: [],
+      workers: [],
+      photos: [],
+      riskLevel: 'medium',
+      emergencyContacts: ['911'],
+      supervisorApproval: false,
+      safetyBriefing: false,
+      equipmentInspection: false,
+      environmentalConditions: {},
+      specialRequirements: [],
+      communicationPlan: '',
+      contingencyPlan: '',
+      incidentReports: [],
+      extensions: [],
+      auditTrail: []
     };
 
     setPermits([...permits, permit]);

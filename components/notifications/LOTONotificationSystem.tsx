@@ -81,12 +81,19 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
     setNotificationState(prev => ({ ...prev, isSending: true }));
 
     try {
-      // Simuler les travailleurs - en production, récupérer depuis Step5 ou API
+      // Récupérer TOUS les travailleurs actifs du projet (pas seulement le superviseur)
+      // En production, récupérer depuis la liste des membres d'équipe de Step1 + API
       const mockWorkers = [
         { id: '1', name: 'Jean Tremblay', phone: '+15141234567', role: 'Électricien', isActive: true },
         { id: '2', name: 'Marie Dubois', phone: '+15149876543', role: 'Mécanicien', isActive: true },
-        { id: '3', name: 'Pierre Martin', phone: '+15145555555', role: 'Superviseur', isActive: true }
+        { id: '3', name: 'Pierre Martin', phone: '+15145555555', role: 'Superviseur', isActive: true },
+        { id: '4', name: 'Luc Gagnon', phone: '+15146666666', role: 'Spécialiste', isActive: true },
+        { id: '5', name: 'Sophie Lavoie', phone: '+15147777777', role: 'Observateur', isActive: true },
+        { id: '6', name: 'Marc Bouchard', phone: '+15148888888', role: 'Travailleur', isActive: true }
       ];
+      
+      // CRITIQUE: Alerter TOUS les travailleurs présents sur le site
+      console.log(`🔔 LOTO Alert: Notifying ALL ${mockWorkers.length} workers on site for equipment: ${lockoutPoint.equipmentName}`);
 
       const messageContext = {
         equipmentName: lockoutPoint.equipmentName || 'Équipement',
@@ -102,30 +109,30 @@ const LOTONotificationSystem: React.FC<NotificationSystemProps> = ({
         switch (modificationType) {
           case 'CHANGE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 MODIFICATION LOTO CRITIQUE\n\nPoint modifié: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n⚠️ ACTION IMMÉDIATE REQUISE:\n• Déplacez votre cadenas\n• Consultez la nouvelle procédure\n• Répondez OUI pour confirmer\n\n🚨 Sécurité priorité absolue`;
+            customMessage = `🔒 MODIFICATION LOTO CRITIQUE\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nPoint modifié: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n🚨 ACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• Vérifiez vos cadenas\n• Consultez la nouvelle procédure\n• Répondez OUI pour confirmer réception\n\n⚠️ NE PAS IGNORER - Sécurité priorité absolue`;
             break;
           case 'DELETE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 POINT LOTO SUPPRIMÉ\n\nÉquipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\n\n⚠️ RETIREZ IMMÉDIATEMENT votre cadenas de cet équipement.\n\nRépondez OUI pour confirmer la réception.`;
+            customMessage = `🔒 POINT LOTO SUPPRIMÉ\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nÉquipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n🚨 ACTION IMMÉDIATE REQUISE:\n• Arrêtez votre travail IMMÉDIATEMENT\n• RETIREZ vos cadenas de cet équipement\n• Confirmez la réception\n\n⚠️ CRITIQUE - Risque de sécurité si ignoré`;
             break;
           case 'ADD':
             messageType = 'EQUIPMENT_CHANGE';
-            customMessage = `🔒 NOUVEAU POINT LOTO\n\nNouveau équipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\nConsultez la procédure mise à jour et répondez OUI pour confirmer.`;
+            customMessage = `🔒 NOUVEAU POINT LOTO\n\n⚠️ ALERTE À TOUS LES TRAVAILLEURS ⚠️\n\nNouveau équipement: ${messageContext.equipmentName}\nProjet: AST-${messageContext.astNumber}\nEmplacement: ${messageContext.location}\n\n📋 NOUVEAU POINT DE VERROUILLAGE:\n• Consultez la procédure mise à jour\n• Appliquez les mesures de sécurité\n• Répondez OUI pour confirmer réception\n\n🔒 Sécurité renforcée sur le site`;
             break;
         }
       } else {
         switch (modificationType) {
           case 'CHANGE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 CRITICAL LOTO MODIFICATION\n\nModified point: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n⚠️ IMMEDIATE ACTION REQUIRED:\n• Move your lock\n• Review new procedure\n• Reply YES to confirm\n\n🚨 Safety absolute priority`;
+            customMessage = `🔒 CRITICAL LOTO MODIFICATION\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nModified point: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n🚨 IMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• Check your locks\n• Review new procedure\n• Reply YES to confirm receipt\n\n⚠️ DO NOT IGNORE - Safety absolute priority`;
             break;
           case 'DELETE':
             messageType = 'LOTO_CHANGE';
-            customMessage = `🔒 LOTO POINT DELETED\n\nEquipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\n\n⚠️ IMMEDIATELY REMOVE your lock from this equipment.\n\nReply YES to confirm receipt.`;
+            customMessage = `🔒 LOTO POINT DELETED\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nEquipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n🚨 IMMEDIATE ACTION REQUIRED:\n• STOP your work IMMEDIATELY\n• REMOVE your locks from this equipment\n• Confirm receipt\n\n⚠️ CRITICAL - Safety risk if ignored`;
             break;
           case 'ADD':
             messageType = 'EQUIPMENT_CHANGE';
-            customMessage = `🔒 NEW LOTO POINT\n\nNew equipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\nReview updated procedure and reply YES to confirm.`;
+            customMessage = `🔒 NEW LOTO POINT\n\n⚠️ ALERT TO ALL WORKERS ⚠️\n\nNew equipment: ${messageContext.equipmentName}\nProject: AST-${messageContext.astNumber}\nLocation: ${messageContext.location}\n\n📋 NEW LOCKOUT POINT:\n• Review updated procedure\n• Apply safety measures\n• Reply YES to confirm receipt\n\n🔒 Enhanced site safety`;
             break;
         }
       }

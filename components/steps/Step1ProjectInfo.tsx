@@ -5,8 +5,12 @@ import {
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
-  TrendingUp, Activity, Shield, Bell, Send, MessageSquare, Hash, Star, Globe, Save
+  TrendingUp, Activity, Shield, Bell, Send, MessageSquare, Hash, Star, Globe, Save,
+  Unlock, GPS, Navigation, RotateCw, ZoomIn, ZoomOut, CheckCircle, Download,
+  ChevronLeft, ChevronRight, Edit
 } from 'lucide-react';
+import LOTOPhotoCarousel from '../loto/LOTOPhotoCarousel';
+import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
 
 // =================== INTERFACES ===================
 interface Step1ProjectInfoProps {
@@ -49,6 +53,81 @@ interface TeamMember {
   signature?: string;
   signatureTimestamp?: string;
 }
+
+interface LOTOPoint {
+  id: string;
+  equipmentName: string;
+  location: string;
+  energyType: EnergyType;
+  isolationMethod: string;
+  lockNumber?: string;
+  appliedBy?: string;
+  verifiedBy?: string;
+  status: LOTOStatus;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  photos: LOTOPhoto[];
+  coordinates?: Coordinates;
+  notes?: string;
+  timestamp?: string;
+}
+
+interface LOTOPhoto {
+  id: string;
+  url: string;
+  thumbnail: string;
+  lockState: LockState;
+  photoType: PhotoType;
+  timestamp: string;
+  gpsLocation?: Coordinates;
+  description: { fr: string; en: string };
+  mandatory: boolean;
+  validated: boolean;
+  validatedBy?: string;
+  metadata: PhotoMetadata;
+}
+
+interface PhotoMetadata {
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  deviceInfo?: string;
+  cameraSettings?: {
+    iso?: number;
+    aperture?: string;
+    shutterSpeed?: string;
+    flash?: boolean;
+  };
+  quality: number;
+}
+
+interface Coordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  altitude?: number;
+  heading?: number;
+}
+
+interface LOTOProcedure {
+  id: string;
+  points: LOTOPoint[];
+  sequence: string[];
+  validated: boolean;
+  validatedBy?: string;
+  validatedAt?: string;
+  metadata: {
+    projectNumber: string;
+    location: string;
+    supervisor: string;
+    startTime: string;
+    estimatedDuration: number;
+  };
+}
+
+type EnergyType = 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical' | 'gravitational';
+type LOTOStatus = 'pending' | 'isolated' | 'verified' | 'completed' | 'removed';
+type LockState = 'before_isolation' | 'during_isolation' | 'isolated' | 'verification' | 'removal' | 'completed';
+type PhotoType = 'isolation' | 'verification' | 'lock_application' | 'energy_test' | 'completion' | 'incident';
 
 interface ProjectInfo {
   // Numéro AST unique
@@ -97,6 +176,9 @@ interface ProjectInfo {
   temperature: string;
   visibility: string;
   workingConditions: string;
+  
+  // LOTO - Nouveauté dans Step 1
+  lotoProcedure: LOTOProcedure;
 }
 
 // =================== TRADUCTIONS ===================
@@ -190,6 +272,51 @@ const translations = {
     visibility: "Visibilité",
     workingConditions: "Conditions générales",
     
+    // LOTO
+    lotoSection: "Verrouillage/Étiquetage (LOTO)",
+    lotoDescription: "Procédures de sécurité énergétique",
+    addLotoPoint: "Ajouter point LOTO",
+    lotoEquipment: "Équipement",
+    lotoLocation: "Emplacement",
+    lotoEnergyType: "Type d'énergie",
+    lotoIsolationMethod: "Méthode d'isolation",
+    lotoLockNumber: "Numéro de cadenas",
+    lotoAppliedBy: "Appliqué par",
+    lotoVerifiedBy: "Vérifié par",
+    lotoStatus: "Statut",
+    lotoPriority: "Priorité",
+    lotoNotes: "Notes",
+    lotoPhotoCarousel: "Carrousel Photo LOTO",
+    lotoNotifications: "Alertes aux travailleurs",
+    
+    // LOTO Energy Types
+    energyTypes: {
+      electrical: "⚡ Électrique",
+      mechanical: "⚙️ Mécanique",
+      hydraulic: "🔧 Hydraulique",
+      pneumatic: "💨 Pneumatique",
+      thermal: "🔥 Thermique",
+      chemical: "🧪 Chimique",
+      gravitational: "⬇️ Gravitationnelle"
+    },
+    
+    // LOTO Statuses
+    lotoStatuses: {
+      pending: "En attente",
+      isolated: "Isolé",
+      verified: "Vérifié",
+      completed: "Complété",
+      removed: "Retiré"
+    },
+    
+    // LOTO Priorities
+    lotoPriorities: {
+      critical: "🔴 Critique",
+      high: "🟠 Élevée",
+      medium: "🟡 Moyenne",
+      low: "🟢 Faible"
+    },
+    
     // Actions
     save: "Sauvegarder",
     next: "Suivant",
@@ -198,6 +325,8 @@ const translations = {
     generate: "Générer",
     delete: "Supprimer",
     edit: "Modifier",
+    removeLotoPoint: "Retirer point LOTO",
+    validateLoto: "Valider LOTO",
     
     // Validation
     required: "Champ requis",
@@ -305,6 +434,51 @@ const translations = {
     visibility: "Visibility",
     workingConditions: "General conditions",
     
+    // LOTO
+    lotoSection: "Lockout/Tagout (LOTO)",
+    lotoDescription: "Energy safety procedures",
+    addLotoPoint: "Add LOTO point",
+    lotoEquipment: "Equipment",
+    lotoLocation: "Location",
+    lotoEnergyType: "Energy type",
+    lotoIsolationMethod: "Isolation method",
+    lotoLockNumber: "Lock number",
+    lotoAppliedBy: "Applied by",
+    lotoVerifiedBy: "Verified by",
+    lotoStatus: "Status",
+    lotoPriority: "Priority",
+    lotoNotes: "Notes",
+    lotoPhotoCarousel: "LOTO Photo Carousel",
+    lotoNotifications: "Worker alerts",
+    
+    // LOTO Energy Types
+    energyTypes: {
+      electrical: "⚡ Electrical",
+      mechanical: "⚙️ Mechanical",
+      hydraulic: "🔧 Hydraulic",
+      pneumatic: "💨 Pneumatic",
+      thermal: "🔥 Thermal",
+      chemical: "🧪 Chemical",
+      gravitational: "⬇️ Gravitational"
+    },
+    
+    // LOTO Statuses
+    lotoStatuses: {
+      pending: "Pending",
+      isolated: "Isolated",
+      verified: "Verified",
+      completed: "Completed",
+      removed: "Removed"
+    },
+    
+    // LOTO Priorities
+    lotoPriorities: {
+      critical: "🔴 Critical",
+      high: "🟠 High",
+      medium: "🟡 Medium",
+      low: "🟢 Low"
+    },
+    
     // Actions
     save: "Save",
     next: "Next",
@@ -313,6 +487,8 @@ const translations = {
     generate: "Generate",
     delete: "Delete",
     edit: "Edit",
+    removeLotoPoint: "Remove LOTO point",
+    validateLoto: "Validate LOTO",
     
     // Validation
     required: "Required field",
@@ -374,11 +550,28 @@ const Step1ProjectInfo = memo(({
     weatherConditions: formData?.projectInfo?.weatherConditions || '',
     temperature: formData?.projectInfo?.temperature || '',
     visibility: formData?.projectInfo?.visibility || '',
-    workingConditions: formData?.projectInfo?.workingConditions || ''
+    workingConditions: formData?.projectInfo?.workingConditions || '',
+    // LOTO - Nouveau dans Step 1
+    lotoProcedure: formData?.projectInfo?.lotoProcedure || {
+      id: `loto_${Date.now()}`,
+      points: [],
+      sequence: [],
+      validated: false,
+      metadata: {
+        projectNumber: formData?.projectInfo?.projectNumber || '',
+        location: formData?.projectInfo?.workSite || '',
+        supervisor: formData?.projectInfo?.supervisor || '',
+        startTime: new Date().toISOString(),
+        estimatedDuration: 8
+      }
+    }
   }));
 
   const [copied, setCopied] = useState(false);
   const [newObjective, setNewObjective] = useState('');
+  const [showLotoSection, setShowLotoSection] = useState(false);
+  const [newLotoPoint, setNewLotoPoint] = useState<Partial<LOTOPoint>>({});
+  const [editingLotoPoint, setEditingLotoPoint] = useState<string | null>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
 
@@ -501,6 +694,74 @@ const Step1ProjectInfo = memo(({
   const removeObjective = useCallback((index: number) => {
     updateField('workObjectives', localData.workObjectives.filter((_, i) => i !== index));
   }, [localData.workObjectives, updateField]);
+
+  // =================== FONCTIONS LOTO ===================
+  
+  // Ajouter point LOTO
+  const addLotoPoint = useCallback(() => {
+    if (!newLotoPoint.equipmentName || !newLotoPoint.energyType) return;
+    
+    const lotoPoint: LOTOPoint = {
+      id: `loto_point_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      equipmentName: newLotoPoint.equipmentName,
+      location: newLotoPoint.location || localData.workSite,
+      energyType: newLotoPoint.energyType as EnergyType,
+      isolationMethod: newLotoPoint.isolationMethod || '',
+      lockNumber: newLotoPoint.lockNumber || '',
+      appliedBy: newLotoPoint.appliedBy || localData.supervisor,
+      verifiedBy: newLotoPoint.verifiedBy || '',
+      status: 'pending',
+      priority: newLotoPoint.priority || 'medium',
+      photos: [],
+      notes: newLotoPoint.notes || '',
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedProcedure = {
+      ...localData.lotoProcedure,
+      points: [...localData.lotoProcedure.points, lotoPoint],
+      sequence: [...localData.lotoProcedure.sequence, lotoPoint.id]
+    };
+    
+    updateField('lotoProcedure', updatedProcedure);
+    setNewLotoPoint({});
+  }, [newLotoPoint, localData.workSite, localData.supervisor, localData.lotoProcedure, updateField]);
+  
+  // Supprimer point LOTO
+  const removeLotoPoint = useCallback((pointId: string) => {
+    const updatedProcedure = {
+      ...localData.lotoProcedure,
+      points: localData.lotoProcedure.points.filter(p => p.id !== pointId),
+      sequence: localData.lotoProcedure.sequence.filter(id => id !== pointId)
+    };
+    
+    updateField('lotoProcedure', updatedProcedure);
+  }, [localData.lotoProcedure, updateField]);
+  
+  // Mettre à jour point LOTO
+  const updateLotoPoint = useCallback((pointId: string, field: string, value: any) => {
+    const updatedPoints = localData.lotoProcedure.points.map(point =>
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
+    
+    const updatedProcedure = {
+      ...localData.lotoProcedure,
+      points: updatedPoints
+    };
+    
+    updateField('lotoProcedure', updatedProcedure);
+  }, [localData.lotoProcedure, updateField]);
+  
+  // Gérer mise à jour procédure LOTO depuis le carrousel
+  const handleLotoProcedureUpdate = useCallback((procedure: LOTOProcedure) => {
+    updateField('lotoProcedure', procedure);
+  }, [updateField]);
+  
+  // Gérer notification LOTO
+  const handleLotoNotification = useCallback((pointId: string) => {
+    console.log('Notification LOTO envoyée pour le point:', pointId);
+    // La notification sera gérée par le composant LOTONotificationSystem
+  }, []);
 
   // Cleanup debounce
   useEffect(() => {
@@ -1451,6 +1712,465 @@ const Step1ProjectInfo = memo(({
           </div>
         </div>
 
+        {/* Section LOTO - Maintenant dans Step 1 */}
+        <div style={cardStyle}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px'
+          }}>
+            <div>
+              <h3 style={{
+                margin: '0 0 8px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Lock size={20} style={{ color: '#ef4444' }} />
+                {t.lotoSection}
+              </h3>
+              <p style={{ 
+                margin: 0, 
+                color: '#94a3b8', 
+                fontSize: '14px' 
+              }}>
+                {t.lotoDescription}
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setShowLotoSection(!showLotoSection)}
+              style={{
+                background: showLotoSection 
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                color: 'white',
+                border: 'none',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              <Lock size={16} />
+              {showLotoSection ? 'Masquer LOTO' : 'Configurer LOTO'}
+            </button>
+          </div>
+          
+          {/* Statistiques LOTO */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gap: '12px',
+            marginBottom: showLotoSection ? '24px' : '0'
+          }}>
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '18px',
+                fontWeight: '800',
+                color: '#ef4444',
+                marginBottom: '4px'
+              }}>
+                {localData.lotoProcedure.points.length}
+              </div>
+              <div style={{
+                fontSize: '10px',
+                color: '#dc2626',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Points LOTO
+              </div>
+            </div>
+            
+            <div style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '18px',
+                fontWeight: '800',
+                color: '#22c55e',
+                marginBottom: '4px'
+              }}>
+                {localData.lotoProcedure.points.filter(p => p.status === 'completed').length}
+              </div>
+              <div style={{
+                fontSize: '10px',
+                color: '#16a34a',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Complétés
+              </div>
+            </div>
+            
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                fontSize: '18px',
+                fontWeight: '800',
+                color: '#f59e0b',
+                marginBottom: '4px'
+              }}>
+                {localData.lotoProcedure.points.reduce((sum, point) => sum + point.photos.length, 0)}
+              </div>
+              <div style={{
+                fontSize: '10px',
+                color: '#d97706',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Photos
+              </div>
+            </div>
+          </div>
+          
+          {/* Configuration LOTO */}
+          {showLotoSection && (
+            <div>
+              {/* Formulaire nouveau point LOTO */}
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.05)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '20px'
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 16px 0', 
+                  color: '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Plus size={16} />
+                  {t.addLotoPoint}
+                </h4>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '12px',
+                  marginBottom: '16px'
+                }}>
+                  <div>
+                    <label style={labelStyle}>{t.lotoEquipment} *</label>
+                    <input
+                      type="text"
+                      value={newLotoPoint.equipmentName || ''}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, equipmentName: e.target.value }))}
+                      style={inputStyle}
+                      placeholder="ex: Disjoncteur principal"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={labelStyle}>{t.lotoEnergyType} *</label>
+                    <select
+                      value={newLotoPoint.energyType || ''}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, energyType: e.target.value as EnergyType }))}
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="electrical">{t.energyTypes.electrical}</option>
+                      <option value="mechanical">{t.energyTypes.mechanical}</option>
+                      <option value="hydraulic">{t.energyTypes.hydraulic}</option>
+                      <option value="pneumatic">{t.energyTypes.pneumatic}</option>
+                      <option value="thermal">{t.energyTypes.thermal}</option>
+                      <option value="chemical">{t.energyTypes.chemical}</option>
+                      <option value="gravitational">{t.energyTypes.gravitational}</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={labelStyle}>{t.lotoLocation}</label>
+                    <input
+                      type="text"
+                      value={newLotoPoint.location || localData.workSite}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, location: e.target.value }))}
+                      style={inputStyle}
+                      placeholder={localData.workSite || "Emplacement"}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={labelStyle}>{t.lotoPriority}</label>
+                    <select
+                      value={newLotoPoint.priority || 'medium'}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' }))}
+                      style={inputStyle}
+                    >
+                      <option value="critical">{t.lotoPriorities.critical}</option>
+                      <option value="high">{t.lotoPriorities.high}</option>
+                      <option value="medium">{t.lotoPriorities.medium}</option>
+                      <option value="low">{t.lotoPriorities.low}</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={labelStyle}>{t.lotoIsolationMethod}</label>
+                    <input
+                      type="text"
+                      value={newLotoPoint.isolationMethod || ''}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, isolationMethod: e.target.value }))}
+                      style={inputStyle}
+                      placeholder="ex: Coupure disjoncteur"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={labelStyle}>{t.lotoLockNumber}</label>
+                    <input
+                      type="text"
+                      value={newLotoPoint.lockNumber || ''}
+                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, lockNumber: e.target.value }))}
+                      style={inputStyle}
+                      placeholder="ex: LOT-001"
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={labelStyle}>{t.lotoNotes}</label>
+                  <textarea
+                    value={newLotoPoint.notes || ''}
+                    onChange={(e) => setNewLotoPoint(prev => ({ ...prev, notes: e.target.value }))}
+                    style={{
+                      ...inputStyle,
+                      minHeight: '60px',
+                      resize: 'vertical'
+                    }}
+                    placeholder="Instructions spéciales, précautions..."
+                    rows={2}
+                  />
+                </div>
+                
+                <button
+                  onClick={addLotoPoint}
+                  disabled={!newLotoPoint.equipmentName || !newLotoPoint.energyType}
+                  style={{
+                    background: (newLotoPoint.equipmentName && newLotoPoint.energyType) 
+                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                      : 'rgba(100, 116, 139, 0.3)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: (newLotoPoint.equipmentName && newLotoPoint.energyType) ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <Plus size={16} />
+                  {t.addLotoPoint}
+                </button>
+              </div>
+              
+              {/* Liste des points LOTO */}
+              {localData.lotoProcedure.points.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ 
+                    margin: '0 0 16px 0', 
+                    color: '#e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Lock size={16} />
+                    Points LOTO configurés ({localData.lotoProcedure.points.length})
+                  </h4>
+                  
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {localData.lotoProcedure.points.map((point, index) => (
+                      <div key={point.id} style={{
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '8px',
+                        padding: '16px'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '12px'
+                        }}>
+                          <div>
+                            <h5 style={{ 
+                              margin: '0 0 4px 0', 
+                              color: '#e2e8f0',
+                              fontSize: '16px',
+                              fontWeight: '600'
+                            }}>
+                              {point.equipmentName}
+                            </h5>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                              <span style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <MapPin size={12} />
+                                {point.location}
+                              </span>
+                              <span style={{
+                                fontSize: '12px',
+                                color: '#94a3b8'
+                              }}>
+                                {t.energyTypes[point.energyType]}
+                              </span>
+                              <span style={{
+                                fontSize: '12px',
+                                color: point.priority === 'critical' ? '#ef4444' : 
+                                       point.priority === 'high' ? '#f59e0b' : 
+                                       point.priority === 'medium' ? '#3b82f6' : '#22c55e',
+                                fontWeight: '600'
+                              }}>
+                                {t.lotoPriorities[point.priority]}
+                              </span>
+                              <span style={{
+                                fontSize: '12px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: point.status === 'completed' ? 'rgba(34, 197, 94, 0.2)' :
+                                           point.status === 'verified' ? 'rgba(59, 130, 246, 0.2)' :
+                                           point.status === 'isolated' ? 'rgba(245, 158, 11, 0.2)' :
+                                           'rgba(107, 114, 128, 0.2)',
+                                color: point.status === 'completed' ? '#22c55e' :
+                                       point.status === 'verified' ? '#3b82f6' :
+                                       point.status === 'isolated' ? '#f59e0b' :
+                                       '#6b7280',
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                              }}>
+                                {t.lotoStatuses[point.status]}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => removeLotoPoint(point.id)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#f87171',
+                              padding: '6px',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        
+                        {point.notes && (
+                          <div style={{
+                            background: 'rgba(100, 116, 139, 0.1)',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            marginTop: '8px'
+                          }}>
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>Notes: </span>
+                            <span style={{ color: '#e2e8f0', fontSize: '12px' }}>{point.notes}</span>
+                          </div>
+                        )}
+                        
+                        {point.photos.length > 0 && (
+                          <div style={{ marginTop: '12px' }}>
+                            <div style={{ 
+                              color: '#94a3b8', 
+                              fontSize: '12px',
+                              marginBottom: '6px'
+                            }}>
+                              Photos: {point.photos.length} • Validées: {point.photos.filter(p => p.validated).length}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                              {point.photos.slice(0, 4).map(photo => (
+                                <img
+                                  key={photo.id}
+                                  src={photo.thumbnail}
+                                  alt={photo.description[language]}
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '4px',
+                                    objectFit: 'cover',
+                                    border: photo.validated ? '1px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)'
+                                  }}
+                                />
+                              ))}
+                              {point.photos.length > 4 && (
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '4px',
+                                  background: 'rgba(100, 116, 139, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px',
+                                  color: '#94a3b8',
+                                  fontWeight: '600'
+                                }}>
+                                  +{point.photos.length - 4}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Carrousel Photo LOTO */}
+              {localData.lotoProcedure.points.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <LOTOPhotoCarousel
+                    lotoProcedure={localData.lotoProcedure}
+                    onUpdateProcedure={handleLotoProcedureUpdate}
+                    language={language}
+                    editable={true}
+                    compactMode={true}
+                    maxPhotosPerPoint={10}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Navigation */}
         <div style={{
           display: 'flex',
@@ -1465,6 +2185,22 @@ const Step1ProjectInfo = memo(({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={20} style={{ color: '#94a3b8' }} />
             <span style={{ color: '#94a3b8' }}>Étape 1 sur 5</span>
+            {localData.lotoProcedure.points.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                marginLeft: '12px',
+                padding: '4px 8px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                borderRadius: '12px'
+              }}>
+                <Lock size={12} style={{ color: '#ef4444' }} />
+                <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>
+                  {localData.lotoProcedure.points.length} point{localData.lotoProcedure.points.length > 1 ? 's' : ''} LOTO
+                </span>
+              </div>
+            )}
           </div>
           
           <button
@@ -1492,6 +2228,21 @@ const Step1ProjectInfo = memo(({
           </button>
         </div>
       </div>
+      
+      {/* Système de notification LOTO - Positionné de manière fixe */}
+      {localData.lotoProcedure.points.length > 0 && (
+        <LOTONotificationSystem
+          lockoutPoints={localData.lotoProcedure.points.map(point => ({
+            id: point.id,
+            equipmentName: point.equipmentName,
+            location: point.location,
+            energyType: t.energyTypes[point.energyType]
+          }))}
+          projectNumber={localData.astNumber || localData.projectNumber}
+          language={language}
+          onNotificationSent={handleLotoNotification}
+        />
+      )}
     </div>
   );
 });
