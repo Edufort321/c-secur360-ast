@@ -19,47 +19,7 @@ export async function POST(request: NextRequest) {
     // Créer une session de portail client
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`,
-      configuration: {
-        business_profile: {
-          headline: 'Gestion abonnement C-Secur360',
-        },
-        features: {
-          payment_method_update: {
-            enabled: true,
-          },
-          invoice_history: {
-            enabled: true,
-          },
-          customer_update: {
-            enabled: true,
-            allowed_updates: ['email', 'address', 'phone', 'tax_id'],
-          },
-          subscription_cancel: {
-            enabled: true,
-            mode: 'at_period_end',
-            proration_behavior: 'none',
-            cancellation_reason: {
-              enabled: true,
-              options: [
-                'too_expensive',
-                'missing_features', 
-                'switched_service',
-                'unused',
-                'other'
-              ],
-            },
-          },
-          subscription_pause: {
-            enabled: false, // Désactivé pour C-Secur360
-          },
-          subscription_update: {
-            enabled: true,
-            default_allowed_updates: ['price', 'quantity'],
-            proration_behavior: 'create_prorations',
-          },
-        },
-      },
+      return_url: returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`
     });
 
     return NextResponse.json({

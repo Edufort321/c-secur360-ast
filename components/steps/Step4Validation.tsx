@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertTriangle, Users, Shield, 
   User, Clock, Award, MessageSquare, ThumbsUp,
-  Edit, Save, Star, Calendar
+  Edit, Save, Star, Calendar, Plus
 } from 'lucide-react';
 
 // =================== INTERFACES ===================
@@ -14,6 +14,11 @@ interface Step4ValidationProps {
   language: 'fr' | 'en';
   tenant: string;
   errors?: any;
+  province?: string;
+  touchOptimized?: boolean;
+  compactMode?: boolean;
+  onPermitChange?: (permits: any) => void;
+  initialPermits?: any;
 }
 
 interface Reviewer {
@@ -245,7 +250,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
       reviewer.id === reviewerId 
         ? { 
             ...reviewer, 
-            status: action === 'approve' ? 'approved' : 'rejected',
+            status: (action === 'approve' ? 'approved' : 'rejected') as 'approved' | 'rejected',
             rating: rating,
             approvedAt: new Date().toISOString()
           }

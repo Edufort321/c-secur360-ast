@@ -15,7 +15,7 @@ interface Customer {
   company_name: string;
   stripe_customer_id?: string;
   province: string;
-  subscription_status: 'active' | 'inactive' | 'suspended' | 'canceled' | 'past_due';
+  subscription_status: 'active' | 'inactive' | 'suspended' | 'canceled' | 'past_due' | 'trial';
   created_at: string;
   trial_end?: string;
 }

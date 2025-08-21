@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       planType, 
       successUrl, 
       cancelUrl,
+      additionalSites = 0,
       trialDays = 14 
     } = await request.json();
 

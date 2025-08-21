@@ -45,7 +45,7 @@ export default function PermitsPage() {
     validityPeriod: '24h'
   });
 
-  const t = TRANSLATIONS[language];
+  const t = TRANSLATIONS[language] as any;
 
   useEffect(() => {
     loadPermits();

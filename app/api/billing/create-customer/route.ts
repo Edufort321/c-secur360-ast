@@ -40,11 +40,7 @@ export async function POST(request: NextRequest) {
         company,
         province: province || 'QC',
         source: 'c-secur360'
-      },
-      tax: taxIds ? {
-        type: 'ca_gst_hst',
-        value: taxIds.gst
-      } : undefined
+      }
     });
 
     // Enregistrer dans Supabase

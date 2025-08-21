@@ -789,7 +789,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   
   const handleLotoSystemToggle = (system: string) => {
     const newSystems = lotoSystems.includes(system)
-      ? lotoSystems.filter(s => s !== system)
+      ? lotoSystems.filter((s: string) => s !== system)
       : [...lotoSystems, system];
     setLotoSystems(newSystems);
     updateLotoData(lotoRequired, newSystems, lotoVerifiedBy, lotoLockNumber, lotoNotes);

@@ -102,9 +102,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           .update({
             subscription_status: 'active',
             stripe_subscription_id: session.subscription,
-            trial_end: session.subscription_data?.trial_end 
-              ? new Date(session.subscription_data.trial_end * 1000).toISOString()
-              : null,
+            trial_end: null, // Will be updated separately if needed
             updated_at: new Date().toISOString()
           })
           .eq('id', customerSupabaseId);
@@ -323,7 +321,7 @@ async function handleMandateUpdated(mandate: Stripe.Mandate) {
           stripe_customer_id: mandate.customer_acceptance?.online?.user_agent || '',
           type: 'acss_debit',
           status: mandate.status,
-          created_at: new Date(mandate.created * 1000).toISOString()
+          created_at: new Date().toISOString()
         }
       ]);
 

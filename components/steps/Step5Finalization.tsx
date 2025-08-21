@@ -799,13 +799,13 @@ function Step6Finalization({
         lastModified: astData.updatedAt
       },
       {
-        stepNumber: 6,
-        sectionName: t.step6Finalization,
-        icon: <CheckCircle size={20} color={validation.sections.step6Complete ? '#10b981' : '#f59e0b'} />,
-        isComplete: validation.sections.step6Complete,
-        completionPercentage: validation.sections.step6Complete ? 100 : 
+        stepNumber: 5,
+        sectionName: 'Finalisation', // Hardcoded since no translation exists
+        icon: <CheckCircle size={20} color={validation.sections.step5Complete ? '#10b981' : '#f59e0b'} />,
+        isComplete: validation.sections.step5Complete,
+        completionPercentage: validation.sections.step5Complete ? 100 : 
           (finalizationData.finalComments.length > 0 ? 50 : 0) + (finalizationData.photos.length > 0 ? 50 : 0),
-        errors: validation.sections.step6Complete ? [] : [language === 'fr' ? 'Finalisation AST incomplète' : 'JSA finalization incomplete'],
+        errors: validation.sections.step5Complete ? [] : [language === 'fr' ? 'Finalisation AST incomplète' : 'JSA finalization incomplete'],
         lastModified: astData.updatedAt
       }
     ];
