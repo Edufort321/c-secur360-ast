@@ -177,6 +177,77 @@ export const TRANSLATIONS: LanguageResources = {
       certification: 'Certification'
     },
     
+    // Permits
+    permits: {
+      title: 'Gestion des Permis',
+      description: 'Gestion complète des permis de travail et autorisations de sécurité',
+      stats: {
+        active: 'Actifs',
+        pending: 'En attente',
+        expired: 'Expirés',
+        total: 'Total'
+      },
+      status: {
+        active: 'Actif',
+        pending: 'En attente',
+        expired: 'Expiré'
+      },
+      types: {
+        hotWork: 'Travail à chaud',
+        confinedSpace: 'Espace confiné',
+        excavation: 'Excavation',
+        electrical: 'Électrique',
+        heightWork: 'Travail en hauteur',
+        chemical: 'Produits chimiques'
+      },
+      actions: {
+        addNew: 'Nouveau permis',
+        view: 'Voir',
+        edit: 'Modifier',
+        revoke: 'Révoquer',
+        cancel: 'Annuler',
+        create: 'Créer',
+        print: 'Imprimer',
+        close: 'Fermer'
+      },
+      list: {
+        title: 'Liste des permis',
+        columns: {
+          type: 'Type',
+          title: 'Titre',
+          holder: 'Détenteur',
+          location: 'Lieu',
+          status: 'Statut',
+          expiry: 'Expiration',
+          actions: 'Actions'
+        }
+      },
+      form: {
+        type: 'Type de permis',
+        title: 'Titre',
+        titlePlaceholder: 'Ex: Soudage pipeline principal',
+        description: 'Description',
+        descriptionPlaceholder: 'Décrivez les travaux à effectuer',
+        holder: 'Détenteur',
+        holderPlaceholder: 'Nom du travailleur',
+        location: 'Lieu de travail',
+        locationPlaceholder: 'Ex: Zone A - Pipeline',
+        validity: 'Période de validité'
+      },
+      details: {
+        information: 'Informations générales',
+        requirements: 'Exigences de sécurité',
+        attachments: 'Documents joints',
+        type: 'Type',
+        status: 'Statut',
+        holder: 'Détenteur',
+        location: 'Lieu',
+        issueDate: 'Date d\'émission',
+        expiryDate: 'Date d\'expiration',
+        issuedBy: 'Émis par'
+      }
+    },
+    
     // Rapports
     reports: {
       title: 'Rapports',
@@ -422,6 +493,77 @@ export const TRANSLATIONS: LanguageResources = {
       evidence: 'Evidence',
       audit: 'Audit',
       certification: 'Certification'
+    },
+    
+    // Permits
+    permits: {
+      title: 'Permit Management',
+      description: 'Complete management of work permits and safety authorizations',
+      stats: {
+        active: 'Active',
+        pending: 'Pending',
+        expired: 'Expired',
+        total: 'Total'
+      },
+      status: {
+        active: 'Active',
+        pending: 'Pending',
+        expired: 'Expired'
+      },
+      types: {
+        hotWork: 'Hot Work',
+        confinedSpace: 'Confined Space',
+        excavation: 'Excavation',
+        electrical: 'Electrical',
+        heightWork: 'Work at Height',
+        chemical: 'Chemical Work'
+      },
+      actions: {
+        addNew: 'New Permit',
+        view: 'View',
+        edit: 'Edit',
+        revoke: 'Revoke',
+        cancel: 'Cancel',
+        create: 'Create',
+        print: 'Print',
+        close: 'Close'
+      },
+      list: {
+        title: 'Permit List',
+        columns: {
+          type: 'Type',
+          title: 'Title',
+          holder: 'Holder',
+          location: 'Location',
+          status: 'Status',
+          expiry: 'Expiry',
+          actions: 'Actions'
+        }
+      },
+      form: {
+        type: 'Permit Type',
+        title: 'Title',
+        titlePlaceholder: 'E.g.: Main pipeline welding',
+        description: 'Description',
+        descriptionPlaceholder: 'Describe the work to be performed',
+        holder: 'Permit Holder',
+        holderPlaceholder: 'Worker name',
+        location: 'Work Location',
+        locationPlaceholder: 'E.g.: Zone A - Pipeline',
+        validity: 'Validity Period'
+      },
+      details: {
+        information: 'General Information',
+        requirements: 'Safety Requirements',
+        attachments: 'Attached Documents',
+        type: 'Type',
+        status: 'Status',
+        holder: 'Holder',
+        location: 'Location',
+        issueDate: 'Issue Date',
+        expiryDate: 'Expiry Date',
+        issuedBy: 'Issued By'
+      }
     },
     
     // Reports

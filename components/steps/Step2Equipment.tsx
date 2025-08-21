@@ -29,8 +29,8 @@ interface Equipment {
 const translations = {
   fr: {
     // En-tête
-    title: "🛡️ Équipements de Protection Individuelle",
-    subtitle: "Sélectionnez tous les EPI requis pour ce travail en cochant les cases",
+    title: "🛡️ Équipements de Protection et LOTO",
+    subtitle: "Sélectionnez tous les EPI requis et confirmez le cadenassage si nécessaire",
     
     // Statistiques
     selected: "Sélectionnés",
@@ -130,13 +130,31 @@ const translations = {
       "flashlight": "Lampe de poche",
       "headlamp": "Lampe frontale",
       "emergency-beacon": "Balise d'urgence"
+    },
+    
+    // LOTO simplifié
+    loto: {
+      title: "🔒 Cadenassage/Étiquetage (LOTO)",
+      description: "Procédures de cadenassage requises pour ce travail",
+      required: "Cadenassage requis",
+      notRequired: "Aucun cadenassage requis",
+      systems: "Systèmes à cadener :",
+      electrical: "Systèmes électriques",
+      mechanical: "Systèmes mécaniques", 
+      hydraulic: "Systèmes hydrauliques",
+      pneumatic: "Systèmes pneumatiques",
+      chemical: "Systèmes chimiques",
+      verified: "Vérification effectuée par :",
+      verifiedBy: "Nom du vérificateur",
+      lockNumber: "Numéro de cadenas :",
+      notes: "Notes LOTO :"
     }
   },
   
   en: {
     // Header
-    title: "🛡️ Personal Protective Equipment",
-    subtitle: "Select all PPE required for this work by checking the boxes",
+    title: "🛡️ Personal Protective Equipment & LOTO",
+    subtitle: "Select all PPE required and confirm lockout if necessary",
     
     // Statistics
     selected: "Selected",
@@ -236,6 +254,24 @@ const translations = {
       "flashlight": "Flashlight",
       "headlamp": "Headlamp",
       "emergency-beacon": "Emergency beacon"
+    },
+    
+    // LOTO simplified
+    loto: {
+      title: "🔒 Lockout/Tagout (LOTO)",
+      description: "Lockout procedures required for this work",
+      required: "Lockout required",
+      notRequired: "No lockout required",
+      systems: "Systems to lockout:",
+      electrical: "Electrical systems",
+      mechanical: "Mechanical systems",
+      hydraulic: "Hydraulic systems", 
+      pneumatic: "Pneumatic systems",
+      chemical: "Chemical systems",
+      verified: "Verification performed by:",
+      verifiedBy: "Verifier name",
+      lockNumber: "Lock number:",
+      notes: "LOTO notes:"
     }
   }
 };
@@ -640,6 +676,13 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   
+  // États pour LOTO
+  const [lotoRequired, setLotoRequired] = useState(formData.loto?.required || false);
+  const [lotoSystems, setLotoSystems] = useState(formData.loto?.systems || []);
+  const [lotoVerifiedBy, setLotoVerifiedBy] = useState(formData.loto?.verifiedBy || '');
+  const [lotoLockNumber, setLotoLockNumber] = useState(formData.loto?.lockNumber || '');
+  const [lotoNotes, setLotoNotes] = useState(formData.loto?.notes || '');
+  
   // Initialiser avec la liste complète des équipements traduits
   const [equipment, setEquipment] = useState<Equipment[]>(() => {
     if (formData.equipment?.list && formData.equipment.list.length > 0) {
@@ -719,7 +762,48 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       }
     };
     
+    // Inclure les données LOTO
+    const lotoData = {
+      required: lotoRequired,
+      systems: lotoSystems,
+      verifiedBy: lotoVerifiedBy,
+      lockNumber: lotoLockNumber,
+      notes: lotoNotes
+    };
+    
     onDataChange('equipment', equipmentData);
+    onDataChange('loto', lotoData);
+  };
+  
+  // Handlers pour LOTO
+  const handleLotoRequiredChange = (required: boolean) => {
+    setLotoRequired(required);
+    if (!required) {
+      setLotoSystems([]);
+      setLotoVerifiedBy('');
+      setLotoLockNumber('');
+      setLotoNotes('');
+    }
+    updateLotoData(required, lotoSystems, lotoVerifiedBy, lotoLockNumber, lotoNotes);
+  };
+  
+  const handleLotoSystemToggle = (system: string) => {
+    const newSystems = lotoSystems.includes(system)
+      ? lotoSystems.filter(s => s !== system)
+      : [...lotoSystems, system];
+    setLotoSystems(newSystems);
+    updateLotoData(lotoRequired, newSystems, lotoVerifiedBy, lotoLockNumber, lotoNotes);
+  };
+  
+  const updateLotoData = (required: boolean, systems: string[], verifiedBy: string, lockNumber: string, notes: string) => {
+    const lotoData = {
+      required,
+      systems,
+      verifiedBy,
+      lockNumber,
+      notes
+    };
+    onDataChange('loto', lotoData);
   };
 
   // =================== FONCTIONS DE STYLE ===================
@@ -1467,6 +1551,214 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
             background: rgba(34, 197, 94, 0.15) !important;
             border-color: #22c55e !important;
           }
+          
+          /* =================== STYLES LOTO =================== */
+          .loto-section {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+            backdrop-filter: blur(20px);
+          }
+          
+          .loto-header {
+            margin-bottom: 20px;
+          }
+          
+          .loto-title {
+            color: #a855f7;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          
+          .loto-description {
+            color: #c4b5fd;
+            margin: 0;
+            font-size: 14px;
+          }
+          
+          .loto-required-toggle {
+            margin-bottom: 20px;
+          }
+          
+          .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            color: #e2e8f0;
+            font-weight: 500;
+          }
+          
+          .toggle-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            border-radius: 4px;
+            background: rgba(15, 23, 42, 0.8);
+            cursor: pointer;
+            appearance: none;
+            position: relative;
+            transition: all 0.3s ease;
+          }
+          
+          .toggle-checkbox:checked {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+          }
+          
+          .toggle-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+          }
+          
+          .toggle-text {
+            font-size: 16px;
+          }
+          
+          .loto-details {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+          }
+          
+          .loto-subsection-title {
+            color: #e2e8f0;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+          }
+          
+          .loto-systems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+          }
+          
+          .loto-system-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+          
+          .loto-system-item:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(139, 92, 246, 0.5);
+          }
+          
+          .system-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            border-radius: 3px;
+            background: transparent;
+            cursor: pointer;
+            appearance: none;
+            position: relative;
+            transition: all 0.3s ease;
+          }
+          
+          .system-checkbox:checked {
+            background: #8b5cf6;
+            border-color: #8b5cf6;
+          }
+          
+          .system-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+          }
+          
+          .system-label {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 500;
+          }
+          
+          .loto-verification {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+          }
+          
+          .loto-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          
+          .loto-input-label {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 500;
+          }
+          
+          .loto-input, .loto-textarea {
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+          }
+          
+          .loto-input:focus, .loto-textarea:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+          }
+          
+          .loto-input::placeholder, .loto-textarea::placeholder {
+            color: #64748b;
+          }
+          
+          .loto-textarea {
+            resize: vertical;
+            min-height: 80px;
+          }
+          
+          /* =================== RESPONSIVE LOTO =================== */
+          @media (max-width: 768px) {
+            .loto-systems-grid {
+              grid-template-columns: 1fr;
+            }
+            
+            .loto-verification {
+              grid-template-columns: 1fr;
+            }
+            
+            .loto-section {
+              padding: 16px;
+            }
+          }
         `
       }} />
 
@@ -1560,6 +1852,93 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
             <p className="no-results-description">{t.noResultsDescription}</p>
           </div>
         )}
+
+        {/* Section LOTO */}
+        <div className="loto-section">
+          <div className="loto-header">
+            <h3 className="loto-title">{t.loto.title}</h3>
+            <p className="loto-description">{t.loto.description}</p>
+          </div>
+
+          <div className="loto-required-toggle">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={lotoRequired}
+                onChange={(e) => handleLotoRequiredChange(e.target.checked)}
+                className="toggle-checkbox"
+              />
+              <span className="toggle-text">
+                {lotoRequired ? t.loto.required : t.loto.notRequired}
+              </span>
+            </label>
+          </div>
+
+          {lotoRequired && (
+            <div className="loto-details">
+              <div className="loto-systems">
+                <h4 className="loto-subsection-title">{t.loto.systems}</h4>
+                <div className="loto-systems-grid">
+                  {['electrical', 'mechanical', 'hydraulic', 'pneumatic', 'chemical'].map(system => (
+                    <label key={system} className="loto-system-item">
+                      <input
+                        type="checkbox"
+                        checked={lotoSystems.includes(system)}
+                        onChange={() => handleLotoSystemToggle(system)}
+                        className="system-checkbox"
+                      />
+                      <span className="system-label">{t.loto[system as keyof typeof t.loto]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="loto-verification">
+                <div className="loto-input-group">
+                  <label className="loto-input-label">{t.loto.verified}</label>
+                  <input
+                    type="text"
+                    value={lotoVerifiedBy}
+                    onChange={(e) => {
+                      setLotoVerifiedBy(e.target.value);
+                      updateLotoData(lotoRequired, lotoSystems, e.target.value, lotoLockNumber, lotoNotes);
+                    }}
+                    placeholder={t.loto.verifiedBy}
+                    className="loto-input"
+                  />
+                </div>
+
+                <div className="loto-input-group">
+                  <label className="loto-input-label">{t.loto.lockNumber}</label>
+                  <input
+                    type="text"
+                    value={lotoLockNumber}
+                    onChange={(e) => {
+                      setLotoLockNumber(e.target.value);
+                      updateLotoData(lotoRequired, lotoSystems, lotoVerifiedBy, e.target.value, lotoNotes);
+                    }}
+                    placeholder="Ex: L001-2024-001"
+                    className="loto-input"
+                  />
+                </div>
+
+                <div className="loto-input-group">
+                  <label className="loto-input-label">{t.loto.notes}</label>
+                  <textarea
+                    value={lotoNotes}
+                    onChange={(e) => {
+                      setLotoNotes(e.target.value);
+                      updateLotoData(lotoRequired, lotoSystems, lotoVerifiedBy, lotoLockNumber, e.target.value);
+                    }}
+                    placeholder="Notes additionnelles sur les procédures LOTO..."
+                    className="loto-textarea"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Validation d'erreurs */}
         {errors?.equipment && (

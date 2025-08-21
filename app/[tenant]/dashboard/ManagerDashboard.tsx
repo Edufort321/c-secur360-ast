@@ -777,6 +777,15 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                 priority: true
               },
               { 
+                href: `/${tenant.subdomain}/permits`, 
+                icon: Shield, 
+                title: 'Gestion des Permis', 
+                desc: 'Permis de travail et autorisations', 
+                color: '#8b5cf6',
+                gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                priority: true
+              },
+              { 
                 href: `/${tenant.subdomain}/improvements/nouveau`, 
                 icon: Target, 
                 title: 'Amélioration', 
@@ -796,7 +805,13 @@ export default function ManagerDashboard({ tenant = { id: '1', subdomain: 'demo'
                       textAlign: 'center',
                       position: 'relative',
                       overflow: 'hidden',
-                      border: `2px solid rgba(${action.color === '#3b82f6' ? '59, 130, 246' : action.color === '#f97316' ? '249, 115, 22' : '34, 197, 94'}, 0.4)`,
+                      border: `2px solid rgba(${
+                        action.color === '#3b82f6' ? '59, 130, 246' : 
+                        action.color === '#f97316' ? '249, 115, 22' : 
+                        action.color === '#ef4444' ? '239, 68, 68' :
+                        action.color === '#8b5cf6' ? '139, 92, 246' :
+                        action.color === '#22c55e' ? '34, 197, 94' : '34, 197, 94'
+                      }, 0.4)`,
                       minHeight: '180px',
                       display: 'flex',
                       flexDirection: 'column',

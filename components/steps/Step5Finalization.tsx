@@ -247,7 +247,7 @@ const translations = {
     step3Hazards: "⚠️ Step 3 - Dangers et Contrôles",
     step4Permits: "📄 Step 4 - Permis et Autorisations",
     step5Validation: "✅ Step 5 - Validation Équipe",
-    step6Finalization: "🏁 Step 6 - Finalisation",
+    step5Finalization: "🏁 Step 5 - Finalisation",
     
     // Validation
     validation: "Validation AST Complète",
@@ -672,7 +672,7 @@ function Step6Finalization({
         comments: formData?.validation?.comments || []
       },
       
-      // ✅ Step 6 - Finalisation (état actuel)
+      // ✅ Step 5 - Finalisation (état actuel)
       finalization: finalizationData
     };
   }, [formData, finalizationData, tenant, language]);
@@ -719,9 +719,8 @@ function Step6Finalization({
     if (!step1Complete) errors.push(language === 'fr' ? 'Informations projet incomplètes' : 'Project information incomplete');
     if (!step2Complete) errors.push(language === 'fr' ? 'Équipements non sélectionnés' : 'Equipment not selected');
     if (!step3Complete) errors.push(language === 'fr' ? 'Dangers non identifiés' : 'Hazards not identified');
-    if (!step4Complete) errors.push(language === 'fr' ? 'Permis non configurés' : 'Permits not configured');
-    if (!step5Complete) errors.push(language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing');
-    if (!step6Complete) errors.push(language === 'fr' ? 'Finalisation incomplète' : 'Finalization incomplete');
+    if (!step4Complete) errors.push(language === 'fr' ? 'Validation équipe manquante' : 'Team validation missing');
+    if (!step5Complete) errors.push(language === 'fr' ? 'Finalisation incomplète' : 'Finalization incomplete');
     
     return {
       isValid: completedSteps === totalSteps,

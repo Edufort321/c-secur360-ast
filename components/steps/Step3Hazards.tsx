@@ -51,93 +51,90 @@ interface Standard {
   mandatory: boolean;
 }
 
-// =================== TRADUCTIONS BILINGUES ===================
-const getTexts = (language: 'fr' | 'en') => {
-  if (language === 'en') {
-    return {
-      title: "⚠️ Hazard & Risk Identification",
-      subtitle: "Select potential hazards and define required control measures",
-      searchPlaceholder: "Search for a hazard...",
-      allCategories: "All categories",
-      hazardsIdentified: "Hazards identified",
-      highRisks: "High risks", 
-      controlsImplemented: "Controls implemented",
-      implementationRate: "Implementation rate",
-      controlMeasures: "Control measures",
-      noHazardsFound: "No hazards found",
-      noHazardsMessage: "Modify your search criteria to see more hazards",
-      responsible: "Responsible...",
-      standardsReferences: "📋 Standards & References:",
-      mandatory: "Mandatory",
-      recommended: "Recommended",
-      riskLevels: {
-        critical: "🔴 Critical",
-        high: "🟠 High",
-        medium: "🟡 Medium",
-        low: "🟢 Low"
-      },
-      controlCategories: {
-        elimination: "❌ Elimination",
-        substitution: "🔄 Substitution", 
-        engineering: "🔧 Engineering",
-        administrative: "📋 Administrative",
-        ppe: "🛡️ PPE"
-      },
-      categories: {
-        'Électrique': 'Electrical',
-        'Mécanique': 'Mechanical',
-        'Physique': 'Physical', 
-        'Chimique': 'Chemical',
-        'Ergonomique': 'Ergonomic',
-        'Environnemental': 'Environmental',
-        'Psychosocial': 'Psychosocial',
-        'Incendie': 'Fire',
-        'Transport': 'Transport'
-      }
-    };
-  }
-  
-  return {
+// =================== SYSTÈME DE TRADUCTIONS ===================
+const translations = {
+  fr: {
     title: "⚠️ Identification des Dangers & Risques",
     subtitle: "Sélectionnez les dangers potentiels et définissez les moyens de contrôle requis",
     searchPlaceholder: "Rechercher un danger...",
     allCategories: "Toutes catégories",
     hazardsIdentified: "Dangers identifiés",
-    highRisks: "Risques élevés",
-    controlsImplemented: "Contrôles implantés", 
-    implementationRate: "Taux d'implantation",
-    controlMeasures: "Moyens de contrôle",
+    highRisks: "Risques élevés", 
+    controlsImplemented: "Contrôles implémentés",
+    implementationRate: "Taux d'implémentation",
+    controlMeasures: "Mesures de contrôle",
     noHazardsFound: "Aucun danger trouvé",
     noHazardsMessage: "Modifiez vos critères de recherche pour voir plus de dangers",
     responsible: "Responsable...",
-    standardsReferences: "📋 Normes & Références :",
+    standardsReferences: "📋 Normes & Références:",
     mandatory: "Obligatoire",
     recommended: "Recommandé",
     riskLevels: {
       critical: "🔴 Critique",
       high: "🟠 Élevé",
-      medium: "🟡 Moyen", 
+      medium: "🟡 Moyen",
       low: "🟢 Faible"
     },
     controlCategories: {
       elimination: "❌ Élimination",
-      substitution: "🔄 Substitution",
-      engineering: "🔧 Ingénierie", 
-      administrative: "📋 Administrative",
+      substitution: "🔄 Substitution", 
+      engineering: "🔧 Ingénierie",
+      administrative: "📋 Administratif",
       ppe: "🛡️ EPI"
     },
     categories: {
       'Électrique': 'Électrique',
       'Mécanique': 'Mécanique',
-      'Physique': 'Physique',
-      'Chimique': 'Chimique', 
+      'Physique': 'Physique', 
+      'Chimique': 'Chimique',
       'Ergonomique': 'Ergonomique',
       'Environnemental': 'Environnemental',
       'Psychosocial': 'Psychosocial',
       'Incendie': 'Incendie',
       'Transport': 'Transport'
     }
-  };
+  },
+  en: {
+    title: "⚠️ Hazard & Risk Identification",
+    subtitle: "Select potential hazards and define required control measures",
+    searchPlaceholder: "Search for a hazard...",
+    allCategories: "All categories",
+    hazardsIdentified: "Hazards identified",
+    highRisks: "High risks", 
+    controlsImplemented: "Controls implemented",
+    implementationRate: "Implementation rate",
+    controlMeasures: "Control measures",
+    noHazardsFound: "No hazards found",
+    noHazardsMessage: "Modify your search criteria to see more hazards",
+    responsible: "Responsible...",
+    standardsReferences: "📋 Standards & References:",
+    mandatory: "Mandatory",
+    recommended: "Recommended",
+    riskLevels: {
+      critical: "🔴 Critical",
+      high: "🟠 High",
+      medium: "🟡 Medium",
+      low: "🟢 Low"
+    },
+    controlCategories: {
+      elimination: "❌ Elimination",
+      substitution: "🔄 Substitution", 
+      engineering: "🔧 Engineering",
+      administrative: "📋 Administrative",
+      ppe: "🛡️ PPE"
+    },
+    categories: {
+      'Électrique': 'Electrical',
+      'Mécanique': 'Mechanical',
+      'Physique': 'Physical', 
+      'Chimique': 'Chemical',
+      'Ergonomique': 'Ergonomic',
+      'Environnemental': 'Environmental',
+      'Psychosocial': 'Psychosocial',
+      'Incendie': 'Fire',
+      'Transport': 'Transport'
+    }
+  }
 };
 
 // =================== FONCTION POUR TRADUIRE LES DANGERS ===================
@@ -668,6 +665,223 @@ const mechanicalHazards: Hazard[] = [
         implemented: false,
         standards: [
           { id: 'cnesst-grue', name: 'CNESST Grues', fullName: 'Guide formation opérateurs grues', url: 'https://www.cnesst.gouv.qc.ca/fr/prevention-securite/identifier-corriger-risques/liste-informations-prevention/appareils-levage', section: 'Section 2', description: 'Formation obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  }
+];
+
+// =================== DANGERS OUTILS MANUELS ET LIGNE DE TIR ===================
+const manualToolsHazards: Hazard[] = [
+  {
+    id: 'manual-tools-impact',
+    name: 'Impact d\'outils manuels',
+    category: 'Mécanique',
+    description: 'Blessures par impact d\'outils (marteaux, clés, etc.)',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 45, CSA Z94.1',
+    icon: '🔨',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-tool-1', 
+        name: 'Inspection pré-utilisation', 
+        category: 'administrative', 
+        description: 'Vérifier état des outils avant usage', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94-1', name: 'CSA Z94.1', fullName: 'Industrial Protective Headwear', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-1', section: 'Art. 4.1', description: 'Protection tête obligatoire', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-tool-2', 
+        name: 'Vigilance 360°', 
+        category: 'administrative', 
+        description: 'Maintenir conscience de l\'environnement complet', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'osha-1926', name: 'OSHA 1926', fullName: 'Construction Industry Standards', url: 'https://www.osha.gov/laws-regs/regulations/standardnumber/1926', section: 'Subpart E', description: 'Personal protective equipment', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-tool-3', 
+        name: 'Zone de sécurité établie', 
+        category: 'engineering', 
+        description: 'Délimiter périmètre de sécurité autour travaux', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z432', name: 'CSA Z432', fullName: 'Safeguarding of Machinery', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z432', section: 'Art. 5.1', description: 'Zones de sécurité', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-tool-4', 
+        name: 'EPI approprié', 
+        category: 'ppe', 
+        description: 'Casque, lunettes, gants résistants aux impacts', 
+        priority: 3, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z94-3', name: 'CSA Z94.3', fullName: 'Industrial Eye and Face Protectors', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z94-3', section: 'Art. 6.1', description: 'Protection oculaire obligatoire', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'line-of-fire-hazard',
+    name: 'Ligne de tir - objets projetés',
+    category: 'Mécanique',
+    description: 'Exposition aux objets projetés, éjectés ou en mouvement',
+    riskLevel: 'critical',
+    legislation: 'OSHA 29 CFR 1926, RSST Art. 51',
+    icon: '⚡',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-lof-1', 
+        name: 'Élimination de la source', 
+        category: 'elimination', 
+        description: 'Supprimer ou remplacer le processus dangereux', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'osha-hierarchy', name: 'OSHA Hierarchy', fullName: 'Hierarchy of Controls', url: 'https://www.cdc.gov/niosh/hierarchy-of-controls/', section: 'Level 1', description: 'Élimination prioritaire', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lof-2', 
+        name: 'Barrières physiques', 
+        category: 'engineering', 
+        description: 'Écrans, filets, garde-corps pour bloquer projections', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z432', name: 'CSA Z432', fullName: 'Safeguarding of Machinery', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z432', section: 'Art. 4.3', description: 'Dispositifs de protection', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lof-3', 
+        name: 'Communication active', 
+        category: 'administrative', 
+        description: 'Signaler déplacements et actions dangereuses', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z1600', name: 'CSA Z1600', fullName: 'Emergency and Continuity Management', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z1600', section: 'Art. 8.2', description: 'Communication sécurité', mandatory: false }
+        ]
+      },
+      { 
+        id: 'cm-lof-4', 
+        name: 'Vigilance ligne de tir', 
+        category: 'administrative', 
+        description: 'Ne jamais se positionner dans trajectoire potentielle', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'osha-struck-by', name: 'OSHA Struck-by', fullName: 'Struck-by Object Prevention', url: 'https://www.osha.gov/safety-management/', section: 'Fatal Four', description: 'Prévention objets projetés', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-lof-5', 
+        name: 'Ancrage et sécurisation', 
+        category: 'engineering', 
+        description: 'Attacher outils et matériaux pour éviter chutes', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'ansi-z359', name: 'ANSI Z359', fullName: 'Fall Protection Code', url: 'https://webstore.ansi.org/standards/asse/ansiz359', section: 'Part 4', description: 'Arrimage équipements', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'hand-tool-maintenance',
+    name: 'Outils défectueux',
+    category: 'Mécanique',
+    description: 'Défaillance d\'outils par manque d\'entretien',
+    riskLevel: 'medium',
+    legislation: 'RSST Art. 51.11, CSA Z142',
+    icon: '🔧',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-maint-1', 
+        name: 'Programme d\'entretien préventif', 
+        category: 'administrative', 
+        description: 'Calendrier de maintenance et remplacement', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z142', name: 'CSA Z142', fullName: 'Workplace Electrical Safety', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z142', section: 'Art. 4.1', description: 'Entretien équipements électriques', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-maint-2', 
+        name: 'Formation identification défauts', 
+        category: 'administrative', 
+        description: 'Reconnaître signes d\'usure et défaillance', 
+        priority: 2, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z1000', name: 'CSA Z1000', fullName: 'Occupational Health and Safety Management', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z1000', section: 'Art. 5.4', description: 'Formation sécurité', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-maint-3', 
+        name: 'Retrait immédiat outils défectueux', 
+        category: 'administrative', 
+        description: 'Procédure de mise hors service', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'osha-1926-95', name: 'OSHA 1926.95', fullName: 'Personal Protective Equipment', url: 'https://www.osha.gov/laws-regs/regulations/standardnumber/1926/1926.95', section: 'Para (a)', description: 'Retrait équipement défectueux', mandatory: true }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'power-tool-kickback',
+    name: 'Contrecoup d\'outils électriques',
+    category: 'Mécanique',
+    description: 'Perte de contrôle par réaction de l\'outil (scie, meuleuse)',
+    riskLevel: 'high',
+    legislation: 'RSST Art. 51.12, UL 745',
+    icon: '⚙️',
+    selected: false,
+    controlMeasures: [
+      { 
+        id: 'cm-kick-1', 
+        name: 'Dispositifs anti-contrecoup', 
+        category: 'engineering', 
+        description: 'Frein de chaîne, embrayage limiteur de couple', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'ul-745', name: 'UL 745', fullName: 'Standard for Portable Electric Tools', url: 'https://standardscatalog.ul.com/standards/en/standard_745', section: 'Part 2', description: 'Dispositifs sécurité outils', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-kick-2', 
+        name: 'Prise ferme à deux mains', 
+        category: 'administrative', 
+        description: 'Technique de tenue sécuritaire', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'iec-62841', name: 'IEC 62841', fullName: 'Electric motor-operated hand-held tools', url: 'https://webstore.iec.ch/publication/7468', section: 'Part 2', description: 'Utilisation sécuritaire', mandatory: true }
+        ]
+      },
+      { 
+        id: 'cm-kick-3', 
+        name: 'Positionnement corps sécuritaire', 
+        category: 'administrative', 
+        description: 'Éviter alignement avec direction de contrecoup', 
+        priority: 1, 
+        implemented: false,
+        standards: [
+          { id: 'csa-z1000', name: 'CSA Z1000', fullName: 'Occupational Health and Safety Management', url: 'https://www.csagroup.org/fr/standards/find-a-standard/csa-z1000', section: 'Art. 5.4', description: 'Formation techniques sécuritaires', mandatory: true }
         ]
       }
     ]
@@ -1329,6 +1543,7 @@ const transportHazards: Hazard[] = [
 const hazardsList: Hazard[] = [
   ...electricalHazards,
   ...mechanicalHazards,
+  ...manualToolsHazards,
   ...physicalHazards,
   ...chemicalHazards,
   ...ergonomicHazards,
@@ -1346,7 +1561,7 @@ const Step3Hazards: React.FC<Step3HazardsProps> = ({
   tenant,
   errors
 }) => {
-  const texts = getTexts(language);
+  const texts = translations[language];
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
