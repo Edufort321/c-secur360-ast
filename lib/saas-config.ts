@@ -28,73 +28,20 @@ export interface SubscriptionPlan {
 }
 
 export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
-  starter: {
-    id: 'starter',
-    name: 'Démarrage',
-    description: 'Parfait pour les petites équipes qui commencent avec la sécurité',
-    price: {
-      monthly: 29,
-      annually: 290  // 2 mois gratuits
-    },
-    features: {
-      maxUsers: 5,
-      maxAST: 50,
-      maxStorage: 5,
-      smsNotifications: 100,
-      emailNotifications: 500,
-      cloudIntegration: false,
-      advancedReports: false,
-      apiAccess: false,
-      phoneSupport: false,
-      customBranding: false,
-      sso: false,
-      audit: false,
-      compliance: ['QC']
-    },
-    stripeProductId: 'prod_starter_plan'
-  },
-
   professional: {
     id: 'professional',
-    name: 'Professionnel',
-    description: 'Pour les entreprises en croissance avec des besoins avancés',
+    name: 'C-SECUR360 Complet',
+    description: 'Solution complète pour toutes les entreprises - Plan unique tout inclus',
     price: {
-      monthly: 79,
-      annually: 790
+      monthly: 250,
+      annually: 3000  // Économie de 1000$ par année (2 mois gratuits)
     },
     features: {
-      maxUsers: 25,
-      maxAST: 500,
-      maxStorage: 50,
-      smsNotifications: 1000,
-      emailNotifications: 5000,
-      cloudIntegration: true,
-      advancedReports: true,
-      apiAccess: true,
-      phoneSupport: false,
-      customBranding: false,
-      sso: false,
-      audit: true,
-      compliance: ['QC', 'ON', 'AB', 'BC']
-    },
-    stripeProductId: 'prod_professional_plan',
-    popular: true
-  },
-
-  enterprise: {
-    id: 'enterprise',
-    name: 'Entreprise',
-    description: 'Solution complète pour les grandes organisations',
-    price: {
-      monthly: 199,
-      annually: 1990
-    },
-    features: {
-      maxUsers: 100,
+      maxUsers: -1, // illimité
       maxAST: -1, // illimité
-      maxStorage: 500,
-      smsNotifications: 10000,
-      emailNotifications: 50000,
+      maxStorage: -1, // illimité
+      smsNotifications: -1, // illimité
+      emailNotifications: -1, // illimité
       cloudIntegration: true,
       advancedReports: true,
       apiAccess: true,
@@ -104,13 +51,14 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       audit: true,
       compliance: ['QC', 'ON', 'AB', 'BC', 'SK', 'MB', 'NS', 'NB', 'PE', 'NL', 'YT', 'NT', 'NU']
     },
-    stripeProductId: 'prod_enterprise_plan'
+    stripeProductId: 'prod_csecur360_plan',
+    popular: true
   },
 
   custom: {
     id: 'custom',
-    name: 'Sur Mesure',
-    description: 'Solution personnalisée pour vos besoins spécifiques',
+    name: 'Solution Entreprise',
+    description: 'Pour les grandes organisations avec besoins spécifiques et intégrations ERP',
     price: {
       monthly: 0, // Prix sur demande
       annually: 0
@@ -208,17 +156,9 @@ export const SAAS_CONFIG = {
   
   // Tarification multi-sites
   multiSitePricing: {
-    starter: {
-      additionalSiteMonthly: 15,   // +15$/mois par site additionnel
-      additionalSiteAnnually: 150   // +150$/an par site additionnel (2 mois gratuits)
-    },
     professional: {
-      additionalSiteMonthly: 25,   // +25$/mois par site additionnel
-      additionalSiteAnnually: 250   // +250$/an par site additionnel
-    },
-    enterprise: {
-      additionalSiteMonthly: 50,   // +50$/mois par site additionnel
-      additionalSiteAnnually: 500   // +500$/an par site additionnel
+      additionalSiteMonthly: 50,   // +50$/mois par site additionnel (600$/an)
+      additionalSiteAnnually: 600   // +600$/an par site additionnel
     },
     custom: {
       additionalSiteMonthly: 0,    // Prix négocié individuellement
