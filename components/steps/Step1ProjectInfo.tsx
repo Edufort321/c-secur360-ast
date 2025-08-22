@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import LOTOPhotoCarousel from '../loto/LOTOPhotoCarousel';
 import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
+import Header from '../ui/Header';
 
 // =================== INTERFACES ===================
 interface Step1ProjectInfoProps {
@@ -787,10 +788,10 @@ const Step1ProjectInfo = memo(({
 
   // Styles communs
   const cardStyle = {
-    background: 'rgba(30, 41, 59, 0.6)',
+    background: 'var(--bg-secondary)',
     borderRadius: '12px',
     padding: '24px',
-    border: '1px solid rgba(100, 116, 139, 0.3)',
+    border: '1px solid var(--border-primary)',
     marginBottom: '24px'
   };
 
@@ -798,8 +799,8 @@ const Step1ProjectInfo = memo(({
     width: '100%',
     padding: '12px',
     borderRadius: '8px',
-    border: '2px solid rgba(100, 116, 139, 0.3)',
-    background: 'rgba(15, 23, 42, 0.8)',
+    border: '2px solid var(--border-primary)',
+    background: 'var(--bg-primary)',
     color: 'white',
     fontSize: '14px',
     boxSizing: 'border-box' as const
@@ -810,71 +811,45 @@ const Step1ProjectInfo = memo(({
     marginBottom: '6px',
     fontSize: '14px',
     fontWeight: '500',
-    color: '#e2e8f0'
+    color: 'var(--text-secondary)'
   };
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      background: 'var(--gradient-bg-primary)',
       color: 'white',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '24px'
     }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '32px'
-        }}>
-          <div>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              margin: '0 0 8px 0',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              {t.title}
-            </h1>
-            <p style={{ margin: 0, color: '#94a3b8', fontSize: '16px' }}>
-              {t.subtitle}
-            </p>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => onDataChange('projectInfo', localData)}
-              style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                color: '#60a5fa',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <Save size={16} />
-              {t.save}
-            </button>
-          </div>
-        </div>
+      {/* Header uniforme */}
+      <Header 
+        title={t.title}
+        subtitle={t.subtitle}
+        logoSize="2xl"
+        actions={
+          <button
+            onClick={() => onDataChange('projectInfo', localData)}
+            className="bg-blue-500/10 border border-blue-500/30 text-blue-400 
+                       px-6 py-3 rounded-lg cursor-pointer text-sm
+                       flex items-center gap-2 hover:bg-blue-500/20 transition-colors"
+          >
+            <Save size={16} />
+            {t.save}
+          </button>
+        }
+      />
+      
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
 
         {/* Navigation par onglets */}
         <div style={{
           display: 'flex',
           marginBottom: '24px',
-          background: 'rgba(30, 41, 59, 0.6)',
+          background: 'var(--bg-secondary)',
           borderRadius: '12px',
           padding: '6px',
-          border: '1px solid rgba(100, 116, 139, 0.3)'
+          border: '1px solid var(--border-secondary)'
         }}>
           {(['project', 'loto'] as const).map((tab) => (
             <button
@@ -892,7 +867,7 @@ const Step1ProjectInfo = memo(({
                 background: activeTab === tab 
                   ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                   : 'transparent',
-                color: activeTab === tab ? 'white' : '#94a3b8',
+                color: activeTab === tab ? 'white' : 'var(--text-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -938,7 +913,7 @@ const Step1ProjectInfo = memo(({
               style={{
                 ...inputStyle,
                 flex: 1,
-                background: 'rgba(15, 23, 42, 0.5)',
+                background: 'var(--bg-primary)',
                 cursor: 'default'
               }}
               placeholder={t.astGenerated}
@@ -947,7 +922,7 @@ const Step1ProjectInfo = memo(({
             <button
               onClick={generateASTNumber}
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'var(--gradient-success)',
                 color: 'white',
                 border: 'none',
                 padding: '12px 16px',
@@ -967,9 +942,9 @@ const Step1ProjectInfo = memo(({
               <button
                 onClick={copyASTNumber}
                 style={{
-                  background: copied ? '#10b981' : 'rgba(100, 116, 139, 0.2)',
-                  color: copied ? 'white' : '#94a3b8',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
+                  background: copied ? '#10b981' : 'var(--bg-secondary)',
+                  color: copied ? 'white' : 'var(--text-muted)',
+                  border: '1px solid var(--border-primary)',
                   padding: '12px 16px',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -1221,7 +1196,7 @@ const Step1ProjectInfo = memo(({
             <button
               onClick={addTeamMember}
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'var(--gradient-success)',
                 color: 'white',
                 border: 'none',
                 padding: '8px 16px',
@@ -1292,10 +1267,10 @@ const Step1ProjectInfo = memo(({
             <div style={{ display: 'grid', gap: '12px' }}>
               {localData.teamMembers.map((member, index) => (
                 <div key={member.id} style={{
-                  background: 'rgba(15, 23, 42, 0.8)',
+                  background: 'var(--bg-secondary)',
                   padding: '16px',
                   borderRadius: '8px',
-                  border: '1px solid rgba(100, 116, 139, 0.3)'
+                  border: '1px solid var(--border-secondary)'
                 }}>
                   <div style={{
                     display: 'flex',
@@ -1303,7 +1278,7 @@ const Step1ProjectInfo = memo(({
                     alignItems: 'center',
                     marginBottom: '12px'
                   }}>
-                    <h5 style={{ margin: 0, color: '#e2e8f0' }}>
+                    <h5 style={{ margin: 0, color: 'var(--text-secondary)' }}>
                       Membre {index + 1}
                     </h5>
                     <button
@@ -1447,10 +1422,10 @@ const Step1ProjectInfo = memo(({
             <div style={{ display: 'grid', gap: '16px' }}>
               {localData.workLocations.map((location, index) => (
                 <div key={location.id} style={{
-                  background: 'rgba(15, 23, 42, 0.8)',
+                  background: 'var(--bg-secondary)',
                   padding: '16px',
                   borderRadius: '8px',
-                  border: '1px solid rgba(100, 116, 139, 0.3)'
+                  border: '1px solid var(--border-secondary)'
                 }}>
                   <div style={{
                     display: 'flex',
@@ -1458,7 +1433,7 @@ const Step1ProjectInfo = memo(({
                     alignItems: 'center',
                     marginBottom: '12px'
                   }}>
-                    <h5 style={{ margin: 0, color: '#e2e8f0' }}>
+                    <h5 style={{ margin: 0, color: 'var(--text-secondary)' }}>
                       Emplacement {index + 1}
                     </h5>
                     <button
@@ -1665,7 +1640,7 @@ const Step1ProjectInfo = memo(({
                       borderRadius: '6px',
                       border: '1px solid rgba(139, 92, 246, 0.3)'
                     }}>
-                      <span style={{ color: '#e2e8f0' }}>{objective}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{objective}</span>
                       <button
                         onClick={() => removeObjective(index)}
                         style={{
@@ -1740,7 +1715,7 @@ const Step1ProjectInfo = memo(({
                   <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '4px' }}>
                     AST Client
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -1768,7 +1743,7 @@ const Step1ProjectInfo = memo(({
                   <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '4px' }}>
                     Fiche Verrouillage Client
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -1796,7 +1771,7 @@ const Step1ProjectInfo = memo(({
                   <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '4px' }}>
                     Photos Diverses
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Site, équipements, conditions
                   </div>
                 </div>
@@ -1806,10 +1781,10 @@ const Step1ProjectInfo = memo(({
 
           {/* Zone d'affichage des documents ajoutés */}
           <div style={{
-            background: 'rgba(15, 23, 42, 0.6)',
+            background: 'var(--bg-primary)',
             borderRadius: '8px',
             padding: '16px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
+            border: '1px solid var(--border-secondary)'
           }}>
             <div style={{ 
               display: 'flex', 
@@ -1817,13 +1792,13 @@ const Step1ProjectInfo = memo(({
               gap: '8px',
               marginBottom: '12px'
             }}>
-              <Eye size={16} style={{ color: '#94a3b8' }} />
-              <span style={{ color: '#94a3b8', fontSize: '14px' }}>
+              <Eye size={16} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
                 Documents ajoutés (0)
               </span>
             </div>
             <div style={{
-              color: '#64748b',
+              color: 'var(--text-muted)',
               fontSize: '14px',
               fontStyle: 'italic',
               textAlign: 'center',
@@ -1938,7 +1913,7 @@ const Step1ProjectInfo = memo(({
               </h3>
               <p style={{ 
                 margin: 0, 
-                color: '#94a3b8', 
+                color: 'var(--text-muted)', 
                 fontSize: '14px' 
               }}>
                 {t.lotoDescription}
@@ -2205,7 +2180,7 @@ const Step1ProjectInfo = memo(({
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ 
                     margin: '0 0 16px 0', 
-                    color: '#e2e8f0',
+                    color: 'var(--text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
@@ -2217,7 +2192,7 @@ const Step1ProjectInfo = memo(({
                   <div style={{ display: 'grid', gap: '12px' }}>
                     {localData.lotoProcedure.points.map((point, index) => (
                       <div key={point.id} style={{
-                        background: 'rgba(15, 23, 42, 0.8)',
+                        background: 'var(--bg-secondary)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '8px',
                         padding: '16px'
@@ -2231,7 +2206,7 @@ const Step1ProjectInfo = memo(({
                           <div>
                             <h5 style={{ 
                               margin: '0 0 4px 0', 
-                              color: '#e2e8f0',
+                              color: 'var(--text-secondary)',
                               fontSize: '16px',
                               fontWeight: '600'
                             }}>
@@ -2240,7 +2215,7 @@ const Step1ProjectInfo = memo(({
                             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                               <span style={{
                                 fontSize: '12px',
-                                color: '#94a3b8',
+                                color: 'var(--text-muted)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px'
@@ -2250,7 +2225,7 @@ const Step1ProjectInfo = memo(({
                               </span>
                               <span style={{
                                 fontSize: '12px',
-                                color: '#94a3b8'
+                                color: 'var(--text-muted)'
                               }}>
                                 {t.energyTypes[point.energyType]}
                               </span>
@@ -2301,20 +2276,20 @@ const Step1ProjectInfo = memo(({
                         
                         {point.notes && (
                           <div style={{
-                            background: 'rgba(100, 116, 139, 0.1)',
+                            background: 'var(--bg-primary)',
                             padding: '8px 12px',
                             borderRadius: '6px',
                             marginTop: '8px'
                           }}>
-                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>Notes: </span>
-                            <span style={{ color: '#e2e8f0', fontSize: '12px' }}>{point.notes}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Notes: </span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{point.notes}</span>
                           </div>
                         )}
                         
                         {point.photos.length > 0 && (
                           <div style={{ marginTop: '12px' }}>
                             <div style={{ 
-                              color: '#94a3b8', 
+                              color: 'var(--text-muted)', 
                               fontSize: '12px',
                               marginBottom: '6px'
                             }}>
@@ -2331,7 +2306,7 @@ const Step1ProjectInfo = memo(({
                                     height: '32px',
                                     borderRadius: '4px',
                                     objectFit: 'cover',
-                                    border: photo.validated ? '1px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)'
+                                    border: photo.validated ? '1px solid #22c55e' : '1px solid var(--border-secondary)'
                                   }}
                                 />
                               ))}
@@ -2340,12 +2315,12 @@ const Step1ProjectInfo = memo(({
                                   width: '32px',
                                   height: '32px',
                                   borderRadius: '4px',
-                                  background: 'rgba(100, 116, 139, 0.3)',
+                                  background: 'var(--bg-secondary)',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   fontSize: '10px',
-                                  color: '#94a3b8',
+                                  color: 'var(--text-muted)',
                                   fontWeight: '600'
                                 }}>
                                   +{point.photos.length - 4}
@@ -2386,13 +2361,13 @@ const Step1ProjectInfo = memo(({
           alignItems: 'center',
           marginTop: '32px',
           padding: '24px',
-          background: 'rgba(30, 41, 59, 0.6)',
+          background: 'var(--bg-secondary)',
           borderRadius: '12px',
-          border: '1px solid rgba(100, 116, 139, 0.3)'
+          border: '1px solid var(--border-secondary)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={20} style={{ color: '#94a3b8' }} />
-            <span style={{ color: '#94a3b8' }}>Étape 1 sur 5</span>
+            <FileText size={20} style={{ color: 'var(--text-muted)' }} />
+            <span style={{ color: 'var(--text-muted)' }}>Étape 1 sur 5</span>
             {localData.lotoProcedure.points.length > 0 && (
               <div style={{ 
                 display: 'flex', 
@@ -2418,7 +2393,7 @@ const Step1ProjectInfo = memo(({
               // Logique pour passer à l'étape suivante
             }}
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background: 'var(--gradient-success)',
               color: 'white',
               border: 'none',
               padding: '12px 24px',

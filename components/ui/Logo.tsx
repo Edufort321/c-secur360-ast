@@ -3,7 +3,7 @@
 import React from 'react';
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   variant?: 'default' | 'glow' | 'minimal';
   className?: string;
   showText?: boolean;
@@ -21,6 +21,7 @@ const Logo: React.FC<LogoProps> = ({
       case 'md': return 'h-12 w-auto';
       case 'lg': return 'h-16 w-auto';
       case 'xl': return 'h-20 w-auto';
+      case '2xl': return 'h-24 w-auto';
       default: return 'h-12 w-auto';
     }
   };
@@ -39,6 +40,7 @@ const Logo: React.FC<LogoProps> = ({
       case 'md': return 'text-xl';
       case 'lg': return 'text-2xl';
       case 'xl': return 'text-3xl';
+      case '2xl': return 'text-4xl';
       default: return 'text-xl';
     }
   };
@@ -71,7 +73,7 @@ const Logo: React.FC<LogoProps> = ({
             <span className={`font-bold text-white ${getTextSize()}`}>
               C-SECUR360
             </span>
-            {(size === 'lg' || size === 'xl') && (
+            {(size === 'lg' || size === 'xl' || size === '2xl') && (
               <span className="text-sm text-gray-300 -mt-1">
                 Sécurité Industrielle
               </span>

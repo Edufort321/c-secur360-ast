@@ -16,6 +16,7 @@ import Step3Hazards from '@/components/steps/Step3Hazards';
 import Step4Validation from '@/components/steps/Step4Validation';
 import Step5Finalization from '@/components/steps/Step5Finalization';
 import Logo from '@/components/ui/Logo';
+import Header from '@/components/ui/Header';
 
 // =================== INTERFACES PRINCIPALES ===================
 interface ASTFormProps {
@@ -567,9 +568,9 @@ const ASTForm: React.FC<ASTFormProps> = ({
           zIndex: 1
         }}>
           <Logo 
-            size={isMobile ? 'md' : 'xl'} 
+            size={isMobile ? 'lg' : '2xl'} 
             variant="glow" 
-            showText={false}
+            showText={true}
           />
         </div>
         
