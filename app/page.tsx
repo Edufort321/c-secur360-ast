@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/ui/Logo';
 import { 
   Shield, 
   Users, 
@@ -1183,10 +1184,10 @@ export default function LandingPage() {
               color: '#94a3b8'
             }}>
               {t.poweredBy} 
-              <img 
-                src="/c-secur360-logo.png" 
-                alt="CERDIA" 
-                style={{ height: '16px', width: 'auto' }}
+              <Logo 
+                size="sm" 
+                variant="minimal"
+                showText={false}
               />
               CERDIA
             </span>

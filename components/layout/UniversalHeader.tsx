@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/ui/Logo';
 import { 
   Bell, 
   Settings, 
@@ -87,28 +88,21 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
           <div className="flex items-center space-x-4">
             <Link 
               href={tenant ? `/${tenant}/dashboard` : '/'}
-              className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+              className="hover:opacity-80 transition-opacity"
             >
-              <img 
-                src="/c-secur360-logo.png" 
-                alt="C-SECUR360" 
-                className="h-10 w-auto"
+              <Logo 
+                size="lg" 
+                variant="default"
+                showText={true}
               />
-              <div className="hidden sm:block">
-                <h1 className={`text-xl font-bold ${
-                  isDark ? 'text-white' : 'text-slate-900'
-                }`}>
-                  C-SECUR360
-                </h1>
-                {tenant && (
-                  <p className={`text-sm ${
-                    isDark ? 'text-slate-400' : 'text-slate-600'
-                  }`}>
-                    {tenant.charAt(0).toUpperCase() + tenant.slice(1)}
-                  </p>
-                )}
-              </div>
             </Link>
+            {tenant && (
+              <p className={`text-sm ${
+                isDark ? 'text-slate-400' : 'text-slate-600'
+              }`}>
+                {tenant.charAt(0).toUpperCase() + tenant.slice(1)}
+              </p>
+            )}
           </div>
 
           {/* Actions desktop */}

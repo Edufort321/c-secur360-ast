@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import LOTOPhotoCarousel from '../loto/LOTOPhotoCarousel';
 import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
-import WorkerRegistryAST from '../workers/WorkerRegistryAST';
 
 // =================== INTERFACES ===================
 interface Step1ProjectInfoProps {
@@ -349,7 +348,6 @@ const translations = {
     // Onglets navigation
     tabs: {
       project: "Projet",
-      workers: "Travailleurs",
       loto: "LOTO"
     }
   },
@@ -518,7 +516,6 @@ const translations = {
     // Onglets navigation
     tabs: {
       project: "Project",
-      workers: "Workers",
       loto: "LOTO"
     }
   }
@@ -587,7 +584,7 @@ const Step1ProjectInfo = memo(({
   const [showLotoSection, setShowLotoSection] = useState(false);
   const [newLotoPoint, setNewLotoPoint] = useState<Partial<LOTOPoint>>({});
   const [editingLotoPoint, setEditingLotoPoint] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'project' | 'workers' | 'loto'>('project');
+  const [activeTab, setActiveTab] = useState<'project' | 'loto'>('project');
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
 
@@ -879,7 +876,7 @@ const Step1ProjectInfo = memo(({
           padding: '6px',
           border: '1px solid rgba(100, 116, 139, 0.3)'
         }}>
-          {(['project', 'workers', 'loto'] as const).map((tab) => (
+          {(['project', 'loto'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -903,7 +900,6 @@ const Step1ProjectInfo = memo(({
               }}
             >
               {tab === 'project' && <Building size={16} />}
-              {tab === 'workers' && <Users size={16} />}
               {tab === 'loto' && <Lock size={16} />}
               {t.tabs[tab]}
               {tab === 'loto' && localData.lotoProcedure.points.length > 0 && (
@@ -1705,6 +1701,139 @@ const Step1ProjectInfo = memo(({
           </div>
         </div>
 
+        {/* Carrousel Info Divers - Documents et photos du projet */}
+        <div style={cardStyle}>
+          <h3 style={{
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Camera size={20} style={{ color: '#8b5cf6' }} />
+            Documentation du Projet
+          </h3>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '16px',
+            marginBottom: '20px'
+          }}>
+            {/* AST Client */}
+            <div style={{
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '2px dashed rgba(139, 92, 246, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <FileText size={32} style={{ color: '#8b5cf6' }} />
+                <div>
+                  <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '4px' }}>
+                    AST Client
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    Cliquer pour ajouter
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fiche de Verrouillage Client */}
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '2px dashed rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Lock size={32} style={{ color: '#ef4444' }} />
+                <div>
+                  <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '4px' }}>
+                    Fiche Verrouillage Client
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    Cliquer pour ajouter
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Photos Diverses */}
+            <div style={{
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '2px dashed rgba(6, 182, 212, 0.3)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Camera size={32} style={{ color: '#06b6d4' }} />
+                <div>
+                  <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '4px' }}>
+                    Photos Diverses
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                    Site, équipements, conditions
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Zone d'affichage des documents ajoutés */}
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '8px',
+            padding: '16px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <Eye size={16} style={{ color: '#94a3b8' }} />
+              <span style={{ color: '#94a3b8', fontSize: '14px' }}>
+                Documents ajoutés (0)
+              </span>
+            </div>
+            <div style={{
+              color: '#64748b',
+              fontSize: '14px',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              padding: '20px'
+            }}>
+              Aucun document ajouté pour le moment
+            </div>
+          </div>
+        </div>
+
         {/* Conditions de Travail */}
         <div style={cardStyle}>
           <h3 style={{
@@ -1785,46 +1914,6 @@ const Step1ProjectInfo = memo(({
           </>
         )}
 
-        {/* Onglet Workers - WorkerRegistryAST */}
-        {activeTab === 'workers' && (
-          <div>
-            <WorkerRegistryAST
-              astId={localData.astNumber || 'AST-TEMP'}
-              astTitle={localData.projectName || localData.workSite || 'Projet AST'}
-              language={language}
-              projectManagerPhone={localData.supervisorPhone}
-              availableLocks={localData.lotoProcedure.points.map(point => ({
-                id: point.id,
-                lockNumber: `LOTO-${point.equipmentName}`,
-                equipment: point.equipmentName,
-                energyType: (point.energyType === 'gravitational' ? 'mechanical' : point.energyType) as 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical',
-                location: point.location,
-                status: (point.status === 'completed' ? 'applied' : 'available') as 'available' | 'applied' | 'verified' | 'removed',
-                isApplied: point.status === 'completed',
-                appliedByWorker: point.status === 'completed',
-                appliedTime: point.status === 'completed' ? new Date().toISOString() : undefined,
-                removedTime: undefined,
-                photos: point.photos.map(p => p.url)
-              }))}
-              onLockStatusChange={(lockId: string, isApplied: boolean, workerId: string) => {
-                // Mettre à jour le statut LOTO correspondant
-                const updatedProcedure = {
-                  ...localData.lotoProcedure,
-                  points: localData.lotoProcedure.points.map(point => 
-                    point.id === lockId 
-                      ? { 
-                          ...point, 
-                          status: isApplied ? 'completed' : 'pending',
-                          assignedWorker: isApplied ? workerId : undefined
-                        }
-                      : point
-                  )
-                };
-                updateField('lotoProcedure', updatedProcedure);
-              }}
-            />
-          </div>
-        )}
 
         {/* Onglet LOTO */}
         {activeTab === 'loto' && (

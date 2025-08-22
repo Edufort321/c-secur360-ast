@@ -7,6 +7,9 @@ import {
   Edit, Save, Star, Calendar, Plus
 } from 'lucide-react';
 
+// Importer le WorkerRegistryAST
+import WorkerRegistryAST from '@/components/workers/WorkerRegistryAST';
+
 // =================== INTERFACES ===================
 interface Step4ValidationProps {
   formData: any;
@@ -682,6 +685,49 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               style={{ width: `${overallProgress * 100}%` }}
             />
           </div>
+        </div>
+
+        {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
+        <div className="section-card">
+          <h3 className="section-title">
+            <Users size={20} />
+            {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
+          </h3>
+          <WorkerRegistryAST
+            astId={formData?.astNumber || 'AST-TEMP'}
+            astTitle={formData?.projectInfo?.title || 'AST'}
+            language={language}
+            projectManagerPhone={formData?.projectInfo?.supervisorPhone}
+            availableLocks={formData?.lotoProcedure?.points?.map((point: any) => ({
+              id: point.id,
+              lockNumber: `LOTO-${point.equipmentName}`,
+              equipment: point.equipmentName,
+              energyType: (point.energyType === 'gravitational' ? 'mechanical' : point.energyType) as 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical',
+              location: point.location,
+              status: (point.status === 'completed' ? 'applied' : 'available') as 'available' | 'applied' | 'verified' | 'removed',
+              isApplied: point.status === 'completed',
+              appliedByWorker: point.status === 'completed',
+              appliedTime: point.status === 'completed' ? new Date().toISOString() : undefined,
+              removedTime: undefined,
+              photos: point.photos?.map((p: any) => p.url) || []
+            })) || []}
+            onLockStatusChange={(lockId: string, isApplied: boolean, workerId: string) => {
+              // Mettre à jour le statut LOTO correspondant
+              const updatedProcedure = {
+                ...formData.lotoProcedure,
+                points: formData.lotoProcedure.points.map((point: any) => 
+                  point.id === lockId 
+                    ? { 
+                        ...point, 
+                        status: isApplied ? 'completed' : 'pending',
+                        assignedWorker: isApplied ? workerId : undefined
+                      }
+                    : point
+                )
+              };
+              onDataChange('lotoProcedure', updatedProcedure);
+            }}
+          />
         </div>
 
         {/* Critères de validation */}

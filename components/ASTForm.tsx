@@ -15,6 +15,7 @@ import Step2Equipment from '@/components/steps/Step2Equipment';
 import Step3Hazards from '@/components/steps/Step3Hazards';
 import Step4Validation from '@/components/steps/Step4Validation';
 import Step5Finalization from '@/components/steps/Step5Finalization';
+import Logo from '@/components/ui/Logo';
 
 // =================== INTERFACES PRINCIPALES ===================
 interface ASTFormProps {
@@ -89,8 +90,8 @@ const translations = {
         subtitle: "Risques + Moyens contrôle"
       },
       step4: {
-        title: "Permis & Autorisations",
-        subtitle: "Conformité réglementaire"
+        title: "Autorisation et validation de l'équipe",
+        subtitle: "Signatures et gestion des travailleurs"
       },
       step5: {
         title: "Finalisation",
@@ -142,8 +143,8 @@ const translations = {
         subtitle: "Risks + Control measures"
       },
       step4: {
-        title: "Permits & Authorizations",
-        subtitle: "Regulatory compliance"
+        title: "Authorization and Team Validation",
+        subtitle: "Signatures and worker management"
       },
       step5: {
         title: "Finalization",
@@ -559,44 +560,17 @@ const ASTForm: React.FC<ASTFormProps> = ({
         }}
       >
         <div style={{
-          width: isMobile ? '32px' : '96px',
-          height: isMobile ? '32px' : '96px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
           zIndex: 1
         }}>
-          <img 
-            src="/c-secur360-logo.png" 
-            alt="C-Secur360"
-            className="logo-glow"
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))'
-            }}
-            onError={(e) => {
-              console.log('❌ Erreur chargement logo:', e);
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'flex';
-            }}
+          <Logo 
+            size={isMobile ? 'md' : 'xl'} 
+            variant="glow" 
+            showText={false}
           />
-          <div style={{ 
-            display: 'none',
-            color: '#f59e0b', 
-            fontSize: isMobile ? '16px' : '48px',
-            fontWeight: '900',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textShadow: '0 4px 8px rgba(0,0,0,0.7)',
-            width: '100%',
-            height: '100%'
-          }}>
-            🛡️
-          </div>
         </div>
         
         {/* Effet brillance animé */}
