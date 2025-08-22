@@ -24,11 +24,53 @@ const config: Config = {
         },
       },
       colors: {
-        'ast-blue': '#3498db',
-        'ast-green': '#27ae60',
-        'ast-red': '#e74c3c',
-        'ast-yellow': '#f39c12',
-        'ast-purple': '#9b59b6',
+        // Couleurs modernes unifiées (alignées avec design-system.css)
+        primary: {
+          DEFAULT: '#3b82f6',  // Blue-500
+          dark: '#1d4ed8',     // Blue-700
+          light: '#60a5fa',    // Blue-400
+        },
+        success: {
+          DEFAULT: '#10b981',  // Emerald-500
+          dark: '#059669',     // Emerald-600
+          light: '#34d399',    // Emerald-400
+        },
+        warning: {
+          DEFAULT: '#f59e0b',  // Amber-500
+          dark: '#d97706',     // Amber-600
+          light: '#fbbf24',    // Amber-400
+        },
+        danger: {
+          DEFAULT: '#ef4444',  // Red-500
+          dark: '#dc2626',     // Red-600
+          light: '#f87171',    // Red-400
+        },
+        info: {
+          DEFAULT: '#06b6d4',  // Cyan-500
+          dark: '#0891b2',     // Cyan-600
+          light: '#22d3ee',    // Cyan-400
+        },
+        // Couleurs LOTO spécialisées
+        loto: {
+          available: '#64748b',  // Slate-500
+          applied: '#dc2626',    // Red-600
+          verified: '#f59e0b',   // Amber-500
+          removed: '#10b981',    // Emerald-500
+        },
+        // Couleurs de risque
+        risk: {
+          critical: '#7f1d1d',   // Red-900
+          high: '#dc2626',       // Red-600
+          medium: '#ea580c',     // Orange-600
+          low: '#ca8a04',        // Yellow-600
+          minimal: '#15803d',    // Green-700
+        },
+        // Legacy (pour compatibilité - DEPRECATED)
+        'ast-blue': '#3b82f6',
+        'ast-green': '#10b981',
+        'ast-red': '#ef4444',
+        'ast-yellow': '#f59e0b',
+        'ast-purple': '#8b5cf6',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

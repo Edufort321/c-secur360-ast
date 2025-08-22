@@ -1,0 +1,328 @@
+/**
+ * 🎨 C-SECUR360 DESIGN SYSTEM
+ * Système de design moderne et professionnel adaptatif
+ * Compatible: Mobile, Tablette, Ordinateur portable, Bureau
+ */
+
+:root {
+  /* ============================================
+   * 🎨 PALETTE DE COULEURS PRINCIPALE
+   * ============================================ */
+  
+  /* Couleurs Primaires - Bleu Sécurité Professionnel */
+  --color-primary: #3b82f6;        /* Blue-500 - Couleur principale */
+  --color-primary-dark: #1d4ed8;   /* Blue-700 - Hover/Active states */
+  --color-primary-light: #60a5fa;  /* Blue-400 - Variants clairs */
+  --color-primary-50: #eff6ff;     /* Blue-50 - Backgrounds très clairs */
+  --color-primary-100: #dbeafe;    /* Blue-100 - Backgrounds clairs */
+  --color-primary-900: #1e3a8a;    /* Blue-900 - Textes sur clair */
+  
+  /* Couleurs Fonctionnelles */
+  --color-success: #10b981;        /* Emerald-500 - Validation, succès */
+  --color-success-dark: #059669;   /* Emerald-600 - Hover success */
+  --color-success-light: #34d399;  /* Emerald-400 - Success subtil */
+  --color-success-bg: #d1fae5;     /* Success background */
+  
+  --color-warning: #f59e0b;        /* Amber-500 - Attention, alertes */
+  --color-warning-dark: #d97706;   /* Amber-600 - Hover warning */
+  --color-warning-light: #fbbf24;  /* Amber-400 - Warning subtil */
+  --color-warning-bg: #fef3c7;     /* Warning background */
+  
+  --color-danger: #ef4444;         /* Red-500 - Erreurs, dangers */
+  --color-danger-dark: #dc2626;    /* Red-600 - Hover danger */
+  --color-danger-light: #f87171;   /* Red-400 - Danger subtil */
+  --color-danger-bg: #fee2e2;      /* Danger background */
+  
+  --color-info: #06b6d4;           /* Cyan-500 - Informations */
+  --color-info-dark: #0891b2;      /* Cyan-600 - Hover info */
+  --color-info-light: #22d3ee;     /* Cyan-400 - Info subtil */
+  --color-info-bg: #cffafe;        /* Info background */
+  
+  /* ============================================
+   * 🌫️ COULEURS NEUTRES MODERNES
+   * ============================================ */
+  
+  /* Backgrounds Principaux */
+  --bg-primary: #0f172a;           /* Slate-900 - Background principal */
+  --bg-secondary: #1e293b;         /* Slate-800 - Cards, composants */
+  --bg-tertiary: #334155;          /* Slate-700 - Éléments interactifs */
+  --bg-quaternary: #475569;        /* Slate-600 - Hover states */
+  --bg-overlay: rgba(15, 23, 42, 0.95);  /* Overlay modals */
+  
+  /* Backgrounds Clairs (Mode jour) */
+  --bg-light: #f8fafc;             /* Slate-50 - Background clair */
+  --bg-light-secondary: #f1f5f9;   /* Slate-100 - Cards claires */
+  --bg-light-tertiary: #e2e8f0;    /* Slate-200 - Éléments clairs */
+  
+  /* Textes */
+  --text-primary: #ffffff;         /* Blanc - Titres principaux */
+  --text-secondary: #e2e8f0;       /* Slate-200 - Textes secondaires */
+  --text-muted: #94a3b8;           /* Slate-400 - Textes désactivés */
+  --text-dark: #1e293b;            /* Texte sur fond clair */
+  --text-dark-secondary: #475569;  /* Texte secondaire sur clair */
+  
+  /* Bordures */
+  --border-primary: #334155;       /* Slate-700 - Bordures principales */
+  --border-secondary: #475569;     /* Slate-600 - Bordures secondaires */
+  --border-light: #cbd5e1;         /* Slate-300 - Bordures sur clair */
+  
+  /* ============================================
+   * 🎨 COULEURS SPÉCIALISÉES SÉCURITÉ
+   * ============================================ */
+  
+  /* Niveaux de Risque */
+  --risk-critical: #7f1d1d;        /* Red-900 */
+  --risk-critical-bg: #fecaca;     /* Red-200 */
+  --risk-high: #dc2626;            /* Red-600 */
+  --risk-high-bg: #fed7d7;         /* Red-100 */
+  --risk-medium: #ea580c;          /* Orange-600 */
+  --risk-medium-bg: #fed7aa;       /* Orange-200 */
+  --risk-low: #ca8a04;             /* Yellow-600 */
+  --risk-low-bg: #fef3c7;          /* Yellow-100 */
+  --risk-minimal: #15803d;         /* Green-700 */
+  --risk-minimal-bg: #dcfce7;      /* Green-100 */
+  
+  /* États LOTO */
+  --loto-available: #64748b;       /* Slate-500 */
+  --loto-applied: #dc2626;         /* Red-600 */
+  --loto-verified: #f59e0b;        /* Amber-500 */
+  --loto-removed: #10b981;         /* Emerald-500 */
+  
+  /* ============================================
+   * 🎭 GRADIENTS PROFESSIONNELS
+   * ============================================ */
+  
+  --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  --gradient-success: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
+  --gradient-warning: linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-dark) 100%);
+  --gradient-danger: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
+  
+  /* Gradients de Background */
+  --gradient-bg-primary: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
+  --gradient-bg-card: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  --gradient-bg-header: linear-gradient(90deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  
+  /* ============================================
+   * 📏 TYPOGRAPHIE & ESPACEMENTS
+   * ============================================ */
+  
+  /* Tailles de Police Responsives */
+  --font-size-xs: clamp(0.75rem, 2vw, 0.875rem);     /* 12px-14px */
+  --font-size-sm: clamp(0.875rem, 2vw, 1rem);        /* 14px-16px */
+  --font-size-base: clamp(1rem, 2.5vw, 1.125rem);    /* 16px-18px */
+  --font-size-lg: clamp(1.125rem, 3vw, 1.25rem);     /* 18px-20px */
+  --font-size-xl: clamp(1.25rem, 4vw, 1.5rem);       /* 20px-24px */
+  --font-size-2xl: clamp(1.5rem, 5vw, 2rem);         /* 24px-32px */
+  --font-size-3xl: clamp(2rem, 6vw, 2.5rem);         /* 32px-40px */
+  --font-size-4xl: clamp(2.5rem, 8vw, 3.5rem);       /* 40px-56px */
+  
+  /* Poids de Police */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* Hauteurs de Ligne */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Espacements Adaptatifs */
+  --spacing-xs: clamp(0.25rem, 1vw, 0.5rem);         /* 4px-8px */
+  --spacing-sm: clamp(0.5rem, 2vw, 0.75rem);         /* 8px-12px */
+  --spacing-md: clamp(0.75rem, 3vw, 1rem);           /* 12px-16px */
+  --spacing-lg: clamp(1rem, 4vw, 1.5rem);            /* 16px-24px */
+  --spacing-xl: clamp(1.5rem, 5vw, 2rem);            /* 24px-32px */
+  --spacing-2xl: clamp(2rem, 6vw, 3rem);             /* 32px-48px */
+  --spacing-3xl: clamp(3rem, 8vw, 4rem);             /* 48px-64px */
+  
+  /* ============================================
+   * 🎨 EFFETS VISUELS
+   * ============================================ */
+  
+  /* Ombres Modernes */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* Ombres Colorées */
+  --shadow-primary: 0 10px 15px -3px rgba(59, 130, 246, 0.1), 0 4px 6px -4px rgba(59, 130, 246, 0.1);
+  --shadow-success: 0 10px 15px -3px rgba(16, 185, 129, 0.1), 0 4px 6px -4px rgba(16, 185, 129, 0.1);
+  --shadow-danger: 0 10px 15px -3px rgba(239, 68, 68, 0.1), 0 4px 6px -4px rgba(239, 68, 68, 0.1);
+  
+  /* Rayons de Bordure */
+  --radius-sm: 0.375rem;           /* 6px */
+  --radius: 0.5rem;                /* 8px */
+  --radius-md: 0.75rem;            /* 12px */
+  --radius-lg: 1rem;               /* 16px */
+  --radius-xl: 1.5rem;             /* 24px */
+  --radius-full: 9999px;           /* Circulaire */
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ============================================
+   * 📱 BREAKPOINTS RESPONSIFS
+   * ============================================ */
+  
+  --breakpoint-sm: 640px;          /* Mobile large */
+  --breakpoint-md: 768px;          /* Tablette */
+  --breakpoint-lg: 1024px;         /* Ordinateur portable */
+  --breakpoint-xl: 1280px;         /* Desktop */
+  --breakpoint-2xl: 1536px;        /* Large desktop */
+}
+
+/* ============================================
+ * 📱 ADAPTATIONS RESPONSIVES
+ * ============================================ */
+
+/* Mobile (jusqu'à 640px) */
+@media (max-width: 640px) {
+  :root {
+    --spacing-scale: 0.75;
+    --font-scale: 0.9;
+  }
+}
+
+/* Tablette (641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  :root {
+    --spacing-scale: 0.875;
+    --font-scale: 0.95;
+  }
+}
+
+/* Desktop (1025px+) */
+@media (min-width: 1025px) {
+  :root {
+    --spacing-scale: 1;
+    --font-scale: 1;
+  }
+}
+
+/* ============================================
+ * 🌙 MODE SOMBRE / CLAIR
+ * ============================================ */
+
+/* Mode sombre (défaut) */
+[data-theme="dark"], :root {
+  color-scheme: dark;
+}
+
+/* Mode clair */
+[data-theme="light"] {
+  --bg-primary: var(--bg-light);
+  --bg-secondary: var(--bg-light-secondary);
+  --bg-tertiary: var(--bg-light-tertiary);
+  --text-primary: var(--text-dark);
+  --text-secondary: var(--text-dark-secondary);
+  --text-muted: #64748b;
+  --border-primary: var(--border-light);
+  color-scheme: light;
+}
+
+/* ============================================
+ * 🎨 CLASSES UTILITAIRES MODERNES
+ * ============================================ */
+
+/* Boutons Modernes */
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  transition: all var(--transition-base);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Cards Modernes */
+.card-modern {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+
+.card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+}
+
+/* Texte Adaptatif */
+.text-responsive {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+.heading-responsive {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+}
+
+/* Layout Adaptatif */
+.container-responsive {
+  width: 100%;
+  max-width: min(1200px, calc(100vw - var(--spacing-lg) * 2));
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+/* ============================================
+ * 🚀 ANIMATIONS MODERNES
+ * ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-base) ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn var(--transition-slow) ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

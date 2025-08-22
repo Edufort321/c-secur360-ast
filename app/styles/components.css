@@ -1,57 +1,69 @@
 /* components.css - Styles des composants AST */
 
-/* =================== VARIABLES CSS =================== */
+/**
+ * ⚠️  IMPORTANT: Ce fichier utilise maintenant le Design System
+ * Les variables sont définies dans design-system.css
+ * Ce fichier contient uniquement les composants spécialisés AST
+ */
+
+/* Import du Design System */
+@import url('./design-system.css');
+
+/* =================== VARIABLES LEGACY (COMPATIBILITÉ) =================== */
 :root {
-  /* Couleurs principales */
-  --ast-primary: #3b82f6;
-  --ast-primary-dark: #1d4ed8;
-  --ast-secondary: #64748b;
-  --ast-success: #22c55e;
-  --ast-warning: #f59e0b;
-  --ast-danger: #ef4444;
-  --ast-info: #06b6d4;
+  /* Mapping vers le nouveau Design System */
+  --ast-primary: var(--color-primary);
+  --ast-primary-dark: var(--color-primary-dark);
+  --ast-secondary: var(--text-muted);
+  --ast-success: var(--color-success);
+  --ast-warning: var(--color-warning);
+  --ast-danger: var(--color-danger);
+  --ast-info: var(--color-info);
   
-  /* Couleurs de risque */
-  --risk-very-low: #dcfce7;
-  --risk-low: #fef3c7;
-  --risk-medium: #fed7aa;
-  --risk-high: #fecaca;
-  --risk-critical: #fee2e2;
+  /* Couleurs de risque (mappées vers le nouveau système) */
+  --risk-very-low: var(--risk-minimal-bg);
+  --risk-low: var(--risk-low-bg);
+  --risk-medium: var(--risk-medium-bg);
+  --risk-high: var(--risk-high-bg);
+  --risk-critical: var(--risk-critical-bg);
   
-  /* Espacements */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
+  /* Espacements (mappés vers le système responsive) */
+  --spacing-xs: var(--spacing-xs);
+  --spacing-sm: var(--spacing-sm);
+  --spacing-md: var(--spacing-md);
+  --spacing-lg: var(--spacing-lg);
+  --spacing-xl: var(--spacing-xl);
+  --spacing-2xl: var(--spacing-2xl);
   
-  /* Bordures */
-  --border-radius: 0.5rem;
-  --border-radius-lg: 0.75rem;
+  /* Bordures (mappées vers le nouveau système) */
+  --border-radius: var(--radius);
+  --border-radius-lg: var(--radius-lg);
   --border-width: 1px;
   
-  /* Ombres */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  /* Ombres (mappées vers le nouveau système) */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
 }
 
 /* =================== COMPOSANTS DE BASE =================== */
 .ast-card {
-  background: white;
-  border-radius: var(--border-radius-lg);
-  border: var(--border-width) solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-lg);
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
+  color: var(--text-primary);
 }
 
 .ast-card:hover {
+  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
-  transform: translateY(-1px);
+  border-color: var(--color-primary);
 }
+
 
 .ast-card-header {
   display: flex;
@@ -59,13 +71,14 @@
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
   padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .ast-card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
   margin: 0;
 }
 
