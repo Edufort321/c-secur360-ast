@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
+import Header from '@/components/ui/Header';
 import { 
   Shield, 
   Users, 
@@ -287,69 +288,34 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      color: 'white',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      {/* Header avec navigation */}
-      <header style={{
-        padding: '20px 0',
-        borderBottom: '1px solid rgba(100, 116, 139, 0.2)'
-      }}>
-        <div style={{ 
-          maxWidth: '1200px', 
-          margin: '0 auto', 
-          padding: '0 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Shield style={{ color: '#10b981' }} size={32} />
-            <h1 style={{ 
-              fontSize: '24px', 
-              fontWeight: 'bold',
-              margin: 0,
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              C-SECUR360
-            </h1>
-          </div>
-          
-          <nav style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            {/* Sélecteur de langue */}
-            <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.6)', borderRadius: '6px', padding: '4px' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-sans">
+      {/* Header uniforme avec logo agrandi et position sticky */}
+      <Header 
+        logoSize="2xl"
+        className="sticky top-0 z-50 backdrop-blur-lg border-b border-white/10
+                   bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
+                   shadow-lg shadow-black/20"
+        actions={
+          <div className="flex gap-4 items-center">
+            {/* Sélecteur de langue avec texte encadré */}
+            <div className="flex bg-slate-800/80 rounded-lg p-1 border border-white/10 backdrop-blur-sm">
               <button
                 onClick={() => setLanguage('fr')}
-                style={{
-                  background: language === 'fr' ? '#10b981' : 'transparent',
-                  color: language === 'fr' ? 'white' : '#94a3b8',
-                  border: 'none',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}
+                className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200
+                          ${language === 'fr' 
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                            : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                          }`}
               >
                 FR
               </button>
               <button
                 onClick={() => setLanguage('en')}
-                style={{
-                  background: language === 'en' ? '#10b981' : 'transparent',
-                  color: language === 'en' ? 'white' : '#94a3b8',
-                  border: 'none',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}
+                className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200
+                          ${language === 'en' 
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                            : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                          }`}
               >
                 EN
               </button>
@@ -357,37 +323,31 @@ export default function LandingPage() {
             
             <button 
               onClick={() => setShowAdminLogin(true)}
-              style={{
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#10b981',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '14px'
-              }}
+              className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400
+                        px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 text-sm font-medium
+                        hover:bg-emerald-500/20 transition-colors backdrop-blur-sm
+                        shadow-md shadow-emerald-500/10"
             >
               <Lock size={16} />
-              {t.adminAccess}
+              <span className="text-white bg-slate-800/60 px-2 py-1 rounded backdrop-blur-sm">
+                {t.adminAccess}
+              </span>
             </button>
             
-            <Link href="/demo/dashboard" style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {t.freeDemo}
+            <Link href="/demo/dashboard" 
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white
+                        px-5 py-2 rounded-lg text-sm font-semibold
+                        hover:from-blue-600 hover:to-blue-700 transition-all duration-200
+                        shadow-lg shadow-blue-500/20 backdrop-blur-sm
+                        border border-blue-400/20"
+            >
+              <span className="text-white bg-slate-800/60 px-2 py-1 rounded backdrop-blur-sm">
+                {t.freeDemo}
+              </span>
             </Link>
-          </nav>
-        </div>
-      </header>
+          </div>
+        }
+      />
 
       {/* Hero Section */}
       <section style={{ 

@@ -80,7 +80,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
       isDark 
         ? 'bg-slate-900/95 border-slate-700' 
         : 'bg-white/95 border-slate-200'
-    } backdrop-blur-sm border-b transition-colors duration-200`}>
+    } backdrop-blur-lg border-b transition-colors duration-200 shadow-lg shadow-black/10`}>
       <div className="max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -91,17 +91,19 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
               className="hover:opacity-80 transition-opacity"
             >
               <Logo 
-                size="lg" 
-                variant="default"
+                size="2xl" 
+                variant="glow"
                 showText={true}
               />
             </Link>
             {tenant && (
-              <p className={`text-sm ${
-                isDark ? 'text-slate-400' : 'text-slate-600'
+              <div className={`text-sm px-3 py-1 rounded-lg backdrop-blur-sm border shadow-md ${
+                isDark 
+                  ? 'bg-slate-800/60 text-slate-300 border-slate-600/30' 
+                  : 'bg-white/80 text-slate-700 border-slate-300/30'
               }`}>
                 {tenant.charAt(0).toUpperCase() + tenant.slice(1)}
-              </p>
+              </div>
             )}
           </div>
 
@@ -112,10 +114,10 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => onLanguageChange(language === 'fr' ? 'en' : 'fr')}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors backdrop-blur-sm border shadow-md ${
                   isDark 
-                    ? 'text-slate-300 hover:bg-slate-800 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/40 border-slate-600/30' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 bg-white/60 border-slate-300/30'
                 }`}
                 title={t.language}
               >
