@@ -160,35 +160,35 @@ const steps = [
     id: 1,
     titleKey: 'step1',
     icon: FileText,
-    color: '#3b82f6',
+    color: 'var(--color-primary)',
     required: true
   },
   {
     id: 2,
     titleKey: 'step2',
     icon: Shield,
-    color: '#10b981',
+    color: 'var(--color-success)',
     required: true
   },
   {
     id: 3,
     titleKey: 'step3',
     icon: AlertTriangle,
-    color: '#f59e0b',
+    color: 'var(--color-warning)',
     required: true
   },
   {
     id: 4,
     titleKey: 'step4',
     icon: Edit,
-    color: '#8b5cf6',
+    color: 'var(--color-primary)',
     required: false
   },
   {
     id: 5,
     titleKey: 'step5',
     icon: CheckCircle,
-    color: '#10b981',
+    color: 'var(--color-success)',
     required: false
   }
 ];
@@ -511,11 +511,11 @@ const ASTForm: React.FC<ASTFormProps> = ({
   // =================== STATUS BADGE ===================
   const getStatusBadge = useCallback(() => {
     const statusConfig = {
-      'draft': { color: '#64748b', text: t.status.draft, icon: Edit },
-      'pending_verification': { color: '#f59e0b', text: t.status.pending_verification, icon: Clock },
-      'approved': { color: '#10b981', text: t.status.approved, icon: CheckCircle },
-      'auto_approved': { color: '#059669', text: t.status.auto_approved, icon: CheckCircle },
-      'rejected': { color: '#ef4444', text: t.status.rejected, icon: AlertTriangle }
+      'draft': { color: 'var(--text-muted)', text: t.status.draft, icon: Edit },
+      'pending_verification': { color: 'var(--color-warning)', text: t.status.pending_verification, icon: Clock },
+      'approved': { color: 'var(--color-success)', text: t.status.approved, icon: CheckCircle },
+      'auto_approved': { color: 'var(--color-success-dark)', text: t.status.auto_approved, icon: CheckCircle },
+      'rejected': { color: 'var(--color-danger)', text: t.status.rejected, icon: AlertTriangle }
     };
 
     const config = statusConfig[astData.status] || statusConfig.draft;
@@ -550,10 +550,10 @@ const ASTForm: React.FC<ASTFormProps> = ({
       <div 
         className="float-animation glow-effect"
         style={{
-          background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
+          background: 'var(--gradient-bg-primary)',
           padding: isMobile ? '16px' : '32px',
           borderRadius: isMobile ? '16px' : '32px',
-          border: '4px solid #f59e0b',
+          border: '4px solid var(--color-warning)',
           boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
           position: 'relative',
           overflow: 'hidden'
@@ -645,7 +645,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
   // =================== HEADER MOBILE ===================
   const MobileHeader = () => (
     <header style={{
-      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(0, 0, 0, 0.95) 100%)',
+      background: 'var(--gradient-bg-header)',
       backdropFilter: 'blur(20px)',
       padding: '12px 16px',
       position: 'sticky',
@@ -670,7 +670,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
           minWidth: 0
         }}>
           <h1 style={{
-            color: '#ffffff',
+            color: 'var(--text-primary)',
             fontSize: '16px',
             fontWeight: '700',
             margin: 0,
@@ -682,7 +682,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
             {tenant === 'demo' ? t.title : `🛡️ ${tenant.charAt(0).toUpperCase() + tenant.slice(1)}-Secur360`}
           </h1>
           <div style={{
-            color: '#94a3b8',
+            color: 'var(--text-muted)',
             fontSize: '11px',
             margin: '2px 0 0 0',
             fontWeight: '400',
@@ -717,7 +717,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
           <div style={{
             width: '8px',
             height: '8px',
-            background: '#22c55e',
+            background: 'var(--color-success)',
             borderRadius: '50%',
             animation: 'pulse 2s infinite'
           }} />
@@ -740,7 +740,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
   // =================== HEADER DESKTOP ===================
   const DesktopHeader = () => (
     <header style={{
-      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(0, 0, 0, 0.9) 100%)',
+      background: 'var(--gradient-bg-header)',
       backdropFilter: 'blur(20px)',
       borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
       boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3), 0 0 50px rgba(251, 191, 36, 0.1)',
@@ -791,10 +791,10 @@ const ASTForm: React.FC<ASTFormProps> = ({
                 width: '12px',
                 height: '12px',
                 borderRadius: '50%',
-                background: '#22c55e'
+                background: 'var(--color-success)'
               }} className="pulse-animation" />
               <span style={{
-                color: '#22c55e',
+                color: 'var(--color-success)',
                 fontSize: '16px',
                 fontWeight: '600'
               }}>
@@ -802,7 +802,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
               </span>
               <p style={{ 
                 fontSize: '14px', 
-                color: '#94a3b8', 
+                color: 'var(--text-muted)', 
                 margin: 0,
                 fontWeight: '500'
               }}>
@@ -835,7 +835,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
               <div style={{ 
                 fontSize: '14px', 
                 fontWeight: '600', 
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 fontFamily: 'monospace',
                 display: 'flex',
                 alignItems: 'center',
@@ -1347,7 +1347,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
             background: (currentStep === 5 || !canNavigateToNext()) 
               ? 'rgba(100, 116, 139, 0.3)' 
               : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            color: '#ffffff',
+            color: 'var(--text-primary)',
             opacity: (currentStep === 5 || !canNavigateToNext()) ? 0.5 : 1
           }}
         >
@@ -1687,7 +1687,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
               <h2 style={{ 
                 fontSize: '28px', 
                 fontWeight: '700', 
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: '8px',
                 background: `linear-gradient(135deg, ${steps[currentStep - 1]?.color}, ${steps[currentStep - 1]?.color}CC)`,
                 WebkitBackgroundClip: 'text',

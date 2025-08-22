@@ -234,9 +234,17 @@ const CardFooter: React.FC<CardFooterProps> = ({
   );
 };
 
-// Export avec sous-composants attachés
-Card.Header = CardHeader;
-Card.Body = CardBody;
-Card.Footer = CardFooter;
+// Type avec sous-composants
+interface CardComponent extends React.FC<CardProps> {
+  Header: typeof CardHeader;
+  Body: typeof CardBody;
+  Footer: typeof CardFooter;
+}
 
-export default Card;
+// Export avec sous-composants attachés
+const CardWithSubComponents = Card as CardComponent;
+CardWithSubComponents.Header = CardHeader;
+CardWithSubComponents.Body = CardBody;
+CardWithSubComponents.Footer = CardFooter;
+
+export default CardWithSubComponents;
