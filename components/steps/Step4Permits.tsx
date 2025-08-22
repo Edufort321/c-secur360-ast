@@ -228,7 +228,8 @@ const translations = {
       validationSuccess: "Validation réussie",
       qrGenerated: "Code QR généré",
       workerCheckedIn: "Travailleur pointé",
-      allRequirementsMet: "Toutes les exigences respectées"
+      allRequirementsMet: "Toutes les exigences respectées",
+      validationErrors: "Erreurs de validation"
     },
     
     // Statistiques
@@ -364,7 +365,8 @@ const translations = {
       validationSuccess: "Validation successful",
       qrGenerated: "QR code generated",
       workerCheckedIn: "Worker checked in",
-      allRequirementsMet: "All requirements met"
+      allRequirementsMet: "All requirements met",
+      validationErrors: "Validation errors"
     },
     
     // Statistics
@@ -473,7 +475,7 @@ const Step4Permits: React.FC<Step4PermitsProps> = ({
     hot_work: Flame,
     excavation: Settings,
     height_work: AlertTriangle,
-    chemical_handling: Flask
+    chemical_handling: AlertTriangle
   };
 
   // =================== CALCULS ===================

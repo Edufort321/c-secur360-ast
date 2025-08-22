@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../layout/AppLayout';
 import { useTheme } from '../layout/AppLayout';
+import WorkerPresenceDashboard from '../workers/WorkerPresenceDashboard';
 
 // Types pour les données du dashboard
 interface ASTData {
@@ -393,6 +394,16 @@ const MainDashboard: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* Worker Presence Dashboard */}
+        <div className="mb-8">
+          <WorkerPresenceDashboard 
+            siteId="main-site"
+            language="fr"
+            refreshInterval={30}
+            compactMode={false}
+          />
         </div>
 
         {/* AST List and Activity */}

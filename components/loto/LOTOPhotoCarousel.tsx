@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { 
   Camera, Lock, Unlock, MapPin, Clock, CheckCircle, AlertTriangle,
   ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw, Download,
-  X, Plus, Edit, Save, Eye, GPS, Navigation, Upload, Trash2
+  X, Plus, Edit, Save, Eye, Navigation, Upload, Trash2
 } from 'lucide-react';
 
 // =================== INTERFACES ===================

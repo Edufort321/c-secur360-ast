@@ -6,11 +6,12 @@ import {
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
   TrendingUp, Activity, Shield, Bell, Send, MessageSquare, Hash, Star, Globe, Save,
-  Unlock, GPS, Navigation, RotateCw, ZoomIn, ZoomOut, CheckCircle, Download,
+  Unlock, Navigation, RotateCw, ZoomIn, ZoomOut, CheckCircle, Download,
   ChevronLeft, ChevronRight, Edit
 } from 'lucide-react';
 import LOTOPhotoCarousel from '../loto/LOTOPhotoCarousel';
 import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
+import WorkerRegistryAST from '../workers/WorkerRegistryAST';
 
 // =================== INTERFACES ===================
 interface Step1ProjectInfoProps {
@@ -343,6 +344,13 @@ const translations = {
       duration: "ex: 8 heures",
       description: "Décrivez en détail les travaux à effectuer...",
       objective: "ex: Maintenance préventive"
+    },
+    
+    // Onglets navigation
+    tabs: {
+      project: "Projet",
+      workers: "Travailleurs",
+      loto: "LOTO"
     }
   },
   en: {
@@ -505,6 +513,13 @@ const translations = {
       duration: "e.g: 8 hours",
       description: "Describe in detail the work to be performed...",
       objective: "e.g: Preventive maintenance"
+    },
+    
+    // Onglets navigation
+    tabs: {
+      project: "Project",
+      workers: "Workers",
+      loto: "LOTO"
     }
   }
 };
@@ -572,6 +587,7 @@ const Step1ProjectInfo = memo(({
   const [showLotoSection, setShowLotoSection] = useState(false);
   const [newLotoPoint, setNewLotoPoint] = useState<Partial<LOTOPoint>>({});
   const [editingLotoPoint, setEditingLotoPoint] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'project' | 'workers' | 'loto'>('project');
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
 
@@ -854,6 +870,58 @@ const Step1ProjectInfo = memo(({
           </div>
         </div>
 
+        {/* Navigation par onglets */}
+        <div style={{
+          display: 'flex',
+          marginBottom: '24px',
+          background: 'rgba(30, 41, 59, 0.6)',
+          borderRadius: '12px',
+          padding: '6px',
+          border: '1px solid rgba(100, 116, 139, 0.3)'
+        }}>
+          {(['project', 'workers', 'loto'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                background: activeTab === tab 
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'transparent',
+                color: activeTab === tab ? 'white' : '#94a3b8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              {tab === 'project' && <Building size={16} />}
+              {tab === 'workers' && <Users size={16} />}
+              {tab === 'loto' && <Lock size={16} />}
+              {t.tabs[tab]}
+              {tab === 'loto' && localData.lotoProcedure.points.length > 0 && (
+                <span style={{
+                  background: 'rgba(239, 68, 68, 0.8)',
+                  color: 'white',
+                  fontSize: '10px',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  marginLeft: '4px'
+                }}>
+                  {localData.lotoProcedure.points.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Numéro AST */}
         <div style={cardStyle}>
           <h3 style={{
@@ -921,6 +989,9 @@ const Step1ProjectInfo = memo(({
           </div>
         </div>
 
+        {/* Contenu des onglets */}
+        {activeTab === 'project' && (
+          <>
         {/* Grid principal */}
         <div style={{
           display: 'grid',
@@ -1711,7 +1782,53 @@ const Step1ProjectInfo = memo(({
             </div>
           </div>
         </div>
+          </>
+        )}
 
+        {/* Onglet Workers - WorkerRegistryAST */}
+        {activeTab === 'workers' && (
+          <div>
+            <WorkerRegistryAST
+              astId={localData.astNumber || 'AST-TEMP'}
+              astTitle={localData.projectName || localData.workSite || 'Projet AST'}
+              language={language}
+              projectManagerPhone={localData.supervisorPhone}
+              availableLocks={localData.lotoProcedure.points.map(point => ({
+                id: point.id,
+                lockNumber: `LOTO-${point.equipmentName}`,
+                equipment: point.equipmentName,
+                energyType: (point.energyType === 'gravitational' ? 'mechanical' : point.energyType) as 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical',
+                location: point.location,
+                status: (point.status === 'completed' ? 'applied' : 'available') as 'available' | 'applied' | 'verified' | 'removed',
+                isApplied: point.status === 'completed',
+                appliedByWorker: point.status === 'completed',
+                appliedTime: point.status === 'completed' ? new Date().toISOString() : undefined,
+                removedTime: undefined,
+                photos: point.photos.map(p => p.url)
+              }))}
+              onLockStatusChange={(lockId: string, isApplied: boolean, workerId: string) => {
+                // Mettre à jour le statut LOTO correspondant
+                const updatedProcedure = {
+                  ...localData.lotoProcedure,
+                  points: localData.lotoProcedure.points.map(point => 
+                    point.id === lockId 
+                      ? { 
+                          ...point, 
+                          status: isApplied ? 'completed' : 'pending',
+                          assignedWorker: isApplied ? workerId : undefined
+                        }
+                      : point
+                  )
+                };
+                updateField('lotoProcedure', updatedProcedure);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Onglet LOTO */}
+        {activeTab === 'loto' && (
+          <>
         {/* Section LOTO - Maintenant dans Step 1 */}
         <div style={cardStyle}>
           <div style={{
@@ -2170,6 +2287,8 @@ const Step1ProjectInfo = memo(({
             </div>
           )}
         </div>
+          </>
+        )}
 
         {/* Navigation */}
         <div style={{
