@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         .from('auth_sessions')
         .select(`
           user_id,
-          users (email)
+          users!inner (email)
         `)
         .eq('token', token)
         .single();
@@ -31,10 +31,10 @@ export async function POST(request: NextRequest) {
         .eq('token', token);
 
       // Log logout event
-      if (session) {
+      if (session && session.users) {
         await logAuthEvent('logout', {
           logout_type: 'manual'
-        }, { ip, userAgent }, session.user_id, session.users?.email);
+        }, { ip, userAgent }, session.user_id, (session.users as any).email);
       }
     }
 
@@ -75,19 +75,19 @@ export async function DELETE(request: NextRequest) {
     const { data: session } = await supabase
       .from('auth_sessions')
       .select(`
-        users (role)
+        users!inner (role)
       `)
       .eq('token', token)
       .single();
 
-    if (!session || session.users?.role !== 'super_admin') {
+    if (!session || !session.users || (session.users as any).role !== 'super_admin') {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
     // Clean expired sessions
     const { data: expiredSessions } = await supabase
       .from('auth_sessions')
-      .select('user_id, users(email)')
+      .select('user_id, users!inner(email)')
       .lt('expires_at', new Date().toISOString());
 
     const { error } = await supabase
@@ -106,7 +106,7 @@ export async function DELETE(request: NextRequest) {
     for (const expiredSession of expiredSessions || []) {
       await logAuthEvent('session_expired', {
         cleanup_type: 'automatic'
-      }, { ip, userAgent }, expiredSession.user_id, expiredSession.users?.email);
+      }, { ip, userAgent }, expiredSession.user_id, (expiredSession.users as any)?.email);
     }
 
     return NextResponse.json({

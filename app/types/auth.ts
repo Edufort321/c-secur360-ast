@@ -57,7 +57,7 @@ export interface AuditLogEntry {
   id: string;
   user_id?: string;
   email?: string;
-  action: 'login_success' | 'login_fail' | 'totp_setup' | 'totp_verify' | 'password_reset' | 'account_locked' | 'logout';
+  action: 'login_success' | 'login_fail' | 'totp_setup' | 'totp_verify' | 'password_reset' | 'account_locked' | 'logout' | 'session_expired';
   details: Record<string, any>;
   ip_address: string;
   user_agent: string;

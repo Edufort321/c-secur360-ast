@@ -109,7 +109,7 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
       .from('auth_sessions')
       .select(`
         expires_at,
-        users (
+        users!inner (
           id, email, role, tenant_id, totp_enabled
         )
       `)
@@ -121,7 +121,7 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
       return redirectToLogin(request, pathname);
     }
 
-    const user = session.users;
+    const user = session.users as any;
 
     // Check if route requires specific role
     const requiredRoles = getRequiredRoles(pathname);
@@ -137,13 +137,15 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
       }
     }
 
-    // Update last activity (non-blocking)
-    supabase
-      .from('auth_sessions')
-      .update({ last_activity: new Date().toISOString() })
-      .eq('token', token)
-      .then()
-      .catch(() => {}); // Ignore errors for last activity update
+    // Update last activity (non-blocking) - fire and forget
+    try {
+      supabase
+        .from('auth_sessions')
+        .update({ last_activity: new Date().toISOString() })
+        .eq('token', token);
+    } catch {
+      // Ignore errors for last activity update
+    }
 
     // Add user info to headers for API routes
     const response = NextResponse.next();

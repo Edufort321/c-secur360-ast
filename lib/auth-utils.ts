@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import * as OTPAuth from 'otplib';
 import QRCode from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
-import { User, AuditLogEntry } from '../types/auth';
+import { User, AuditLogEntry } from '@/types/auth';
 
 // Configuration
 const SALT_ROUNDS = 12;
@@ -68,11 +68,7 @@ export async function generateTOTPSetup(email: string): Promise<{
  */
 export function verifyTOTPCode(code: string, secret: string): boolean {
   try {
-    return OTPAuth.authenticator.verify({
-      token: code.replace(/\s/g, ''), // Remove spaces
-      secret,
-      window: 1 // Allow 1 step tolerance (30 seconds before/after)
-    });
+    return OTPAuth.authenticator.check(code.replace(/\s/g, ''), secret);
   } catch (error) {
     console.error('TOTP verification error:', error);
     return false;
