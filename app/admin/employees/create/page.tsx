@@ -424,7 +424,7 @@ export default function CreateEmployeePage() {
                             onClick={() => toggleSection(group.module)}
                           >
                             <h4 className="font-medium text-gray-900">
-                              {PERMISSION_MODULES[group.module] || group.module}
+                              {PERMISSION_MODULES[group.module as keyof typeof PERMISSION_MODULES] || group.module}
                               <span className="ml-2 text-sm text-gray-500">
                                 ({group.permissions.length} permissions)
                               </span>
