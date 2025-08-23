@@ -7,8 +7,9 @@ import {
   Edit, Save, Star, Calendar, Plus
 } from 'lucide-react';
 
-// Importer le WorkerRegistryAST
+// Importer le WorkerRegistryAST et SMS
 import WorkerRegistryAST from '@/components/workers/WorkerRegistryAST';
+import SMSNotification from '@/components/notifications/SMSNotification';
 
 // =================== INTERFACES ===================
 interface Step4ValidationProps {
@@ -727,6 +728,25 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               };
               onDataChange('lotoProcedure', updatedProcedure);
             }}
+          />
+        </div>
+
+        {/* Section Notifications SMS */}
+        <div className="section-card">
+          <h3 className="section-title">
+            <MessageSquare size={20} />
+            {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
+          </h3>
+          <SMSNotification
+            astId={formData?.astNumber}
+            defaultType="general_alert"
+            defaultMessage={`AST ${formData?.astNumber}: ${formData?.projectInfo?.title || 'Nouveau projet'} - Mise à jour importante de l'équipe.`}
+            defaultRecipients={[
+              formData?.projectInfo?.supervisorPhone,
+              ...(formData?.projectInfo?.teamMembers || []).map((m: any) => m.phone).filter(Boolean)
+            ].filter(Boolean)}
+            compact={false}
+            autoExpand={false}
           />
         </div>
 

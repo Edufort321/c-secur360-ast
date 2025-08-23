@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, DollarSign, Download, FileText, Clock, AlertTriangle, 
   CheckCircle, TrendingUp, Users, CreditCard, Mail, ArrowUpRight,
-  Filter, Search, ChevronDown, RefreshCw, Calculator
+  Filter, Search, ChevronDown, RefreshCw, Calculator, Phone, Settings
 } from 'lucide-react';
 import AppLayout from '../layout/AppLayout';
 import { useTheme } from '../layout/AppLayout';
@@ -247,12 +247,29 @@ const BillingDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Suivi de Facturation
-          </h1>
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-            Gestion des abonnements, revenus et renouvellements automatiques
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Suivi de Facturation
+              </h1>
+              <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                Gestion des abonnements, revenus et renouvellements automatiques
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <a
+                href="/admin/twilio-config"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                Configuration Twilio
+              </a>
+              <button className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                <Settings className="w-4 h-4" />
+                Paramètres
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}

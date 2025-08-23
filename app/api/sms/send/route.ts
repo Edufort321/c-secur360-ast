@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createTwilioClient, isTwilioAvailable } from '@/lib/twilio-safe';
+import { createTwilioClient, validateTwilioConfig, TwilioClient } from '@/lib/twilio-safe';
+import { auditHelpers } from '@/lib/audit';
 
 // =================== TYPES ===================
 
@@ -76,59 +77,101 @@ function checkRateLimit(identifier: string): boolean {
   return true;
 }
 
-// =================== FONCTION SMS TWILIO (PLACEHOLDER) ===================
+// =================== FONCTION SMS TWILIO COMPLÈTE ===================
 
-async function sendSMSWithTwilio(phone: string, message: string): Promise<{ success: boolean; sid?: string; error?: string }> {
-  // TODO: Remplacer par la vraie intégration Twilio quand installé
+async function sendSMSWithTwilio(phone: string, message: string): Promise<{ success: boolean; sid?: string; error?: string; mode?: string }> {
+  // Validation de la configuration Twilio
+  const config = validateTwilioConfig();
   
-  const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-  
-  if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-    console.log('📝 SMS Simulation (Twilio non configuré):', { phone, message });
-    
-    // Simulation de l'envoi réussi pour les tests
-    return { 
-      success: true, 
-      sid: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` 
-    };
-  }
-  
-  try {
-    // Vérification si Twilio est disponible
-    if (!isTwilioAvailable()) {
-      console.log('📝 Twilio non installé - simulation activée');
-      return { 
-        success: true, 
-        sid: `sim_twilio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` 
-      };
-    }
-    
-    // Créer le client Twilio de manière sécurisée
-    const twilio = createTwilioClient(twilioAccountSid, twilioAuthToken);
-    if (!twilio) {
-      console.log('📝 Erreur création client Twilio - simulation activée');
-      return { 
-        success: true, 
-        sid: `sim_error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` 
-      };
-    }
-    
-    const messageResponse = await twilio.messages.create({
-      body: message,
-      from: twilioPhoneNumber,
-      to: phone
+  if (!config.valid) {
+    await auditHelpers.sms('send', {
+      to: phone,
+      error: 'Configuration Twilio invalide',
+      missing: config.missing,
+      mode: config.mode
     });
     
-    console.log('✅ SMS envoyé via Twilio:', messageResponse.sid);
-    return { success: true, sid: messageResponse.sid };
-    
-  } catch (error: any) {
-    console.error('❌ Erreur Twilio:', error);
     return { 
       success: false, 
-      error: error.message || 'Erreur inconnue Twilio' 
+      error: `Configuration Twilio manquante: ${config.missing.join(', ')}`,
+      mode: config.mode
+    };
+  }
+
+  const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID!;
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN!;
+  const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER!;
+  const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  
+  try {
+    // Créer le client Twilio
+    const twilio = createTwilioClient(twilioAccountSid, twilioAuthToken);
+    if (!twilio) {
+      return { 
+        success: false, 
+        error: 'Impossible de créer le client Twilio',
+        mode: config.mode
+      };
+    }
+
+    // Options d'envoi SMS
+    const smsOptions: any = {
+      body: message,
+      to: phone,
+      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/sms/status`
+    };
+
+    // Utiliser Messaging Service si disponible (recommandé)
+    if (messagingServiceSid) {
+      smsOptions.messagingServiceSid = messagingServiceSid;
+    } else {
+      smsOptions.from = twilioPhoneNumber;
+    }
+
+    // Envoi du SMS
+    const messageResponse = await twilio.messages.create(smsOptions);
+    
+    // Log de succès
+    await auditHelpers.sms('send', {
+      to: phone,
+      messageSid: messageResponse.sid,
+      status: messageResponse.status,
+      mode: config.mode,
+      messagingService: !!messagingServiceSid
+    });
+    
+    console.log(`✅ SMS envoyé [${config.mode}]:`, {
+      to: phone,
+      sid: messageResponse.sid,
+      status: messageResponse.status
+    });
+    
+    return { 
+      success: true, 
+      sid: messageResponse.sid,
+      mode: config.mode
+    };
+    
+  } catch (error: any) {
+    // Log d'erreur détaillé
+    await auditHelpers.sms('send', {
+      to: phone,
+      error: error.message,
+      errorCode: error.code,
+      mode: config.mode,
+      success: false
+    });
+
+    console.error('❌ Erreur envoi SMS:', {
+      to: phone,
+      error: error.message,
+      code: error.code
+    });
+    
+    return { 
+      success: false, 
+      error: `Erreur Twilio: ${error.message}`,
+      mode: config.mode
     };
   }
 }

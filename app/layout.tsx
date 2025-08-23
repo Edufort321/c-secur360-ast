@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   themeColor: '#3498db',
 }
 
+import { TwilioProvider } from '../contexts/TwilioContext'
+
 export default function RootLayout({
   children,
 }: {
@@ -35,7 +37,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="AST MDL" />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <TwilioProvider>
+          {children}
+        </TwilioProvider>
+      </body>
     </html>
   )
 }
