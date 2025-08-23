@@ -18,11 +18,21 @@ const CLIENT_DOMAINS: Record<string, string> = {
 
 // Protected routes configuration
 const protectedRoutes = {
-  // Super admin routes
+  // Super admin routes (accès administrateur principal)
   '/admin': ['super_admin'],
   '/admin/(.*)': ['super_admin'],
   
-  // Client admin routes  
+  // Client tenant routes (pour chaque entreprise)
+  '/demo': ['super_admin', 'client_admin'],
+  '/demo/(.*)': ['super_admin', 'client_admin'],
+  '/entrepriseabc': ['super_admin', 'client_admin'],
+  '/entrepriseabc/(.*)': ['super_admin', 'client_admin'],
+  '/companyxyz': ['super_admin', 'client_admin'],
+  '/companyxyz/(.*)': ['super_admin', 'client_admin'],
+  '/corpdef': ['super_admin', 'client_admin'],
+  '/corpdef/(.*)': ['super_admin', 'client_admin'],
+  
+  // Legacy client routes (à migrer graduellement)
   '/client/(.*)': ['super_admin', 'client_admin'],
   
   // API routes that need authentication
@@ -33,8 +43,11 @@ const protectedRoutes = {
 // Public routes (no authentication needed)
 const publicRoutes = [
   '/',
-  '/auth/admin',
-  '/auth/client',
+  '/auth/admin',     // Accès super admin principal
+  '/auth/client',    // Accès client admin
+  '/pricing',
+  '/contact', 
+  '/about',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/totp-setup',
@@ -76,11 +89,11 @@ async function handleTenantRouting(request: NextRequest, url: URL, hostname: str
   
   // Gestion des sous-domaines classiques
   const subdomain = hostname.split('.')[0];
-  const validTenants = ['demo', 'c-secur360', 'admin', 'localhost', 'entrepriseabc', 'companyxyz', 'corpdef'];
+  const validTenants = ['demo', 'entrepriseabc', 'companyxyz', 'corpdef'];
   
-  // Si c'est un sous-domaine valide
-  if (validTenants.includes(subdomain) || hostname.includes('localhost')) {
-    const currentTenant = hostname.includes('localhost') ? 'demo' : subdomain;
+  // Si c'est un sous-domaine valide (pas localhost ni admin principal)
+  if (validTenants.includes(subdomain) && !hostname.includes('localhost')) {
+    const currentTenant = subdomain;
     
     // Si l'URL ne commence pas déjà par le tenant
     if (!url.pathname.startsWith(`/${currentTenant}`) && !url.pathname.startsWith('/admin') && !url.pathname.startsWith('/auth')) {
@@ -88,6 +101,8 @@ async function handleTenantRouting(request: NextRequest, url: URL, hostname: str
       return NextResponse.rewrite(url);
     }
   }
+  
+  // Pour localhost et admin principal: pas de rewrite automatique vers tenant
 }
 
 async function handleAuthentication(request: NextRequest, pathname: string, url: URL) {

@@ -235,13 +235,12 @@ const features = {
 };
 
 export default function LandingPage() {
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
   const [clientSubdomain, setClientSubdomain] = useState('');
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const [showImageManager, setShowImageManager] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
   
   const t = translations[language];
   const currentFeatures = features[language];
@@ -268,15 +267,6 @@ export default function LandingPage() {
     }
   ]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Production password for development
-    if (adminPassword === 'CGEstion321$') {
-      window.location.href = '/admin/dashboard';
-    } else {
-      alert('Mot de passe incorrect');
-    }
-  };
 
   const handleClientAccess = (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,8 +311,7 @@ export default function LandingPage() {
               </button>
             </div>
             
-            <button 
-              onClick={() => setShowAdminLogin(true)}
+            <Link href="/auth/admin"
               className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400
                         px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 text-sm font-medium
                         hover:bg-emerald-500/20 transition-colors backdrop-blur-sm
@@ -332,7 +321,7 @@ export default function LandingPage() {
               <span className="text-white bg-slate-800/60 px-2 py-1 rounded backdrop-blur-sm">
                 {t.adminAccess}
               </span>
-            </button>
+            </Link>
             
             <Link href="/demo/dashboard" 
               className="bg-gradient-to-r from-blue-500 to-blue-600 text-white
@@ -810,127 +799,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Modal Admin Login */}
-      {showAdminLogin && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'rgba(15, 23, 42, 0.95)',
-            padding: '32px',
-            borderRadius: '16px',
-            border: '1px solid rgba(100, 116, 139, 0.3)',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
-            <h3 style={{ 
-              margin: '0 0 24px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <Lock style={{ color: '#10b981' }} size={24} />
-              {t.adminTitle}
-            </h3>
-            
-            <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={t.adminPasswordPlaceholder}
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 45px 12px 12px',
-                    borderRadius: '8px',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    color: 'white',
-                    fontSize: '16px',
-                    boxSizing: 'border-box'
-                  }}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: 'white',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    fontWeight: '600'
-                  }}
-                >
-                  {t.login}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAdminLogin(false);
-                    setAdminPassword('');
-                  }}
-                  style={{
-                    flex: 1,
-                    background: 'rgba(100, 116, 139, 0.6)',
-                    color: 'white',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
-                    cursor: 'pointer',
-                    fontSize: '16px'
-                  }}
-                >
-                  {t.cancel}
-                </button>
-              </div>
-            </form>
-            
-            <p style={{ 
-              marginTop: '16px', 
-              fontSize: '12px', 
-              color: '#64748b',
-              textAlign: 'center'
-            }}>
-              {t.development}: CGEstion321$
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Modal Image Manager */}
       {showImageManager && (
@@ -966,50 +834,17 @@ export default function LandingPage() {
             
             <form onSubmit={(e) => {
               e.preventDefault();
-              if (adminPassword === 'CGEstion321$') {
-                window.location.href = '/admin/gallery';
-              } else {
-                alert('Mot de passe incorrect');
-              }
+              // Redirect to admin auth then to gallery
+              window.location.href = '/auth/admin?redirect=/admin/gallery';
             }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={t.adminPasswordPlaceholder}
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 45px 12px 12px',
-                    borderRadius: '8px',
-                    border: '2px solid rgba(100, 116, 139, 0.3)',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    color: 'white',
-                    fontSize: '16px',
-                    boxSizing: 'border-box'
-                  }}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+              <p style={{ 
+                color: '#94a3b8', 
+                fontSize: '14px',
+                textAlign: 'center',
+                marginBottom: '16px'
+              }}>
+                Redirection vers l'authentification admin sécurisée
+              </p>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   type="submit"
@@ -1025,13 +860,12 @@ export default function LandingPage() {
                     fontWeight: '600'
                   }}
                 >
-                  {t.login}
+                  Accéder
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowImageManager(false);
-                    setAdminPassword('');
                   }}
                   style={{
                     flex: 1,
@@ -1047,16 +881,6 @@ export default function LandingPage() {
                   {t.cancel}
                 </button>
               </div>
-            </form>
-            
-            <p style={{ 
-              marginTop: '16px', 
-              fontSize: '12px', 
-              color: '#64748b',
-              textAlign: 'center'
-            }}>
-              {t.development}: CGEstion321$
-            </p>
           </div>
         </div>
       )}

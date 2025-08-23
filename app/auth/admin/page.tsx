@@ -200,10 +200,10 @@ ${state.setupData.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}
             <Shield className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Accès Super Admin
+            Administrateur Principal
           </h1>
           <p className="text-slate-400">
-            Authentification sécurisée C-Secur360
+            Accès système C-Secur360 - Administrateur
           </p>
         </div>
 
