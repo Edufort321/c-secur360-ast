@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 import { Camera, X, Flashlight, RotateCcw, AlertCircle } from 'lucide-react';
-import { parseQRCode, type QRScanResult } from '@/lib/inventory-utils';
+import { parseQRCode } from '@/lib/inventory-utils';
+import type { QRScanResult } from '@/app/types/inventory';
 
 interface QRScannerProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export default function QRScanner({
 
       // Vérifier support flashlight
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities?.();
+      const capabilities = track.getCapabilities?.() as any;
       setHasFlashlight(!!capabilities?.torch);
 
       // Initialiser le reader ZXing
@@ -90,7 +91,7 @@ export default function QRScanner({
       const videoElement = videoRef.current;
       if (videoElement) {
         codeReader.current.decodeFromVideoDevice(
-          undefined,
+          null,
           videoElement,
           (result, error) => {
             if (result) {

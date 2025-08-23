@@ -277,7 +277,7 @@ export default function ItemSheet({
                     <div className="flex items-center gap-1 text-sm">
                       <MapPin className="w-4 h-4 text-gray-400" />
                       <span className="font-medium">
-                        {instance?.location?.name || item?.default_location?.name || 'Non défini'}
+                        {instance?.location?.name || 'Non défini'}
                       </span>
                     </div>
                   </div>

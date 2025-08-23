@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ASTForm from '@/components/ASTForm';
+import ASTForm from '../../../../components/ASTForm';
 
 interface PageProps {
   params: {

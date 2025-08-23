@@ -33,7 +33,7 @@ export default function InventoryPage() {
 
   // Item Sheet
   const [itemSheetOpen, setItemSheetOpen] = useState(false);
-  const [selectedItemPayload, setSelectedItemPayload] = useState(null);
+  const [selectedItemPayload, setSelectedItemPayload] = useState<any>(null);
 
   // Data state
   const [items, setItems] = useState<InventoryItem[]>([]);
