@@ -22,6 +22,14 @@
     {
       "path": "/api/admin/billing/cron", 
       "schedule": "0 10 1 * *"
+    },
+    {
+      "path": "/api/billing/sync",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/sms/cleanup",
+      "schedule": "0 3 * * 0"
     }
   ],
   
