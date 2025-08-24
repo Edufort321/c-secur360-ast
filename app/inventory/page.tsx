@@ -13,10 +13,14 @@ import {
   Settings,
   MapPin,
   AlertTriangle,
-  Scan
+  Scan,
+  Printer,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import QRScanner, { useQRScanner } from '@/app/components/inventory/QRScanner';
 import ItemSheet from '@/app/components/inventory/ItemSheet';
+import LabelPrintModal from '@/app/components/inventory/LabelPrintModal';
 import type { InventoryItem, QRScanResult } from '@/app/types/inventory';
 import { searchInventoryItems } from '@/lib/inventory-utils';
 
@@ -34,6 +38,11 @@ export default function InventoryPage() {
   // Item Sheet
   const [itemSheetOpen, setItemSheetOpen] = useState(false);
   const [selectedItemPayload, setSelectedItemPayload] = useState<any>(null);
+
+  // Label Print Modal
+  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
 
   // Data state
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -144,6 +153,39 @@ export default function InventoryPage() {
     }
   };
 
+  const toggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const selectAllItems = () => {
+    setSelectedItems(new Set(filteredItems.map(item => item.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedItems(new Set());
+    setSelectionMode(false);
+  };
+
+  const openLabelPrint = () => {
+    if (selectedItems.size === 0) {
+      // If no items selected, enter selection mode
+      setSelectionMode(true);
+    } else {
+      // Open print modal with selected items
+      setLabelPrintOpen(true);
+    }
+  };
+
+  const getSelectedItemsForPrint = () => {
+    return filteredItems.filter(item => selectedItems.has(item.id));
+  };
+
   const quickActions = [
     {
       id: 'scan',
@@ -151,6 +193,13 @@ export default function InventoryPage() {
       icon: <Scan className="w-6 h-6" />,
       color: 'bg-blue-600 hover:bg-blue-700',
       action: openScanner
+    },
+    {
+      id: 'print-labels',
+      label: 'Étiquettes',
+      icon: <Printer className="w-6 h-6" />,
+      color: 'bg-indigo-600 hover:bg-indigo-700',
+      action: openLabelPrint
     },
     {
       id: 'add-item',
@@ -165,13 +214,6 @@ export default function InventoryPage() {
       icon: <Truck className="w-6 h-6" />,
       color: 'bg-orange-600 hover:bg-orange-700',
       action: () => console.log('Nouvelle commande')
-    },
-    {
-      id: 'shop',
-      label: 'Boutique',
-      icon: <ShoppingCart className="w-6 h-6" />,
-      color: 'bg-purple-600 hover:bg-purple-700',
-      action: () => console.log('Ouvrir boutique')
     }
   ];
 
@@ -301,6 +343,47 @@ export default function InventoryPage() {
           </div>
         </div>
 
+        {/* Selection Mode Header */}
+        {selectionMode && (
+          <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-indigo-900">
+                Sélectionner articles pour étiquettes
+              </h3>
+              <button
+                onClick={clearSelection}
+                className="text-sm text-indigo-600 hover:text-indigo-700"
+              >
+                Annuler
+              </button>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-indigo-700">
+                {selectedItems.size} article{selectedItems.size > 1 ? 's' : ''} sélectionné{selectedItems.size > 1 ? 's' : ''}
+              </span>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={selectAllItems}
+                  className="px-3 py-1 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200"
+                >
+                  Tout sélectionner
+                </button>
+                {selectedItems.size > 0 && (
+                  <button
+                    onClick={() => setLabelPrintOpen(true)}
+                    className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1"
+                  >
+                    <Printer className="w-3 h-3" />
+                    Imprimer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Items List */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -332,54 +415,79 @@ export default function InventoryPage() {
               {filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => {
-                    setSelectedItemPayload({
-                      type: 'item',
-                      id: item.id,
-                      code: item.sku || item.id,
-                      timestamp: Date.now() / 1000
-                    });
-                    setItemSheetOpen(true);
-                  }}
-                  className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+                  className={`bg-white rounded-lg p-4 shadow-sm border transition-colors ${
+                    selectedItems.has(item.id) 
+                      ? 'border-indigo-300 bg-indigo-50' 
+                      : 'border-gray-200 hover:border-blue-300'
+                  } ${selectionMode ? 'cursor-pointer' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Package className="w-6 h-6 text-gray-600" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {item.name}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                        {item.sku && (
-                          <span>SKU: {item.sku}</span>
+                    {/* Selection Checkbox */}
+                    {selectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleItemSelection(item.id);
+                        }}
+                        className="flex-shrink-0 p-1"
+                      >
+                        {selectedItems.has(item.id) ? (
+                          <CheckSquare className="w-5 h-5 text-indigo-600" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400" />
                         )}
-                        {item.category && (
-                          <span>{item.category}</span>
-                        )}
-                      </div>
-                      
-                      {item.default_location_id && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                          <MapPin className="w-3 h-3" />
-                          <span>Emplacement par défaut</span>
-                        </div>
-                      )}
-                    </div>
+                      </button>
+                    )}
 
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-gray-900">
-                        -
+                    <div 
+                      className={`flex items-center gap-3 flex-1 ${!selectionMode ? 'cursor-pointer' : ''}`}
+                      onClick={!selectionMode ? () => {
+                        setSelectedItemPayload({
+                          type: 'item',
+                          id: item.id,
+                          code: item.sku || item.id,
+                          timestamp: Date.now() / 1000
+                        });
+                        setItemSheetOpen(true);
+                      } : undefined}
+                    >
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Package className="w-6 h-6 text-gray-600" />
                       </div>
-                      <div className="text-xs text-gray-500">{item.uom}</div>
                       
-                      {item.sellable && (
-                        <div className="mt-1">
-                          <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 truncate">
+                          {item.name}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                          {item.sku && (
+                            <span>SKU: {item.sku}</span>
+                          )}
+                          {item.category && (
+                            <span>{item.category}</span>
+                          )}
                         </div>
-                      )}
+                        
+                        {item.default_location_id && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                            <MapPin className="w-3 h-3" />
+                            <span>Emplacement par défaut</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-lg font-semibold text-gray-900">
+                          -
+                        </div>
+                        <div className="text-xs text-gray-500">{item.uom}</div>
+                        
+                        {item.sellable && (
+                          <div className="mt-1">
+                            <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -405,6 +513,19 @@ export default function InventoryPage() {
           setSelectedItemPayload(null);
         }}
         qrPayload={selectedItemPayload}
+      />
+
+      {/* Label Print Modal */}
+      <LabelPrintModal
+        isOpen={labelPrintOpen}
+        onClose={() => {
+          setLabelPrintOpen(false);
+          if (selectionMode && selectedItems.size === 0) {
+            setSelectionMode(false);
+          }
+        }}
+        items={getSelectedItemsForPrint()}
+        title="Imprimer étiquettes d'inventaire"
       />
 
       {/* Floating Action Button */}

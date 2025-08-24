@@ -442,6 +442,142 @@ export async function generateLabelPDF(request: LabelPrintRequest): Promise<{
 // SEARCH & FILTERS
 // ===================================================================
 
+// Demo data pour les tests
+const DEMO_INVENTORY_ITEMS: InventoryItem[] = [
+  {
+    id: 'item-001',
+    client_id: 'demo-client-id',
+    name: 'Casque de sécurité MSA V-Gard',
+    sku: 'HELMET-MSA-001',
+    uom: 'UN',
+    category: 'Équipement de Protection',
+    description: 'Casque de sécurité industriel certifié ANSI',
+    min_qty: 10,
+    max_qty: 100,
+    reorder_point: 25,
+    safety_stock: 15,
+    dimensions: { length: 35, width: 25, height: 18 },
+    images: [],
+    serializable: false,
+    sellable: true,
+    active: true,
+    default_location_id: 'loc-warehouse-main',
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z',
+    tags: ['sécurité', 'protection']
+  },
+  {
+    id: 'item-002',
+    client_id: 'demo-client-id',
+    name: 'Perceuse sans fil DeWalt 20V',
+    sku: 'DRILL-DW-20V',
+    uom: 'UN',
+    category: 'Outils électriques',
+    description: 'Perceuse-visseuse sans fil avec batterie lithium',
+    min_qty: 2,
+    max_qty: 15,
+    reorder_point: 5,
+    safety_stock: 3,
+    dimensions: { length: 28, width: 8, height: 20 },
+    images: [],
+    serializable: true,
+    sellable: true,
+    active: true,
+    default_location_id: 'loc-tools-storage',
+    created_at: '2024-01-16T14:30:00Z',
+    updated_at: '2024-01-16T14:30:00Z',
+    tags: ['électrique', 'DeWalt', 'sans-fil']
+  },
+  {
+    id: 'item-003',
+    client_id: 'demo-client-id',
+    name: 'Gants de protection nitrile',
+    sku: 'GLOVES-NIT-100',
+    uom: 'BOITE',
+    category: 'Équipement de Protection',
+    description: 'Gants jetables en nitrile, boîte de 100 pièces',
+    min_qty: 20,
+    max_qty: 200,
+    reorder_point: 50,
+    safety_stock: 30,
+    dimensions: { length: 25, width: 12, height: 8 },
+    images: [],
+    serializable: false,
+    sellable: true,
+    active: true,
+    default_location_id: 'loc-warehouse-main',
+    created_at: '2024-01-17T09:15:00Z',
+    updated_at: '2024-01-17T09:15:00Z',
+    tags: ['protection', 'jetable', 'hygiène']
+  },
+  {
+    id: 'item-004',
+    client_id: 'demo-client-id',
+    name: 'Échelle télescopique 3.8m',
+    sku: 'LADDER-TEL-38',
+    uom: 'UN',
+    category: 'Équipement d\'accès',
+    description: 'Échelle télescopique aluminium hauteur max 3.8m',
+    min_qty: 1,
+    max_qty: 8,
+    reorder_point: 2,
+    safety_stock: 1,
+    dimensions: { length: 110, width: 45, height: 15 },
+    images: [],
+    serializable: true,
+    sellable: true,
+    active: true,
+    default_location_id: 'loc-yard-outdoor',
+    created_at: '2024-01-18T16:45:00Z',
+    updated_at: '2024-01-18T16:45:00Z',
+    tags: ['accès', 'télescopique', 'aluminium']
+  },
+  {
+    id: 'item-005',
+    client_id: 'demo-client-id',
+    name: 'Détecteur de gaz portable',
+    sku: 'GAS-DET-PRT',
+    uom: 'UN',
+    category: 'Instruments de mesure',
+    description: 'Détecteur multi-gaz portable avec alarmes',
+    min_qty: 3,
+    max_qty: 12,
+    reorder_point: 5,
+    safety_stock: 2,
+    dimensions: { length: 15, width: 8, height: 4 },
+    images: [],
+    serializable: true,
+    sellable: false,
+    active: true,
+    default_location_id: 'loc-equipment-room',
+    created_at: '2024-01-19T11:20:00Z',
+    updated_at: '2024-01-19T11:20:00Z',
+    tags: ['sécurité', 'gaz', 'portable', 'alarme']
+  },
+  {
+    id: 'item-006',
+    client_id: 'demo-client-id',
+    name: 'Câble électrique 14 AWG',
+    sku: 'CABLE-14AWG-100M',
+    uom: 'M',
+    category: 'Matériel électrique',
+    description: 'Câble électrique cuivre 14 AWG, rouleau 100m',
+    min_qty: 200,
+    max_qty: 1000,
+    reorder_point: 300,
+    safety_stock: 100,
+    dimensions: { length: 50, width: 50, height: 30 },
+    images: [],
+    serializable: false,
+    sellable: true,
+    active: true,
+    default_location_id: 'loc-warehouse-main',
+    created_at: '2024-01-20T08:00:00Z',
+    updated_at: '2024-01-20T08:00:00Z',
+    tags: ['électrique', 'cuivre', '14AWG']
+  }
+];
+
 /**
  * Recherche d'articles avec filtres
  */
@@ -456,6 +592,36 @@ export async function searchInventoryItems(
     active?: boolean;
   }
 ): Promise<InventoryItem[]> {
+  // Mode démo pour les tests
+  if (clientId === 'demo-client-id') {
+    let items = [...DEMO_INVENTORY_ITEMS];
+    
+    // Appliquer les filtres
+    if (filters.search) {
+      const search = filters.search.toLowerCase();
+      items = items.filter(item => 
+        item.name.toLowerCase().includes(search) ||
+        item.sku?.toLowerCase().includes(search) ||
+        item.category?.toLowerCase().includes(search)
+      );
+    }
+    
+    if (filters.category) {
+      items = items.filter(item => item.category === filters.category);
+    }
+    
+    if (filters.sellable !== undefined) {
+      items = items.filter(item => item.sellable === filters.sellable);
+    }
+    
+    if (filters.active !== undefined) {
+      items = items.filter(item => item.active === filters.active);
+    }
+    
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Mode production avec Supabase
   let query = supabase
     .from('inv_items')
     .select(`
