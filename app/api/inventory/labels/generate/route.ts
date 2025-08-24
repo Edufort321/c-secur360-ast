@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    const template = templates[labelTemplate] || templates.avery_5160;
+    const template = templates[labelTemplate as keyof typeof templates] || templates.avery_5160;
     
     // Taille des QR codes
     const qrSizes = {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       medium: 18,
       large: 20
     };
-    const qrDimension = qrSizes[qrSize] || qrSizes.medium;
+    const qrDimension = qrSizes[qrSize as keyof typeof qrSizes] || qrSizes.medium;
 
     // Créer le PDF
     const pdf = new jsPDF({
