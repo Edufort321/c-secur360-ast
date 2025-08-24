@@ -12,6 +12,8 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
+import { useDemoLimiter } from '@/app/hooks/useDemoLimiter';
+import DemoContactModal from '@/app/components/demo/DemoContactModal';
 import type { InventoryItem, InventoryInstance } from '@/app/types/inventory';
 
 interface LabelPrintModalProps {
@@ -57,6 +59,9 @@ export default function LabelPrintModal({
   items, 
   title = "Impression d'étiquettes" 
 }: LabelPrintModalProps) {
+  // Système de limitation démo
+  const { isDemo, interceptSave, showContactModal, setShowContactModal } = useDemoLimiter();
+
   const [settings, setSettings] = useState({
     labelTemplate: 'avery_5160',
     includeQR: true,
@@ -78,11 +83,13 @@ export default function LabelPrintModal({
       return;
     }
 
-    setIsGenerating(true);
-    setError('');
-    setSuccess('');
+    // Intercepter si en mode démo
+    interceptSave(async () => {
+      setIsGenerating(true);
+      setError('');
+      setSuccess('');
 
-    try {
+      try {
       // Préparer les données pour l'API
       const requestData: LabelPrintRequest = {
         items: items.map(item => ({
@@ -140,6 +147,7 @@ export default function LabelPrintModal({
     } finally {
       setIsGenerating(false);
     }
+    });
   };
 
   const selectedTemplate = LABEL_TEMPLATES[settings.labelTemplate];
@@ -357,6 +365,13 @@ export default function LabelPrintModal({
           </div>
         </div>
       </div>
+
+      {/* Modal de contact démo */}
+      <DemoContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        reason="save_attempted"
+      />
     </div>
   );
 }

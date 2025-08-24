@@ -16,55 +16,35 @@ import {
   Scan,
   Printer,
   CheckSquare,
-  Square
+  Square,
+  ArrowLeft,
+  Info
 } from 'lucide-react';
-import QRScanner, { useQRScanner } from '@/app/components/inventory/QRScanner';
-import ItemSheet from '@/app/components/inventory/ItemSheet';
-import LabelPrintModal from '@/app/components/inventory/LabelPrintModal';
-import DemoContactModal from '@/app/components/demo/DemoContactModal';
-import { useDemoLimiter } from '@/app/hooks/useDemoLimiter';
-import type { InventoryItem, QRScanResult } from '@/app/types/inventory';
-import { searchInventoryItems } from '@/lib/inventory-utils';
 
-export default function InventoryPage() {
-  // Système de limitation démo
-  const { 
-    isDemo, 
-    showContactModal, 
-    setShowContactModal, 
-    interceptSave,
-    timeRemaining 
-  } = useDemoLimiter({
-    onLimitReached: () => console.log('⏰ Temps de démo écoulé'),
-    onSaveAttempt: () => console.log('💾 Tentative de sauvegarde interceptée')
-  });
+// Types pour la démo
+interface DemoInventoryItem {
+  id: string;
+  name: string;
+  sku?: string;
+  category?: string;
+  uom: string;
+  sellable: boolean;
+  active: boolean;
+  default_location_id?: string;
+  description?: string;
+}
 
-  // Scanner QR
-  const {
-    isOpen: scannerOpen,
-    openScanner,
-    closeScanner,
-    handleScan,
-    lastResult,
-    clearResult
-  } = useQRScanner();
-
-  // Item Sheet
-  const [itemSheetOpen, setItemSheetOpen] = useState(false);
-  const [selectedItemPayload, setSelectedItemPayload] = useState<any>(null);
-
-  // Label Print Modal
-  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [selectionMode, setSelectionMode] = useState(false);
-
-  // Data state
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+export default function DemoInventoryPage() {
+  // État de la démo
+  const [items, setItems] = useState<DemoInventoryItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<DemoInventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Filters
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
+  
+  // Filtres
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     category: '',
@@ -76,44 +56,98 @@ export default function InventoryPage() {
   // Stats
   const [stats, setStats] = useState({
     totalItems: 0,
-    lowStockItems: 0,
+    lowStockItems: 2,
     sellableItems: 0,
     totalValue: 0
   });
 
+  // Données démo
+  const DEMO_ITEMS: DemoInventoryItem[] = [
+    {
+      id: 'demo-001',
+      name: 'Casque de sécurité MSA V-Gard',
+      sku: 'HELMET-MSA-001',
+      category: 'Équipement de Protection',
+      uom: 'UN',
+      sellable: true,
+      active: true,
+      default_location_id: 'loc-warehouse',
+      description: 'Casque de sécurité industriel certifié ANSI'
+    },
+    {
+      id: 'demo-002',
+      name: 'Perceuse sans fil DeWalt 20V',
+      sku: 'DRILL-DW-20V',
+      category: 'Outils électriques',
+      uom: 'UN',
+      sellable: true,
+      active: true,
+      default_location_id: 'loc-tools',
+      description: 'Perceuse-visseuse sans fil avec batterie lithium'
+    },
+    {
+      id: 'demo-003',
+      name: 'Gants de protection nitrile',
+      sku: 'GLOVES-NIT-100',
+      category: 'Équipement de Protection',
+      uom: 'BOITE',
+      sellable: true,
+      active: true,
+      default_location_id: 'loc-warehouse',
+      description: 'Gants jetables en nitrile, boîte de 100 pièces'
+    },
+    {
+      id: 'demo-004',
+      name: 'Échelle télescopique 3.8m',
+      sku: 'LADDER-TEL-38',
+      category: 'Équipement d\'accès',
+      uom: 'UN',
+      sellable: true,
+      active: true,
+      default_location_id: 'loc-yard',
+      description: 'Échelle télescopique aluminium hauteur max 3.8m'
+    },
+    {
+      id: 'demo-005',
+      name: 'Détecteur de gaz portable',
+      sku: 'GAS-DET-PRT',
+      category: 'Instruments de mesure',
+      uom: 'UN',
+      sellable: false,
+      active: true,
+      default_location_id: 'loc-equipment',
+      description: 'Détecteur multi-gaz portable avec alarmes'
+    },
+    {
+      id: 'demo-006',
+      name: 'Câble électrique 14 AWG',
+      sku: 'CABLE-14AWG-100M',
+      category: 'Matériel électrique',
+      uom: 'M',
+      sellable: true,
+      active: true,
+      default_location_id: 'loc-warehouse',
+      description: 'Câble électrique cuivre 14 AWG, rouleau 100m'
+    }
+  ];
+
   useEffect(() => {
-    loadItems();
+    // Simuler le chargement
+    setLoading(true);
+    setTimeout(() => {
+      setItems(DEMO_ITEMS);
+      updateStats(DEMO_ITEMS);
+      setLoading(false);
+    }, 800);
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [items, searchTerm, filters]);
 
-  useEffect(() => {
-    if (lastResult) {
-      handleQRScanResult(lastResult);
-    }
-  }, [lastResult]);
-
-  const loadItems = async () => {
-    setLoading(true);
-    try {
-      // TODO: Obtenir le client_id depuis l'authentification
-      const clientId = 'demo-client-id';
-      const itemsData = await searchInventoryItems(clientId, { active: true });
-      setItems(itemsData);
-      updateStats(itemsData);
-    } catch (error) {
-      console.error('Erreur chargement items:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const applyFilters = () => {
     let filtered = items;
 
-    // Search term
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,23 +156,14 @@ export default function InventoryPage() {
       );
     }
 
-    // Category filter
     if (filters.category) {
       filtered = filtered.filter(item => item.category === filters.category);
     }
 
-    // Low stock filter
-    if (filters.lowStock) {
-      // TODO: Implémenter la vérification du stock faible
-      filtered = filtered.filter(item => false); // Placeholder
-    }
-
-    // Sellable filter
     if (filters.sellable) {
       filtered = filtered.filter(item => item.sellable);
     }
 
-    // Active filter
     if (filters.active) {
       filtered = filtered.filter(item => item.active);
     }
@@ -146,25 +171,13 @@ export default function InventoryPage() {
     setFilteredItems(filtered);
   };
 
-  const updateStats = (itemsList: InventoryItem[]) => {
+  const updateStats = (itemsList: DemoInventoryItem[]) => {
     setStats({
       totalItems: itemsList.length,
-      lowStockItems: 0, // TODO: Calculer réellement
+      lowStockItems: 2,
       sellableItems: itemsList.filter(item => item.sellable).length,
-      totalValue: 0 // TODO: Calculer valeur totale
+      totalValue: 12450
     });
-  };
-
-  const handleQRScanResult = (result: QRScanResult) => {
-    if (result.success && result.payload) {
-      setSelectedItemPayload(result.payload);
-      setItemSheetOpen(true);
-      clearResult();
-    } else {
-      // Afficher erreur de scan
-      alert(result.error || 'Erreur de scan QR');
-      clearResult();
-    }
   };
 
   const toggleItemSelection = (itemId: string) => {
@@ -188,16 +201,12 @@ export default function InventoryPage() {
 
   const openLabelPrint = () => {
     if (selectedItems.size === 0) {
-      // If no items selected, enter selection mode
       setSelectionMode(true);
     } else {
-      // Open print modal with selected items
-      setLabelPrintOpen(true);
+      // Simuler la génération de PDF
+      alert(`🏷️ PDF généré avec succès!\n${selectedItems.size} étiquette(s) prête(s) à imprimer.\n\n(En mode démo, aucun fichier n'est créé)`);
+      clearSelection();
     }
-  };
-
-  const getSelectedItemsForPrint = () => {
-    return filteredItems.filter(item => selectedItems.has(item.id));
   };
 
   const quickActions = [
@@ -206,7 +215,7 @@ export default function InventoryPage() {
       label: 'Scanner QR',
       icon: <Scan className="w-6 h-6" />,
       color: 'bg-blue-600 hover:bg-blue-700',
-      action: openScanner
+      action: () => alert('📱 Scanner QR ouvert!\n(Démo: fonctionnalité disponible en version complète)')
     },
     {
       id: 'print-labels',
@@ -220,14 +229,14 @@ export default function InventoryPage() {
       label: 'Nouvel article',
       icon: <Plus className="w-6 h-6" />,
       color: 'bg-green-600 hover:bg-green-700',
-      action: () => interceptSave(() => console.log('Créer article'))
+      action: () => alert('➕ Création d\'article\n(Démo: données temporaires uniquement)')
     },
     {
       id: 'purchase-order',
       label: 'Commande',
       icon: <Truck className="w-6 h-6" />,
       color: 'bg-orange-600 hover:bg-orange-700',
-      action: () => interceptSave(() => console.log('Nouvelle commande'))
+      action: () => alert('🚚 Nouvelle commande\n(Démo: workflow disponible en version complète)')
     }
   ];
 
@@ -235,15 +244,27 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header avec retour démo */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-lg mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Inventaire</h1>
-            <button
-              onClick={() => console.log('Settings')}
-              className="p-2 rounded-full hover:bg-gray-100"
+          {/* Bandeau démo */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center gap-3">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">Mode Démo</p>
+              <p className="text-xs text-blue-700">Données temporaires - Aucune sauvegarde</p>
+            </div>
+            <a 
+              href="/demo"
+              className="text-blue-600 hover:text-blue-700 p-1"
             >
+              <ArrowLeft className="w-5 h-5" />
+            </a>
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Inventaire QR</h1>
+            <button className="p-2 rounded-full hover:bg-gray-100">
               <Settings className="w-6 h-6 text-gray-600" />
             </button>
           </div>
@@ -291,16 +312,6 @@ export default function InventoryPage() {
               </div>
 
               <div className="flex flex-wrap gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={filters.lowStock}
-                    onChange={(e) => setFilters({ ...filters, lowStock: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Stock faible</span>
-                </label>
-
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -386,7 +397,7 @@ export default function InventoryPage() {
                 </button>
                 {selectedItems.size > 0 && (
                   <button
-                    onClick={() => setLabelPrintOpen(true)}
+                    onClick={openLabelPrint}
                     className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1"
                   >
                     <Printer className="w-3 h-3" />
@@ -404,12 +415,6 @@ export default function InventoryPage() {
             <h2 className="text-lg font-semibold text-gray-900">
               Articles ({filteredItems.length})
             </h2>
-            <button
-              onClick={loadItems}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Actualiser
-            </button>
           </div>
 
           {loading ? (
@@ -453,18 +458,7 @@ export default function InventoryPage() {
                       </button>
                     )}
 
-                    <div 
-                      className={`flex items-center gap-3 flex-1 ${!selectionMode ? 'cursor-pointer' : ''}`}
-                      onClick={!selectionMode ? () => {
-                        setSelectedItemPayload({
-                          type: 'item',
-                          id: item.id,
-                          code: item.sku || item.id,
-                          timestamp: Date.now() / 1000
-                        });
-                        setItemSheetOpen(true);
-                      } : undefined}
-                    >
+                    <div className="flex items-center gap-3 flex-1">
                       <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
                         <Package className="w-6 h-6 text-gray-600" />
                       </div>
@@ -492,7 +486,7 @@ export default function InventoryPage() {
 
                       <div className="text-right">
                         <div className="text-lg font-semibold text-gray-900">
-                          -
+                          {Math.floor(Math.random() * 50) + 5}
                         </div>
                         <div className="text-xs text-gray-500">{item.uom}</div>
                         
@@ -511,55 +505,9 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* QR Scanner */}
-      <QRScanner
-        isOpen={scannerOpen}
-        onClose={closeScanner}
-        onScan={handleScan}
-        title="Scanner article QR"
-      />
-
-      {/* Item Sheet */}
-      <ItemSheet
-        isOpen={itemSheetOpen}
-        onClose={() => {
-          setItemSheetOpen(false);
-          setSelectedItemPayload(null);
-        }}
-        qrPayload={selectedItemPayload}
-      />
-
-      {/* Label Print Modal */}
-      <LabelPrintModal
-        isOpen={labelPrintOpen}
-        onClose={() => {
-          setLabelPrintOpen(false);
-          if (selectionMode && selectedItems.size === 0) {
-            setSelectionMode(false);
-          }
-        }}
-        items={getSelectedItemsForPrint()}
-        title="Imprimer étiquettes d'inventaire"
-      />
-
-      {/* Demo Timer (si en mode démo) */}
-      {isDemo && timeRemaining > 0 && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-medium z-50">
-          Démo: {Math.floor(timeRemaining / 60000)}:{String(Math.floor((timeRemaining % 60000) / 1000)).padStart(2, '0')}
-        </div>
-      )}
-
-      {/* Modal de contact démo */}
-      <DemoContactModal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        reason="save_attempted"
-        timeSpent={5 * 60 * 1000 - timeRemaining}
-      />
-
       {/* Floating Action Button */}
       <button
-        onClick={openScanner}
+        onClick={() => alert('📱 Scanner QR mobile!\n(Version complète avec caméra)')}
         className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center z-40"
       >
         <QrCode className="w-6 h-6" />
