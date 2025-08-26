@@ -44,7 +44,8 @@ export default function HomePage() {
                 alt="C-Secur360 Logo" 
                 width={180} 
                 height={60}
-                className="h-10 w-auto"
+                className="h-12 w-auto"
+                priority={true}
               />
               <div className="hidden md:block text-white/80 text-sm">
                 Plateforme AST & ERP Intégré
@@ -1012,7 +1013,7 @@ export default function HomePage() {
                 alt="C-Secur360" 
                 width={150} 
                 height={50}
-                className="h-8 w-auto mb-4"
+                className="h-10 w-auto mb-4"
               />
               <p className="text-slate-400 text-sm">
                 La plateforme AST & ERP la plus sécurisée du marché canadien.
