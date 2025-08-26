@@ -62,16 +62,16 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header avec logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-6">
+          <div className="inline-block mb-6">
             <Image 
               src="/c-secur360-logo.png" 
               alt="C-Secur360 Logo" 
-              width={180} 
-              height={60}
+              width={150} 
+              height={40}
               className="h-12 w-auto"
               priority
             />
-          </Link>
+          </div>
           
           <h1 className="text-2xl font-bold text-white mb-2">
             Connexion Tenant

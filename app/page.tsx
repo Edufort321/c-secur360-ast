@@ -39,15 +39,13 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             {/* Logo en haut à gauche */}
             <div className="flex items-center gap-3">
-              <Link href="/">
-                <Image 
-                  src="/c-secur360-logo.png" 
-                  alt="C-Secur360 Logo" 
-                  width={150} 
-                  height={40}
-                  priority
-                />
-              </Link>
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-Secur360 Logo" 
+                width={150} 
+                height={40}
+                priority
+              />
               <div className="hidden md:block text-white/80 text-sm">
                 Plateforme AST & ERP Intégré
               </div>
@@ -1009,16 +1007,14 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <Link href="/">
-                <Image 
-                  src="/c-secur360-logo.png" 
-                  alt="C-Secur360" 
-                  width={150} 
-                  height={40}
-                  className="h-10 w-auto mb-4"
-                  priority
-                />
-              </Link>
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-Secur360" 
+                width={150} 
+                height={40}
+                className="h-10 w-auto mb-4"
+                priority
+              />
               <p className="text-slate-400 text-sm">
                 La plateforme AST & ERP la plus sécurisée du marché canadien.
               </p>
