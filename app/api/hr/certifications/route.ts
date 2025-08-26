@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 
+export const dynamic = 'force-dynamic';
+
 interface CertificationUpdateData {
   employee_id: string;
   certification_type: string;

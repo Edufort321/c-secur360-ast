@@ -24,7 +24,8 @@ import {
   FileText,
   QrCode,
   Smartphone,
-  Headphones
+  Headphones,
+  Sparkles
 } from 'lucide-react';
 
 export default function HomePage() {

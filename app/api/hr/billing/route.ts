@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 
+export const dynamic = 'force-dynamic';
+
 interface BillingProfileData {
   rate_normal: number;
   rate_overtime_1_5: number;
