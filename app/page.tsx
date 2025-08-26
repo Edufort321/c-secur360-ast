@@ -39,14 +39,15 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             {/* Logo en haut à gauche */}
             <div className="flex items-center gap-3">
-              <Image 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360 Logo" 
-                width={180} 
-                height={60}
-                className="h-12 w-auto"
-                priority={true}
-              />
+              <Link href="/">
+                <Image 
+                  src="/c-secur360-logo.png" 
+                  alt="C-Secur360 Logo" 
+                  width={150} 
+                  height={40}
+                  priority
+                />
+              </Link>
               <div className="hidden md:block text-white/80 text-sm">
                 Plateforme AST & ERP Intégré
               </div>
@@ -57,7 +58,7 @@ export default function HomePage() {
               <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
               <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
               <a href="#demo" className="hover:text-white transition-colors">Démo</a>
-              <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
+              <Link href="/login" className="hover:text-white transition-colors">Connexion Tenant</Link>
             </nav>
 
             {/* CTA Header */}
@@ -74,13 +75,13 @@ export default function HomePage() {
               </Link>
               
               <Link
-                href="/admin"
+                href="/login"
                 className="border border-white/30 text-white hover:bg-white/10
                           px-4 py-2 rounded-lg text-sm font-medium transition-all
                           flex items-center gap-2"
               >
                 <Shield className="w-4 h-4" />
-                Connexion
+                Connexion Tenant
               </Link>
             </div>
           </div>
@@ -1008,13 +1009,16 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <Image 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360" 
-                width={150} 
-                height={50}
-                className="h-10 w-auto mb-4"
-              />
+              <Link href="/">
+                <Image 
+                  src="/c-secur360-logo.png" 
+                  alt="C-Secur360" 
+                  width={150} 
+                  height={40}
+                  className="h-10 w-auto mb-4"
+                  priority
+                />
+              </Link>
               <p className="text-slate-400 text-sm">
                 La plateforme AST & ERP la plus sécurisée du marché canadien.
               </p>
@@ -1026,7 +1030,7 @@ export default function HomePage() {
                 <li><a href="#features" className="hover:text-white">Fonctionnalités</a></li>
                 <li><Link href="/demo" className="hover:text-white">Démo</Link></li>
                 <li><a href="#pricing" className="hover:text-white">Tarifs</a></li>
-                <li><Link href="/admin" className="hover:text-white">Admin</Link></li>
+                <li><Link href="/login" className="hover:text-white">Connexion</Link></li>
               </ul>
             </div>
             
