@@ -1,27 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
     
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const department = searchParams.get('department');
-    const includePerformance = searchParams.get('includePerformance') === 'true';
+    const includeSafety = searchParams.get('includeSafety') === 'true';
 
     let query = supabase
       .from('employees')
       .select(`
         *,
-        ${includePerformance ? `
-        employee_performance (
-          jobs_completed,
+        ${includeSafety ? `
+        employee_safety_records (
           safety_score,
-          efficiency_ratio,
           punctuality_score,
+          ast_filled,
+          ast_participated,
+          incidents,
           last_evaluation_date
         )
         ` : ''}
@@ -39,14 +51,21 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      throw error;
+      console.error('Database error:', error);
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération des employés' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ employees: data || [] });
+    return NextResponse.json({ 
+      employees: data || [],
+      count: data?.length || 0
+    });
   } catch (error) {
-    console.error('Erreur lors de la récupération des employés:', error);
+    console.error('Server error:', error);
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des employés' },
+      { error: 'Erreur serveur lors de la récupération des employés' },
       { status: 500 }
     );
   }
@@ -54,11 +73,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
     const body = await request.json();
 
-    // Valider les champs requis
-    const requiredFields = ['full_name', 'email', 'position', 'department', 'hourly_rate_base', 'billable_rate'];
+    // Validation des champs requis (données minimales)
+    const requiredFields = ['first_name', 'last_name'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -68,25 +98,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Vérifier que l'email n'existe pas déjà
-    const { data: existingEmployee } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('email', body.email)
-      .single();
+    // Obtenir tenant depuis les en-têtes ou utiliser default
+    const tenant_id = request.headers.get('x-tenant-id') || 'demo';
 
-    if (existingEmployee) {
-      return NextResponse.json(
-        { error: 'Un employé avec cet email existe déjà' },
-        { status: 400 }
-      );
+    // Vérifier l'unicité du numéro d'employé dans le tenant
+    if (body.employee_number) {
+      const { data: existingEmployee } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('tenant_id', tenant_id)
+        .eq('employee_number', body.employee_number)
+        .single();
+
+      if (existingEmployee) {
+        return NextResponse.json(
+          { error: 'Un employé avec ce numéro existe déjà' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Calculer les taux de temps supplémentaire
+    // Préparer les données employé avec certifications par défaut
     const employeeData = {
       ...body,
-      overtime_rate_1_5: body.hourly_rate_base * 1.5,
-      overtime_rate_2_0: body.hourly_rate_base * 2.0
+      tenant_id,
+      certifications: body.certifications || {
+        "permis_conduire": {"valid": false, "expiry": null},
+        "chariot_elevateur": {"valid": false, "expiry": null},
+        "travail_hauteur": {"valid": false, "expiry": null},
+        "premiers_secours": {"valid": false, "expiry": null},
+        "manipulation_substances": {"valid": false, "expiry": null}
+      }
     };
 
     // Créer l'employé
@@ -97,22 +139,28 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (employeeError) {
-      throw employeeError;
+      console.error('Employee creation error:', employeeError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la création de l\'employé' },
+        { status: 500 }
+      );
     }
 
-    // Créer l'enregistrement de performance initial
-    const { error: performanceError } = await supabase
-      .from('employee_performance')
+    // Créer l'enregistrement de sécurité initial
+    const { error: safetyError } = await supabase
+      .from('employee_safety_records')
       .insert({
         employee_id: employee.id,
-        jobs_completed: 0,
-        safety_score: 85,
-        efficiency_ratio: 100,
-        punctuality_score: 85
+        safety_score: 85.00,
+        punctuality_score: 85.00,
+        ast_filled: 0,
+        ast_participated: 0,
+        incidents: 0
       });
 
-    if (performanceError) {
-      console.error('Erreur lors de la création des performances initiales:', performanceError);
+    if (safetyError) {
+      console.error('Safety record creation error:', safetyError);
+      // Erreur non bloquante, l'employé est quand même créé
     }
 
     return NextResponse.json({ employee, message: 'Employé créé avec succès' }, { status: 201 });
@@ -127,7 +175,18 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
     const body = await request.json();
 
     if (!body.id) {
@@ -170,7 +229,18 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const cookieStore = cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
