@@ -192,10 +192,13 @@ export default function TenantManagementPage() {
                 <p className="text-sm text-gray-600">Administration client C-SECUR360</p>
               </div>
             </div>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <Link 
+              href="/admin/tenant-management/create"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               Nouveau Tenant
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -367,13 +370,29 @@ export default function TenantManagementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <Link 
+                          href={`/admin/tenant-management/${tenant.id}`}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          title="Modifier le tenant"
+                        >
                           <Edit className="w-4 h-4" />
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-900">
+                        </Link>
+                        <button 
+                          onClick={() => window.open(`https://${tenant.tenant_id}.csecur360.ca`, '_blank')}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          title="Accéder au portail client"
+                        >
                           <Shield className="w-4 h-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button 
+                          onClick={() => {
+                            if (confirm(`Supprimer définitivement ${tenant.company_name}?\nCette action est irréversible.`)) {
+                              alert('Suppression tenant (à implémenter avec API)');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-900 p-1 rounded"
+                          title="Supprimer le tenant"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
