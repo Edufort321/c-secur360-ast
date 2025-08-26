@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoles, hasPermission } from '@/lib/rbac-utils';
-nexport const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
