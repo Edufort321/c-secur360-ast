@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import EmployeeForm from './employee-form';
 import CertificationManager from './certification-manager';
+import ExportManager from './export-manager';
 import { 
   Plus, 
   Search, 
@@ -454,6 +455,11 @@ export default function EmployeesDashboard({ tenantId = 'demo' }: EmployeeDashbo
           );
         })}
       </div>
+
+      {/* Export Manager */}
+      {employees.length > 0 && (
+        <ExportManager employees={employees} tenantId={tenantId} />
+      )}
 
       {/* Empty State */}
       {filteredEmployees.length === 0 && (

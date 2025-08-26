@@ -1,0 +1,208 @@
+### Test HR API Endpoints for C-SECUR360
+### Use with REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:3000
+@tenantId = demo
+
+### 1. Test Employees Endpoint - GET all employees
+GET {{baseUrl}}/api/hr/employees
+x-tenant-id: {{tenantId}}
+
+### 2. Test Employee Creation - POST new employee
+POST {{baseUrl}}/api/hr/employees
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "first_name": "Jean",
+  "last_name": "Dupont",
+  "employee_number": "EMP001",
+  "phone_number": "+1 (514) 555-0123",
+  "emergency_contact_name": "Marie Dupont",
+  "emergency_contact_phone": "+1 (514) 555-0124",
+  "role": "worker",
+  "employment_status": "active",
+  "department": "Sécurité",
+  "position": "Technicien",
+  "hire_date": "2024-01-15"
+}
+
+### 3. Test Employee Update - PUT existing employee (use ID from creation response)
+PUT {{baseUrl}}/api/hr/employees/EMPLOYEE_ID_HERE
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "first_name": "Jean",
+  "last_name": "Dupont-Martin",
+  "phone_number": "+1 (514) 555-9999",
+  "employment_status": "active"
+}
+
+### 4. Test Safety Records - GET employee safety data
+GET {{baseUrl}}/api/hr/performance?employee_id=EMPLOYEE_ID_HERE&includeEmployeeInfo=true
+x-tenant-id: {{tenantId}}
+
+### 5. Test Safety Record Creation - POST new safety record
+POST {{baseUrl}}/api/hr/performance
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "employee_id": "EMPLOYEE_ID_HERE",
+  "ast_filled": 5,
+  "ast_participated": 3,
+  "incidents": 0,
+  "near_misses": 1,
+  "safety_score": 92.5,
+  "punctuality_score": 88.0,
+  "training_completed": ["sst_formation", "premiers_secours"],
+  "tools_checkouts": 15,
+  "tools_returns": 15,
+  "equipment_damage_reports": 0
+}
+
+### 6. Test Certifications - GET employee certifications
+GET {{baseUrl}}/api/hr/certifications?employee_id=EMPLOYEE_ID_HERE
+x-tenant-id: {{tenantId}}
+
+### 7. Test Certification Update - PUT single certification
+PUT {{baseUrl}}/api/hr/certifications
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "employee_id": "EMPLOYEE_ID_HERE",
+  "certification_type": "sst_formation_generale",
+  "valid": true,
+  "expiry": "2025-12-31",
+  "issuer": "CNESST",
+  "doc_id": "SST-2024-001"
+}
+
+### 8. Test Batch Certification Update - PATCH multiple certifications
+PATCH {{baseUrl}}/api/hr/certifications
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "employee_id": "EMPLOYEE_ID_HERE",
+  "certifications_batch": [
+    {
+      "certification_type": "premiers_secours",
+      "valid": true,
+      "expiry": "2025-06-30",
+      "issuer": "Croix-Rouge",
+      "doc_id": "PS-2024-015"
+    },
+    {
+      "certification_type": "espaces_confines",
+      "valid": true,
+      "expiry": "2025-03-15",
+      "issuer": "Formation SST Inc",
+      "doc_id": "EC-2024-089"
+    }
+  ]
+}
+
+### 9. Test AST Assignment Eligibility - POST validation check
+POST {{baseUrl}}/api/hr/certifications
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "employee_id": "EMPLOYEE_ID_HERE",
+  "required_certifications": ["sst_formation_generale", "premiers_secours", "espaces_confines"],
+  "strict_mode": true
+}
+
+### 10. Test Expiring Certifications - GET warning check
+GET {{baseUrl}}/api/hr/certifications?check_expiring=true&warning_days=30
+x-tenant-id: {{tenantId}}
+
+### 11. Test Specific Employee Expiring Certs
+GET {{baseUrl}}/api/hr/certifications?employee_id=EMPLOYEE_ID_HERE&check_expiring=true&warning_days=60
+x-tenant-id: {{tenantId}}
+
+### 12. Test Billing Profile - GET client billing rates
+GET {{baseUrl}}/api/hr/billing?tenant_id={{tenantId}}
+x-tenant-id: {{tenantId}}
+
+### 13. Test Billing Profile Creation - POST new billing profile
+POST {{baseUrl}}/api/hr/billing
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "rate_normal": 145.00,
+  "rate_overtime_1_5": 217.50,
+  "rate_overtime_2_0": 290.00,
+  "per_diem_rate": 80.00,
+  "vehicle_rate_light": 0.70,
+  "vehicle_rate_trailer": 0.75,
+  "custom_rates": {
+    "supervision": 165.00,
+    "emergency_call": 220.00,
+    "specialized_equipment": 185.00,
+    "weekend_premium": 1.3,
+    "holiday_premium": 2.1
+  },
+  "currency": "CAD",
+  "tax_rate": 0.14975,
+  "rounding_minutes": 15,
+  "minimum_billable_hours": 0.25,
+  "payment_terms_days": 30,
+  "invoice_prefix": "CSR"
+}
+
+### 14. Test Billing Profile Update - PUT existing billing profile
+PUT {{baseUrl}}/api/hr/billing
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "rate_normal": 150.00,
+  "rate_overtime_1_5": 225.00,
+  "per_diem_rate": 85.00
+}
+
+### 15. Test Performance Update - PUT safety record update
+PUT {{baseUrl}}/api/hr/performance
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "employee_id": "EMPLOYEE_ID_HERE",
+  "safety_score": 95.0,
+  "punctuality_score": 90.0,
+  "ast_filled": 8,
+  "incidents": 0
+}
+
+### 16. Test Error Handling - Invalid employee ID
+GET {{baseUrl}}/api/hr/employees/invalid-uuid
+x-tenant-id: {{tenantId}}
+
+### 17. Test Authorization - Missing tenant header
+GET {{baseUrl}}/api/hr/employees
+
+### 18. Test Malformed Data - Invalid JSON
+POST {{baseUrl}}/api/hr/employees
+x-tenant-id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "first_name": "",
+  "employee_number": "",
+  "role": "invalid_role"
+}
+
+### Notes for Testing:
+### 1. Replace EMPLOYEE_ID_HERE with actual UUIDs from creation responses
+### 2. Ensure Supabase is running and migrations are applied
+### 3. Check that environment variables are set correctly
+### 4. Verify RLS policies allow operations for the demo tenant
+### 5. Test both success and error scenarios
+### 6. Validate response formats match expected schemas
+### 7. Check that sensitive data is properly encrypted/handled
+### 8. Verify multi-tenant isolation works correctly
