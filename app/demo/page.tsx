@@ -38,11 +38,28 @@ export default function DemoPublicPage() {
       status: 'Opérationnel'
     },
     {
+      id: 'hr',
+      title: 'Module RH Sécurisé',
+      description: 'Gestion employés avec certifications SST et conformité',
+      icon: <Users className="w-8 h-8" />,
+      color: 'bg-green-600',
+      features: [
+        'Gestion employés minimale',
+        'Certifications SST',
+        'Scores de sécurité',
+        'Suivi AST participation',
+        'Export CSV/Excel',
+        'Données chiffrées'
+      ],
+      demoUrl: '/demo/hr',
+      status: 'Opérationnel'
+    },
+    {
       id: 'rbac',
       title: 'Système RBAC Avancé',
       description: 'Gestion granulaire des rôles et permissions par portée',
       icon: <Shield className="w-8 h-8" />,
-      color: 'bg-green-600',
+      color: 'bg-purple-600',
       features: [
         'Rôles hiérarchiques',
         'Permissions par module',
@@ -92,18 +109,18 @@ export default function DemoPublicPage() {
       id: 'ast',
       title: 'Analyse Sécurité Travail',
       description: 'AST interentreprises avec identité fédérée',
-      icon: <Users className="w-8 h-8" />,
+      icon: <Shield className="w-8 h-8" />,
       color: 'bg-red-600',
       features: [
         'AST collaboratives',
-        'Registre travailleurs',
-        'Certifications',
-        'Interopérabilité',
-        'Conformité PIPEDA',
-        'Rapports gouvernementaux'
+        'Scanner QR mobile',
+        'Workflow approbation',
+        'Multi-sites & clients',
+        'Conformité provinciale',
+        'Signatures électroniques'
       ],
       demoUrl: '/demo/ast',
-      status: 'Planifié'
+      status: 'Opérationnel'
     },
     {
       id: 'analytics',
