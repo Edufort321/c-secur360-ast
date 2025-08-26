@@ -23,8 +23,6 @@ const protectedRoutes = {
   '/admin/(.*)': ['super_admin'],
   
   // Client tenant routes (pour chaque entreprise)
-  '/demo': ['super_admin', 'client_admin'],
-  '/demo/(.*)': ['super_admin', 'client_admin'],
   '/entrepriseabc': ['super_admin', 'client_admin'],
   '/entrepriseabc/(.*)': ['super_admin', 'client_admin'],
   '/companyxyz': ['super_admin', 'client_admin'],
@@ -43,6 +41,8 @@ const protectedRoutes = {
 // Public routes (no authentication needed)
 const publicRoutes = [
   '/',
+  '/demo',           // Accès demo public
+  '/demo/(.*)',      // Toutes les pages demo publiques
   '/auth/admin',     // Accès super admin principal
   '/auth/client',    // Accès client admin
   '/pricing',

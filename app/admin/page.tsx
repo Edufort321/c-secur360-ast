@@ -59,7 +59,7 @@ export default function AdminPortalPage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Vérification hardcodée pour l'admin
-    if (email === 'eric.dufort@cerdia.ai' && password === 'CerdiaAdmin2024!') {
+    if (email === 'eric.dufort@cerdia.ai' && password === 'CGEstion321$') {
       // Créer un token d'authentification simple
       const token = btoa(JSON.stringify({
         email: email,
