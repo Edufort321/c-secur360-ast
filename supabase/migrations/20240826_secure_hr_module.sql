@@ -28,13 +28,52 @@ CREATE TABLE IF NOT EXISTS employees (
     department VARCHAR(100),
     position VARCHAR(100),
     
-    -- Safety Certifications (JSON)
+    -- Safety Certifications (JSON) - Structured and versionable
     certifications JSONB DEFAULT '{
-        "permis_conduire": {"valid": false, "expiry": null},
-        "chariot_elevateur": {"valid": false, "expiry": null},
-        "travail_hauteur": {"valid": false, "expiry": null},
-        "premiers_secours": {"valid": false, "expiry": null},
-        "manipulation_substances": {"valid": false, "expiry": null}
+        "permis_conduire": {
+            "valid": false, 
+            "expiry": null,
+            "issuer": null,
+            "doc_id": null,
+            "last_verified_at": null,
+            "critical": false
+        },
+        "chariot_elevateur": {
+            "valid": false, 
+            "expiry": null,
+            "issuer": "CNESST",
+            "doc_id": null,
+            "last_verified_at": null,
+            "critical": true
+        },
+        "travail_hauteur": {
+            "valid": false, 
+            "expiry": null,
+            "issuer": "CNESST",
+            "doc_id": null,
+            "last_verified_at": null,
+            "critical": true
+        },
+        "premiers_secours": {
+            "valid": false, 
+            "expiry": null,
+            "issuer": null,
+            "doc_id": null,
+            "last_verified_at": null,
+            "critical": false
+        },
+        "manipulation_substances": {
+            "valid": false, 
+            "expiry": null,
+            "issuer": "CNESST",
+            "doc_id": null,
+            "last_verified_at": null,
+            "critical": true
+        },
+        "_meta": {
+            "schema_version": 1,
+            "last_updated": null
+        }
     }'::jsonb,
     
     -- Vehicle Assignment (Optional)
@@ -247,35 +286,186 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to check certification validity
+-- Function to check certification validity with critical flag support
 CREATE OR REPLACE FUNCTION check_certification_validity(
     p_employee_id UUID,
     p_certification_type VARCHAR(100)
-) RETURNS BOOLEAN AS $$
+) RETURNS TABLE (
+    is_valid BOOLEAN,
+    is_critical BOOLEAN,
+    expires_in_days INTEGER,
+    expiry_date DATE
+) AS $$
 DECLARE
     cert_data JSONB;
-    expiry_date DATE;
+    cert_expiry DATE;
+    cert_critical BOOLEAN;
+    days_until_expiry INTEGER;
 BEGIN
     SELECT certifications->p_certification_type INTO cert_data
     FROM employees 
     WHERE id = p_employee_id;
     
     IF cert_data IS NULL THEN
-        RETURN FALSE;
+        RETURN QUERY SELECT FALSE, FALSE, NULL::INTEGER, NULL::DATE;
+        RETURN;
     END IF;
+    
+    -- Extract certification properties
+    cert_critical := COALESCE((cert_data->>'critical')::BOOLEAN, FALSE);
     
     -- Check if certification is marked as valid
     IF NOT COALESCE((cert_data->>'valid')::BOOLEAN, FALSE) THEN
-        RETURN FALSE;
+        RETURN QUERY SELECT FALSE, cert_critical, NULL::INTEGER, NULL::DATE;
+        RETURN;
     END IF;
     
     -- Check expiry date if present
     IF cert_data->>'expiry' IS NOT NULL THEN
-        expiry_date := (cert_data->>'expiry')::DATE;
-        RETURN expiry_date >= CURRENT_DATE;
+        cert_expiry := (cert_data->>'expiry')::DATE;
+        days_until_expiry := cert_expiry - CURRENT_DATE;
+        
+        RETURN QUERY SELECT 
+            (cert_expiry >= CURRENT_DATE) as is_valid,
+            cert_critical,
+            days_until_expiry,
+            cert_expiry;
+    ELSE
+        -- No expiry date means perpetual validity if marked valid
+        RETURN QUERY SELECT TRUE, cert_critical, NULL::INTEGER, NULL::DATE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get all expiring certifications for an employee
+CREATE OR REPLACE FUNCTION get_expiring_certifications(
+    p_employee_id UUID,
+    p_warning_days INTEGER DEFAULT 30
+) RETURNS TABLE (
+    certification_type VARCHAR(100),
+    expiry_date DATE,
+    days_until_expiry INTEGER,
+    is_critical BOOLEAN,
+    is_expired BOOLEAN
+) AS $$
+DECLARE
+    cert_key TEXT;
+    cert_data JSONB;
+    employee_certs JSONB;
+BEGIN
+    SELECT certifications INTO employee_certs
+    FROM employees 
+    WHERE id = p_employee_id;
+    
+    IF employee_certs IS NULL THEN
+        RETURN;
     END IF;
     
-    RETURN TRUE;
+    -- Iterate through all certifications
+    FOR cert_key IN SELECT jsonb_object_keys(employee_certs) 
+    WHERE jsonb_object_keys(employee_certs) != '_meta'
+    LOOP
+        cert_data := employee_certs->cert_key;
+        
+        -- Only process valid certifications with expiry dates
+        IF COALESCE((cert_data->>'valid')::BOOLEAN, FALSE) 
+           AND cert_data->>'expiry' IS NOT NULL THEN
+            
+            RETURN QUERY SELECT 
+                cert_key as certification_type,
+                (cert_data->>'expiry')::DATE as expiry_date,
+                ((cert_data->>'expiry')::DATE - CURRENT_DATE) as days_until_expiry,
+                COALESCE((cert_data->>'critical')::BOOLEAN, FALSE) as is_critical,
+                ((cert_data->>'expiry')::DATE < CURRENT_DATE) as is_expired
+            WHERE (cert_data->>'expiry')::DATE - CURRENT_DATE <= p_warning_days;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to check if employee can be assigned to AST work
+CREATE OR REPLACE FUNCTION can_assign_to_ast(
+    p_employee_id UUID,
+    p_required_certifications TEXT[] DEFAULT ARRAY[]::TEXT[],
+    p_strict_mode BOOLEAN DEFAULT NULL
+) RETURNS TABLE (
+    can_assign BOOLEAN,
+    blocking_certifications TEXT[],
+    warning_certifications TEXT[],
+    message TEXT
+) AS $$
+DECLARE
+    employee_certs JSONB;
+    tenant_strict_mode BOOLEAN;
+    employee_tenant_id VARCHAR(100);
+    cert_type TEXT;
+    cert_validity RECORD;
+    blocking_list TEXT[] := ARRAY[]::TEXT[];
+    warning_list TEXT[] := ARRAY[]::TEXT[];
+    final_can_assign BOOLEAN := TRUE;
+BEGIN
+    -- Get employee and tenant info
+    SELECT certifications, tenant_id INTO employee_certs, employee_tenant_id
+    FROM employees 
+    WHERE id = p_employee_id;
+    
+    IF employee_certs IS NULL THEN
+        RETURN QUERY SELECT FALSE, ARRAY['employee_not_found'], ARRAY[]::TEXT[], 'Employee not found';
+        RETURN;
+    END IF;
+    
+    -- Get strict mode setting for tenant
+    IF p_strict_mode IS NULL THEN
+        SELECT strict_mode INTO tenant_strict_mode
+        FROM tenant_settings 
+        WHERE tenant_id = employee_tenant_id;
+        tenant_strict_mode := COALESCE(tenant_strict_mode, TRUE);
+    ELSE
+        tenant_strict_mode := p_strict_mode;
+    END IF;
+    
+    -- Check required certifications
+    FOREACH cert_type IN ARRAY p_required_certifications
+    LOOP
+        SELECT * INTO cert_validity 
+        FROM check_certification_validity(p_employee_id, cert_type);
+        
+        IF NOT cert_validity.is_valid THEN
+            IF cert_validity.is_critical OR tenant_strict_mode THEN
+                blocking_list := array_append(blocking_list, cert_type);
+                final_can_assign := FALSE;
+            ELSE
+                warning_list := array_append(warning_list, cert_type);
+            END IF;
+        END IF;
+    END LOOP;
+    
+    -- Check all critical certifications even if not specifically required
+    FOR cert_type IN SELECT jsonb_object_keys(employee_certs) 
+    WHERE jsonb_object_keys(employee_certs) != '_meta'
+    LOOP
+        IF COALESCE(((employee_certs->cert_type)->>'critical')::BOOLEAN, FALSE) THEN
+            SELECT * INTO cert_validity 
+            FROM check_certification_validity(p_employee_id, cert_type);
+            
+            IF NOT cert_validity.is_valid THEN
+                IF NOT (cert_type = ANY(blocking_list)) THEN
+                    blocking_list := array_append(blocking_list, cert_type);
+                    final_can_assign := FALSE;
+                END IF;
+            END IF;
+        END IF;
+    END LOOP;
+    
+    RETURN QUERY SELECT 
+        final_can_assign,
+        blocking_list,
+        warning_list,
+        CASE 
+            WHEN NOT final_can_assign THEN 'Assignment blocked due to expired critical certifications'
+            WHEN array_length(warning_list, 1) > 0 THEN 'Assignment possible but requires justification'
+            ELSE 'Assignment approved'
+        END;
 END;
 $$ LANGUAGE plpgsql;
 
