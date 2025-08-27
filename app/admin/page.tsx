@@ -154,6 +154,15 @@ export default function AdminPortalPage() {
       color: 'bg-orange-600',
       features: ['Auto-setup', 'Données de test', 'Modules complets', 'Accès instantané'],
       url: '/admin/setup-test-tenant'
+    },
+    {
+      id: 'todo',
+      title: '📝 Gestionnaire de Tâches',
+      description: 'Système To-Do Microsoft style avec catégories',
+      icon: <CheckCircle className="w-8 h-8" />,
+      color: 'bg-teal-600',
+      features: ['Microsoft To-Do Style', 'Catégories & Priorités', 'Sous-tâches', 'Statistiques'],
+      url: '/admin/todo'
     }
   ];
 
@@ -354,7 +363,7 @@ export default function AdminPortalPage() {
                 <div className="pt-4 border-t border-gray-100">
                   <button
                     onClick={() => {
-                      if (['ultimate-dashboard', 'tenant-management', 'financial-dashboard', 'setup-test-tenant'].includes(module.id)) {
+                      if (['ultimate-dashboard', 'tenant-management', 'financial-dashboard', 'setup-test-tenant', 'todo'].includes(module.id)) {
                         window.location.href = module.url;
                       } else {
                         alert(`🚀 Module "${module.title}"\n\nEn développement...\nAccès complet bientôt disponible.`);
