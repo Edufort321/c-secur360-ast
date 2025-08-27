@@ -250,19 +250,19 @@ export default function LandingPage() {
   const [carouselImages] = useState([
     {
       id: 1,
-      url: '/csecur360-logo-v2025.png',
+      url: '/logo.png',
       title: 'Interface AST',
       description: 'Formulaire d\'analyse sécuritaire de tâches'
     },
     {
       id: 2,
-      url: '/csecur360-logo-v2025.png', 
+      url: '/logo.png', 
       title: 'Dashboard Analytics',
       description: 'Tableaux de bord temps réel'
     },
     {
       id: 3,
-      url: '/csecur360-logo-v2025.png',
+      url: '/logo.png',
       title: 'Gestion Multi-Sites',
       description: 'Interface de gestion des emplacements'
     }

@@ -65,7 +65,7 @@ const Logo: React.FC<LogoProps> = ({
 
       <div className={`flex items-center gap-3 ${className}`}>
         <Image 
-          src="/csecur360-logo-v2025.png" 
+          src="/logo.png" 
           alt="C-SECUR360"
           width={getSizeDimensions().width}
           height={getSizeDimensions().height}
