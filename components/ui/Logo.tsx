@@ -63,44 +63,11 @@ const Logo: React.FC<LogoProps> = ({
       }} />
 
       <div className={`flex items-center gap-3 ${className}`}>
-        {/* Logo SVG intégré - toujours fiable */}
-        <div className={`${getSizeClasses()} ${getVariantClasses()} flex items-center justify-center`}>
-          <svg 
-            viewBox="0 0 200 200" 
-            className={`${getSizeClasses()}`}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Cercle principal avec gradient */}
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style={{stopColor:'#3b82f6', stopOpacity:1}} />
-                <stop offset="50%" style={{stopColor:'#8b5cf6', stopOpacity:1}} />
-                <stop offset="100%" style={{stopColor:'#10b981', stopOpacity:1}} />
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge> 
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/> 
-                </feMerge>
-              </filter>
-            </defs>
-            
-            {/* Fond circulaire */}
-            <circle cx="100" cy="100" r="95" fill="url(#logoGradient)" filter="url(#glow)" />
-            
-            {/* Lettre C */}
-            <path d="M 140 60 A 40 40 0 1 0 140 140" stroke="white" strokeWidth="12" fill="none" strokeLinecap="round"/>
-            
-            {/* Chiffre 360 */}
-            <text x="100" y="160" textAnchor="middle" fill="white" fontSize="24" fontWeight="bold" fontFamily="Arial, sans-serif">
-              360
-            </text>
-            
-            {/* Point de sécurité */}
-            <circle cx="160" cy="100" r="8" fill="#fbbf24" />
-          </svg>
-        </div>
+        <img 
+          src="/csecur360-logo-v2025.png" 
+          alt="C-SECUR360 Logo"
+          className={`${getSizeClasses()} ${getVariantClasses()}`}
+        />
         
         {showText && (
           <div className="flex flex-col">
