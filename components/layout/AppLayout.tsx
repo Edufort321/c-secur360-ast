@@ -82,12 +82,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           } border-r flex-shrink-0`}>
             <div className="flex flex-col h-full">
               {/* Logo et titre */}
-              <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center h-10 px-4 border-b border-gray-200 dark:border-gray-700">
                 <Image
-                  src="/c-secur360-logo.png"
+                  src="/logo.png"
                   alt="C-SECUR360"
-                  width={32}
-                  height={32}
+                  width={28}
+                  height={28}
                   className="flex-shrink-0"
                 />
                 {sidebarOpen && (

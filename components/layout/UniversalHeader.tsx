@@ -82,7 +82,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
         : 'bg-white/95 border-slate-200'
     } backdrop-blur-lg border-b transition-colors duration-200 shadow-lg shadow-black/10`}>
       <div className="max-w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-10">
           
           {/* Logo et titre */}
           <div className="flex items-center space-x-4">
@@ -91,7 +91,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
               className="hover:opacity-80 transition-opacity"
             >
               <Logo 
-                size="2xl" 
+                size="sm" 
                 variant="glow"
                 showText={true}
               />

@@ -568,7 +568,7 @@ const ASTForm: React.FC<ASTFormProps> = ({
           zIndex: 1
         }}>
           <Logo 
-            size={isMobile ? 'lg' : '2xl'} 
+            size={isMobile ? 'sm' : 'md'} 
             variant="glow" 
             showText={true}
           />
