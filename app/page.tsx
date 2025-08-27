@@ -2,1127 +2,1158 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Logo from '@/components/ui/Logo';
+import Header from '@/components/ui/Header';
 import { 
   Shield, 
-  Building, 
   Users, 
-  Settings, 
-  ChevronRight, 
-  Globe, 
-  ArrowRight, 
+  BarChart3, 
   CheckCircle, 
+  ArrowRight, 
   Star,
-  Play,
-  Eye,
-  Zap,
-  Lock,
-  Clock,
-  Car,
-  DollarSign,
-  BarChart3,
-  FileText,
+  Phone,
+  Mail,
+  MapPin,
+  Download,
   QrCode,
   Smartphone,
-  Headphones,
-  Sparkles
+  Monitor,
+  Lock,
+  Zap,
+  Award,
+  Globe,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
-export default function HomePage() {
-  const [selectedPlan, setSelectedPlan] = useState('pro');
+const translations = {
+  fr: {
+    // Header
+    adminAccess: "Accès Admin",
+    freeDemo: "Démo Gratuite",
+    
+    // Hero
+    heroTitle: "Plateforme SaaS de Sécurité",
+    heroSubtitle: "Multi-Sites & Multi-Clients",
+    heroDescription: "Gestion complète des AST, permis de travail, facturation automatique et conformité provinciale. Chaque client accède à son portail personnalisé.",
+    
+    // Client Access
+    personalizedAccess: "Accès Client Personnalisé",
+    clientPlaceholder: "Nom du client (ex: entrepriseabc)",
+    accessPortal: "Accéder au Portail Client",
+    personalizedUrl: "URL Personnalisée",
+    customDomain: "Domaine Custom",
+    qrAvailable: "Code QR disponible",
+    
+    // CTA
+    viewPlans: "Voir les Plans",
+    interactiveDemo: "Démo Interactive",
+    
+    // Pricing
+    pricing: {
+      title: "Plan Unique",
+      annual: "3 000$/année",
+      monthly: "250$/mois",
+      additionalSite: "Site supplémentaire: 500$/année",
+      features: [
+        "AST et permis de travail illimités",
+        "Multi-sites avec facturation additive",
+        "Analytics temps réel",
+        "Support 24/7",
+        "Conformité provinciale",
+        "PWA mobile incluse"
+      ]
+    },
+    
+    // Carousel
+    carouselTitle: "Captures d'écran",
+    viewGallery: "Voir la galerie",
+    manageImages: "Gérer les images",
+    
+    // Features
+    featuresTitle: "Fonctionnalités Entreprise",
+    
+    // Admin Modal
+    adminTitle: "Accès Administrateur",
+    adminPasswordPlaceholder: "Mot de passe admin",
+    login: "Connexion",
+    cancel: "Annuler",
+    development: "Développement",
+    
+    // Contact
+    contact: "Contact",
+    downloads: "Téléchargements",
+    mobileApp: "App Mobile (PWA)",
+    desktopVersion: "Version Desktop",
+    
+    // Footer
+    copyright: "© 2024 C-SECUR360. Tous droits réservés. Plateforme SaaS de sécurité industrielle.",
+    poweredBy: "Propulsé par"
+  },
+  en: {
+    // Header
+    adminAccess: "Admin Access",
+    freeDemo: "Free Demo",
+    
+    // Hero
+    heroTitle: "Safety SaaS Platform",
+    heroSubtitle: "Multi-Sites & Multi-Clients",
+    heroDescription: "Complete management of JSA, work permits, automatic billing and provincial compliance. Each client accesses their personalized portal.",
+    
+    // Client Access
+    personalizedAccess: "Personalized Client Access",
+    clientPlaceholder: "Client name (ex: companyabc)",
+    accessPortal: "Access Client Portal",
+    personalizedUrl: "Personalized URL",
+    customDomain: "Custom Domain",
+    qrAvailable: "QR Code available",
+    
+    // CTA
+    viewPlans: "View Plans",
+    interactiveDemo: "Interactive Demo",
+    
+    // Pricing
+    pricing: {
+      title: "Single Plan",
+      annual: "$3,000/year",
+      monthly: "$250/month",
+      additionalSite: "Additional site: $500/year",
+      features: [
+        "Unlimited JSA and work permits",
+        "Multi-sites with additive billing",
+        "Real-time analytics",
+        "24/7 support",
+        "Provincial compliance",
+        "Mobile PWA included"
+      ]
+    },
+    
+    // Carousel
+    carouselTitle: "Screenshots",
+    viewGallery: "View gallery",
+    manageImages: "Manage images",
+    
+    // Features
+    featuresTitle: "Enterprise Features",
+    
+    // Admin Modal
+    adminTitle: "Administrator Access",
+    adminPasswordPlaceholder: "Admin password",
+    login: "Login",
+    cancel: "Cancel",
+    development: "Development",
+    
+    // Contact
+    contact: "Contact",
+    downloads: "Downloads",
+    mobileApp: "Mobile App (PWA)",
+    desktopVersion: "Desktop Version",
+    
+    // Footer
+    copyright: "© 2024 C-SECUR360. All rights reserved. Industrial safety SaaS platform.",
+    poweredBy: "Powered by"
+  }
+};
+
+const features = {
+  fr: [
+    {
+      icon: Users,
+      title: 'Multi-Clients & Multi-Sites',
+      description: 'Gestion centralisée avec portails clients personnalisés. Facturation additive par site.',
+      color: '#3b82f6'
+    },
+    {
+      icon: BarChart3,
+      title: 'Analytics Consolidées',
+      description: 'Tableaux de bord temps réel, statistiques AST, conformité provinciale automatique.',
+      color: '#10b981'
+    },
+    {
+      icon: Shield,
+      title: 'Sécurité & Conformité',
+      description: 'Conforme CNESST, MOL, WorkSafeBC. Authentification sécurisée par tenant.',
+      color: '#8b5cf6'
+    },
+    {
+      icon: Zap,
+      title: 'Automatisation Complète',
+      description: 'Facturation automatique, renouvellements, notifications SMS, exports comptables.',
+      color: '#f59e0b'
+    },
+    {
+      icon: Smartphone,
+      title: 'Accès Mobile & QR',
+      description: 'PWA téléchargeable, codes QR personnalisés, synchronisation cloud.',
+      color: '#ef4444'
+    },
+    {
+      icon: Award,
+      title: 'Support 24/7',
+      description: 'Intégration IA, support technique, formation équipes, mises à jour gratuites.',
+      color: '#06b6d4'
+    }
+  ],
+  en: [
+    {
+      icon: Users,
+      title: 'Multi-Clients & Multi-Sites',
+      description: 'Centralized management with personalized client portals. Additive billing per site.',
+      color: '#3b82f6'
+    },
+    {
+      icon: BarChart3,
+      title: 'Consolidated Analytics',
+      description: 'Real-time dashboards, JSA statistics, automatic provincial compliance.',
+      color: '#10b981'
+    },
+    {
+      icon: Shield,
+      title: 'Security & Compliance',
+      description: 'CNESST, MOL, WorkSafeBC compliant. Secure authentication per tenant.',
+      color: '#8b5cf6'
+    },
+    {
+      icon: Zap,
+      title: 'Complete Automation',
+      description: 'Automatic billing, renewals, SMS notifications, accounting exports.',
+      color: '#f59e0b'
+    },
+    {
+      icon: Smartphone,
+      title: 'Mobile Access & QR',
+      description: 'Downloadable PWA, personalized QR codes, cloud synchronization.',
+      color: '#ef4444'
+    },
+    {
+      icon: Award,
+      title: '24/7 Support',
+      description: 'AI integration, technical support, team training, free updates.',
+      color: '#06b6d4'
+    }
+  ]
+};
+
+export default function LandingPage() {
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [clientSubdomain, setClientSubdomain] = useState('');
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
+  const [showImageManager, setShowImageManager] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const t = translations[language];
+  const currentFeatures = features[language];
+  
+  // Images par défaut pour le carrousel
+  const [carouselImages] = useState([
+    {
+      id: 1,
+      url: '/c-secur360-logo.png',
+      title: 'Interface AST',
+      description: 'Formulaire d\'analyse sécuritaire de tâches'
+    },
+    {
+      id: 2,
+      url: '/c-secur360-logo.png', 
+      title: 'Dashboard Analytics',
+      description: 'Tableaux de bord temps réel'
+    },
+    {
+      id: 3,
+      url: '/c-secur360-logo.png',
+      title: 'Gestion Multi-Sites',
+      description: 'Interface de gestion des emplacements'
+    }
+  ]);
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Production password for development
+    if (adminPassword === 'CGEstion321$') {
+      window.location.href = '/admin/ultimate-dashboard';
+    } else {
+      alert('Mot de passe incorrect');
+    }
+  };
+
+  const handleClientAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (clientSubdomain.trim()) {
+      window.location.href = `/${clientSubdomain.trim()}/dashboard`;
+    } else {
+      alert('Veuillez entrer le nom du client');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      {/* Header avec logo repositionné */}
-      <header className="bg-white/10 backdrop-blur-sm border-b border-white/20 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Logo en haut à gauche */}
-            <div className="flex items-center gap-3">
-              <Image 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360 Logo" 
-                width={150} 
-                height={40}
-                priority
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-sans">
+      {/* Header uniforme avec logo agrandi et position sticky */}
+      <Header 
+        logoSize="2xl"
+        className="sticky top-0 z-50 backdrop-blur-lg border-b border-white/10
+                   bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
+                   shadow-lg shadow-black/20"
+        actions={
+          <div className="flex gap-4 items-center">
+            {/* Sélecteur de langue avec texte encadré */}
+            <div className="flex bg-slate-800/80 rounded-lg p-1 border border-white/10 backdrop-blur-sm">
+              <button
+                onClick={() => setLanguage('fr')}
+                className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200
+                          ${language === 'fr' 
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                            : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                          }`}
+              >
+                FR
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200
+                          ${language === 'en' 
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                            : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                          }`}
+              >
+                EN
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setShowAdminLogin(true)}
+              className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400
+                        px-4 py-2 rounded-lg cursor-pointer flex items-center gap-2 text-sm font-medium
+                        hover:bg-emerald-500/20 transition-colors backdrop-blur-sm
+                        shadow-md shadow-emerald-500/10"
+            >
+              <Lock size={16} />
+              <span className="text-white bg-slate-800/60 px-2 py-1 rounded backdrop-blur-sm">
+                {t.adminAccess}
+              </span>
+            </button>
+            
+            <Link href="/demo/ast/nouveau" 
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white
+                        px-5 py-2 rounded-lg text-sm font-semibold
+                        hover:from-blue-600 hover:to-blue-700 transition-all duration-200
+                        shadow-lg shadow-blue-500/20 backdrop-blur-sm
+                        border border-blue-400/20"
+            >
+              <span className="text-white bg-slate-800/60 px-2 py-1 rounded backdrop-blur-sm">
+                {t.freeDemo}
+              </span>
+            </Link>
+          </div>
+        }
+      />
+
+      {/* Hero Section */}
+      <section style={{ 
+        padding: '80px 24px', 
+        textAlign: 'center',
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
+        <h2 style={{ 
+          fontSize: '48px', 
+          fontWeight: 'bold', 
+          margin: '0 0 24px 0',
+          lineHeight: '1.1'
+        }}>
+          {t.heroTitle}
+          <br />
+          <span style={{ 
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            {t.heroSubtitle}
+          </span>
+        </h2>
+        
+        <p style={{ 
+          fontSize: '20px', 
+          color: '#94a3b8', 
+          margin: '0 0 48px 0',
+          maxWidth: '600px',
+          marginLeft: 'auto',
+          marginRight: 'auto'
+        }}>
+          {t.heroDescription}
+        </p>
+
+        {/* Accès Client Section */}
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          padding: '32px',
+          borderRadius: '16px',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          marginBottom: '48px',
+          maxWidth: '500px',
+          margin: '0 auto 48px auto'
+        }}>
+          <h3 style={{ 
+            fontSize: '24px', 
+            margin: '0 0 24px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}>
+            <Globe style={{ color: '#10b981' }} size={24} />
+            {t.personalizedAccess}
+          </h3>
+          
+          <form onSubmit={handleClientAccess} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <input
+              type="text"
+              placeholder={t.clientPlaceholder}
+              value={clientSubdomain}
+              onChange={(e) => setClientSubdomain(e.target.value)}
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                border: '2px solid rgba(100, 116, 139, 0.3)',
+                background: 'rgba(15, 23, 42, 0.8)',
+                color: 'white',
+                fontSize: '16px'
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <ArrowRight size={16} />
+              {t.accessPortal}
+            </button>
+          </form>
+          
+          <div style={{ 
+            marginTop: '20px', 
+            padding: '16px', 
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '8px',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            fontSize: '14px',
+            color: '#93c5fd'
+          }}>
+            <p style={{ margin: 0 }}>
+              📱 <strong>{t.personalizedUrl}:</strong> csecur360.com/clientname
+              <br />
+              🔗 <strong>{t.customDomain}:</strong> clientname.csecur360.ca
+              <br />
+              📲 <strong>{t.qrAvailable}</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/demo/ast/nouveau" style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: '16px 32px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '18px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Star size={20} />
+            {t.viewPlans}
+          </Link>
+          
+          <Link href="/demo/ast/nouveau" style={{
+            background: 'rgba(100, 116, 139, 0.6)',
+            color: 'white',
+            padding: '16px 32px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '18px',
+            fontWeight: '600',
+            border: '1px solid rgba(148, 163, 184, 0.3)'
+          }}>
+            {t.interactiveDemo}
+          </Link>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section style={{ 
+        padding: '80px 24px',
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
+        <h3 style={{ 
+          fontSize: '36px', 
+          textAlign: 'center', 
+          margin: '0 0 48px 0' 
+        }}>
+          {t.featuresTitle}
+        </h3>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '32px' 
+        }}>
+          {currentFeatures.map((feature, index) => (
+            <div key={index} style={{
+              background: 'rgba(30, 41, 59, 0.6)',
+              padding: '32px',
+              borderRadius: '16px',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              textAlign: 'center'
+            }}>
+              <feature.icon 
+                size={48} 
+                style={{ 
+                  color: feature.color, 
+                  marginBottom: '16px' 
+                }} 
               />
-              <div className="hidden md:block text-white/80 text-sm">
-                Plateforme AST & ERP Intégré
-              </div>
+              <h4 style={{ 
+                fontSize: '20px', 
+                margin: '0 0 16px 0',
+                color: feature.color
+              }}>
+                {feature.title}
+              </h4>
+              <p style={{ 
+                color: '#94a3b8', 
+                margin: 0,
+                lineHeight: '1.6'
+              }}>
+                {feature.description}
+              </p>
             </div>
-
-            {/* Navigation principale */}
-            <nav className="hidden lg:flex items-center gap-8 text-white/80">
-              <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
-              <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
-              <a href="#demo" className="hover:text-white transition-colors">Démo</a>
-              <Link href="/login" className="hover:text-white transition-colors">Connexion Tenant</Link>
-            </nav>
-
-            {/* CTA Header */}
-            <div className="flex items-center gap-3">
-              <Link
-                href="/demo"
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white
-                          px-4 py-2 rounded-lg text-sm font-semibold
-                          hover:from-emerald-600 hover:to-emerald-700 transition-all
-                          shadow-lg shadow-emerald-500/20 flex items-center gap-2"
-              >
-                <Play className="w-4 h-4" />
-                Essayer Gratuitement
-              </Link>
-              
-              <Link
-                href="/login"
-                className="border border-white/30 text-white hover:bg-white/10
-                          px-4 py-2 rounded-lg text-sm font-medium transition-all
-                          flex items-center gap-2"
-              >
-                <Shield className="w-4 h-4" />
-                Connexion Tenant
-              </Link>
-            </div>
-          </div>
+          ))}
         </div>
-      </header>
+      </section>
 
-      {/* Section Hero */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <div className="mb-6">
-            <span className="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-full text-sm font-medium">
-              🚀 Nouveau: Interface mobile + QR Code inventaire
-            </span>
+      {/* Pricing Section */}
+      <section style={{ 
+        padding: '80px 24px',
+        maxWidth: '800px',
+        margin: '0 auto',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ 
+          fontSize: '36px', 
+          margin: '0 0 48px 0',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          {t.pricing.title}
+        </h3>
+        
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          padding: '48px',
+          borderRadius: '20px',
+          border: '2px solid rgba(16, 185, 129, 0.3)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            color: 'white',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: '600'
+          }}>
+            POPULAIRE
           </div>
           
-          <h1 className="text-6xl font-bold text-white mb-6 leading-tight">
-            C-Secur360
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-              AST & ERP Unifié
-            </span>
-          </h1>
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ 
+              fontSize: '48px', 
+              fontWeight: 'bold',
+              margin: '0 0 8px 0',
+              color: '#10b981'
+            }}>
+              {t.pricing.annual}
+            </div>
+            <div style={{ 
+              fontSize: '18px', 
+              color: '#94a3b8',
+              margin: '0 0 16px 0'
+            }}>
+              {language === 'fr' ? 'ou ' : 'or '}{t.pricing.monthly}
+            </div>
+            <div style={{ 
+              fontSize: '16px', 
+              color: '#f59e0b',
+              fontWeight: '600'
+            }}>
+              {t.pricing.additionalSite}
+            </div>
+          </div>
           
-          <p className="text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-            La seule plateforme qui combine <strong>gestion AST</strong>, <strong>feuilles de temps</strong>, 
-            <strong>inventaire QR</strong> et <strong>facturation</strong> dans une solution sécurisée avec MFA obligatoire.
-          </p>
+          <div style={{ 
+            display: 'grid', 
+            gap: '12px',
+            textAlign: 'left',
+            marginBottom: '32px'
+          }}>
+            {t.pricing.features.map((feature, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#e2e8f0'
+              }}>
+                <CheckCircle size={20} style={{ color: '#10b981', flexShrink: 0 }} />
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link
-              href="/demo"
-              className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white
-                        px-8 py-4 rounded-xl text-lg font-semibold
-                        hover:from-emerald-600 hover:to-emerald-700 transition-all
-                        shadow-xl shadow-emerald-500/25 flex items-center gap-3"
-            >
-              <Eye className="w-5 h-5" />
-              Voir la Démo Gratuite
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+          <Link href="/demo/ast/nouveau" style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: '16px 32px',
+            borderRadius: '12px',
+            textDecoration: 'none',
+            fontSize: '18px',
+            fontWeight: '600',
+            boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)'
+          }}>
+            <Star size={20} />
+            {t.viewPlans}
+          </Link>
+        </div>
+      </section>
+
+      {/* Screenshots Carousel */}
+      <section style={{ 
+        padding: '80px 24px',
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
+        <h3 style={{ 
+          fontSize: '36px', 
+          textAlign: 'center', 
+          margin: '0 0 48px 0' 
+        }}>
+          {t.carouselTitle}
+        </h3>
+        
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          padding: '32px',
+          borderRadius: '16px',
+          border: '1px solid rgba(100, 116, 139, 0.3)'
+        }}>
+          <div style={{ 
+            position: 'relative',
+            marginBottom: '24px'
+          }}>
+            <div style={{
+              width: '100%',
+              height: '400px',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              position: 'relative',
+              background: 'rgba(15, 23, 42, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <img 
+                src={carouselImages[currentImageIndex].url}
+                alt={carouselImages[currentImageIndex].title}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
             
-            <Link
-              href="#pricing"
-              className="border border-white/30 text-white hover:bg-white/10
-                        px-8 py-4 rounded-xl text-lg font-medium transition-all
-                        flex items-center gap-3"
+            {/* Navigation buttons */}
+            <button
+              onClick={() => setCurrentImageIndex(prev => 
+                prev === 0 ? carouselImages.length - 1 : prev - 1
+              )}
+              style={{
+                position: 'absolute',
+                left: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(16, 185, 129, 0.8)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
             >
-              <BarChart3 className="w-5 h-5" />
-              Voir les Plans
-            </Link>
-          </div>
-        </div>
-
-        {/* Stats rapides */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-emerald-400 mb-2">99.9%</div>
-            <div className="text-slate-400">Uptime SLA</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-400 mb-2">ISO 27001</div>
-            <div className="text-slate-400">Sécurité</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-400 mb-2">24/7</div>
-            <div className="text-slate-400">Support</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-orange-400 mb-2">MFA</div>
-            <div className="text-slate-400">Obligatoire</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Section Fonctionnalités */}
-      <section id="features" className="bg-white/5 border-y border-white/10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              Tout-en-un pour votre entreprise
-            </h2>
-            <p className="text-slate-300 text-xl max-w-2xl mx-auto">
-              Centralisez tous vos processus métier dans une seule plateforme sécurisée
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* AST */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-red-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Analyses AST</h3>
-              <p className="text-slate-300 mb-4">
-                Formulaires intelligents, évaluations risques, rapports conformité
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• Templates personnalisables</li>
-                <li>• Workflow d'approbation</li>
-                <li>• Export PDF sécurisé</li>
-              </ul>
-            </div>
-
-            {/* Temps & Présences */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Temps & Présences</h3>
-              <p className="text-slate-300 mb-4">
-                Timer mobile, géolocalisation, dépenses photo, validation
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• App mobile native</li>
-                <li>• GPS tracking</li>
-                <li>• Validation manageur</li>
-              </ul>
-            </div>
-
-            {/* Inventaire QR */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
-                <QrCode className="w-6 h-6 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Inventaire QR</h3>
-              <p className="text-slate-300 mb-4">
-                Scan QR, étiquettes Avery, tracking complet, vente en ligne
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• Génération étiquettes PDF</li>
-                <li>• Scan mobile optimisé</li>
-                <li>• E-commerce intégré</li>
-              </ul>
-            </div>
-
-            {/* Véhicules */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4">
-                <Car className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Flotte Véhicules</h3>
-              <p className="text-slate-300 mb-4">
-                Attribution, réservation, maintenance, kilomètres projet
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• Planning réservations</li>
-                <li>• Suivi maintenance</li>
-                <li>• Coûts par projet</li>
-              </ul>
-            </div>
-
-            {/* Facturation */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center mb-4">
-                <DollarSign className="w-6 h-6 text-orange-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Facturation Pro</h3>
-              <p className="text-slate-300 mb-4">
-                Stripe intégré, per-diem automatique, exports comptables
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• Facturation automatique</li>
-                <li>• Intégration comptable</li>
-                <li>• Paiements en ligne</li>
-              </ul>
-            </div>
-
-            {/* Sécurité */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mb-4">
-                <Lock className="w-6 h-6 text-red-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Sécurité Ultime</h3>
-              <p className="text-slate-300 mb-4">
-                MFA obligatoire, RBAC, audit trail, conformité ISO 27001
-              </p>
-              <ul className="space-y-1 text-sm text-slate-400">
-                <li>• Authentification 2FA</li>
-                <li>• Chiffrement bout-en-bout</li>
-                <li>• Audit complet</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Section Modules Interactifs */}
-      <section className="py-20 bg-gradient-to-b from-slate-900/50 to-slate-900/80">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              Explorez Nos Modules
-            </h2>
-            <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-              Découvrez en détail comment chaque module transforme votre gestion d'entreprise
-            </p>
-          </div>
-
-          <div className="max-w-6xl mx-auto">
-            {/* Onglets de navigation */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8" id="module-tabs">
-              <button
-                className="module-tab px-6 py-3 rounded-lg font-semibold transition-all bg-emerald-500 text-white"
-                data-module="ast"
-              >
-                <Shield className="w-5 h-5 mr-2 inline" />
-                AST & Sécurité
-              </button>
-              <button
-                className="module-tab px-6 py-3 rounded-lg font-semibold transition-all bg-slate-600 hover:bg-slate-500 text-white"
-                data-module="timesheet"
-              >
-                <Clock className="w-5 h-5 mr-2 inline" />
-                Feuilles de Temps
-              </button>
-              <button
-                className="module-tab px-6 py-3 rounded-lg font-semibold transition-all bg-slate-600 hover:bg-slate-500 text-white"
-                data-module="inventory"
-              >
-                <QrCode className="w-5 h-5 mr-2 inline" />
-                Inventaire QR
-              </button>
-              <button
-                className="module-tab px-6 py-3 rounded-lg font-semibold transition-all bg-slate-600 hover:bg-slate-500 text-white"
-                data-module="vehicles"
-              >
-                <Car className="w-5 h-5 mr-2 inline" />
-                Véhicules
-              </button>
-              <button
-                className="module-tab px-6 py-3 rounded-lg font-semibold transition-all bg-slate-600 hover:bg-slate-500 text-white"
-                data-module="billing"
-              >
-                <DollarSign className="w-5 h-5 mr-2 inline" />
-                Facturation
-              </button>
-            </div>
-
-            {/* Contenu des modules */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20">
-              
-              {/* Module AST */}
-              <div id="module-ast" className="module-content">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <div className="w-16 h-16 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-6">
-                      <Shield className="w-8 h-8 text-emerald-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Module AST & Sécurité</h3>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Système complet de gestion des Analyses de Sécurité au Travail (AST) 
-                      conforme aux normes de toutes les provinces canadiennes.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Conformité Multi-Provinciale</h4>
-                          <p className="text-slate-400 text-sm">Support QC, ON, AB, BC et toutes provinces</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Scan QR Mobile</h4>
-                          <p className="text-slate-400 text-sm">Accès rapide AST via QR codes sur mobile</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Identité Fédérée</h4>
-                          <p className="text-slate-400 text-sm">Partage sécurisé entre entreprises</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 rounded-2xl p-6">
-                    <h4 className="font-semibold text-white mb-4">Fonctionnalités Clés</h4>
-                    <ul className="space-y-2 text-slate-300">
-                      <li>• Création AST guidée avec modèles</li>
-                      <li>• Signatures électroniques légales</li>
-                      <li>• Notifications automatiques SMS/Email</li>
-                      <li>• Rapports conformité temps réel</li>
-                      <li>• Audit trail complet PIPEDA</li>
-                      <li>• Multi-sites et multi-clients</li>
-                    </ul>
-                    <div className="mt-4 pt-4 border-t border-slate-600">
-                      <span className="text-emerald-400 font-semibold">📄 Documentation disponible</span>
-                      <p className="text-sm text-slate-400 mt-1">Guide complet + support PowerPoint</p>
-                      <div className="flex gap-2 mt-3">
-                        <a
-                          href="/docs/module-ast-presentation.md"
-                          target="_blank"
-                          className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          📋 Guide PDF
-                        </a>
-                        <button
-                          onClick={() => window.open('mailto:sales@c-secur360.ca?subject=Demande PowerPoint AST&body=Bonjour, je souhaiterais recevoir la présentation PowerPoint du module AST.')}
-                          className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          🎯 PowerPoint
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module Timesheet (caché par défaut) */}
-              <div id="module-timesheet" className="module-content hidden">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <div className="w-16 h-16 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6">
-                      <Clock className="w-8 h-8 text-blue-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Feuilles de Temps Mobiles</h3>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Application mobile complète avec timer, géolocalisation et capture automatique 
-                      des dépenses par photo.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-blue-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Timer Intelligent</h4>
-                          <p className="text-slate-400 text-sm">Start/pause/stop avec détection pauses</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-blue-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Géolocalisation GPS</h4>
-                          <p className="text-slate-400 text-sm">Tracking automatique avec km projet</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-blue-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Dépenses Photo</h4>
-                          <p className="text-slate-400 text-sm">Scan reçus instantané avec OCR</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 rounded-2xl p-6">
-                    <h4 className="font-semibold text-white mb-4">Fonctionnalités Avancées</h4>
-                    <ul className="space-y-2 text-slate-300">
-                      <li>• Mode offline avec sync automatique</li>
-                      <li>• Planification Gantt intégrée</li>
-                      <li>• Validation manager en temps réel</li>
-                      <li>• Facturation automatique client</li>
-                      <li>• Per-diem règles configurables</li>
-                      <li>• Exports Excel/PDF personnalisés</li>
-                    </ul>
-                    <div className="mt-4 pt-4 border-t border-slate-600">
-                      <span className="text-blue-400 font-semibold">📱 Applications Mobile</span>
-                      <p className="text-sm text-slate-400 mt-1">iOS & Android + PWA web</p>
-                      <div className="flex gap-2 mt-3">
-                        <a
-                          href="/docs/module-timesheet-guide.md"
-                          target="_blank"
-                          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          📋 Guide Complet
-                        </a>
-                        <button
-                          onClick={() => window.open('mailto:sales@c-secur360.ca?subject=Demande PowerPoint Timesheet&body=Bonjour, je souhaiterais recevoir la présentation PowerPoint du module Feuilles de Temps.')}
-                          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          🎯 PowerPoint
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module Inventaire (caché par défaut) */}
-              <div id="module-inventory" className="module-content hidden">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <div className="w-16 h-16 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-6">
-                      <QrCode className="w-8 h-8 text-emerald-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Inventaire QR Intelligent</h3>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Solution QR-first avec impression étiquettes Avery, e-commerce intégré 
-                      et vente en ligne automatisée.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Étiquettes Avery</h4>
-                          <p className="text-slate-400 text-sm">Impression PDF format Avery 5160/5161</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">E-commerce Intégré</h4>
-                          <p className="text-slate-400 text-sm">Vente publique avec Stripe automatique</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-emerald-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Scan Mobile</h4>
-                          <p className="text-slate-400 text-sm">Interface optimisée caméra mobile</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 rounded-2xl p-6">
-                    <h4 className="font-semibold text-white mb-4">Système Complet</h4>
-                    <ul className="space-y-2 text-slate-300">
-                      <li>• Génération QR codes automatique</li>
-                      <li>• Stock temps réel multi-sites</li>
-                      <li>• Commandes auto si seuil minimal</li>
-                      <li>• Historique mouvements complet</li>
-                      <li>• Photos produits haute qualité</li>
-                      <li>• Catégories et attributs flexibles</li>
-                    </ul>
-                    <div className="mt-4 pt-4 border-t border-slate-600">
-                      <span className="text-emerald-400 font-semibold">🏪 Vente en Ligne</span>
-                      <p className="text-sm text-slate-400 mt-1">Boutique publique + B2B privée</p>
-                      <div className="flex gap-2 mt-3">
-                        <a
-                          href="/docs/module-inventory-qr.md"
-                          target="_blank"
-                          className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          📋 Guide QR
-                        </a>
-                        <button
-                          onClick={() => window.open('mailto:sales@c-secur360.ca?subject=Demande PowerPoint Inventaire QR&body=Bonjour, je souhaiterais recevoir la présentation PowerPoint du module Inventaire QR.')}
-                          className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          🎯 PowerPoint
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module Véhicules (caché par défaut) */}
-              <div id="module-vehicles" className="module-content hidden">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <div className="w-16 h-16 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6">
-                      <Car className="w-8 h-8 text-purple-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Gestion Flotte Véhicules</h3>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Attribution véhicules par projet, réservation intelligente, maintenance 
-                      préventive et coûts kilomètres automatiques.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-purple-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Réservation Intelligente</h4>
-                          <p className="text-slate-400 text-sm">Planning automatique selon projets</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-purple-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Kilomètres Projet</h4>
-                          <p className="text-slate-400 text-sm">Tracking GPS intégré feuilles temps</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-purple-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Maintenance Préventive</h4>
-                          <p className="text-slate-400 text-sm">Alertes automatiques selon usage</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 rounded-2xl p-6">
-                    <h4 className="font-semibold text-white mb-4">Fonctionnalités Pro</h4>
-                    <ul className="space-y-2 text-slate-300">
-                      <li>• Attribution employés par période</li>
-                      <li>• Coûts carburant temps réel</li>
-                      <li>• Planificateur maintenance</li>
-                      <li>• Assurances et documents</li>
-                      <li>• Rapports utilisation détaillés</li>
-                      <li>• Intégration comptabilité</li>
-                    </ul>
-                    <div className="mt-4 pt-4 border-t border-slate-600">
-                      <span className="text-purple-400 font-semibold">🚗 Flotte Complète</span>
-                      <p className="text-sm text-slate-400 mt-1">Voitures, camions, équipements mobiles</p>
-                      <div className="flex gap-2 mt-3">
-                        <a
-                          href="/docs/module-vehicles-fleet.md"
-                          target="_blank"
-                          className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          📋 Guide Flotte
-                        </a>
-                        <button
-                          onClick={() => window.open('mailto:sales@c-secur360.ca?subject=Demande PowerPoint Véhicules&body=Bonjour, je souhaiterais recevoir la présentation PowerPoint du module Gestion Véhicules.')}
-                          className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          🎯 PowerPoint
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Module Facturation (caché par défaut) */}
-              <div id="module-billing" className="module-content hidden">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <div className="w-16 h-16 bg-orange-500/20 rounded-xl flex items-center justify-center mb-6">
-                      <DollarSign className="w-8 h-8 text-orange-400" />
-                    </div>
-                    <h3 className="text-3xl font-bold text-white mb-4">Facturation Professionnelle</h3>
-                    <p className="text-slate-300 text-lg mb-6">
-                      Système complet intégré Stripe avec per-diem automatique, codes facturation 
-                      et exports comptables professionnels.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-orange-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Stripe Intégré</h4>
-                          <p className="text-slate-400 text-sm">Paiements automatiques en ligne</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-orange-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Per-Diem Automatique</h4>
-                          <p className="text-slate-400 text-sm">Règles configurables par client</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start">
-                        <CheckCircle className="w-5 h-5 text-orange-400 mt-1 mr-3 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-semibold text-white">Codes Facturation</h4>
-                          <p className="text-slate-400 text-sm">Classification automatique tâches</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-slate-800/50 rounded-2xl p-6">
-                    <h4 className="font-semibold text-white mb-4">Automatisation Complète</h4>
-                    <ul className="space-y-2 text-slate-300">
-                      <li>• Facturation temps réel depuis timesheet</li>
-                      <li>• Approbations e-mail automatiques</li>
-                      <li>• Exports Excel/CSV/PDF/QuickBooks</li>
-                      <li>• Relances paiement automatiques</li>
-                      <li>• TPS/TVQ calculs automatiques</li>
-                      <li>• Dashboard financier temps réel</li>
-                    </ul>
-                    <div className="mt-4 pt-4 border-t border-slate-600">
-                      <span className="text-orange-400 font-semibold">💼 Intégration ERP</span>
-                      <p className="text-sm text-slate-400 mt-1">SAP, Oracle, QuickBooks, Sage</p>
-                      <div className="flex gap-2 mt-3">
-                        <a
-                          href="/docs/module-billing-pro.md"
-                          target="_blank"
-                          className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          📋 Guide Facturation
-                        </a>
-                        <button
-                          onClick={() => window.open('mailto:sales@c-secur360.ca?subject=Demande PowerPoint Facturation&body=Bonjour, je souhaiterais recevoir la présentation PowerPoint du module Facturation Pro.')}
-                          className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 px-3 py-1 rounded text-xs transition-all"
-                        >
-                          🎯 PowerPoint
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Section Demo */}
-      <section id="demo" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto bg-gradient-to-r from-emerald-500/10 to-blue-500/10 
-                         backdrop-blur-sm rounded-3xl p-8 border border-white/20">
-            <div className="text-center mb-8">
-              <h2 className="text-4xl font-bold text-white mb-4">
-                🚀 Testez Maintenant - 100% Gratuit
-              </h2>
-              <p className="text-slate-300 text-lg">
-                Explorez toutes les fonctionnalités sans limitation dans notre environnement de démonstration
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <Link
-                href="/demo"
-                className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-6 transition-all group"
-              >
-                <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                  <Eye className="w-5 h-5 text-emerald-400" />
-                </div>
-                <h3 className="text-white font-semibold mb-2">Dashboard Global</h3>
-                <p className="text-slate-300 text-sm mb-3">Interface complète avec tous les modules</p>
-                <div className="text-emerald-400 text-sm font-medium flex items-center gap-2">
-                  Découvrir <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-
-              <Link
-                href="/demo/ast-forms"
-                className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-6 transition-all group"
-              >
-                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                </div>
-                <h3 className="text-white font-semibold mb-2">Formulaires AST</h3>
-                <p className="text-slate-300 text-sm mb-3">Templates et workflow d'analyses</p>
-                <div className="text-blue-400 text-sm font-medium flex items-center gap-2">
-                  Tester <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-
-              <Link
-                href="/demo/mobile"
-                className="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-6 transition-all group"
-              >
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
-                  <Smartphone className="w-5 h-5 text-purple-400" />
-                </div>
-                <h3 className="text-white font-semibold mb-2">App Mobile</h3>
-                <p className="text-slate-300 text-sm mb-3">Timer, dépenses photo, QR scan</p>
-                <div className="text-purple-400 text-sm font-medium flex items-center gap-2">
-                  Ouvrir <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            </div>
-
-            <div className="text-center">
-              <Link
-                href="/demo"
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white
-                          px-12 py-4 rounded-xl text-xl font-semibold
-                          hover:from-emerald-600 hover:to-emerald-700 transition-all
-                          shadow-xl shadow-emerald-500/25 inline-flex items-center gap-3"
-              >
-                <Play className="w-6 h-6" />
-                Lancer la Démo Complète
-                <Zap className="w-5 h-5" />
-              </Link>
-              <p className="text-slate-400 text-sm mt-3">
-                ✨ Données temporaires • 🔒 Aucune sauvegarde • 📧 Contact après 5 min
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Section Plans & Tarifs RÉELS */}
-      <section id="pricing" className="bg-white/5 border-y border-white/10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              Tarification C-Secur360
-            </h2>
-            <p className="text-slate-300 text-xl max-w-2xl mx-auto">
-              <strong>Un seul plan. Toutes les fonctionnalités.</strong><br />
-              Solution complète pour toutes les entreprises canadiennes.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-            {/* Plan Principal - VRAIS PRIX */}
-            <div className="bg-gradient-to-b from-emerald-500/20 to-emerald-600/10 backdrop-blur-sm 
-                           rounded-2xl p-8 border-2 border-emerald-400/30 hover:border-emerald-400/50 
-                           transition-all transform scale-105 relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-emerald-400 to-emerald-500 text-white 
-                               px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-                  <Star className="w-4 h-4" />
-                  PLAN RECOMMANDÉ
-                </span>
-              </div>
-              
-              <div className="text-center mb-6">
-                <Building className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-white mb-2">C-Secur360 Complet</h3>
-                <p className="text-slate-300">Solution tout inclus pour toutes les entreprises</p>
-              </div>
-              
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold text-emerald-400 mb-2">
-                  250<span className="text-2xl text-slate-300">$/mois</span>
-                </div>
-                <div className="text-emerald-300 font-medium mb-2">ou</div>
-                <div className="text-4xl font-bold text-emerald-400 mb-2">
-                  3000<span className="text-xl text-slate-300">$/année</span>
-                </div>
-                <div className="text-sm text-emerald-300 bg-emerald-500/20 rounded-full px-3 py-1 inline-block">
-                  💰 Économisez 1000$ avec le plan annuel
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h4 className="font-semibold text-white mb-4 text-center">Tout inclus:</h4>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Users className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Utilisateurs illimités</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Shield className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">AST illimités + conformité provinces</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Clock className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Feuilles temps + app mobile</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <QrCode className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Inventaire QR + étiquettes</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Car className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Gestion flotte véhicules</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <DollarSign className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Facturation Stripe intégrée</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Headphones className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Support téléphonique prioritaire</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mr-3 flex-shrink-0" />
-                    <Lock className="w-4 h-4 text-emerald-400 mr-2 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">MFA + SSO + audit complet</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-emerald-500/10 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-white mb-2">Sites additionnels</h4>
-                <p className="text-sm text-emerald-300">
-                  📍 Site principal inclus<br />
-                  📍 Sites additionnels: <strong>+50$/mois</strong> ou <strong>+600$/année</strong>
-                </p>
-              </div>
-
-              <button
-                onClick={() => window.location.href = '/register?plan=professional'}
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white 
-                         hover:from-emerald-600 hover:to-emerald-700 py-4 rounded-xl 
-                         font-semibold transition-all shadow-lg text-lg flex items-center justify-center gap-2"
-              >
-                Commencer maintenant
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <p className="text-center text-sm text-emerald-300 mt-3">
-                ✨ Essai gratuit 14 jours - Aucune carte requise
-              </p>
-            </div>
-
-            {/* Plan Entreprise - VRAIS PRIX */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/15 transition-all">
-              <div className="text-center mb-6">
-                <Sparkles className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-white mb-2">Solution Entreprise</h3>
-                <p className="text-slate-300">Pour grandes organisations avec besoins spécifiques</p>
-              </div>
-              
-              <div className="text-center mb-6">
-                <div className="text-4xl font-bold text-slate-300 mb-2">Sur demande</div>
-                <p className="text-slate-400">Tarification personnalisée selon besoins</p>
-              </div>
-
-              <div className="mb-6">
-                <h4 className="font-semibold text-white mb-4 text-center">Plan Complet +</h4>
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Intégration ERP sur mesure (SAP, Oracle, etc.)</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Support technique dédié 24/7</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Formation personnalisée sur site</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Développement fonctionnalités spécifiques</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Architecture dédiée et sécurisée</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">SLA personnalisé avec garanties</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <span className="text-sm text-slate-300">Migration données assistée</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => window.open('https://calendly.com/c-secur360/demo', '_blank')}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white 
-                         hover:from-purple-700 hover:to-indigo-700 py-4 rounded-xl 
-                         font-semibold transition-all shadow-lg text-lg flex items-center justify-center gap-2"
-              >
-                Demander une démo
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <p className="text-center text-sm text-slate-400 mt-3">
-                💼 Contactez notre équipe commerciale
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center mt-12">
-            <p className="text-slate-400 mb-4">
-              🔒 Données chiffrées • 📊 Conformité PIPEDA • 🛡️ ISO 27001 • 🇨🇦 Toutes provinces
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-4">
-              <span>💳 Paiement: Cartes de crédit • Virement PAD/ACSS</span>
-            </div>
-            <Link 
-              href="/demo" 
-              className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center justify-center gap-2"
+              ←
+            </button>
+            <button
+              onClick={() => setCurrentImageIndex(prev => 
+                prev === carouselImages.length - 1 ? 0 : prev + 1
+              )}
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(16, 185, 129, 0.8)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
             >
-              Tester gratuitement avant d'acheter <ArrowRight className="w-4 h-4" />
-            </Link>
+              →
+            </button>
           </div>
-        </div>
-      </section>
-
-      {/* Section Contact & Support */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Prêt à transformer votre gestion d'entreprise ?
-            </h2>
-            <p className="text-slate-300 text-lg mb-8">
-              Rejoignez des centaines d'entreprises qui font confiance à C-Secur360
+          
+          <div style={{ textAlign: 'center' }}>
+            <h4 style={{ 
+              fontSize: '20px', 
+              margin: '0 0 8px 0',
+              color: '#10b981'
+            }}>
+              {carouselImages[currentImageIndex].title}
+            </h4>
+            <p style={{ 
+              color: '#94a3b8', 
+              margin: '0 0 16px 0'
+            }}>
+              {carouselImages[currentImageIndex].description}
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-              <Link
-                href="/demo"
-                className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white
-                          px-8 py-4 rounded-xl text-lg font-semibold
-                          hover:from-emerald-600 hover:to-emerald-700 transition-all
-                          shadow-xl shadow-emerald-500/25 flex items-center gap-3"
-              >
-                <Play className="w-5 h-5" />
-                Essayer Maintenant
-              </Link>
-              
-              <a
-                href="mailto:info@c-secur360.ca"
-                className="border border-white/30 text-white hover:bg-white/10
-                          px-8 py-4 rounded-xl text-lg font-medium transition-all
-                          flex items-center gap-3"
-              >
-                <Headphones className="w-5 h-5" />
-                Nous Contacter
-              </a>
+            {/* Dots indicator */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '8px' 
+            }}>
+              {carouselImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: index === currentImageIndex ? '#10b981' : 'rgba(148, 163, 184, 0.5)',
+                    cursor: 'pointer'
+                  }}
+                />
+              ))}
             </div>
-
-            <div className="flex items-center justify-center gap-8 text-slate-400 text-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Configuration gratuite
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Formation incluse
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Migration assistée
-              </div>
-            </div>
+          </div>
+          
+          <div style={{ 
+            marginTop: '24px',
+            textAlign: 'center'
+          }}>
+            <button
+              onClick={() => setShowImageManager(true)}
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: '#60a5fa',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                margin: '0 auto'
+              }}
+            >
+              <Lock size={16} />
+              {t.manageImages}
+            </button>
           </div>
         </div>
       </section>
+
+      {/* Modal Admin Login */}
+      {showAdminLogin && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.95)',
+            padding: '32px',
+            borderRadius: '16px',
+            border: '1px solid rgba(100, 116, 139, 0.3)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h3 style={{ 
+              margin: '0 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Lock style={{ color: '#10b981' }} size={24} />
+              {t.adminTitle}
+            </h3>
+            
+            <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t.adminPasswordPlaceholder}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 45px 12px 12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '16px',
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600'
+                  }}
+                >
+                  {t.login}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminLogin(false);
+                    setAdminPassword('');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(100, 116, 139, 0.6)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    cursor: 'pointer',
+                    fontSize: '16px'
+                  }}
+                >
+                  {t.cancel}
+                </button>
+              </div>
+            </form>
+            
+            <p style={{ 
+              marginTop: '16px', 
+              fontSize: '12px', 
+              color: '#64748b',
+              textAlign: 'center'
+            }}>
+              {t.development}: CGEstion321$
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Image Manager */}
+      {showImageManager && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.95)',
+            padding: '32px',
+            borderRadius: '16px',
+            border: '1px solid rgba(100, 116, 139, 0.3)',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <h3 style={{ 
+              margin: '0 0 24px 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <Lock style={{ color: '#10b981' }} size={24} />
+              {t.manageImages}
+            </h3>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (adminPassword === 'CGEstion321$') {
+                window.location.href = '/admin/gallery';
+              } else {
+                alert('Mot de passe incorrect');
+              }
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t.adminPasswordPlaceholder}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 45px 12px 12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '16px',
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600'
+                  }}
+                >
+                  {t.login}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageManager(false);
+                    setAdminPassword('');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(100, 116, 139, 0.6)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    cursor: 'pointer',
+                    fontSize: '16px'
+                  }}
+                >
+                  {t.cancel}
+                </button>
+              </div>
+            </form>
+            
+            <p style={{ 
+              marginTop: '16px', 
+              fontSize: '12px', 
+              color: '#64748b',
+              textAlign: 'center'
+            }}>
+              {t.development}: CGEstion321$
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
-      <footer className="border-t border-white/20 bg-white/5">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
+      <footer style={{
+        padding: '48px 24px',
+        borderTop: '1px solid rgba(100, 116, 139, 0.2)',
+        textAlign: 'center',
+        background: 'rgba(15, 23, 42, 0.8)'
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '32px',
+            marginBottom: '32px'
+          }}>
             <div>
-              <Image 
-                src="/c-secur360-logo.png" 
-                alt="C-Secur360" 
-                width={150} 
-                height={40}
-                className="h-10 w-auto mb-4"
-                priority
-              />
-              <p className="text-slate-400 text-sm">
-                La plateforme AST & ERP la plus sécurisée du marché canadien.
-              </p>
+              <h4 style={{ color: '#10b981', margin: '0 0 16px 0' }}>{t.contact}</h4>
+              <div style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6' }}>
+                <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Phone size={16} /> +1 (514) 603-4519
+                </p>
+                <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mail size={16} /> eric.dufort@cerdia.ai
+                </p>
+                <p style={{ margin: '8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MapPin size={16} /> Montréal, QC, Canada
+                </p>
+              </div>
             </div>
             
             <div>
-              <h4 className="text-white font-semibold mb-4">Produit</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="#features" className="hover:text-white">Fonctionnalités</a></li>
-                <li><Link href="/demo" className="hover:text-white">Démo</Link></li>
-                <li><a href="#pricing" className="hover:text-white">Tarifs</a></li>
-                <li><Link href="/login" className="hover:text-white">Connexion</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">Entreprise</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="mailto:info@c-secur360.ca" className="hover:text-white">Contact</a></li>
-                <li><a href="/privacy" className="hover:text-white">Confidentialité</a></li>
-                <li><a href="/terms" className="hover:text-white">Conditions</a></li>
-                <li><a href="/security" className="hover:text-white">Sécurité</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li><a href="mailto:support@c-secur360.ca" className="hover:text-white">Aide</a></li>
-                <li><a href="/docs" className="hover:text-white">Documentation</a></li>
-                <li><a href="/status" className="hover:text-white">Statut</a></li>
-                <li><a href="tel:+15145551234" className="hover:text-white">Urgence 24/7</a></li>
-              </ul>
+              <h4 style={{ color: '#10b981', margin: '0 0 16px 0' }}>{t.downloads}</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#60a5fa',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px'
+                }}>
+                  <Smartphone size={16} />
+                  {t.mobileApp}
+                </button>
+                <button style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: '#4ade80',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px'
+                }}>
+                  <Monitor size={16} />
+                  {t.desktopVersion}
+                </button>
+              </div>
             </div>
           </div>
           
-          <div className="border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400 text-sm">
-              © 2024 C-Secur360. Tous droits réservés. 🇨🇦 Fièrement canadien.
-            </p>
-            <div className="flex items-center gap-4 mt-4 md:mt-0">
-              <span className="text-slate-400 text-sm">Certifications:</span>
-              <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">ISO 27001</span>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs">SOC 2</span>
-              <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs">PIPEDA</span>
-            </div>
-          </div>
+          <p style={{ 
+            color: '#64748b', 
+            margin: 0,
+            fontSize: '14px'
+          }}>
+            {t.copyright}
+            <br />
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              marginTop: '8px',
+              fontSize: '12px',
+              color: '#94a3b8'
+            }}>
+              {t.poweredBy} 
+              <Logo 
+                size="sm" 
+                variant="minimal"
+                showText={false}
+              />
+              CERDIA
+            </span>
+          </p>
         </div>
       </footer>
-
-      {/* Script pour les onglets interactifs */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            // Attendre le DOM
-            document.addEventListener('DOMContentLoaded', function() {
-              const tabs = document.querySelectorAll('.module-tab');
-              const contents = document.querySelectorAll('.module-content');
-              
-              // Fonction pour changer d'onglet
-              function switchTab(targetModule) {
-                // Désactiver tous les onglets
-                tabs.forEach(tab => {
-                  tab.classList.remove('bg-emerald-500');
-                  tab.classList.add('bg-slate-600', 'hover:bg-slate-500');
-                });
-                
-                // Cacher tous les contenus
-                contents.forEach(content => {
-                  content.classList.add('hidden');
-                });
-                
-                // Activer l'onglet sélectionné
-                const activeTab = document.querySelector('[data-module="' + targetModule + '"]');
-                if (activeTab) {
-                  activeTab.classList.add('bg-emerald-500');
-                  activeTab.classList.remove('bg-slate-600', 'hover:bg-slate-500');
-                }
-                
-                // Afficher le contenu correspondant
-                const activeContent = document.getElementById('module-' + targetModule);
-                if (activeContent) {
-                  activeContent.classList.remove('hidden');
-                }
-              }
-              
-              // Ajouter les event listeners
-              tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                  const targetModule = this.getAttribute('data-module');
-                  switchTab(targetModule);
-                });
-              });
-              
-              // Auto-rotation des onglets (toutes les 8 secondes)
-              const modules = ['ast', 'timesheet', 'inventory', 'vehicles', 'billing'];
-              let currentIndex = 0;
-              
-              setInterval(() => {
-                currentIndex = (currentIndex + 1) % modules.length;
-                switchTab(modules[currentIndex]);
-              }, 8000);
-              
-              console.log('🎯 Onglets modules interactifs activés');
-            });
-          `
-        }}
-      />
     </div>
   );
 }
