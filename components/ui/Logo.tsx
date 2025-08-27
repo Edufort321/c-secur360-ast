@@ -64,10 +64,27 @@ const Logo: React.FC<LogoProps> = ({
 
       <div className={`flex items-center gap-3 ${className}`}>
         <img 
-          src="/c-secur360-logo.png" 
-          alt="C-SECUR360"
+          src="/csecur360-logo-v2025.png" 
+          alt="C-SECUR360 Logo"
           className={`${getSizeClasses()} ${getVariantClasses()}`}
+          onError={(e) => {
+            // Fallback si l'image ne charge pas
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            if (target.nextElementSibling) {
+              (target.nextElementSibling as HTMLElement).style.display = 'block';
+            }
+          }}
         />
+        {/* Fallback texte si l'image ne charge pas */}
+        <div 
+          className={`hidden items-center justify-center ${getSizeClasses()} ${getVariantClasses()}
+                     bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-bold rounded-lg px-3`}
+          style={{ display: 'none' }}
+        >
+          C360
+        </div>
+        
         {showText && (
           <div className="flex flex-col">
             <span className={`font-bold text-white ${getTextSize()}`}>
