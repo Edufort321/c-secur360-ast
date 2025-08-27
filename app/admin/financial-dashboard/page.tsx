@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   DollarSign,
@@ -256,6 +257,13 @@ export default function FinancialDashboardPage() {
               <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="w-6 h-6" />
               </Link>
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-SECUR360" 
+                width={40} 
+                height={40}
+                className="rounded-lg shadow-sm"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard Financier</h1>
                 <p className="text-sm text-gray-600">Revenus et facturation C-SECUR360</p>

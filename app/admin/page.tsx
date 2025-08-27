@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Shield,
   Lock,
@@ -92,22 +93,40 @@ export default function AdminPortalPage() {
 
   const adminModules = [
     {
+      id: 'ultimate-dashboard',
+      title: '🚀 Ultimate Dashboard',
+      description: 'Dashboard principal avec IA et automation',
+      icon: <Crown className="w-8 h-8" />,
+      color: 'bg-gradient-to-r from-yellow-500 to-orange-600',
+      features: ['OpenAI Assistant', 'API Management', 'Todo Global', 'KPIs Temps Réel'],
+      url: '/admin/ultimate-dashboard'
+    },
+    {
+      id: 'tenant-management',
+      title: 'Gestion des Tenants',
+      description: 'Administration complète des clients',
+      icon: <Users className="w-8 h-8" />,
+      color: 'bg-emerald-600',
+      features: ['Profils Complets', 'Billing Stripe', 'Email Config', 'Métriques'],
+      url: '/admin/tenant-management'
+    },
+    {
+      id: 'financial-dashboard',
+      title: 'Dashboard Financier',
+      description: 'Suivi revenus et facturation',
+      icon: <Activity className="w-8 h-8" />,
+      color: 'bg-blue-600',
+      features: ['MRR/ARR', 'Stripe Integration', 'Export CSV', 'Filtres Avancés'],
+      url: '/admin/financial-dashboard'
+    },
+    {
       id: 'database',
       title: 'Administration Base de Données',
       description: 'Gestion complète Supabase et migrations',
       icon: <Database className="w-8 h-8" />,
-      color: 'bg-blue-600',
+      color: 'bg-indigo-600',
       features: ['Migrations SQL', 'Backup/Restore', 'Performance', 'Monitoring'],
       url: '/admin/database'
-    },
-    {
-      id: 'users',
-      title: 'Gestion Utilisateurs Globale',
-      description: 'Administration utilisateurs multi-tenants',
-      icon: <Users className="w-8 h-8" />,
-      color: 'bg-green-600',
-      features: ['Multi-tenant', 'RBAC Global', 'Audit Trail', 'MFA Management'],
-      url: '/admin/users'
     },
     {
       id: 'system',
@@ -126,6 +145,15 @@ export default function AdminPortalPage() {
       color: 'bg-red-600',
       features: ['Logs Système', 'Performances', 'Usage Metrics', 'Alertes'],
       url: '/admin/monitoring'
+    },
+    {
+      id: 'setup-test-tenant',
+      title: '🧪 Créer Tenant de Test',
+      description: 'Configuration automatique tenant c-secur360test',
+      icon: <Settings className="w-8 h-8" />,
+      color: 'bg-orange-600',
+      features: ['Auto-setup', 'Données de test', 'Modules complets', 'Accès instantané'],
+      url: '/admin/setup-test-tenant'
     }
   ];
 
@@ -135,7 +163,16 @@ export default function AdminPortalPage() {
         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-center text-white">
-            <Crown className="w-12 h-12 mx-auto mb-4" />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-SECUR360" 
+                width={48} 
+                height={48}
+                className="rounded-lg bg-white/10 p-1"
+              />
+              <Crown className="w-12 h-12" />
+            </div>
             <h1 className="text-2xl font-bold mb-2">Admin Portal</h1>
             <p className="text-blue-100 text-sm">C-Secur360 Administration</p>
           </div>
@@ -234,6 +271,13 @@ export default function AdminPortalPage() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-SECUR360" 
+                width={48} 
+                height={48}
+                className="rounded-lg shadow-sm"
+              />
               <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg">
                 <Crown className="w-8 h-8 text-white" />
               </div>
@@ -309,7 +353,13 @@ export default function AdminPortalPage() {
 
                 <div className="pt-4 border-t border-gray-100">
                   <button
-                    onClick={() => alert(`🚀 Module "${module.title}"\n\nEn développement...\nAccès complet bientôt disponible.`)}
+                    onClick={() => {
+                      if (['ultimate-dashboard', 'tenant-management', 'financial-dashboard', 'setup-test-tenant'].includes(module.id)) {
+                        window.location.href = module.url;
+                      } else {
+                        alert(`🚀 Module "${module.title}"\n\nEn développement...\nAccès complet bientôt disponible.`);
+                      }
+                    }}
                     className={`${module.color} hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-all`}
                   >
                     <Shield className="w-4 h-4" />

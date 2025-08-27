@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   Play,
   Package,
@@ -169,6 +170,33 @@ export default function DemoPublicPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Header avec logo */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-SECUR360" 
+                width={48} 
+                height={48}
+                className="rounded-lg shadow-sm"
+              />
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">C-SECUR360</h1>
+                <p className="text-sm text-gray-600">Mode Démonstration</p>
+              </div>
+            </div>
+            <a 
+              href="/"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              ← Retour à l'accueil
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-indigo-600/10"></div>

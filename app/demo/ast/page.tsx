@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   Shield,
   FileText,
@@ -209,17 +210,26 @@ export default function DemoASTPage() {
           </div>
 
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Analyses de Sécurité au Travail</h1>
-              <p className="text-gray-600 mt-1">Système AST collaboratif inter-entreprises</p>
+            <div className="flex items-center gap-4">
+              <Image 
+                src="/c-secur360-logo.png" 
+                alt="C-SECUR360" 
+                width={48} 
+                height={48}
+                className="rounded-lg shadow-sm"
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Analyses de Sécurité au Travail</h1>
+                <p className="text-gray-600 mt-1">Système AST collaboratif inter-entreprises</p>
+              </div>
             </div>
-            <button 
-              onClick={() => handleDemoAction('Nouvelle AST')}
+            <a 
+              href="/demo/ast/nouveau"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               Nouvelle AST
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -438,13 +448,13 @@ export default function DemoASTPage() {
                 ? 'Aucune AST ne correspond aux filtres sélectionnés.'
                 : 'Commencez par créer votre première Analyse de Sécurité au Travail.'}
             </p>
-            <button 
-              onClick={() => handleDemoAction('Créer première AST')}
+            <a 
+              href="/demo/ast/nouveau"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 mx-auto"
             >
               <Plus className="h-4 w-4" />
               Nouvelle AST
-            </button>
+            </a>
           </div>
         )}
 
