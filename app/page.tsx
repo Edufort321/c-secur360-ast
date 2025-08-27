@@ -272,7 +272,7 @@ export default function LandingPage() {
     e.preventDefault();
     // Production password for development
     if (adminPassword === 'CGEstion321$') {
-      window.location.href = '/admin/ultimate-dashboard';
+      window.location.href = '/admin/dashboard';
     } else {
       alert('Mot de passe incorrect');
     }
@@ -290,32 +290,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-sans">
       {/* Header uniforme avec logo agrandi et position sticky */}
-      <div className="sticky top-0 z-50 backdrop-blur-lg border-b border-white/10
-                     bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
-                     shadow-lg shadow-black/20 flex justify-between items-center w-full px-6 py-4">
-        <div className="flex items-center gap-8">
-          {/* Logo direct test */}
-          <div className="flex items-center gap-3">
-            <img 
-              src="/c-secur360-logo.png" 
-              alt="C-SECUR360"
-              className="h-24 w-auto hover:scale-105 transition-transform duration-200"
-              style={{
-                filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)) drop-shadow(0 0 16px rgba(139, 92, 246, 0.4))'
-              }}
-            />
-            <div className="flex flex-col">
-              <span className="font-bold text-white text-4xl">
-                C-SECUR360
-              </span>
-              <span className="text-sm text-gray-300 -mt-1">
-                Sécurité Industrielle
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex gap-4 items-center">
+      <Header 
+        logoSize="2xl"
+        className="sticky top-0 z-50 backdrop-blur-lg border-b border-white/10
+                   bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
+                   shadow-lg shadow-black/20"
+        actions={
+          <div className="flex gap-4 items-center">
             {/* Sélecteur de langue avec texte encadré */}
             <div className="flex bg-slate-800/80 rounded-lg p-1 border border-white/10 backdrop-blur-sm">
               <button
@@ -353,7 +334,7 @@ export default function LandingPage() {
               </span>
             </button>
             
-            <Link href="/demo/ast/nouveau" 
+            <Link href="/demo/dashboard" 
               className="bg-gradient-to-r from-blue-500 to-blue-600 text-white
                         px-5 py-2 rounded-lg text-sm font-semibold
                         hover:from-blue-600 hover:to-blue-700 transition-all duration-200
@@ -364,8 +345,9 @@ export default function LandingPage() {
                 {t.freeDemo}
               </span>
             </Link>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Hero Section */}
       <section style={{ 
@@ -482,7 +464,7 @@ export default function LandingPage() {
 
         {/* Call to Action */}
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/demo/ast/nouveau" style={{
+          <Link href="/demo/pricing" style={{
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: 'white',
             padding: '16px 32px',
@@ -498,7 +480,7 @@ export default function LandingPage() {
             {t.viewPlans}
           </Link>
           
-          <Link href="/demo/ast/nouveau" style={{
+          <Link href="/demo/dashboard" style={{
             background: 'rgba(100, 116, 139, 0.6)',
             color: 'white',
             padding: '16px 32px',
@@ -649,7 +631,7 @@ export default function LandingPage() {
             ))}
           </div>
           
-          <Link href="/demo/ast/nouveau" style={{
+          <Link href="/demo/pricing" style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
