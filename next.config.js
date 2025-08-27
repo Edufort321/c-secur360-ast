@@ -5,9 +5,9 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      // Redirection des sous-domaines vers les tenants
+      // Redirection des sous-domaines vers les tenants (EXCLUT les assets statiques)
       {
-        source: '/:path*',
+        source: '/((?!_next|api|favicon.ico|logo.png|manifest.json|.*\\.(png|jpg|jpeg|gif|svg|ico|css|js)).*)/:path*',
         has: [
           {
             type: 'host',
