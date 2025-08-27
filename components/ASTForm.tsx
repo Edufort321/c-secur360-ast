@@ -26,6 +26,9 @@ interface ASTFormProps {
   userRole?: 'worker' | 'supervisor' | 'manager' | 'admin';
   formData: any;
   onDataChange: (section: string, data: any) => void;
+  onPrint?: () => void;
+  onSave?: () => void;
+  demoMode?: boolean;
 }
 
 interface FormDataStructure {
@@ -259,7 +262,10 @@ const ASTForm: React.FC<ASTFormProps> = ({
   userId, 
   userRole = 'worker',
   formData,
-  onDataChange
+  onDataChange,
+  onPrint,
+  onSave,
+  demoMode = false
 }) => {
   
   // =================== DEBUG COUNTER POUR TRACKING ===================
@@ -1407,17 +1413,17 @@ const ASTForm: React.FC<ASTFormProps> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Save size={14} />
-          <span>{t.autoSave}</span>
+          <span>{demoMode ? '🚫 Sauvegarde désactivée' : t.autoSave}</span>
         </div>
         <div style={{
           width: '6px',
           height: '6px',
-          background: hasUnsavedChanges ? '#f59e0b' : '#10b981',
+          background: demoMode ? '#ef4444' : (hasUnsavedChanges ? '#f59e0b' : '#10b981'),
           borderRadius: '50%',
-          animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none'
+          animation: demoMode ? 'none' : (hasUnsavedChanges ? 'pulse 2s infinite' : 'none')
         }} />
-        <span style={{ fontSize: '12px', color: hasUnsavedChanges ? '#f59e0b' : '#10b981' }}>
-          {hasUnsavedChanges ? t.saving : t.saved}
+        <span style={{ fontSize: '12px', color: demoMode ? '#ef4444' : (hasUnsavedChanges ? '#f59e0b' : '#10b981') }}>
+          {demoMode ? 'MODE DÉMO' : (hasUnsavedChanges ? t.saving : t.saved)}
         </span>
       </div>
 
