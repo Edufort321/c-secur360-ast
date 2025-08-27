@@ -66,6 +66,20 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const { pathname } = request.nextUrl;
   
+  // Skip middleware for static assets
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/logo.png' ||
+    pathname === '/manifest.json' ||
+    pathname === '/c-secur360-logo.png' ||
+    pathname === '/csecur360-logo-v2025.png' ||
+    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+  
   // First, handle domain/tenant routing
   await handleTenantRouting(request, url, hostname);
   
@@ -218,6 +232,7 @@ function redirectToLogin(request: NextRequest, originalPath: string): NextRespon
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|logo.png|manifest.json|.*\\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)).*)',
+    // Ne PAS matcher les assets statiques
+    '/((?!_next/static|_next/image|favicon.ico|logo.png|manifest.json).*)',
   ],
 }
