@@ -52,7 +52,13 @@ const publicRoutes = [
   '/api/auth/logout',
   '/api/auth/totp-setup',
   '/api/sms/inbound', // Twilio webhooks
-  '/api/voice/inbound'
+  '/api/voice/inbound',
+  // Assets statiques
+  '/logo.png',
+  '/favicon.ico',
+  '/manifest.json',
+  '/c-secur360-logo.png',
+  '/csecur360-logo-v2025.png'
 ];
 
 export async function middleware(request: NextRequest) {
@@ -212,6 +218,6 @@ function redirectToLogin(request: NextRequest, originalPath: string): NextRespon
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|logo.png|manifest.json|.*\\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)).*)',
   ],
 }
