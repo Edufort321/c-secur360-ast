@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -15,14 +16,14 @@ const Logo: React.FC<LogoProps> = ({
   className = '', 
   showText = true 
 }) => {
-  const getSizeClasses = () => {
+  const getSizeDimensions = () => {
     switch (size) {
-      case 'sm': return 'h-8 w-auto';
-      case 'md': return 'h-12 w-auto';
-      case 'lg': return 'h-16 w-auto';
-      case 'xl': return 'h-20 w-auto';
-      case '2xl': return 'h-24 w-auto';
-      default: return 'h-12 w-auto';
+      case 'sm': return { width: 120, height: 32 };
+      case 'md': return { width: 160, height: 48 };
+      case 'lg': return { width: 200, height: 64 };
+      case 'xl': return { width: 240, height: 80 };
+      case '2xl': return { width: 280, height: 96 };
+      default: return { width: 160, height: 48 };
     }
   };
 
@@ -63,10 +64,14 @@ const Logo: React.FC<LogoProps> = ({
       }} />
 
       <div className={`flex items-center gap-3 ${className}`}>
-        <img 
+        <Image 
           src="/csecur360-logo-v2025.png" 
-          alt="C-SECUR360 Logo"
-          className={`${getSizeClasses()} ${getVariantClasses()}`}
+          alt="C-SECUR360"
+          width={getSizeDimensions().width}
+          height={getSizeDimensions().height}
+          priority
+          className={getVariantClasses()}
+          sizes="(max-width: 768px) 140px, 160px"
         />
         
         {showText && (
