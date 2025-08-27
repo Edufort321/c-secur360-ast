@@ -826,7 +826,7 @@ const Step1ProjectInfo = memo(({
       <Header 
         title={t.title}
         subtitle={t.subtitle}
-        logoSize="2xl"
+        logoSize="sm"
         actions={
           <button
             onClick={() => onDataChange('projectInfo', localData)}

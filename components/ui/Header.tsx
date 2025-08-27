@@ -25,12 +25,12 @@ const Header: React.FC<HeaderProps> = ({
       flex justify-between items-center w-full
       bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95
       border-b border-white/10
-      px-3 py-1
+      px-2 py-0.5
       backdrop-blur-lg
       shadow-lg shadow-black/20
       ${className}
     `}>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {showLogo && (
           <Logo 
             size={logoSize}

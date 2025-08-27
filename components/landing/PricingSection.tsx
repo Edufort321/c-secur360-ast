@@ -11,6 +11,7 @@ interface PricingSectionProps {
 const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('annually');
   const [additionalSites, setAdditionalSites] = useState(0);
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
 
   const handlePlanSelection = (planId: string) => {
     if (planId === 'custom') {
@@ -43,40 +44,87 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
 
   const pricing = calculateTotalPrice();
 
-  const allFeatures = [
-    { icon: Users, text: 'Utilisateurs illimités' },
-    { icon: Database, text: 'AST illimités' },
-    { icon: Database, text: 'Stockage illimité' },
-    { icon: Shield, text: 'Conformité toutes provinces canadiennes' },
-    { icon: Phone, text: 'Support téléphonique prioritaire' },
-    { icon: Mail, text: 'Notifications SMS et email illimitées' },
-    { icon: Globe, text: 'Intégration cloud (Drive, SharePoint)' },
-    { icon: Settings, text: 'API complète et webhooks' },
-    { icon: Crown, text: 'Branding personnalisé' },
-    { icon: Lock, text: 'Single Sign-On (SSO)' },
-    { icon: Zap, text: 'Rapports avancés et analytics' },
-    { icon: Shield, text: 'Logs d\'audit et conformité' }
-  ];
+  const translations = {
+    fr: {
+      title: 'Tarification C-SECUR360',
+      subtitle: 'Un seul plan. Toutes les fonctionnalités.',
+      description: 'Solution complète d\'analyse sécuritaire de tâches (AST) pour toutes les entreprises canadiennes.',
+      monthly: 'Mensuel',
+      annually: 'Annuel',
+      features: [
+        { icon: Users, text: 'Utilisateurs illimités' },
+        { icon: Database, text: 'AST illimités' },
+        { icon: Database, text: 'Stockage illimité' },
+        { icon: Shield, text: 'Conformité toutes provinces canadiennes' },
+        { icon: Phone, text: 'Support téléphonique prioritaire' },
+        { icon: Mail, text: 'Notifications SMS et email illimitées' },
+        { icon: Globe, text: 'Intégration cloud (Drive, SharePoint)' },
+        { icon: Settings, text: 'API complète et webhooks' },
+        { icon: Crown, text: 'Branding personnalisé' },
+        { icon: Lock, text: 'Single Sign-On (SSO)' },
+        { icon: Zap, text: 'Rapports avancés et analytics' },
+        { icon: Shield, text: 'Logs d\'audit et conformité' }
+      ]
+    },
+    en: {
+      title: 'C-SECUR360 Pricing',
+      subtitle: 'One plan. All features.',
+      description: 'Complete Job Safety Analysis (JSA) solution for all Canadian businesses.',
+      monthly: 'Monthly',
+      annually: 'Annually',
+      features: [
+        { icon: Users, text: 'Unlimited users' },
+        { icon: Database, text: 'Unlimited JSA/AST' },
+        { icon: Database, text: 'Unlimited storage' },
+        { icon: Shield, text: 'All Canadian provinces compliance' },
+        { icon: Phone, text: 'Priority phone support' },
+        { icon: Mail, text: 'Unlimited SMS and email notifications' },
+        { icon: Globe, text: 'Cloud integration (Drive, SharePoint)' },
+        { icon: Settings, text: 'Complete API and webhooks' },
+        { icon: Crown, text: 'Custom branding' },
+        { icon: Lock, text: 'Single Sign-On (SSO)' },
+        { icon: Zap, text: 'Advanced reports and analytics' },
+        { icon: Shield, text: 'Audit logs and compliance' }
+      ]
+    }
+  };
+
+  const t = translations[language];
+  const allFeatures = t.features;
 
   return (
     <section className="py-20 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header avec logo */}
+        {/* Header avec logo et sélecteur de langue */}
         <div className="text-center mb-16">
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center items-center mb-8 gap-6">
             <img 
-              src="/c-secur360-logo.png" 
+              src="/logo.png" 
               alt="C-SECUR360" 
-              className="h-16 w-auto"
+              className="h-32 w-auto"
             />
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setLanguage('fr')}
+                className={`px-4 py-2 rounded-lg font-medium ${language === 'fr' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              >
+                FR
+              </button>
+              <button 
+                onClick={() => setLanguage('en')}
+                className={`px-4 py-2 rounded-lg font-medium ${language === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              >
+                EN
+              </button>
+            </div>
           </div>
           
           <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-            Tarification C-SECUR360
+            {t.title}
           </h1>
           <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            <strong>Un seul plan. Toutes les fonctionnalités.</strong><br />
-            Solution complète d'analyse sécuritaire de tâches (AST) pour toutes les entreprises canadiennes.
+            <strong>{t.subtitle}</strong><br />
+            {t.description}
           </p>
           
           {/* Billing Toggle */}
@@ -89,7 +137,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Mensuel
+              {t.monthly}
             </button>
             <button
               onClick={() => setBillingCycle('annually')}
@@ -99,7 +147,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onPlanSelect }) => {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Annuel
+              {t.annually}
               <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
                 Économisez 1000$
               </span>

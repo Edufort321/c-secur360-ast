@@ -291,7 +291,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-sans">
       {/* Header uniforme avec logo agrandi et position sticky */}
       <Header 
-        logoSize="2xl"
+        logoSize="lg"
         className="sticky top-0 z-50 backdrop-blur-lg border-b border-white/10
                    bg-gradient-to-r from-slate-900/90 via-slate-800/90 to-slate-900/90
                    shadow-lg shadow-black/20"
