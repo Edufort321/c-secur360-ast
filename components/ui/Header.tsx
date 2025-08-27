@@ -16,7 +16,7 @@ const Header: React.FC<HeaderProps> = ({
   title,
   subtitle,
   showLogo = true,
-  logoSize = 'md',
+  logoSize = 'sm',
   actions,
   className = ''
 }) => {
@@ -25,12 +25,12 @@ const Header: React.FC<HeaderProps> = ({
       flex justify-between items-center w-full
       bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95
       border-b border-white/10
-      px-4 py-2
+      px-3 py-1
       backdrop-blur-lg
       shadow-lg shadow-black/20
       ${className}
     `}>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         {showLogo && (
           <Logo 
             size={logoSize}
@@ -42,17 +42,17 @@ const Header: React.FC<HeaderProps> = ({
         {(title || subtitle) && (
           <div className="flex flex-col">
             {title && (
-              <h1 className="text-xl font-bold mb-1 relative">
+              <h1 className="text-lg font-bold mb-0 relative">
                 <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400
                                bg-clip-text text-transparent font-bold">
                   {title}
                 </span>
-                <span className="absolute inset-0 bg-slate-800/80 rounded-lg -z-10 px-2 py-0.5
+                <span className="absolute inset-0 bg-slate-800/80 rounded-lg -z-10 px-1 py-0
                                backdrop-blur-sm border border-white/10 shadow-lg"></span>
               </h1>
             )}
             {subtitle && (
-              <p className="text-slate-300 text-sm bg-slate-800/60 rounded-md px-2 py-0.5
+              <p className="text-slate-300 text-xs bg-slate-800/60 rounded-md px-1 py-0
                           backdrop-blur-sm border border-white/10 inline-block shadow-md">
                 {subtitle}
               </p>
