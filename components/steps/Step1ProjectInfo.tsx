@@ -180,6 +180,9 @@ interface ProjectInfo {
   
   // LOTO - Nouveauté dans Step 1
   lotoProcedure: LOTOProcedure;
+  
+  // Photos et documentation du projet
+  photos?: string[];
 }
 
 // =================== TRADUCTIONS ===================
@@ -564,6 +567,8 @@ const Step1ProjectInfo = memo(({
     temperature: formData?.projectInfo?.temperature || '',
     visibility: formData?.projectInfo?.visibility || '',
     workingConditions: formData?.projectInfo?.workingConditions || '',
+    // Photos et documentation du projet
+    photos: formData?.projectInfo?.photos || [],
     // LOTO - Nouveau dans Step 1
     lotoProcedure: formData?.projectInfo?.lotoProcedure || {
       id: `loto_${Date.now()}`,
@@ -776,6 +781,38 @@ const Step1ProjectInfo = memo(({
     console.log('Notification LOTO envoyée pour le point:', pointId);
     // La notification sera gérée par le composant LOTONotificationSystem
   }, []);
+
+  // Gestion des photos du projet
+  const handlePhotoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentPhotos = localData.photos || [];
+    const newPhotos: string[] = [];
+    let loadedCount = 0;
+    const totalFiles = files.length;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        newPhotos.push(result);
+        loadedCount++;
+        
+        if (loadedCount === totalFiles) {
+          updateField('photos', [...currentPhotos, ...newPhotos]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    event.target.value = '';
+  }, [localData.photos, updateField]);
+
+  const removePhoto = useCallback((index: number) => {
+    const updatedPhotos = (localData.photos || []).filter((_, i) => i !== index);
+    updateField('photos', updatedPhotos);
+  }, [localData.photos, updateField]);
 
   // Cleanup debounce
   useEffect(() => {
@@ -1750,15 +1787,16 @@ const Step1ProjectInfo = memo(({
               </div>
             </div>
 
-            {/* Photos Diverses */}
-            <div style={{
+            {/* Photos Diverses - Fonctionnel */}
+            <label style={{
               background: 'rgba(6, 182, 212, 0.1)',
               border: '2px dashed rgba(6, 182, 212, 0.3)',
               borderRadius: '12px',
               padding: '20px',
               textAlign: 'center',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              display: 'block'
             }}>
               <div style={{
                 display: 'flex',
@@ -1766,20 +1804,27 @@ const Step1ProjectInfo = memo(({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Camera size={32} style={{ color: '#06b6d4' }} />
+                <Upload size={32} style={{ color: '#06b6d4' }} />
                 <div>
                   <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '4px' }}>
                     Photos Diverses
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Site, équipements, conditions
+                    Cliquer pour ajouter
                   </div>
                 </div>
               </div>
-            </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
           </div>
 
-          {/* Zone d'affichage des documents ajoutés */}
+          {/* Zone d'affichage des photos ajoutées */}
           <div style={{
             background: 'var(--bg-primary)',
             borderRadius: '8px',
@@ -1792,20 +1837,66 @@ const Step1ProjectInfo = memo(({
               gap: '8px',
               marginBottom: '12px'
             }}>
-              <Eye size={16} style={{ color: 'var(--text-muted)' }} />
+              <Camera size={16} style={{ color: 'var(--text-muted)' }} />
               <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                Documents ajoutés (0)
+                Photos ajoutées ({(localData.photos || []).length})
               </span>
             </div>
-            <div style={{
-              color: 'var(--text-muted)',
-              fontSize: '14px',
-              fontStyle: 'italic',
-              textAlign: 'center',
-              padding: '20px'
-            }}>
-              Aucun document ajouté pour le moment
-            </div>
+            
+            {(localData.photos && localData.photos.length > 0) ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: '8px'
+              }}>
+                {localData.photos.map((photo, index) => (
+                  <div key={index} style={{ position: 'relative' }}>
+                    <img
+                      src={photo}
+                      alt={`Photo ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '80px',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-secondary)'
+                      }}
+                    />
+                    <button
+                      onClick={() => removePhoto(index)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(239, 68, 68, 0.8)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                color: 'var(--text-muted)',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                padding: '20px'
+              }}>
+                Aucune photo ajoutée pour le moment
+              </div>
+            )}
           </div>
         </div>
 
