@@ -185,6 +185,10 @@ interface ProjectInfo {
   photos?: string[];
   astClientFiles?: string[];
   lockoutClientFiles?: string[];
+  
+  // Système LOTO complet
+  lockoutPoints?: any[];
+  lockoutPhotos?: any[];
 }
 
 // =================== TRADUCTIONS ===================
@@ -573,6 +577,9 @@ const Step1ProjectInfo = memo(({
     photos: formData?.projectInfo?.photos || [],
     astClientFiles: formData?.projectInfo?.astClientFiles || [],
     lockoutClientFiles: formData?.projectInfo?.lockoutClientFiles || [],
+    // Système LOTO complet
+    lockoutPoints: formData?.projectInfo?.lockoutPoints || [],
+    lockoutPhotos: formData?.projectInfo?.lockoutPhotos || [],
     // LOTO - Nouveau dans Step 1
     lotoProcedure: formData?.projectInfo?.lotoProcedure || {
       id: `loto_${Date.now()}`,
@@ -597,6 +604,7 @@ const Step1ProjectInfo = memo(({
   const [activeTab, setActiveTab] = useState<'project' | 'loto'>('project');
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Générer numéro AST unique
   const generateASTNumber = useCallback(() => {
@@ -882,6 +890,278 @@ const Step1ProjectInfo = memo(({
     updateField('lockoutClientFiles', updatedFiles);
   }, [localData.lockoutClientFiles, updateField]);
 
+  // =================== CONSTANTES LOTO ===================
+  const ENERGY_TYPES = useMemo(() => ({
+    electrical: { 
+      name: language === 'fr' ? 'Électrique' : 'Electrical', 
+      icon: Zap, 
+      color: '#fbbf24',
+      procedures: language === 'fr' ? [
+        'Identifier la source d\'alimentation (disjoncteur, sectionneur, etc...)',
+        'Couper l\'alimentation électrique', 
+        'Verrouiller la source d\'alimentation',
+        'Tester l\'absence de tension',
+        'Poser les étiquettes de sécurité',
+        'Installation des mises à la terre'
+      ] : [
+        'Identify power source (breaker, disconnect, etc...)',
+        'Turn off electrical power',
+        'Lock the power source',
+        'Test for absence of voltage',
+        'Apply safety tags',
+        'Install grounding connections'
+      ]
+    },
+    mechanical: { 
+      name: language === 'fr' ? 'Mécanique' : 'Mechanical', 
+      icon: Settings, 
+      color: '#6b7280',
+      procedures: language === 'fr' ? [
+        'Arrêter les équipements mécaniques', 
+        'Bloquer les parties mobiles',
+        'Verrouiller les commandes', 
+        'Vérifier l\'immobilisation',
+        'Signaler la zone', 
+        'Installer les dispositifs de blocage'
+      ] : [
+        'Stop mechanical equipment',
+        'Block moving parts',
+        'Lock controls',
+        'Verify immobilization',
+        'Mark the area',
+        'Install blocking devices'
+      ]
+    },
+    hydraulic: { 
+      name: language === 'fr' ? 'Hydraulique' : 'Hydraulic', 
+      icon: Droplets, 
+      color: '#3b82f6',
+      procedures: language === 'fr' ? [
+        'Fermer les vannes principales', 
+        'Purger la pression résiduelle',
+        'Verrouiller les vannes', 
+        'Vérifier la dépressurisation',
+        'Installer des bouchons de sécurité', 
+        'Tester l\'étanchéité du système'
+      ] : [
+        'Close main valves',
+        'Bleed residual pressure',
+        'Lock valves',
+        'Verify depressurization',
+        'Install safety plugs',
+        'Test system tightness'
+      ]
+    },
+    pneumatic: { 
+      name: language === 'fr' ? 'Pneumatique' : 'Pneumatic', 
+      icon: Wind, 
+      color: '#10b981',
+      procedures: language === 'fr' ? [
+        'Couper l\'alimentation en air', 
+        'Purger les réservoirs d\'air',
+        'Verrouiller les vannes', 
+        'Vérifier la dépressurisation',
+        'Isoler les circuits', 
+        'Contrôler l\'absence de pression'
+      ] : [
+        'Cut air supply',
+        'Bleed air tanks',
+        'Lock valves',
+        'Verify depressurization',
+        'Isolate circuits',
+        'Check absence of pressure'
+      ]
+    },
+    chemical: { 
+      name: language === 'fr' ? 'Chimique' : 'Chemical', 
+      icon: AlertTriangle, 
+      color: '#f59e0b',
+      procedures: language === 'fr' ? [
+        'Fermer les vannes d\'alimentation', 
+        'Purger les conduites',
+        'Neutraliser les résidus', 
+        'Verrouiller les accès',
+        'Installer la signalisation', 
+        'Vérifier l\'absence de vapeurs'
+      ] : [
+        'Close supply valves',
+        'Purge lines',
+        'Neutralize residues',
+        'Lock access points',
+        'Install signage',
+        'Check absence of vapors'
+      ]
+    },
+    thermal: { 
+      name: language === 'fr' ? 'Thermique' : 'Thermal', 
+      icon: Flame, 
+      color: '#ef4444',
+      procedures: language === 'fr' ? [
+        'Couper l\'alimentation de chauffage', 
+        'Laisser refroidir les équipements',
+        'Isoler les sources de chaleur', 
+        'Vérifier la température',
+        'Signaler les zones chaudes', 
+        'Installer les protections thermiques'
+      ] : [
+        'Cut heating supply',
+        'Let equipment cool down',
+        'Isolate heat sources',
+        'Check temperature',
+        'Mark hot zones',
+        'Install thermal protections'
+      ]
+    },
+    gravity: { 
+      name: language === 'fr' ? 'Gravité' : 'Gravity', 
+      icon: Wrench, 
+      color: '#8b5cf6',
+      procedures: language === 'fr' ? [
+        'supporter les charges suspendues', 
+        'Bloquer les mécanismes de levage',
+        'Installer des supports de sécurité', 
+        'Vérifier la stabilité',
+        'Baliser la zone', 
+        'Contrôler les points d\'ancrage'
+      ] : [
+        'Support suspended loads',
+        'Block lifting mechanisms',
+        'Install safety supports',
+        'Verify stability',
+        'Mark the area',
+        'Check anchor points'
+      ]
+    }
+  }), [language]);
+
+  // =================== HANDLERS LOTO MANQUANTS ===================
+  const handlePhotoCapture = useCallback(async (category: string, lockoutPointId?: string) => {
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.capture = 'environment';
+        fileInputRef.current.multiple = true;
+        fileInputRef.current.onchange = (e) => {
+          const files = Array.from((e.target as HTMLInputElement).files || []);
+          if (files.length > 0) {
+            files.forEach(file => processPhoto(file, category, lockoutPointId));
+          }
+        };
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Erreur capture photo:', error);
+    }
+  }, []);
+
+  const processPhoto = useCallback(async (file: File, category: string, lockoutPointId?: string) => {
+    try {
+      const photoUrl = URL.createObjectURL(file);
+      const newPhoto = {
+        id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: photoUrl,
+        caption: `${getCategoryLabel(category)} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
+        category: category as any,
+        timestamp: new Date().toISOString(),
+        lockoutPointId
+      };
+      
+      const updatedPhotos = [...(localData.lockoutPhotos || []), newPhoto];
+      updateField('lockoutPhotos', updatedPhotos);
+      
+      console.log('✅ Step1 - Photo ajoutée:', newPhoto.id);
+    } catch (error) {
+      console.error('Erreur traitement photo:', error);
+    }
+  }, [language, localData.lockoutPhotos, updateField]);
+
+  const deletePhoto = useCallback((photoId: string) => {
+    const updatedPhotos = (localData.lockoutPhotos || []).filter((photo: any) => photo.id !== photoId);
+    updateField('lockoutPhotos', updatedPhotos);
+    console.log('✅ Step1 - Photo supprimée:', photoId);
+  }, [localData.lockoutPhotos, updateField]);
+
+  const getCategoryLabel = useCallback((category: string): string => {
+    const categories = {
+      before_lockout: 'Avant verrouillage',
+      during_lockout: 'Pendant verrouillage', 
+      lockout_device: 'Dispositif de verrouillage',
+      client_form: 'Fiche client',
+      verification: 'Vérification'
+    };
+    return categories[category as keyof typeof categories] || category;
+  }, []);
+
+  const addLockoutPoint = useCallback(() => {
+    const newPoint = {
+      id: `lockout_${Date.now()}`,
+      energyType: 'electrical',
+      equipmentName: '',
+      location: '',
+      lockType: '',
+      tagNumber: `TAG-${Date.now().toString().slice(-6)}`,
+      isLocked: false,
+      verifiedBy: '',
+      verificationTime: '',
+      photos: [],
+      notes: '',
+      completedProcedures: []
+    };
+
+    const updatedPoints = [...(localData.lockoutPoints || []), newPoint];
+    updateField('lockoutPoints', updatedPoints);
+  }, [localData.lockoutPoints, updateField]);
+
+  const deleteLockoutPoint = useCallback((pointId: string) => {
+    const updatedPoints = (localData.lockoutPoints || []).filter((point: any) => point.id !== pointId);
+    const updatedPhotos = (localData.lockoutPhotos || []).filter((photo: any) => photo.lockoutPointId !== pointId);
+    
+    updateField('lockoutPoints', updatedPoints);
+    updateField('lockoutPhotos', updatedPhotos);
+  }, [localData.lockoutPoints, localData.lockoutPhotos, updateField]);
+
+  const updateLockoutPoint = useCallback((pointId: string, field: string, value: any) => {
+    const updatedPoints = (localData.lockoutPoints || []).map((point: any) => 
+      point.id === pointId ? { ...point, [field]: value } : point
+    );
+    updateField('lockoutPoints', updatedPoints);
+  }, [localData.lockoutPoints, updateField]);
+
+  const toggleProcedureComplete = useCallback((pointId: string, procedureIndex: number) => {
+    const point = (localData.lockoutPoints || []).find((p: any) => p.id === pointId);
+    if (!point) return;
+
+    const completedProcedures = point.completedProcedures || [];
+    const isCompleted = completedProcedures.includes(procedureIndex);
+    
+    const updatedCompleted = isCompleted 
+      ? completedProcedures.filter((index: number) => index !== procedureIndex)
+      : [...completedProcedures, procedureIndex];
+
+    updateLockoutPoint(pointId, 'completedProcedures', updatedCompleted);
+  }, [localData.lockoutPoints, updateLockoutPoint]);
+
+  const getProcedureProgress = useCallback((point: any): { completed: number; total: number; percentage: number } => {
+    const energyType = ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES];
+    const total = energyType?.procedures.length || 0;
+    const completed = (point.completedProcedures || []).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  }, []);
+
+  const setTimeNow = useCallback((pointId: string) => {
+    const now = new Date();
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  }, [updateLockoutPoint]);
+
+  const setTimePlus = useCallback((pointId: string, minutes: number) => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + minutes);
+    const timeString = now.toTimeString().substring(0, 5);
+    updateLockoutPoint(pointId, 'verificationTime', timeString);
+  }, [updateLockoutPoint]);
+
   // Cleanup debounce
   useEffect(() => {
     return () => {
@@ -927,6 +1207,9 @@ const Step1ProjectInfo = memo(({
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '24px'
     }}>
+      {/* Input caché pour capture photo */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      
       {/* Header uniforme */}
       <Header 
         title={t.title}
@@ -2368,7 +2651,7 @@ const Step1ProjectInfo = memo(({
           
           {/* =================== SECTION LOTO COMPLÈTE COMME ANCIEN STEP1 =================== */}
               {/* Points de verrouillage dynamiques */}
-              {localData.lockoutPoints.map((point, index) => (
+              {(localData.lockoutPoints || []).map((point, index) => (
                 <div key={point.id} style={{
                   background: 'rgba(15, 23, 42, 0.8)',
                   border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -2456,7 +2739,7 @@ const Step1ProjectInfo = memo(({
                     </div>
 
                     {/* Procédures recommandées */}
-                    {point.energyType && ENERGY_TYPES[point.energyType] && (
+                    {point.energyType && ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES] && (
                       <div style={{
                         background: 'rgba(15, 23, 42, 0.6)',
                         border: '1px solid rgba(100, 116, 139, 0.2)',
@@ -2466,7 +2749,7 @@ const Step1ProjectInfo = memo(({
                       }}>
                         <h4 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', margin: '0 0 12px' }}>🔧 Procédures à Suivre:</h4>
                         <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                          {ENERGY_TYPES[point.energyType].procedures.map((procedure, idx) => {
+                          {ENERGY_TYPES[point.energyType as keyof typeof ENERGY_TYPES].procedures.map((procedure, idx) => {
                             const isCompleted = (point.completedProcedures || []).includes(idx);
                             return (
                               <li
@@ -2945,13 +3228,13 @@ const Step1ProjectInfo = memo(({
                     </div>
                     
                     {/* Affichage photos du point */}
-                    {localData.lockoutPhotos.filter(photo => photo.lockoutPointId === point.id).length > 0 ? (
+                    {(localData.lockoutPhotos || []).filter(photo => photo.lockoutPointId === point.id).length > 0 ? (
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                         gap: '8px'
                       }}>
-                        {localData.lockoutPhotos.filter(photo => photo.lockoutPointId === point.id).map(photo => (
+                        {(localData.lockoutPhotos || []).filter(photo => photo.lockoutPointId === point.id).map(photo => (
                           <div key={photo.id} style={{
                             position: 'relative',
                             background: 'rgba(15, 23, 42, 0.8)',
@@ -3031,7 +3314,7 @@ const Step1ProjectInfo = memo(({
               ))}
 
               {/* Bouton ajouter point */}
-              <div style={{ marginTop: localData.lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+              <div style={{ marginTop: (localData.lockoutPoints || []).length > 0 ? '24px' : '0', marginBottom: '24px' }}>
                 <button
                   onClick={addLockoutPoint}
                   style={{
@@ -3054,7 +3337,7 @@ const Step1ProjectInfo = memo(({
               </div>
 
               {/* Message si aucun point */}
-              {localData.lockoutPoints.length === 0 && (
+              {(localData.lockoutPoints || []).length === 0 && (
                 <div style={{
                   background: 'rgba(59, 130, 246, 0.1)',
                   border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -3072,16 +3355,16 @@ const Step1ProjectInfo = memo(({
               )}
 
               {/* Validation LOTO */}
-              {localData.lockoutPoints.length > 0 && (
+              {(localData.lockoutPoints || []).length > 0 && (
                 <div style={{
-                  background: localData.lockoutPoints.filter(point => {
+                  background: (localData.lockoutPoints || []).filter(point => {
                     const progress = getProcedureProgress(point);
                     return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
-                  }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                  border: `1px solid ${localData.lockoutPoints.filter(point => {
+                  }).length >= Math.ceil((localData.lockoutPoints || []).length * 0.8) ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                  border: `1px solid ${(localData.lockoutPoints || []).filter(point => {
                     const progress = getProcedureProgress(point);
                     return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
-                  }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                  }).length >= Math.ceil((localData.lockoutPoints || []).length * 0.8) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
                   borderRadius: '12px',
                   padding: '16px',
                   marginTop: '16px'
@@ -3092,16 +3375,16 @@ const Step1ProjectInfo = memo(({
                     gap: '12px',
                     marginBottom: '8px'
                   }}>
-                    <Shield size={20} color={localData.lockoutPoints.filter(point => {
+                    <Shield size={20} color={(localData.lockoutPoints || []).filter(point => {
                       const progress = getProcedureProgress(point);
                       return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
-                    }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? '#22c55e' : '#f59e0b'} />
+                    }).length >= Math.ceil((localData.lockoutPoints || []).length * 0.8) ? '#22c55e' : '#f59e0b'} />
                     <h4 style={{
                       margin: 0,
-                      color: localData.lockoutPoints.filter(point => {
+                      color: (localData.lockoutPoints || []).filter(point => {
                         const progress = getProcedureProgress(point);
                         return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
-                      }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? '#22c55e' : '#f59e0b'
+                      }).length >= Math.ceil((localData.lockoutPoints || []).length * 0.8) ? '#22c55e' : '#f59e0b'
                     }}>État Verrouillage</h4>
                   </div>
                   <div style={{
@@ -3109,10 +3392,10 @@ const Step1ProjectInfo = memo(({
                     color: '#e2e8f0',
                     marginBottom: '8px'
                   }}>
-                    {localData.lockoutPoints.filter(point => {
+                    {(localData.lockoutPoints || []).filter(point => {
                       const progress = getProcedureProgress(point);
                       return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
-                    }).length}/{localData.lockoutPoints.length} points complétés
+                    }).length}/{(localData.lockoutPoints || []).length} points complétés
                   </div>
                 </div>
               )}
@@ -3122,402 +3405,6 @@ const Step1ProjectInfo = memo(({
       </div>
 
       {/* =================== FIN DU COMPOSANT =================== */}
-          {showLotoSection && (
-            <div>
-              {/* Formulaire nouveau point LOTO */}
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.05)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                borderRadius: '12px',
-                padding: '20px',
-                marginBottom: '20px'
-              }}>
-                <h4 style={{ 
-                  margin: '0 0 16px 0', 
-                  color: '#ef4444',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <Plus size={16} />
-                  {t.addLotoPoint}
-                </h4>
-                
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '12px',
-                  marginBottom: '16px'
-                }}>
-                  <div>
-                    <label style={labelStyle}>{t.lotoEquipment} *</label>
-                    <input
-                      type="text"
-                      value={newLotoPoint.equipmentName || ''}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, equipmentName: e.target.value }))}
-                      style={inputStyle}
-                      placeholder="ex: Disjoncteur principal"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={labelStyle}>{t.lotoEnergyType} *</label>
-                    <select
-                      value={newLotoPoint.energyType || ''}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, energyType: e.target.value as EnergyType }))}
-                      style={inputStyle}
-                      required
-                    >
-                      <option value="">Sélectionner...</option>
-                      <option value="electrical">{t.energyTypes.electrical}</option>
-                      <option value="mechanical">{t.energyTypes.mechanical}</option>
-                      <option value="hydraulic">{t.energyTypes.hydraulic}</option>
-                      <option value="pneumatic">{t.energyTypes.pneumatic}</option>
-                      <option value="thermal">{t.energyTypes.thermal}</option>
-                      <option value="chemical">{t.energyTypes.chemical}</option>
-                      <option value="gravitational">{t.energyTypes.gravitational}</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label style={labelStyle}>{t.lotoLocation}</label>
-                    <input
-                      type="text"
-                      value={newLotoPoint.location || localData.workSite}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, location: e.target.value }))}
-                      style={inputStyle}
-                      placeholder={localData.workSite || "Emplacement"}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={labelStyle}>{t.lotoPriority}</label>
-                    <select
-                      value={newLotoPoint.priority || 'medium'}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, priority: e.target.value as 'critical' | 'high' | 'medium' | 'low' }))}
-                      style={inputStyle}
-                    >
-                      <option value="critical">{t.lotoPriorities.critical}</option>
-                      <option value="high">{t.lotoPriorities.high}</option>
-                      <option value="medium">{t.lotoPriorities.medium}</option>
-                      <option value="low">{t.lotoPriorities.low}</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label style={labelStyle}>{t.lotoIsolationMethod}</label>
-                    <input
-                      type="text"
-                      value={newLotoPoint.isolationMethod || ''}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, isolationMethod: e.target.value }))}
-                      style={inputStyle}
-                      placeholder="ex: Coupure disjoncteur"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={labelStyle}>{t.lotoLockNumber}</label>
-                    <input
-                      type="text"
-                      value={newLotoPoint.lockNumber || ''}
-                      onChange={(e) => setNewLotoPoint(prev => ({ ...prev, lockNumber: e.target.value }))}
-                      style={inputStyle}
-                      placeholder="ex: LOT-001"
-                    />
-                  </div>
-                </div>
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={labelStyle}>{t.lotoNotes}</label>
-                  <textarea
-                    value={newLotoPoint.notes || ''}
-                    onChange={(e) => setNewLotoPoint(prev => ({ ...prev, notes: e.target.value }))}
-                    style={{
-                      ...inputStyle,
-                      minHeight: '60px',
-                      resize: 'vertical'
-                    }}
-                    placeholder="Instructions spéciales, précautions..."
-                    rows={2}
-                  />
-                </div>
-                
-                <button
-                  onClick={addLotoPoint}
-                  disabled={!newLotoPoint.equipmentName || !newLotoPoint.energyType}
-                  style={{
-                    background: (newLotoPoint.equipmentName && newLotoPoint.energyType) 
-                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                      : 'rgba(100, 116, 139, 0.3)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    cursor: (newLotoPoint.equipmentName && newLotoPoint.energyType) ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  <Plus size={16} />
-                  {t.addLotoPoint}
-                </button>
-              </div>
-              
-              {/* Liste des points LOTO */}
-              {localData.lotoProcedure.points.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ 
-                    margin: '0 0 16px 0', 
-                    color: 'var(--text-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <Lock size={16} />
-                    Points LOTO configurés ({localData.lotoProcedure.points.length})
-                  </h4>
-                  
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {localData.lotoProcedure.points.map((point, index) => (
-                      <div key={point.id} style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        padding: '16px'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          marginBottom: '12px'
-                        }}>
-                          <div>
-                            <h5 style={{ 
-                              margin: '0 0 4px 0', 
-                              color: 'var(--text-secondary)',
-                              fontSize: '16px',
-                              fontWeight: '600'
-                            }}>
-                              {point.equipmentName}
-                            </h5>
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                              <span style={{
-                                fontSize: '12px',
-                                color: 'var(--text-muted)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}>
-                                <MapPin size={12} />
-                                {point.location}
-                              </span>
-                              <span style={{
-                                fontSize: '12px',
-                                color: 'var(--text-muted)'
-                              }}>
-                                {t.energyTypes[point.energyType]}
-                              </span>
-                              <span style={{
-                                fontSize: '12px',
-                                color: point.priority === 'critical' ? '#ef4444' : 
-                                       point.priority === 'high' ? '#f59e0b' : 
-                                       point.priority === 'medium' ? '#3b82f6' : '#22c55e',
-                                fontWeight: '600'
-                              }}>
-                                {t.lotoPriorities[point.priority]}
-                              </span>
-                              <span style={{
-                                fontSize: '12px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                background: point.status === 'completed' ? 'rgba(34, 197, 94, 0.2)' :
-                                           point.status === 'verified' ? 'rgba(59, 130, 246, 0.2)' :
-                                           point.status === 'isolated' ? 'rgba(245, 158, 11, 0.2)' :
-                                           'rgba(107, 114, 128, 0.2)',
-                                color: point.status === 'completed' ? '#22c55e' :
-                                       point.status === 'verified' ? '#3b82f6' :
-                                       point.status === 'isolated' ? '#f59e0b' :
-                                       '#6b7280',
-                                fontWeight: '600',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
-                              }}>
-                                {t.lotoStatuses[point.status]}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => removeLotoPoint(point.id)}
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              color: '#f87171',
-                              padding: '6px',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                        
-                        {point.notes && (
-                          <div style={{
-                            background: 'var(--bg-primary)',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            marginTop: '8px'
-                          }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Notes: </span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{point.notes}</span>
-                          </div>
-                        )}
-                        
-                        {point.photos.length > 0 && (
-                          <div style={{ marginTop: '12px' }}>
-                            <div style={{ 
-                              color: 'var(--text-muted)', 
-                              fontSize: '12px',
-                              marginBottom: '6px'
-                            }}>
-                              Photos: {point.photos.length} • Validées: {point.photos.filter(p => p.validated).length}
-                            </div>
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                              {point.photos.slice(0, 4).map(photo => (
-                                <img
-                                  key={photo.id}
-                                  src={photo.thumbnail}
-                                  alt={photo.description[language]}
-                                  style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '4px',
-                                    objectFit: 'cover',
-                                    border: photo.validated ? '1px solid #22c55e' : '1px solid var(--border-secondary)'
-                                  }}
-                                />
-                              ))}
-                              {point.photos.length > 4 && (
-                                <div style={{
-                                  width: '32px',
-                                  height: '32px',
-                                  borderRadius: '4px',
-                                  background: 'var(--bg-secondary)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '10px',
-                                  color: 'var(--text-muted)',
-                                  fontWeight: '600'
-                                }}>
-                                  +{point.photos.length - 4}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Carrousel Photo LOTO */}
-              {localData.lotoProcedure.points.length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <LOTOPhotoCarousel
-                    lotoProcedure={localData.lotoProcedure}
-                    onUpdateProcedure={handleLotoProcedureUpdate}
-                    language={language}
-                    editable={true}
-                    compactMode={true}
-                    maxPhotosPerPoint={10}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-          </>
-        )}
-
-        {/* Navigation */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '32px',
-          padding: '24px',
-          background: 'var(--bg-secondary)',
-          borderRadius: '12px',
-          border: '1px solid var(--border-secondary)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={20} style={{ color: 'var(--text-muted)' }} />
-            <span style={{ color: 'var(--text-muted)' }}>Étape 1 sur 5</span>
-            {localData.lotoProcedure.points.length > 0 && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                marginLeft: '12px',
-                padding: '4px 8px',
-                background: 'rgba(239, 68, 68, 0.2)',
-                borderRadius: '12px'
-              }}>
-                <Lock size={12} style={{ color: '#ef4444' }} />
-                <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>
-                  {localData.lotoProcedure.points.length} point{localData.lotoProcedure.points.length > 1 ? 's' : ''} LOTO
-                </span>
-              </div>
-            )}
-          </div>
-          
-          <button
-            onClick={() => {
-              // Sauvegarder avant de passer à l'étape suivante
-              onDataChange('projectInfo', localData);
-              // Logique pour passer à l'étape suivante
-            }}
-            style={{
-              background: 'var(--gradient-success)',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '16px',
-              fontWeight: '600'
-            }}
-          >
-            {t.next}
-            <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Système de notification LOTO - Positionné de manière fixe */}
-      {localData.lotoProcedure.points.length > 0 && (
-        <LOTONotificationSystem
-          lockoutPoints={localData.lotoProcedure.points.map(point => ({
-            id: point.id,
-            equipmentName: point.equipmentName,
-            location: point.location,
-            energyType: t.energyTypes[point.energyType]
-          }))}
-          projectNumber={localData.astNumber || localData.projectNumber}
-          language={language}
-          onNotificationSent={handleLotoNotification}
-        />
-      )}
     </div>
   );
 });
