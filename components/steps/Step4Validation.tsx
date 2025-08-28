@@ -892,25 +892,68 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Critères de validation */}
-        <div className="section-card">
-          <h3 className="section-title">
-            <Shield size={20} />
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '16px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+        }}>
+          <h3 style={{
+            color: '#e2e8f0',
+            fontSize: window.innerWidth < 768 ? '16px' : '18px',
+            fontWeight: '600',
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap'
+          }}>
+            <Shield size={window.innerWidth < 768 ? 18 : 20} />
             {t.validationCriteria}
           </h3>
           
-          <div className="criteria-grid">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: window.innerWidth < 768 ? '12px' : '16px'
+          }}>
             {(Object.keys(criteria) as Array<keyof ValidationCriteria>).map(key => (
               <div 
                 key={key}
-                className={`criteria-item ${criteria[key] ? 'valid' : ''}`}
+                style={{
+                  background: criteria[key] ? 'rgba(34, 197, 94, 0.1)' : 'rgba(15, 23, 42, 0.6)',
+                  border: criteria[key] ? '1px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}
                 onClick={() => handleCriteriaChange(key, !criteria[key])}
               >
-                <div className="criteria-header">
-                  <span className="criteria-name">{t.criteria[key]}</span>
-                  <div 
-                    className="criteria-status"
-                    style={{ backgroundColor: getCriteriaColor(criteria[key]) }}
-                  >
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{
+                    color: '#e2e8f0',
+                    fontWeight: '500',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px'
+                  }}>{t.criteria[key]}</span>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    color: 'white',
+                    backgroundColor: getCriteriaColor(criteria[key])
+                  }}>
                     {criteria[key] ? '✓' : ''}
                   </div>
                 </div>
@@ -920,9 +963,25 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Équipe de révision */}
-        <div className="section-card">
-          <h3 className="section-title">
-            <Users size={20} />
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '16px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+        }}>
+          <h3 style={{
+            color: '#e2e8f0',
+            fontSize: window.innerWidth < 768 ? '16px' : '18px',
+            fontWeight: '600',
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap'
+          }}>
+            <Users size={window.innerWidth < 768 ? 18 : 20} />
             {t.reviewTeam}
           </h3>
           
@@ -932,79 +991,203 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               <p>{t.messages.noReviewers}</p>
             </div>
           ) : (
-            <div className="reviewer-list">
+            <div style={{ display: 'grid', gap: '16px' }}>
               {reviewers.map(reviewer => (
-                <div key={reviewer.id} className="reviewer-card">
-                  <div className="reviewer-header">
-                    <div className="reviewer-info">
-                      <h4>{reviewer.name}</h4>
-                      <p>{reviewer.role} • {reviewer.email}</p>
+                <div key={reviewer.id} style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px',
+                  padding: window.innerWidth < 768 ? '16px' : '20px',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                    marginBottom: '16px',
+                    flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                    gap: window.innerWidth < 768 ? '12px' : '0'
+                  }}>
+                    <div>
+                      <h4 style={{
+                        color: '#e2e8f0',
+                        margin: '0 0 4px 0',
+                        fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                        fontWeight: '600'
+                      }}>{reviewer.name}</h4>
+                      <p style={{
+                        color: '#94a3b8',
+                        margin: 0,
+                        fontSize: window.innerWidth < 768 ? '12px' : '14px'
+                      }}>{reviewer.role} • {reviewer.email}</p>
                     </div>
-                    <div 
-                      className="reviewer-status"
-                      style={{ 
-                        backgroundColor: `${getStatusColor(reviewer.status)}20`,
-                        color: getStatusColor(reviewer.status)
-                      }}
-                    >
+                    <div style={{
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                      fontWeight: '500',
+                      textTransform: 'uppercase',
+                      backgroundColor: `${getStatusColor(reviewer.status)}20`,
+                      color: getStatusColor(reviewer.status)
+                    }}>
                       {t.status[reviewer.status]}
                     </div>
                   </div>
                   
                   {reviewer.status === 'pending' && (
-                    <div className="reviewer-actions">
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginTop: '12px',
+                      flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
+                    }}>
                       <button 
-                        className="btn btn-approve"
+                        style={{
+                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: 'rgba(34, 197, 94, 0.2)',
+                          color: '#22c55e',
+                          border: '1px solid rgba(34, 197, 94, 0.4)'
+                        }}
                         onClick={() => handleReviewerAction(reviewer.id, 'approve', 5)}
                       >
-                        <ThumbsUp size={14} />
+                        <ThumbsUp size={window.innerWidth < 768 ? 12 : 14} />
                         {t.actions.approve}
                       </button>
                       <button 
-                        className="btn btn-reject"
+                        style={{
+                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: 'rgba(239, 68, 68, 0.2)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239, 68, 68, 0.4)'
+                        }}
                         onClick={() => handleReviewerAction(reviewer.id, 'reject')}
                       >
-                        <AlertTriangle size={14} />
+                        <AlertTriangle size={window.innerWidth < 768 ? 12 : 14} />
                         {t.actions.reject}
                       </button>
                       <button 
-                        className="btn btn-edit"
+                        style={{
+                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: 'rgba(59, 130, 246, 0.2)',
+                          color: '#3b82f6',
+                          border: '1px solid rgba(59, 130, 246, 0.4)'
+                        }}
                         onClick={() => {
                           setEditingComments(reviewer.id);
                           setTempComments(reviewer.comments || '');
                         }}
                       >
-                        <Edit size={14} />
+                        <Edit size={window.innerWidth < 768 ? 12 : 14} />
                         {t.actions.saveComments}
                       </button>
                     </div>
                   )}
                   
                   {reviewer.comments && (
-                    <div className="comments-section">
-                      <div className="comments-text">{reviewer.comments}</div>
+                    <div style={{
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid rgba(100, 116, 139, 0.3)'
+                    }}>
+                      <div style={{
+                        color: '#94a3b8',
+                        fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                        lineHeight: 1.5,
+                        margin: '8px 0'
+                      }}>{reviewer.comments}</div>
                     </div>
                   )}
                   
                   {editingComments === reviewer.id && (
-                    <div className="comments-section">
+                    <div style={{
+                      marginTop: '12px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid rgba(100, 116, 139, 0.3)'
+                    }}>
                       <textarea
                         value={tempComments}
                         onChange={(e) => setTempComments(e.target.value)}
                         placeholder={t.form.commentsPlaceholder}
-                        className="form-input form-textarea"
+                        style={{
+                          padding: '10px 12px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ffffff',
+                          fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                          transition: 'all 0.3s ease',
+                          minHeight: '80px',
+                          resize: 'vertical',
+                          width: '100%',
+                          boxSizing: 'border-box'
+                        }}
                         rows={3}
                       />
                       <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                         <button 
-                          className="btn btn-approve"
+                          style={{
+                            padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                            fontWeight: '500',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(34, 197, 94, 0.2)',
+                            color: '#22c55e',
+                            border: '1px solid rgba(34, 197, 94, 0.4)'
+                          }}
                           onClick={() => handleSaveComments(reviewer.id)}
                         >
-                          <Save size={14} />
+                          <Save size={window.innerWidth < 768 ? 12 : 14} />
                           {t.actions.saveComments}
                         </button>
                         <button 
-                          className="btn btn-edit"
+                          style={{
+                            padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                            fontWeight: '500',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(100, 116, 139, 0.2)',
+                            color: '#64748b',
+                            border: '1px solid rgba(100, 116, 139, 0.4)'
+                          }}
                           onClick={() => {
                             setEditingComments(null);
                             setTempComments('');
@@ -1035,70 +1218,185 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           
           {!isAddingReviewer ? (
             <button 
-              className="btn btn-edit"
-              style={{ marginTop: '16px' }}
-              onClick={() => setIsAddingReviewer(true)}
+              style={{
+                marginTop: '16px',
+                padding: window.innerWidth < 768 ? '10px 16px' : '12px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                fontWeight: '500',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                color: '#3b82f6',
+                border: '1px solid rgba(59, 130, 246, 0.4)'
+              }}
+              onClick={() => {
+                console.log('Bouton ajouter réviseur cliqué');
+                setIsAddingReviewer(true);
+              }}
             >
-              <Plus size={16} />
+              <Plus size={window.innerWidth < 768 ? 14 : 16} />
               {t.actions.addReviewer}
             </button>
           ) : (
-            <div className="add-reviewer-form">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">{t.form.reviewerName}</label>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '16px' : '20px',
+              marginTop: '16px'
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500'
+                  }}>{t.form.reviewerName}</label>
                   <input
                     type="text"
                     value={newReviewer.name}
                     onChange={(e) => setNewReviewer({...newReviewer, name: e.target.value})}
-                    className="form-input"
+                    style={{
+                      padding: '10px 12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      transition: 'all 0.3s ease'
+                    }}
                     placeholder="Nom complet"
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t.form.reviewerRole}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500'
+                  }}>{t.form.reviewerRole}</label>
                   <input
                     type="text"
                     value={newReviewer.role}
                     onChange={(e) => setNewReviewer({...newReviewer, role: e.target.value})}
-                    className="form-input"
+                    style={{
+                      padding: '10px 12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      transition: 'all 0.3s ease'
+                    }}
                     placeholder="Ex: Superviseur sécurité"
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t.form.reviewerEmail}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500'
+                  }}>{t.form.reviewerEmail}</label>
                   <input
                     type="email"
                     value={newReviewer.email}
                     onChange={(e) => setNewReviewer({...newReviewer, email: e.target.value})}
-                    className="form-input"
+                    style={{
+                      padding: '10px 12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      transition: 'all 0.3s ease'
+                    }}
                     placeholder="email@example.com"
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t.form.comments}</label>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '6px',
+                  gridColumn: window.innerWidth < 768 ? '1' : '1 / -1'
+                }}>
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500'
+                  }}>{t.form.comments}</label>
                   <textarea
                     value={newReviewer.comments}
                     onChange={(e) => setNewReviewer({...newReviewer, comments: e.target.value})}
-                    className="form-input form-textarea"
+                    style={{
+                      padding: '10px 12px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      transition: 'all 0.3s ease',
+                      minHeight: '80px',
+                      resize: 'vertical'
+                    }}
                     placeholder={t.form.commentsPlaceholder}
                     rows={3}
                   />
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button 
-                  className="btn btn-approve"
-                  onClick={handleAddReviewer}
-                  disabled={!newReviewer.name || !newReviewer.role}
+                  style={{
+                    padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 'rgba(100, 116, 139, 0.3)' : 'rgba(34, 197, 94, 0.2)',
+                    color: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? '#64748b' : '#22c55e',
+                    border: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? '1px solid rgba(100, 116, 139, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)',
+                    opacity: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 0.6 : 1
+                  }}
+                  onClick={() => {
+                    console.log('Clic sur ajouter réviseur', { newReviewer });
+                    handleAddReviewer();
+                  }}
+                  disabled={!newReviewer.name.trim() || !newReviewer.role.trim()}
                 >
-                  <Save size={14} />
+                  <Save size={window.innerWidth < 768 ? 12 : 14} />
                   {t.actions.addReviewer}
                 </button>
                 <button 
-                  className="btn btn-edit"
+                  style={{
+                    padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(100, 116, 139, 0.2)',
+                    color: '#64748b',
+                    border: '1px solid rgba(100, 116, 139, 0.4)'
+                  }}
                   onClick={() => {
+                    console.log('Clic sur annuler');
                     setIsAddingReviewer(false);
                     setNewReviewer({ name: '', role: '', email: '', comments: '' });
                   }}
