@@ -230,23 +230,31 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   };
 
   const handleAddReviewer = () => {
-    if (!newReviewer.name || !newReviewer.role) return;
+    if (!newReviewer.name.trim() || !newReviewer.role.trim()) {
+      console.log('Nom ou rôle requis');
+      return;
+    }
     
     const reviewer: Reviewer = {
-      id: `reviewer-${Date.now()}`,
-      name: newReviewer.name,
-      role: newReviewer.role,
-      email: newReviewer.email,
+      id: `reviewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: newReviewer.name.trim(),
+      role: newReviewer.role.trim(),
+      email: newReviewer.email.trim(),
       status: 'pending',
-      comments: newReviewer.comments
+      comments: newReviewer.comments.trim()
     };
+    
+    console.log('Ajout du réviseur:', reviewer);
     
     const newReviewers = [...reviewers, reviewer];
     setReviewers(newReviewers);
     updateFormData(criteria, newReviewers);
     
+    // Reset du formulaire
     setNewReviewer({ name: '', role: '', email: '', comments: '' });
     setIsAddingReviewer(false);
+    
+    console.log('Réviseur ajouté avec succès, nouveau total:', newReviewers.length);
   };
 
   const handleReviewerAction = (reviewerId: string, action: 'approve' | 'reject', rating?: number) => {
@@ -317,20 +325,21 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             background: rgba(34, 197, 94, 0.1);
             border: 1px solid rgba(34, 197, 94, 0.3);
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: window.innerWidth < 768 ? 16px : 24px;
+            margin-bottom: window.innerWidth < 768 ? 16px : 24px;
             position: relative;
             overflow: hidden;
           }
           
           .validation-title {
             color: #22c55e;
-            font-size: 20px;
+            font-size: window.innerWidth < 768 ? 18px : 20px;
             font-weight: 700;
             margin: 0 0 8px 0;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: window.innerWidth < 768 ? 8px : 12px;
+            flex-wrap: wrap;
           }
           
           .validation-subtitle {
@@ -341,9 +350,9 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           
           .validation-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-            margin-top: 20px;
+            grid-template-columns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))';
+            gap: window.innerWidth < 768 ? 12px : 16px;
+            margin-top: window.innerWidth < 768 ? 16px : 20px;
           }
           
           .stat-card {
@@ -377,8 +386,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             backdrop-filter: blur(20px);
             border: 1px solid rgba(100, 116, 139, 0.3);
             border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: window.innerWidth < 768 ? 16px : 24px;
+            margin-bottom: window.innerWidth < 768 ? 16px : 24px;
           }
           
           .section-title {
@@ -393,8 +402,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           
           .criteria-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
+            grid-template-columns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))';
+            gap: window.innerWidth < 768 ? 12px : 16px;
           }
           
           .criteria-item {
@@ -652,46 +661,162 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         `
       }} />
 
-      <div className="validation-container">
+      <div style={{ 
+        padding: window.innerWidth < 768 ? '12px' : '24px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        color: '#ffffff'
+      }}>
         {/* Header avec statistiques */}
-        <div className="validation-header">
-          <h2 className="validation-title">
+        <div style={{
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          borderRadius: '16px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <h2 style={{
+            color: '#22c55e',
+            fontSize: window.innerWidth < 768 ? '18px' : '20px',
+            fontWeight: '700',
+            margin: '0 0 8px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: window.innerWidth < 768 ? '8px' : '12px',
+            flexWrap: 'wrap'
+          }}>
             <CheckCircle size={24} />
             {t.title}
           </h2>
-          <p className="validation-subtitle">{t.subtitle}</p>
+          <p style={{
+            color: '#16a34a',
+            margin: 0,
+            fontSize: window.innerWidth < 768 ? '12px' : '14px'
+          }}>{t.subtitle}</p>
           
-          <div className="validation-stats">
-            <div className="stat-card">
-              <div className="stat-value">{validCriteria}/{totalCriteria}</div>
-              <div className="stat-label">{t.stats.criteriaValid}</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: window.innerWidth < 768 ? '12px' : '16px',
+            marginTop: window.innerWidth < 768 ? '16px' : '20px'
+          }}>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
+              textAlign: 'center',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '20px' : '24px',
+                fontWeight: '800',
+                color: '#22c55e',
+                marginBottom: '4px'
+              }}>{validCriteria}/{totalCriteria}</div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                color: '#16a34a',
+                fontWeight: '500'
+              }}>{t.stats.criteriaValid}</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-value">{reviewers.length}</div>
-              <div className="stat-label">{t.stats.reviewersAssigned}</div>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
+              textAlign: 'center',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '20px' : '24px',
+                fontWeight: '800',
+                color: '#22c55e',
+                marginBottom: '4px'
+              }}>{reviewers.length}</div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                color: '#16a34a',
+                fontWeight: '500'
+              }}>{t.stats.reviewersAssigned}</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-value">{approvedReviewers}</div>
-              <div className="stat-label">{t.stats.approvalsReceived}</div>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
+              textAlign: 'center',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '20px' : '24px',
+                fontWeight: '800',
+                color: '#22c55e',
+                marginBottom: '4px'
+              }}>{approvedReviewers}</div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                color: '#16a34a',
+                fontWeight: '500'
+              }}>{t.stats.approvalsReceived}</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-value">{Math.round(overallProgress * 100)}%</div>
-              <div className="stat-label">{t.stats.overallStatus}</div>
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
+              textAlign: 'center',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '20px' : '24px',
+                fontWeight: '800',
+                color: '#22c55e',
+                marginBottom: '4px'
+              }}>{Math.round(overallProgress * 100)}%</div>
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                color: '#16a34a',
+                fontWeight: '500'
+              }}>{t.stats.overallStatus}</div>
             </div>
           </div>
           
-          <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: `${overallProgress * 100}%` }}
-            />
+          <div style={{
+            width: '100%',
+            height: '8px',
+            background: 'rgba(100, 116, 139, 0.3)',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            margin: '16px 0'
+          }}>
+            <div style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+              transition: 'width 0.5s ease',
+              width: `${overallProgress * 100}%`
+            }} />
           </div>
         </div>
 
         {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
-        <div className="section-card">
-          <h3 className="section-title">
-            <Users size={20} />
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '16px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+        }}>
+          <h3 style={{
+            color: '#e2e8f0',
+            fontSize: window.innerWidth < 768 ? '16px' : '18px',
+            fontWeight: '600',
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap'
+          }}>
+            <Users size={window.innerWidth < 768 ? 18 : 20} />
             {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
           </h3>
           <WorkerRegistryAST
@@ -732,9 +857,25 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Section Notifications SMS */}
-        <div className="section-card">
-          <h3 className="section-title">
-            <MessageSquare size={20} />
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(100, 116, 139, 0.3)',
+          borderRadius: '16px',
+          padding: window.innerWidth < 768 ? '16px' : '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+        }}>
+          <h3 style={{
+            color: '#e2e8f0',
+            fontSize: window.innerWidth < 768 ? '16px' : '18px',
+            fontWeight: '600',
+            margin: '0 0 20px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap'
+          }}>
+            <MessageSquare size={window.innerWidth < 768 ? 18 : 20} />
             {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
           </h3>
           <SMSNotification
