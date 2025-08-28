@@ -183,6 +183,8 @@ interface ProjectInfo {
   
   // Photos et documentation du projet
   photos?: string[];
+  astClientFiles?: string[];
+  lockoutClientFiles?: string[];
 }
 
 // =================== TRADUCTIONS ===================
@@ -569,6 +571,8 @@ const Step1ProjectInfo = memo(({
     workingConditions: formData?.projectInfo?.workingConditions || '',
     // Photos et documentation du projet
     photos: formData?.projectInfo?.photos || [],
+    astClientFiles: formData?.projectInfo?.astClientFiles || [],
+    lockoutClientFiles: formData?.projectInfo?.lockoutClientFiles || [],
     // LOTO - Nouveau dans Step 1
     lotoProcedure: formData?.projectInfo?.lotoProcedure || {
       id: `loto_${Date.now()}`,
@@ -813,6 +817,70 @@ const Step1ProjectInfo = memo(({
     const updatedPhotos = (localData.photos || []).filter((_, i) => i !== index);
     updateField('photos', updatedPhotos);
   }, [localData.photos, updateField]);
+
+  // Gestion des fichiers AST Client
+  const handleASTClientUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentFiles = localData.astClientFiles || [];
+    const newFiles: string[] = [];
+    let loadedCount = 0;
+    const totalFiles = files.length;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        newFiles.push(result);
+        loadedCount++;
+        
+        if (loadedCount === totalFiles) {
+          updateField('astClientFiles', [...currentFiles, ...newFiles]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    event.target.value = '';
+  }, [localData.astClientFiles, updateField]);
+
+  const removeASTClientFile = useCallback((index: number) => {
+    const updatedFiles = (localData.astClientFiles || []).filter((_, i) => i !== index);
+    updateField('astClientFiles', updatedFiles);
+  }, [localData.astClientFiles, updateField]);
+
+  // Gestion des fichiers Fiche Verrouillage Client
+  const handleLockoutClientUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentFiles = localData.lockoutClientFiles || [];
+    const newFiles: string[] = [];
+    let loadedCount = 0;
+    const totalFiles = files.length;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        newFiles.push(result);
+        loadedCount++;
+        
+        if (loadedCount === totalFiles) {
+          updateField('lockoutClientFiles', [...currentFiles, ...newFiles]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    event.target.value = '';
+  }, [localData.lockoutClientFiles, updateField]);
+
+  const removeLockoutClientFile = useCallback((index: number) => {
+    const updatedFiles = (localData.lockoutClientFiles || []).filter((_, i) => i !== index);
+    updateField('lockoutClientFiles', updatedFiles);
+  }, [localData.lockoutClientFiles, updateField]);
 
   // Cleanup debounce
   useEffect(() => {
@@ -1727,72 +1795,16 @@ const Step1ProjectInfo = memo(({
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '16px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '12px',
             marginBottom: '20px'
           }}>
-            {/* AST Client */}
-            <div style={{
+            {/* AST Client - Fonctionnel */}
+            <label style={{
               background: 'rgba(139, 92, 246, 0.1)',
               border: '2px dashed rgba(139, 92, 246, 0.3)',
               borderRadius: '12px',
-              padding: '20px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <FileText size={32} style={{ color: '#8b5cf6' }} />
-                <div>
-                  <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '4px' }}>
-                    AST Client
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Cliquer pour ajouter
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Fiche de Verrouillage Client */}
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '2px dashed rgba(239, 68, 68, 0.3)',
-              borderRadius: '12px',
-              padding: '20px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <Lock size={32} style={{ color: '#ef4444' }} />
-                <div>
-                  <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '4px' }}>
-                    Fiche Verrouillage Client
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Cliquer pour ajouter
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Photos Diverses - Fonctionnel */}
-            <label style={{
-              background: 'rgba(6, 182, 212, 0.1)',
-              border: '2px dashed rgba(6, 182, 212, 0.3)',
-              borderRadius: '12px',
-              padding: '20px',
+              padding: '16px 12px',
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -1804,12 +1816,84 @@ const Step1ProjectInfo = memo(({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Upload size={32} style={{ color: '#06b6d4' }} />
+                <Upload size={24} style={{ color: '#8b5cf6' }} />
                 <div>
-                  <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '4px' }}>
+                  <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '2px', fontSize: '14px' }}>
+                    AST Client
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Cliquer pour ajouter
+                  </div>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                multiple
+                onChange={handleASTClientUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            {/* Fiche de Verrouillage Client - Fonctionnel */}
+            <label style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '2px dashed rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              padding: '16px 12px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'block'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Upload size={24} style={{ color: '#ef4444' }} />
+                <div>
+                  <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '2px', fontSize: '14px' }}>
+                    Fiche Verrouillage Client
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Cliquer pour ajouter
+                  </div>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                multiple
+                onChange={handleLockoutClientUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            {/* Photos Diverses - Fonctionnel */}
+            <label style={{
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '2px dashed rgba(6, 182, 212, 0.3)',
+              borderRadius: '12px',
+              padding: '16px 12px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'block'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <Upload size={24} style={{ color: '#06b6d4' }} />
+                <div>
+                  <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '2px', fontSize: '14px' }}>
                     Photos Diverses
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -1824,69 +1908,235 @@ const Step1ProjectInfo = memo(({
             </label>
           </div>
 
-          {/* Zone d'affichage des photos ajoutées */}
+          {/* Zone d'affichage des documents ajoutés - Vue responsive optimisée mobile */}
           <div style={{
             background: 'var(--bg-primary)',
             borderRadius: '8px',
             padding: '16px',
             border: '1px solid var(--border-secondary)'
           }}>
+            {/* En-tête avec compteurs */}
             <div style={{ 
               display: 'flex', 
+              flexWrap: 'wrap',
               alignItems: 'center', 
-              gap: '8px',
-              marginBottom: '12px'
+              gap: '12px',
+              marginBottom: '16px'
             }}>
-              <Camera size={16} style={{ color: 'var(--text-muted)' }} />
-              <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                Photos ajoutées ({(localData.photos || []).length})
-              </span>
-            </div>
-            
-            {(localData.photos && localData.photos.length > 0) ? (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                gap: '8px'
-              }}>
-                {localData.photos.map((photo, index) => (
-                  <div key={index} style={{ position: 'relative' }}>
-                    <img
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      style={{
-                        width: '100%',
-                        height: '80px',
-                        objectFit: 'cover',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border-secondary)'
-                      }}
-                    />
-                    <button
-                      onClick={() => removePhoto(index)}
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(239, 68, 68, 0.8)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileText size={16} style={{ color: '#8b5cf6' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  AST: {(localData.astClientFiles || []).length}
+                </span>
               </div>
-            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Lock size={16} style={{ color: '#ef4444' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Verrouillage: {(localData.lockoutClientFiles || []).length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Camera size={16} style={{ color: '#06b6d4' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Photos: {(localData.photos || []).length}
+                </span>
+              </div>
+            </div>
+
+            {/* Fichiers AST Client */}
+            {(localData.astClientFiles && localData.astClientFiles.length > 0) && (
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ 
+                  color: '#8b5cf6', 
+                  fontSize: '14px', 
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <FileText size={14} />
+                  AST Client ({localData.astClientFiles.length})
+                </h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: '8px'
+                }}>
+                  {localData.astClientFiles.map((file, index) => (
+                    <div key={index} style={{ 
+                      position: 'relative',
+                      background: 'rgba(139, 92, 246, 0.1)',
+                      borderRadius: '6px',
+                      padding: '8px',
+                      border: '1px solid rgba(139, 92, 246, 0.3)'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        height: '60px',
+                        fontSize: '11px',
+                        color: '#8b5cf6',
+                        fontWeight: '600'
+                      }}>
+                        AST #{index + 1}
+                      </div>
+                      <button
+                        onClick={() => removeASTClientFile(index)}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          background: 'rgba(239, 68, 68, 0.8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fichiers Fiche Verrouillage */}
+            {(localData.lockoutClientFiles && localData.lockoutClientFiles.length > 0) && (
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ 
+                  color: '#ef4444', 
+                  fontSize: '14px', 
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <Lock size={14} />
+                  Fiche Verrouillage ({localData.lockoutClientFiles.length})
+                </h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: '8px'
+                }}>
+                  {localData.lockoutClientFiles.map((file, index) => (
+                    <div key={index} style={{ 
+                      position: 'relative',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      borderRadius: '6px',
+                      padding: '8px',
+                      border: '1px solid rgba(239, 68, 68, 0.3)'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        height: '60px',
+                        fontSize: '11px',
+                        color: '#ef4444',
+                        fontWeight: '600'
+                      }}>
+                        LOTO #{index + 1}
+                      </div>
+                      <button
+                        onClick={() => removeLockoutClientFile(index)}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          background: 'rgba(239, 68, 68, 0.8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Photos */}
+            {(localData.photos && localData.photos.length > 0) && (
+              <div style={{ marginBottom: '8px' }}>
+                <h4 style={{ 
+                  color: '#06b6d4', 
+                  fontSize: '14px', 
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <Camera size={14} />
+                  Photos Diverses ({localData.photos.length})
+                </h4>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: '8px'
+                }}>
+                  {localData.photos.map((photo, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <img
+                        src={photo}
+                        alt={`Photo ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '80px',
+                          objectFit: 'cover',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-secondary)'
+                        }}
+                      />
+                      <button
+                        onClick={() => removePhoto(index)}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          background: 'rgba(239, 68, 68, 0.8)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Message si aucun document */}
+            {(!localData.astClientFiles?.length && !localData.lockoutClientFiles?.length && !localData.photos?.length) && (
               <div style={{
                 color: 'var(--text-muted)',
                 fontSize: '14px',
@@ -1894,7 +2144,7 @@ const Step1ProjectInfo = memo(({
                 textAlign: 'center',
                 padding: '20px'
               }}>
-                Aucune photo ajoutée pour le moment
+                Aucun document ajouté pour le moment
               </div>
             )}
           </div>
@@ -1981,146 +2231,897 @@ const Step1ProjectInfo = memo(({
         )}
 
 
-        {/* Onglet LOTO */}
+        {/* Onglet LOTO - Section complète comme ancien Step1 */}
         {activeTab === 'loto' && (
           <>
-        {/* Section LOTO - Maintenant dans Step 1 */}
-        <div style={cardStyle}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px'
-          }}>
-            <div>
-              <h3 style={{
-                margin: '0 0 8px 0',
+            {/* =================== SECTION VERROUILLAGE/CADENASSAGE COMPLÈTE =================== */}
+            <div style={cardStyle}>
+              <div style={{
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px'
+                marginBottom: '20px'
               }}>
-                <Lock size={20} style={{ color: '#ef4444' }} />
-                {t.lotoSection}
-              </h3>
-              <p style={{ 
-                margin: 0, 
-                color: 'var(--text-muted)', 
-                fontSize: '14px' 
-              }}>
-                {t.lotoDescription}
-              </p>
-            </div>
-            
-            <button
-              onClick={() => setShowLotoSection(!showLotoSection)}
-              style={{
-                background: showLotoSection 
-                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                  : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                color: 'white',
-                border: 'none',
-                padding: '12px 20px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
-              <Lock size={16} />
-              {showLotoSection ? 'Masquer LOTO' : 'Configurer LOTO'}
-            </button>
-          </div>
+                <div>
+                  <h3 style={{
+                    margin: '0 0 8px 0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Lock size={20} style={{ color: '#ef4444' }} />
+                    🔒 Verrouillage / Cadenassage (LOTO)
+                  </h3>
+                  <p style={{ 
+                    margin: 0, 
+                    color: 'var(--text-muted)', 
+                    fontSize: '14px' 
+                  }}>
+                    Documentation des procédures de verrouillage/étiquetage des énergies dangereuses selon les normes RSST. Photographiez chaque étape pour assurer une traçabilité complète.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowLotoSection(!showLotoSection)}
+                  style={{
+                    background: showLotoSection 
+                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                      : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <Lock size={16} />
+                  {showLotoSection ? 'Masquer LOTO' : 'Configurer LOTO'}
+                </button>
+              </div>
           
-          {/* Statistiques LOTO */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-            gap: '12px',
-            marginBottom: showLotoSection ? '24px' : '0'
-          }}>
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                fontSize: '18px',
-                fontWeight: '800',
-                color: '#ef4444',
-                marginBottom: '4px'
-              }}>
-                {localData.lotoProcedure.points.length}
+              {/* Photos générales de verrouillage */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '12px'
+                }}>
+                  <Camera size={18} style={{ color: '#06b6d4' }} />
+                  <label style={{
+                    color: '#e2e8f0',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}>Photos Générales de Verrouillage</label>
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '12px'
+                }}>
+                  <button
+                    onClick={() => handlePhotoCapture('before_lockout')}
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#60a5fa',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <Camera size={14} />Avant verrouillage
+                  </button>
+                  <button
+                    onClick={() => handlePhotoCapture('client_form')}
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#60a5fa',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <FileText size={14} />Fiche client
+                  </button>
+                  <button
+                    onClick={() => handlePhotoCapture('verification')}
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#60a5fa',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <Eye size={14} />Vérification finale
+                  </button>
+                </div>
               </div>
-              <div style={{
-                fontSize: '10px',
-                color: '#dc2626',
-                fontWeight: '500',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Points LOTO
-              </div>
-            </div>
-            
-            <div style={{
-              background: 'rgba(34, 197, 94, 0.1)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                fontSize: '18px',
-                fontWeight: '800',
-                color: '#22c55e',
-                marginBottom: '4px'
-              }}>
-                {localData.lotoProcedure.points.filter(p => p.status === 'completed').length}
-              </div>
-              <div style={{
-                fontSize: '10px',
-                color: '#16a34a',
-                fontWeight: '500',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Complétés
-              </div>
-            </div>
-            
-            <div style={{
-              background: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                fontSize: '18px',
-                fontWeight: '800',
-                color: '#f59e0b',
-                marginBottom: '4px'
-              }}>
-                {localData.lotoProcedure.points.reduce((sum, point) => sum + point.photos.length, 0)}
-              </div>
-              <div style={{
-                fontSize: '10px',
-                color: '#d97706',
-                fontWeight: '500',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Photos
-              </div>
-            </div>
-          </div>
           
-          {/* Configuration LOTO */}
+          {/* =================== SECTION LOTO COMPLÈTE COMME ANCIEN STEP1 =================== */}
+              {/* Points de verrouillage dynamiques */}
+              {localData.lockoutPoints.map((point, index) => (
+                <div key={point.id} style={{
+                  background: 'rgba(15, 23, 42, 0.8)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '16px',
+                    paddingBottom: '12px',
+                    borderBottom: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}>
+                    <h4 style={{ color: '#ef4444', margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                      🔒 Point de Verrouillage #{index + 1}
+                    </h4>
+                    <button
+                      onClick={() => deleteLockoutPoint(point.id)}
+                      style={{
+                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                        border: 'none',
+                        color: 'white',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '14px'
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      Supprimer
+                    </button>
+                  </div>
+
+                  {/* Sélecteur type d'énergie avec procédures */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>Type d'Énergie<span style={{ color: '#ef4444' }}>*</span></label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                      gap: '12px',
+                      marginBottom: '16px'
+                    }}>
+                      {Object.entries(ENERGY_TYPES).map(([key, type]) => {
+                        const IconComponent = type.icon;
+                        return (
+                          <div
+                            key={key}
+                            onClick={() => updateLockoutPoint(point.id, 'energyType', key)}
+                            style={{
+                              padding: '12px',
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              border: `2px solid ${point.energyType === key ? type.color : 'rgba(100, 116, 139, 0.3)'}`,
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              textAlign: 'center',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '8px',
+                              minHeight: '80px',
+                              justifyContent: 'center',
+                              backgroundColor: point.energyType === key ? `${type.color}20` : undefined
+                            }}
+                          >
+                            <IconComponent size={20} color={type.color} />
+                            <span style={{ fontSize: '12px', fontWeight: '500', color: '#e2e8f0' }}>{type.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Procédures recommandées */}
+                    {point.energyType && ENERGY_TYPES[point.energyType] && (
+                      <div style={{
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        border: '1px solid rgba(100, 116, 139, 0.2)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginTop: '12px'
+                      }}>
+                        <h4 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', margin: '0 0 12px' }}>🔧 Procédures à Suivre:</h4>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                          {ENERGY_TYPES[point.energyType].procedures.map((procedure, idx) => {
+                            const isCompleted = (point.completedProcedures || []).includes(idx);
+                            return (
+                              <li
+                                key={idx}
+                                onClick={() => toggleProcedureComplete(point.id, idx)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: '12px',
+                                  marginBottom: '12px',
+                                  padding: '8px',
+                                  borderRadius: '8px',
+                                  transition: 'all 0.3s ease',
+                                  cursor: 'pointer',
+                                  background: isCompleted ? 'rgba(34, 197, 94, 0.1)' : undefined,
+                                  border: isCompleted ? '1px solid rgba(34, 197, 94, 0.3)' : undefined
+                                }}
+                              >
+                                <div style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  border: '2px solid rgba(100, 116, 139, 0.5)',
+                                  borderRadius: '4px',
+                                  background: isCompleted ? '#22c55e' : 'rgba(15, 23, 42, 0.8)',
+                                  borderColor: isCompleted ? '#22c55e' : 'rgba(100, 116, 139, 0.5)',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.3s ease',
+                                  flexShrink: 0,
+                                  marginTop: '2px',
+                                  color: isCompleted ? 'white' : undefined
+                                }}>
+                                  {isCompleted && <Check size={12} />}
+                                </div>
+                                <span style={{
+                                  color: isCompleted ? '#a7f3d0' : '#94a3b8',
+                                  fontSize: '13px',
+                                  lineHeight: '1.5',
+                                  flex: 1
+                                }}>{procedure}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <div style={{
+                          marginTop: '12px',
+                          paddingTop: '12px',
+                          borderTop: '1px solid rgba(100, 116, 139, 0.2)'
+                        }}>
+                          <div style={{
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            borderRadius: '8px',
+                            height: '6px',
+                            overflow: 'hidden',
+                            marginBottom: '8px'
+                          }}>
+                            <div style={{
+                              height: '100%',
+                              background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                              transition: 'width 0.5s ease',
+                              borderRadius: '8px',
+                              width: `${getProcedureProgress(point).percentage}%`
+                            }} />
+                          </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: '#64748b',
+                            textAlign: 'center'
+                          }}>
+                            {getProcedureProgress(point).completed} / {getProcedureProgress(point).total} étapes complétées ({getProcedureProgress(point).percentage}%)
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Détails équipement */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px',
+                    alignItems: 'start',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <Settings style={{ width: '18px', height: '18px' }} />Nom de l'Équipement
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Disjoncteur principal"
+                        value={point.equipmentName}
+                        onChange={(e) => updateLockoutPoint(point.id, 'equipmentName', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <MapPin style={{ width: '18px', height: '18px' }} />Localisation
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Panneau électrique B-2"
+                        value={point.location}
+                        onChange={(e) => updateLockoutPoint(point.id, 'location', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px',
+                    alignItems: 'start',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <Lock style={{ width: '18px', height: '18px' }} />Type de Cadenas/Dispositif
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Cadenas rouge C-Secur360"
+                        value={point.lockType}
+                        onChange={(e) => updateLockoutPoint(point.id, 'lockType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <FileText style={{ width: '18px', height: '18px' }} />Numéro d'Étiquette
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="TAG-123456"
+                        value={point.tagNumber}
+                        onChange={(e) => updateLockoutPoint(point.id, 'tagNumber', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Vérification avec boutons temps */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px',
+                    alignItems: 'start',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <User style={{ width: '18px', height: '18px' }} />Vérifié par
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nom de la personne"
+                        value={point.verifiedBy}
+                        onChange={(e) => updateLockoutPoint(point.id, 'verifiedBy', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#e2e8f0',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        marginBottom: '8px'
+                      }}>
+                        <Clock style={{ width: '18px', height: '18px' }} />Heure de Vérification
+                      </label>
+                      <input
+                        type="time"
+                        value={point.verificationTime}
+                        onChange={(e) => updateLockoutPoint(point.id, 'verificationTime', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(100, 116, 139, 0.3)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '15px',
+                          fontWeight: '500',
+                          transition: 'all 0.3s ease',
+                          backdropFilter: 'blur(10px)',
+                          boxSizing: 'border-box',
+                          minHeight: '50px'
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                        <button
+                          onClick={() => setTimeNow(point.id)}
+                          style={{
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                            color: '#4ade80',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            flex: 1,
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Clock size={12} />Maintenant
+                        </button>
+                        <button
+                          onClick={() => setTimePlus(point.id, 5)}
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.1)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            color: '#fbbf24',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            flex: 1,
+                            justifyContent: 'center'
+                          }}
+                        >
+                          +5min
+                        </button>
+                        <button
+                          onClick={() => setTimePlus(point.id, 15)}
+                          style={{
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            color: '#a78bfa',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            flex: 1,
+                            justifyContent: 'center'
+                          }}
+                        >
+                          +15min
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>
+                      <FileText style={{ width: '18px', height: '18px' }} />Notes et Observations
+                    </label>
+                    <textarea
+                      placeholder="Observations particulières, difficultés rencontrées, modifications apportées..."
+                      value={point.notes}
+                      onChange={(e) => updateLockoutPoint(point.id, 'notes', e.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: '80px',
+                        padding: '14px 16px',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '2px solid rgba(100, 116, 139, 0.3)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '15px',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        backdropFilter: 'blur(10px)',
+                        resize: 'vertical',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {/* Photos spécifiques au point */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: '#e2e8f0',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>
+                      <Camera style={{ width: '18px', height: '18px' }} />Photos de ce Point de Verrouillage
+                    </label>
+                    
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      <button
+                        onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          color: '#60a5fa',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <Camera size={14} />Pendant verrouillage
+                      </button>
+                      <button
+                        onClick={() => handlePhotoCapture('lockout_device', point.id)}
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          color: '#60a5fa',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <Lock size={14} />Dispositif
+                      </button>
+                      <button
+                        onClick={() => handlePhotoCapture('verification', point.id)}
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          color: '#60a5fa',
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <Eye size={14} />Vérification
+                      </button>
+                    </div>
+                    
+                    {/* Affichage photos du point */}
+                    {localData.lockoutPhotos.filter(photo => photo.lockoutPointId === point.id).length > 0 ? (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                        gap: '8px'
+                      }}>
+                        {localData.lockoutPhotos.filter(photo => photo.lockoutPointId === point.id).map(photo => (
+                          <div key={photo.id} style={{
+                            position: 'relative',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            borderRadius: '8px',
+                            overflow: 'hidden'
+                          }}>
+                            <img src={photo.url} alt={photo.caption} style={{
+                              width: '100%',
+                              height: '80px',
+                              objectFit: 'cover'
+                            }} />
+                            <button
+                              onClick={() => deletePhoto(photo.id)}
+                              style={{
+                                position: 'absolute',
+                                top: '4px',
+                                right: '4px',
+                                background: 'rgba(239, 68, 68, 0.8)',
+                                border: 'none',
+                                color: 'white',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                            <div style={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              background: 'rgba(0, 0, 0, 0.8)',
+                              color: 'white',
+                              padding: '4px 6px',
+                              fontSize: '10px',
+                              textAlign: 'center'
+                            }}>
+                              {getCategoryLabel(photo.category)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => handlePhotoCapture('during_lockout', point.id)}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '2px dashed rgba(239, 68, 68, 0.3)',
+                          borderRadius: '12px',
+                          padding: '40px 20px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minHeight: '140px'
+                        }}
+                      >
+                        <Camera size={32} style={{ color: '#f87171', marginBottom: '12px' }} />
+                        <h4 style={{ margin: '0 0 8px', color: '#f87171' }}>Aucune photo</h4>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8' }}>
+                          Cliquez pour prendre une photo avec l'appareil
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Bouton ajouter point */}
+              <div style={{ marginTop: localData.lockoutPoints.length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+                <button
+                  onClick={addLockoutPoint}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    border: 'none',
+                    color: 'white',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <Plus size={20} />Ajouter Point de Verrouillage
+                </button>
+              </div>
+
+              {/* Message si aucun point */}
+              {localData.lockoutPoints.length === 0 && (
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  textAlign: 'center',
+                  color: '#60a5fa'
+                }}>
+                  <Lock size={32} style={{ marginBottom: '12px' }} />
+                  <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucun Point de Verrouillage</h4>
+                  <p style={{ margin: 0, fontSize: '14px' }}>
+                    Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
+                  </p>
+                </div>
+              )}
+
+              {/* Validation LOTO */}
+              {localData.lockoutPoints.length > 0 && (
+                <div style={{
+                  background: localData.lockoutPoints.filter(point => {
+                    const progress = getProcedureProgress(point);
+                    return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+                  }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                  border: `1px solid ${localData.lockoutPoints.filter(point => {
+                    const progress = getProcedureProgress(point);
+                    return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+                  }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginTop: '16px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '8px'
+                  }}>
+                    <Shield size={20} color={localData.lockoutPoints.filter(point => {
+                      const progress = getProcedureProgress(point);
+                      return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+                    }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? '#22c55e' : '#f59e0b'} />
+                    <h4 style={{
+                      margin: 0,
+                      color: localData.lockoutPoints.filter(point => {
+                        const progress = getProcedureProgress(point);
+                        return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+                      }).length >= Math.ceil(localData.lockoutPoints.length * 0.8) ? '#22c55e' : '#f59e0b'
+                    }}>État Verrouillage</h4>
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#e2e8f0',
+                    marginBottom: '8px'
+                  }}>
+                    {localData.lockoutPoints.filter(point => {
+                      const progress = getProcedureProgress(point);
+                      return progress.percentage >= 80 && point.equipmentName && point.verifiedBy;
+                    }).length}/{localData.lockoutPoints.length} points complétés
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* =================== FIN DU COMPOSANT =================== */}
           {showLotoSection && (
             <div>
               {/* Formulaire nouveau point LOTO */}
