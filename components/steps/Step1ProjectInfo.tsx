@@ -1228,15 +1228,15 @@ const Step1ProjectInfo = memo(({
         }
       />
       
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: window.innerWidth < 768 ? '12px' : '24px' }}>
 
         {/* Navigation par onglets */}
         <div style={{
           display: 'flex',
-          marginBottom: '24px',
+          marginBottom: window.innerWidth < 768 ? '16px' : '24px',
           background: 'var(--bg-secondary)',
           borderRadius: '12px',
-          padding: '6px',
+          padding: window.innerWidth < 768 ? '4px' : '6px',
           border: '1px solid var(--border-secondary)'
         }}>
           {(['project', 'loto'] as const).map((tab) => (
@@ -1245,11 +1245,11 @@ const Step1ProjectInfo = memo(({
               onClick={() => setActiveTab(tab)}
               style={{
                 flex: 1,
-                padding: '12px 16px',
+                padding: window.innerWidth < 768 ? '8px 12px' : '12px 16px',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: window.innerWidth < 768 ? '12px' : '14px',
                 fontWeight: '600',
                 transition: 'all 0.2s ease',
                 background: activeTab === tab 
@@ -1392,7 +1392,7 @@ const Step1ProjectInfo = memo(({
                 />
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>{t.clientPhone}</label>
                   <input
@@ -1431,7 +1431,7 @@ const Step1ProjectInfo = memo(({
             </h3>
             
             <div style={{ display: 'grid', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>{t.projectNumber} *</label>
                   <input
@@ -1466,7 +1466,7 @@ const Step1ProjectInfo = memo(({
                 />
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>{t.startDate} *</label>
                   <input
@@ -1921,8 +1921,8 @@ const Step1ProjectInfo = memo(({
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '16px'
+            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+            gap: window.innerWidth < 768 ? '12px' : '16px'
           }}>
             <div>
               <label style={labelStyle}>{t.emergencyContact} *</label>
@@ -2078,8 +2078,8 @@ const Step1ProjectInfo = memo(({
           
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '12px',
+            gridTemplateColumns: window.innerWidth < 768 ? 'repeat(auto-fit, minmax(140px, 1fr))' : 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: window.innerWidth < 768 ? '8px' : '12px',
             marginBottom: '20px'
           }}>
             {/* AST Client - Fonctionnel */}
@@ -2087,7 +2087,7 @@ const Step1ProjectInfo = memo(({
               background: 'rgba(139, 92, 246, 0.1)',
               border: '2px dashed rgba(139, 92, 246, 0.3)',
               borderRadius: '12px',
-              padding: '16px 12px',
+              padding: window.innerWidth < 768 ? '12px 8px' : '16px 12px',
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -2099,12 +2099,12 @@ const Step1ProjectInfo = memo(({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Upload size={24} style={{ color: '#8b5cf6' }} />
+                <Upload size={window.innerWidth < 768 ? 20 : 24} style={{ color: '#8b5cf6' }} />
                 <div>
-                  <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '2px', fontSize: '14px' }}>
+                  <div style={{ fontWeight: '600', color: '#8b5cf6', marginBottom: '2px', fontSize: window.innerWidth < 768 ? '12px' : '14px' }}>
                     AST Client
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: window.innerWidth < 768 ? '10px' : '11px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -2135,12 +2135,12 @@ const Step1ProjectInfo = memo(({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Upload size={24} style={{ color: '#ef4444' }} />
+                <Upload size={window.innerWidth < 768 ? 20 : 24} style={{ color: '#ef4444' }} />
                 <div>
-                  <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '2px', fontSize: '14px' }}>
+                  <div style={{ fontWeight: '600', color: '#ef4444', marginBottom: '2px', fontSize: window.innerWidth < 768 ? '12px' : '14px' }}>
                     Fiche Verrouillage Client
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: window.innerWidth < 768 ? '10px' : '11px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -2159,7 +2159,7 @@ const Step1ProjectInfo = memo(({
               background: 'rgba(6, 182, 212, 0.1)',
               border: '2px dashed rgba(6, 182, 212, 0.3)',
               borderRadius: '12px',
-              padding: '16px 12px',
+              padding: window.innerWidth < 768 ? '12px 8px' : '16px 12px',
               textAlign: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -2171,12 +2171,12 @@ const Step1ProjectInfo = memo(({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Upload size={24} style={{ color: '#06b6d4' }} />
+                <Upload size={window.innerWidth < 768 ? 20 : 24} style={{ color: '#06b6d4' }} />
                 <div>
-                  <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '2px', fontSize: '14px' }}>
+                  <div style={{ fontWeight: '600', color: '#06b6d4', marginBottom: '2px', fontSize: window.innerWidth < 768 ? '12px' : '14px' }}>
                     Photos Diverses
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: window.innerWidth < 768 ? '10px' : '11px', color: 'var(--text-muted)' }}>
                     Cliquer pour ajouter
                   </div>
                 </div>
@@ -2195,7 +2195,7 @@ const Step1ProjectInfo = memo(({
           <div style={{
             background: 'var(--bg-primary)',
             borderRadius: '8px',
-            padding: '16px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
             border: '1px solid var(--border-secondary)'
           }}>
             {/* En-tête avec compteurs */}
@@ -2831,10 +2831,10 @@ const Step1ProjectInfo = memo(({
                   {/* Détails équipement */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '16px',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                    gap: window.innerWidth < 768 ? '12px' : '16px',
                     alignItems: 'start',
-                    marginBottom: '16px'
+                    marginBottom: window.innerWidth < 768 ? '12px' : '16px'
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <label style={{
@@ -2906,10 +2906,10 @@ const Step1ProjectInfo = memo(({
 
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '16px',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                    gap: window.innerWidth < 768 ? '12px' : '16px',
                     alignItems: 'start',
-                    marginBottom: '16px'
+                    marginBottom: window.innerWidth < 768 ? '12px' : '16px'
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <label style={{
@@ -2917,11 +2917,11 @@ const Step1ProjectInfo = memo(({
                         alignItems: 'center',
                         gap: '8px',
                         color: '#e2e8f0',
-                        fontSize: '14px',
+                        fontSize: window.innerWidth < 768 ? '12px' : '14px',
                         fontWeight: '600',
                         marginBottom: '8px'
                       }}>
-                        <Lock style={{ width: '18px', height: '18px' }} />Type de Cadenas/Dispositif
+                        <Lock style={{ width: window.innerWidth < 768 ? '16px' : '18px', height: window.innerWidth < 768 ? '16px' : '18px' }} />Type de Cadenas/Dispositif
                       </label>
                       <input
                         type="text"
@@ -2982,10 +2982,10 @@ const Step1ProjectInfo = memo(({
                   {/* Vérification avec boutons temps */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '16px',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                    gap: window.innerWidth < 768 ? '12px' : '16px',
                     alignItems: 'start',
-                    marginBottom: '16px'
+                    marginBottom: window.innerWidth < 768 ? '12px' : '16px'
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <label style={{
@@ -2993,11 +2993,11 @@ const Step1ProjectInfo = memo(({
                         alignItems: 'center',
                         gap: '8px',
                         color: '#e2e8f0',
-                        fontSize: '14px',
+                        fontSize: window.innerWidth < 768 ? '12px' : '14px',
                         fontWeight: '600',
                         marginBottom: '8px'
                       }}>
-                        <User style={{ width: '18px', height: '18px' }} />Vérifié par
+                        <User style={{ width: window.innerWidth < 768 ? '16px' : '18px', height: window.innerWidth < 768 ? '16px' : '18px' }} />Vérifié par
                       </label>
                       <input
                         type="text"
@@ -3193,18 +3193,18 @@ const Step1ProjectInfo = memo(({
                           background: 'rgba(59, 130, 246, 0.1)',
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                           color: '#60a5fa',
-                          padding: '8px 12px',
+                          padding: window.innerWidth < 768 ? '6px 10px' : '8px 12px',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          fontSize: '12px',
+                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
                           fontWeight: '500'
                         }}
                       >
-                        <Lock size={14} />Dispositif
+                        <Lock size={window.innerWidth < 768 ? 12 : 14} />Dispositif
                       </button>
                       <button
                         onClick={() => handlePhotoCapture('verification', point.id)}
@@ -3212,18 +3212,18 @@ const Step1ProjectInfo = memo(({
                           background: 'rgba(59, 130, 246, 0.1)',
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                           color: '#60a5fa',
-                          padding: '8px 12px',
+                          padding: window.innerWidth < 768 ? '6px 10px' : '8px 12px',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          fontSize: '12px',
+                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
                           fontWeight: '500'
                         }}
                       >
-                        <Eye size={14} />Vérification
+                        <Eye size={window.innerWidth < 768 ? 12 : 14} />Vérification
                       </button>
                     </div>
                     
@@ -3314,14 +3314,14 @@ const Step1ProjectInfo = memo(({
               ))}
 
               {/* Bouton ajouter point */}
-              <div style={{ marginTop: (localData.lockoutPoints || []).length > 0 ? '24px' : '0', marginBottom: '24px' }}>
+              <div style={{ marginTop: (localData.lockoutPoints || []).length > 0 ? (window.innerWidth < 768 ? '16px' : '24px') : '0', marginBottom: window.innerWidth < 768 ? '16px' : '24px' }}>
                 <button
                   onClick={addLockoutPoint}
                   style={{
                     background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                     border: 'none',
                     color: 'white',
-                    padding: '12px 20px',
+                    padding: window.innerWidth < 768 ? '10px 16px' : '12px 20px',
                     borderRadius: '12px',
                     fontWeight: '600',
                     cursor: 'pointer',
@@ -3329,10 +3329,10 @@ const Step1ProjectInfo = memo(({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    fontSize: '14px'
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px'
                   }}
                 >
-                  <Plus size={20} />Ajouter Point de Verrouillage
+                  <Plus size={window.innerWidth < 768 ? 16 : 20} />Ajouter Point de Verrouillage
                 </button>
               </div>
 
@@ -3342,13 +3342,13 @@ const Step1ProjectInfo = memo(({
                   background: 'rgba(59, 130, 246, 0.1)',
                   border: '1px solid rgba(59, 130, 246, 0.3)',
                   borderRadius: '12px',
-                  padding: '24px',
+                  padding: window.innerWidth < 768 ? '16px' : '24px',
                   textAlign: 'center',
                   color: '#60a5fa'
                 }}>
-                  <Lock size={32} style={{ marginBottom: '12px' }} />
-                  <h4 style={{ margin: '0 0 8px', color: '#60a5fa' }}>Aucun Point de Verrouillage</h4>
-                  <p style={{ margin: 0, fontSize: '14px' }}>
+                  <Lock size={window.innerWidth < 768 ? 24 : 32} style={{ marginBottom: '12px' }} />
+                  <h4 style={{ margin: '0 0 8px', color: '#60a5fa', fontSize: window.innerWidth < 768 ? '16px' : '18px' }}>Aucun Point de Verrouillage</h4>
+                  <p style={{ margin: 0, fontSize: window.innerWidth < 768 ? '12px' : '14px' }}>
                     Cliquez sur "Ajouter Point de Verrouillage" pour documenter les procédures LOTO
                   </p>
                 </div>
