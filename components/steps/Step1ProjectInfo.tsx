@@ -1287,13 +1287,15 @@ const Step1ProjectInfo = memo(({
             margin: '0 0 16px 0',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            fontSize: window.innerWidth < 768 ? '16px' : '18px',
+            flexWrap: 'wrap'
           }}>
             <Hash size={20} style={{ color: '#10b981' }} />
             {t.astNumber}
           </h3>
           
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: window.innerWidth < 768 ? '8px' : '12px', alignItems: 'center', flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap' }}>
             <input
               type="text"
               value={localData.astNumber}
@@ -1313,16 +1315,17 @@ const Step1ProjectInfo = memo(({
                 background: 'var(--gradient-success)',
                 color: 'white',
                 border: 'none',
-                padding: '12px 16px',
+                padding: window.innerWidth < 768 ? '8px 12px' : '12px 16px',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                fontSize: window.innerWidth < 768 ? '12px' : '14px'
               }}
             >
-              <Star size={16} />
+              <Star size={window.innerWidth < 768 ? 14 : 16} />
               {t.generate}
             </button>
             
@@ -1354,8 +1357,8 @@ const Step1ProjectInfo = memo(({
         {/* Grid principal */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
-          gap: '24px'
+          gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(500px, 1fr))',
+          gap: window.innerWidth < 768 ? '16px' : '24px'
         }}>
           {/* Informations Client */}
           <div style={cardStyle}>
@@ -1363,9 +1366,11 @@ const Step1ProjectInfo = memo(({
               margin: '0 0 20px 0',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              fontSize: window.innerWidth < 768 ? '16px' : '18px',
+              flexWrap: 'wrap'
             }}>
-              <Building size={20} style={{ color: '#3b82f6' }} />
+              <Building size={window.innerWidth < 768 ? 18 : 20} style={{ color: '#3b82f6' }} />
               {t.clientSection}
             </h3>
             
@@ -1424,9 +1429,11 @@ const Step1ProjectInfo = memo(({
               margin: '0 0 20px 0',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              fontSize: window.innerWidth < 768 ? '16px' : '18px',
+              flexWrap: 'wrap'
             }}>
-              <FileText size={20} style={{ color: '#8b5cf6' }} />
+              <FileText size={window.innerWidth < 768 ? 18 : 20} style={{ color: '#8b5cf6' }} />
               {t.projectSection}
             </h3>
             
