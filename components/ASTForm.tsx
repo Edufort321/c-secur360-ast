@@ -549,13 +549,13 @@ const ASTForm: React.FC<ASTFormProps> = ({
   }) => {
     return (
       <div 
-        className="float-animation glow-effect"
+        className=""
         style={{
           background: 'var(--gradient-bg-primary)',
-          padding: isMobile ? '16px' : '32px',
+          padding: isMobile ? '8px' : '16px',
           borderRadius: isMobile ? '16px' : '32px',
-          border: '4px solid var(--color-warning)',
-          boxShadow: '0 0 50px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(245, 158, 11, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -569,30 +569,10 @@ const ASTForm: React.FC<ASTFormProps> = ({
         }}>
           <Logo 
             size={isMobile ? 'sm' : 'md'} 
-            variant="glow" 
-            showText={true}
+            variant="default" 
+            showText={false}
           />
         </div>
-        
-        {/* Effet brillance animé */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: '-100%',
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent)',
-          animation: 'shine 2.5s ease-in-out infinite'
-        }} />
-        
-        {/* Effet pulse border */}
-        <div style={{
-          position: 'absolute',
-          inset: '-10px',
-          border: '2px solid rgba(245, 158, 11, 0.3)',
-          borderRadius: isMobile ? '24px' : '40px',
-          animation: 'pulse 3s ease-in-out infinite'
-        }} />
       </div>
     );
   }, []);
