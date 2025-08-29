@@ -442,23 +442,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           }} />
         </div>
       </div>
-          
-          <div style={{
-            width: '100%',
-            height: '8px',
-            background: 'rgba(100, 116, 139, 0.3)',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            margin: '16px 0'
-          }}>
-            <div style={{
-              height: '100%',
-              background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-              transition: 'width 0.5s ease',
-              width: `${overallProgress * 100}%`
-            }} />
-          </div>
-      </div>
 
       {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
       <div style={{
