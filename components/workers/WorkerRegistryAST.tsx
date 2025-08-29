@@ -294,6 +294,15 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const [showSmsDialog, setShowSmsDialog] = useState(false);
   const [customSmsMessage, setCustomSmsMessage] = useState('');
   
+  // États pour l'ajout de travailleur
+  const [newWorker, setNewWorker] = useState({
+    name: '',
+    company: '',
+    phoneNumber: '',
+    employeeNumber: '',
+    certification: []
+  });
+  
   // Refs pour la signature
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -336,7 +345,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const addWorker = (workerData: Partial<WorkerRegistryEntry>) => {
     if (readOnly) return;
     
-    const newWorker: WorkerRegistryEntry = {
+    const worker: WorkerRegistryEntry = {
       id: `worker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: workerData.name || '',
       company: workerData.company || '',
@@ -356,11 +365,33 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       lastActivity: new Date().toISOString()
     };
     
-    const updatedWorkers = [...workers, newWorker];
+    const updatedWorkers = [...workers, worker];
     setWorkers(updatedWorkers);
     const newStats = calculateStats(updatedWorkers);
     setStats(newStats);
     onStatsChange?.(newStats);
+  };
+
+  const handleAddWorker = () => {
+    if (!newWorker.name.trim() || !newWorker.company.trim()) {
+      alert('Nom et entreprise requis');
+      return;
+    }
+    
+    addWorker(newWorker);
+    
+    // Reset du formulaire
+    setNewWorker({
+      name: '',
+      company: '',
+      phoneNumber: '',
+      employeeNumber: '',
+      certification: []
+    });
+    setShowAddWorker(false);
+    
+    // Feedback utilisateur
+    alert(`Travailleur "${newWorker.name}" ajouté avec succès !`);
   };
   
   const startWork = (workerId: string) => {
@@ -1406,6 +1437,259 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                 }}
               >
                 ✓ Valider et Signer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal Ajouter Travailleur */}
+      {showAddWorker && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1f2937',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90%',
+            overflow: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ color: 'white', margin: 0 }}>
+                {t.addWorker}
+              </h3>
+              <button
+                onClick={() => setShowAddWorker(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            {/* Formulaire d'ajout */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  {t.workerName} *
+                </label>
+                <input
+                  type="text"
+                  value={newWorker.name}
+                  onChange={(e) => setNewWorker({...newWorker, name: e.target.value})}
+                  placeholder="Nom complet du travailleur"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  {t.company} *
+                </label>
+                <input
+                  type="text"
+                  value={newWorker.company}
+                  onChange={(e) => setNewWorker({...newWorker, company: e.target.value})}
+                  placeholder="Nom de l'entreprise"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  {t.phoneNumber}
+                </label>
+                <input
+                  type="tel"
+                  value={newWorker.phoneNumber}
+                  onChange={(e) => setNewWorker({...newWorker, phoneNumber: e.target.value})}
+                  placeholder="+1 514 123-4567"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{
+                  color: '#e2e8f0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  {t.employeeNumber}
+                </label>
+                <input
+                  type="text"
+                  value={newWorker.employeeNumber}
+                  onChange={(e) => setNewWorker({...newWorker, employeeNumber: e.target.value})}
+                  placeholder="Numéro d'employé"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Certifications */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                color: '#e2e8f0',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                {t.certifications} (optionnel)
+              </label>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginBottom: '12px'
+              }}>
+                {['Espaces confinés', 'LOTO', 'Travail en hauteur', 'Soudure', 'Gaz', 'Premiers soins'].map((cert) => (
+                  <button
+                    key={cert}
+                    onClick={() => {
+                      if (newWorker.certification.includes(cert)) {
+                        setNewWorker({
+                          ...newWorker,
+                          certification: newWorker.certification.filter(c => c !== cert)
+                        });
+                      } else {
+                        setNewWorker({
+                          ...newWorker,
+                          certification: [...newWorker.certification, cert]
+                        });
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      border: newWorker.certification.includes(cert) ? 
+                        '2px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                      background: newWorker.certification.includes(cert) ? 
+                        'rgba(34, 197, 94, 0.2)' : 'rgba(15, 23, 42, 0.8)',
+                      color: newWorker.certification.includes(cert) ? '#86efac' : '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {newWorker.certification.includes(cert) ? '✓ ' : ''}{cert}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowAddWorker(false)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #6b7280',
+                  background: 'rgba(107, 114, 128, 0.1)',
+                  color: '#9ca3af',
+                  cursor: 'pointer'
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAddWorker}
+                disabled={!newWorker.name.trim() || !newWorker.company.trim()}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #3b82f6',
+                  background: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                    'rgba(107, 114, 128, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                  color: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                    '#6b7280' : '#93c5fd',
+                  cursor: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                    'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  opacity: (!newWorker.name.trim() || !newWorker.company.trim()) ? 0.5 : 1
+                }}
+              >
+                <Plus size={16} style={{ marginRight: '6px', display: 'inline' }} />
+                {t.addWorker}
               </button>
             </div>
           </div>
