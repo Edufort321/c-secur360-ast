@@ -1045,7 +1045,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                         style={{
                           padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                           borderRadius: '8px',
-                          border: 'none',
                           cursor: 'pointer',
                           fontSize: window.innerWidth < 768 ? '11px' : '12px',
                           fontWeight: '500',
@@ -1066,7 +1065,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                         style={{
                           padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                           borderRadius: '8px',
-                          border: 'none',
                           cursor: 'pointer',
                           fontSize: window.innerWidth < 768 ? '11px' : '12px',
                           fontWeight: '500',
@@ -1087,7 +1085,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                         style={{
                           padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                           borderRadius: '8px',
-                          border: 'none',
                           cursor: 'pointer',
                           fontSize: window.innerWidth < 768 ? '11px' : '12px',
                           fontWeight: '500',
@@ -1155,7 +1152,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                           style={{
                             padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                             borderRadius: '8px',
-                            border: 'none',
                             cursor: 'pointer',
                             fontSize: window.innerWidth < 768 ? '11px' : '12px',
                             fontWeight: '500',
@@ -1176,7 +1172,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                           style={{
                             padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
                             borderRadius: '8px',
-                            border: 'none',
                             cursor: 'pointer',
                             fontSize: window.innerWidth < 768 ? '11px' : '12px',
                             fontWeight: '500',
@@ -1222,7 +1217,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                 marginTop: '16px',
                 padding: window.innerWidth < 768 ? '10px 16px' : '12px 20px',
                 borderRadius: '8px',
-                border: 'none',
                 cursor: 'pointer',
                 fontSize: window.innerWidth < 768 ? '12px' : '14px',
                 fontWeight: '500',
@@ -1357,7 +1351,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                   style={{
                     padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
                     borderRadius: '8px',
-                    border: 'none',
                     cursor: 'pointer',
                     fontSize: window.innerWidth < 768 ? '12px' : '14px',
                     fontWeight: '500',
@@ -1383,7 +1376,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
                   style={{
                     padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
                     borderRadius: '8px',
-                    border: 'none',
                     cursor: 'pointer',
                     fontSize: window.innerWidth < 768 ? '12px' : '14px',
                     fontWeight: '500',
