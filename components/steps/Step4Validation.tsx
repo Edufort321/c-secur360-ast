@@ -231,7 +231,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
 
   const handleAddReviewer = () => {
     if (!newReviewer.name.trim() || !newReviewer.role.trim()) {
-      console.log('Nom ou rôle requis');
+      alert('Nom et rôle requis');
       return;
     }
     
@@ -244,8 +244,6 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
       comments: newReviewer.comments.trim()
     };
     
-    console.log('Ajout du réviseur:', reviewer);
-    
     const newReviewers = [...reviewers, reviewer];
     setReviewers(newReviewers);
     updateFormData(criteria, newReviewers);
@@ -254,7 +252,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
     setNewReviewer({ name: '', role: '', email: '', comments: '' });
     setIsAddingReviewer(false);
     
-    console.log('Réviseur ajouté avec succès, nouveau total:', newReviewers.length);
+    // Feedback utilisateur
+    alert(`Réviseur "${reviewer.name}" ajouté avec succès !`);
   };
 
   const handleReviewerAction = (reviewerId: string, action: 'approve' | 'reject', rating?: number) => {
@@ -312,471 +311,36 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   };
 
   return (
-    <>
-      {/* CSS Styles */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .validation-container {
-            padding: 0;
-            color: #ffffff;
-          }
-          
-          .validation-header {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            border-radius: 16px;
-            padding: window.innerWidth < 768 ? 16px : 24px;
-            margin-bottom: window.innerWidth < 768 ? 16px : 24px;
-            position: relative;
-            overflow: hidden;
-          }
-          
-          .validation-title {
-            color: #22c55e;
-            font-size: window.innerWidth < 768 ? 18px : 20px;
-            font-weight: 700;
-            margin: 0 0 8px 0;
-            display: flex;
-            align-items: center;
-            gap: window.innerWidth < 768 ? 8px : 12px;
-            flex-wrap: wrap;
-          }
-          
-          .validation-subtitle {
-            color: #16a34a;
-            margin: 0;
-            font-size: 14px;
-          }
-          
-          .validation-stats {
-            display: grid;
-            grid-template-columns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))';
-            gap: window.innerWidth < 768 ? 12px : 16px;
-            margin-top: window.innerWidth < 768 ? 16px : 20px;
-          }
-          
-          .stat-card {
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-            transition: all 0.3s ease;
-          }
-          
-          .stat-card:hover {
-            transform: translateY(-2px);
-            background: rgba(15, 23, 42, 0.8);
-          }
-          
-          .stat-value {
-            font-size: 24px;
-            font-weight: 800;
-            color: #22c55e;
-            margin-bottom: 4px;
-          }
-          
-          .stat-label {
-            font-size: 12px;
-            color: #16a34a;
-            font-weight: 500;
-          }
-          
-          .section-card {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 16px;
-            padding: window.innerWidth < 768 ? 16px : 24px;
-            margin-bottom: window.innerWidth < 768 ? 16px : 24px;
-          }
-          
-          .section-title {
-            color: #e2e8f0;
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 20px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          
-          .criteria-grid {
-            display: grid;
-            grid-template-columns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))';
-            gap: window.innerWidth < 768 ? 12px : 16px;
-          }
-          
-          .criteria-item {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .criteria-item:hover {
-            background: rgba(15, 23, 42, 0.8);
-            border-color: rgba(34, 197, 94, 0.5);
-          }
-          
-          .criteria-item.valid {
-            border-color: #22c55e;
-            background: rgba(34, 197, 94, 0.1);
-          }
-          
-          .criteria-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-          }
-          
-          .criteria-name {
-            color: #e2e8f0;
-            font-weight: 500;
-            font-size: 14px;
-          }
-          
-          .criteria-status {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: white;
-          }
-          
-          .reviewer-list {
-            display: grid;
-            gap: 16px;
-          }
-          
-          .reviewer-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            transition: all 0.3s ease;
-          }
-          
-          .reviewer-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-          }
-          
-          .reviewer-info h4 {
-            color: #e2e8f0;
-            margin: 0 0 4px 0;
-            font-size: 16px;
-            font-weight: 600;
-          }
-          
-          .reviewer-info p {
-            color: #94a3b8;
-            margin: 0;
-            font-size: 14px;
-          }
-          
-          .reviewer-status {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-          }
-          
-          .reviewer-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-          }
-          
-          .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          }
-          
-          .btn-approve {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.4);
-          }
-          
-          .btn-reject {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-          }
-          
-          .btn-edit {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 1px solid rgba(59, 130, 246, 0.4);
-          }
-          
-          .btn:hover {
-            transform: translateY(-1px);
-            opacity: 0.9;
-          }
-          
-          .add-reviewer-form {
-            background: rgba(15, 23, 42, 0.8);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 16px;
-          }
-          
-          .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 16px;
-          }
-          
-          .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          }
-          
-          .form-label {
-            color: #e2e8f0;
-            font-size: 14px;
-            font-weight: 500;
-          }
-          
-          .form-input {
-            padding: 10px 12px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid rgba(100, 116, 139, 0.3);
-            border-radius: 8px;
-            color: #ffffff;
-            font-size: 14px;
-            transition: all 0.3s ease;
-          }
-          
-          .form-input:focus {
-            outline: none;
-            border-color: #22c55e;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
-          }
-          
-          .form-textarea {
-            min-height: 80px;
-            resize: vertical;
-            grid-column: 1 / -1;
-          }
-          
-          .comments-section {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(100, 116, 139, 0.3);
-          }
-          
-          .comments-text {
-            color: #94a3b8;
-            font-size: 14px;
-            line-height: 1.5;
-            margin: 8px 0;
-          }
-          
-          .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(100, 116, 139, 0.3);
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 16px 0;
-          }
-          
-          .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            transition: width 0.5s ease;
-          }
-          
-          .validation-complete {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin-top: 24px;
-          }
-          
-          .validation-complete .icon {
-            color: #22c55e;
-            margin-bottom: 12px;
-          }
-          
-          .validation-complete h3 {
-            color: #22c55e;
-            margin: 0 0 8px 0;
-            font-size: 18px;
-          }
-          
-          .validation-complete p {
-            color: #16a34a;
-            margin: 0;
-            font-size: 14px;
-          }
-          
-          /* Responsive */
-          @media (max-width: 768px) {
-            .validation-stats {
-              grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .criteria-grid {
-              grid-template-columns: 1fr;
-            }
-            
-            .form-grid {
-              grid-template-columns: 1fr;
-            }
-            
-            .reviewer-header {
-              flex-direction: column;
-              gap: 12px;
-              align-items: flex-start;
-            }
-            
-            .reviewer-actions {
-              flex-wrap: wrap;
-            }
-          }
-        `
-      }} />
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+      {/* Styles minimes pour cohérence */}
 
-      <div style={{ 
-        padding: window.innerWidth < 768 ? '12px' : '24px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        color: '#ffffff'
-      }}>
-        {/* Header avec statistiques */}
-        <div style={{
-          background: 'rgba(34, 197, 94, 0.1)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '16px' : '24px',
-          marginBottom: window.innerWidth < 768 ? '16px' : '24px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <h2 style={{
-            color: '#22c55e',
-            fontSize: window.innerWidth < 768 ? '18px' : '20px',
-            fontWeight: '700',
-            margin: '0 0 8px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: window.innerWidth < 768 ? '8px' : '12px',
-            flexWrap: 'wrap'
-          }}>
-            <CheckCircle size={24} />
-            {t.title}
-          </h2>
-          <p style={{
-            color: '#16a34a',
-            margin: 0,
-            fontSize: window.innerWidth < 768 ? '12px' : '14px'
-          }}>{t.subtitle}</p>
+      {/* Header avec statistiques - Style harmonisé avec SMSNotification */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <h2 className="font-semibold text-gray-900">{t.title}</h2>
+            </div>
+          </div>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: window.innerWidth < 768 ? '12px' : '16px',
-            marginTop: window.innerWidth < 768 ? '16px' : '20px'
-          }}>
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              borderRadius: '12px',
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              textAlign: 'center',
-              transition: 'all 0.3s ease'
-            }}>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '20px' : '24px',
-                fontWeight: '800',
-                color: '#22c55e',
-                marginBottom: '4px'
-              }}>{validCriteria}/{totalCriteria}</div>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                color: '#16a34a',
-                fontWeight: '500'
-              }}>{t.stats.criteriaValid}</div>
+          <p className="text-gray-600 text-sm mb-4">{t.subtitle}</p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
+              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{validCriteria}/{totalCriteria}</div>
+              <div className="text-xs text-gray-600 font-medium">{t.stats.criteriaValid}</div>
             </div>
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              borderRadius: '12px',
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              textAlign: 'center',
-              transition: 'all 0.3s ease'
-            }}>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '20px' : '24px',
-                fontWeight: '800',
-                color: '#22c55e',
-                marginBottom: '4px'
-              }}>{reviewers.length}</div>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                color: '#16a34a',
-                fontWeight: '500'
-              }}>{t.stats.reviewersAssigned}</div>
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
+              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{reviewers.length}</div>
+              <div className="text-xs text-gray-600 font-medium">{t.stats.reviewersAssigned}</div>
             </div>
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              borderRadius: '12px',
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              textAlign: 'center',
-              transition: 'all 0.3s ease'
-            }}>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '20px' : '24px',
-                fontWeight: '800',
-                color: '#22c55e',
-                marginBottom: '4px'
-              }}>{approvedReviewers}</div>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                color: '#16a34a',
-                fontWeight: '500'
-              }}>{t.stats.approvalsReceived}</div>
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
+              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{approvedReviewers}</div>
+              <div className="text-xs text-gray-600 font-medium">{t.stats.approvalsReceived}</div>
             </div>
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              borderRadius: '12px',
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              textAlign: 'center',
-              transition: 'all 0.3s ease'
-            }}>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '20px' : '24px',
-                fontWeight: '800',
-                color: '#22c55e',
-                marginBottom: '4px'
-              }}>{Math.round(overallProgress * 100)}%</div>
-              <div style={{
-                fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                color: '#16a34a',
-                fontWeight: '500'
-              }}>{t.stats.overallStatus}</div>
+            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
+              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{Math.round(overallProgress * 100)}%</div>
+              <div className="text-xs text-gray-600 font-medium">{t.stats.overallStatus}</div>
             </div>
           </div>
           
@@ -798,27 +362,15 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '16px' : '24px',
-          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
-        }}>
-          <h3 style={{
-            color: '#e2e8f0',
-            fontSize: window.innerWidth < 768 ? '16px' : '18px',
-            fontWeight: '600',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            flexWrap: 'wrap'
-          }}>
-            <Users size={window.innerWidth < 768 ? 18 : 20} />
-            {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-900">
+                {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
+              </h3>
+            </div>
+          </div>
           <WorkerRegistryAST
             astId={formData?.astNumber || 'AST-TEMP'}
             astTitle={formData?.projectInfo?.title || 'AST'}
@@ -857,27 +409,15 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Section Notifications SMS */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '16px' : '24px',
-          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
-        }}>
-          <h3 style={{
-            color: '#e2e8f0',
-            fontSize: window.innerWidth < 768 ? '16px' : '18px',
-            fontWeight: '600',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            flexWrap: 'wrap'
-          }}>
-            <MessageSquare size={window.innerWidth < 768 ? 18 : 20} />
-            {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-900">
+                {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
+              </h3>
+            </div>
+          </div>
           <SMSNotification
             astId={formData?.astNumber}
             defaultType="general_alert"
@@ -892,69 +432,29 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Critères de validation */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '16px' : '24px',
-          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
-        }}>
-          <h3 style={{
-            color: '#e2e8f0',
-            fontSize: window.innerWidth < 768 ? '16px' : '18px',
-            fontWeight: '600',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            flexWrap: 'wrap'
-          }}>
-            <Shield size={window.innerWidth < 768 ? 18 : 20} />
-            {t.validationCriteria}
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold text-gray-900">{t.validationCriteria}</h3>
+          </div>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: window.innerWidth < 768 ? '12px' : '16px'
-          }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(Object.keys(criteria) as Array<keyof ValidationCriteria>).map(key => (
               <div 
                 key={key}
-                style={{
-                  background: criteria[key] ? 'rgba(34, 197, 94, 0.1)' : 'rgba(15, 23, 42, 0.6)',
-                  border: criteria[key] ? '1px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
+                  criteria[key] 
+                    ? 'bg-green-50 border-green-300 hover:bg-green-100' 
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                }`}
                 onClick={() => handleCriteriaChange(key, !criteria[key])}
               >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px'
-                }}>
-                  <span style={{
-                    color: '#e2e8f0',
-                    fontWeight: '500',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px'
-                  }}>{t.criteria[key]}</span>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    color: 'white',
-                    backgroundColor: getCriteriaColor(criteria[key])
-                  }}>
-                    {criteria[key] ? '✓' : ''}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium text-sm">{t.criteria[key]}</span>
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    criteria[key] ? 'bg-green-500' : 'bg-gray-400'
+                  }`}>
+                    {criteria[key] ? <CheckCircle className="w-3 h-3" /> : ''}
                   </div>
                 </div>
               </div>
@@ -963,146 +463,60 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Équipe de révision */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '16px' : '24px',
-          marginBottom: window.innerWidth < 768 ? '16px' : '24px'
-        }}>
-          <h3 style={{
-            color: '#e2e8f0',
-            fontSize: window.innerWidth < 768 ? '16px' : '18px',
-            fontWeight: '600',
-            margin: '0 0 20px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            flexWrap: 'wrap'
-          }}>
-            <Users size={window.innerWidth < 768 ? 18 : 20} />
-            {t.reviewTeam}
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="w-5 h-5 text-blue-600" />
+            <h3 className="font-semibold text-gray-900">{t.reviewTeam}</h3>
+          </div>
           
           {reviewers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-              <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <div className="text-center py-12 text-gray-500">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>{t.messages.noReviewers}</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div className="space-y-4">
               {reviewers.map(reviewer => (
-                <div key={reviewer.id} style={{
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  border: '1px solid rgba(100, 116, 139, 0.3)',
-                  borderRadius: '12px',
-                  padding: window.innerWidth < 768 ? '16px' : '20px',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-                    marginBottom: '16px',
-                    flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-                    gap: window.innerWidth < 768 ? '12px' : '0'
-                  }}>
+                <div key={reviewer.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow-md transition-all">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3 md:gap-0">
                     <div>
-                      <h4 style={{
-                        color: '#e2e8f0',
-                        margin: '0 0 4px 0',
-                        fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                        fontWeight: '600'
-                      }}>{reviewer.name}</h4>
-                      <p style={{
-                        color: '#94a3b8',
-                        margin: 0,
-                        fontSize: window.innerWidth < 768 ? '12px' : '14px'
-                      }}>{reviewer.role} • {reviewer.email}</p>
+                      <h4 className="text-gray-900 font-semibold text-base mb-1">{reviewer.name}</h4>
+                      <p className="text-gray-600 text-sm">{reviewer.role} • {reviewer.email}</p>
                     </div>
-                    <div style={{
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                      fontWeight: '500',
-                      textTransform: 'uppercase',
-                      backgroundColor: `${getStatusColor(reviewer.status)}20`,
-                      color: getStatusColor(reviewer.status)
-                    }}>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
+                      reviewer.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      reviewer.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
                       {t.status[reviewer.status]}
                     </div>
                   </div>
                   
                   {reviewer.status === 'pending' && (
-                    <div style={{
-                      display: 'flex',
-                      gap: '8px',
-                      marginTop: '12px',
-                      flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
-                    }}>
+                    <div className="flex flex-wrap gap-2 mt-3">
                       <button 
-                        style={{
-                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                          fontWeight: '500',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(34, 197, 94, 0.2)',
-                          color: '#22c55e',
-                          border: '1px solid rgba(34, 197, 94, 0.4)'
-                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 border border-green-300 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
                         onClick={() => handleReviewerAction(reviewer.id, 'approve', 5)}
                       >
-                        <ThumbsUp size={window.innerWidth < 768 ? 12 : 14} />
+                        <ThumbsUp className="w-3 h-3" />
                         {t.actions.approve}
                       </button>
                       <button 
-                        style={{
-                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                          fontWeight: '500',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(239, 68, 68, 0.2)',
-                          color: '#ef4444',
-                          border: '1px solid rgba(239, 68, 68, 0.4)'
-                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
                         onClick={() => handleReviewerAction(reviewer.id, 'reject')}
                       >
-                        <AlertTriangle size={window.innerWidth < 768 ? 12 : 14} />
+                        <AlertTriangle className="w-3 h-3" />
                         {t.actions.reject}
                       </button>
                       <button 
-                        style={{
-                          padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: window.innerWidth < 768 ? '11px' : '12px',
-                          fontWeight: '500',
-                          transition: 'all 0.3s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(59, 130, 246, 0.2)',
-                          color: '#3b82f6',
-                          border: '1px solid rgba(59, 130, 246, 0.4)'
-                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
                         onClick={() => {
                           setEditingComments(reviewer.id);
                           setTempComments(reviewer.comments || '');
                         }}
                       >
-                        <Edit size={window.innerWidth < 768 ? 12 : 14} />
-                        {t.actions.saveComments}
+                        <Edit className="w-3 h-3" />
+                        Commentaires
                       </button>
                     </div>
                   )}
@@ -1213,182 +627,77 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           
           {!isAddingReviewer ? (
             <button 
-              style={{
-                marginTop: '16px',
-                padding: window.innerWidth < 768 ? '10px 16px' : '12px 20px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                fontWeight: '500',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'rgba(59, 130, 246, 0.2)',
-                color: '#3b82f6',
-                border: '1px solid rgba(59, 130, 246, 0.4)'
-              }}
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               onClick={() => {
-                console.log('Bouton ajouter réviseur cliqué');
                 setIsAddingReviewer(true);
               }}
             >
-              <Plus size={window.innerWidth < 768 ? 14 : 16} />
+              <Plus className="w-4 h-4" />
               {t.actions.addReviewer}
             </button>
           ) : (
-            <div style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              borderRadius: '12px',
-              padding: window.innerWidth < 768 ? '16px' : '20px',
-              marginTop: '16px'
-            }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px',
-                marginBottom: '16px'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500'
-                  }}>{t.form.reviewerName}</label>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 md:p-5 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerName}</label>
                   <input
                     type="text"
                     value={newReviewer.name}
                     onChange={(e) => setNewReviewer({...newReviewer, name: e.target.value})}
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: '2px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ffffff',
-                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                      transition: 'all 0.3s ease'
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="Nom complet"
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500'
-                  }}>{t.form.reviewerRole}</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerRole}</label>
                   <input
                     type="text"
                     value={newReviewer.role}
                     onChange={(e) => setNewReviewer({...newReviewer, role: e.target.value})}
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: '2px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ffffff',
-                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                      transition: 'all 0.3s ease'
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="Ex: Superviseur sécurité"
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500'
-                  }}>{t.form.reviewerEmail}</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerEmail}</label>
                   <input
                     type="email"
                     value={newReviewer.email}
                     onChange={(e) => setNewReviewer({...newReviewer, email: e.target.value})}
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: '2px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ffffff',
-                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                      transition: 'all 0.3s ease'
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     placeholder="email@example.com"
                   />
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '6px',
-                  gridColumn: window.innerWidth < 768 ? '1' : '1 / -1'
-                }}>
-                  <label style={{
-                    color: '#e2e8f0',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500'
-                  }}>{t.form.comments}</label>
+                <div className="md:col-span-3 flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">{t.form.comments}</label>
                   <textarea
                     value={newReviewer.comments}
                     onChange={(e) => setNewReviewer({...newReviewer, comments: e.target.value})}
-                    style={{
-                      padding: '10px 12px',
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: '2px solid rgba(100, 116, 139, 0.3)',
-                      borderRadius: '8px',
-                      color: '#ffffff',
-                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                      transition: 'all 0.3s ease',
-                      minHeight: '80px',
-                      resize: 'vertical'
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm h-20 resize-none"
                     placeholder={t.form.commentsPlaceholder}
                     rows={3}
                   />
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="flex flex-wrap gap-3">
                 <button 
-                  style={{
-                    padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 'rgba(100, 116, 139, 0.3)' : 'rgba(34, 197, 94, 0.2)',
-                    color: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? '#64748b' : '#22c55e',
-                    border: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? '1px solid rgba(100, 116, 139, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)',
-                    opacity: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 0.6 : 1
-                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    (!newReviewer.name.trim() || !newReviewer.role.trim()) 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
                   onClick={() => {
-                    console.log('Clic sur ajouter réviseur', { newReviewer });
                     handleAddReviewer();
                   }}
                   disabled={!newReviewer.name.trim() || !newReviewer.role.trim()}
                 >
-                  <Save size={window.innerWidth < 768 ? 12 : 14} />
+                  <Plus className="w-4 h-4" />
                   {t.actions.addReviewer}
                 </button>
                 <button 
-                  style={{
-                    padding: window.innerWidth < 768 ? '8px 16px' : '10px 20px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'rgba(100, 116, 139, 0.2)',
-                    color: '#64748b',
-                    border: '1px solid rgba(100, 116, 139, 0.4)'
-                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
                   onClick={() => {
-                    console.log('Clic sur annuler');
                     setIsAddingReviewer(false);
                     setNewReviewer({ name: '', role: '', email: '', comments: '' });
                   }}
@@ -1402,29 +711,28 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
 
         {/* Validation finale */}
         {canValidate && (
-          <div className="validation-complete">
-            <Award size={48} className="icon" />
-            <h3>{t.messages.validationComplete}</h3>
-            <p>L'AST est prête pour l'étape de finalisation et partage.</p>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+            <Award className="w-12 h-12 text-green-600 mx-auto mb-3" />
+            <h3 className="text-green-800 font-semibold text-lg mb-2">{t.messages.validationComplete}</h3>
+            <p className="text-green-700">L'AST est prête pour l'étape de finalisation et partage.</p>
           </div>
         )}
 
         {/* Erreurs de validation */}
         {errors?.validation && (
-          <div className="section-card" style={{ borderColor: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171' }}>
-              <AlertTriangle size={20} />
-              <span>Erreurs de validation</span>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-red-700 mb-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-medium">Erreurs de validation</span>
             </div>
-            <ul style={{ color: '#fca5a5', marginTop: '8px', paddingLeft: '20px' }}>
+            <ul className="text-red-600 text-sm space-y-1 ml-7">
               {errors.validation.map((error: string, index: number) => (
                 <li key={index}>{error}</li>
               ))}
             </ul>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 };
 
