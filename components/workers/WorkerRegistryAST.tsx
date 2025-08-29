@@ -295,7 +295,13 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const [customSmsMessage, setCustomSmsMessage] = useState('');
   
   // États pour l'ajout de travailleur
-  const [newWorker, setNewWorker] = useState({
+  const [newWorker, setNewWorker] = useState<{
+    name: string;
+    company: string;
+    phoneNumber: string;
+    employeeNumber: string;
+    certification: string[];
+  }>({
     name: '',
     company: '',
     phoneNumber: '',

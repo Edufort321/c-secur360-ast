@@ -311,38 +311,137 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Styles minimes pour cohérence */}
-
-      {/* Header avec statistiques - Style harmonisé avec SMSNotification */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <h2 className="font-semibold text-gray-900">{t.title}</h2>
-            </div>
-          </div>
+    <div style={{
+      padding: window.innerWidth < 768 ? '12px' : '24px',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      color: '#ffffff'
+    }}>
+      {/* Header avec statistiques */}
+      <div style={{
+        background: 'rgba(34, 197, 94, 0.1)',
+        border: '1px solid rgba(34, 197, 94, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
+        <h2 style={{
+          color: '#22c55e',
+          fontSize: window.innerWidth < 768 ? '18px' : '20px',
+          fontWeight: '700',
+          margin: '0 0 8px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: window.innerWidth < 768 ? '8px' : '12px'
+        }}>
+          <CheckCircle size={24} />
+          {t.title}
+        </h2>
+        <p style={{
+          color: '#16a34a',
+          margin: '0 0 16px 0',
+          fontSize: window.innerWidth < 768 ? '12px' : '14px'
+        }}>{t.subtitle}</p>
           
-          <p className="text-gray-600 text-sm mb-4">{t.subtitle}</p>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
-              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{validCriteria}/{totalCriteria}</div>
-              <div className="text-xs text-gray-600 font-medium">{t.stats.criteriaValid}</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
-              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{reviewers.length}</div>
-              <div className="text-xs text-gray-600 font-medium">{t.stats.reviewersAssigned}</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
-              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{approvedReviewers}</div>
-              <div className="text-xs text-gray-600 font-medium">{t.stats.approvalsReceived}</div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3 md:p-4 text-center border hover:shadow-md transition-all">
-              <div className="text-xl md:text-2xl font-bold text-green-600 mb-1">{Math.round(overallProgress * 100)}%</div>
-              <div className="text-xs text-gray-600 font-medium">{t.stats.overallStatus}</div>
-            </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: window.innerWidth < 768 ? '12px' : '16px'
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#22c55e',
+              marginBottom: '4px'
+            }}>{validCriteria}/{totalCriteria}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#16a34a',
+              fontWeight: '500'
+            }}>{t.stats.criteriaValid}</div>
           </div>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#22c55e',
+              marginBottom: '4px'
+            }}>{reviewers.length}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#16a34a',
+              fontWeight: '500'
+            }}>{t.stats.reviewersAssigned}</div>
+          </div>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#22c55e',
+              marginBottom: '4px'
+            }}>{approvedReviewers}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#16a34a',
+              fontWeight: '500'
+            }}>{t.stats.approvalsReceived}</div>
+          </div>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#22c55e',
+              marginBottom: '4px'
+            }}>{Math.round(overallProgress * 100)}%</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#16a34a',
+              fontWeight: '500'
+            }}>{t.stats.overallStatus}</div>
+          </div>
+        </div>
+        
+        <div style={{
+          width: '100%',
+          height: '8px',
+          background: 'rgba(100, 116, 139, 0.3)',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          margin: '16px 0'
+        }}>
+          <div style={{
+            height: '100%',
+            background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+            transition: 'width 0.5s ease',
+            width: `${overallProgress * 100}%`
+          }} />
+        </div>
+      </div>
           
           <div style={{
             width: '100%',
@@ -359,18 +458,29 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               width: `${overallProgress * 100}%`
             }} />
           </div>
-        </div>
+      </div>
 
         {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-900">
-                {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
-              </h3>
-            </div>
-          </div>
+        <div style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
+        <h3 style={{
+          color: '#e2e8f0',
+          fontSize: window.innerWidth < 768 ? '16px' : '18px',
+          fontWeight: '600',
+          margin: '0 0 20px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <Users size={window.innerWidth < 768 ? 18 : 20} />
+          {language === 'fr' ? 'Registre des Travailleurs' : 'Worker Registry'}
+        </h3>
           <WorkerRegistryAST
             astId={formData?.astNumber || 'AST-TEMP'}
             astTitle={formData?.projectInfo?.title || 'AST'}
@@ -409,15 +519,26 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Section Notifications SMS */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-900">
-                {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
-              </h3>
-            </div>
-          </div>
+        <div style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
+        <h3 style={{
+          color: '#e2e8f0',
+          fontSize: window.innerWidth < 768 ? '16px' : '18px',
+          fontWeight: '600',
+          margin: '0 0 20px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <MessageSquare size={window.innerWidth < 768 ? 18 : 20} />
+          {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
+        </h3>
           <SMSNotification
             astId={formData?.astNumber}
             defaultType="general_alert"
@@ -432,92 +553,216 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         </div>
 
         {/* Critères de validation */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Shield className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">{t.validationCriteria}</h3>
-          </div>
+        <div style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
+        <h3 style={{
+          color: '#e2e8f0',
+          fontSize: window.innerWidth < 768 ? '16px' : '18px',
+          fontWeight: '600',
+          margin: '0 0 20px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <Shield size={window.innerWidth < 768 ? 18 : 20} />
+          {t.validationCriteria}
+        </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: window.innerWidth < 768 ? '12px' : '16px'
+        }}>
             {(Object.keys(criteria) as Array<keyof ValidationCriteria>).map(key => (
               <div 
                 key={key}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
-                  criteria[key] 
-                    ? 'bg-green-50 border-green-300 hover:bg-green-100' 
-                    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                }`}
+                style={{
+                  background: criteria[key] ? 'rgba(34, 197, 94, 0.1)' : 'rgba(15, 23, 42, 0.6)',
+                  border: criteria[key] ? '1px solid #22c55e' : '1px solid rgba(100, 116, 139, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}
                 onClick={() => handleCriteriaChange(key, !criteria[key])}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700 font-medium text-sm">{t.criteria[key]}</span>
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                    criteria[key] ? 'bg-green-500' : 'bg-gray-400'
-                  }`}>
-                    {criteria[key] ? <CheckCircle className="w-3 h-3" /> : ''}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{
+                    color: '#e2e8f0',
+                    fontWeight: '500',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px'
+                  }}>{t.criteria[key]}</span>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    color: 'white',
+                    backgroundColor: getCriteriaColor(criteria[key])
+                  }}>
+                    {criteria[key] ? '✓' : ''}
                   </div>
                 </div>
               </div>
             ))}
-          </div>
+        </div>
         </div>
 
         {/* Équipe de révision */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Users className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">{t.reviewTeam}</h3>
-          </div>
+        <div style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
+        <h3 style={{
+          color: '#e2e8f0',
+          fontSize: window.innerWidth < 768 ? '16px' : '18px',
+          fontWeight: '600',
+          margin: '0 0 20px 0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <Users size={window.innerWidth < 768 ? 18 : 20} />
+          {t.reviewTeam}
+        </h3>
           
           {reviewers.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>{t.messages.noReviewers}</p>
-            </div>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+            <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <p>{t.messages.noReviewers}</p>
+          </div>
           ) : (
-            <div className="space-y-4">
+          <div style={{ display: 'grid', gap: '16px' }}>
               {reviewers.map(reviewer => (
-                <div key={reviewer.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow-md transition-all">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3 md:gap-0">
-                    <div>
-                      <h4 className="text-gray-900 font-semibold text-base mb-1">{reviewer.name}</h4>
-                      <p className="text-gray-600 text-sm">{reviewer.role} • {reviewer.email}</p>
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
-                      reviewer.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      reviewer.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
+              <div key={reviewer.id} style={{
+                background: 'rgba(15, 23, 42, 0.6)',
+                border: '1px solid rgba(100, 116, 139, 0.3)',
+                borderRadius: '12px',
+                padding: window.innerWidth < 768 ? '16px' : '20px',
+                transition: 'all 0.3s ease'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                  marginBottom: '16px',
+                  flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                  gap: window.innerWidth < 768 ? '12px' : '0'
+                }}>
+                  <div>
+                    <h4 style={{
+                      color: '#e2e8f0',
+                      margin: '0 0 4px 0',
+                      fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                      fontWeight: '600'
+                    }}>{reviewer.name}</h4>
+                    <p style={{
+                      color: '#94a3b8',
+                      margin: 0,
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px'
+                    }}>{reviewer.role} • {reviewer.email}</p>
+                  </div>
+                  <div style={{
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                    fontWeight: '500',
+                    textTransform: 'uppercase',
+                    backgroundColor: `${getStatusColor(reviewer.status)}20`,
+                    color: getStatusColor(reviewer.status)
+                  }}>
                       {t.status[reviewer.status]}
                     </div>
                   </div>
                   
                   {reviewer.status === 'pending' && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <button 
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 border border-green-300 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
-                        onClick={() => handleReviewerAction(reviewer.id, 'approve', 5)}
-                      >
-                        <ThumbsUp className="w-3 h-3" />
-                        {t.actions.approve}
-                      </button>
-                      <button 
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 border border-red-300 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-                        onClick={() => handleReviewerAction(reviewer.id, 'reject')}
-                      >
-                        <AlertTriangle className="w-3 h-3" />
-                        {t.actions.reject}
-                      </button>
-                      <button 
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
-                        onClick={() => {
-                          setEditingComments(reviewer.id);
-                          setTempComments(reviewer.comments || '');
-                        }}
-                      >
-                        <Edit className="w-3 h-3" />
-                        Commentaires
-                      </button>
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    marginTop: '12px',
+                    flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
+                  }}>
+                    <button 
+                      style={{
+                        padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(34, 197, 94, 0.2)',
+                        color: '#22c55e',
+                        border: '1px solid rgba(34, 197, 94, 0.4)'
+                      }}
+                      onClick={() => handleReviewerAction(reviewer.id, 'approve', 5)}
+                    >
+                      <ThumbsUp size={window.innerWidth < 768 ? 12 : 14} />
+                      {t.actions.approve}
+                    </button>
+                    <button 
+                      style={{
+                        padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        color: '#ef4444',
+                        border: '1px solid rgba(239, 68, 68, 0.4)'
+                      }}
+                      onClick={() => handleReviewerAction(reviewer.id, 'reject')}
+                    >
+                      <AlertTriangle size={window.innerWidth < 768 ? 12 : 14} />
+                      {t.actions.reject}
+                    </button>
+                    <button 
+                      style={{
+                        padding: window.innerWidth < 768 ? '6px 12px' : '8px 16px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: window.innerWidth < 768 ? '11px' : '12px',
+                        fontWeight: '500',
+                        transition: 'all 0.3s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#3b82f6',
+                        border: '1px solid rgba(59, 130, 246, 0.4)'
+                      }}
+                      onClick={() => {
+                        setEditingComments(reviewer.id);
+                        setTempComments(reviewer.comments || '');
+                      }}
+                    >
+                      <Edit size={window.innerWidth < 768 ? 12 : 14} />
+                      {t.actions.saveComments}
+                    </button>
                     </div>
                   )}
                   
@@ -732,6 +977,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             </ul>
           </div>
         )}
+      </div>
     </div>
   );
 };
