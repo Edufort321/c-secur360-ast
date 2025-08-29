@@ -941,28 +941,64 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             </div>
           )}
         </div>
-      </div>
 
       {/* Validation finale */}
-      <div>
+      <div style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(100, 116, 139, 0.3)',
+        borderRadius: '16px',
+        padding: window.innerWidth < 768 ? '16px' : '24px',
+        marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+      }}>
         {canValidate && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-            <Award className="w-12 h-12 text-green-600 mx-auto mb-3" />
-            <h3 className="text-green-800 font-semibold text-lg mb-2">{t.messages.validationComplete}</h3>
-            <p className="text-green-700">L'AST est prête pour l'étape de finalisation et partage.</p>
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '12px',
+            padding: '24px',
+            textAlign: 'center'
+          }}>
+            <Award size={48} style={{ color: '#22c55e', margin: '0 auto 12px' }} />
+            <h3 style={{
+              color: '#22c55e',
+              fontWeight: '600',
+              fontSize: '18px',
+              marginBottom: '8px'
+            }}>{t.messages.validationComplete}</h3>
+            <p style={{
+              color: '#16a34a',
+              fontSize: '14px'
+            }}>L'AST est prête pour l'étape de finalisation et partage.</p>
           </div>
         )}
 
         {/* Erreurs de validation */}
         {errors?.validation && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 text-red-700 mb-2">
-              <AlertTriangle className="w-5 h-5" />
-              <span className="font-medium">Erreurs de validation</span>
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '12px',
+            padding: '16px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#dc2626',
+              marginBottom: '8px'
+            }}>
+              <AlertTriangle size={20} />
+              <span style={{ fontWeight: '500' }}>Erreurs de validation</span>
             </div>
-            <ul className="text-red-600 text-sm space-y-1 ml-7">
+            <ul style={{
+              color: '#dc2626',
+              fontSize: '14px',
+              listStyle: 'disc',
+              marginLeft: '28px'
+            }}>
               {errors.validation.map((error: string, index: number) => (
-                <li key={index}>{error}</li>
+                <li key={index} style={{ marginBottom: '4px' }}>{error}</li>
               ))}
             </ul>
           </div>
