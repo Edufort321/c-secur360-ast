@@ -181,7 +181,12 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   onDataChange,
   language = 'fr',
   tenant,
-  errors
+  errors,
+  province,
+  touchOptimized = false,
+  compactMode = false,
+  onPermitChange,
+  initialPermits
 }) => {
   // =================== TRADUCTIONS ===================
   const t = translations[language];
@@ -936,8 +941,10 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             </div>
           )}
         </div>
+      </div>
 
-        {/* Validation finale */}
+      {/* Validation finale */}
+      <div>
         {canValidate && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
             <Award className="w-12 h-12 text-green-600 mx-auto mb-3" />
