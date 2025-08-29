@@ -460,8 +460,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           </div>
       </div>
 
-        {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
-        <div style={{
+      {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
+      <div style={{
         background: 'rgba(30, 41, 59, 0.6)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(100, 116, 139, 0.3)',
@@ -516,10 +516,10 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               onDataChange('lotoProcedure', updatedProcedure);
             }}
           />
-        </div>
+      </div>
 
-        {/* Section Notifications SMS */}
-        <div style={{
+      {/* Section Notifications SMS */}
+      <div style={{
         background: 'rgba(30, 41, 59, 0.6)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(100, 116, 139, 0.3)',
@@ -550,10 +550,10 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             compact={false}
             autoExpand={false}
           />
-        </div>
+      </div>
 
-        {/* Critères de validation */}
-        <div style={{
+      {/* Critères de validation */}
+      <div style={{
         background: 'rgba(30, 41, 59, 0.6)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(100, 116, 139, 0.3)',
@@ -620,10 +620,10 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               </div>
             ))}
         </div>
-        </div>
+      </div>
 
-        {/* Équipe de révision */}
-        <div style={{
+      {/* Équipe de révision */}
+      <div style={{
         background: 'rgba(30, 41, 59, 0.6)',
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(100, 116, 139, 0.3)',
