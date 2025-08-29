@@ -217,6 +217,55 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   const [editingComments, setEditingComments] = useState<string | null>(null);
   const [tempComments, setTempComments] = useState('');
 
+  // =================== ÉTATS STATISTIQUES TRAVAILLEURS ===================
+  const [workerStats, setWorkerStats] = useState({
+    totalWorkers: 0,
+    activeWorkers: 0,
+    locksApplied: 0,
+    locksRemoved: 0,
+    locksNA: 0,
+    signedAST: 0,
+    pendingSignatures: 0,
+    totalWorkTime: 0,
+    averageWorkTime: 0,
+    workLocations: [] as string[]
+  });
+
+  // =================== CALLBACK STATISTIQUES TRAVAILLEURS ===================
+  const handleWorkerStatsChange = (stats: any) => {
+    setWorkerStats({
+      totalWorkers: stats.totalWorkers,
+      activeWorkers: stats.activeWorkers,
+      locksApplied: stats.locksApplied,
+      locksRemoved: stats.locksRemoved,
+      locksNA: stats.locksNA,
+      signedAST: stats.signedAST,
+      pendingSignatures: stats.totalWorkers - stats.signedAST,
+      totalWorkTime: stats.totalWorkTime,
+      averageWorkTime: stats.totalWorkers > 0 ? Math.round(stats.totalWorkTime / stats.totalWorkers) : 0,
+      workLocations: stats.workLocations || []
+    });
+  };
+
+  // =================== CALLBACKS EXPORT SYSTÈME ===================
+  const handleWorkersExport = (data: any) => {
+    console.log('🔄 Export Workers Data:', data);
+    // Ici, les données peuvent être envoyées à un store global, API, ou autre système
+    // Exemple : dispatch(updateWorkersData(data));
+  };
+
+  const handleHRDataExport = (hrData: any[]) => {
+    console.log('👥 Export HR Data:', hrData);
+    // Données formatées pour le module RH
+    // Exemple : sendToHRSystem(hrData);
+  };
+
+  const handleDashboardSummaryExport = (summary: any) => {
+    console.log('📊 Export Dashboard Summary:', summary);
+    // Données pour le dashboard principal tenant
+    // Exemple : updateTenantDashboard(tenant, summary);
+  };
+
   // =================== CALCULS ===================
   const validCriteria = Object.values(criteria).filter(Boolean).length;
   const totalCriteria = Object.keys(criteria).length;
@@ -351,7 +400,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-          gap: window.innerWidth < 768 ? '12px' : '16px'
+          gap: window.innerWidth < 768 ? '12px' : '16px',
+          marginBottom: '20px'
         }}>
           <div style={{
             background: 'rgba(15, 23, 42, 0.6)',
@@ -446,6 +496,141 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             width: `${overallProgress * 100}%`
           }} />
         </div>
+
+        {/* Statistiques Travailleurs */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: window.innerWidth < 768 ? '12px' : '16px',
+          marginTop: '20px'
+        }}>
+          {/* Travailleurs Actifs */}
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.1)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#60a5fa',
+              marginBottom: '4px'
+            }}>{workerStats.activeWorkers}/{workerStats.totalWorkers}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#93c5fd',
+              fontWeight: '500'
+            }}>👷‍♂️ Travailleurs Actifs</div>
+          </div>
+
+          {/* Cadenas Status */}
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease',
+            border: '1px solid rgba(34, 197, 94, 0.2)'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#22c55e',
+              marginBottom: '4px'
+            }}>{workerStats.locksApplied}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#86efac',
+              fontWeight: '500'
+            }}>🔒 Cadenas Apposés</div>
+          </div>
+
+          {/* Signatures AST */}
+          <div style={{
+            background: 'rgba(168, 85, 247, 0.1)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease',
+            border: '1px solid rgba(168, 85, 247, 0.2)'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#a855f7',
+              marginBottom: '4px'
+            }}>{workerStats.signedAST}/{workerStats.totalWorkers}</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#c4b5fd',
+              fontWeight: '500'
+            }}>✍️ Signatures AST</div>
+          </div>
+
+          {/* Temps Total */}
+          <div style={{
+            background: 'rgba(245, 158, 11, 0.1)',
+            borderRadius: '12px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease',
+            border: '1px solid rgba(245, 158, 11, 0.2)'
+          }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '20px' : '24px',
+              fontWeight: '800',
+              color: '#f59e0b',
+              marginBottom: '4px'
+            }}>{Math.floor(workerStats.totalWorkTime / 60)}h {workerStats.totalWorkTime % 60}m</div>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '11px' : '12px',
+              color: '#fbbf24',
+              fontWeight: '500'
+            }}>⏱️ Temps Total</div>
+          </div>
+        </div>
+
+        {/* Emplacements de travail */}
+        {workerStats.workLocations.length > 0 && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            background: 'rgba(15, 23, 42, 0.6)',
+            borderRadius: '8px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              color: '#94a3b8',
+              marginBottom: '6px',
+              fontWeight: '600'
+            }}>📍 Emplacements actifs:</div>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px'
+            }}>
+              {workerStats.workLocations.map((location, index) => (
+                <span
+                  key={index}
+                  style={{
+                    fontSize: '11px',
+                    padding: '4px 8px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    color: '#93c5fd',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}
+                >
+                  {location}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Section WorkerRegistry - Gestion des travailleurs avec signatures */}
@@ -474,6 +659,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             astTitle={formData?.projectInfo?.title || 'AST'}
             language={language}
             projectManagerPhone={formData?.projectInfo?.supervisorPhone}
+            workLocations={formData?.projectInfo?.workLocations || []}
             availableLocks={formData?.lotoProcedure?.points?.map((point: any) => ({
               id: point.id,
               lockNumber: `LOTO-${point.equipmentName}`,
@@ -503,6 +689,10 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               };
               onDataChange('lotoProcedure', updatedProcedure);
             }}
+            onStatsChange={handleWorkerStatsChange}
+            onWorkersExport={handleWorkersExport}
+            onHRDataExport={handleHRDataExport}
+            onDashboardSummaryExport={handleDashboardSummaryExport}
           />
       </div>
 

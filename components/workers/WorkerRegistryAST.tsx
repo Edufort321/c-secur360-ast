@@ -22,6 +22,17 @@ interface WorkerRegistryEntry {
   consentTimestamp: string;
   astValidated: boolean;
   
+  // Nouvelles propriétés
+  lockStatus: 'applied' | 'removed' | 'n/a';
+  workLocation: string;
+  consentAST: boolean;
+  consentSignatureDate: string;
+  workStarted: boolean;
+  workStartTime: string;
+  workEnded: boolean;
+  workEndTime: string;
+  totalWorkTime: number;
+  
   // Timer de travail
   workTimer: {
     startTime?: string;
@@ -73,6 +84,71 @@ interface WorkerRegistryStats {
   activeLocks: number;
   averageWorkTime: number;
   companiesCount: number;
+  // Nouvelles statistiques
+  totalWorkers: number;
+  locksApplied: number;
+  locksRemoved: number;
+  locksNA: number;
+  signedAST: number;
+  workLocations: string[];
+}
+
+interface WorkLocation {
+  id: string;
+  name: string;
+  description: string;
+  zone: string;
+  building?: string;
+  floor?: string;
+  maxWorkers: number;
+  currentWorkers: number;
+  isActive: boolean;
+  createdAt: string;
+  notes?: string;
+  estimatedDuration: string;
+  startTime?: string;
+  endTime?: string;
+  coordinates?: { lat: number; lng: number };
+}
+
+// Interfaces pour l'export système
+interface WorkerExportData {
+  astId: string;
+  astTitle: string;
+  tenant: string;
+  workers: WorkerRegistryEntry[];
+  stats: WorkerRegistryStats;
+  lastUpdated: string;
+}
+
+interface HRModuleData {
+  workerId: string;
+  employeeName: string;
+  employeeNumber: string;
+  company: string;
+  workLocation: string;
+  clockInTime?: string;
+  clockOutTime?: string;
+  totalWorkTime: number; // en minutes
+  consentAST: boolean;
+  consentSignatureDate: string;
+  lockStatus: 'applied' | 'removed' | 'n/a';
+  certifications: string[];
+  lastActivity: string;
+}
+
+interface DashboardSummary {
+  totalActiveProjects: number;
+  totalActiveWorkers: number;
+  totalWorkHours: number;
+  locksStatusSummary: {
+    applied: number;
+    removed: number;
+    na: number;
+  };
+  complianceRate: number; // % signatures AST
+  averageProjectTime: number;
+  alertsCount: number;
 }
 
 interface WorkerRegistryProps {
@@ -84,7 +160,12 @@ interface WorkerRegistryProps {
   compactMode?: boolean;
   projectManagerPhone?: string; // Pour les alertes SMS
   availableLocks?: LOTOLockEntry[]; // Cadenas disponibles du projet
+  workLocations?: WorkLocation[]; // Emplacements depuis Step1
   onLockStatusChange?: (lockId: string, isApplied: boolean, workerId: string) => void;
+  // Nouveaux callbacks pour l'export système
+  onWorkersExport?: (data: WorkerExportData) => void;
+  onHRDataExport?: (hrData: HRModuleData[]) => void;
+  onDashboardSummaryExport?: (summary: DashboardSummary) => void;
 }
 
 interface SMSAlert {
@@ -271,7 +352,11 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   compactMode = false,
   projectManagerPhone,
   availableLocks = [],
-  onLockStatusChange
+  workLocations = [],
+  onLockStatusChange,
+  onWorkersExport,
+  onHRDataExport,
+  onDashboardSummaryExport
 }) => {
   // États
   const [workers, setWorkers] = useState<WorkerRegistryEntry[]>([]);
@@ -301,12 +386,30 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     phoneNumber: string;
     employeeNumber: string;
     certification: string[];
+    lockStatus: 'applied' | 'removed' | 'n/a';
+    workLocation: string;
+    consentAST: boolean;
+    consentSignatureDate: string;
+    workStarted: boolean;
+    workStartTime: string;
+    workEnded: boolean;
+    workEndTime: string;
+    totalWorkTime: number;
   }>({
     name: '',
     company: '',
     phoneNumber: '',
     employeeNumber: '',
-    certification: []
+    certification: [],
+    lockStatus: 'n/a',
+    workLocation: '',
+    consentAST: false,
+    consentSignatureDate: '',
+    workStarted: false,
+    workStartTime: '',
+    workEnded: false,
+    workEndTime: '',
+    totalWorkTime: 0
   });
   
   // Refs pour la signature
@@ -334,6 +437,13 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     const companies = new Set(workerList.map(w => w.company));
     const companiesCount = companies.size;
     
+    // Nouvelles statistiques
+    const locksApplied = workerList.filter(w => w.lockStatus === 'applied').length;
+    const locksRemoved = workerList.filter(w => w.lockStatus === 'removed').length;
+    const locksNA = workerList.filter(w => w.lockStatus === 'n/a').length;
+    const signedAST = workerList.filter(w => w.consentAST).length;
+    const workLocations = [...new Set(workerList.filter(w => w.workLocation).map(w => w.workLocation))];
+
     return {
       totalRegistered,
       activeWorkers,
@@ -342,9 +452,79 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       totalLocks,
       activeLocks,
       averageWorkTime,
-      companiesCount
+      companiesCount,
+      // Nouvelles statistiques
+      totalWorkers: totalRegistered,
+      locksApplied,
+      locksRemoved,
+      locksNA,
+      signedAST,
+      workLocations
     };
   };
+
+  // =================== FONCTIONS D'EXPORT SYSTÈME ===================
+  
+  const exportWorkersData = (): WorkerExportData => {
+    return {
+      astId,
+      astTitle,
+      tenant: 'system', // À configurer selon le contexte
+      workers,
+      stats,
+      lastUpdated: new Date().toISOString()
+    };
+  };
+
+  const exportHRData = (): HRModuleData[] => {
+    return workers.map(worker => ({
+      workerId: worker.id,
+      employeeName: worker.name,
+      employeeNumber: worker.employeeNumber,
+      company: worker.company,
+      workLocation: worker.workLocation,
+      clockInTime: worker.workStartTime || undefined,
+      clockOutTime: worker.workEndTime || undefined,
+      totalWorkTime: worker.totalWorkTime,
+      consentAST: worker.consentAST,
+      consentSignatureDate: worker.consentSignatureDate,
+      lockStatus: worker.lockStatus,
+      certifications: worker.certification,
+      lastActivity: worker.lastActivity
+    }));
+  };
+
+  const exportDashboardSummary = (): DashboardSummary => {
+    const totalWorkHours = Math.round(stats.totalWorkTime / 60);
+    const complianceRate = stats.totalWorkers > 0 ? (stats.signedAST / stats.totalWorkers) * 100 : 0;
+    
+    return {
+      totalActiveProjects: 1, // Peut être étendu pour plusieurs projets
+      totalActiveWorkers: stats.activeWorkers,
+      totalWorkHours,
+      locksStatusSummary: {
+        applied: stats.locksApplied,
+        removed: stats.locksRemoved,
+        na: stats.locksNA
+      },
+      complianceRate: Math.round(complianceRate),
+      averageProjectTime: Math.round(stats.averageWorkTime / 60),
+      alertsCount: 0 // À implémenter selon les alertes actives
+    };
+  };
+
+  // Déclencher les exports à chaque mise à jour
+  useEffect(() => {
+    if (workers.length === 0) return;
+
+    const workerExportData = exportWorkersData();
+    const hrData = exportHRData();
+    const dashboardSummary = exportDashboardSummary();
+
+    onWorkersExport?.(workerExportData);
+    onHRDataExport?.(hrData);
+    onDashboardSummaryExport?.(dashboardSummary);
+  }, [workers, stats]);
   
   // =================== GESTION DES TRAVAILLEURS ===================
   
@@ -361,9 +541,21 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       signature: '',
       consentTimestamp: '',
       astValidated: false,
+      // Nouvelles propriétés
+      lockStatus: (workerData as any).lockStatus || 'n/a',
+      workLocation: (workerData as any).workLocation || '',
+      consentAST: (workerData as any).consentAST || false,
+      consentSignatureDate: (workerData as any).consentSignatureDate || '',
+      workStarted: (workerData as any).workStarted || false,
+      workStartTime: (workerData as any).workStartTime || '',
+      workEnded: (workerData as any).workEnded || false,
+      workEndTime: (workerData as any).workEndTime || '',
+      totalWorkTime: (workerData as any).totalWorkTime || 0,
       workTimer: {
-        totalTime: 0,
-        isActive: false,
+        startTime: (workerData as any).workStartTime || undefined,
+        endTime: (workerData as any).workEndTime || undefined,
+        totalTime: ((workerData as any).totalWorkTime || 0) * 60 * 1000, // Conversion minutes -> millisecondes
+        isActive: (workerData as any).workStarted && !(workerData as any).workEnded,
         breaks: []
       },
       assignedLocks: [],
@@ -379,25 +571,59 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   };
 
   const handleAddWorker = () => {
+    // Validation des champs requis
     if (!newWorker.name.trim() || !newWorker.company.trim()) {
       alert('Nom et entreprise requis');
       return;
     }
     
+    if (!newWorker.workLocation) {
+      alert('Emplacement de travail requis');
+      return;
+    }
+
+    // Validation de la capacité de l'emplacement
+    if (workLocations.length > 0) {
+      const selectedLocation = workLocations.find(loc => 
+        `${loc.zone} - ${loc.name}` === newWorker.workLocation
+      );
+      
+      if (selectedLocation && selectedLocation.maxWorkers > 0) {
+        if (selectedLocation.currentWorkers >= selectedLocation.maxWorkers) {
+          alert(`❌ Capacité maximale atteinte pour "${selectedLocation.zone} - ${selectedLocation.name}" (${selectedLocation.currentWorkers}/${selectedLocation.maxWorkers})`);
+          return;
+        }
+      }
+    }
+
+    if (!newWorker.consentAST) {
+      alert('Le consentement AST est requis pour enregistrer le travailleur');
+      return;
+    }
+    
     addWorker(newWorker);
     
-    // Reset du formulaire
+    // Reset complet du formulaire
     setNewWorker({
       name: '',
       company: '',
       phoneNumber: '',
       employeeNumber: '',
-      certification: []
+      certification: [],
+      lockStatus: 'n/a',
+      workLocation: '',
+      consentAST: false,
+      consentSignatureDate: '',
+      workStarted: false,
+      workStartTime: '',
+      workEnded: false,
+      workEndTime: '',
+      totalWorkTime: 0
     });
     setShowAddWorker(false);
     
-    // Feedback utilisateur
-    alert(`Travailleur "${newWorker.name}" ajouté avec succès !`);
+    // Feedback utilisateur amélioré
+    alert(`✅ Travailleur "${newWorker.name}" ajouté avec succès !\n🔒 Cadenas: ${newWorker.lockStatus}\n📍 Emplacement: ${newWorker.workLocation}\n✍️ Consentement AST validé`);
   };
   
   const startWork = (workerId: string) => {
@@ -1661,6 +1887,283 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Gestion des Cadenas */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                color: '#e2e8f0',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                Statut du cadenas personnel *
+              </label>
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                {[
+                  { value: 'applied', label: '🔒 Apposé', color: '#22c55e' },
+                  { value: 'removed', label: '🔓 Enlevé', color: '#f59e0b' },
+                  { value: 'n/a', label: '❌ N/A', color: '#6b7280' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setNewWorker({...newWorker, lockStatus: option.value as any})}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: newWorker.lockStatus === option.value ? 
+                        `2px solid ${option.color}` : '1px solid rgba(100, 116, 139, 0.3)',
+                      background: newWorker.lockStatus === option.value ? 
+                        `${option.color}20` : 'rgba(15, 23, 42, 0.8)',
+                      color: newWorker.lockStatus === option.value ? option.color : '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      minWidth: '100px'
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Emplacement de travail */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                color: '#e2e8f0',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                Emplacement de travail *
+              </label>
+              <select
+                value={newWorker.workLocation}
+                onChange={(e) => setNewWorker({...newWorker, workLocation: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(100, 116, 139, 0.3)',
+                  background: 'rgba(15, 23, 42, 0.8)',
+                  color: 'white',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">Sélectionner un emplacement...</option>
+                {workLocations.length > 0 ? (
+                  workLocations
+                    .filter(location => location.isActive)
+                    .map((location) => (
+                      <option key={location.id} value={`${location.zone} - ${location.name}`}>
+                        {location.zone} - {location.name}
+                        {location.building && ` (${location.building})`}
+                        {location.floor && ` - Étage ${location.floor}`}
+                        {location.maxWorkers > 0 && ` [${location.currentWorkers}/${location.maxWorkers}]`}
+                      </option>
+                    ))
+                ) : (
+                  // Options par défaut si aucun emplacement défini dans Step1
+                  <>
+                    <option value="Zone A - Production">Zone A - Production</option>
+                    <option value="Zone B - Maintenance">Zone B - Maintenance</option>
+                    <option value="Zone C - Stockage">Zone C - Stockage</option>
+                    <option value="Extérieur - Cour">Extérieur - Cour</option>
+                    <option value="Bureau - Administration">Bureau - Administration</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Consentement AST */}
+            <div style={{ 
+              marginBottom: '20px',
+              padding: '16px',
+              border: '2px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '12px',
+              background: 'rgba(34, 197, 94, 0.05)'
+            }}>
+              <label style={{
+                color: '#22c55e',
+                fontSize: '16px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={newWorker.consentAST}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    const now = isChecked ? new Date().toLocaleString('fr-CA') : '';
+                    setNewWorker({
+                      ...newWorker, 
+                      consentAST: isChecked,
+                      consentSignatureDate: now
+                    });
+                  }}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    accentColor: '#22c55e'
+                  }}
+                />
+                ✍️ Je consens avoir pris connaissance de l'AST
+              </label>
+              {newWorker.consentAST && newWorker.consentSignatureDate && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: '#86efac',
+                  fontStyle: 'italic'
+                }}>
+                  ✓ Signé le {newWorker.consentSignatureDate}
+                </div>
+              )}
+            </div>
+
+            {/* Horodateur Travaux */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px'
+              }}>
+                {/* Début travaux */}
+                <div style={{
+                  padding: '16px',
+                  border: '2px solid rgba(59, 130, 246, 0.3)',
+                  borderRadius: '12px',
+                  background: 'rgba(59, 130, 246, 0.05)'
+                }}>
+                  <label style={{
+                    color: '#60a5fa',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={newWorker.workStarted}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const now = isChecked ? new Date().toLocaleString('fr-CA') : '';
+                        setNewWorker({
+                          ...newWorker,
+                          workStarted: isChecked,
+                          workStartTime: now
+                        });
+                      }}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: '#3b82f6'
+                      }}
+                    />
+                    🟢 Début des travaux
+                  </label>
+                  {newWorker.workStarted && newWorker.workStartTime && (
+                    <div style={{
+                      marginTop: '8px',
+                      fontSize: '12px',
+                      color: '#93c5fd',
+                      fontWeight: '500'
+                    }}>
+                      Débuté: {newWorker.workStartTime}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fin travaux */}
+                <div style={{
+                  padding: '16px',
+                  border: '2px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '12px',
+                  background: 'rgba(239, 68, 68, 0.05)'
+                }}>
+                  <label style={{
+                    color: '#f87171',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={newWorker.workEnded}
+                      disabled={!newWorker.workStarted}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const now = isChecked ? new Date().toLocaleString('fr-CA') : '';
+                        let totalTime = 0;
+                        
+                        if (isChecked && newWorker.workStartTime) {
+                          const startTime = new Date(newWorker.workStartTime).getTime();
+                          const endTime = new Date().getTime();
+                          totalTime = Math.round((endTime - startTime) / (1000 * 60)); // en minutes
+                        }
+
+                        setNewWorker({
+                          ...newWorker,
+                          workEnded: isChecked,
+                          workEndTime: now,
+                          totalWorkTime: totalTime
+                        });
+                      }}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: '#ef4444'
+                      }}
+                    />
+                    🔴 Fin des travaux
+                  </label>
+                  {newWorker.workEnded && newWorker.workEndTime && (
+                    <div style={{
+                      marginTop: '8px',
+                      fontSize: '12px',
+                      color: '#fca5a5',
+                      fontWeight: '500'
+                    }}>
+                      Terminé: {newWorker.workEndTime}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Temps total */}
+              {newWorker.totalWorkTime > 0 && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  border: '2px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '8px',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    color: '#22c55e',
+                    fontSize: '16px',
+                    fontWeight: '700'
+                  }}>
+                    ⏱️ Temps total: {Math.floor(newWorker.totalWorkTime / 60)}h {newWorker.totalWorkTime % 60}min
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Actions */}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -1679,19 +2182,19 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
               </button>
               <button
                 onClick={handleAddWorker}
-                disabled={!newWorker.name.trim() || !newWorker.company.trim()}
+                disabled={!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.workLocation || !newWorker.consentAST}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '8px',
                   border: '1px solid #3b82f6',
-                  background: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                  background: (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.workLocation || !newWorker.consentAST) ? 
                     'rgba(107, 114, 128, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                  color: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                  color: (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.workLocation || !newWorker.consentAST) ? 
                     '#6b7280' : '#93c5fd',
-                  cursor: (!newWorker.name.trim() || !newWorker.company.trim()) ? 
+                  cursor: (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.workLocation || !newWorker.consentAST) ? 
                     'not-allowed' : 'pointer',
                   fontWeight: '600',
-                  opacity: (!newWorker.name.trim() || !newWorker.company.trim()) ? 0.5 : 1
+                  opacity: (!newWorker.name.trim() || !newWorker.company.trim() || !newWorker.workLocation || !newWorker.consentAST) ? 0.5 : 1
                 }}
               >
                 <Plus size={16} style={{ marginRight: '6px', display: 'inline' }} />
