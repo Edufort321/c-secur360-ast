@@ -679,6 +679,12 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
 
   // Categories uniques avec traductions
   const categories = Array.from(new Set(equipment.map(eq => eq.category))).sort();
+  
+  // Options de catégorie avec compteurs
+  const categoryOptions = categories.map(category => ({
+    category,
+    count: equipment.filter(eq => eq.category === category).length
+  }));
 
   // Équipements sélectionnés
   const selectedEquipment = equipment.filter(eq => eq.required);
@@ -1059,15 +1065,15 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
         
         <div className="summary-stats">
           <div className="stat-item">
-            <span className="stat-number">{requiredCount}</span>
+            <span className="stat-number">{stats.totalSelected}</span>
             <span className="stat-label">{t.selected}</span>
           </div>
           <div className="stat-item">
-            <span className="stat-number">{criticalCount}</span>
+            <span className="stat-number">{stats.highPriority}</span>
             <span className="stat-label">{t.critical}</span>
           </div>
           <div className="stat-item">
-            <span className="stat-number">{categoryCount}</span>
+            <span className="stat-number">{stats.categoriesCount}</span>
             <span className="stat-label">{t.categories}</span>
           </div>
         </div>
@@ -1125,7 +1131,7 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       {/* Liste des équipements */}
       <div className="equipment-grid">
         {filteredEquipment.length > 0 ? (
-          filteredEquipment.map((item) => <EquipmentItem key={item.id} item={item} />)
+          filteredEquipment.map((item) => <EquipmentCard key={item.id} item={item} />)
         ) : (
           <div className="no-results">
             <AlertTriangle size={48} />
