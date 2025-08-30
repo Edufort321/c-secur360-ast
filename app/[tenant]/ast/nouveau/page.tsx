@@ -115,7 +115,7 @@ finalization: {
       return `AST-${tenantCode}-${year}-${sequence}`;
     };
 
-    setAstData(prev => {
+    setAstData((prev: any) => {
       // Si pas d'ID (nouveau formulaire), en générer un
       if (!prev.id) {
         const newData = {
@@ -146,7 +146,7 @@ finalization: {
     
     console.log('📝 Page - Data changed:', { section, data });
     
-    setAstData(prev => {
+    setAstData((prev: any) => {
       const newData = {
         ...prev,
         [section]: data,
