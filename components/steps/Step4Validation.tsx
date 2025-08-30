@@ -196,10 +196,20 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   // =================== FONCTIONS UTILITAIRES ===================
   
   const formatWorkTime = (totalMinutes: number): string => {
-    if (!totalMinutes || totalMinutes === 0) return '0h 0m';
+    if (!totalMinutes || totalMinutes === 0) return '0h 0m 0s';
+    
     const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours}h ${minutes}m`;
+    const minutes = Math.floor(totalMinutes % 60);
+    // Pour les secondes, on utilise la partie décimale des minutes * 60
+    const seconds = Math.floor((totalMinutes % 1) * 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
   
   // =================== ÉTATS ===================
@@ -298,17 +308,17 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
 
   // Fonction pour obtenir les numéros de téléphone selon le ciblage
   const getTargetedPhoneNumbers = (): string[] => {
-    const workers = currentWorkers.filter(w => w.phone && w.phone.trim());
+    const workers = currentWorkers.filter(w => w.phoneNumber && w.phoneNumber.trim());
     
     switch (smsTargetMode) {
       case 'all':
-        return workers.map(w => w.phone);
+        return workers.map(w => w.phoneNumber);
       
       case 'location':
         if (!selectedLocation) return [];
         return workers
           .filter(w => w.workLocation === selectedLocation)
-          .map(w => w.phone);
+          .map(w => w.phoneNumber);
       
       case 'custom':
       default:

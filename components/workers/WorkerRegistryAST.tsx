@@ -823,11 +823,20 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   };
   
   const formatDuration = (totalMinutes: number): string => {
-    if (!totalMinutes || totalMinutes === 0) return '0h 0m';
+    if (!totalMinutes || totalMinutes === 0) return '0h 0m 0s';
     
     const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours}h ${minutes}m`;
+    const minutes = Math.floor(totalMinutes % 60);
+    // Pour les secondes, on utilise la partie décimale des minutes * 60
+    const seconds = Math.floor((totalMinutes % 1) * 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
   
   const formatTime = (isoString: string): string => {
@@ -912,14 +921,16 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         if (worker.workTimer.isActive && worker.workTimer.startTime) {
           const currentTime = Date.now();
           const startTime = new Date(worker.workTimer.startTime).getTime();
-          const elapsedMinutes = Math.floor((currentTime - startTime) / (1000 * 60));
+          // Calcul précis incluant les secondes comme fraction de minute
+          const elapsedMilliseconds = currentTime - startTime;
+          const elapsedMinutesWithSeconds = elapsedMilliseconds / (1000 * 60);
           
           return {
             ...worker,
-            totalWorkTime: elapsedMinutes, // Temps en minutes depuis le début
+            totalWorkTime: elapsedMinutesWithSeconds, // Temps en minutes avec décimales pour les secondes
             workTimer: {
               ...worker.workTimer,
-              totalTime: currentTime - startTime // Garder en millisecondes pour compatibilité
+              totalTime: elapsedMilliseconds // Garder en millisecondes pour compatibilité
             }
           };
         }
