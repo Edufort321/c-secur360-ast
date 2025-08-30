@@ -437,6 +437,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const [selectedWorker, setSelectedWorker] = useState<WorkerRegistryEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed' | 'withLocks'>('all');
+  const [compactView, setCompactView] = useState(false);
   const [smsAlerts, setSmsAlerts] = useState<SMSAlert[]>([]);
   const [showSmsDialog, setShowSmsDialog] = useState(false);
   const [customSmsMessage, setCustomSmsMessage] = useState('');
@@ -479,6 +480,20 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   
   const t = translations[language];
+  
+  // Liste des emplacements disponibles
+  const availableLocations = [
+    'Zone A - Production',
+    'Zone B - Assemblage', 
+    'Zone C - Maintenance',
+    'Zone D - Entrepôt',
+    'Bureau - Administration',
+    'Atelier - Soudure',
+    'Salle électrique',
+    'Cour extérieure',
+    'Sous-sol technique',
+    'Toit - Équipements'
+  ];
   
   // =================== CALCUL DES STATISTIQUES ===================
   
@@ -626,7 +641,12 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         isActive: (workerData as any).workStarted && !(workerData as any).workEnded,
         breaks: []
       },
-      workSessions: [],
+      workSessions: (workerData as any).workStarted && (workerData as any).workStartTime ? [{
+        id: `session_${Date.now()}`,
+        startTime: (workerData as any).workStartTime,
+        location: (workerData as any).workLocation || '',
+        isActive: true
+      }] : [],
       currentLocation: (workerData as any).workLocation || '',
       assignedLocks: [],
       registeredAt: new Date().toISOString(),
@@ -774,17 +794,50 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     }));
   };
   
-  // Changer l'emplacement du travailleur
+  // Changer l'emplacement du travailleur avec gestion automatique du timer
   const changeWorkerLocation = (workerId: string, newLocation: string) => {
     if (readOnly) return;
     
     setWorkers(prev => prev.map(worker => {
       if (worker.id === workerId) {
+        const now = new Date().toISOString();
+        
+        // Si le travailleur travaille actuellement, on arrête la session actuelle
+        let updatedSessions = worker.workSessions || [];
+        if (worker.workTimer.isActive) {
+          updatedSessions = updatedSessions.map(session => {
+            if (session.isActive) {
+              const sessionDuration = new Date(now).getTime() - new Date(session.startTime).getTime();
+              return {
+                ...session,
+                endTime: now,
+                duration: sessionDuration,
+                isActive: false
+              };
+            }
+            return session;
+          });
+          
+          // Démarrer une nouvelle session au nouvel emplacement
+          const newSession: WorkSession = {
+            id: `session_${Date.now()}`,
+            startTime: now,
+            location: newLocation,
+            isActive: true
+          };
+          updatedSessions.push(newSession);
+        }
+        
         return {
           ...worker,
           currentLocation: newLocation,
           workLocation: newLocation,
-          lastActivity: new Date().toISOString()
+          workSessions: updatedSessions,
+          workTimer: {
+            ...worker.workTimer,
+            startTime: worker.workTimer.isActive ? now : worker.workTimer.startTime
+          },
+          lastActivity: now
         };
       }
       return worker;
@@ -941,6 +994,37 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+  
+  // Compiler le temps par emplacement pour un travailleur
+  const getTimeByLocation = (worker: WorkerRegistryEntry) => {
+    const locationTimes: Record<string, number> = {};
+    
+    (worker.workSessions || []).forEach(session => {
+      const location = session.location || 'Non défini';
+      let sessionDuration = 0;
+      
+      if (session.duration) {
+        sessionDuration = session.duration;
+      } else if (session.isActive && session.startTime) {
+        // Session active, calculer le temps jusqu'à maintenant
+        sessionDuration = Date.now() - new Date(session.startTime).getTime();
+      } else if (session.startTime && session.endTime) {
+        // Session terminée
+        sessionDuration = new Date(session.endTime).getTime() - new Date(session.startTime).getTime();
+      }
+      
+      locationTimes[location] = (locationTimes[location] || 0) + sessionDuration;
+    });
+    
+    return Object.entries(locationTimes)
+      .map(([location, duration]) => ({
+        location,
+        duration: duration / (1000 * 60), // Convertir en minutes
+        formattedDuration: formatDuration(duration / (1000 * 60))
+      }))
+      .filter(item => item.duration > 0)
+      .sort((a, b) => b.duration - a.duration);
   };
   
   // =================== GESTION DE LA SIGNATURE ===================
@@ -1279,6 +1363,26 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
           <option value="withLocks">🔒 Avec cadenas actifs</option>
         </select>
         
+        {/* Mode compact toggle */}
+        <button
+          onClick={() => setCompactView(!compactView)}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '8px',
+            border: `2px solid ${compactView ? '#22c55e' : 'rgba(100, 116, 139, 0.3)'}`,
+            background: compactView ? 'rgba(34, 197, 94, 0.1)' : 'rgba(15, 23, 42, 0.8)',
+            color: compactView ? '#22c55e' : '#94a3b8',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          {compactView ? '📋' : '📝'} {compactView ? 'Mode Liste' : 'Mode Compact'}
+        </button>
+        
         {!readOnly && (
           <button
             onClick={() => setShowAddWorker(true)}
@@ -1343,13 +1447,232 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       </div>
       
       {/* Liste des travailleurs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : compactMode ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
-        gap: isMobile ? '12px' : '16px',
-        padding: isMobile ? '12px' : '20px'
-      }}>
-        {filteredWorkers.map((worker) => (
+      {compactView ? (
+        /* Mode liste compact */
+        <div style={{ 
+          padding: isMobile ? '12px' : '20px',
+          maxHeight: '600px',
+          overflowY: 'auto'
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.8)',
+            borderRadius: '12px',
+            border: '1px solid rgba(100, 116, 139, 0.3)'
+          }}>
+            {/* En-tête de la table */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile 
+                ? '1fr 80px 100px' 
+                : '1fr 150px 120px 120px 100px 120px',
+              gap: '12px',
+              padding: '16px',
+              borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+              background: 'rgba(0, 0, 0, 0.3)',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#94a3b8'
+            }}>
+              <div>👤 Nom & Entreprise</div>
+              {!isMobile && <div>📍 Emplacement</div>}
+              <div>⏱️ Temps</div>
+              <div>📊 Statut</div>
+              {!isMobile && <div>🔒 Cadenas</div>}
+              <div>🎛️ Actions</div>
+            </div>
+            
+            {filteredWorkers.map((worker) => (
+              <div
+                key={worker.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile 
+                    ? '1fr 80px 100px' 
+                    : '1fr 150px 120px 120px 100px 120px',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
+                  alignItems: 'center',
+                  borderLeft: `4px solid ${worker.workTimer.isActive ? '#22c55e' : worker.workTimer.endTime ? '#3b82f6' : '#6b7280'}`,
+                  ':hover': {
+                    background: 'rgba(59, 130, 246, 0.05)'
+                  }
+                }}
+              >
+                {/* Nom & Entreprise */}
+                <div style={{ fontSize: '13px' }}>
+                  <div style={{ color: '#e2e8f0', fontWeight: '600' }}>
+                    {worker.name}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                    {worker.company} #{worker.employeeNumber}
+                  </div>
+                  {worker.phoneNumber && (
+                    <div style={{ color: '#64748b', fontSize: '10px' }}>
+                      📞 {worker.phoneNumber}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Emplacement (desktop only) */}
+                {!isMobile && (
+                  <div style={{ 
+                    fontSize: '11px',
+                    color: '#94a3b8'
+                  }}>
+                    {worker.currentLocation || worker.workLocation || 'Non défini'}
+                  </div>
+                )}
+                
+                {/* Temps */}
+                <div style={{
+                  fontSize: '11px',
+                  color: '#e2e8f0',
+                  fontWeight: '600'
+                }}>
+                  {formatDuration(worker.totalWorkTime)}
+                  {worker.workSessions && worker.workSessions.length > 0 && (
+                    <div style={{ 
+                      color: '#64748b', 
+                      fontSize: '9px',
+                      marginTop: '2px'
+                    }}>
+                      {worker.workSessions.length} session(s)
+                    </div>
+                  )}
+                </div>
+                
+                {/* Statut */}
+                <div style={{
+                  fontSize: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    background: worker.workTimer.isActive 
+                      ? 'rgba(34, 197, 94, 0.2)'
+                      : worker.workTimer.endTime 
+                        ? 'rgba(59, 130, 246, 0.2)'
+                        : 'rgba(107, 114, 128, 0.2)',
+                    color: worker.workTimer.isActive 
+                      ? '#86efac'
+                      : worker.workTimer.endTime 
+                        ? '#93c5fd'
+                        : '#94a3b8',
+                    fontWeight: '600'
+                  }}>
+                    {worker.workTimer.isActive ? 'En cours' :
+                     worker.workTimer.endTime ? 'Terminé' : 
+                     'Inactif'}
+                  </div>
+                  {worker.astValidated && (
+                    <div style={{
+                      fontSize: '8px',
+                      color: '#86efac',
+                      marginTop: '2px'
+                    }}>
+                      ✓ AST
+                    </div>
+                  )}
+                </div>
+                
+                {/* Cadenas (desktop only) */}
+                {!isMobile && (
+                  <div style={{
+                    fontSize: '10px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{
+                      color: worker.lockStatus === 'applied' 
+                        ? '#fca5a5' 
+                        : worker.lockStatus === 'removed' 
+                          ? '#86efac' 
+                          : '#94a3b8',
+                      fontWeight: '600'
+                    }}>
+                      {worker.lockStatus === 'applied' ? '🔴 Apposé' :
+                       worker.lockStatus === 'removed' ? '🟢 Enlevé' : '⚪ N/A'}
+                    </div>
+                    {worker.assignedLocks.length > 0 && (
+                      <div style={{ color: '#64748b', fontSize: '9px' }}>
+                        {worker.assignedLocks.filter(l => l.isApplied).length}/{worker.assignedLocks.length} LOTO
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Actions */}
+                <div style={{
+                  display: 'flex',
+                  gap: '4px',
+                  justifyContent: 'center'
+                }}>
+                  {!readOnly && (
+                    <>
+                      {!worker.workTimer.isActive ? (
+                        <button
+                          onClick={() => startWork(worker.id)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #22c55e',
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            color: '#86efac',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          ▶
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => endWork(worker.id)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #ef4444',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            color: '#fca5a5',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          ⏹
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {filteredWorkers.length === 0 && (
+              <div style={{
+                padding: '40px',
+                textAlign: 'center',
+                color: '#64748b',
+                fontSize: '14px'
+              }}>
+                {searchTerm 
+                  ? `Aucun travailleur trouvé pour "${searchTerm}"`
+                  : 'Aucun travailleur enregistré'
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Mode cartes normal */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : compactMode ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
+          gap: isMobile ? '12px' : '16px',
+          padding: isMobile ? '12px' : '20px'
+        }}>
+          {filteredWorkers.map((worker) => (
           <div
             key={worker.id}
             style={{
@@ -1509,37 +1832,38 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   fontSize: '13px', 
                   fontWeight: '600' 
                 }}>
-                  📍 Emplacement actuel
+                  📍 Emplacement
                 </span>
-                <button
-                  onClick={() => {
-                    const newLocation = prompt('Nouvel emplacement:', worker.currentLocation || worker.workLocation);
-                    if (newLocation && newLocation.trim()) {
-                      changeWorkerLocation(worker.id, newLocation.trim());
-                    }
-                  }}
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    border: '1px solid rgba(59, 130, 246, 0.4)',
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '11px',
-                    color: '#3b82f6',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✏️ Changer
-                </button>
               </div>
-              <div style={{ 
-                color: '#e2e8f0', 
-                fontSize: '12px',
-                marginBottom: '8px'
-              }}>
-                {worker.currentLocation || worker.workLocation || 'Non défini'}
-              </div>
+              <select
+                value={worker.currentLocation || worker.workLocation || ''}
+                onChange={(e) => {
+                  if (e.target.value !== worker.currentLocation) {
+                    changeWorkerLocation(worker.id, e.target.value);
+                  }
+                }}
+                disabled={readOnly}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  background: 'rgba(15, 23, 42, 0.8)',
+                  color: '#e2e8f0',
+                  fontSize: '12px',
+                  marginBottom: '8px',
+                  cursor: readOnly ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <option value="">Sélectionner un emplacement</option>
+                {availableLocations.map((location, index) => (
+                  <option key={index} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
               
-              {/* Sessions de travail */}
+              {/* Temps par emplacement */}
               {worker.workSessions && worker.workSessions.length > 0 && (
                 <div>
                   <span style={{ 
@@ -1547,32 +1871,78 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     fontSize: '11px', 
                     fontWeight: '600' 
                   }}>
-                    📊 Sessions ({worker.workSessions.length})
+                    📊 Temps par emplacement ({worker.workSessions.length} sessions)
                   </span>
                   <div style={{ 
-                    maxHeight: '80px', 
+                    maxHeight: '100px', 
                     overflowY: 'auto',
                     marginTop: '4px'
                   }}>
-                    {worker.workSessions.map((session, index) => (
-                      <div key={session.id} style={{
+                    {getTimeByLocation(worker).map((locationData, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         fontSize: '10px',
                         color: '#94a3b8',
-                        padding: '2px 0',
-                        borderLeft: session.isActive ? '2px solid #22c55e' : '2px solid #64748b',
-                        paddingLeft: '6px',
-                        marginBottom: '2px'
+                        padding: '4px 6px',
+                        marginBottom: '2px',
+                        borderRadius: '4px',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)'
                       }}>
-                        <span style={{ color: session.isActive ? '#22c55e' : '#e2e8f0' }}>
-                          {session.isActive ? '🟢' : '⚪'} {formatTime(session.startTime)}
-                          {session.endTime && ` → ${formatTime(session.endTime)}`}
+                        <span style={{ 
+                          color: '#e2e8f0',
+                          fontSize: '10px'
+                        }}>
+                          📍 {locationData.location}
                         </span>
-                        <br />
-                        <span style={{ color: '#64748b' }}>
-                          📍 {session.location}
+                        <span style={{ 
+                          color: '#60a5fa', 
+                          fontWeight: '600',
+                          fontSize: '11px'
+                        }}>
+                          {locationData.formattedDuration}
                         </span>
                       </div>
                     ))}
+                    
+                    {/* Sessions individuelles (détail) */}
+                    <details style={{ marginTop: '8px' }}>
+                      <summary style={{ 
+                        color: '#64748b', 
+                        fontSize: '9px', 
+                        cursor: 'pointer',
+                        marginBottom: '4px'
+                      }}>
+                        Voir détail des sessions
+                      </summary>
+                      <div style={{ 
+                        maxHeight: '60px', 
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}>
+                        {worker.workSessions.map((session, index) => (
+                          <div key={session.id} style={{
+                            fontSize: '9px',
+                            color: '#64748b',
+                            padding: '2px 0',
+                            borderLeft: session.isActive ? '2px solid #22c55e' : '2px solid #64748b',
+                            paddingLeft: '4px',
+                            marginBottom: '2px'
+                          }}>
+                            <span style={{ color: session.isActive ? '#22c55e' : '#94a3b8' }}>
+                              {session.isActive ? '🟢' : '⚪'} {formatTime(session.startTime)}
+                              {session.endTime && ` → ${formatTime(session.endTime)}`}
+                            </span>
+                            <br />
+                            <span style={{ color: '#64748b', fontSize: '8px' }}>
+                              📍 {session.location}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   </div>
                 </div>
               )}
@@ -1966,53 +2336,58 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                 </button>
               )}
               
-              {worker.astValidated && !worker.workTimer.isActive && !worker.workTimer.endTime && !readOnly && (
-                <button
-                  onClick={() => startWork(worker.id)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #22c55e',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    color: '#86efac',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Play size={12} />
-                  {t.startWork}
-                </button>
-              )}
-              
-              {worker.workTimer.isActive && !readOnly && (
-                <button
-                  onClick={() => endWork(worker.id)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #ef4444',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    color: '#fca5a5',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Square size={12} />
-                  {t.endWork}
-                </button>
+              {/* Boutons toujours disponibles */}
+              {!readOnly && (
+                <>
+                  {!worker.workTimer.isActive ? (
+                    <button
+                      onClick={() => startWork(worker.id)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #22c55e',
+                        background: 'rgba(34, 197, 94, 0.1)',
+                        color: '#86efac',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Play size={12} />
+                      {t.startWork}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => endWork(worker.id)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #ef4444',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#fca5a5',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Square size={12} />
+                      {t.endWork}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
-        ))}
-      </div>
+            ))}
+          </div>
+        )
+      )}
       
       {/* Modal Signature */}
       {selectedWorker && (
