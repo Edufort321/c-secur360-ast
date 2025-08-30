@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, AlertTriangle, Users, Shield, 
   User, Clock, Award, MessageSquare, ThumbsUp,
-  Edit, Save, Star, Calendar, Plus
+  Edit, Save, Star, Calendar, Plus, X
 } from 'lucide-react';
 
 // Importer le WorkerRegistryAST et SMS
@@ -79,7 +79,8 @@ const translations = {
       reject: "Rejeter", 
       saveComments: "Sauvegarder commentaires",
       requestChanges: "Demander modifications",
-      validate: "Valider l'AST"
+      validate: "Valider l'AST",
+      cancel: "Annuler"
     },
     
     // Formulaires
@@ -143,7 +144,8 @@ const translations = {
       reject: "Reject",
       saveComments: "Save comments",
       requestChanges: "Request changes",
-      validate: "Validate JSA"
+      validate: "Validate JSA",
+      cancel: "Cancel"
     },
     
     // Forms
@@ -190,6 +192,15 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
 }) => {
   // =================== TRADUCTIONS ===================
   const t = translations[language];
+  
+  // =================== FONCTIONS UTILITAIRES ===================
+  
+  const formatWorkTime = (totalMinutes: number): string => {
+    if (!totalMinutes || totalMinutes === 0) return '0h 0m';
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+  };
   
   // =================== ÉTATS ===================
   const [criteria, setCriteria] = useState<ValidationCriteria>(
@@ -275,6 +286,42 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
       lastUpdated: new Date().toISOString(),
       totalCount: workersData.length
     });
+    
+    // Mettre à jour aussi les données pour les SMS
+    setCurrentWorkers(workersData);
+  };
+
+  // =================== GESTION SMS AVEC CIBLAGE ===================
+  const [currentWorkers, setCurrentWorkers] = useState<any[]>(formData?.workers?.list || []);
+  const [smsTargetMode, setSmsTargetMode] = useState<'all' | 'location' | 'custom'>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+
+  // Fonction pour obtenir les numéros de téléphone selon le ciblage
+  const getTargetedPhoneNumbers = (): string[] => {
+    const workers = currentWorkers.filter(w => w.phone && w.phone.trim());
+    
+    switch (smsTargetMode) {
+      case 'all':
+        return workers.map(w => w.phone);
+      
+      case 'location':
+        if (!selectedLocation) return [];
+        return workers
+          .filter(w => w.workLocation === selectedLocation)
+          .map(w => w.phone);
+      
+      case 'custom':
+      default:
+        return [];
+    }
+  };
+
+  // Fonction pour obtenir la liste des emplacements uniques
+  const getUniqueWorkLocations = (): string[] => {
+    return [...new Set(currentWorkers
+      .map(w => w.workLocation)
+      .filter(Boolean)
+    )];
   };
 
   // =================== CALCULS ===================
@@ -595,7 +642,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
               fontWeight: '800',
               color: '#f59e0b',
               marginBottom: '4px'
-            }}>{Math.floor(workerStats.totalWorkTime / 60)}h {workerStats.totalWorkTime % 60}m</div>
+            }}>{formatWorkTime(workerStats.totalWorkTime)}</div>
             <div style={{
               fontSize: window.innerWidth < 768 ? '11px' : '12px',
               color: '#fbbf24',
@@ -730,14 +777,142 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           <MessageSquare size={window.innerWidth < 768 ? 18 : 20} />
           {language === 'fr' ? 'Notifications Équipe' : 'Team Notifications'}
         </h3>
+
+        {/* Interface de ciblage des destinataires */}
+        {currentWorkers.length > 0 && (
+          <div style={{
+            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            border: '1px solid rgba(100, 116, 139, 0.3)',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '20px'
+          }}>
+            <h4 style={{
+              color: '#e2e8f0',
+              fontSize: '14px',
+              fontWeight: '600',
+              margin: '0 0 12px 0'
+            }}>
+              🎯 {language === 'fr' ? 'Cibler les destinataires' : 'Target Recipients'}
+            </h4>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)',
+              gap: '12px',
+              marginBottom: '12px'
+            }}>
+              {/* Tous les travailleurs */}
+              <button
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: smsTargetMode === 'all' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                  color: smsTargetMode === 'all' ? '#22c55e' : '#94a3b8',
+                  border: '1px solid ' + (smsTargetMode === 'all' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(100, 116, 139, 0.3)'),
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => setSmsTargetMode('all')}
+              >
+                👥 {language === 'fr' ? `Tous (${currentWorkers.length})` : `All (${currentWorkers.length})`}
+              </button>
+
+              {/* Par emplacement */}
+              <button
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: smsTargetMode === 'location' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                  color: smsTargetMode === 'location' ? '#3b82f6' : '#94a3b8',
+                  border: '1px solid ' + (smsTargetMode === 'location' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(100, 116, 139, 0.3)'),
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => setSmsTargetMode('location')}
+              >
+                📍 {language === 'fr' ? 'Par emplacement' : 'By Location'}
+              </button>
+
+              {/* Sélection manuelle */}
+              <button
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: smsTargetMode === 'custom' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+                  color: smsTargetMode === 'custom' ? '#a855f7' : '#94a3b8',
+                  border: '1px solid ' + (smsTargetMode === 'custom' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(100, 116, 139, 0.3)'),
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => setSmsTargetMode('custom')}
+              >
+                ✋ {language === 'fr' ? 'Sélection manuelle' : 'Manual Selection'}
+              </button>
+            </div>
+
+            {/* Sélecteur d'emplacement */}
+            {smsTargetMode === 'location' && getUniqueWorkLocations().length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '2px solid rgba(100, 116, 139, 0.3)',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                    color: 'white',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">{language === 'fr' ? 'Choisir un emplacement...' : 'Choose location...'}</option>
+                  {getUniqueWorkLocations().map(location => (
+                    <option key={location} value={location}>
+                      {location} ({currentWorkers.filter(w => w.workLocation === location).length} {language === 'fr' ? 'travailleurs' : 'workers'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Aperçu des destinataires ciblés */}
+            <div style={{
+              fontSize: '12px',
+              color: '#94a3b8',
+              padding: '8px',
+              backgroundColor: 'rgba(100, 116, 139, 0.1)',
+              borderRadius: '6px',
+              border: '1px solid rgba(100, 116, 139, 0.2)'
+            }}>
+              📱 {language === 'fr' ? 'Destinataires ciblés' : 'Targeted recipients'}: {getTargetedPhoneNumbers().length} {language === 'fr' ? 'numéro(s)' : 'number(s)'}
+              {getTargetedPhoneNumbers().length > 0 && (
+                <div style={{ marginTop: '4px', fontSize: '11px' }}>
+                  {getTargetedPhoneNumbers().slice(0, 3).join(', ')}
+                  {getTargetedPhoneNumbers().length > 3 && ` + ${getTargetedPhoneNumbers().length - 3} ${language === 'fr' ? 'autres' : 'others'}`}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
           <SMSNotification
             astId={formData?.astNumber}
             defaultType="general_alert"
             defaultMessage={`AST ${formData?.astNumber}: ${formData?.projectInfo?.title || 'Nouveau projet'} - Mise à jour importante de l'équipe.`}
             language={language}
             defaultRecipients={[
-              formData?.projectInfo?.supervisorPhone,
-              ...(formData?.projectInfo?.teamMembers || []).map((m: any) => m.phone).filter(Boolean)
+              ...(smsTargetMode === 'custom' ? [
+                formData?.projectInfo?.supervisorPhone,
+                ...(formData?.projectInfo?.teamMembers || []).map((m: any) => m.phone).filter(Boolean)
+              ] : getTargetedPhoneNumbers())
             ].filter(Boolean)}
             compact={false}
             autoExpand={false}
@@ -1064,82 +1239,196 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
           
           {!isAddingReviewer ? (
             <button 
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              style={{
+                marginTop: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
               onClick={() => {
                 setIsAddingReviewer(true);
               }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus style={{ width: '16px', height: '16px' }} />
               {t.actions.addReviewer}
             </button>
           ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 md:p-5 mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerName}</label>
+            <div style={{
+              backgroundColor: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '12px',
+              padding: window.innerWidth < 768 ? '16px' : '20px',
+              marginTop: '16px'
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)',
+                gap: '16px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>{t.form.reviewerName}</label>
                   <input
                     type="text"
                     value={newReviewer.name}
                     onChange={(e) => setNewReviewer({...newReviewer, name: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                      color: 'white',
+                      fontSize: '14px'
+                    }}
                     placeholder="Nom complet"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerRole}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>{t.form.reviewerRole}</label>
                   <input
                     type="text"
                     value={newReviewer.role}
                     onChange={(e) => setNewReviewer({...newReviewer, role: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                      color: 'white',
+                      fontSize: '14px'
+                    }}
                     placeholder="Ex: Superviseur sécurité"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-700">{t.form.reviewerEmail}</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>{t.form.reviewerEmail}</label>
                   <input
                     type="email"
                     value={newReviewer.email}
                     onChange={(e) => setNewReviewer({...newReviewer, email: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                      color: 'white',
+                      fontSize: '14px'
+                    }}
                     placeholder="email@example.com"
                   />
                 </div>
-                <div className="md:col-span-3 flex flex-col gap-2">
-                  <label className="text-sm font-medium text-gray-700">{t.form.comments}</label>
+                <div style={{ 
+                  gridColumn: window.innerWidth < 768 ? '1' : '1 / -1',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <label style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#e2e8f0'
+                  }}>{t.form.comments}</label>
                   <textarea
                     value={newReviewer.comments}
                     onChange={(e) => setNewReviewer({...newReviewer, comments: e.target.value})}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm h-20 resize-none"
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid rgba(100, 116, 139, 0.3)',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                      color: 'white',
+                      fontSize: '14px',
+                      height: '80px',
+                      resize: 'none'
+                    }}
                     placeholder={t.form.commentsPlaceholder}
                     rows={3}
                   />
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-3">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                 <button 
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    (!newReviewer.name.trim() || !newReviewer.role.trim()) 
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    cursor: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 'not-allowed' : 'pointer',
+                    backgroundColor: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 'rgba(148, 163, 184, 0.3)' : 'rgba(34, 197, 94, 0.1)',
+                    color: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? '#94a3b8' : '#22c55e',
+                    border: '1px solid ' + ((!newReviewer.name.trim() || !newReviewer.role.trim()) ? 'rgba(148, 163, 184, 0.3)' : 'rgba(34, 197, 94, 0.3)'),
+                    opacity: (!newReviewer.name.trim() || !newReviewer.role.trim()) ? 0.5 : 1,
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(!newReviewer.name.trim() || !newReviewer.role.trim())) {
+                      e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.2)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!(!newReviewer.name.trim() || !newReviewer.role.trim())) {
+                      e.currentTarget.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+                    }
+                  }}
                   onClick={() => {
                     handleAddReviewer();
                   }}
                   disabled={!newReviewer.name.trim() || !newReviewer.role.trim()}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus style={{ width: '16px', height: '16px' }} />
                   {t.actions.addReviewer}
                 </button>
                 <button 
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: 'rgba(148, 163, 184, 0.2)',
+                    color: '#94a3b8',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.3)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.2)'}
                   onClick={() => {
                     setIsAddingReviewer(false);
                     setNewReviewer({ name: '', role: '', email: '', comments: '' });
                   }}
                 >
-                  Annuler
+                  <X style={{ width: '16px', height: '16px' }} />
+                  {t.actions.cancel}
                 </button>
               </div>
             </div>
