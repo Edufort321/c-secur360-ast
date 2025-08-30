@@ -7,7 +7,7 @@ import {
   Droplets, Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, BarChart3,
   TrendingUp, Activity, Shield, Bell, Send, MessageSquare, Hash, Star, Globe, Save,
   Unlock, Navigation, RotateCw, ZoomIn, ZoomOut, CheckCircle, Download,
-  ChevronLeft, ChevronRight, Edit
+  ChevronLeft, ChevronRight, Edit, Timer
 } from 'lucide-react';
 import LOTOPhotoCarousel from '../loto/LOTOPhotoCarousel';
 import LOTONotificationSystem from '../notifications/LOTONotificationSystem';
@@ -149,9 +149,25 @@ type LOTOStatus = 'pending' | 'isolated' | 'verified' | 'completed' | 'removed';
 type LockState = 'before_isolation' | 'during_isolation' | 'isolated' | 'verification' | 'removal' | 'completed';
 type PhotoType = 'isolation' | 'verification' | 'lock_application' | 'energy_test' | 'completion' | 'incident';
 
+// Nouvelle interface pour les objectifs de travail avancés
+interface WorkObjective {
+  id: string;
+  title: string;
+  description: string;
+  assignedLocationId?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  estimatedDuration?: number; // en minutes
+  actualDuration?: number; // en minutes
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignedWorkers?: string[]; // IDs des travailleurs assignés
+  notes?: string;
+}
+
 interface ProjectInfo {
-  // Numéro AST unique
-  astNumber: string;
+  // astNumber retiré - il vient maintenant de formData directement
   
   // Client et projet
   clientName: string;
@@ -188,7 +204,7 @@ interface ProjectInfo {
   
   // Description
   workDescription: string;
-  workObjectives: string[];
+  workObjectives: WorkObjective[];
   specialRequirements: string;
   
   // Météo et conditions
@@ -306,6 +322,33 @@ const translations = {
     workObjectives: "Objectifs de travail",
     addObjective: "Ajouter objectif",
     specialRequirements: "Exigences spéciales",
+    
+    // Nouveaux objectifs avancés
+    objectiveTitle: "Titre de l'objectif",
+    objectiveDescription: "Description de la tâche",
+    assignedLocation: "Emplacement assigné",
+    selectLocation: "Sélectionner un emplacement",
+    noLocation: "Aucun emplacement",
+    objectiveStatus: "Statut",
+    objectivePriority: "Priorité",
+    objectiveEstimatedDuration: "Durée estimée (minutes)",
+    actualDuration: "Durée réelle",
+    assignedWorkers: "Travailleurs assignés",
+    objectiveNotes: "Notes",
+    statusPending: "En attente",
+    statusInProgress: "En cours",
+    statusCompleted: "Terminé",
+    priorityLow: "Faible",
+    priorityMedium: "Moyen",
+    priorityHigh: "Élevé",
+    priorityCritical: "Critique",
+    startObjective: "Démarrer",
+    completeObjective: "Terminer",
+    editObjective: "Modifier",
+    deleteObjective: "Supprimer",
+    workersInTask: "travailleurs dans cette tâche",
+    totalTimeSpent: "Temps total passé",
+    taskProgress: "Progrès de la tâche",
     
     // Conditions
     conditionsSection: "Conditions de Travail",
@@ -514,6 +557,33 @@ const translations = {
     addObjective: "Add objective",
     specialRequirements: "Special requirements",
     
+    // Nouveaux objectifs avancés
+    objectiveTitle: "Objective title",
+    objectiveDescription: "Task description",
+    assignedLocation: "Assigned location",
+    selectLocation: "Select location",
+    noLocation: "No location",
+    objectiveStatus: "Status",
+    objectivePriority: "Priority",
+    objectiveEstimatedDuration: "Estimated duration (minutes)",
+    actualDuration: "Actual duration",
+    assignedWorkers: "Assigned workers",
+    objectiveNotes: "Notes",
+    statusPending: "Pending",
+    statusInProgress: "In progress",
+    statusCompleted: "Completed",
+    priorityLow: "Low",
+    priorityMedium: "Medium",
+    priorityHigh: "High",
+    priorityCritical: "Critical",
+    startObjective: "Start",
+    completeObjective: "Complete",
+    editObjective: "Edit",
+    deleteObjective: "Delete",
+    workersInTask: "workers in this task",
+    totalTimeSpent: "Total time spent",
+    taskProgress: "Task progress",
+    
     // Conditions
     conditionsSection: "Working Conditions",
     weatherConditions: "Weather conditions",
@@ -654,7 +724,7 @@ const Step1ProjectInfo = memo(({
   const t = translations[language];
   const [localData, setLocalData] = useState<ProjectInfo>(() => ({
     // Initialisation avec données existantes ou valeurs par défaut
-    astNumber: formData?.projectInfo?.astNumber || '',
+    // Le numéro AST vient directement de formData, pas besoin de le stocker dans localData
     clientName: formData?.projectInfo?.clientName || '',
     clientRep: formData?.projectInfo?.clientRep || '',
     clientPhone: formData?.projectInfo?.clientPhone || '',
@@ -677,7 +747,21 @@ const Step1ProjectInfo = memo(({
     emergencyContact: formData?.projectInfo?.emergencyContact || '',
     emergencyPhone: formData?.projectInfo?.emergencyPhone || '',
     workDescription: formData?.projectInfo?.workDescription || '',
-    workObjectives: formData?.projectInfo?.workObjectives || [],
+    workObjectives: (formData?.projectInfo?.workObjectives || []).map((objective: any) => {
+      // Migration des anciens objectifs string vers nouveaux WorkObjective
+      if (typeof objective === 'string') {
+        return {
+          id: `objective_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title: objective,
+          description: '',
+          status: 'pending' as const,
+          priority: 'medium' as const,
+          createdAt: new Date().toISOString()
+        };
+      }
+      // Retourner l'objectif existant s'il est déjà au bon format
+      return objective;
+    }),
     specialRequirements: formData?.projectInfo?.specialRequirements || '',
     weatherConditions: formData?.projectInfo?.weatherConditions || '',
     temperature: formData?.projectInfo?.temperature || '',
@@ -712,7 +796,17 @@ const Step1ProjectInfo = memo(({
   }));
 
   const [copied, setCopied] = useState(false);
-  const [newObjective, setNewObjective] = useState('');
+  
+  // États pour les nouveaux objectifs avancés
+  const [newObjective, setNewObjective] = useState<Partial<WorkObjective>>({
+    title: '',
+    description: '',
+    assignedLocationId: '',
+    priority: 'medium',
+    estimatedDuration: 60
+  });
+  const [editingObjective, setEditingObjective] = useState<string | null>(null);
+  const [showObjectiveForm, setShowObjectiveForm] = useState(false);
   const [showLotoSection, setShowLotoSection] = useState(false);
   const [newLotoPoint, setNewLotoPoint] = useState<Partial<LOTOPoint>>({});
   const [editingLotoPoint, setEditingLotoPoint] = useState<string | null>(null);
@@ -733,38 +827,26 @@ const Step1ProjectInfo = memo(({
     responsible: '',
     priority: 'medium'
   });
-  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
-  const [showControlForm, setShowControlForm] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Générer numéro AST unique
-  const generateASTNumber = useCallback(() => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const time = String(Date.now()).slice(-4);
-    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
-    
-    const astNumber = `AST-${year}${month}${day}-${time}-${random}`;
-    
-    updateField('astNumber', astNumber);
-  }, []);
+  // Le numéro AST est généré automatiquement par ASTForm
+  // Nous utilisons celui qui est déjà fourni dans formData
 
-  // Copier numéro AST
+  // Copier numéro AST (depuis formData.astNumber généré par ASTForm)
   const copyASTNumber = useCallback(async () => {
-    if (localData.astNumber) {
+    const astNumber = formData?.astNumber;
+    if (astNumber) {
       try {
-        await navigator.clipboard.writeText(localData.astNumber);
+        await navigator.clipboard.writeText(astNumber);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (error) {
         console.error('Erreur copie:', error);
       }
     }
-  }, [localData.astNumber]);
+  }, [formData?.astNumber]);
 
   // Mise à jour de champ avec debounce
   const updateField = useCallback((field: string, value: any) => {
@@ -846,18 +928,211 @@ const Step1ProjectInfo = memo(({
     updateField('workLocations', updatedLocations);
   }, [localData.workLocations, updateField]);
 
-  // Ajouter objectif
-  const addObjective = useCallback(() => {
-    if (newObjective.trim()) {
-      updateField('workObjectives', [...localData.workObjectives, newObjective.trim()]);
-      setNewObjective('');
-    }
+  // =================== FONCTIONS OBJECTIFS AVANCÉS ===================
+  
+  // Ajouter objectif avancé
+  const addWorkObjective = useCallback(() => {
+    if (!newObjective.title?.trim()) return;
+    
+    const objective: WorkObjective = {
+      id: `objective_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: newObjective.title.trim(),
+      description: newObjective.description || '',
+      assignedLocationId: newObjective.assignedLocationId || undefined,
+      status: 'pending',
+      priority: newObjective.priority || 'medium',
+      estimatedDuration: newObjective.estimatedDuration || 60,
+      createdAt: new Date().toISOString()
+    };
+    
+    updateField('workObjectives', [...localData.workObjectives, objective]);
+    setNewObjective({
+      title: '',
+      description: '',
+      assignedLocationId: '',
+      priority: 'medium',
+      estimatedDuration: 60
+    });
+    setShowObjectiveForm(false);
   }, [newObjective, localData.workObjectives, updateField]);
-
+  
   // Supprimer objectif
-  const removeObjective = useCallback((index: number) => {
-    updateField('workObjectives', localData.workObjectives.filter((_, i) => i !== index));
+  const removeWorkObjective = useCallback((objectiveId: string) => {
+    updateField('workObjectives', localData.workObjectives.filter(obj => obj.id !== objectiveId));
   }, [localData.workObjectives, updateField]);
+  
+  // Modifier statut d'un objectif
+  const updateObjectiveStatus = useCallback((objectiveId: string, status: 'pending' | 'in_progress' | 'completed') => {
+    const updatedObjectives = localData.workObjectives.map(objective => {
+      if (objective.id === objectiveId) {
+        const updates: Partial<WorkObjective> = { status };
+        
+        if (status === 'in_progress' && !objective.startedAt) {
+          updates.startedAt = new Date().toISOString();
+        } else if (status === 'completed' && !objective.completedAt) {
+          updates.completedAt = new Date().toISOString();
+          
+          // Calculer la durée réelle si l'objectif avait été démarré
+          if (objective.startedAt) {
+            const startTime = new Date(objective.startedAt).getTime();
+            const endTime = new Date().getTime();
+            updates.actualDuration = Math.round((endTime - startTime) / 1000 / 60); // en minutes
+          }
+        }
+        
+        return { ...objective, ...updates };
+      }
+      return objective;
+    });
+    
+    updateField('workObjectives', updatedObjectives);
+  }, [localData.workObjectives, updateField]);
+  
+  // Fonction pour obtenir les statistiques temps réel des travailleurs par tâche
+  const getObjectiveWorkerStats = useCallback((objectiveId: string) => {
+    const objective = localData.workObjectives.find(obj => obj.id === objectiveId);
+    if (!objective?.assignedLocationId) return { workerCount: 0, totalTime: 0, activeWorkers: [], completedWorkers: [] };
+    
+    // Récupérer les données temps réel depuis Step4 (formData.workers)
+    const workersData = formData?.workers?.list || [];
+    const assignedLocation = localData.workLocations.find(loc => loc.id === objective.assignedLocationId);
+    
+    if (!assignedLocation || workersData.length === 0) {
+      return { workerCount: 0, totalTime: 0, activeWorkers: [], completedWorkers: [] };
+    }
+    
+    // Filtrer les travailleurs assignés à cette location
+    const locationWorkers = workersData.filter((worker: any) => 
+      worker.workLocation === assignedLocation.name || 
+      worker.currentLocation === assignedLocation.name
+    );
+    
+    // Séparer les travailleurs actifs et terminés
+    const activeWorkers = locationWorkers.filter((worker: any) => 
+      worker.workStarted && !worker.workEnded
+    );
+    
+    const completedWorkers = locationWorkers.filter((worker: any) => 
+      worker.workStarted && worker.workEnded
+    );
+    
+    // Calculer le temps total (additionner tous les temps de travail)
+    const totalTime = locationWorkers.reduce((total: number, worker: any) => {
+      if (worker.totalWorkTime && typeof worker.totalWorkTime === 'number') {
+        return total + Math.floor(worker.totalWorkTime); // Convertir en minutes si nécessaire
+      }
+      return total;
+    }, 0);
+    
+    return {
+      workerCount: locationWorkers.length,
+      activeWorkerCount: activeWorkers.length,
+      completedWorkerCount: completedWorkers.length,
+      totalTime: totalTime,
+      activeWorkers: activeWorkers.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        startTime: w.workStartTime,
+        currentDuration: w.workTimer?.isActive ? 
+          Math.floor((new Date().getTime() - new Date(w.workStartTime).getTime()) / 60000) : 0
+      })),
+      completedWorkers: completedWorkers.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        totalDuration: w.totalWorkTime || 0
+      }))
+    };
+  }, [localData.workObjectives, localData.workLocations, formData?.workers]);
+
+  // Fonction pour mettre à jour automatiquement les statuts des objectifs basés sur les données travailleurs
+  const updateObjectiveStatusBasedOnWorkers = useCallback(() => {
+    let objectivesUpdated = false;
+    const updatedObjectives = localData.workObjectives.map(objective => {
+      const stats = getObjectiveWorkerStats(objective.id);
+      
+      // Auto-progression des statuts basée sur les données temps réel
+      let newStatus = objective.status;
+      let actualDuration = objective.actualDuration;
+      
+      // Si des travailleurs commencent à travailler et l'objectif est pending -> in_progress
+      if (objective.status === 'pending' && stats.activeWorkerCount > 0) {
+        newStatus = 'in_progress';
+        objectivesUpdated = true;
+        
+        // Enregistrer le temps de début si pas déjà fait
+        if (!objective.startedAt) {
+          return {
+            ...objective,
+            status: newStatus,
+            startedAt: new Date().toISOString()
+          };
+        }
+      }
+      
+      // Si tous les travailleurs ont terminé et il y a du temps accumulé -> completed
+      if (objective.status === 'in_progress' && 
+          stats.activeWorkerCount === 0 && 
+          stats.completedWorkerCount > 0 && 
+          stats.totalTime > 0) {
+        newStatus = 'completed';
+        actualDuration = stats.totalTime;
+        objectivesUpdated = true;
+        
+        return {
+          ...objective,
+          status: newStatus,
+          actualDuration: actualDuration,
+          completedAt: new Date().toISOString()
+        };
+      }
+      
+      // Mettre à jour la durée actuelle pour les tâches en cours
+      if (objective.status === 'in_progress' && stats.totalTime !== actualDuration) {
+        objectivesUpdated = true;
+        return {
+          ...objective,
+          actualDuration: stats.totalTime
+        };
+      }
+      
+      return objective;
+    });
+    
+    // Seulement mettre à jour si des changements ont été détectés
+    if (objectivesUpdated) {
+      updateField('workObjectives', updatedObjectives);
+    }
+  }, [localData.workObjectives, getObjectiveWorkerStats, updateField]);
+
+  // Effet pour mettre à jour les statuts automatiquement quand les données de Step4 changent
+  useEffect(() => {
+    if (formData?.workers?.list && localData.workObjectives.length > 0) {
+      updateObjectiveStatusBasedOnWorkers();
+    }
+  }, [formData?.workers?.list, updateObjectiveStatusBasedOnWorkers]);
+
+  // Timer pour mise à jour temps réel (toutes les 30 secondes)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (formData?.workers?.list && localData.workObjectives.length > 0) {
+        // Force une re-render des statistiques pour mettre à jour les timers actifs
+        updateObjectiveStatusBasedOnWorkers();
+      }
+    }, 30000); // 30 secondes
+
+    return () => clearInterval(interval);
+  }, [formData?.workers?.list, localData.workObjectives.length, updateObjectiveStatusBasedOnWorkers]);
+  
+  // Ancien handler pour compatibilité (peut être supprimé plus tard)
+  const addObjective = useCallback(() => {
+    setShowObjectiveForm(true);
+  }, []);
+  
+  const removeObjective = useCallback((index: number) => {
+    if (localData.workObjectives[index]) {
+      removeWorkObjective(localData.workObjectives[index].id);
+    }
+  }, [localData.workObjectives, removeWorkObjective]);
 
   // =================== FONCTIONS ÉQUIPEMENTS/CONTRÔLES ===================
   
@@ -1406,6 +1681,14 @@ const Step1ProjectInfo = memo(({
       fontFamily: 'system-ui, -apple-system, sans-serif',
       padding: '24px'
     }}>
+      {/* Ajouter les animations CSS */}
+      <style>{`
+        @keyframes pulse {
+          0% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
       {/* Input caché pour capture photo */}
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
       
@@ -1497,38 +1780,19 @@ const Step1ProjectInfo = memo(({
           <div style={{ display: 'flex', gap: window.innerWidth < 768 ? '8px' : '12px', alignItems: 'center', flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap' }}>
             <input
               type="text"
-              value={localData.astNumber}
+              value={formData?.astNumber || ''}
               readOnly
+              placeholder={t.astGenerated}
               style={{
                 ...inputStyle,
                 flex: 1,
                 background: 'var(--bg-primary)',
                 cursor: 'default'
               }}
-              placeholder={t.astGenerated}
             />
             
-            <button
-              onClick={generateASTNumber}
-              style={{
-                background: 'var(--gradient-success)',
-                color: 'white',
-                border: 'none',
-                padding: window.innerWidth < 768 ? '8px 12px' : '12px 16px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap',
-                fontSize: window.innerWidth < 768 ? '12px' : '14px'
-              }}
-            >
-              <Star size={window.innerWidth < 768 ? 14 : 16} />
-              {t.generate}
-            </button>
-            
-            {localData.astNumber && (
+            {/* Bouton copier - affiché seulement si numéro AST existe */}
+            {formData?.astNumber && (
               <button
                 onClick={copyASTNumber}
                 style={{
@@ -1791,12 +2055,14 @@ const Step1ProjectInfo = memo(({
             </div>
           </div>
 
-          {/* Configuration globale */}
+          {/* Configuration selon le mode sélectionné */}
           {localData.equipmentControlMode === 'global' && (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
-              gap: '24px'
+              background: 'rgba(59, 130, 246, 0.05)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '12px',
+              padding: '20px',
+              textAlign: 'center'
             }}>
               {/* Équipements globaux */}
               <div style={{
@@ -2732,72 +2998,490 @@ const Step1ProjectInfo = memo(({
               />
             </div>
             
+            {/* =================== OBJECTIFS DE TRAVAIL AVANCÉS =================== */}
             <div>
-              <label style={labelStyle}>{t.workObjectives}</label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  type="text"
-                  value={newObjective}
-                  onChange={(e) => setNewObjective(e.target.value)}
-                  style={{ ...inputStyle, flex: 1 }}
-                  placeholder={t.placeholders.objective}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addObjective();
-                    }
-                  }}
-                />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px'
+              }}>
+                <label style={{
+                  ...labelStyle,
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <BarChart3 size={16} style={{ color: '#8b5cf6' }} />
+                  {t.workObjectives}
+                </label>
                 <button
-                  onClick={addObjective}
-                  disabled={!newObjective.trim()}
+                  onClick={() => setShowObjectiveForm(true)}
                   style={{
-                    background: newObjective.trim() ? 
-                      'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 
-                      'rgba(100, 116, 139, 0.3)',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                     color: 'white',
                     border: 'none',
-                    padding: '12px 16px',
+                    padding: window.innerWidth < 768 ? '8px 12px' : '10px 16px',
                     borderRadius: '8px',
-                    cursor: newObjective.trim() ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    fontWeight: '500'
                   }}
                 >
-                  <Plus size={16} />
+                  <Plus size={window.innerWidth < 768 ? 14 : 16} />
                   {t.addObjective}
                 </button>
               </div>
-              
-              {localData.workObjectives.length > 0 && (
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {localData.workObjectives.map((objective, index) => (
-                    <div key={index} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '8px 12px',
-                      background: 'rgba(139, 92, 246, 0.1)',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(139, 92, 246, 0.3)'
-                    }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>{objective}</span>
-                      <button
-                        onClick={() => removeObjective(index)}
+
+              {/* Formulaire d'ajout d'objectif */}
+              {showObjectiveForm && (
+                <div style={{
+                  background: 'rgba(139, 92, 246, 0.05)',
+                  border: '1px solid rgba(139, 92, 246, 0.2)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '2fr 1fr',
+                    gap: '16px',
+                    marginBottom: '16px'
+                  }}>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: '13px' }}>{t.objectiveTitle} *</label>
+                      <input
+                        type="text"
+                        value={newObjective.title || ''}
+                        onChange={(e) => setNewObjective({...newObjective, title: e.target.value})}
                         style={{
-                          background: 'rgba(239, 68, 68, 0.1)',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
-                          color: '#f87171',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          cursor: 'pointer'
+                          ...inputStyle,
+                          fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                        }}
+                        placeholder="ex: Maintenance des équipements"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: '13px' }}>{t.assignedLocation}</label>
+                      <select
+                        value={newObjective.assignedLocationId || ''}
+                        onChange={(e) => setNewObjective({...newObjective, assignedLocationId: e.target.value})}
+                        style={{
+                          ...inputStyle,
+                          fontSize: window.innerWidth < 768 ? '14px' : '16px'
                         }}
                       >
-                        <X size={12} />
-                      </button>
+                        <option value="">{t.noLocation}</option>
+                        {localData.workLocations.map(location => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ ...labelStyle, fontSize: '13px' }}>{t.objectiveDescription}</label>
+                    <textarea
+                      value={newObjective.description || ''}
+                      onChange={(e) => setNewObjective({...newObjective, description: e.target.value})}
+                      style={{
+                        ...inputStyle,
+                        height: '80px',
+                        resize: 'vertical',
+                        fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                      }}
+                      placeholder="Décrivez la tâche à accomplir..."
+                    />
+                  </div>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr 1fr',
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: '13px' }}>{t.objectivePriority}</label>
+                      <select
+                        value={newObjective.priority || 'medium'}
+                        onChange={(e) => setNewObjective({...newObjective, priority: e.target.value as any})}
+                        style={{
+                          ...inputStyle,
+                          fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                        }}
+                      >
+                        <option value="low">{t.priorityLow}</option>
+                        <option value="medium">{t.priorityMedium}</option>
+                        <option value="high">{t.priorityHigh}</option>
+                        <option value="critical">{t.priorityCritical}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ ...labelStyle, fontSize: '13px' }}>{t.objectiveEstimatedDuration}</label>
+                      <input
+                        type="number"
+                        value={newObjective.estimatedDuration || 60}
+                        onChange={(e) => setNewObjective({...newObjective, estimatedDuration: parseInt(e.target.value) || 60})}
+                        style={{
+                          ...inputStyle,
+                          fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                        }}
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    justifyContent: 'flex-end'
+                  }}>
+                    <button
+                      onClick={() => {
+                        setShowObjectiveForm(false);
+                        setNewObjective({
+                          title: '',
+                          description: '',
+                          assignedLocationId: '',
+                          priority: 'medium',
+                          estimatedDuration: 60
+                        });
+                      }}
+                      style={{
+                        background: 'rgba(100, 116, 139, 0.1)',
+                        border: '1px solid rgba(100, 116, 139, 0.3)',
+                        color: '#64748b',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={addWorkObjective}
+                      disabled={!newObjective.title?.trim()}
+                      style={{
+                        background: newObjective.title?.trim() 
+                          ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' 
+                          : 'rgba(100, 116, 139, 0.3)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        cursor: newObjective.title?.trim() ? 'pointer' : 'not-allowed',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      {t.addObjective}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste des objectifs */}
+              {localData.workObjectives.length > 0 && (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {localData.workObjectives.map((objective) => {
+                    const stats = getObjectiveWorkerStats(objective.id);
+                    const assignedLocation = objective.assignedLocationId 
+                      ? localData.workLocations.find(loc => loc.id === objective.assignedLocationId)
+                      : null;
+                    
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case 'completed': return '#22c55e';
+                        case 'in_progress': return '#f59e0b';
+                        case 'pending':
+                        default: return '#6b7280';
+                      }
+                    };
+                    
+                    const getPriorityColor = (priority: string) => {
+                      switch (priority) {
+                        case 'critical': return '#ef4444';
+                        case 'high': return '#f97316';
+                        case 'medium': return '#eab308';
+                        case 'low': return '#22c55e';
+                        default: return '#6b7280';
+                      }
+                    };
+                    
+                    return (
+                      <div key={objective.id} style={{
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        border: `1px solid ${getStatusColor(objective.status)}40`,
+                        borderRadius: '12px',
+                        padding: '16px',
+                        position: 'relative'
+                      }}>
+                        {/* Header avec titre et statut */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{
+                              margin: '0 0 4px 0',
+                              color: '#e2e8f0',
+                              fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                              fontWeight: '600'
+                            }}>
+                              {objective.title}
+                            </h4>
+                            {objective.description && (
+                              <p style={{
+                                margin: '0 0 8px 0',
+                                color: '#94a3b8',
+                                fontSize: '13px',
+                                lineHeight: '1.4'
+                              }}>
+                                {objective.description}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Actions */}
+                          <div style={{
+                            display: 'flex',
+                            gap: '4px',
+                            marginLeft: '8px'
+                          }}>
+                            {objective.status === 'pending' && (
+                              <button
+                                onClick={() => updateObjectiveStatus(objective.id, 'in_progress')}
+                                style={{
+                                  background: 'rgba(245, 158, 11, 0.1)',
+                                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                                  color: '#f59e0b',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {t.startObjective}
+                              </button>
+                            )}
+                            {objective.status === 'in_progress' && (
+                              <button
+                                onClick={() => updateObjectiveStatus(objective.id, 'completed')}
+                                style={{
+                                  background: 'rgba(34, 197, 94, 0.1)',
+                                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                                  color: '#22c55e',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {t.completeObjective}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeWorkObjective(objective.id)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#ef4444',
+                                padding: '4px',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Informations détaillées */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))',
+                          gap: '12px',
+                          fontSize: '12px'
+                        }}>
+                          {/* Emplacement */}
+                          {assignedLocation && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              color: '#f59e0b'
+                            }}>
+                              <MapPin size={14} />
+                              <span>{assignedLocation.name}</span>
+                            </div>
+                          )}
+                          
+                          {/* Statut */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: getStatusColor(objective.status)
+                          }}>
+                            <Activity size={14} />
+                            <span>
+                              {objective.status === 'pending' && t.statusPending}
+                              {objective.status === 'in_progress' && t.statusInProgress}
+                              {objective.status === 'completed' && t.statusCompleted}
+                            </span>
+                          </div>
+                          
+                          {/* Priorité */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: getPriorityColor(objective.priority)
+                          }}>
+                            <Star size={14} />
+                            <span>
+                              {objective.priority === 'low' && t.priorityLow}
+                              {objective.priority === 'medium' && t.priorityMedium}
+                              {objective.priority === 'high' && t.priorityHigh}
+                              {objective.priority === 'critical' && t.priorityCritical}
+                            </span>
+                          </div>
+                          
+                          {/* Travailleurs assignés (temps réel depuis Step4) */}
+                          {assignedLocation && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              color: '#60a5fa'
+                            }}>
+                              <Users size={14} />
+                              <span>
+                                {stats.workerCount} {t.workersInTask}
+                                {stats.activeWorkerCount > 0 && ` (${stats.activeWorkerCount} actifs)`}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Temps estimé vs réel */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: '#a78bfa'
+                          }}>
+                            <Clock size={14} />
+                            <span>
+                              {stats.totalTime > 0
+                                ? `${Math.floor(stats.totalTime / 60)}h${stats.totalTime % 60}m / ${objective.estimatedDuration || 60}min estimé`
+                                : `${objective.estimatedDuration || 60}min estimé`
+                              }
+                            </span>
+                          </div>
+                          
+                          {/* Temps total temps réel depuis Step4 avec indicateur live */}
+                          {assignedLocation && stats.totalTime > 0 && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              color: '#34d399'
+                            }}>
+                              <TrendingUp size={14} />
+                              <span>
+                                {Math.floor(stats.totalTime / 60)}h{stats.totalTime % 60}m total
+                                {stats.completedWorkerCount > 0 && ` (${stats.completedWorkerCount} terminés)`}
+                                {stats.activeWorkerCount > 0 && (
+                                  <span style={{
+                                    display: 'inline-block',
+                                    width: '6px',
+                                    height: '6px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#22c55e',
+                                    marginLeft: '4px',
+                                    animation: 'pulse 2s infinite'
+                                  }} />
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Travailleurs actifs avec détails timer */}
+                          {assignedLocation && stats.activeWorkers && stats.activeWorkers.length > 0 && (
+                            <div style={{
+                              gridColumn: window.innerWidth < 768 ? '1' : '1 / -1',
+                              background: 'rgba(34, 197, 94, 0.05)',
+                              border: '1px solid rgba(34, 197, 94, 0.2)',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              marginTop: '8px'
+                            }}>
+                              <div style={{
+                                fontSize: '11px',
+                                color: '#22c55e',
+                                fontWeight: '600',
+                                marginBottom: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <Activity size={12} />
+                                Travailleurs actifs:
+                              </div>
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                                gap: '4px',
+                                flexWrap: 'wrap'
+                              }}>
+                                {stats.activeWorkers.map((worker: any) => (
+                                  <div
+                                    key={worker.id}
+                                    style={{
+                                      fontSize: '10px',
+                                      color: '#16a34a',
+                                      background: 'rgba(34, 197, 94, 0.1)',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '2px',
+                                      border: '1px solid rgba(34, 197, 94, 0.2)'
+                                    }}
+                                  >
+                                    <Timer size={8} />
+                                    {worker.name}: {Math.floor(worker.currentDuration / 60)}h{worker.currentDuration % 60}m
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Indicateur de statut visuel */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: getStatusColor(objective.status)
+                        }} />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

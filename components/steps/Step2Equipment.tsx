@@ -5,6 +5,7 @@ import {
   Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
   Zap, Activity, Star, AlertTriangle 
 } from 'lucide-react';
+import LocationTabsContainer from '../shared/LocationTabsContainer';
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
@@ -1035,6 +1036,112 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
       </div>
     );
   };
+  // Récupérer le mode depuis formData
+  const equipmentControlMode = formData?.projectInfo?.equipmentControlMode || 'global';
+  const workLocations = formData?.projectInfo?.workLocations || [];
+
+  // Fonction pour gérer les changements de données par emplacement
+  const handleLocationDataChange = (locationId: string, section: string, data: any) => {
+    // Cette fonction sera utilisée pour les données par emplacement
+    console.log('Location data change:', locationId, section, data);
+  };
+
+  // Contenu principal de l'interface équipements
+  const equipmentContent = (
+    <div className="equipment-simple-container">
+      {/* En-tête avec résumé */}
+      <div className="summary-header">
+        <div className="summary-title">
+          <Shield size={24} />
+          {t.title}
+        </div>
+        <div className="summary-subtitle">{t.subtitle}</div>
+        
+        <div className="summary-stats">
+          <div className="stat-item">
+            <span className="stat-number">{requiredCount}</span>
+            <span className="stat-label">{t.selected}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{criticalCount}</span>
+            <span className="stat-label">{t.critical}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{categoryCount}</span>
+            <span className="stat-label">{t.categories}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Erreurs de validation */}
+      {errors?.equipment && (
+        <div className="validation-errors">
+          <AlertTriangle size={20} />
+          <div className="errors-content">
+            <strong>{t.validationErrors}</strong>
+            <ul>
+              {errors.equipment.map((error: string, index: number) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Sélecteur de catégorie */}
+      <div className="category-selector">
+        <select 
+          value={selectedCategory} 
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="category-select"
+        >
+          <option value="all">{t.allCategories}</option>
+          {categoryOptions.map(({ category, count }) => {
+            if (count > 0) {
+              return (
+                <option key={category} value={category}>
+                  {category} ({count})
+                </option>
+              );
+            }
+          })}
+        </select>
+      </div>
+      
+      {/* Contrôles de recherche */}
+      <div className="controls-section">
+        <div className="search-container">
+          <Search className="search-icon" size={20} />
+          <input
+            type="text"
+            placeholder={t.searchPlaceholder}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+      </div>
+
+      {/* Liste des équipements */}
+      <div className="equipment-grid">
+        {filteredEquipment.length > 0 ? (
+          filteredEquipment.map((item) => <EquipmentItem key={item.id} item={item} />)
+        ) : (
+          <div className="no-results">
+            <AlertTriangle size={48} />
+            <h3>{t.noResults}</h3>
+            <p>{t.noResultsDescription}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Debug info */}
+      <div className="debug-info">
+        {equipment.length} {t.debugMessage} {filteredEquipment.length} {t.debugDisplayed}
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* CSS pour le design optimisé et responsive */}
@@ -1475,113 +1582,22 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
         `
       }} />
 
-      <div className="equipment-simple-container">
-        {/* En-tête avec résumé */}
-        <div className="summary-header">
-          <div className="summary-title">
-            <Shield size={24} />
-            {t.title}
-          </div>
-          <p className="summary-subtitle">
-            {t.subtitle}
-          </p>
-          
-          {stats.totalSelected > 0 && (
-            <div className="summary-stats">
-              <div className="stat-item">
-                <div className="stat-value">{stats.totalSelected}</div>
-                <div className="stat-label">{t.selected}</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.highPriority}</div>
-                <div className="stat-label">{t.critical}</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">{stats.categoriesCount}</div>
-                <div className="stat-label">{t.categories}</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section de recherche */}
-        <div className="search-section">
-          <div className="search-grid">
-            <div className="search-input-wrapper">
-              <Search className="search-icon" size={18} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t.searchPlaceholder}
-                className="search-field"
-              />
-            </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="category-select"
-            >
-              <option value="all">
-                {t.allCategories} ({stats.totalEquipment})
-              </option>
-              {categories.map(category => {
-                const count = equipment.filter(eq => eq.category === category).length;
-                return (
-                  <option key={category} value={category}>
-                    {category} ({count})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          
-          {/* Contrôles de recherche */}
-          <div className="controls-section">
-            <SearchControls />
-          </div>
-        </div>
-
-        {/* Information sur la catégorie sélectionnée */}
-        <CategoryInfo />
-
-        {/* Message de débogage */}
-        <div className="debug-section">
-          <strong>Debug:</strong> {stats.totalEquipment} {t.debugMessage} {stats.filteredCount} {t.debugDisplayed}
-        </div>
-
-        {/* Grille des équipements */}
-        <div className="equipment-grid">
-          {filteredEquipment.map(item => (
-            <EquipmentCard key={item.id} item={item} />
-          ))}
-        </div>
-
-        {/* Message si aucun résultat */}
-        {stats.filteredCount === 0 && (
-          <div className="no-results">
-            <Shield size={48} className="no-results-icon" />
-            <h3 className="no-results-title">{t.noResults}</h3>
-            <p className="no-results-description">{t.noResultsDescription}</p>
-          </div>
-        )}
-
-
-        {/* Validation d'erreurs */}
-        {errors?.equipment && (
-          <div className="error-section">
-            <div className="error-header">
-              <AlertTriangle size={20} />
-              {t.validationErrors}
-            </div>
-            <ul className="error-list">
-              {errors.equipment.map((error: string, index: number) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+      {/* Affichage conditionnel selon le mode */}
+      {equipmentControlMode === 'global' ? (
+        // Mode global - interface unique
+        equipmentContent
+      ) : (
+        // Mode par emplacement - onglets pour chaque emplacement
+        <LocationTabsContainer
+          workLocations={workLocations}
+          equipmentControlMode={equipmentControlMode}
+          step={2}
+          onLocationDataChange={handleLocationDataChange}
+          language={language}
+        >
+          {() => equipmentContent}
+        </LocationTabsContainer>
+      )}
     </>
   );
 };
