@@ -125,6 +125,25 @@ interface LOTOProcedure {
   };
 }
 
+// Nouvelles interfaces pour le système bidirectionnel
+interface Equipment {
+  id: string;
+  name: string;
+  category: 'ppe' | 'tool' | 'safety_device' | 'other';
+  required: boolean;
+  quantity?: number;
+  notes?: string;
+}
+
+interface ControlMeasure {
+  id: string;
+  name: string;
+  type: 'preventive' | 'protective' | 'corrective';
+  description: string;
+  responsible?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+}
+
 type EnergyType = 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical' | 'gravitational';
 type LOTOStatus = 'pending' | 'isolated' | 'verified' | 'completed' | 'removed';
 type LockState = 'before_isolation' | 'during_isolation' | 'isolated' | 'verification' | 'removal' | 'completed';
@@ -189,6 +208,19 @@ interface ProjectInfo {
   // Système LOTO complet
   lockoutPoints?: any[];
   lockoutPhotos?: any[];
+  
+  // Nouveau système bidirectionnel pour équipements et contrôles
+  equipmentControlMode: 'global' | 'by_location';
+  globalEquipment?: Equipment[];
+  globalControlMeasures?: ControlMeasure[];
+  locationBasedConfig?: {
+    [locationId: string]: {
+      equipment: Equipment[];
+      controlMeasures: ControlMeasure[];
+      assignedTeamLeader?: string;
+      completionStatus?: 'pending' | 'in_progress' | 'completed';
+    }
+  };
 }
 
 // =================== TRADUCTIONS ===================
@@ -359,6 +391,45 @@ const translations = {
     tabs: {
       project: "Projet",
       loto: "LOTO"
+    },
+    
+    // Système bidirectionnel équipements/contrôles
+    equipmentControlMode: "Mode de gestion",
+    equipmentControlModeLabel: "Gestion des équipements et moyens de contrôle",
+    globalMode: "Global - Chargé de projet",
+    byLocationMode: "Par emplacement - Chefs d'équipe",
+    globalModeDesc: "Le chargé de projet définit les équipements et contrôles pour toute l'équipe",
+    byLocationModeDesc: "Chaque chef d'équipe configure pour son emplacement de travail",
+    globalEquipment: "Équipements globaux",
+    globalControlMeasures: "Moyens de contrôle globaux",
+    addEquipment: "Ajouter équipement",
+    addControlMeasure: "Ajouter moyen de contrôle",
+    equipmentName: "Nom de l'équipement",
+    equipmentCategory: "Catégorie",
+    equipmentRequired: "Obligatoire",
+    equipmentQuantity: "Quantité",
+    equipmentNotes: "Notes",
+    controlMeasureName: "Nom du moyen",
+    controlMeasureType: "Type",
+    controlMeasureDesc: "Description",
+    controlMeasureResponsible: "Responsable",
+    controlMeasurePriority: "Priorité",
+    categories: {
+      ppe: "ÉPI",
+      tool: "Outil",
+      safety_device: "Dispositif sécurité",
+      other: "Autre"
+    },
+    controlTypes: {
+      preventive: "Préventif",
+      protective: "Protection",
+      corrective: "Correctif"
+    },
+    priorities: {
+      low: "Faible",
+      medium: "Moyen", 
+      high: "Élevé",
+      critical: "Critique"
     }
   },
   en: {
@@ -527,6 +598,45 @@ const translations = {
     tabs: {
       project: "Project",
       loto: "LOTO"
+    },
+    
+    // Système bidirectionnel équipements/contrôles
+    equipmentControlMode: "Management Mode",
+    equipmentControlModeLabel: "Equipment and Control Measures Management",
+    globalMode: "Global - Project Manager",
+    byLocationMode: "By Location - Team Leaders", 
+    globalModeDesc: "Project manager defines equipment and controls for entire team",
+    byLocationModeDesc: "Each team leader configures for their work location",
+    globalEquipment: "Global Equipment",
+    globalControlMeasures: "Global Control Measures",
+    addEquipment: "Add Equipment",
+    addControlMeasure: "Add Control Measure",
+    equipmentName: "Equipment Name",
+    equipmentCategory: "Category",
+    equipmentRequired: "Required",
+    equipmentQuantity: "Quantity",
+    equipmentNotes: "Notes",
+    controlMeasureName: "Measure Name",
+    controlMeasureType: "Type",
+    controlMeasureDesc: "Description",
+    controlMeasureResponsible: "Responsible",
+    controlMeasurePriority: "Priority",
+    categories: {
+      ppe: "PPE",
+      tool: "Tool",
+      safety_device: "Safety Device",
+      other: "Other"
+    },
+    controlTypes: {
+      preventive: "Preventive",
+      protective: "Protective",
+      corrective: "Corrective"
+    },
+    priorities: {
+      low: "Low",
+      medium: "Medium",
+      high: "High", 
+      critical: "Critical"
     }
   }
 };
@@ -593,7 +703,12 @@ const Step1ProjectInfo = memo(({
         startTime: new Date().toISOString(),
         estimatedDuration: 8
       }
-    }
+    },
+    // Nouveau système bidirectionnel pour équipements et contrôles
+    equipmentControlMode: formData?.projectInfo?.equipmentControlMode || 'global',
+    globalEquipment: formData?.projectInfo?.globalEquipment || [],
+    globalControlMeasures: formData?.projectInfo?.globalControlMeasures || [],
+    locationBasedConfig: formData?.projectInfo?.locationBasedConfig || {}
   }));
 
   const [copied, setCopied] = useState(false);
@@ -602,6 +717,24 @@ const Step1ProjectInfo = memo(({
   const [newLotoPoint, setNewLotoPoint] = useState<Partial<LOTOPoint>>({});
   const [editingLotoPoint, setEditingLotoPoint] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'project' | 'loto'>('project');
+  
+  // États pour le nouveau système bidirectionnel
+  const [newEquipment, setNewEquipment] = useState<Partial<Equipment>>({
+    name: '',
+    category: 'ppe',
+    required: true,
+    quantity: 1,
+    notes: ''
+  });
+  const [newControlMeasure, setNewControlMeasure] = useState<Partial<ControlMeasure>>({
+    name: '',
+    type: 'preventive',
+    description: '',
+    responsible: '',
+    priority: 'medium'
+  });
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
+  const [showControlForm, setShowControlForm] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const stableFormDataRef = useRef(localData);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -725,6 +858,72 @@ const Step1ProjectInfo = memo(({
   const removeObjective = useCallback((index: number) => {
     updateField('workObjectives', localData.workObjectives.filter((_, i) => i !== index));
   }, [localData.workObjectives, updateField]);
+
+  // =================== FONCTIONS ÉQUIPEMENTS/CONTRÔLES ===================
+  
+  // Handler pour changer le mode de contrôle
+  const handleEquipmentControlModeChange = useCallback((mode: 'global' | 'by_location') => {
+    updateField('equipmentControlMode', mode);
+    // Si on passe en mode par emplacement, initialiser la config pour chaque emplacement
+    if (mode === 'by_location') {
+      const config: any = {};
+      localData.workLocations.forEach(location => {
+        config[location.id] = {
+          equipment: [],
+          controlMeasures: [],
+          assignedTeamLeader: '',
+          completionStatus: 'pending'
+        };
+      });
+      updateField('locationBasedConfig', config);
+    }
+  }, [localData.workLocations, updateField]);
+  
+  // Ajouter équipement global
+  const addGlobalEquipment = useCallback(() => {
+    if (!newEquipment.name?.trim()) return;
+    
+    const equipment: Equipment = {
+      id: `equipment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newEquipment.name.trim(),
+      category: newEquipment.category || 'ppe',
+      required: newEquipment.required || true,
+      quantity: newEquipment.quantity || 1,
+      notes: newEquipment.notes || ''
+    };
+    
+    updateField('globalEquipment', [...(localData.globalEquipment || []), equipment]);
+    setNewEquipment({ name: '', category: 'ppe', required: true, quantity: 1, notes: '' });
+    setShowEquipmentForm(false);
+  }, [newEquipment, localData.globalEquipment, updateField]);
+  
+  // Supprimer équipement global
+  const removeGlobalEquipment = useCallback((equipmentId: string) => {
+    updateField('globalEquipment', (localData.globalEquipment || []).filter(e => e.id !== equipmentId));
+  }, [localData.globalEquipment, updateField]);
+  
+  // Ajouter moyen de contrôle global
+  const addGlobalControlMeasure = useCallback(() => {
+    if (!newControlMeasure.name?.trim() || !newControlMeasure.description?.trim()) return;
+    
+    const controlMeasure: ControlMeasure = {
+      id: `control_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newControlMeasure.name.trim(),
+      type: newControlMeasure.type || 'preventive',
+      description: newControlMeasure.description.trim(),
+      responsible: newControlMeasure.responsible || '',
+      priority: newControlMeasure.priority || 'medium'
+    };
+    
+    updateField('globalControlMeasures', [...(localData.globalControlMeasures || []), controlMeasure]);
+    setNewControlMeasure({ name: '', type: 'preventive', description: '', responsible: '', priority: 'medium' });
+    setShowControlForm(false);
+  }, [newControlMeasure, localData.globalControlMeasures, updateField]);
+  
+  // Supprimer moyen de contrôle global
+  const removeGlobalControlMeasure = useCallback((controlId: string) => {
+    updateField('globalControlMeasures', (localData.globalControlMeasures || []).filter(c => c.id !== controlId));
+  }, [localData.globalControlMeasures, updateField]);
 
   // =================== FONCTIONS LOTO ===================
   
@@ -3406,6 +3605,559 @@ const Step1ProjectInfo = memo(({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* =================== NOUVELLE SECTION ÉQUIPEMENTS/CONTRÔLES =================== */}
+            <div style={{
+              ...cardStyle,
+              marginTop: '32px'
+            }}>
+              <h3 style={{
+                margin: '0 0 20px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: window.innerWidth < 768 ? '16px' : '18px',
+                flexWrap: 'wrap'
+              }}>
+                <Settings size={window.innerWidth < 768 ? 18 : 20} style={{ color: '#22c55e' }} />
+                {t.equipmentControlModeLabel}
+              </h3>
+
+              {/* Sélecteur de mode */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={labelStyle}>{t.equipmentControlMode} *</label>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '16px'
+                }}>
+                  <button
+                    onClick={() => handleEquipmentControlModeChange('global')}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: `2px solid ${localData.equipmentControlMode === 'global' ? '#22c55e' : 'var(--border-primary)'}`,
+                      background: localData.equipmentControlMode === 'global' ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-primary)',
+                      color: localData.equipmentControlMode === 'global' ? '#22c55e' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: '600',
+                      fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                    }}>
+                      <Globe size={16} />
+                      {t.globalMode}
+                    </div>
+                    <div style={{
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      opacity: 0.8
+                    }}>
+                      {t.globalModeDesc}
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleEquipmentControlModeChange('by_location')}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: `2px solid ${localData.equipmentControlMode === 'by_location' ? '#22c55e' : 'var(--border-primary)'}`,
+                      background: localData.equipmentControlMode === 'by_location' ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-primary)',
+                      color: localData.equipmentControlMode === 'by_location' ? '#22c55e' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: '600',
+                      fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                    }}>
+                      <MapPin size={16} />
+                      {t.byLocationMode}
+                    </div>
+                    <div style={{
+                      fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                      opacity: 0.8
+                    }}>
+                      {t.byLocationModeDesc}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Configuration globale */}
+              {localData.equipmentControlMode === 'global' && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                  gap: '24px'
+                }}>
+                  {/* Équipements globaux */}
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.05)',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '16px'
+                    }}>
+                      <h4 style={{
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                      }}>
+                        <Shield size={16} style={{ color: '#3b82f6' }} />
+                        {t.globalEquipment}
+                      </h4>
+                      <button
+                        onClick={() => setShowEquipmentForm(!showEquipmentForm)}
+                        style={{
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          border: '1px solid rgba(34, 197, 94, 0.3)',
+                          color: '#22c55e',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Plus size={14} />
+                        {t.addEquipment}
+                      </button>
+                    </div>
+
+                    {/* Formulaire d'ajout d'équipement */}
+                    {showEquipmentForm && (
+                      <div style={{
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        border: '1px solid rgba(100, 116, 139, 0.3)'
+                      }}>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          <input
+                            type="text"
+                            placeholder={t.equipmentName}
+                            value={newEquipment.name || ''}
+                            onChange={(e) => setNewEquipment({...newEquipment, name: e.target.value})}
+                            style={{
+                              ...inputStyle,
+                              fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                            }}
+                          />
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                            gap: '8px'
+                          }}>
+                            <select
+                              value={newEquipment.category || 'ppe'}
+                              onChange={(e) => setNewEquipment({...newEquipment, category: e.target.value as any})}
+                              style={{
+                                ...inputStyle,
+                                fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                              }}
+                            >
+                              <option value="ppe">{t.categories.ppe}</option>
+                              <option value="tool">{t.categories.tool}</option>
+                              <option value="safety_device">{t.categories.safety_device}</option>
+                              <option value="other">{t.categories.other}</option>
+                            </select>
+                            <input
+                              type="number"
+                              placeholder={t.equipmentQuantity}
+                              value={newEquipment.quantity || 1}
+                              onChange={(e) => setNewEquipment({...newEquipment, quantity: parseInt(e.target.value) || 1})}
+                              style={{
+                                ...inputStyle,
+                                fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                              }}
+                            />
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'flex-end'
+                          }}>
+                            <button
+                              onClick={() => setShowEquipmentForm(false)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#ef4444',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              onClick={addGlobalEquipment}
+                              style={{
+                                background: 'rgba(34, 197, 94, 0.1)',
+                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                color: '#22c55e',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Ajouter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Liste des équipements */}
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {(localData.globalEquipment || []).map((equipment, index) => (
+                        <div
+                          key={equipment.id}
+                          style={{
+                            background: 'rgba(15, 23, 42, 0.6)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              fontWeight: '600',
+                              fontSize: window.innerWidth < 768 ? '13px' : '14px',
+                              color: '#e2e8f0'
+                            }}>
+                              {equipment.name}
+                            </div>
+                            <div style={{
+                              fontSize: '11px',
+                              color: '#94a3b8',
+                              marginTop: '2px'
+                            }}>
+                              {t.categories[equipment.category]} • Qté: {equipment.quantity}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeGlobalEquipment(equipment.id)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#ef4444',
+                              padding: '6px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Moyens de contrôle globaux */}
+                  <div style={{
+                    background: 'rgba(34, 197, 94, 0.05)',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    border: '1px solid rgba(34, 197, 94, 0.2)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '16px'
+                    }}>
+                      <h4 style={{
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                      }}>
+                        <CheckCircle size={16} style={{ color: '#22c55e' }} />
+                        {t.globalControlMeasures}
+                      </h4>
+                      <button
+                        onClick={() => setShowControlForm(!showControlForm)}
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          color: '#3b82f6',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Plus size={14} />
+                        {t.addControlMeasure}
+                      </button>
+                    </div>
+
+                    {/* Formulaire d'ajout de moyen de contrôle */}
+                    {showControlForm && (
+                      <div style={{
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        border: '1px solid rgba(100, 116, 139, 0.3)'
+                      }}>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          <input
+                            type="text"
+                            placeholder={t.controlMeasureName}
+                            value={newControlMeasure.name || ''}
+                            onChange={(e) => setNewControlMeasure({...newControlMeasure, name: e.target.value})}
+                            style={{
+                              ...inputStyle,
+                              fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                            }}
+                          />
+                          <textarea
+                            placeholder={t.controlMeasureDesc}
+                            value={newControlMeasure.description || ''}
+                            onChange={(e) => setNewControlMeasure({...newControlMeasure, description: e.target.value})}
+                            style={{
+                              ...inputStyle,
+                              height: '80px',
+                              resize: 'vertical',
+                              fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                            }}
+                          />
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr',
+                            gap: '8px'
+                          }}>
+                            <select
+                              value={newControlMeasure.type || 'preventive'}
+                              onChange={(e) => setNewControlMeasure({...newControlMeasure, type: e.target.value as any})}
+                              style={{
+                                ...inputStyle,
+                                fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                              }}
+                            >
+                              <option value="preventive">{t.controlTypes.preventive}</option>
+                              <option value="protective">{t.controlTypes.protective}</option>
+                              <option value="corrective">{t.controlTypes.corrective}</option>
+                            </select>
+                            <select
+                              value={newControlMeasure.priority || 'medium'}
+                              onChange={(e) => setNewControlMeasure({...newControlMeasure, priority: e.target.value as any})}
+                              style={{
+                                ...inputStyle,
+                                fontSize: window.innerWidth < 768 ? '14px' : '16px'
+                              }}
+                            >
+                              <option value="low">{t.priorities.low}</option>
+                              <option value="medium">{t.priorities.medium}</option>
+                              <option value="high">{t.priorities.high}</option>
+                              <option value="critical">{t.priorities.critical}</option>
+                            </select>
+                          </div>
+                          <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'flex-end'
+                          }}>
+                            <button
+                              onClick={() => setShowControlForm(false)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                color: '#ef4444',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              onClick={addGlobalControlMeasure}
+                              style={{
+                                background: 'rgba(34, 197, 94, 0.1)',
+                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                color: '#22c55e',
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Ajouter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Liste des moyens de contrôle */}
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {(localData.globalControlMeasures || []).map((control) => (
+                        <div
+                          key={control.id}
+                          style={{
+                            background: 'rgba(15, 23, 42, 0.6)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(100, 116, 139, 0.3)',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              fontWeight: '600',
+                              fontSize: window.innerWidth < 768 ? '13px' : '14px',
+                              color: '#e2e8f0'
+                            }}>
+                              {control.name}
+                            </div>
+                            <div style={{
+                              fontSize: '11px',
+                              color: '#94a3b8',
+                              marginTop: '4px',
+                              lineHeight: '1.4'
+                            }}>
+                              {control.description}
+                            </div>
+                            <div style={{
+                              fontSize: '10px',
+                              color: '#64748b',
+                              marginTop: '4px'
+                            }}>
+                              {t.controlTypes[control.type]} • {t.priorities[control.priority]}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeGlobalControlMeasure(control.id)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#ef4444',
+                              padding: '6px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode par emplacement */}
+              {localData.equipmentControlMode === 'by_location' && (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.05)',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  border: '1px solid rgba(245, 158, 11, 0.2)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '12px',
+                    color: '#f59e0b',
+                    fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                    fontWeight: '600'
+                  }}>
+                    <MapPin size={20} />
+                    Configuration par emplacement activée
+                  </div>
+                  <div style={{
+                    fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                    color: '#94a3b8',
+                    lineHeight: '1.5'
+                  }}>
+                    Les chefs d'équipe pourront configurer les équipements et moyens de contrôle 
+                    spécifiques à leur emplacement de travail dans les Steps 2 et 3.
+                  </div>
+                  {localData.workLocations.length > 0 && (
+                    <div style={{
+                      marginTop: '16px',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      justifyContent: 'center'
+                    }}>
+                      {localData.workLocations.map((location) => (
+                        <div
+                          key={location.id}
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.1)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            color: '#f59e0b',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          {location.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* =================== FIN NOUVELLE SECTION =================== */}
+
             </div>
           </>
         )}
