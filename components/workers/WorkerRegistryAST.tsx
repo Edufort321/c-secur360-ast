@@ -442,6 +442,28 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   const [showSmsDialog, setShowSmsDialog] = useState(false);
   const [customSmsMessage, setCustomSmsMessage] = useState('');
   
+  const t = translations[language];
+  
+  // Liste des emplacements disponibles (depuis Step1 ou défaut)
+  const availableLocations = useMemo(() => {
+    if (workLocations && workLocations.length > 0) {
+      return workLocations.map(loc => loc.name).filter(Boolean);
+    }
+    // Emplacements par défaut si aucun défini dans Step1
+    return [
+      'Zone A - Production',
+      'Zone B - Assemblage', 
+      'Zone C - Maintenance',
+      'Zone D - Entrepôt',
+      'Bureau - Administration',
+      'Atelier - Soudure',
+      'Salle électrique',
+      'Cour extérieure',
+      'Sous-sol technique',
+      'Toit - Équipements'
+    ];
+  }, [workLocations]);
+  
   // États pour l'ajout de travailleur
   const [newWorker, setNewWorker] = useState<{
     name: string;
@@ -478,28 +500,6 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   // Refs pour la signature
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  
-  const t = translations[language];
-  
-  // Liste des emplacements disponibles (depuis Step1 ou défaut)
-  const availableLocations = useMemo(() => {
-    if (workLocations && workLocations.length > 0) {
-      return workLocations.map(loc => loc.name).filter(Boolean);
-    }
-    // Emplacements par défaut si aucun défini dans Step1
-    return [
-      'Zone A - Production',
-      'Zone B - Assemblage', 
-      'Zone C - Maintenance',
-      'Zone D - Entrepôt',
-      'Bureau - Administration',
-      'Atelier - Soudure',
-      'Salle électrique',
-      'Cour extérieure',
-      'Sous-sol technique',
-      'Toit - Équipements'
-    ];
-  }, [workLocations]);
   
   // =================== CALCUL DES STATISTIQUES ===================
   
