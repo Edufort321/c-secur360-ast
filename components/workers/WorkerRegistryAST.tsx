@@ -368,7 +368,14 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     totalLocks: 0,
     activeLocks: 0,
     averageWorkTime: 0,
-    companiesCount: 0
+    companiesCount: 0,
+    // Nouvelles statistiques
+    totalWorkers: 0,
+    locksApplied: 0,
+    locksRemoved: 0,
+    locksNA: 0,
+    signedAST: 0,
+    workLocations: []
   });
   
   const [showAddWorker, setShowAddWorker] = useState(false);
