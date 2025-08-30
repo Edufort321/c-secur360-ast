@@ -1169,7 +1169,7 @@ const Step1ProjectInfo = memo(({
     
     updateField('globalEquipment', [...(localData.globalEquipment || []), equipment]);
     setNewEquipment({ name: '', category: 'ppe', required: true, quantity: 1, notes: '' });
-    setShowEquipmentForm(false);
+    // setShowEquipmentForm supprimé - mode sélecteur seulement
   }, [newEquipment, localData.globalEquipment, updateField]);
   
   // Supprimer équipement global
@@ -1192,7 +1192,7 @@ const Step1ProjectInfo = memo(({
     
     updateField('globalControlMeasures', [...(localData.globalControlMeasures || []), controlMeasure]);
     setNewControlMeasure({ name: '', type: 'preventive', description: '', responsible: '', priority: 'medium' });
-    setShowControlForm(false);
+    // setShowControlForm supprimé - mode sélecteur seulement
   }, [newControlMeasure, localData.globalControlMeasures, updateField]);
   
   // Supprimer moyen de contrôle global
@@ -2087,28 +2087,11 @@ const Step1ProjectInfo = memo(({
                     <Shield size={16} style={{ color: '#3b82f6' }} />
                     {t.globalEquipment}
                   </h4>
-                  <button
-                    onClick={() => setShowEquipmentForm(!showEquipmentForm)}
-                    style={{
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      color: '#22c55e',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <Plus size={14} />
-                    {t.addEquipment}
-                  </button>
+                  {/* Bouton création supprimé - mode sélecteur seulement */}
                 </div>
 
-                {/* Formulaire d'ajout d'équipement */}
-                {showEquipmentForm && (
+                {/* Formulaire d'ajout supprimé - mode sélecteur seulement */}
+                {false && (
                   <div style={{
                     background: 'rgba(15, 23, 42, 0.8)',
                     padding: '16px',
@@ -2162,7 +2145,7 @@ const Step1ProjectInfo = memo(({
                         justifyContent: 'flex-end'
                       }}>
                         <button
-                          onClick={() => setShowEquipmentForm(false)}
+                          onClick={() => () => {}}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
                             border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -2269,28 +2252,11 @@ const Step1ProjectInfo = memo(({
                     <CheckCircle size={16} style={{ color: '#22c55e' }} />
                     {t.globalControlMeasures}
                   </h4>
-                  <button
-                    onClick={() => setShowControlForm(!showControlForm)}
-                    style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                      color: '#3b82f6',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <Plus size={14} />
-                    {t.addControlMeasure}
-                  </button>
+                  {/* Bouton création supprimé - mode sélecteur seulement */}
                 </div>
 
-                {/* Formulaire d'ajout de moyen de contrôle */}
-                {showControlForm && (
+                {/* Formulaire d'ajout supprimé - mode sélecteur seulement */}
+                {false && (
                   <div style={{
                     background: 'rgba(15, 23, 42, 0.8)',
                     padding: '16px',
@@ -2357,7 +2323,7 @@ const Step1ProjectInfo = memo(({
                         justifyContent: 'flex-end'
                       }}>
                         <button
-                          onClick={() => setShowControlForm(false)}
+                          onClick={() => () => {}}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
                             border: '1px solid rgba(239, 68, 68, 0.3)',
