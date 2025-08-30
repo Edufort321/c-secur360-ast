@@ -159,8 +159,8 @@ interface WorkObjective {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  estimatedDuration?: number; // en minutes
-  actualDuration?: number; // en minutes
+  estimatedDuration?: number; // en heures
+  actualDuration?: number; // en heures
   priority: 'low' | 'medium' | 'high' | 'critical';
   assignedWorkers?: string[]; // IDs des travailleurs assignés
   notes?: string;
@@ -331,7 +331,7 @@ const translations = {
     noLocation: "Aucun emplacement",
     objectiveStatus: "Statut",
     objectivePriority: "Priorité",
-    objectiveEstimatedDuration: "Durée estimée (minutes)",
+    objectiveEstimatedDuration: "Durée estimée (heures)",
     actualDuration: "Durée réelle",
     assignedWorkers: "Travailleurs assignés",
     objectiveNotes: "Notes",
@@ -565,7 +565,7 @@ const translations = {
     noLocation: "No location",
     objectiveStatus: "Status",
     objectivePriority: "Priority",
-    objectiveEstimatedDuration: "Estimated duration (minutes)",
+    objectiveEstimatedDuration: "Estimated duration (hours)",
     actualDuration: "Actual duration",
     assignedWorkers: "Assigned workers",
     objectiveNotes: "Notes",
@@ -803,7 +803,7 @@ const Step1ProjectInfo = memo(({
     description: '',
     assignedLocationId: '',
     priority: 'medium',
-    estimatedDuration: 60
+    estimatedDuration: 1
   });
   const [editingObjective, setEditingObjective] = useState<string | null>(null);
   const [showObjectiveForm, setShowObjectiveForm] = useState(false);
@@ -941,7 +941,7 @@ const Step1ProjectInfo = memo(({
       assignedLocationId: newObjective.assignedLocationId || undefined,
       status: 'pending',
       priority: newObjective.priority || 'medium',
-      estimatedDuration: newObjective.estimatedDuration || 60,
+      estimatedDuration: newObjective.estimatedDuration || 1,
       createdAt: new Date().toISOString()
     };
     
@@ -951,7 +951,7 @@ const Step1ProjectInfo = memo(({
       description: '',
       assignedLocationId: '',
       priority: 'medium',
-      estimatedDuration: 60
+      estimatedDuration: 1
     });
     setShowObjectiveForm(false);
   }, [newObjective, localData.workObjectives, updateField]);
@@ -3092,8 +3092,8 @@ const Step1ProjectInfo = memo(({
                       <label style={{ ...labelStyle, fontSize: '13px' }}>{t.objectiveEstimatedDuration}</label>
                       <input
                         type="number"
-                        value={newObjective.estimatedDuration || 60}
-                        onChange={(e) => setNewObjective({...newObjective, estimatedDuration: parseInt(e.target.value) || 60})}
+                        value={newObjective.estimatedDuration || 1}
+                        onChange={(e) => setNewObjective({...newObjective, estimatedDuration: parseInt(e.target.value) || 1})}
                         style={{
                           ...inputStyle,
                           fontSize: window.innerWidth < 768 ? '14px' : '16px'
@@ -3116,7 +3116,7 @@ const Step1ProjectInfo = memo(({
                           description: '',
                           assignedLocationId: '',
                           priority: 'medium',
-                          estimatedDuration: 60
+                          estimatedDuration: 1
                         });
                       }}
                       style={{
@@ -3350,8 +3350,8 @@ const Step1ProjectInfo = memo(({
                             <Clock size={14} />
                             <span>
                               {stats.totalTime > 0
-                                ? `${Math.floor(stats.totalTime / 60)}h${stats.totalTime % 60}m / ${objective.estimatedDuration || 60}min estimé`
-                                : `${objective.estimatedDuration || 60}min estimé`
+                                ? `${Math.floor(stats.totalTime / 60)}h${stats.totalTime % 60}m / ${objective.estimatedDuration || 1}h estimé`
+                                : `${objective.estimatedDuration || 1}h estimé`
                               }
                             </span>
                           </div>
