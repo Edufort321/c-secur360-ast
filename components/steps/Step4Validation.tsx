@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CheckCircle, AlertTriangle, Users, Shield, 
   User, Clock, Award, MessageSquare, ThumbsUp,
@@ -288,8 +288,20 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
   };
 
   // =================== PERSISTANCE DONNÉES TRAVAILLEURS ===================
-  const handleWorkersDataChange = (workersData: any[]) => {
+  const lastWorkersDataRef = useRef<string>('');
+  
+  const handleWorkersDataChange = useCallback((workersData: any[]) => {
+    // Vérifier si les données ont vraiment changé pour éviter la boucle infinie
+    const currentDataString = JSON.stringify(workersData);
+    
+    if (lastWorkersDataRef.current === currentDataString) {
+      console.log('🚫 Évite mise à jour identique Workers:', workersData.length);
+      return; // Éviter les mises à jour inutiles
+    }
+    
+    lastWorkersDataRef.current = currentDataString;
     console.log('💾 Sauvegarde Workers dans formData:', workersData);
+    
     // Sauvegarder les données des travailleurs dans formData pour persistance entre étapes
     onDataChange('workers', {
       list: workersData,
@@ -299,7 +311,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
     
     // Mettre à jour aussi les données pour les SMS
     setCurrentWorkers(workersData);
-  };
+  }, [onDataChange]);
 
   // =================== GESTION SMS AVEC CIBLAGE ===================
   const [currentWorkers, setCurrentWorkers] = useState<any[]>(formData?.workers?.list || []);
