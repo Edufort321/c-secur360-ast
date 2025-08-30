@@ -4158,7 +4158,6 @@ const Step1ProjectInfo = memo(({
             </div>
             {/* =================== FIN NOUVELLE SECTION =================== */}
 
-            </div>
           </>
         )}
       </div>
