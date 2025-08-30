@@ -1493,10 +1493,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                   padding: '12px 16px',
                   borderBottom: '1px solid rgba(100, 116, 139, 0.1)',
                   alignItems: 'center',
-                  borderLeft: `4px solid ${worker.workTimer.isActive ? '#22c55e' : worker.workTimer.endTime ? '#3b82f6' : '#6b7280'}`,
-                  ':hover': {
-                    background: 'rgba(59, 130, 246, 0.05)'
-                  }
+                  borderLeft: `4px solid ${worker.workTimer.isActive ? '#22c55e' : worker.workTimer.endTime ? '#3b82f6' : '#6b7280'}`
                 }}
               >
                 {/* Nom & Entreprise */}
