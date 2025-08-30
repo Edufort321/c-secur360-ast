@@ -2384,9 +2384,8 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
               )}
             </div>
           </div>
-            ))}
-          </div>
-        )
+          ))}
+        </div>
       )}
       
       {/* Modal Signature */}
