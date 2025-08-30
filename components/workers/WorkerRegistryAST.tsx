@@ -1098,35 +1098,48 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   
   useEffect(() => {
     const interval = setInterval(() => {
-      setWorkers(prev => prev.map(worker => {
-        if (worker.workTimer.isActive && worker.workTimer.startTime) {
-          const currentTime = Date.now();
-          const startTime = new Date(worker.workTimer.startTime).getTime();
-          // Calcul précis incluant les secondes comme fraction de minute
-          const elapsedMilliseconds = currentTime - startTime;
-          const elapsedMinutesWithSeconds = elapsedMilliseconds / (1000 * 60);
-          
-          return {
-            ...worker,
-            totalWorkTime: elapsedMinutesWithSeconds, // Temps en minutes avec décimales pour les secondes
-            workTimer: {
-              ...worker.workTimer,
-              totalTime: elapsedMilliseconds // Garder en millisecondes pour compatibilité
-            }
-          };
-        }
-        return worker;
-      }));
-    }, 1000);
+      setWorkers(prev => {
+        let hasActiveWorkers = false;
+        const updatedWorkers = prev.map(worker => {
+          if (worker.workTimer.isActive && worker.workTimer.startTime) {
+            hasActiveWorkers = true;
+            const currentTime = Date.now();
+            const startTime = new Date(worker.workTimer.startTime).getTime();
+            // Calcul précis incluant les secondes comme fraction de minute
+            const elapsedMilliseconds = currentTime - startTime;
+            const elapsedMinutesWithSeconds = elapsedMilliseconds / (1000 * 60);
+            
+            return {
+              ...worker,
+              totalWorkTime: elapsedMinutesWithSeconds, // Temps en minutes avec décimales pour les secondes
+              workTimer: {
+                ...worker.workTimer,
+                totalTime: elapsedMilliseconds // Garder en millisecondes pour compatibilité
+              }
+            };
+          }
+          return worker;
+        });
+        
+        // Ne mettre à jour que s'il y a des travailleurs actifs
+        return hasActiveWorkers ? updatedWorkers : prev;
+      });
+    }, 5000); // Réduit à 5 secondes au lieu de 1 seconde
     
     return () => clearInterval(interval);
   }, []);
   
-  // Mise à jour des stats en temps réel
+  // Mise à jour des stats en temps réel (optimisée)
   useEffect(() => {
     const newStats = calculateStats(workers);
-    setStats(newStats);
-    onStatsChange?.(newStats);
+    setStats(prevStats => {
+      // Ne mettre à jour que si les stats ont vraiment changé
+      if (JSON.stringify(prevStats) !== JSON.stringify(newStats)) {
+        onStatsChange?.(newStats);
+        return newStats;
+      }
+      return prevStats;
+    });
   }, [workers, onStatsChange]);
   
   // =================== FILTRAGE ===================
@@ -3260,4 +3273,4 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   );
 };
 
-export default WorkerRegistryAST;
+export default React.memo(WorkerRegistryAST);
