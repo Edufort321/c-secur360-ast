@@ -12,7 +12,69 @@ interface SMSNotificationProps {
   onClose?: () => void;
   compact?: boolean;
   autoExpand?: boolean;
+  language?: 'fr' | 'en';
 }
+
+const translations = {
+  fr: {
+    title: "Notification SMS",
+    typeLabel: "Type d'alerte",
+    messageLabel: "Message (max 160 caractères)",
+    messagePlaceholder: "Tapez votre message...",
+    recipientsLabel: "Destinataires",
+    recipientPlaceholder: "+15141234567",
+    sendButton: "Envoyer SMS",
+    sending: "Envoi en cours...",
+    simulation: "simulation",
+    characters: "caractères",
+    recipient: "destinataire",
+    recipients: "destinataires",
+    types: {
+      lock_applied: "Verrouillage appliqué",
+      lock_removed: "Verrouillage retiré", 
+      general_alert: "Alerte générale",
+      emergency: "Urgence",
+      work_completion: "Travail terminé",
+      test: "Test"
+    },
+    messages: {
+      invalidPhone: "Format de numéro invalide. Utilisez le format canadien (ex: +15141234567)",
+      requirementError: "Message et destinataires requis",
+      sendError: "Erreur lors de l'envoi",
+      serviceNotConfigured: "Service SMS non configuré",
+      loading: "Chargement SMS..."
+    }
+  },
+  en: {
+    title: "SMS Notification",
+    typeLabel: "Alert type",
+    messageLabel: "Message (max 160 characters)",
+    messagePlaceholder: "Type your message...",
+    recipientsLabel: "Recipients",
+    recipientPlaceholder: "+15141234567",
+    sendButton: "Send SMS",
+    sending: "Sending...",
+    simulation: "simulation",
+    characters: "characters",
+    recipient: "recipient",
+    recipients: "recipients",
+    types: {
+      lock_applied: "Lock applied",
+      lock_removed: "Lock removed",
+      general_alert: "General alert", 
+      emergency: "Emergency",
+      work_completion: "Work completed",
+      test: "Test"
+    },
+    messages: {
+      invalidPhone: "Invalid phone format. Use Canadian format (ex: +15141234567)",
+      requirementError: "Message and recipients required",
+      sendError: "Error sending message",
+      serviceNotConfigured: "SMS service not configured",
+      loading: "Loading SMS..."
+    }
+  }
+};
 
 export default function SMSNotification({ 
   astId,
@@ -21,9 +83,11 @@ export default function SMSNotification({
   defaultRecipients = [],
   onClose,
   compact = false,
-  autoExpand = false
+  autoExpand = false,
+  language = 'fr'
 }: SMSNotificationProps) {
   const { config, sendSMS, loading } = useTwilio();
+  const t = translations[language];
   const [isOpen, setIsOpen] = useState(autoExpand);
   const [message, setMessage] = useState(defaultMessage);
   const [recipients, setRecipients] = useState<string[]>(defaultRecipients);
@@ -56,7 +120,7 @@ export default function SMSNotification({
         setRecipients([...recipients, formatted]);
         setNewRecipient('');
       } else {
-        alert('Format de numéro invalide. Utilisez le format canadien (ex: +15141234567)');
+        alert(t.messages.invalidPhone);
       }
     }
   };
@@ -67,7 +131,7 @@ export default function SMSNotification({
 
   const handleSend = async () => {
     if (!message.trim() || recipients.length === 0) {
-      alert('Message et destinataires requis');
+      alert(t.messages.requirementError);
       return;
     }
 
@@ -96,7 +160,7 @@ export default function SMSNotification({
     } catch (error) {
       setResult({
         success: false,
-        message: 'Erreur lors de l\'envoi',
+        message: t.messages.sendError,
         details: { error: error instanceof Error ? error.message : 'Unknown error' }
       });
     } finally {
@@ -105,15 +169,7 @@ export default function SMSNotification({
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'lock_applied': return 'Verrouillage appliqué';
-      case 'lock_removed': return 'Verrouillage retiré';
-      case 'general_alert': return 'Alerte générale';
-      case 'emergency': return 'Urgence';
-      case 'work_completion': return 'Travail terminé';
-      case 'test': return 'Test';
-      default: return type;
-    }
+    return t.types[type as keyof typeof t.types] || type;
   };
 
   if (loading) {
@@ -155,14 +211,40 @@ export default function SMSNotification({
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+    <div style={{
+      backgroundColor: '#0f172a',
+      color: 'white',
+      borderRadius: '16px',
+      padding: '24px',
+      border: '1px solid rgba(100, 116, 139, 0.3)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+    }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-gray-900">Notification SMS</h3>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageSquare style={{ width: '20px', height: '20px', color: '#3b82f6' }} />
+          <h3 style={{ 
+            fontWeight: '600', 
+            color: '#e2e8f0', 
+            margin: 0,
+            fontSize: '18px'
+          }}>
+            {t.title}
+          </h3>
           {config.mode === 'simulation' && (
-            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+            <span style={{
+              fontSize: '12px',
+              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+              color: '#fbbf24',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              border: '1px solid rgba(245, 158, 11, 0.3)'
+            }}>
               Mode simulation
             </span>
           )}
@@ -170,70 +252,132 @@ export default function SMSNotification({
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer'
+            }}
           >
-            <X className="w-5 h-5" />
+            <X style={{ width: '20px', height: '20px' }} />
           </button>
         )}
       </div>
 
       {/* Type Selection */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Type d'alerte
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#e2e8f0',
+          marginBottom: '8px'
+        }}>
+          {t.typeLabel}
         </label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value as any)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          style={{
+            width: '100%',
+            padding: '12px',
+            border: '2px solid rgba(100, 116, 139, 0.3)',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            color: 'white',
+            fontSize: '14px'
+          }}
         >
-          <option value="general_alert">Alerte générale</option>
-          <option value="emergency">Urgence</option>
-          <option value="lock_applied">Verrouillage appliqué</option>
-          <option value="lock_removed">Verrouillage retiré</option>
-          <option value="work_completion">Travail terminé</option>
-          <option value="test">Test</option>
+          <option value="general_alert">{t.types.general_alert}</option>
+          <option value="emergency">{t.types.emergency}</option>
+          <option value="lock_applied">{t.types.lock_applied}</option>
+          <option value="lock_removed">{t.types.lock_removed}</option>
+          <option value="work_completion">{t.types.work_completion}</option>
+          <option value="test">{t.types.test}</option>
         </select>
       </div>
 
       {/* Message */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Message (max 160 caractères)
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#e2e8f0',
+          marginBottom: '8px'
+        }}>
+          {t.messageLabel}
         </label>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value.substring(0, 160))}
-          placeholder="Tapez votre message..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-20 resize-none"
+          placeholder={t.messagePlaceholder}
+          style={{
+            width: '100%',
+            padding: '12px',
+            border: '2px solid rgba(100, 116, 139, 0.3)',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            color: 'white',
+            fontSize: '14px',
+            height: '80px',
+            resize: 'none'
+          }}
         />
-        <div className="text-right text-xs text-gray-500 mt-1">
-          {message.length}/160
+        <div style={{
+          textAlign: 'right',
+          fontSize: '12px',
+          color: '#94a3b8',
+          marginTop: '4px'
+        }}>
+          {message.length}/160 {t.characters}
         </div>
       </div>
 
       {/* Recipients */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Destinataires
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#e2e8f0',
+          marginBottom: '8px'
+        }}>
+          {t.recipientsLabel}
         </label>
         
         {/* Add recipient */}
-        <div className="flex gap-2 mb-3">
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
           <input
             type="tel"
             value={newRecipient}
             onChange={(e) => setNewRecipient(e.target.value)}
-            placeholder="+15141234567"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder={t.recipientPlaceholder}
+            style={{
+              flex: 1,
+              padding: '12px',
+              border: '2px solid rgba(100, 116, 139, 0.3)',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(15, 23, 42, 0.8)',
+              color: 'white',
+              fontSize: '14px'
+            }}
             onKeyPress={(e) => e.key === 'Enter' && handleAddRecipient()}
           />
           <button
             onClick={handleAddRecipient}
             disabled={!newRecipient.trim()}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            style={{
+              padding: '12px 16px',
+              backgroundColor: !newRecipient.trim() ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.1)',
+              color: !newRecipient.trim() ? '#86efac' : '#22c55e',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: '8px',
+              cursor: !newRecipient.trim() ? 'not-allowed' : 'pointer',
+              opacity: !newRecipient.trim() ? 0.5 : 1
+            }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus style={{ width: '16px', height: '16px' }} />
           </button>
         </div>
 
@@ -253,7 +397,7 @@ export default function SMSNotification({
             ))}
             <div className="text-xs text-gray-500 flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {recipients.length} destinataire{recipients.length > 1 ? 's' : ''}
+              {recipients.length} {recipients.length > 1 ? t.recipients : t.recipient}
             </div>
           </div>
         )}
@@ -298,12 +442,12 @@ export default function SMSNotification({
         {sending ? (
           <>
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Envoi en cours...
+            {t.sending}
           </>
         ) : (
           <>
             <Send className="w-4 h-4" />
-            Envoyer SMS {config.mode === 'simulation' ? '(simulation)' : ''}
+            {t.sendButton} {config.mode === 'simulation' ? `(${t.simulation})` : ''}
           </>
         )}
       </button>

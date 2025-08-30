@@ -166,6 +166,9 @@ interface WorkerRegistryProps {
   onWorkersExport?: (data: WorkerExportData) => void;
   onHRDataExport?: (hrData: HRModuleData[]) => void;
   onDashboardSummaryExport?: (summary: DashboardSummary) => void;
+  // Persistance formData
+  onWorkersDataChange?: (workers: WorkerRegistryEntry[]) => void;
+  initialWorkers?: WorkerRegistryEntry[];
 }
 
 interface SMSAlert {
@@ -356,10 +359,12 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   onLockStatusChange,
   onWorkersExport,
   onHRDataExport,
-  onDashboardSummaryExport
+  onDashboardSummaryExport,
+  onWorkersDataChange,
+  initialWorkers = []
 }) => {
-  // États
-  const [workers, setWorkers] = useState<WorkerRegistryEntry[]>([]);
+  // États avec initialisation depuis formData
+  const [workers, setWorkers] = useState<WorkerRegistryEntry[]>(initialWorkers);
   const [stats, setStats] = useState<WorkerRegistryStats>({
     totalRegistered: 0,
     activeWorkers: 0,
@@ -432,15 +437,16 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     const activeWorkers = workerList.filter(w => w.workTimer.isActive).length;
     const completedWorkers = workerList.filter(w => w.workTimer.endTime).length;
     
-    const totalWorkTime = workerList.reduce((total, worker) => {
-      return total + worker.workTimer.totalTime;
+    // Calcul correct du temps total en minutes
+    const totalWorkTimeMinutes = workerList.reduce((total, worker) => {
+      return total + (worker.totalWorkTime || 0); // totalWorkTime est déjà en minutes
     }, 0);
     
     const allLocks = workerList.flatMap(w => w.assignedLocks);
     const totalLocks = allLocks.length;
     const activeLocks = allLocks.filter(l => l.status !== 'removed').length;
     
-    const averageWorkTime = totalRegistered > 0 ? totalWorkTime / totalRegistered : 0;
+    const averageWorkTime = totalRegistered > 0 ? totalWorkTimeMinutes / totalRegistered : 0;
     const companies = new Set(workerList.map(w => w.company));
     const companiesCount = companies.size;
     
@@ -455,7 +461,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
       totalRegistered,
       activeWorkers,
       completedWorkers,
-      totalWorkTime,
+      totalWorkTime: totalWorkTimeMinutes, // En minutes
       totalLocks,
       activeLocks,
       averageWorkTime,
@@ -532,6 +538,11 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     onHRDataExport?.(hrData);
     onDashboardSummaryExport?.(dashboardSummary);
   }, [workers, stats]);
+
+  // Sauvegarder automatiquement dans formData
+  useEffect(() => {
+    onWorkersDataChange?.(workers);
+  }, [workers, onWorkersDataChange]);
   
   // =================== GESTION DES TRAVAILLEURS ===================
   
@@ -811,11 +822,11 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     setShowSmsDialog(false);
   };
   
-  const formatDuration = (milliseconds: number): string => {
-    if (milliseconds === 0) return '0h 0m';
+  const formatDuration = (totalMinutes: number): string => {
+    if (!totalMinutes || totalMinutes === 0) return '0h 0m';
     
-    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
   
@@ -901,13 +912,14 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         if (worker.workTimer.isActive && worker.workTimer.startTime) {
           const currentTime = Date.now();
           const startTime = new Date(worker.workTimer.startTime).getTime();
-          const elapsedSinceStart = currentTime - startTime;
+          const elapsedMinutes = Math.floor((currentTime - startTime) / (1000 * 60));
           
           return {
             ...worker,
+            totalWorkTime: elapsedMinutes, // Temps en minutes depuis le début
             workTimer: {
               ...worker.workTimer,
-              totalTime: worker.workTimer.totalTime + 1000 // Ajouter 1 seconde
+              totalTime: currentTime - startTime // Garder en millisecondes pour compatibilité
             }
           };
         }
@@ -1320,7 +1332,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
                     {t.timer.total}
                   </span>
                   <span style={{ color: '#e2e8f0', fontWeight: '700', fontSize: '16px' }}>
-                    {formatDuration(worker.workTimer.totalTime)}
+                    {formatDuration(worker.totalWorkTime)}
                   </span>
                 </div>
                 <div>

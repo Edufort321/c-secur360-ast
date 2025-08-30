@@ -136,6 +136,21 @@ interface ASTData {
     criteria: Record<string, boolean>;
     comments: string[];
   };
+
+  // Workers data (Step 4)
+  workers?: {
+    list: any[];
+    lastUpdated: string;
+    totalCount: number;
+    activeWorkers?: number;
+    completedWorkers?: number;
+    complianceRate?: number;
+    locksApplied?: number;
+    locksRemoved?: number;
+    totalWorkTime?: number;
+    signedAST?: number;
+    workLocations?: string[];
+  };
   
   // Step 6 - Finalisation
   finalization: FinalizationData;
@@ -662,6 +677,22 @@ function Step6Finalization({
         specialRequirements: formData?.permits?.specialRequirements || []
       },
       
+      // ✅ Step 4 - Registre des travailleurs (nouveau)
+      workers: {
+        list: formData?.workers?.list || [],
+        totalCount: formData?.workers?.totalCount || 0,
+        activeWorkers: formData?.workers?.list?.filter((w: any) => w.workStarted && !w.workEnded).length || 0,
+        completedWorkers: formData?.workers?.list?.filter((w: any) => w.workEnded).length || 0,
+        locksApplied: formData?.workers?.list?.filter((w: any) => w.lockStatus === 'applied').length || 0,
+        locksRemoved: formData?.workers?.list?.filter((w: any) => w.lockStatus === 'removed').length || 0,
+        signedAST: formData?.workers?.list?.filter((w: any) => w.consentAST).length || 0,
+        totalWorkTime: formData?.workers?.list?.reduce((sum: number, w: any) => sum + (w.totalWorkTime || 0), 0) || 0,
+        workLocations: formData?.workers?.list ? [...new Set(formData.workers.list.map((w: any) => w.workLocation as string).filter(Boolean))] as string[] : [],
+        complianceRate: formData?.workers?.list?.length > 0 ? 
+          Math.round((formData?.workers?.list?.filter((w: any) => w.consentAST).length / formData?.workers?.list?.length) * 100) : 100,
+        lastUpdated: formData?.workers?.lastUpdated || new Date().toISOString()
+      },
+      
       // ✅ Step 5 - Validation équipe
       validation: {
         reviewers: formData?.validation?.reviewers || formData?.teamMembers || [],
@@ -697,8 +728,26 @@ function Step6Finalization({
     // Validation Step 3 - Au moins un danger identifié
     const step3Complete = Boolean(astData.hazards.identified.length > 0);
     
-    // Validation Step 4 - Au moins un permis requis
-    const step4Complete = Boolean(astData.permits.required.length > 0);
+    // Validation Step 4 - Au moins un permis requis OU travailleurs enregistrés
+    const step4Complete = Boolean(
+      astData.permits.required.length > 0 || 
+      (astData.workers?.totalCount || 0) > 0
+    );
+    
+    // Validation Travailleurs - Conformité sécurité si travailleurs présents
+    const workersValidation = (astData.workers?.totalCount || 0) > 0 ? {
+      hasWorkers: true,
+      complianceRate: astData.workers?.complianceRate || 0,
+      allSigned: (astData.workers?.complianceRate || 0) === 100,
+      locksManaged: (astData.workers?.locksApplied || 0) > 0 || (astData.workers?.locksRemoved || 0) > 0,
+      workTimeTracked: (astData.workers?.totalWorkTime || 0) > 0
+    } : {
+      hasWorkers: false,
+      complianceRate: 100,
+      allSigned: true,
+      locksManaged: true,
+      workTimeTracked: true
+    };
     
     // Validation Step 5 - Au moins un reviewer dans l'équipe
     const step5Complete = Boolean(astData.validation.reviewers.length > 0);

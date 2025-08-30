@@ -266,6 +266,17 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
     // Exemple : updateTenantDashboard(tenant, summary);
   };
 
+  // =================== PERSISTANCE DONNÉES TRAVAILLEURS ===================
+  const handleWorkersDataChange = (workersData: any[]) => {
+    console.log('💾 Sauvegarde Workers dans formData:', workersData);
+    // Sauvegarder les données des travailleurs dans formData pour persistance entre étapes
+    onDataChange('workers', {
+      list: workersData,
+      lastUpdated: new Date().toISOString(),
+      totalCount: workersData.length
+    });
+  };
+
   // =================== CALCULS ===================
   const validCriteria = Object.values(criteria).filter(Boolean).length;
   const totalCriteria = Object.keys(criteria).length;
@@ -693,6 +704,8 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             onWorkersExport={handleWorkersExport}
             onHRDataExport={handleHRDataExport}
             onDashboardSummaryExport={handleDashboardSummaryExport}
+            onWorkersDataChange={handleWorkersDataChange}
+            initialWorkers={formData?.workers?.list || []}
           />
       </div>
 
@@ -721,6 +734,7 @@ const Step4Validation: React.FC<Step4ValidationProps> = ({
             astId={formData?.astNumber}
             defaultType="general_alert"
             defaultMessage={`AST ${formData?.astNumber}: ${formData?.projectInfo?.title || 'Nouveau projet'} - Mise à jour importante de l'équipe.`}
+            language={language}
             defaultRecipients={[
               formData?.projectInfo?.supervisorPhone,
               ...(formData?.projectInfo?.teamMembers || []).map((m: any) => m.phone).filter(Boolean)
