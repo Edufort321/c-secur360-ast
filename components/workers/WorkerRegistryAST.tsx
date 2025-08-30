@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Users, UserCheck, UserX, Clock, Timer, Play, Pause, Square,
   Phone, Building, FileText, PenTool, CheckCircle, AlertTriangle,
@@ -465,11 +465,11 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
     employeeNumber: '',
     certification: [],
     lockStatus: 'n/a',
-    workLocation: '',
+    workLocation: availableLocations.length > 0 ? availableLocations[0] : '',
     consentAST: false,
     consentSignatureDate: '',
-    workStarted: true,
-    workStartTime: new Date().toLocaleString('fr-CA'),
+    workStarted: false,
+    workStartTime: '',
     workEnded: false,
     workEndTime: '',
     totalWorkTime: 0
@@ -481,19 +481,25 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
   
   const t = translations[language];
   
-  // Liste des emplacements disponibles
-  const availableLocations = [
-    'Zone A - Production',
-    'Zone B - Assemblage', 
-    'Zone C - Maintenance',
-    'Zone D - Entrepôt',
-    'Bureau - Administration',
-    'Atelier - Soudure',
-    'Salle électrique',
-    'Cour extérieure',
-    'Sous-sol technique',
-    'Toit - Équipements'
-  ];
+  // Liste des emplacements disponibles (depuis Step1 ou défaut)
+  const availableLocations = useMemo(() => {
+    if (workLocations && workLocations.length > 0) {
+      return workLocations.map(loc => loc.name).filter(Boolean);
+    }
+    // Emplacements par défaut si aucun défini dans Step1
+    return [
+      'Zone A - Production',
+      'Zone B - Assemblage', 
+      'Zone C - Maintenance',
+      'Zone D - Entrepôt',
+      'Bureau - Administration',
+      'Atelier - Soudure',
+      'Salle électrique',
+      'Cour extérieure',
+      'Sous-sol technique',
+      'Toit - Équipements'
+    ];
+  }, [workLocations]);
   
   // =================== CALCUL DES STATISTIQUES ===================
   
@@ -641,12 +647,7 @@ const WorkerRegistryAST: React.FC<WorkerRegistryProps> = ({
         isActive: (workerData as any).workStarted && !(workerData as any).workEnded,
         breaks: []
       },
-      workSessions: (workerData as any).workStarted && (workerData as any).workStartTime ? [{
-        id: `session_${Date.now()}`,
-        startTime: (workerData as any).workStartTime,
-        location: (workerData as any).workLocation || '',
-        isActive: true
-      }] : [],
+      workSessions: [],
       currentLocation: (workerData as any).workLocation || '',
       assignedLocks: [],
       registeredAt: new Date().toISOString(),
