@@ -9,6 +9,78 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Database {
   public: {
     Tables: {
+      ast_forms: {
+        Row: {
+          id: string
+          tenant_id: string
+          user_id: string
+          project_number: string
+          client_name: string
+          work_location: string
+          client_rep: string | null
+          emergency_number: string | null
+          ast_mdl_number: string
+          ast_client_number: string | null
+          work_description: string
+          status: string
+          general_info: any | null
+          team_discussion: any | null
+          isolation: any | null
+          hazards: any | null
+          control_measures: any | null
+          workers: any | null
+          photos: any | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          user_id: string
+          project_number: string
+          client_name: string
+          work_location: string
+          client_rep?: string | null
+          emergency_number?: string | null
+          ast_mdl_number: string
+          ast_client_number?: string | null
+          work_description: string
+          status?: string
+          general_info?: any | null
+          team_discussion?: any | null
+          isolation?: any | null
+          hazards?: any | null
+          control_measures?: any | null
+          workers?: any | null
+          photos?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          user_id?: string
+          project_number?: string
+          client_name?: string
+          work_location?: string
+          client_rep?: string | null
+          emergency_number?: string | null
+          ast_mdl_number?: string
+          ast_client_number?: string | null
+          work_description?: string
+          status?: string
+          general_info?: any | null
+          team_discussion?: any | null
+          isolation?: any | null
+          hazards?: any | null
+          control_measures?: any | null
+          workers?: any | null
+          photos?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       confined_space_permits: {
         Row: {
           id: string
@@ -289,6 +361,127 @@ export const searchPermits = async (query: string, province?: ProvinceCode) => {
   }
 
   const { data, error } = await queryBuilder.order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+// =================== FONCTIONS AST ===================
+
+export interface ASTFormData {
+  id?: string
+  tenantId: string
+  userId: string
+  projectNumber: string
+  clientName: string
+  workLocation: string
+  clientRep?: string
+  emergencyNumber?: string
+  astMdlNumber: string
+  astClientNumber?: string
+  workDescription: string
+  status?: string
+  generalInfo?: any
+  teamDiscussion?: any
+  isolation?: any
+  hazards?: any
+  controlMeasures?: any
+  workers?: any
+  photos?: any
+}
+
+export const createASTForm = async (astData: ASTFormData) => {
+  const { data, error } = await supabase
+    .from('ast_forms')
+    .insert({
+      tenant_id: astData.tenantId,
+      user_id: astData.userId,
+      project_number: astData.projectNumber,
+      client_name: astData.clientName,
+      work_location: astData.workLocation,
+      client_rep: astData.clientRep,
+      emergency_number: astData.emergencyNumber,
+      ast_mdl_number: astData.astMdlNumber,
+      ast_client_number: astData.astClientNumber,
+      work_description: astData.workDescription,
+      status: astData.status || 'draft',
+      general_info: astData.generalInfo,
+      team_discussion: astData.teamDiscussion,
+      isolation: astData.isolation,
+      hazards: astData.hazards,
+      control_measures: astData.controlMeasures,
+      workers: astData.workers,
+      photos: astData.photos
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updateASTForm = async (id: string, astData: Partial<ASTFormData>) => {
+  const updateData: any = {}
+  
+  if (astData.tenantId) updateData.tenant_id = astData.tenantId
+  if (astData.userId) updateData.user_id = astData.userId
+  if (astData.projectNumber) updateData.project_number = astData.projectNumber
+  if (astData.clientName) updateData.client_name = astData.clientName
+  if (astData.workLocation) updateData.work_location = astData.workLocation
+  if (astData.clientRep !== undefined) updateData.client_rep = astData.clientRep
+  if (astData.emergencyNumber !== undefined) updateData.emergency_number = astData.emergencyNumber
+  if (astData.astMdlNumber) updateData.ast_mdl_number = astData.astMdlNumber
+  if (astData.astClientNumber !== undefined) updateData.ast_client_number = astData.astClientNumber
+  if (astData.workDescription) updateData.work_description = astData.workDescription
+  if (astData.status) updateData.status = astData.status
+  if (astData.generalInfo !== undefined) updateData.general_info = astData.generalInfo
+  if (astData.teamDiscussion !== undefined) updateData.team_discussion = astData.teamDiscussion
+  if (astData.isolation !== undefined) updateData.isolation = astData.isolation
+  if (astData.hazards !== undefined) updateData.hazards = astData.hazards
+  if (astData.controlMeasures !== undefined) updateData.control_measures = astData.controlMeasures
+  if (astData.workers !== undefined) updateData.workers = astData.workers
+  if (astData.photos !== undefined) updateData.photos = astData.photos
+
+  const { data, error } = await supabase
+    .from('ast_forms')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getASTForm = async (id: string) => {
+  const { data, error } = await supabase
+    .from('ast_forms')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getASTFormsByTenant = async (tenantId: string) => {
+  const { data, error } = await supabase
+    .from('ast_forms')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const deleteASTForm = async (id: string) => {
+  const { data, error } = await supabase
+    .from('ast_forms')
+    .delete()
+    .eq('id', id)
+    .select()
+    .single()
 
   if (error) throw error
   return data
