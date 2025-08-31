@@ -24,7 +24,7 @@ export async function GET() {
     // Test de lecture ast_forms
     const { data: astData, error: astError } = await supabase
       .from('ast_forms')
-      .select('id, tenant_id, client_name, created_at')
+      .select('*')
       .limit(3);
     
     if (astError) {
@@ -41,20 +41,20 @@ export async function GET() {
     
     // Test d'insertion simple
     const testAST = {
-      tenant_id: 'api-test',
-      user_id: 'test-api-user',
-      project_number: `API-TEST-${Date.now()}`,
-      client_name: '🧪 Test API Endpoint',
-      work_location: 'Test via API',
-      ast_mdl_number: `AST-API-2025-${Date.now()}`,
-      work_description: 'Test de l\'endpoint API Supabase',
+      tenantId: 'api-test',
+      userId: 'test-api-user',
+      projectNumber: `API-TEST-${Date.now()}`,
+      clientName: '🧪 Test API Endpoint',
+      workLocation: 'Test via API',
+      astMdlNumber: `AST-API-2025-${Date.now()}`,
+      workDescription: 'Test de l\'endpoint API Supabase',
       status: 'draft'
     };
     
     const { data: insertData, error: insertError } = await supabase
       .from('ast_forms')
       .insert(testAST)
-      .select('id, ast_mdl_number')
+      .select('id, astMdlNumber')
       .single();
     
     if (insertError) {
@@ -82,7 +82,7 @@ export async function GET() {
       message: 'Supabase fonctionne parfaitement !',
       details: {
         read_count: astData?.length || 0,
-        test_ast_created: insertData.ast_mdl_number,
+        test_ast_created: insertData.astMdlNumber,
         test_cleaned: true
       },
       timestamp: new Date().toISOString()
