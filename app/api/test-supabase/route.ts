@@ -54,7 +54,7 @@ export async function GET() {
     const { data: insertData, error: insertError } = await supabase
       .from('ast_forms')
       .insert(testAST)
-      .select('id, astMdlNumber')
+      .select('*')
       .single();
     
     if (insertError) {
@@ -82,7 +82,7 @@ export async function GET() {
       message: 'Supabase fonctionne parfaitement !',
       details: {
         read_count: astData?.length || 0,
-        test_ast_created: insertData.astMdlNumber,
+        test_ast_created: insertData?.astMdlNumber || 'créé',
         test_cleaned: true
       },
       timestamp: new Date().toISOString()
