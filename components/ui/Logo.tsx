@@ -28,12 +28,12 @@ const Logo: React.FC<LogoProps> = ({
   }
   const getSizeDimensions = () => {
     switch (size) {
-      case 'sm': return { width: 100, height: 28 };
-      case 'md': return { width: 120, height: 32 };
-      case 'lg': return { width: 140, height: 40 };
-      case 'xl': return { width: 160, height: 48 };
-      case '2xl': return { width: 180, height: 56 };
-      default: return { width: 120, height: 32 };
+      case 'sm': return { width: 120, height: 32 };
+      case 'md': return { width: 140, height: 36 };
+      case 'lg': return { width: 160, height: 42 };
+      case 'xl': return { width: 180, height: 50 };
+      case '2xl': return { width: 200, height: 58 };
+      default: return { width: 140, height: 36 };
     }
   };
 

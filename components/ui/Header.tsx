@@ -32,17 +32,17 @@ const Header: React.FC<HeaderProps> = ({
   }
   return (
     <div className={`
-      flex justify-between items-center w-full min-h-[60px]
+      flex justify-between items-center w-full min-h-[80px]
       ${isDark 
         ? 'bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10' 
         : 'bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 border-b border-gray-200/50'
       }
-      px-4 py-2
+      px-6 py-4
       backdrop-blur-lg
       shadow-lg ${isDark ? 'shadow-black/20' : 'shadow-gray-500/10'}
       ${className}
     `}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {showLogo && (
           <Logo 
             size={logoSize}
