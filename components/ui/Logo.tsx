@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { useTheme } from '../layout/UniversalLayout';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -16,6 +17,15 @@ const Logo: React.FC<LogoProps> = ({
   className = '', 
   showText = true 
 }) => {
+  // Utiliser le thème pour adapter les couleurs avec fallback
+  let isDark = false;
+  try {
+    const theme = useTheme();
+    isDark = theme?.isDark || false;
+  } catch (e) {
+    // Fallback si le hook n'est pas disponible (mode sombre par défaut)
+    isDark = false;
+  }
   const getSizeDimensions = () => {
     switch (size) {
       case 'sm': return { width: 100, height: 28 };
@@ -76,11 +86,11 @@ const Logo: React.FC<LogoProps> = ({
         
         {showText && (
           <div className="flex flex-col">
-            <span className={`font-bold text-white ${getTextSize()}`}>
+            <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-700'} ${getTextSize()}`}>
               C-SECUR360
             </span>
             {(size === 'lg' || size === 'xl' || size === '2xl') && (
-              <span className="text-sm text-gray-300 -mt-1">
+              <span className={`text-sm -mt-1 ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 Sécurité Industrielle
               </span>
             )}

@@ -1,0 +1,151 @@
+{
+  "timestamp": "2025-09-03T22:50:58.906Z",
+  "supabase_url": "https://nzjjgcccxlqhbtpitmpo.supabase.co",
+  "discovery_method": "brute_force_comprehensive",
+  "total_tables_found": 12,
+  "tables_found": [
+    "ast_forms",
+    "audit_logs",
+    "confined_space_permits",
+    "customers",
+    "entitlements",
+    "invoices",
+    "price_adjustments",
+    "price_config",
+    "profiles",
+    "tenants",
+    "timesheets",
+    "users"
+  ],
+  "tables_with_data": [
+    "tenants",
+    "profiles",
+    "customers",
+    "audit_logs",
+    "price_config",
+    "entitlements"
+  ],
+  "table_details": {
+    "users": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    },
+    "profiles": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "full_name",
+        "tenant_id",
+        "role",
+        "company_name",
+        "phone",
+        "province",
+        "created_at",
+        "updated_at"
+      ],
+      "hasData": true
+    },
+    "customers": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "company_name",
+        "stripe_customer_id",
+        "province",
+        "address",
+        "tax_ids",
+        "subscription_status",
+        "stripe_subscription_id",
+        "trial_end",
+        "created_at",
+        "updated_at"
+      ],
+      "hasData": true
+    },
+    "tenants": {
+      "count": 3,
+      "columns": [
+        "id",
+        "subdomain",
+        "companyName",
+        "plan",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ],
+      "hasData": true
+    },
+    "ast_forms": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    },
+    "audit_logs": {
+      "count": 1,
+      "columns": [
+        "id",
+        "actor",
+        "action",
+        "target_id",
+        "meta",
+        "created_at"
+      ],
+      "hasData": true
+    },
+    "invoices": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    },
+    "confined_space_permits": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    },
+    "timesheets": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    },
+    "price_config": {
+      "count": 1,
+      "columns": [
+        "id",
+        "monthly_price",
+        "annual_price",
+        "additional_site_price",
+        "auto_adjustment_enabled",
+        "adjustment_percentage",
+        "next_adjustment_date",
+        "effective_date",
+        "created_at",
+        "updated_at"
+      ],
+      "hasData": true
+    },
+    "entitlements": {
+      "count": 1,
+      "columns": [
+        "id",
+        "customer_id",
+        "features",
+        "is_active",
+        "activated_at",
+        "suspended_at",
+        "expires_at",
+        "created_at",
+        "updated_at"
+      ],
+      "hasData": true
+    },
+    "price_adjustments": {
+      "count": 0,
+      "columns": [],
+      "hasData": false
+    }
+  },
+  "notes": "Découverte exhaustive de toutes les tables accessibles"
+}

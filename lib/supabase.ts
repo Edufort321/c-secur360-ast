@@ -19,8 +19,8 @@ export interface Database {
           work_location: string
           client_rep: string | null
           emergency_number: string | null
-          ast_mdl_number: string
-          ast_client_number: string | null
+          ast_number: string
+          client_reference: string | null
           work_description: string
           status: string
           general_info: any | null
@@ -42,8 +42,8 @@ export interface Database {
           work_location: string
           client_rep?: string | null
           emergency_number?: string | null
-          ast_mdl_number: string
-          ast_client_number?: string | null
+          ast_number: string
+          client_reference?: string | null
           work_description: string
           status?: string
           general_info?: any | null
@@ -65,8 +65,8 @@ export interface Database {
           work_location?: string
           client_rep?: string | null
           emergency_number?: string | null
-          ast_mdl_number?: string
-          ast_client_number?: string | null
+          ast_number?: string
+          client_reference?: string | null
           work_description?: string
           status?: string
           general_info?: any | null
@@ -377,8 +377,8 @@ export interface ASTFormData {
   workLocation: string
   clientRep?: string
   emergencyNumber?: string
-  astMdlNumber: string
-  astClientNumber?: string
+  astNumber: string
+  clientReference?: string
   workDescription: string
   status?: string
   generalInfo?: any
@@ -401,8 +401,8 @@ export const createASTForm = async (astData: ASTFormData) => {
       work_location: astData.workLocation,
       client_rep: astData.clientRep,
       emergency_number: astData.emergencyNumber,
-      ast_mdl_number: astData.astMdlNumber,
-      ast_client_number: astData.astClientNumber,
+      ast_number: astData.astNumber,
+      client_reference: astData.clientReference,
       work_description: astData.workDescription,
       status: astData.status || 'draft',
       general_info: astData.generalInfo,
@@ -430,8 +430,8 @@ export const updateASTForm = async (id: string, astData: Partial<ASTFormData>) =
   if (astData.workLocation) updateData.work_location = astData.workLocation
   if (astData.clientRep !== undefined) updateData.client_rep = astData.clientRep
   if (astData.emergencyNumber !== undefined) updateData.emergency_number = astData.emergencyNumber
-  if (astData.astMdlNumber) updateData.ast_mdl_number = astData.astMdlNumber
-  if (astData.astClientNumber !== undefined) updateData.ast_client_number = astData.astClientNumber
+  if (astData.astNumber) updateData.ast_number = astData.astNumber
+  if (astData.clientReference !== undefined) updateData.client_reference = astData.clientReference
   if (astData.workDescription) updateData.work_description = astData.workDescription
   if (astData.status) updateData.status = astData.status
   if (astData.generalInfo !== undefined) updateData.general_info = astData.generalInfo

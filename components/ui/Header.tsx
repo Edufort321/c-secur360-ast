@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Logo from './Logo';
+import { useTheme } from '../layout/UniversalLayout';
 
 interface HeaderProps {
   title?: string;
@@ -20,17 +21,28 @@ const Header: React.FC<HeaderProps> = ({
   actions,
   className = ''
 }) => {
+  // Utiliser le thème pour adapter les couleurs avec fallback
+  let isDark = false;
+  try {
+    const theme = useTheme();
+    isDark = theme?.isDark || false;
+  } catch (e) {
+    // Fallback si le hook n'est pas disponible
+    isDark = false;
+  }
   return (
     <div className={`
-      flex justify-between items-center w-full
-      bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95
-      border-b border-white/10
-      px-2 py-0.5
+      flex justify-between items-center w-full min-h-[60px]
+      ${isDark 
+        ? 'bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10' 
+        : 'bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 border-b border-gray-200/50'
+      }
+      px-4 py-2
       backdrop-blur-lg
-      shadow-lg shadow-black/20
+      shadow-lg ${isDark ? 'shadow-black/20' : 'shadow-gray-500/10'}
       ${className}
     `}>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-3">
         {showLogo && (
           <Logo 
             size={logoSize}
@@ -47,13 +59,19 @@ const Header: React.FC<HeaderProps> = ({
                                bg-clip-text text-transparent font-bold">
                   {title}
                 </span>
-                <span className="absolute inset-0 bg-slate-800/80 rounded-lg -z-10 px-1 py-0
-                               backdrop-blur-sm border border-white/10 shadow-lg"></span>
+                <span className={`absolute inset-0 rounded-lg -z-10 px-1 py-0 backdrop-blur-sm shadow-lg
+                               ${isDark 
+                                 ? 'bg-slate-800/80 border border-white/10' 
+                                 : 'bg-white/80 border border-gray-200/30'
+                               }`}></span>
               </h1>
             )}
             {subtitle && (
-              <p className="text-slate-300 text-xs bg-slate-800/60 rounded-md px-1 py-0
-                          backdrop-blur-sm border border-white/10 inline-block shadow-md">
+              <p className={`text-xs rounded-md px-1 py-0 backdrop-blur-sm inline-block shadow-md
+                          ${isDark 
+                            ? 'text-slate-300 bg-slate-800/60 border border-white/10' 
+                            : 'text-gray-600 bg-white/60 border border-gray-200/30'
+                          }`}>
                 {subtitle}
               </p>
             )}

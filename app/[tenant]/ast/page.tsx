@@ -45,7 +45,7 @@ export default function ASTDashboard() {
       form.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       form.project_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       form.work_location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      form.ast_mdl_number?.toLowerCase().includes(searchTerm.toLowerCase());
+      form.ast_number?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
     
