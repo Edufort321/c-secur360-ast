@@ -33,34 +33,25 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <div className={`
       flex justify-between items-center w-full
-      /* Responsive height - Mobile to Desktop */
-      min-h-[60px] sm:min-h-[70px] md:min-h-[80px] lg:min-h-[90px] xl:min-h-[100px]
+      /* 2025 standards: Mobile 56px, Desktop 64px */
+      min-h-[56px] md:min-h-[64px]
       /* Navy dark theme as original - always dark */
       bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10
-      /* Responsive padding - Scales with screen size */
-      px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 xl:px-10 xl:py-6
+      /* Optimal padding for 2025 standards */
+      px-4 py-2 md:px-6 md:py-3
       backdrop-blur-lg
       shadow-lg shadow-black/20
       ${className}
     `}>
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
+      <div className="flex items-center gap-3 md:gap-4">
         {showLogo && (
           <div className="responsive-logo">
-            {/* Logo responsive qui s'adapte automatiquement */}
-            <div className="block sm:hidden">
+            {/* Logo 2025 standards: 2 tailles optimales */}
+            <div className="block md:hidden">
               <Logo size="sm" variant="glow" showText={true} />
             </div>
-            <div className="hidden sm:block md:hidden">
+            <div className="hidden md:block">
               <Logo size="md" variant="glow" showText={true} />
-            </div>
-            <div className="hidden md:block lg:hidden">
-              <Logo size="lg" variant="glow" showText={true} />
-            </div>
-            <div className="hidden lg:block xl:hidden">
-              <Logo size="xl" variant="glow" showText={true} />
-            </div>
-            <div className="hidden xl:block">
-              <Logo size="2xl" variant="glow" showText={true} />
             </div>
           </div>
         )}
@@ -68,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({
         {(title || subtitle) && (
           <div className="flex flex-col">
             {title && (
-              <h1 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold mb-0 relative">
+              <h1 className="text-sm md:text-base font-bold mb-0 relative">
                 <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400
                                bg-clip-text text-transparent font-bold">
                   {title}
@@ -77,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({
               </h1>
             )}
             {subtitle && (
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg rounded-md px-1 py-0 backdrop-blur-sm inline-block shadow-md text-slate-300 bg-slate-800/60 border border-white/10">
+              <p className="text-xs md:text-sm rounded-md px-1 py-0 backdrop-blur-sm inline-block shadow-md text-slate-300 bg-slate-800/60 border border-white/10">
                 {subtitle}
               </p>
             )}

@@ -82,29 +82,20 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
         : 'bg-white/95 border-slate-200'
     } backdrop-blur-lg border-b transition-colors duration-200 shadow-lg shadow-black/10`}>
       <div className="max-w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between min-h-[60px] sm:min-h-[70px] md:min-h-[80px] lg:min-h-[90px] xl:min-h-[100px] py-2 sm:py-3 md:py-4">
+        <div className="flex items-center justify-between min-h-[56px] md:min-h-[64px] py-2 md:py-3">
           
           {/* Logo et titre */}
-          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
+          <div className="flex items-center gap-3 md:gap-4">
             <Link 
               href={tenant ? `/${tenant}/dashboard` : '/'}
               className="hover:opacity-80 transition-opacity"
             >
-              {/* Logo responsive - adapte automatiquement la taille */}
-              <div className="block sm:hidden">
+              {/* Logo responsive - 2025 standards: 2 tailles optimales */}
+              <div className="block md:hidden">
                 <Logo size="sm" variant="glow" showText={true} />
               </div>
-              <div className="hidden sm:block md:hidden">
+              <div className="hidden md:block">
                 <Logo size="md" variant="glow" showText={true} />
-              </div>
-              <div className="hidden md:block lg:hidden">
-                <Logo size="lg" variant="glow" showText={true} />
-              </div>
-              <div className="hidden lg:block xl:hidden">
-                <Logo size="xl" variant="glow" showText={true} />
-              </div>
-              <div className="hidden xl:block">
-                <Logo size="2xl" variant="glow" showText={true} />
               </div>
             </Link>
             {tenant && (
