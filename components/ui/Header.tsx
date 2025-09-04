@@ -33,12 +33,12 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <div className={`
       flex justify-between items-center w-full
-      /* 2025 standards: Mobile 56px, Desktop 64px */
-      min-h-[56px] md:min-h-[64px]
+      /* Reduced height: Mobile 28px, Desktop 32px */
+      min-h-[28px] md:min-h-[32px]
       /* Navy dark theme as original - always dark */
       bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10
-      /* Optimal padding for 2025 standards */
-      px-4 py-2 md:px-6 md:py-3
+      /* Compact padding for reduced height */
+      px-4 py-1 md:px-6 md:py-1.5
       backdrop-blur-lg
       shadow-lg shadow-black/20
       ${className}
