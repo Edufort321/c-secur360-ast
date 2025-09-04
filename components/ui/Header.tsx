@@ -35,14 +35,12 @@ const Header: React.FC<HeaderProps> = ({
       flex justify-between items-center w-full
       /* Responsive height - Mobile to Desktop */
       min-h-[60px] sm:min-h-[70px] md:min-h-[80px] lg:min-h-[90px] xl:min-h-[100px]
-      ${isDark 
-        ? 'bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10' 
-        : 'bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 border-b border-gray-200/50'
-      }
+      /* Navy dark theme as original - always dark */
+      bg-gradient-to-r from-slate-800/95 via-slate-800/95 to-slate-900/95 border-b border-white/10
       /* Responsive padding - Scales with screen size */
       px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 lg:px-8 lg:py-5 xl:px-10 xl:py-6
       backdrop-blur-lg
-      shadow-lg ${isDark ? 'shadow-black/20' : 'shadow-gray-500/10'}
+      shadow-lg shadow-black/20
       ${className}
     `}>
       <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
@@ -75,19 +73,11 @@ const Header: React.FC<HeaderProps> = ({
                                bg-clip-text text-transparent font-bold">
                   {title}
                 </span>
-                <span className={`absolute inset-0 rounded-lg -z-10 px-1 py-0 backdrop-blur-sm shadow-lg
-                               ${isDark 
-                                 ? 'bg-slate-800/80 border border-white/10' 
-                                 : 'bg-white/80 border border-gray-200/30'
-                               }`}></span>
+                <span className="absolute inset-0 rounded-lg -z-10 px-1 py-0 backdrop-blur-sm shadow-lg bg-slate-800/80 border border-white/10"></span>
               </h1>
             )}
             {subtitle && (
-              <p className={`text-xs sm:text-sm md:text-base lg:text-lg rounded-md px-1 py-0 backdrop-blur-sm inline-block shadow-md
-                          ${isDark 
-                            ? 'text-slate-300 bg-slate-800/60 border border-white/10' 
-                            : 'text-gray-600 bg-white/60 border border-gray-200/30'
-                          }`}>
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg rounded-md px-1 py-0 backdrop-blur-sm inline-block shadow-md text-slate-300 bg-slate-800/60 border border-white/10">
                 {subtitle}
               </p>
             )}
