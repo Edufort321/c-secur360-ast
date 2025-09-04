@@ -82,22 +82,33 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
         : 'bg-white/95 border-slate-200'
     } backdrop-blur-lg border-b transition-colors duration-200 shadow-lg shadow-black/10`}>
       <div className="max-w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-10">
+        <div className="flex items-center justify-between min-h-[60px] sm:min-h-[70px] md:min-h-[80px] lg:min-h-[90px] xl:min-h-[100px] py-2 sm:py-3 md:py-4">
           
           {/* Logo et titre */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
             <Link 
               href={tenant ? `/${tenant}/dashboard` : '/'}
               className="hover:opacity-80 transition-opacity"
             >
-              <Logo 
-                size="sm" 
-                variant="glow"
-                showText={true}
-              />
+              {/* Logo responsive - adapte automatiquement la taille */}
+              <div className="block sm:hidden">
+                <Logo size="sm" variant="glow" showText={true} />
+              </div>
+              <div className="hidden sm:block md:hidden">
+                <Logo size="md" variant="glow" showText={true} />
+              </div>
+              <div className="hidden md:block lg:hidden">
+                <Logo size="lg" variant="glow" showText={true} />
+              </div>
+              <div className="hidden lg:block xl:hidden">
+                <Logo size="xl" variant="glow" showText={true} />
+              </div>
+              <div className="hidden xl:block">
+                <Logo size="2xl" variant="glow" showText={true} />
+              </div>
             </Link>
             {tenant && (
-              <div className={`text-sm px-3 py-1 rounded-lg backdrop-blur-sm border shadow-md ${
+              <div className={`text-xs sm:text-sm md:text-base px-2 py-1 sm:px-3 md:px-4 rounded-lg backdrop-blur-sm border shadow-md ${
                 isDark 
                   ? 'bg-slate-800/60 text-slate-300 border-slate-600/30' 
                   : 'bg-white/80 text-slate-700 border-slate-300/30'
