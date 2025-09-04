@@ -665,7 +665,7 @@ export default function ManagerDashboard({
         <div style={{ 
           maxWidth: '1400px', 
           margin: '0 auto', 
-          padding: '32px 20px', 
+          padding: '20px 20px 32px 20px', // Reduced top padding since UniversalLayout handles header spacing
           position: 'relative',
           zIndex: 5
         }}>
@@ -677,7 +677,8 @@ export default function ManagerDashboard({
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
               gap: '24px',
-              marginBottom: '48px'
+              marginBottom: '48px',
+              marginTop: '8px' // Extra space to ensure no header overlap
             }}
           >
             {[
