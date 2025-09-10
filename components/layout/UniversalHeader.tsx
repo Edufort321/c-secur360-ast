@@ -82,7 +82,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
         : 'bg-white/95 border-slate-200'
     } backdrop-blur-lg border-b transition-colors duration-200 shadow-lg shadow-black/10`}>
       <div className="max-w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between min-h-[28px] md:min-h-[32px] py-1 md:py-1.5">
+        <div className="flex items-center justify-between min-h-[20px] md:min-h-[24px] py-0.5 md:py-1">
           
           {/* Logo et titre */}
           <div className="flex items-center gap-3 md:gap-4">
