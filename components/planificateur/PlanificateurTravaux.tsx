@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { 
   Calendar, 
   Users, 
@@ -16,7 +17,13 @@ import {
   X,
   ChevronDown,
   BarChart3,
-  Settings
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Maximize2,
+  Home,
+  CalendarDays
 } from 'lucide-react';
 
 interface Employee {
@@ -49,13 +56,29 @@ interface Filters {
   search: string;
 }
 
-const PlanificateurTravaux: React.FC = () => {
-  const [activeView, setActiveView] = useState<'calendrier' | 'analytics' | 'equipe'>('calendrier');
+interface PlanificateurTravauxProps {
+  tenant: string;
+  user: {
+    name: string;
+    email: string;
+    role: string;
+    avatar?: string;
+  };
+}
+
+const PlanificateurTravaux: React.FC<PlanificateurTravauxProps> = ({ tenant, user }) => {
+  const [activeView, setActiveView] = useState<'calendrier' | 'analytics' | 'equipe' | 'personnel' | 'equipements'>('calendrier');
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [notifications, setNotifications] = useState<Array<{id: number, message: string, type: string}>>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [quickFilter, setQuickFilter] = useState('');
+  const [showQuickFilters, setShowQuickFilters] = useState(false);
+  
+  const gridRef = useRef<HTMLDivElement>(null);
   
   const [filters, setFilters] = useState<Filters>({
     division: 'toutes',
@@ -63,52 +86,16 @@ const PlanificateurTravaux: React.FC = () => {
     search: ''
   });
 
-  const [personnel] = useState<Employee[]>([
-    { id: 1, nom: 'Éric Dufort', poste: 'TECH', succursale: 'MDL - Sherbrooke', division: 'transformateurs', disponible: true },
-    { id: 2, nom: 'Carl Lévesque', poste: 'ING', succursale: 'MDL - Terrebonne', division: 'transformateurs', disponible: true },
-    { id: 3, nom: 'Miguel Morin', poste: 'CPI', succursale: 'MDL - Québec', division: 'quebec', disponible: true },
-    { id: 4, nom: 'Chad Rodrigue', poste: 'COORD', succursale: 'DUAL - Sherbrooke', division: 'dual', disponible: true },
-    { id: 5, nom: 'Alexandre Gariépy-Gauvin', poste: 'D.T.', succursale: 'CFM - St-Jean', division: 'cfm', disponible: true },
-    { id: 6, nom: 'Guillaume Guay-Fortier', poste: 'ADMIN', succursale: 'MDL - Sherbrooke', division: 'transformateurs', disponible: true },
-    { id: 7, nom: 'Étienne Walczack', poste: 'Stagiaire TECH', succursale: 'MDL - Terrebonne', division: 'terrebonne', disponible: true },
-    { id: 8, nom: 'Guillaume Buisson', poste: 'Stagiaire ING', succursale: 'MDL - Québec', division: 'quebec', disponible: true },
-    { id: 9, nom: 'Léo Mercier', poste: 'Sous-traitance', succursale: 'Externe', division: 'external', disponible: true },
-    { id: 10, nom: 'Nicolas Girard', poste: 'Instrument', succursale: 'MDL - Sherbrooke', division: 'transformateurs', disponible: true },
-  ]);
+  const [personnel, setPersonnel] = useState<Employee[]>([]);
 
-  const [jobs, setJobs] = useState<Job[]>([
-    {
-      id: 1,
-      numero: 'G25-1164',
-      nom: 'DUAL LABRADOR IOC',
-      description: 'ASSEMBLAGE',
-      date: '2025-01-15',
-      heureDebut: '08:00',
-      heureFin: '16:00',
-      technicien: 4,
-      priorite: 'haute',
-      statut: 'planifie',
-      lieu: 'DUAL - Sherbrooke',
-      client: 'Labrador IOC'
-    },
-    {
-      id: 2,
-      numero: 'G25-1171',
-      nom: 'DUAL RTFT',
-      description: 'ASSEMBLAGE',
-      date: '2025-01-16',
-      heureDebut: '09:00',
-      heureFin: '17:00',
-      technicien: 1,
-      priorite: 'normale',
-      statut: 'en_cours',
-      lieu: 'MDL - Sherbrooke',
-      client: 'RTFT'
-    }
-  ]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [equipements, setEquipements] = useState<Array<{id: number, nom: string, type: string, disponible: boolean}>>([]);
 
   useEffect(() => {
     const savedJobs = localStorage.getItem('planificateur-jobs');
+    const savedPersonnel = localStorage.getItem('planificateur-personnel');
+    const savedEquipements = localStorage.getItem('planificateur-equipements');
+    
     if (savedJobs) {
       try {
         setJobs(JSON.parse(savedJobs));
@@ -116,11 +103,35 @@ const PlanificateurTravaux: React.FC = () => {
         console.error('Erreur chargement jobs');
       }
     }
+    
+    if (savedPersonnel) {
+      try {
+        setPersonnel(JSON.parse(savedPersonnel));
+      } catch (e) {
+        console.error('Erreur chargement personnel');
+      }
+    }
+    
+    if (savedEquipements) {
+      try {
+        setEquipements(JSON.parse(savedEquipements));
+      } catch (e) {
+        console.error('Erreur chargement équipements');
+      }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('planificateur-jobs', JSON.stringify(jobs));
   }, [jobs]);
+
+  useEffect(() => {
+    localStorage.setItem('planificateur-personnel', JSON.stringify(personnel));
+  }, [personnel]);
+
+  useEffect(() => {
+    localStorage.setItem('planificateur-equipements', JSON.stringify(equipements));
+  }, [equipements]);
 
   const addNotification = (message: string, type = 'success') => {
     const id = Date.now();
@@ -132,15 +143,46 @@ const PlanificateurTravaux: React.FC = () => {
 
   const getDatesInPeriod = () => {
     const dates = [];
-    const start = new Date();
-    start.setDate(start.getDate() - start.getDay());
     
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      dates.push(date);
+    if (viewMode === 'week') {
+      // Vue semaine : 7 jours à partir du lundi de la semaine courante
+      const start = new Date(currentDate);
+      const day = start.getDay();
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Ajuster pour commencer le lundi
+      start.setDate(diff);
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        dates.push(date);
+      }
+    } else {
+      // Vue mois : tous les jours du mois courant
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
     }
+    
     return dates;
+  };
+
+  const navigateDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
+    } else {
+      newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
   };
 
   const getPersonnelFiltre = () => {
@@ -148,8 +190,26 @@ const PlanificateurTravaux: React.FC = () => {
       if (filters.division !== 'toutes' && p.division !== filters.division) return false;
       if (filters.poste !== 'tous' && !p.poste.toLowerCase().includes(filters.poste.toLowerCase())) return false;
       if (filters.search && !p.nom.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (quickFilter && !p.nom.toLowerCase().includes(quickFilter.toLowerCase()) && 
+          !p.poste.toLowerCase().includes(quickFilter.toLowerCase()) &&
+          !p.succursale.toLowerCase().includes(quickFilter.toLowerCase())) return false;
       return true;
     });
+  };
+
+  const getDateDisplayText = () => {
+    if (viewMode === 'week') {
+      const start = new Date(currentDate);
+      const day = start.getDay();
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+      start.setDate(diff);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      
+      return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    } else {
+      return currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    }
   };
 
   const handleCellClick = (date: Date, employee: Employee) => {
@@ -203,14 +263,26 @@ const PlanificateurTravaux: React.FC = () => {
   };
 
   const exportData = () => {
-    const data = JSON.stringify(jobs, null, 2);
+    const data = JSON.stringify({ jobs, personnel, equipements }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'jobs-backup.json';
+    a.download = 'planificateur-backup.json';
     a.click();
     addNotification('Export réussi');
+  };
+
+  const addPersonnel = (personnelData: Employee) => {
+    const newPersonnel = { ...personnelData, id: Date.now() };
+    setPersonnel(prev => [...prev, newPersonnel]);
+    addNotification(`${personnelData.nom} ajouté à l'équipe`);
+  };
+
+  const addEquipement = (equipementData: { nom: string; type: string; disponible: boolean }) => {
+    const newEquipement = { ...equipementData, id: Date.now() };
+    setEquipements(prev => [...prev, newEquipement]);
+    addNotification(`Équipement ${equipementData.nom} ajouté`);
   };
 
   const getDivisionColor = (division: string) => {
@@ -239,31 +311,130 @@ const PlanificateurTravaux: React.FC = () => {
   const dates = getDatesInPeriod();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="h-screen w-screen flex flex-col bg-slate-50 dark:bg-slate-900">
       {/* Notifications */}
       {notifications.map(notif => (
         <div key={notif.id} className={`fixed top-4 right-4 ${
           notif.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in-right`}>
+        } text-white px-6 py-3 rounded-lg shadow-lg z-50`}>
           {notif.message}
         </div>
       ))}
 
-      {/* Header avec boutons de vue */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setActiveView('calendrier')}
-              className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
-                activeView === 'calendrier' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Calendrier</span>
-            </button>
+      {/* Header principal fixe */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm z-40">
+        <div className="px-6 py-4">
+          {/* Ligne 1: Navigation et titre */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center space-x-4">
+              <Link 
+                href={`/${tenant}/dashboard`}
+                className="flex items-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              >
+                <Home className="w-5 h-5" />
+                <span>Dashboard</span>
+              </Link>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center space-x-2">
+                <CalendarDays className="w-5 h-5 text-blue-500" />
+                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  Planificateur de Travaux
+                </h1>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {/* Filtre rapide */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Recherche rapide..."
+                  value={quickFilter}
+                  onChange={(e) => setQuickFilter(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm w-64"
+                />
+              </div>
+              
+              <button
+                onClick={exportData}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Ligne 2: Navigation calendrier et vues */}
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              {/* Navigation date */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigateDate('prev')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                
+                <div className="text-lg font-semibold text-slate-900 dark:text-slate-100 min-w-[200px] text-center">
+                  {getDateDisplayText()}
+                </div>
+                
+                <button
+                  onClick={() => navigateDate('next')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                
+                <button
+                  onClick={goToToday}
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  Aujourd'hui
+                </button>
+              </div>
+              
+              {/* Vue semaine/mois */}
+              <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('week')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    viewMode === 'week'
+                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  Semaine
+                </button>
+                <button
+                  onClick={() => setViewMode('month')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    viewMode === 'month'
+                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  Mois
+                </button>
+              </div>
+            </div>
+
+            {/* Onglets de vue */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setActiveView('calendrier')}
+                className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                  activeView === 'calendrier' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Calendrier</span>
+              </button>
             <button
               onClick={() => setActiveView('analytics')}
               className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
@@ -285,6 +456,28 @@ const PlanificateurTravaux: React.FC = () => {
             >
               <Users className="w-4 h-4" />
               <span>Équipe</span>
+            </button>
+            <button
+              onClick={() => setActiveView('personnel')}
+              className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                activeView === 'personnel' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Personnel</span>
+            </button>
+            <button
+              onClick={() => setActiveView('equipements')}
+              className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                activeView === 'equipements' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Équipements</span>
             </button>
           </div>
           
@@ -473,26 +666,229 @@ const PlanificateurTravaux: React.FC = () => {
       {activeView === 'equipe' && (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <h2 className="text-2xl font-bold mb-6">Gestion d'Équipe</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {personnel.map(p => (
-              <div key={p.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-bold text-lg">{p.nom}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{p.poste}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-500">{p.succursale}</p>
+          {personnel.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+                Aucun personnel ajouté
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-4">
+                Utilisez l'onglet "Personnel" pour ajouter des membres à votre équipe
+              </p>
+              <button
+                onClick={() => setActiveView('personnel')}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Ajouter du personnel
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personnel.map(p => (
+                <div key={p.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="font-bold text-lg">{p.nom}</h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{p.poste}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-500">{p.succursale}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      p.disponible 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {p.disponible ? 'Disponible' : 'Indisponible'}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    p.disponible 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {p.disponible ? 'Disponible' : 'Indisponible'}
-                  </span>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vue Personnel - Ajout */}
+      {activeView === 'personnel' && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-2xl font-bold mb-6">Ajouter du Personnel</h2>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target as HTMLFormElement);
+            const personnelData: Employee = {
+              id: 0,
+              nom: formData.get('nom') as string,
+              poste: formData.get('poste') as string,
+              succursale: formData.get('succursale') as string,
+              division: formData.get('division') as string,
+              disponible: true
+            };
+            addPersonnel(personnelData);
+            (e.target as HTMLFormElement).reset();
+          }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Nom complet</label>
+                <input 
+                  type="text" 
+                  name="nom" 
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                />
               </div>
-            ))}
-          </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Poste</label>
+                <select 
+                  name="poste" 
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                >
+                  <option value="">Sélectionner un poste</option>
+                  <option value="TECH">Technicien</option>
+                  <option value="ING">Ingénieur</option>
+                  <option value="COORD">Coordinateur</option>
+                  <option value="CPI">CPI</option>
+                  <option value="ADMIN">Administrateur</option>
+                  <option value="Stagiaire">Stagiaire</option>
+                  <option value="Sous-traitance">Sous-traitance</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Succursale</label>
+                <input 
+                  type="text" 
+                  name="succursale" 
+                  placeholder="Ex: MDL - Sherbrooke"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Division</label>
+                <select 
+                  name="division" 
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                >
+                  <option value="">Sélectionner une division</option>
+                  <option value="transformateurs">Transformateurs</option>
+                  <option value="terrebonne">MDL-Terrebonne</option>
+                  <option value="quebec">MDL-Québec</option>
+                  <option value="dual">DUAL-Sherbrooke</option>
+                  <option value="cfm">CFM St-Jean</option>
+                  <option value="external">Externe</option>
+                </select>
+              </div>
+            </div>
+            
+            <button 
+              type="submit"
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ajouter à l'équipe</span>
+            </button>
+          </form>
+
+          {personnel.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Personnel existant ({personnel.length})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {personnel.map(p => (
+                  <div key={p.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                    <h4 className="font-medium">{p.nom}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{p.poste} - {p.succursale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vue Équipements - Ajout */}
+      {activeView === 'equipements' && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-2xl font-bold mb-6">Ajouter des Équipements</h2>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target as HTMLFormElement);
+            const equipementData = {
+              nom: formData.get('nom') as string,
+              type: formData.get('type') as string,
+              disponible: true
+            };
+            addEquipement(equipementData);
+            (e.target as HTMLFormElement).reset();
+          }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Nom de l'équipement</label>
+                <input 
+                  type="text" 
+                  name="nom" 
+                  placeholder="Ex: Grue mobile 50T"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Type d'équipement</label>
+                <select 
+                  name="type" 
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700"
+                  required
+                >
+                  <option value="">Sélectionner un type</option>
+                  <option value="Grue">Grue</option>
+                  <option value="Nacelle">Nacelle</option>
+                  <option value="Camion">Camion</option>
+                  <option value="Outillage">Outillage</option>
+                  <option value="Sécurité">Équipement de sécurité</option>
+                  <option value="Mesure">Instrument de mesure</option>
+                  <option value="Autre">Autre</option>
+                </select>
+              </div>
+            </div>
+            
+            <button 
+              type="submit"
+              className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ajouter équipement</span>
+            </button>
+          </form>
+
+          {equipements.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Équipements disponibles ({equipements.length})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {equipements.map(e => (
+                  <div key={e.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{e.nom}</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{e.type}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        e.disponible 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {e.disponible ? 'Disponible' : 'En cours'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
