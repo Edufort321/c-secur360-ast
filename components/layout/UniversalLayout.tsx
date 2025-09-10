@@ -146,7 +146,7 @@ const UniversalLayout: React.FC<UniversalLayoutProps> = ({
         )}
 
         {/* Layout principal */}
-        <div className={`${showHeader ? 'pt-24 md:pt-28' : ''} flex min-h-screen`}>
+        <div className={`${showHeader ? 'pt-32 md:pt-36' : ''} flex min-h-screen`}>
           
           {/* Sidebar (optionnelle) */}
           {sidebar && (

@@ -665,7 +665,7 @@ export default function ManagerDashboard({
         <div style={{ 
           maxWidth: '1400px', 
           margin: '0 auto', 
-          padding: '8px 20px 32px 20px', // Minimal top padding - UniversalLayout provides main spacing
+          padding: '60px 20px 32px 20px', // Increased top padding to ensure content is visible
           position: 'relative',
           zIndex: 5
         }}>
