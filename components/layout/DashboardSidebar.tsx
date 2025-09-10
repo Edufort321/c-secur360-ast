@@ -53,6 +53,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ tenant, userRole = 
       description: { fr: 'Vue d\'ensemble de vos activités', en: 'Overview of your activities' }
     },
     {
+      id: 'planificateur',
+      label: { fr: 'Planificateur', en: 'Scheduler' },
+      href: `/${tenant}/planificateur`,
+      icon: Calendar,
+      description: { fr: 'Planification des travaux et ressources', en: 'Work and resource scheduling' }
+    },
+    {
       id: 'ast',
       label: { fr: 'Analyses AST', en: 'JSA Analysis' },
       href: `/${tenant}/ast`,
