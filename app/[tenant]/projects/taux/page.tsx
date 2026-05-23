@@ -148,7 +148,7 @@ export default function TauxPage() {
       flash(tr('Niveaux enregistrés ✓', 'Levels saved ✓'));
       await loadAll();
     } catch (e: any) {
-      flash('Erreur DB — migration requise : voir note ci-dessous');
+      flash(tr('Erreur DB — vérifier que la migration 023 a été appliquée dans Supabase', 'DB error — check migration 023 was applied in Supabase'));
     } finally { setBusy(false); }
   }
 
@@ -251,7 +251,12 @@ export default function TauxPage() {
                           </select>
                         </Td>
                         <Td><input className="inp w-32" value={s.key} onChange={e => upd(setSettings, settings, i, 'key', e.target.value)} /></Td>
-                        <Td><input type="number" step="0.01" className="inp w-28" value={s.value} onChange={e => upd(setSettings, settings, i, 'value', e.target.value)} /></Td>
+                        <Td>
+                          <div className="flex items-center gap-1">
+                            <input type="number" step="0.01" className="inp w-24" value={s.value} onChange={e => upd(setSettings, settings, i, 'value', e.target.value)} />
+                            <span className="text-xs text-gray-400">$</span>
+                          </div>
+                        </Td>
                         <Td><button onClick={() => delSetting(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={16} /></button></Td>
                       </tr>
                     ))}

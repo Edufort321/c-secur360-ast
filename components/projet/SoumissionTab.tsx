@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 // ===== Types =====
 type LaborLine = { id?: string; desc?: string; nbTech: number; hrsReg: number; hrsSupp: number; hrsMaj: number };
-type VoyLine = { id: string; desc: string; nbTech: number; km: number; type: 'camion' | 'remorque' | 'degazeur' };
+type VoyLine = { id: string; desc: string; nbTech: number; km: number; type: string };
 type SubLine = { id: string; desc: string; nbTech: number; h5: number; h12: number; h15: number; nuitee: number };
 type HebLine = { id: string; desc: string; nbTech: number; nuits: number };
 type MatLine = { id: string; desc: string; qte: number; prixUnitaire: number };
@@ -27,7 +27,7 @@ const newItem = (n: number, tauxType: string): Item => ({
 });
 
 const DEF_SUB = { h5: 0, h12: 0, h15: 0, nuitee: 0 };
-const DEF_KM: Record<string, number> = { camion: 0, remorque: 0, degazeur: 0 };
+const DEF_KM: Record<string, number> = {};
 const DEF_HEB = 0;
 
 // ===== Composant principal =====
@@ -54,7 +54,9 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
       setRates(r || []);
       const get = (cat: string, key: string, def: number) => { const row = (s || []).find((x: any) => x.category === cat && x.key === key); return row ? Number(row.value) : def; };
       setSub({ h5: get('subsistance', 'h5', DEF_SUB.h5), h12: get('subsistance', 'h12', DEF_SUB.h12), h15: get('subsistance', 'h15', DEF_SUB.h15), nuitee: get('subsistance', 'nuitee', DEF_SUB.nuitee) });
-      setKm({ camion: get('km', 'camion', DEF_KM.camion), remorque: get('km', 'remorque', DEF_KM.remorque), degazeur: get('km', 'degazeur', DEF_KM.degazeur) });
+      const kmMap: Record<string, number> = {};
+      (s || []).filter((x: any) => x.category === 'km').forEach((x: any) => { kmMap[x.key] = Number(x.value) || 0; });
+      setKm(kmMap);
       setHeb(get('hebergement', 'vendant', DEF_HEB));
       setCatalog(c || []);
     })();
@@ -122,10 +124,10 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
         ? <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{label}</span>
         : <input className="inp w-36" value={l.desc || ''} onChange={e => onCh('desc', e.target.value)} />}
       </td>
-      <td className="px-2"><input type="number" min="0" className="inp w-14 text-right" value={l.nbTech} onChange={e => onCh('nbTech', +e.target.value)} /></td>
-      <td className="px-2"><input type="number" min="0" step="0.5" className="inp w-16 text-right" value={l.hrsReg} onChange={e => onCh('hrsReg', +e.target.value)} /></td>
-      <td className="px-2"><input type="number" min="0" step="0.5" className="inp w-16 text-right" value={l.hrsSupp} onChange={e => onCh('hrsSupp', +e.target.value)} /></td>
-      <td className="px-2"><input type="number" min="0" step="0.5" className="inp w-16 text-right" value={l.hrsMaj} onChange={e => onCh('hrsMaj', +e.target.value)} /></td>
+      <td className="px-2"><input type="number" min="0" onFocus={e => e.target.select()} className="inp w-14 text-right" value={l.nbTech} onChange={e => onCh('nbTech', +e.target.value)} /></td>
+      <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsReg} onChange={e => onCh('hrsReg', +e.target.value)} /></td>
+      <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsSupp} onChange={e => onCh('hrsSupp', +e.target.value)} /></td>
+      <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsMaj} onChange={e => onCh('hrsMaj', +e.target.value)} /></td>
       <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(laborCost(l, code))}</td>
       <td className="px-1 text-center">{onDel && <button onClick={onDel} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>}</td>
     </tr>
@@ -331,7 +333,7 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                 {/* Voyagement */}
                 <div>
                   <SectionHeader title={tr("Voyagement", "Travel")} amount={bd.voyagement}
-                    onAdd={() => upd(d => { d[ii].voyagement.push({ id: lid(), desc: '', nbTech: 1, km: 0, type: 'camion' }); })} />
+                    onAdd={() => upd(d => { d[ii].voyagement.push({ id: lid(), desc: '', nbTech: 1, km: 0, type: Object.keys(km)[0] || '' }); })} />
                   {it.voyagement.length > 0 && (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -349,11 +351,19 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                           {it.voyagement.map((l, li) => (
                             <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
                               <td className="px-2 py-1"><input className="inp w-36" value={l.desc} onChange={e => upd(d => { d[ii].voyagement[li].desc = e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].voyagement[li].nbTech = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-16 text-right" value={l.km} onChange={e => upd(d => { d[ii].voyagement[li].km = +e.target.value; })} /></td>
-                              <td className="px-2"><select className="inp w-24" value={l.type} onChange={e => upd(d => { d[ii].voyagement[li].type = e.target.value as any; })}>
-                                <option value="camion">Camion</option><option value="remorque">Remorque</option><option value="degazeur">Dégazeur</option>
-                              </select></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].voyagement[li].nbTech = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.km} onChange={e => upd(d => { d[ii].voyagement[li].km = +e.target.value; })} /></td>
+                              <td className="px-2">
+                                {Object.keys(km).length > 0 ? (
+                                  <select className="inp w-40" value={l.type} onChange={e => upd(d => { d[ii].voyagement[li].type = e.target.value; })}>
+                                    {Object.entries(km).map(([k, v]) => (
+                                      <option key={k} value={k}>{k} — {money(v)}/km</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="text-xs text-amber-600">{tr('Configurer km dans Taux & catalogue', 'Set km in Rates catalog')}</span>
+                                )}
+                              </td>
                               <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(voyCost(l))}</td>
                               <td className="px-1 text-center"><button onClick={() => upd(d => { d[ii].voyagement.splice(li, 1); })} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                             </tr>
@@ -384,11 +394,11 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                           {it.subsistance.map((l, li) => (
                             <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
                               <td className="px-2 py-1"><input className="inp w-32" value={l.desc} onChange={e => upd(d => { d[ii].subsistance[li].desc = e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].subsistance[li].nbTech = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-12 text-right" value={l.h5} onChange={e => upd(d => { d[ii].subsistance[li].h5 = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-12 text-right" value={l.h12} onChange={e => upd(d => { d[ii].subsistance[li].h12 = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-12 text-right" value={l.h15} onChange={e => upd(d => { d[ii].subsistance[li].h15 = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-12 text-right" value={l.nuitee} onChange={e => upd(d => { d[ii].subsistance[li].nuitee = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].subsistance[li].nbTech = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-12 text-right" value={l.h5} onChange={e => upd(d => { d[ii].subsistance[li].h5 = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-12 text-right" value={l.h12} onChange={e => upd(d => { d[ii].subsistance[li].h12 = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-12 text-right" value={l.h15} onChange={e => upd(d => { d[ii].subsistance[li].h15 = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-12 text-right" value={l.nuitee} onChange={e => upd(d => { d[ii].subsistance[li].nuitee = +e.target.value; })} /></td>
                               <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(subCost(l))}</td>
                               <td className="px-1 text-center"><button onClick={() => upd(d => { d[ii].subsistance.splice(li, 1); })} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                             </tr>
@@ -419,8 +429,8 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                           {it.hebergement.map((l, li) => (
                             <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
                               <td className="px-2 py-1"><input className="inp w-40" value={l.desc} onChange={e => upd(d => { d[ii].hebergement[li].desc = e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].hebergement[li].nbTech = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" className="inp w-16 text-right" value={l.nuits} onChange={e => upd(d => { d[ii].hebergement[li].nuits = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-14 text-right" value={l.nbTech} onChange={e => upd(d => { d[ii].hebergement[li].nbTech = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.nuits} onChange={e => upd(d => { d[ii].hebergement[li].nuits = +e.target.value; })} /></td>
                               <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(hebCost(l))}</td>
                               <td className="px-1 text-center"><button onClick={() => upd(d => { d[ii].hebergement.splice(li, 1); })} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                             </tr>
@@ -457,8 +467,8 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                                 }} />
                                 <datalist id={`cat-${it.id}-${li}`}>{catalog.map((c: any) => <option key={c.sku || c.name} value={c.name} />)}</datalist>
                               </td>
-                              <td className="px-2"><input type="number" className="inp w-16 text-right" value={l.qte} onChange={e => upd(d => { d[ii].materiaux[li].qte = +e.target.value; })} /></td>
-                              <td className="px-2"><input type="number" step="0.01" className="inp w-24 text-right" value={l.prixUnitaire} onChange={e => upd(d => { d[ii].materiaux[li].prixUnitaire = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.qte} onChange={e => upd(d => { d[ii].materiaux[li].qte = +e.target.value; })} /></td>
+                              <td className="px-2"><input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-24 text-right" value={l.prixUnitaire} onChange={e => upd(d => { d[ii].materiaux[li].prixUnitaire = +e.target.value; })} /></td>
                               <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(matCost(l))}</td>
                               <td className="px-1 text-center"><button onClick={() => upd(d => { d[ii].materiaux.splice(li, 1); })} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                             </tr>
