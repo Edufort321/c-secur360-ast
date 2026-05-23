@@ -419,13 +419,6 @@ export default function TauxPage() {
                 </div>
               )}
 
-              {/* Note migration */}
-              <p className="mt-3 text-xs text-gray-400">
-                {tr('Migration requise :', 'Migration required:')}{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-700">
-                  CREATE TABLE IF NOT EXISTS approval_levels (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id TEXT NOT NULL, sort_order INT DEFAULT 0, level_name TEXT NOT NULL, max_amount NUMERIC NOT NULL DEFAULT 0, approver_label TEXT DEFAULT '', color TEXT DEFAULT 'blue', created_at TIMESTAMPTZ DEFAULT now());
-                </code>
-              </p>
             </section>
 
           </div>
