@@ -1,0 +1,325 @@
+{
+  "timestamp": "2025-09-03T22:58:25.499Z",
+  "method": "comprehensive_manual_test",
+  "supabase_url": "https://nzjjgcccxlqhbtpitmpo.supabase.co",
+  "total_found": 34,
+  "tables_found": [
+    "ast_forms",
+    "audit_logs",
+    "billing_events",
+    "checkout_sessions",
+    "client_billing_configs",
+    "confined_space_permits",
+    "customers",
+    "entitlements",
+    "expenses",
+    "inv_items",
+    "inv_locations",
+    "inv_stock",
+    "inv_transactions",
+    "invoices",
+    "payment_methods",
+    "per_diem_logs",
+    "per_diem_rules",
+    "permissions",
+    "planned_assignments",
+    "price_adjustments",
+    "price_config",
+    "profiles",
+    "role_permissions",
+    "roles",
+    "subscriptions",
+    "tenants",
+    "timesheet_entries",
+    "timesheets",
+    "user_profile_payroll",
+    "user_roles",
+    "users",
+    "vehicle_assignments",
+    "vehicle_logs",
+    "vehicles"
+  ],
+  "table_details": {
+    "user_roles": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "user_profile_payroll": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "users": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "profiles": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "full_name",
+        "tenant_id",
+        "role",
+        "company_name",
+        "phone",
+        "province",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "roles": {
+      "count": 5,
+      "columns": [
+        "id",
+        "key",
+        "name",
+        "description",
+        "is_system",
+        "color",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "customers": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "company_name",
+        "stripe_customer_id",
+        "province",
+        "address",
+        "tax_ids",
+        "subscription_status",
+        "stripe_subscription_id",
+        "trial_end",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "invoices": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "permissions": {
+      "count": 6,
+      "columns": [
+        "id",
+        "key",
+        "module",
+        "action",
+        "name",
+        "description",
+        "is_dangerous",
+        "created_at"
+      ],
+      "accessible": true
+    },
+    "payment_methods": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "role_permissions": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "entitlements": {
+      "count": 1,
+      "columns": [
+        "id",
+        "customer_id",
+        "features",
+        "is_active",
+        "activated_at",
+        "suspended_at",
+        "expires_at",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "subscriptions": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "checkout_sessions": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "billing_events": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "inv_items": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "client_billing_configs": {
+      "count": 2,
+      "columns": [
+        "id",
+        "client_id",
+        "tenant_id",
+        "time_rounding_minutes",
+        "min_billable_hours",
+        "overtime_multiplier",
+        "weekend_multiplier",
+        "holiday_multiplier",
+        "travel_rules",
+        "mileage_rate_per_km",
+        "expense_markup_percentage",
+        "expense_categories_allowed",
+        "invoice_terms_net_days",
+        "currency",
+        "tax_rate",
+        "export_format",
+        "custom_fields",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "inv_transactions": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "inv_locations": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "inv_stock": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "vehicles": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "per_diem_rules": {
+      "count": 2,
+      "columns": [
+        "id",
+        "client_id",
+        "tenant_id",
+        "name",
+        "daily_amount",
+        "currency",
+        "conditions",
+        "effective_from",
+        "effective_until",
+        "is_active",
+        "created_at"
+      ],
+      "accessible": true
+    },
+    "per_diem_logs": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "price_adjustments": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "price_config": {
+      "count": 1,
+      "columns": [
+        "id",
+        "monthly_price",
+        "annual_price",
+        "additional_site_price",
+        "auto_adjustment_enabled",
+        "adjustment_percentage",
+        "next_adjustment_date",
+        "effective_date",
+        "created_at",
+        "updated_at"
+      ],
+      "accessible": true
+    },
+    "timesheets": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "timesheet_entries": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "planned_assignments": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "vehicle_assignments": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "vehicle_logs": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "ast_forms": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "confined_space_permits": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    },
+    "tenants": {
+      "count": 3,
+      "columns": [
+        "id",
+        "subdomain",
+        "companyName",
+        "plan",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ],
+      "accessible": true
+    },
+    "audit_logs": {
+      "count": 1,
+      "columns": [
+        "id",
+        "actor",
+        "action",
+        "target_id",
+        "meta",
+        "created_at"
+      ],
+      "accessible": true
+    },
+    "expenses": {
+      "count": 0,
+      "columns": [],
+      "accessible": true
+    }
+  },
+  "notes": "Test exhaustif de toutes les tables connues"
+}

@@ -1,0 +1,221 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Hammer } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { PortalHeader } from '@/components/PortalHeader';
+import { SoumissionTab } from '@/components/projet/SoumissionTab';
+import { TempsTab } from '@/components/projet/TempsTab';
+import { CoutsTab } from '@/components/projet/CoutsTab';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+type Tab = 'projet' | 'soumission' | 'temps' | 'couts';
+
+export default function ProjectDetailPage() {
+  const params = useParams();
+  const tenant = (params?.tenant as string) || 'cerdia';
+  const id = params?.id as string;
+  const { lang } = useLanguage();
+  const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
+
+  const [tab, setTab] = useState<Tab>('projet');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [p, setP] = useState<any>(null);
+  const [linkedAst, setLinkedAst] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
+        if (error) throw error;
+        if (active) setP(data);
+      } catch {
+        if (active) setP(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [id]);
+
+  // AST liés à ce projet (par n° de projet)
+  useEffect(() => {
+    if (!p?.project_number) { setLinkedAst([]); return; }
+    let active = true;
+    (async () => {
+      const { data } = await supabase.from('ast_forms')
+        .select('id, ast_number, status, created_at')
+        .eq('tenant_id', tenant).eq('project_number', p.project_number)
+        .order('created_at', { ascending: false });
+      if (active) setLinkedAst(data || []);
+    })();
+    return () => { active = false; };
+  }, [p?.project_number, tenant]);
+
+  const set = (k: string, v: any) => setP((prev: any) => ({ ...prev, [k]: v }));
+
+  async function save() {
+    if (!p) return;
+    setSaving(true); setNotice(null);
+    const payload = {
+      project_number: p.project_number, title: p.title, client_name: p.client_name,
+      location: p.location, dossier: p.dossier, submission_number: p.submission_number,
+      po_number: p.po_number, po_amount: p.po_amount ? Number(p.po_amount) : null,
+      status: p.status, project_type: p.project_type, pricing_mode: p.pricing_mode,
+      global_price: p.global_price ? Number(p.global_price) : null,
+      date_submission: p.date_submission || null, date_work_start: p.date_work_start || null,
+    };
+    try {
+      const { error } = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant);
+      if (error) throw error;
+      setNotice(tr('Enregistré ✓', 'Saved ✓'));
+    } catch {
+      setNotice(tr('Erreur d’enregistrement (DB).', 'Save error (DB).'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const tabs: { key: Tab; label: string; icon: any }[] = [
+    { key: 'projet', label: tr('Projet', 'Project'), icon: FileText },
+    { key: 'soumission', label: tr('Soumission', 'Quote'), icon: Calculator },
+    { key: 'temps', label: tr('Feuille de temps', 'Timesheet'), icon: Clock },
+    { key: 'couts', label: tr('Coûts', 'Costs'), icon: DollarSign },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      <PortalHeader tenant={tenant} />
+
+      <div className="w-full px-4 py-6 lg:px-6">
+        <Link href={`/${tenant}/projects`} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400">
+          <ArrowLeft size={16} /> {tr('Retour aux projets', 'Back to projects')}
+        </Link>
+
+        {loading ? (
+          <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
+        ) : !p ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">{tr('Projet introuvable.', 'Project not found.')}</div>
+        ) : (
+          <>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold">{p.title || tr('Projet sans titre', 'Untitled project')}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">#{p.project_number} · {tenant}</p>
+              </div>
+              <div className="flex flex-wrap gap-2 self-start">
+                <Link href={`/${tenant}/ast/nouveau?project=${id}`} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                  <FileText size={18} /> {tr('Créer un AST', 'Create JSA')}
+                </Link>
+                <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} {tr('Enregistrer', 'Save')}
+                </button>
+              </div>
+            </div>
+
+            {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">{notice}</div>}
+
+            {/* Onglets */}
+            <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+              {tabs.map(t => {
+                const Icon = t.icon;
+                return (
+                  <button key={t.key} onClick={() => setTab(t.key)}
+                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab === t.key ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                    <Icon size={16} /> {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Onglet Projet */}
+            {tab === 'projet' && (
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Field label={tr('Numéro de projet', 'Project number')}><input className="inp" value={p.project_number || ''} onChange={e => set('project_number', e.target.value)} /></Field>
+                  <Field label={tr('Titre', 'Title')}><input className="inp" value={p.title || ''} onChange={e => set('title', e.target.value)} /></Field>
+                  <Field label={tr('Client', 'Client')}><input className="inp" value={p.client_name || ''} onChange={e => set('client_name', e.target.value)} /></Field>
+                  <Field label={tr('Lieu', 'Location')}><input className="inp" value={p.location || ''} onChange={e => set('location', e.target.value)} /></Field>
+                  <Field label={tr('N° dossier', 'File #')}><input className="inp" value={p.dossier || ''} onChange={e => set('dossier', e.target.value)} /></Field>
+                  <Field label={tr('N° soumission', 'Quote #')}><input className="inp" value={p.submission_number || ''} onChange={e => set('submission_number', e.target.value)} /></Field>
+                  <Field label={tr('N° bon de commande', 'PO #')}><input className="inp" value={p.po_number || ''} onChange={e => set('po_number', e.target.value)} /></Field>
+                  <Field label={tr('Montant BC ($)', 'PO amount ($)')}><input type="number" className="inp" value={p.po_amount ?? ''} onChange={e => set('po_amount', e.target.value)} /></Field>
+                  <Field label={tr('Statut', 'Status')}>
+                    <select className="inp" value={p.status || 'soumission'} onChange={e => set('status', e.target.value)}>
+                      <option value="soumission">{tr('Soumission', 'Quote')}</option>
+                      <option value="en-cours">{tr('En cours', 'In progress')}</option>
+                      <option value="facture">{tr('Facturé', 'Invoiced')}</option>
+                    </select>
+                  </Field>
+                  <Field label={tr('Type', 'Type')}>
+                    <select className="inp" value={p.project_type || 'budgetaire'} onChange={e => set('project_type', e.target.value)}>
+                      <option value="budgetaire">{tr('Budgétaire', 'Budget')}</option>
+                      <option value="forfaitaire">{tr('Forfaitaire', 'Fixed price')}</option>
+                    </select>
+                  </Field>
+                  <Field label={tr('Mode de prix', 'Pricing mode')}>
+                    <select className="inp" value={p.pricing_mode || 'ventile'} onChange={e => set('pricing_mode', e.target.value)}>
+                      <option value="ventile">{tr('Ventilé', 'Itemized')}</option>
+                      <option value="global">{tr('Global', 'Global')}</option>
+                    </select>
+                  </Field>
+                  {p.pricing_mode === 'global' && (
+                    <Field label={tr('Prix global ($)', 'Global price ($)')}><input type="number" className="inp" value={p.global_price ?? ''} onChange={e => set('global_price', e.target.value)} /></Field>
+                  )}
+                  <Field label={tr('Date soumission', 'Quote date')}><input type="date" className="inp" value={p.date_submission || ''} onChange={e => set('date_submission', e.target.value)} /></Field>
+                  <Field label={tr('Début des travaux', 'Work start')}><input type="date" className="inp" value={p.date_work_start || ''} onChange={e => set('date_work_start', e.target.value)} /></Field>
+                </div>
+
+                <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-bold">{tr('AST liés', 'Linked JSAs')} ({linkedAst.length})</h3>
+                    <Link href={`/${tenant}/ast/nouveau?project=${id}`} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Créer un AST', 'Create JSA')}</Link>
+                  </div>
+                  {linkedAst.length === 0 ? (
+                    <p className="text-sm text-gray-400">{tr('Aucun AST lié (associé par n° de projet).', 'No linked JSA (matched by project #).')}</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {linkedAst.map(a => (
+                        <div key={a.id} className="flex items-center justify-between py-2 text-sm">
+                          <span className="font-medium">{a.ast_number || a.id}</span>
+                          <span className="flex items-center gap-3 text-xs text-gray-500">
+                            <span>{(a.created_at || '').slice(0, 10)}</span>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{a.status || 'draft'}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {tab === 'soumission' && <SoumissionTab tenant={tenant} projectId={id} initialEstimate={p.estimate} />}
+            {tab === 'temps' && <TempsTab tenant={tenant} projectId={id} initialActuals={p.actuals} />}
+            {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={p.actuals} poAmount={p.po_amount} />}
+          </>
+        )}
+      </div>
+
+      <style jsx>{`
+        .inp { width: 100%; border-radius: 0.6rem; border: 1px solid rgb(209 213 219); background: transparent; padding: 0.5rem 0.7rem; font-size: 0.875rem; outline: none; }
+        .inp:focus { border-color: rgb(37 99 235); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+        :global(.dark) .inp { border-color: rgb(75 85 99); }
+      `}</style>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{label}</span>
+      {children}
+    </label>
+  );
+}

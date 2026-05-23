@@ -1,0 +1,123 @@
+{
+  "timestamp": "2025-09-03T22:48:27.841Z",
+  "supabase_url": "https://nzjjgcccxlqhbtpitmpo.supabase.co",
+  "existing_tables": [
+    "ast_forms",
+    "users",
+    "profiles",
+    "tenants",
+    "customers",
+    "confined_space_permits"
+  ],
+  "missing_tables": [
+    "worker_registry_entries",
+    "loto_locks",
+    "sms_alerts",
+    "near_miss_events",
+    "employees",
+    "employee_safety_records",
+    "client_billing_profiles",
+    "tenant_settings",
+    "project_billing_overrides",
+    "wip_calculations",
+    "wip_calculation_logs"
+  ],
+  "table_details": {
+    "ast_forms": {
+      "count": 0,
+      "columns": [],
+      "sample": null
+    },
+    "users": {
+      "count": 0,
+      "columns": [],
+      "sample": null
+    },
+    "profiles": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "full_name",
+        "tenant_id",
+        "role",
+        "company_name",
+        "phone",
+        "province",
+        "created_at",
+        "updated_at"
+      ],
+      "sample": {
+        "id": "c298ef23-6b76-4fdb-8434-b0d118acb087",
+        "email": "eric.dufort@cerdia.ai",
+        "full_name": "Eric Dufort",
+        "tenant_id": "cerdia-admin",
+        "role": "admin",
+        "company_name": "CERDIA",
+        "phone": null,
+        "province": "QC",
+        "created_at": "2025-08-21T01:43:15.498641+00:00",
+        "updated_at": "2025-08-21T02:13:38.151249+00:00"
+      }
+    },
+    "tenants": {
+      "count": 3,
+      "columns": [
+        "id",
+        "subdomain",
+        "companyName",
+        "plan",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ],
+      "sample": {
+        "id": "cmco2rggs0000e85bz98zuixs",
+        "subdomain": "demo",
+        "companyName": "Démo AST MDL",
+        "plan": "demo",
+        "isActive": true,
+        "createdAt": "2025-07-04T00:27:06.653",
+        "updatedAt": "2025-07-04T00:27:06.653"
+      }
+    },
+    "customers": {
+      "count": 1,
+      "columns": [
+        "id",
+        "email",
+        "company_name",
+        "stripe_customer_id",
+        "province",
+        "address",
+        "tax_ids",
+        "subscription_status",
+        "stripe_subscription_id",
+        "trial_end",
+        "created_at",
+        "updated_at"
+      ],
+      "sample": {
+        "id": "6c0e5dba-df53-4fc4-8314-cff94e63c1a9",
+        "email": "eric.dufort@cerdia.ai",
+        "company_name": "CERDIA - Administration",
+        "stripe_customer_id": null,
+        "province": "QC",
+        "address": null,
+        "tax_ids": null,
+        "subscription_status": "active",
+        "stripe_subscription_id": null,
+        "trial_end": null,
+        "created_at": "2025-08-21T01:26:19.206663+00:00",
+        "updated_at": "2025-08-21T01:26:19.206663+00:00"
+      }
+    },
+    "confined_space_permits": {
+      "count": 0,
+      "columns": [],
+      "sample": null
+    }
+  },
+  "total_tables": 17,
+  "success_rate": "35%"
+}
