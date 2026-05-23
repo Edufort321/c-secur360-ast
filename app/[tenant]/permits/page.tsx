@@ -1,734 +1,274 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { TRANSLATIONS } from '../../../app/utils/translations';
-import UniversalLayout from '../../../components/layout/UniversalLayout';
-import DashboardSidebar from '../../../components/layout/DashboardSidebar';
-import LOTOPhotoCarousel from '../../../components/loto/LOTOPhotoCarousel';
-import { 
-  Shield, Users, MapPin, Clock, AlertTriangle, CheckCircle, 
-  Zap, Flame, Wind, Wrench, Settings, Camera, Lock,
-  Eye, Phone, FileText, Plus, X, Edit, Save, Download,
-  QrCode, Scan, UserCheck, Activity, Timer, Upload,
-  Trash2, ZoomIn, ChevronLeft, ChevronRight, Star,
-  Archive, Filter, Search, Calendar, Award, Target
+import {
+  FileCheck, Plus, Search, MapPin, Calendar, User,
+  Clock, CheckCircle, AlertTriangle, XCircle, Loader2,
+  Flame, Zap, Shovel, Wind, FlaskConical, BarChart3,
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { PortalHeader } from '@/components/PortalHeader';
 
-// =================== INTERFACES ÉTENDUES ===================
+// =================== TYPES ===================
 
-interface Worker {
-  id: string;
-  name: string;
-  role: string;
-  certification: string[];
-  present: boolean;
-  checkedInAt?: string;
-  emergencyContact?: string;
-  badgeNumber?: string;
-  qrCode?: string;
-  permitIds: string[];
-}
+type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 
-interface Photo {
-  id: string;
-  url: string;
-  thumbnail: string;
-  timestamp: string;
-  gpsLocation?: Coordinates;
-  description: { fr: string; en: string };
-  mandatory: boolean;
-  validated: boolean;
-  validatedBy?: string;
-  permitId: string;
-  metadata: PhotoMetadata;
-}
-
-interface PhotoMetadata {
-  fileName: string;
-  fileSize: number;
-  mimeType: string;
-  deviceInfo?: string;
-  quality: number;
-}
-
-interface Coordinates {
-  latitude: number;
-  longitude: number;
-  accuracy?: number;
-}
-
-interface LOTOProcedure {
-  id: string;
-  permitId: string;
-  points: LOTOPoint[];
-  sequence: string[];
-  validated: boolean;
-  validatedBy?: string;
-  validatedAt?: string;
-  photos: Photo[];
-}
-
-interface LOTOPoint {
-  id: string;
-  equipmentName: string;
-  location: string;
-  energyType: 'electrical' | 'mechanical' | 'hydraulic' | 'pneumatic' | 'thermal' | 'chemical';
-  isolationMethod: string;
-  lockNumber?: string;
-  appliedBy?: string;
-  verifiedBy?: string;
-  status: 'pending' | 'isolated' | 'verified' | 'completed';
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  photos: string[];
-  notes?: string;
-}
-
-interface Permit {
-  id: string;
-  type: 'hot_work' | 'confined_space' | 'excavation' | 'electrical' | 'height_work' | 'chemical';
-  title: string;
-  description: string;
-  requirements: string[];
-  validityPeriod: string;
-  status: 'active' | 'expired' | 'pending' | 'completed' | 'cancelled';
-  issueDate: Date;
-  expiryDate: Date;
-  issuedBy: string;
-  holder: string;
-  workLocation: string;
-  attachments: string[];
-  
-  // Nouvelles propriétés avancées
-  workers: string[]; // Worker IDs
-  photos: string[]; // Photo IDs
-  lotoProcedure?: string; // LOTO Procedure ID
-  qrCode?: string;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  emergencyContacts: string[];
-  supervisorApproval: boolean;
-  safetyBriefing: boolean;
-  equipmentInspection: boolean;
-  environmentalConditions: {
-    weather?: string;
-    temperature?: number;
-    windSpeed?: number;
-    visibility?: string;
+type PermitRow = {
+  permit_number: string;
+  updated_at: string;
+  data: {
+    status?: PermitStatus;
+    province?: string;
+    permit_valid_from?: string;
+    permit_valid_to?: string;
+    siteInformation?: {
+      workLocation?: string;
+      contractor?: string;
+      supervisor?: string;
+      entryDate?: string;
+    };
+    validation?: { percentage?: number; isComplete?: boolean };
   };
-  specialRequirements: string[];
-  communicationPlan: string;
-  contingencyPlan: string;
-  completionReport?: string;
-  incidentReports: string[];
-  extensions: Extension[];
-  auditTrail: AuditEntry[];
-}
+};
 
-interface Extension {
-  id: string;
-  reason: string;
-  originalEndDate: string;
-  newEndDate: string;
-  requestedBy: string;
-  approvedBy?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-}
+// =================== CONSTANTES ===================
 
-interface AuditEntry {
-  id: string;
-  action: string;
-  performedBy: string;
-  timestamp: string;
-  details?: string;
-  ipAddress?: string;
-}
+const STATUS: Record<PermitStatus, { label: string; cls: string; icon: React.ElementType }> = {
+  draft:     { label: 'Brouillon',  cls: 'bg-slate-100 text-slate-600',    icon: Clock },
+  active:    { label: 'Actif',      cls: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+  completed: { label: 'Complété',   cls: 'bg-blue-100 text-blue-700',      icon: CheckCircle },
+  cancelled: { label: 'Annulé',     cls: 'bg-red-100 text-red-700',        icon: XCircle },
+};
 
-interface NewPermit {
-  type: Permit['type'];
-  title: string;
-  description: string;
-  workLocation: string;
-  holder: string;
-  validityPeriod: string;
-}
+const PERMIT_TYPES = [
+  { key: 'confined_space', labelFr: 'Espace clos',       icon: Wind,        color: 'text-cyan-600',   accent: 'bg-cyan-50' },
+  { key: 'hot_work',       labelFr: 'Travail à chaud',    icon: Flame,       color: 'text-orange-600', accent: 'bg-orange-50' },
+  { key: 'electrical',     labelFr: 'Électrique',          icon: Zap,         color: 'text-yellow-600', accent: 'bg-yellow-50' },
+  { key: 'excavation',     labelFr: 'Excavation',          icon: Shovel,      color: 'bg-amber-600',    accent: 'bg-amber-50' },
+  { key: 'chemical',       labelFr: 'Produits chimiques',  icon: FlaskConical,color: 'text-purple-600', accent: 'bg-purple-50' },
+];
 
 export default function PermitsPage() {
   const params = useParams();
-  const tenant = params.tenant as string;
-  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
-  const [permits, setPermits] = useState<Permit[]>([]);
-  const [isAddingPermit, setIsAddingPermit] = useState(false);
-  const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
-  const [newPermit, setNewPermit] = useState<NewPermit>({
-    type: 'hot_work',
-    title: '',
-    description: '',
-    workLocation: '',
-    holder: '',
-    validityPeriod: '24h'
-  });
+  const tenant = (params?.tenant as string) || 'demo';
 
-  const t = TRANSLATIONS[language] as any;
+  const [permits, setPermits] = useState<PermitRow[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [query, setQuery]       = useState('');
+  const [filter, setFilter]     = useState<PermitStatus | 'all'>('all');
 
   useEffect(() => {
-    loadPermits();
-  }, []);
-
-  const loadPermits = () => {
-    const mockPermits: Permit[] = [
-      {
-        id: 'permit-001',
-        type: 'hot_work',
-        title: t.permits.types.hotWork,
-        description: 'Soudage sur pipeline principal',
-        requirements: ['Formation soudage', 'Extincteur à proximité', 'Surveillance continue'],
-        validityPeriod: '24h',
-        status: 'active',
-        issueDate: new Date('2024-01-15'),
-        expiryDate: new Date('2024-01-16'),
-        issuedBy: 'Superviseur Jean Dupont',
-        holder: 'Soudeur Marie Tremblay',
-        workLocation: 'Zone A - Pipeline principal',
-        attachments: ['certificat-soudage.pdf', 'plan-securite.pdf'],
-        workers: ['worker-001', 'worker-002'],
-        photos: ['photo-001', 'photo-002'],
-        lotoProcedure: 'loto-001',
-        qrCode: 'QR-PERMIT-001',
-        riskLevel: 'high',
-        emergencyContacts: ['911', 'Superviseur: +1-514-123-4567'],
-        supervisorApproval: true,
-        safetyBriefing: true,
-        equipmentInspection: true,
-        environmentalConditions: {
-          weather: 'clear',
-          temperature: 15,
-          windSpeed: 5,
-          visibility: 'excellent'
-        },
-        specialRequirements: ['Ventilation forcée', 'Détecteur de gaz'],
-        communicationPlan: 'Radio VHF canal 12',
-        contingencyPlan: 'Évacuation zone en cas d\'incident',
-        completionReport: undefined,
-        incidentReports: [],
-        extensions: [],
-        auditTrail: []
-      },
-      {
-        id: 'permit-002',
-        type: 'confined_space',
-        title: t.permits.types.confinedSpace,
-        description: 'Inspection réservoir souterrain',
-        requirements: ['Détecteur de gaz', 'Harnais de sécurité', 'Surveillance externe'],
-        validityPeriod: '8h',
-        status: 'pending',
-        issueDate: new Date('2024-01-15'),
-        expiryDate: new Date('2024-01-15'),
-        issuedBy: 'Superviseur Paul Martin',
-        holder: 'Inspecteur Claude Lavoie',
-        workLocation: 'Réservoir R-12',
-        attachments: ['formation-espaces-confines.pdf'],
-        workers: ['worker-003'],
-        photos: [],
-        lotoProcedure: 'loto-002',
-        qrCode: 'QR-PERMIT-002',
-        riskLevel: 'critical',
-        emergencyContacts: ['911', 'Superviseur: +1-514-987-6543'],
-        supervisorApproval: false,
-        safetyBriefing: true,
-        equipmentInspection: false,
-        environmentalConditions: {
-          weather: 'clear',
-          temperature: 12,
-          windSpeed: 2,
-          visibility: 'good'
-        },
-        specialRequirements: ['Test atmosphérique', 'Ventilation assistée', 'Équipe de secours'],
-        communicationPlan: 'Radio portative + système de surveillance',
-        contingencyPlan: 'Évacuation immédiate en cas de détection de gaz',
-        completionReport: undefined,
-        incidentReports: [],
-        extensions: [],
-        auditTrail: []
+    let active = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('confined_space_permits')
+          .select('permit_number, data, updated_at')
+          .eq('tenant_id', tenant)
+          .order('updated_at', { ascending: false });
+        if (!active) return;
+        if (error) throw error;
+        setPermits(data || []);
+      } catch {
+        if (active) setPermits([]);
+      } finally {
+        if (active) setLoading(false);
       }
-    ];
-    setPermits(mockPermits);
-  };
+    })();
+    return () => { active = false; };
+  }, [tenant]);
 
-  const handleAddPermit = () => {
-    const permit: Permit = {
-      id: `permit-${Date.now()}`,
-      ...newPermit,
-      requirements: getDefaultRequirements(newPermit.type),
-      status: 'pending',
-      issueDate: new Date(),
-      expiryDate: new Date(Date.now() + getValidityMs(newPermit.validityPeriod)),
-      issuedBy: 'Système automatique',
-      attachments: [],
-      workers: [],
-      photos: [],
-      riskLevel: 'medium',
-      emergencyContacts: ['911'],
-      supervisorApproval: false,
-      safetyBriefing: false,
-      equipmentInspection: false,
-      environmentalConditions: {},
-      specialRequirements: [],
-      communicationPlan: '',
-      contingencyPlan: '',
-      incidentReports: [],
-      extensions: [],
-      auditTrail: []
-    };
-
-    setPermits([...permits, permit]);
-    setNewPermit({
-      type: 'hot_work',
-      title: '',
-      description: '',
-      workLocation: '',
-      holder: '',
-      validityPeriod: '24h'
+  const filtered = useMemo(() => {
+    let rows = permits;
+    if (filter !== 'all') rows = rows.filter(p => (p.data?.status || 'draft') === filter);
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(p => {
+      const si = p.data?.siteInformation || {};
+      return [p.permit_number, si.workLocation, si.contractor, si.supervisor]
+        .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
     });
-    setIsAddingPermit(false);
-  };
+  }, [permits, filter, query]);
 
-  const getDefaultRequirements = (type: Permit['type']): string[] => {
-    const requirementsMap = {
-      hot_work: ['Formation travail à chaud', 'Extincteur', 'Surveillance'],
-      confined_space: ['Détecteur de gaz', 'Harnais', 'Surveillance externe'],
-      excavation: ['Localisation services', 'Étayage', 'Signalisation'],
-      electrical: ['Cadenassage', 'EPI électrique', 'Vérification tension'],
-      height_work: ['Harnais antichute', 'Points d\'ancrage', 'Formation hauteur'],
-      chemical: ['EPI chimique', 'Fiche signalétique', 'Douche d\'urgence']
-    };
-    return requirementsMap[type] || [];
-  };
-
-  const getValidityMs = (period: string): number => {
-    const periodMap = {
-      '4h': 4 * 60 * 60 * 1000,
-      '8h': 8 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000
-    };
-    return periodMap[period as keyof typeof periodMap] || 24 * 60 * 60 * 1000;
-  };
-
-  const getStatusColor = (status: Permit['status']) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'expired': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getTypeIcon = (type: Permit['type']) => {
-    const iconMap = {
-      hot_work: '🔥',
-      confined_space: '🕳️',
-      excavation: '🚧',
-      electrical: '⚡',
-      height_work: '🪜',
-      chemical: '🧪'
-    };
-    return iconMap[type] || '📄';
-  };
+  const stats = useMemo(() => ({
+    total:     permits.length,
+    active:    permits.filter(p => p.data?.status === 'active').length,
+    draft:     permits.filter(p => !p.data?.status || p.data.status === 'draft').length,
+    completed: permits.filter(p => p.data?.status === 'completed').length,
+  }), [permits]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <PortalHeader tenant={tenant} />
+      <div className="w-full px-4 py-8 lg:px-6">
+
+        {/* En-tête */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-600 text-white shadow-sm">
+              <FileCheck size={22} />
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t.permits.title}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {t.permits.description}
+              <h1 className="text-2xl font-bold text-slate-900">Permis de travail</h1>
+              <p className="text-sm text-slate-500">
+                Espace <span className="font-medium text-slate-700">{tenant}</span> · permis, espaces clos, conditions de sécurité
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setLanguage('fr')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${
-                    language === 'fr' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  FR
-                </button>
-                <button
-                  onClick={() => setLanguage('en')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${
-                    language === 'en' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
-              <button
-                onClick={() => setIsAddingPermit(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          </div>
+          <Link
+            href={`/${tenant}/permits/nouveau`}
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-cyan-700"
+          >
+            <Plus size={18} /> Nouveau permis
+          </Link>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { k: 'Total',     v: stats.total,     c: 'text-slate-900' },
+            { k: 'Actifs',    v: stats.active,    c: 'text-emerald-600' },
+            { k: 'Brouillons',v: stats.draft,     c: 'text-slate-500' },
+            { k: 'Complétés', v: stats.completed, c: 'text-blue-600' },
+          ].map(s => (
+            <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className={`text-2xl font-bold ${s.c}`}>{s.v}</div>
+              <div className="text-sm text-slate-500">{s.k}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Types de permis */}
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {PERMIT_TYPES.map(pt => {
+            const Icon = pt.icon;
+            return (
+              <Link
+                key={pt.key}
+                href={`/${tenant}/permits/nouveau?type=${pt.key}`}
+                className={`flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-slate-300`}
               >
-                <span>+</span>
-                <span>{t.permits.actions.addNew}</span>
+                <div className={`grid h-10 w-10 place-items-center rounded-xl ${pt.accent}`}>
+                  <Icon size={20} className={pt.color} />
+                </div>
+                <span className="text-center text-xs font-semibold text-slate-700">{pt.labelFr}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Filtres statut + Recherche */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+          <div className="flex gap-1.5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {(['all', 'active', 'draft', 'completed', 'cancelled'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  filter === s
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {s === 'all' ? 'Tous' : STATUS[s]?.label}
               </button>
-            </div>
+            ))}
+          </div>
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <Search size={16} className="text-slate-400" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Rechercher (numéro, lieu, entrepreneur…)"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            />
           </div>
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <span className="text-green-600 text-xl">✅</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">{t.permits.stats.active}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {permits.filter(p => p.status === 'active').length}
-                </p>
-              </div>
-            </div>
+        {/* Liste */}
+        {loading ? (
+          <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400">
+            <Loader2 className="animate-spin" />
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <span className="text-yellow-600 text-xl">⏳</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">{t.permits.stats.pending}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {permits.filter(p => p.status === 'pending').length}
-                </p>
-              </div>
+        ) : filtered.length === 0 ? (
+          <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400">
+              <FileCheck size={26} />
             </div>
+            <p className="font-medium text-slate-700">Aucun permis</p>
+            <p className="max-w-sm text-sm text-slate-500">
+              Crée ton premier permis de travail — espace clos, travail à chaud, électrique, excavation ou produits chimiques.
+            </p>
+            <Link
+              href={`/${tenant}/permits/nouveau`}
+              className="mt-1 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white hover:bg-cyan-700"
+            >
+              <Plus size={18} /> Nouveau permis
+            </Link>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <span className="text-red-600 text-xl">❌</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">{t.permits.stats.expired}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {permits.filter(p => p.status === 'expired').length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <span className="text-blue-600 text-xl">📄</span>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">{t.permits.stats.total}</p>
-                <p className="text-2xl font-bold text-gray-900">{permits.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map(p => {
+              const si = p.data?.siteInformation || {};
+              const status = (p.data?.status || 'draft') as PermitStatus;
+              const st = STATUS[status] || STATUS.draft;
+              const StatusIcon = st.icon;
+              const pct = p.data?.validation?.percentage ?? 0;
 
-        {/* Permits List */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {t.permits.list.title}
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.type}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.title}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.holder}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.location}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.status}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.expiry}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t.permits.list.columns.actions}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {permits.map((permit) => (
-                  <tr key={permit.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="text-2xl mr-2">{getTypeIcon(permit.type)}</span>
-                        <span className="text-sm text-gray-900">{permit.type}</span>
+              return (
+                <Link
+                  key={p.permit_number}
+                  href={`/${tenant}/permits/${p.permit_number}`}
+                  className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-xs font-mono font-semibold text-slate-600">
+                      {p.permit_number}
+                    </div>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
+                      <StatusIcon size={12} /> {st.label}
+                    </span>
+                  </div>
+
+                  <div className="mb-3 space-y-1 text-sm text-slate-600">
+                    {si.workLocation && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={13} className="text-slate-400" />
+                        <span className="line-clamp-1">{si.workLocation}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{permit.title}</div>
-                      <div className="text-sm text-gray-500">{permit.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {permit.holder}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {permit.workLocation}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(permit.status)}`}>
-                        {t.permits.status[permit.status]}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {permit.expiryDate.toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedPermit(permit)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        {t.permits.actions.view}
-                      </button>
-                      <button className="text-green-600 hover:text-green-900 mr-3">
-                        {t.permits.actions.edit}
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        {t.permits.actions.revoke}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Add Permit Modal */}
-        {isAddingPermit && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {t.permits.actions.addNew}
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.permits.form.type}
-                  </label>
-                  <select
-                    value={newPermit.type}
-                    onChange={(e) => setNewPermit({...newPermit, type: e.target.value as Permit['type']})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                  >
-                    <option value="hot_work">{t.permits.types.hotWork}</option>
-                    <option value="confined_space">{t.permits.types.confinedSpace}</option>
-                    <option value="excavation">{t.permits.types.excavation}</option>
-                    <option value="electrical">{t.permits.types.electrical}</option>
-                    <option value="height_work">{t.permits.types.heightWork}</option>
-                    <option value="chemical">{t.permits.types.chemical}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.permits.form.title}
-                  </label>
-                  <input
-                    type="text"
-                    value={newPermit.title}
-                    onChange={(e) => setNewPermit({...newPermit, title: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    placeholder={t.permits.form.titlePlaceholder}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.permits.form.description}
-                  </label>
-                  <textarea
-                    value={newPermit.description}
-                    onChange={(e) => setNewPermit({...newPermit, description: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    rows={3}
-                    placeholder={t.permits.form.descriptionPlaceholder}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t.permits.form.holder}
-                    </label>
-                    <input
-                      type="text"
-                      value={newPermit.holder}
-                      onChange={(e) => setNewPermit({...newPermit, holder: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                      placeholder={t.permits.form.holderPlaceholder}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t.permits.form.validity}
-                    </label>
-                    <select
-                      value={newPermit.validityPeriod}
-                      onChange={(e) => setNewPermit({...newPermit, validityPeriod: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    >
-                      <option value="4h">4 heures</option>
-                      <option value="8h">8 heures</option>
-                      <option value="24h">24 heures</option>
-                      <option value="7d">7 jours</option>
-                      <option value="30d">30 jours</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.permits.form.location}
-                  </label>
-                  <input
-                    type="text"
-                    value={newPermit.workLocation}
-                    onChange={(e) => setNewPermit({...newPermit, workLocation: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                    placeholder={t.permits.form.locationPlaceholder}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setIsAddingPermit(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  {t.permits.actions.cancel}
-                </button>
-                <button
-                  onClick={handleAddPermit}
-                  disabled={!newPermit.title || !newPermit.holder || !newPermit.workLocation}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {t.permits.actions.create}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* View Permit Modal */}
-        {selectedPermit && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {selectedPermit.title}
-                  </h3>
-                  <p className="text-gray-600 mt-1">{selectedPermit.description}</p>
-                </div>
-                <button
-                  onClick={() => setSelectedPermit(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">{t.permits.details.information}</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.type}:</span>
-                      <span>{selectedPermit.type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.status}:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(selectedPermit.status)}`}>
-                        {t.permits.status[selectedPermit.status]}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.holder}:</span>
-                      <span>{selectedPermit.holder}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.location}:</span>
-                      <span>{selectedPermit.workLocation}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.issueDate}:</span>
-                      <span>{selectedPermit.issueDate.toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.expiryDate}:</span>
-                      <span>{selectedPermit.expiryDate.toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">{t.permits.details.issuedBy}:</span>
-                      <span>{selectedPermit.issuedBy}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">{t.permits.details.requirements}</h4>
-                  <ul className="space-y-1 text-sm">
-                    {selectedPermit.requirements.map((req, index) => (
-                      <li key={index} className="flex items-center">
-                        <span className="text-green-600 mr-2">✓</span>
-                        {req}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {selectedPermit.attachments.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-medium text-gray-900 mb-3">{t.permits.details.attachments}</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedPermit.attachments.map((attachment, index) => (
-                      <div key={index} className="flex items-center p-2 border rounded-lg">
-                        <span className="text-blue-600 mr-2">📎</span>
-                        <span className="text-sm">{attachment}</span>
+                    )}
+                    {si.contractor && (
+                      <div className="flex items-center gap-1.5">
+                        <User size={13} className="text-slate-400" />
+                        <span className="line-clamp-1">{si.contractor}</span>
                       </div>
-                    ))}
+                    )}
+                    {si.entryDate && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={13} className="text-slate-400" />
+                        {si.entryDate}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setSelectedPermit(null)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  {t.permits.actions.close}
-                </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  {t.permits.actions.print}
-                </button>
-              </div>
-            </div>
+                  {/* Barre de progression */}
+                  <div className="mt-2">
+                    <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                      <span className="flex items-center gap-1"><BarChart3 size={12} /> Complétude</span>
+                      <span className="font-semibold">{Math.round(pct)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-emerald-500' : pct >= 60 ? 'bg-blue-500' : 'bg-amber-400'}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
