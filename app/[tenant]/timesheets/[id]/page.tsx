@@ -360,8 +360,8 @@ export default function TimesheetDetailPage() {
                           </optgroup>
                         )}
                       </select>
-                      {e.vehicle_type === 'company'  && <Building2 size={13} className="text-blue-500"    title="Entreprise" />}
-                      {e.vehicle_type === 'personal' && <Car        size={13} className="text-emerald-600" title="Personnel — remboursé" />}
+                      {e.vehicle_type === 'company'  && <Building2 size={13} className="text-blue-500" />}
+                      {e.vehicle_type === 'personal' && <Car        size={13} className="text-emerald-600" />}
                     </div>
                   </label>
 
