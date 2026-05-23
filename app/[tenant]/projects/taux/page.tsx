@@ -46,8 +46,13 @@ export default function TauxPage() {
       setRates((r.data as any) || []);
       setSettings((s.data as any) || []);
       setItems((i.data as any) || []);
-      setApprovals((a.data as any) || []);
-    } catch { /* mode dégradé */ }
+      if (a.error) {
+        flash(tr('Niveaux d\'approbation : migration 023+024 requise dans Supabase SQL Editor', 'Approval levels: run migration 023+024 in Supabase SQL Editor'));
+        setApprovals([]);
+      } else {
+        setApprovals((a.data as any) || []);
+      }
+    } catch { /* mode dégradé — pas de connexion DB */ }
     finally { setLoading(false); }
   }
   useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [tenant]);

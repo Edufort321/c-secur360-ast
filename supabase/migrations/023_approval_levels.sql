@@ -12,3 +12,7 @@ CREATE TABLE IF NOT EXISTS approval_levels (
 );
 
 CREATE INDEX IF NOT EXISTS approval_levels_tenant_idx ON approval_levels (tenant_id, sort_order);
+
+ALTER TABLE approval_levels ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS approval_levels_access ON approval_levels;
+CREATE POLICY approval_levels_access ON approval_levels FOR ALL USING (true);
