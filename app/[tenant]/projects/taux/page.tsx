@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Save, Loader2, ShieldCheck, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Loader2, ShieldCheck, ChevronUp, ChevronDown, Fuel, ExternalLink, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,10 +14,18 @@ type Item = { id?: string; sku: string; name: string; cost_price: number; sale_p
 type ApprovalLevel = {
   id?: string;
   sort_order: number;
-  level_name: string;      // ex. "Chargé de projet", "Directeur", "PDG"
-  max_amount: number;      // montant maximum que ce niveau peut approuver (0 = illimité)
-  approver_label: string;  // titre/rôle de l'approbateur
-  color: string;           // green | blue | amber | red | purple
+  level_name: string;
+  max_amount: number;
+  approver_label: string;
+  color: string;
+};
+type SurchargeTier = {
+  id?: string;
+  sort_order: number;
+  price_min: number;
+  price_max: number | null;   // null = illimité
+  surcharge_pct: number;
+  applies_to: string;
 };
 
 export default function TauxPage() {
@@ -32,16 +40,21 @@ export default function TauxPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [approvals, setApprovals] = useState<ApprovalLevel[]>([]);
+  const [tiers, setTiers] = useState<SurchargeTier[]>([]);
+  const [fuelPrice, setFuelPrice] = useState('');
+  const [fetchingFuel, setFetchingFuel] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [r, s, i, a] = await Promise.all([
+      const [r, s, i, a, t, fp] = await Promise.all([
         supabase.from('labor_rates').select('id, code, label, rate_regular, rate_overtime, rate_premium').eq('tenant_id', tenant).order('code'),
         supabase.from('rate_settings').select('id, category, key, value').eq('tenant_id', tenant).order('category'),
         supabase.from('inv_items').select('id, sku, name, cost_price, sale_price').eq('tenant_id', tenant).order('name').limit(200),
         supabase.from('approval_levels').select('*').eq('tenant_id', tenant).order('sort_order'),
+        supabase.from('surcharge_fuel_tiers').select('*').eq('tenant_id', tenant).order('sort_order'),
+        supabase.from('rate_settings').select('value').eq('tenant_id', tenant).eq('category', 'surcharge_fuel').eq('key', 'prix_litre').maybeSingle(),
       ]);
       setRates((r.data as any) || []);
       setSettings((s.data as any) || []);
@@ -52,6 +65,8 @@ export default function TauxPage() {
       } else {
         setApprovals((a.data as any) || []);
       }
+      setTiers((t.data as any) || []);
+      if (fp.data?.value) setFuelPrice(String(fp.data.value));
     } catch { /* mode dégradé — pas de connexion DB */ }
     finally { setLoading(false); }
   }
@@ -115,6 +130,81 @@ export default function TauxPage() {
     const row = items[idx];
     if (row.id) await supabase.from('inv_items').delete().eq('id', row.id);
     setItems(items.filter((_, i) => i !== idx));
+  }
+
+  // ── Surcharge carburant ────────────────────────────────────────────────
+  function addTier() {
+    const last = tiers[tiers.length - 1];
+    setTiers([...tiers, {
+      sort_order: tiers.length,
+      price_min: last ? (last.price_max ?? last.price_min + 0.20) : 0,
+      price_max: null,
+      surcharge_pct: 0,
+      applies_to: 'km',
+    }]);
+  }
+
+  async function saveTiers() {
+    setBusy(true);
+    try {
+      const sorted = tiers.map((t, i) => ({ ...t, sort_order: i }));
+      for (const row of sorted) {
+        const data = {
+          tenant_id: tenant, sort_order: row.sort_order,
+          price_min: Number(row.price_min) || 0,
+          price_max: row.price_max != null ? Number(row.price_max) : null,
+          surcharge_pct: Number(row.surcharge_pct) || 0,
+          applies_to: row.applies_to || 'km',
+        };
+        if (row.id) await supabase.from('surcharge_fuel_tiers').update(data).eq('id', row.id);
+        else await supabase.from('surcharge_fuel_tiers').insert(data);
+      }
+      // Sauvegarder le prix courant
+      const price = Number(fuelPrice) || 0;
+      const { data: existing } = await supabase.from('rate_settings')
+        .select('id').eq('tenant_id', tenant).eq('category', 'surcharge_fuel').eq('key', 'prix_litre').maybeSingle();
+      if (existing?.id) {
+        await supabase.from('rate_settings').update({ value: price }).eq('id', existing.id);
+      } else {
+        await supabase.from('rate_settings').insert({ tenant_id: tenant, category: 'surcharge_fuel', key: 'prix_litre', value: price });
+      }
+      flash(tr('Barème enregistré ✓', 'Surcharge tiers saved ✓'));
+      await loadAll();
+    } catch { flash(tr('Erreur DB — migration 025 requise', 'DB error — run migration 025')); }
+    finally { setBusy(false); }
+  }
+
+  async function delTier(idx: number) {
+    const row = tiers[idx];
+    if (row.id) await supabase.from('surcharge_fuel_tiers').delete().eq('id', row.id);
+    setTiers(tiers.filter((_, i) => i !== idx));
+  }
+
+  function updTier(idx: number, k: keyof SurchargeTier, v: any) {
+    setTiers(prev => prev.map((t, i) => i === idx ? { ...t, [k]: v } : t));
+  }
+
+  async function fetchFuelPrice() {
+    setFetchingFuel(true);
+    try {
+      const res = await fetch('/api/energie-prix');
+      const data = await res.json();
+      if (data.price) {
+        setFuelPrice(data.price.toFixed(2));
+        flash(tr(`Prix récupéré : ${data.price.toFixed(2)} $/L (${data.region})`, `Price fetched: ${data.price.toFixed(2)} $/L (${data.region})`));
+      } else {
+        flash(tr(`Impossible de récupérer automatiquement (${data.error}) — entrez manuellement`, `Auto-fetch failed (${data.error}) — enter manually`));
+      }
+    } catch { flash(tr('Erreur réseau — entrez le prix manuellement', 'Network error — enter price manually')); }
+    finally { setFetchingFuel(false); }
+  }
+
+  function activeTier(price: number): SurchargeTier | null {
+    const sorted = [...tiers].sort((a, b) => a.price_min - b.price_min);
+    for (const t of sorted) {
+      if (price >= t.price_min && (t.price_max == null || price < t.price_max)) return t;
+    }
+    return null;
   }
 
   // ── Niveaux d'approbation ───────────────────────────────────────────────
@@ -291,6 +381,138 @@ export default function TauxPage() {
                 </table>
               </div>
             </Section>
+
+            {/* ── Surcharge carburant ── */}
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Fuel size={20} className="text-orange-500" />
+                  <h2 className="font-bold">{tr('Surcharge carburant (km)', 'Fuel Surcharge (km)')}</h2>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={addTier} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                    <Plus size={15} /> {tr('Palier', 'Tier')}
+                  </button>
+                  <button onClick={saveTiers} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-60">
+                    {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+                  </button>
+                </div>
+              </div>
+
+              <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                {tr(
+                  'Définit un pourcentage de surcharge sur les coûts de kilométrage selon le prix du litre d\'essence. Appliqué automatiquement dans la feuille de temps et la facture selon la date des travaux.',
+                  'Defines a km cost surcharge percentage based on the fuel price per litre. Applied automatically in timesheets and invoices by work date.'
+                )}
+              </p>
+
+              {/* Prix courant */}
+              <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3 dark:border-orange-500/20 dark:bg-orange-500/10">
+                <div className="flex-1">
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    {tr('Prix courant du litre ($/L)', 'Current fuel price ($/L)')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number" step="0.01" min="0"
+                      onFocus={e => e.target.select()}
+                      className="inp w-28"
+                      value={fuelPrice}
+                      onChange={e => setFuelPrice(e.target.value)}
+                      placeholder="1.65"
+                    />
+                    <span className="text-sm text-gray-400">$/L</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={fetchFuelPrice}
+                    disabled={fetchingFuel}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60 dark:border-orange-500/30 dark:bg-gray-800 dark:text-orange-300"
+                  >
+                    {fetchingFuel ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                    {tr('Actualiser (NRCan)', 'Refresh (NRCan)')}
+                  </button>
+                  <a
+                    href="https://www.regie-energie.qc.ca/energie/petroliers-gaziers/prix-des-produits-petroliers/"
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <ExternalLink size={14} /> Régie de l'énergie
+                  </a>
+                </div>
+                {fuelPrice && (() => {
+                  const price = Number(fuelPrice);
+                  const active = activeTier(price);
+                  if (!active) return <div className="text-sm text-gray-400">{tr('Aucun palier correspondant', 'No matching tier')}</div>;
+                  return (
+                    <div className="flex items-center gap-2 rounded-lg bg-orange-100 px-3 py-1.5 text-sm dark:bg-orange-500/20">
+                      <span className="font-semibold text-orange-700 dark:text-orange-300">{active.surcharge_pct}% surcharge</span>
+                      <span className="text-orange-600 dark:text-orange-400">
+                        {tr('applicable pour', 'applicable for')} {price.toFixed(2)} $/L
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Barème */}
+              {tiers.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400 dark:border-gray-600">
+                  {tr('Aucun palier — ajoute des tranches de prix litre.', 'No tiers — add fuel price ranges.')}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50">
+                      <tr className="text-left text-xs font-bold uppercase tracking-wide text-gray-400">
+                        <th className="px-3 py-2">{tr('Prix min ($/L)', 'Min price ($/L)')}</th>
+                        <th className="px-3 py-2">{tr('Prix max ($/L)', 'Max price ($/L)')}</th>
+                        <th className="px-3 py-2">{tr('Surcharge %', 'Surcharge %')}</th>
+                        <th className="px-3 py-2">{tr('Appliqué à', 'Applies to')}</th>
+                        <th className="px-3 py-2">{tr('Actif', 'Active')}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tiers.map((t, i) => {
+                        const price = Number(fuelPrice);
+                        const isActive = price > 0 && price >= t.price_min && (t.price_max == null || price < t.price_max);
+                        return (
+                          <tr key={i} className={`border-t border-gray-100 dark:border-gray-700 ${isActive ? 'bg-orange-50 dark:bg-orange-500/10' : ''}`}>
+                            <td className="px-3 py-1.5">
+                              <div className="flex items-center gap-1">
+                                <input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-20" value={t.price_min} onChange={e => updTier(i, 'price_min', +e.target.value)} />
+                                <span className="text-xs text-gray-400">$</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-1.5">
+                              <div className="flex items-center gap-1">
+                                <input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-20" value={t.price_max ?? ''} onChange={e => updTier(i, 'price_max', e.target.value === '' ? null : +e.target.value)} placeholder={tr('Illimité', 'Unlimited')} />
+                                <span className="text-xs text-gray-400">$</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-1.5">
+                              <div className="flex items-center gap-1">
+                                <input type="number" step="0.1" min="0" max="100" onFocus={e => e.target.select()} className="inp w-16" value={t.surcharge_pct} onChange={e => updTier(i, 'surcharge_pct', +e.target.value)} />
+                                <span className="text-xs text-gray-400">%</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300">km</td>
+                            <td className="px-3 py-1.5">
+                              {isActive && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">● {tr('Actif', 'Active')}</span>}
+                            </td>
+                            <td className="px-2">
+                              <button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             {/* ── Niveaux d'approbation des soumissions ── */}
             <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

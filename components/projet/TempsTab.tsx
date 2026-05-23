@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 type Entry = { id: string; date: string; desc: string; rateCode: string; hrsReg: number; hrsSupp: number; hrsMaj: number; km: number; materiel: number };
+type SurchargeTier = { price_min: number; price_max: number | null; surcharge_pct: number };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
 export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string; projectId: string; initialActuals: any }) {
@@ -13,7 +14,9 @@ export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
 
   const [rates, setRates] = useState<any[]>([]);
-  const [kmRate, setKmRate] = useState(0);
+  const [kmRates, setKmRates] = useState<Record<string, number>>({});
+  const [surchargeTiers, setSurchargeTiers] = useState<SurchargeTier[]>([]);
+  const [fuelPrice, setFuelPrice] = useState(0);
   const [entries, setEntries] = useState<Entry[]>(() => (initialActuals?.entries as Entry[]) || []);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -22,19 +25,41 @@ export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string
     let active = true;
     (async () => {
       const { data: r } = await supabase.from('labor_rates').select('code, rate_regular, rate_overtime, rate_premium').eq('tenant_id', tenant).order('code');
-      const { data: s } = await supabase.from('rate_settings').select('value').eq('tenant_id', tenant).eq('category', 'km').limit(1);
-      if (active) { setRates(r || []); if (s && s[0]) setKmRate(Number(s[0].value) || 0); }
+      const { data: s } = await supabase.from('rate_settings').select('category, key, value').eq('tenant_id', tenant);
+      const { data: t } = await supabase.from('surcharge_fuel_tiers').select('price_min, price_max, surcharge_pct').eq('tenant_id', tenant).order('sort_order');
+      if (!active) return;
+      setRates(r || []);
+      const kmMap: Record<string, number> = {};
+      (s || []).filter((x: any) => x.category === 'km').forEach((x: any) => { kmMap[x.key] = Number(x.value) || 0; });
+      setKmRates(kmMap);
+      const fp = (s || []).find((x: any) => x.category === 'surcharge_fuel' && x.key === 'prix_litre');
+      setFuelPrice(fp ? Number(fp.value) : 0);
+      setSurchargeTiers((t || []) as SurchargeTier[]);
     })();
     return () => { active = false; };
   }, [tenant]);
+
+  const kmRate = useMemo(() => Object.values(kmRates)[0] || 0, [kmRates]);
+
+  function surchargePctForPrice(price: number): number {
+    if (!price || !surchargeTiers.length) return 0;
+    const tier = surchargeTiers.find(t => price >= t.price_min && (t.price_max == null || price < t.price_max));
+    return tier ? Number(tier.surcharge_pct) : 0;
+  }
+
+  const activeSurchargePct = useMemo(() => surchargePctForPrice(fuelPrice), [fuelPrice, surchargeTiers]);
 
   const rateMap = useMemo(() => Object.fromEntries((rates || []).map((r: any) => [r.code, r])), [rates]);
   const laborCost = (e: Entry) => {
     const r = rateMap[e.rateCode]; if (!r) return 0;
     return (Number(e.hrsReg) || 0) * Number(r.rate_regular) + (Number(e.hrsSupp) || 0) * Number(r.rate_overtime) + (Number(e.hrsMaj) || 0) * Number(r.rate_premium);
   };
-  const rowCost = (e: Entry) => laborCost(e) + (Number(e.km) || 0) * kmRate + (Number(e.materiel) || 0);
-  const total = useMemo(() => entries.reduce((s, e) => s + rowCost(e), 0), [entries, rateMap, kmRate]);
+  const kmCost = (e: Entry) => (Number(e.km) || 0) * kmRate;
+  const kmSurcharge = (e: Entry) => kmCost(e) * activeSurchargePct / 100;
+  const rowCost = (e: Entry) => laborCost(e) + kmCost(e) + kmSurcharge(e) + (Number(e.materiel) || 0);
+  const totalKm = useMemo(() => entries.reduce((s, e) => s + kmCost(e), 0), [entries, kmRate]);
+  const totalSurcharge = useMemo(() => entries.reduce((s, e) => s + kmSurcharge(e), 0), [entries, kmRate, activeSurchargePct]);
+  const total = useMemo(() => entries.reduce((s, e) => s + rowCost(e), 0), [entries, rateMap, kmRate, activeSurchargePct]);
 
   const upd = (i: number, k: keyof Entry, v: any) => setEntries(p => p.map((e, j) => j === i ? { ...e, [k]: v } : e));
   const add = () => setEntries(p => [...p, { id: `t_${Date.now()}`, date: new Date().toISOString().slice(0, 10), desc: '', rateCode: rates[0]?.code || '', hrsReg: 0, hrsSupp: 0, hrsMaj: 0, km: 0, materiel: 0 }]);
@@ -42,7 +67,7 @@ export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string
   async function save() {
     setSaving(true); setNotice(null);
     try {
-      const actuals = { entries, total, updatedAt: new Date().toISOString() };
+      const actuals = { entries, total, totalKm, totalSurcharge, fuelPrice, surchargePct: activeSurchargePct, updatedAt: new Date().toISOString() };
       const { error } = await supabase.from('projects').update({ actuals }).eq('id', projectId).eq('tenant_id', tenant);
       if (error) throw error;
       setNotice(tr('Feuille de temps enregistrée ✓', 'Timesheet saved ✓'));
@@ -85,8 +110,25 @@ export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string
             ))}
             {entries.length === 0 && <tr><td colSpan={10} className="px-2 py-6 text-center text-gray-400">{tr('Aucune entrée. Ajoute une journée travaillée.', 'No entry. Add a worked day.')}</td></tr>}
           </tbody>
+          {entries.length > 0 && activeSurchargePct > 0 && (
+            <tfoot className="border-t-2 border-gray-200 text-sm dark:border-gray-600">
+              <tr className="bg-orange-50 dark:bg-orange-500/10">
+                <td colSpan={7} className="px-2 py-1.5 text-right text-xs font-semibold text-orange-700 dark:text-orange-300">
+                  {tr(`Surcharge carburant ${activeSurchargePct}% sur km (${fuelPrice.toFixed(2)} $/L)`, `Fuel surcharge ${activeSurchargePct}% on km (${fuelPrice.toFixed(2)} $/L)`)}
+                </td>
+                <td className="px-2 py-1.5 text-right font-bold tabular-nums text-orange-700 dark:text-orange-300">{money(totalSurcharge)}</td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
+      {activeSurchargePct > 0 && entries.some(e => e.km > 0) && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200">
+          <strong>Surcharge carburant :</strong> {activeSurchargePct}% sur {money(totalKm)} km = <strong>{money(totalSurcharge)}</strong>
+          {tr(` — prix courant ${fuelPrice.toFixed(2)} $/L`, ` — current price ${fuelPrice.toFixed(2)} $/L`)}
+        </div>
+      )}
 
       <style jsx>{`
         .inp { border-radius: 0.45rem; border: 1px solid rgb(209 213 219); background: transparent; padding: 0.3rem 0.5rem; font-size: 0.8rem; outline: none; }

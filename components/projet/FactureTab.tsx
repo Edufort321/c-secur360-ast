@@ -26,8 +26,9 @@ interface Extra { id: string; desc: string; amount: number }
 interface FactureData {
   invoice_number: string;
   invoice_date: string;
-  mode: 'soumission' | 'temps';   // forfaitaire → soumission, budgétaire → temps (default auto)
+  mode: 'soumission' | 'temps';
   extras: Extra[];
+  surcharge_km_billable: boolean;  // inclure la surcharge carburant km dans la facture
   tps: boolean;
   tvq: boolean;
   notes: string;
@@ -40,6 +41,7 @@ const defaultFacture = (projectType?: string): FactureData => ({
   invoice_date: new Date().toISOString().slice(0, 10),
   mode: projectType === 'forfaitaire' ? 'soumission' : 'temps',
   extras: [],
+  surcharge_km_billable: true,
   tps: true,
   tvq: true,
   notes: '',
@@ -82,13 +84,19 @@ export function FactureTab({
   const set = <K extends keyof FactureData>(k: K, v: FactureData[K]) =>
     setFacture(f => ({ ...f, [k]: v }));
 
+  // ── Surcharge carburant depuis les actuals (feuille de temps) ──────────
+  const kmSurchargeFromActuals = Number(project?.actuals?.totalSurcharge || 0);
+  const kmSurchargePct = Number(project?.actuals?.surchargePct || 0);
+  const kmFuelPrice = Number(project?.actuals?.fuelPrice || 0);
+  const surchargeKmAmount = facture.surcharge_km_billable ? kmSurchargeFromActuals : 0;
+
   // ── Calcul de la base ────────────────────────────────────────────────────
   const baseFromSoumission = Number(project?.estimate?.total || 0);
   const baseFromTemps = Number(project?.actuals?.total || 0);
   const base = facture.mode === 'soumission' ? baseFromSoumission : baseFromTemps;
 
   const extrasTotal = facture.extras.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const subtotal = base + extrasTotal;
+  const subtotal = base + extrasTotal + surchargeKmAmount;
   const tpsMnt = facture.tps ? subtotal * TPS : 0;
   const tvqMnt = facture.tvq ? subtotal * TVQ : 0;
   const total = subtotal + tpsMnt + tvqMnt;
@@ -208,6 +216,12 @@ export function FactureTab({
           </div>
 
           <div className="flex flex-col gap-2 self-end">
+            {kmSurchargeFromActuals > 0 && (
+              <label className="flex items-center gap-2 text-sm font-medium text-orange-700 dark:text-orange-300">
+                <input type="checkbox" checked={facture.surcharge_km_billable} onChange={e => set('surcharge_km_billable', e.target.checked)} disabled={facture.approved} />
+                Surcharge carburant km ({kmSurchargePct}%)
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
               <input type="checkbox" checked={facture.tps} onChange={e => set('tps', e.target.checked)} disabled={facture.approved} />
               TPS (5%)
@@ -247,6 +261,21 @@ export function FactureTab({
             </div>
             <span className="font-bold tabular-nums text-gray-900 dark:text-white">{money(base)}</span>
           </div>
+
+          {/* Surcharge carburant km */}
+          {surchargeKmAmount > 0 && (
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <div className="font-semibold text-orange-700 dark:text-orange-300">
+                  Surcharge carburant km ({kmSurchargePct}%)
+                </div>
+                <div className="text-xs text-orange-600 dark:text-orange-400">
+                  Prix carburant : {kmFuelPrice.toFixed(2)} $/L — date des travaux
+                </div>
+              </div>
+              <span className="font-bold tabular-nums text-orange-700 dark:text-orange-300">{money(surchargeKmAmount)}</span>
+            </div>
+          )}
 
           {/* Extras */}
           {facture.extras.map((ex, i) => (
