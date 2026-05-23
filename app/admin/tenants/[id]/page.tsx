@@ -28,6 +28,7 @@ export default function TenantManagePage() {
     c: t?.companyName ?? '', s: t?.subdomain ?? '', d: t?.domain ?? '', b: t?.billing_email ?? '',
     p: t?.plan ?? '', a: t?.isActive !== false, ar: t?.archived === true,
     ep: t?.erp_provider ?? '', eu: t?.erp_base_url ?? '', ec: t?.erp_company_id ?? '',
+    l: t?.logo_url ?? '',
   });
 
   async function load() {
@@ -96,6 +97,7 @@ export default function TenantManagePage() {
         erp_provider: tenant.erp_provider || null,
         erp_base_url: tenant.erp_base_url || null,
         erp_company_id: tenant.erp_company_id || null,
+        logo_url: tenant.logo_url || null,
       }).eq('id', id);
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -175,6 +177,18 @@ export default function TenantManagePage() {
                 <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">URL de base ERP</span><input className={inputCls} placeholder="https://erp.exemple.com/api" value={tenant.erp_base_url || ''} onChange={e => setTenant((t: any) => ({ ...t, erp_base_url: e.target.value }))} /></label>
                 <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">ID société / base</span><input className={inputCls} value={tenant.erp_company_id || ''} onChange={e => setTenant((t: any) => ({ ...t, erp_company_id: e.target.value }))} /></label>
                 <p className="text-xs text-gray-400 sm:col-span-2 lg:col-span-3">🔒 Clé/API ERP : stockage sécurisé côté serveur (à brancher) — non saisie ici.</p>
+                <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
+                <label className="block sm:col-span-2">
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">URL du logo (remplace le logo C-Secur360 dans l'en-tête)</span>
+                  <input className={inputCls} placeholder="https://exemple.com/logo.png" value={tenant.logo_url || ''} onChange={e => setTenant((t: any) => ({ ...t, logo_url: e.target.value }))} />
+                </label>
+                {tenant.logo_url && (
+                  <div className="flex items-center gap-3">
+                    <img src={tenant.logo_url} alt="Aperçu logo" className="h-10 w-auto rounded border border-gray-200 bg-white p-1 dark:border-gray-600" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <span className="text-xs text-gray-400">Aperçu</span>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 sm:col-span-2 lg:col-span-3">Migration requise : <code className="rounded bg-gray-100 px-1 dark:bg-gray-700">ALTER TABLE tenants ADD COLUMN IF NOT EXISTS logo_url TEXT;</code></p>
               </div>
             </div>
 

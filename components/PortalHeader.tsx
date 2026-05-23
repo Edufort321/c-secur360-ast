@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Sun, Moon, Menu, X, LayoutGrid } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { MODULES } from '@/lib/modules/registry';
+import { supabase } from '@/lib/supabase';
 
 // En-tête unifié : logo officiel à gauche ; à droite Jour/Nuit + FR/EN + hamburger (navigation modules).
 export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?: string }) {
@@ -14,12 +15,19 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const { lang, setLang, t } = useLanguage();
   const { sites, siteId, setSiteId } = useSite();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
 
   return (
     <header className="sticky top-0 z-40 bg-gray-900 text-white shadow">
       <div className="flex w-full items-center justify-between px-4 py-3 lg:px-6">
         <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
-          <img src="/logo.png" alt="C-Secur360" className="h-9 w-auto" />
+          <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-9 w-auto" />
           <div className="leading-tight">
             <div className="font-bold text-white">C-Secur360</div>
             <div className="text-xs text-gray-400">{subtitle || (tenant ? `${t('platform')} · ${tenant}` : (lang === 'fr' ? 'Panneau multi-clients' : 'Multi-client panel'))}</div>

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Save, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Loader2, ShieldCheck, ChevronUp, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +11,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 type Rate = { id?: string; code: string; label: string; rate_regular: number; rate_overtime: number; rate_premium: number };
 type Setting = { id?: string; category: string; key: string; value: number };
 type Item = { id?: string; sku: string; name: string; cost_price: number; sale_price: number };
+type ApprovalLevel = {
+  id?: string;
+  sort_order: number;
+  level_name: string;      // ex. "Chargé de projet", "Directeur", "PDG"
+  max_amount: number;      // montant maximum que ce niveau peut approuver (0 = illimité)
+  approver_label: string;  // titre/rôle de l'approbateur
+  color: string;           // green | blue | amber | red | purple
+};
 
 export default function TauxPage() {
   const params = useParams();
@@ -23,19 +31,22 @@ export default function TauxPage() {
   const [rates, setRates] = useState<Rate[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalLevel[]>([]);
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [r, s, i] = await Promise.all([
+      const [r, s, i, a] = await Promise.all([
         supabase.from('labor_rates').select('id, code, label, rate_regular, rate_overtime, rate_premium').eq('tenant_id', tenant).order('code'),
         supabase.from('rate_settings').select('id, category, key, value').eq('tenant_id', tenant).order('category'),
         supabase.from('inv_items').select('id, sku, name, cost_price, sale_price').eq('tenant_id', tenant).order('name').limit(200),
+        supabase.from('approval_levels').select('*').eq('tenant_id', tenant).order('sort_order'),
       ]);
       setRates((r.data as any) || []);
       setSettings((s.data as any) || []);
       setItems((i.data as any) || []);
+      setApprovals((a.data as any) || []);
     } catch { /* mode dégradé */ }
     finally { setLoading(false); }
   }
@@ -100,6 +111,84 @@ export default function TauxPage() {
     if (row.id) await supabase.from('inv_items').delete().eq('id', row.id);
     setItems(items.filter((_, i) => i !== idx));
   }
+
+  // ── Niveaux d'approbation ───────────────────────────────────────────────
+  function addApproval() {
+    const next: ApprovalLevel = {
+      sort_order: approvals.length,
+      level_name: '',
+      max_amount: 0,
+      approver_label: '',
+      color: 'blue',
+    };
+    setApprovals([...approvals, next]);
+  }
+
+  async function saveApprovals() {
+    setBusy(true);
+    try {
+      // Re-assign sort_order by position
+      const sorted = approvals.map((a, i) => ({ ...a, sort_order: i }));
+      for (const row of sorted) {
+        if (!row.level_name?.trim()) continue;
+        const data = {
+          tenant_id: tenant,
+          sort_order: row.sort_order,
+          level_name: row.level_name,
+          max_amount: Number(row.max_amount) || 0,
+          approver_label: row.approver_label || '',
+          color: row.color || 'blue',
+        };
+        if (row.id) {
+          await supabase.from('approval_levels').update(data).eq('id', row.id);
+        } else {
+          await supabase.from('approval_levels').insert(data);
+        }
+      }
+      flash(tr('Niveaux enregistrés ✓', 'Levels saved ✓'));
+      await loadAll();
+    } catch (e: any) {
+      flash('Erreur DB — migration requise : voir note ci-dessous');
+    } finally { setBusy(false); }
+  }
+
+  async function delApproval(idx: number) {
+    const row = approvals[idx];
+    if (row.id) await supabase.from('approval_levels').delete().eq('id', row.id);
+    setApprovals(approvals.filter((_, i) => i !== idx));
+  }
+
+  function moveApproval(idx: number, dir: -1 | 1) {
+    const arr = [...approvals];
+    const target = idx + dir;
+    if (target < 0 || target >= arr.length) return;
+    [arr[idx], arr[target]] = [arr[target], arr[idx]];
+    setApprovals(arr);
+  }
+
+  function updApproval(idx: number, k: keyof ApprovalLevel, v: any) {
+    setApprovals(prev => prev.map((a, i) => i === idx ? { ...a, [k]: v } : a));
+  }
+
+  // Calcule quel niveau s'applique à un montant donné
+  function levelForAmount(amount: number): ApprovalLevel | null {
+    const sorted = [...approvals].sort((a, b) => a.max_amount - b.max_amount);
+    for (const lvl of sorted) {
+      if (lvl.max_amount === 0 || amount <= lvl.max_amount) return lvl;
+    }
+    return sorted[sorted.length - 1] || null;
+  }
+
+  const COLOR_OPTS = [
+    { value: 'green',  label: 'Vert',   cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    { value: 'blue',   label: 'Bleu',   cls: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { value: 'amber',  label: 'Ambre',  cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+    { value: 'red',    label: 'Rouge',  cls: 'bg-red-100 text-red-700 border-red-200' },
+    { value: 'purple', label: 'Mauve',  cls: 'bg-purple-100 text-purple-700 border-purple-200' },
+  ];
+  const colorCls = (c: string) => COLOR_OPTS.find(o => o.value === c)?.cls || 'bg-gray-100 text-gray-700 border-gray-200';
+
+  const [previewAmount, setPreviewAmount] = useState('');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -192,6 +281,153 @@ export default function TauxPage() {
                 </table>
               </div>
             </Section>
+
+            {/* ── Niveaux d'approbation des soumissions ── */}
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-blue-600" />
+                  <h2 className="font-bold">{tr("Niveaux d'approbation des soumissions", 'Quote Approval Levels')}</h2>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={addApproval} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                    <Plus size={15} /> {tr('Ajouter', 'Add')}
+                  </button>
+                  <button onClick={saveApprovals} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                    {busy ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+                  </button>
+                </div>
+              </div>
+
+              <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                {tr(
+                  'Définit qui peut approuver une soumission selon son montant. Les niveaux sont évalués du plus bas au plus élevé — le premier niveau dont le montant max est ≥ au montant de la soumission s\'applique. Un montant max de 0 signifie « illimité ».',
+                  'Defines who can approve a quote by amount. Levels are evaluated lowest to highest — the first level whose max ≥ quote amount applies. Max amount 0 means unlimited.'
+                )}
+              </p>
+
+              {/* Grille des niveaux */}
+              {approvals.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400 dark:border-gray-600">
+                  {tr('Aucun niveau configuré — ajoute au moins un niveau.', 'No levels configured — add at least one level.')}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {approvals.map((a, i) => (
+                    <div key={i} className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 ${colorCls(a.color)} dark:bg-opacity-10`}>
+                      {/* Ordre */}
+                      <div className="flex flex-col gap-0.5">
+                        <button onClick={() => moveApproval(i, -1)} disabled={i === 0} className="rounded p-0.5 hover:bg-white/40 disabled:opacity-30"><ChevronUp size={14} /></button>
+                        <button onClick={() => moveApproval(i, 1)} disabled={i === approvals.length - 1} className="rounded p-0.5 hover:bg-white/40 disabled:opacity-30"><ChevronDown size={14} /></button>
+                      </div>
+
+                      {/* Niveau n° */}
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current text-xs font-bold">
+                        {i + 1}
+                      </div>
+
+                      {/* Nom du niveau */}
+                      <label className="block">
+                        <span className="mb-0.5 block text-xs font-semibold opacity-70">{tr('Nom du niveau', 'Level name')}</span>
+                        <input className="inp-approval w-36" value={a.level_name} onChange={e => updApproval(i, 'level_name', e.target.value)} placeholder={tr('Ex. Directeur', 'e.g. Director')} />
+                      </label>
+
+                      {/* Rôle / titre approbateur */}
+                      <label className="block">
+                        <span className="mb-0.5 block text-xs font-semibold opacity-70">{tr('Rôle approbateur', 'Approver role')}</span>
+                        <input className="inp-approval w-36" value={a.approver_label} onChange={e => updApproval(i, 'approver_label', e.target.value)} placeholder={tr('Ex. Chargé de projet', 'e.g. Project Manager')} />
+                      </label>
+
+                      {/* Montant max */}
+                      <label className="block">
+                        <span className="mb-0.5 block text-xs font-semibold opacity-70">{tr('Montant max ($)', 'Max amount ($)')}</span>
+                        <div className="flex items-center gap-1">
+                          <input type="number" step="500" min="0" className="inp-approval w-28 text-right" value={a.max_amount}
+                            onChange={e => updApproval(i, 'max_amount', +e.target.value)} />
+                          {a.max_amount === 0 && <span className="text-xs font-semibold opacity-70">{tr('Illimité', 'Unlimited')}</span>}
+                        </div>
+                      </label>
+
+                      {/* Couleur */}
+                      <label className="block">
+                        <span className="mb-0.5 block text-xs font-semibold opacity-70">{tr('Couleur', 'Color')}</span>
+                        <select className="inp-approval w-24" value={a.color} onChange={e => updApproval(i, 'color', e.target.value)}>
+                          {COLOR_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </label>
+
+                      <button onClick={() => delApproval(i)} className="ml-auto rounded-lg p-1.5 hover:bg-white/40"><Trash2 size={15} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Visualisation matricielle */}
+              {approvals.length > 0 && (
+                <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/30">
+                  <h3 className="mb-3 text-sm font-bold text-gray-700 dark:text-gray-200">{tr('Matrice d\'approbation', 'Approval Matrix')}</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs font-semibold text-gray-500">
+                          <th className="px-2 py-1.5">{tr('Plage de montant', 'Amount Range')}</th>
+                          <th className="px-2 py-1.5">{tr('Niveau requis', 'Required Level')}</th>
+                          <th className="px-2 py-1.5">{tr('Approbateur', 'Approver')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...approvals]
+                          .sort((a, b) => a.max_amount === 0 ? 1 : b.max_amount === 0 ? -1 : a.max_amount - b.max_amount)
+                          .map((lvl, i, arr) => {
+                            const prev = i === 0 ? 0 : (arr[i - 1].max_amount + 1);
+                            const range = lvl.max_amount === 0
+                              ? `${prev.toLocaleString('fr-CA')} $ et plus`
+                              : `${prev.toLocaleString('fr-CA')} $ – ${lvl.max_amount.toLocaleString('fr-CA')} $`;
+                            return (
+                              <tr key={lvl.level_name + i} className="border-t border-gray-200 dark:border-gray-600">
+                                <td className="px-2 py-2 font-mono text-xs text-gray-600 dark:text-gray-300">{range}</td>
+                                <td className="px-2 py-2">
+                                  <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${colorCls(lvl.color)}`}>
+                                    {lvl.level_name || '—'}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-2 text-gray-600 dark:text-gray-300">{lvl.approver_label || '—'}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Testeur de montant */}
+                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-gray-200 pt-3 dark:border-gray-600">
+                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{tr('Tester un montant', 'Test an amount')} :</span>
+                    <input type="number" step="100" min="0" value={previewAmount}
+                      onChange={e => setPreviewAmount(e.target.value)}
+                      placeholder="25 000"
+                      className="w-32 rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800" />
+                    {previewAmount && Number(previewAmount) >= 0 && (() => {
+                      const lvl = levelForAmount(Number(previewAmount));
+                      if (!lvl) return <span className="text-xs text-gray-400">{tr('Aucun niveau applicable', 'No level applies')}</span>;
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${colorCls(lvl.color)}`}>
+                          <ShieldCheck size={13} /> {lvl.level_name} — {lvl.approver_label || tr('Approbateur non défini', 'Approver undefined')}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Note migration */}
+              <p className="mt-3 text-xs text-gray-400">
+                {tr('Migration requise :', 'Migration required:')}{' '}
+                <code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-700">
+                  CREATE TABLE IF NOT EXISTS approval_levels (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id TEXT NOT NULL, sort_order INT DEFAULT 0, level_name TEXT NOT NULL, max_amount NUMERIC NOT NULL DEFAULT 0, approver_label TEXT DEFAULT '', color TEXT DEFAULT 'blue', created_at TIMESTAMPTZ DEFAULT now());
+                </code>
+              </p>
+            </section>
+
           </div>
         )}
       </div>

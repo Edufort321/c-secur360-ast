@@ -2,19 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Hammer } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Download, Receipt, Trash2, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { SoumissionTab } from '@/components/projet/SoumissionTab';
 import { TempsTab } from '@/components/projet/TempsTab';
 import { CoutsTab } from '@/components/projet/CoutsTab';
+import { FactureTab } from '@/components/projet/FactureTab';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type Tab = 'projet' | 'soumission' | 'temps' | 'couts';
+type Tab = 'projet' | 'soumission' | 'temps' | 'couts' | 'facture';
 
 export default function ProjectDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const tenant = (params?.tenant as string) || 'cerdia';
   const id = params?.id as string;
   const { lang } = useLanguage();
@@ -23,9 +25,36 @@ export default function ProjectDetailPage() {
   const [tab, setTab] = useState<Tab>('projet');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportingFull, setExportingFull] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [p, setP] = useState<any>(null);
   const [linkedAst, setLinkedAst] = useState<any[]>([]);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setTenantLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
+
+  async function exportPdf() {
+    if (!p) return;
+    setExporting(true);
+    try {
+      const { exportProjectPdf } = await import('@/lib/pdf/projectPdf');
+      await exportProjectPdf({ tab, project: p, tenant, tenantLogoUrl, linkedAst });
+    } finally { setExporting(false); }
+  }
+
+  async function exportFullReport() {
+    if (!p) return;
+    setExportingFull(true);
+    try {
+      const { exportFullReportPdf } = await import('@/lib/pdf/projectPdf');
+      await exportFullReportPdf({ project: p, tenant, tenantLogoUrl, linkedAst });
+    } finally { setExportingFull(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -81,11 +110,28 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function deleteProject() {
+    if (!confirm(tr(
+      `Supprimer définitivement le projet #${p?.project_number} « ${p?.title || 'Sans titre'} » ? Cette action est irréversible.`,
+      `Permanently delete project #${p?.project_number} "${p?.title || 'Untitled'}"? This cannot be undone.`
+    ))) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', id).eq('tenant_id', tenant);
+      if (error) throw error;
+      router.push(`/${tenant}/projects`);
+    } catch {
+      setNotice(tr('Erreur lors de la suppression.', 'Delete error.'));
+      setDeleting(false);
+    }
+  }
+
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'projet', label: tr('Projet', 'Project'), icon: FileText },
     { key: 'soumission', label: tr('Soumission', 'Quote'), icon: Calculator },
     { key: 'temps', label: tr('Feuille de temps', 'Timesheet'), icon: Clock },
     { key: 'couts', label: tr('Coûts', 'Costs'), icon: DollarSign },
+    { key: 'facture', label: tr('Facture', 'Invoice'), icon: Receipt },
   ];
 
   return (
@@ -109,6 +155,15 @@ export default function ProjectDetailPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">#{p.project_number} · {tenant}</p>
               </div>
               <div className="flex flex-wrap gap-2 self-start">
+                <button onClick={deleteProject} disabled={deleting} className="inline-flex items-center gap-2 rounded-xl border border-red-300 px-4 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10">
+                  {deleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />} {tr('Supprimer', 'Delete')}
+                </button>
+                <button onClick={exportPdf} disabled={exporting} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                  {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />} {tr("Onglet PDF", 'Tab PDF')}
+                </button>
+                <button onClick={exportFullReport} disabled={exportingFull} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+                  {exportingFull ? <Loader2 size={18} className="animate-spin" /> : <BookOpen size={18} />} {tr('Rapport complet', 'Full Report')}
+                </button>
                 <Link href={`/${tenant}/ast/nouveau?project=${id}`} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                   <FileText size={18} /> {tr('Créer un AST', 'Create JSA')}
                 </Link>
@@ -198,6 +253,7 @@ export default function ProjectDetailPage() {
             {tab === 'soumission' && <SoumissionTab tenant={tenant} projectId={id} initialEstimate={p.estimate} />}
             {tab === 'temps' && <TempsTab tenant={tenant} projectId={id} initialActuals={p.actuals} />}
             {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={p.actuals} poAmount={p.po_amount} />}
+            {tab === 'facture' && <FactureTab tenant={tenant} projectId={id} project={p} />}
           </>
         )}
       </div>

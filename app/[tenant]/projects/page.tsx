@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   FolderKanban, Plus, Search, Building2, MapPin, Calendar,
-  FileText, X, DollarSign, Hash, Loader2,
+  FileText, X, DollarSign, Hash, Loader2, Download,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -46,8 +46,25 @@ export default function ProjectsPage() {
   const [query, setQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setTenantLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
+
+  async function exportPdf() {
+    setExporting(true);
+    try {
+      const { exportProjectListPdf } = await import('@/lib/pdf/projectPdf');
+      await exportProjectListPdf({ projects, tenant, tenantLogoUrl });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -146,6 +163,13 @@ export default function ProjectsPage() {
             <Link href={`/${tenant}/projects/taux`} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50">
               <FileText size={18} /> Taux & catalogue
             </Link>
+            <button
+              onClick={exportPdf}
+              disabled={exporting || loading}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />} Exporter PDF
+            </button>
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-blue-700"
