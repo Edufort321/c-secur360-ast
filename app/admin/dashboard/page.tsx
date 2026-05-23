@@ -7,7 +7,7 @@ import PriceManager from '../../../components/admin/PriceManager';
 import RevenueForecast from '../../../components/admin/RevenueForecast';
 import { computeSubState } from '@/lib/subscription';
 import { CANADIAN_PROVINCES, getProvinceByCode } from '../../../data/provinces';
-import { 
+import {
   Users,
   Building,
   DollarSign,
@@ -28,7 +28,9 @@ import {
   Download,
   QrCode,
   Smartphone,
-  Lock
+  Lock,
+  Home,
+  LogIn
 } from 'lucide-react';
 
 interface AdminStats {
@@ -276,6 +278,62 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f3f4f6', color: '#111827', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <PortalHeader subtitle="Panneau de contrôle multi-clients" />
+
+      {/* Barre de navigation rapide */}
+      <div style={{
+        background: '#1e293b',
+        borderBottom: '1px solid #334155',
+        padding: '10px 24px',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center'
+      }}>
+        <Link
+          href="/"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#e2e8f0',
+            padding: '7px 14px',
+            borderRadius: '7px',
+            textDecoration: 'none',
+            fontSize: '13px',
+            fontWeight: 500,
+            transition: 'background 0.15s'
+          }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+        >
+          <Home size={15} />
+          Accueil public
+        </Link>
+
+        <Link
+          href="/auth/admin"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            background: 'rgba(16,185,129,0.12)',
+            border: '1px solid rgba(16,185,129,0.35)',
+            color: '#34d399',
+            padding: '7px 14px',
+            borderRadius: '7px',
+            textDecoration: 'none',
+            fontSize: '13px',
+            fontWeight: 500,
+            transition: 'background 0.15s'
+          }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.22)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(16,185,129,0.12)')}
+        >
+          <LogIn size={15} />
+          Connexion tenant
+        </Link>
+      </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
         {/* Stats Grid */}

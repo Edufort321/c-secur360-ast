@@ -191,8 +191,6 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
   const [mods, setMods] = useState<Mod[]>([]);
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30 });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -217,43 +215,33 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
   const discountPct = Math.min(Math.max(selected.length - 1, 0) * cfg.discount_per_module, cfg.discount_cap);
   const total = subtotal * (1 - discountPct / 100);
 
-  async function save() {
-    setSaving(true); setNotice(null);
-    try {
-      for (const m of mods) {
-        await supabase.from('modules').update({ monthly_price: m.monthly_price }).eq('key', m.key);
-        await supabase.from('tenant_modules').upsert({ tenant_id: tenant, module_key: m.key, enabled: m.enabled, source: 'manual' }, { onConflict: 'tenant_id,module_key' });
-      }
-      setNotice(tr('Abonnement enregistré ✓', 'Subscription saved ✓'));
-    } catch { setNotice(tr('Erreur DB — as-tu exécuté la migration 011 ?', 'DB error — did you run migration 011?')); }
-    finally { setSaving(false); }
-  }
-
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
-  if (mods.length === 0) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Catalogue de modules vide. Exécute la migration 011 (modules + tenant_modules) dans le SQL editor Supabase.', 'Empty module catalog. Run migration 011 in the Supabase SQL editor.')}</div>;
+  if (mods.length === 0) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Aucun module configuré. Contactez votre administrateur.', 'No module configured. Contact your administrator.')}</div>;
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-          <h2 className="font-bold">{tr('Modules & prix', 'Modules & prices')}</h2>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+          <div>
+            <h2 className="font-bold">{tr('Modules actifs', 'Active modules')}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{tr('Configuré par votre administrateur C-Secur360.', 'Configured by your C-Secur360 administrator.')}</p>
+          </div>
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+            {tr('Lecture seule', 'Read only')}
+          </span>
         </div>
-        {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {mods.map((m, i) => (
+          {mods.map(m => (
             <div key={m.key} className="flex items-center gap-3 px-4 py-2.5">
-              <button onClick={() => setMods(p => p.map((x, j) => j === i ? { ...x, enabled: !x.enabled } : x))}
-                className={`grid h-6 w-6 place-items-center rounded border ${m.enabled ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 dark:border-gray-600'}`}>
+              <div className={`grid h-6 w-6 place-items-center rounded border ${m.enabled ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'}`}>
                 {m.enabled && <Check size={14} />}
-              </button>
-              <span className="flex-1 font-medium">{lang === 'fr' ? m.name_fr : m.name_en}</span>
-              <div className="flex items-center gap-1">
-                <input type="number" step="1" value={m.monthly_price}
-                  onChange={e => setMods(p => p.map((x, j) => j === i ? { ...x, monthly_price: Number(e.target.value) } : x))}
-                  className="w-24 rounded-lg border border-gray-300 bg-transparent px-2 py-1 text-right text-sm outline-none focus:border-blue-500 dark:border-gray-600" />
-                <span className="text-sm text-gray-400">$/{tr('an', 'yr')}</span>
               </div>
+              <span className={`flex-1 font-medium ${!m.enabled ? 'text-gray-400 dark:text-gray-500' : ''}`}>
+                {lang === 'fr' ? m.name_fr : m.name_en}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {m.monthly_price > 0 ? `${money(m.monthly_price)}/${tr('an', 'yr')}` : tr('Inclus', 'Included')}
+              </span>
             </div>
           ))}
         </div>
@@ -263,16 +251,23 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
         <h2 className="mb-3 font-bold">{tr('Facture annuelle', 'Annual invoice')}</h2>
         <div className="space-y-1 text-sm">
           {selected.map(m => (
-            <div key={m.key} className="flex justify-between"><span className="text-gray-600 dark:text-gray-300">{lang === 'fr' ? m.name_fr : m.name_en}</span><span>{money(m.monthly_price)}</span></div>
+            <div key={m.key} className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-300">{lang === 'fr' ? m.name_fr : m.name_en}</span>
+              <span>{money(m.monthly_price)}</span>
+            </div>
           ))}
-          {selected.length === 0 && <div className="text-gray-400">{tr('Aucun module sélectionné', 'No module selected')}</div>}
+          {selected.length === 0 && <div className="text-gray-400">{tr('Aucun module actif', 'No active module')}</div>}
         </div>
         <div className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-sm dark:border-gray-700">
           <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>{tr('Sous-total', 'Subtotal')}</span><span>{money(subtotal)}</span></div>
-          <div className="flex justify-between text-emerald-600"><span>{tr('Escompte', 'Discount')} ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
+          {discountPct > 0 && (
+            <div className="flex justify-between text-emerald-600"><span>{tr('Escompte', 'Discount')} ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
+          )}
           <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
         </div>
-        <p className="mt-2 text-xs text-gray-400">{tr(`Escompte cumulatif : ${cfg.discount_per_module}% par module additionnel (max ${cfg.discount_cap}%).`, `Cumulative discount: ${cfg.discount_per_module}% per extra module (max ${cfg.discount_cap}%).`)}</p>
+        <p className="mt-3 text-xs text-gray-400 leading-relaxed">
+          {tr('Pour modifier votre abonnement, contactez votre administrateur C-Secur360.', 'To modify your subscription, contact your C-Secur360 administrator.')}
+        </p>
       </div>
     </div>
   );

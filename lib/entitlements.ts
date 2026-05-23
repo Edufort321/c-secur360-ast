@@ -15,7 +15,7 @@ export function useEntitlements(tenant: string): string[] | null {
           .from('tenant_modules').select('module_key, enabled').eq('tenant_id', tenant).eq('enabled', true);
         if (active) setEnabled((data || []).map((r: any) => r.module_key));
       } catch {
-        if (active) setEnabled([]);
+        if (active) setEnabled(null);
       }
     })();
     return () => { active = false; };
