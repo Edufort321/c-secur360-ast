@@ -222,9 +222,9 @@ export default function TauxPage() {
                       <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
                         <Td><input className="inp w-24" value={r.code} onChange={e => upd(setRates, rates, i, 'code', e.target.value)} /></Td>
                         <Td><input className="inp" value={r.label} onChange={e => upd(setRates, rates, i, 'label', e.target.value)} /></Td>
-                        <Td><input type="number" className="inp w-24" value={r.rate_regular} onChange={e => upd(setRates, rates, i, 'rate_regular', e.target.value)} /></Td>
-                        <Td><input type="number" className="inp w-24" value={r.rate_overtime} onChange={e => upd(setRates, rates, i, 'rate_overtime', e.target.value)} /></Td>
-                        <Td><input type="number" className="inp w-24" value={r.rate_premium} onChange={e => upd(setRates, rates, i, 'rate_premium', e.target.value)} /></Td>
+                        <Td><input type="number" onFocus={e => e.target.select()} className="inp w-24" value={r.rate_regular} onChange={e => upd(setRates, rates, i, 'rate_regular', e.target.value)} /></Td>
+                        <Td><input type="number" onFocus={e => e.target.select()} className="inp w-24" value={r.rate_overtime} onChange={e => upd(setRates, rates, i, 'rate_overtime', e.target.value)} /></Td>
+                        <Td><input type="number" onFocus={e => e.target.select()} className="inp w-24" value={r.rate_premium} onChange={e => upd(setRates, rates, i, 'rate_premium', e.target.value)} /></Td>
                         <Td><button onClick={() => delRate(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={16} /></button></Td>
                       </tr>
                     ))}
@@ -253,7 +253,7 @@ export default function TauxPage() {
                         <Td><input className="inp w-32" value={s.key} onChange={e => upd(setSettings, settings, i, 'key', e.target.value)} /></Td>
                         <Td>
                           <div className="flex items-center gap-1">
-                            <input type="number" step="0.01" className="inp w-24" value={s.value} onChange={e => upd(setSettings, settings, i, 'value', e.target.value)} />
+                            <input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-24" value={s.value} onChange={e => upd(setSettings, settings, i, 'value', e.target.value)} />
                             <span className="text-xs text-gray-400">$</span>
                           </div>
                         </Td>
@@ -276,8 +276,8 @@ export default function TauxPage() {
                       <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
                         <Td><input className="inp w-28" value={it.sku} onChange={e => upd(setItems, items, i, 'sku', e.target.value)} /></Td>
                         <Td><input className="inp" value={it.name} onChange={e => upd(setItems, items, i, 'name', e.target.value)} /></Td>
-                        <Td><input type="number" step="0.01" className="inp w-28" value={it.cost_price} onChange={e => upd(setItems, items, i, 'cost_price', e.target.value)} /></Td>
-                        <Td><input type="number" step="0.01" className="inp w-28" value={it.sale_price} onChange={e => upd(setItems, items, i, 'sale_price', e.target.value)} /></Td>
+                        <Td><input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-28" value={it.cost_price} onChange={e => upd(setItems, items, i, 'cost_price', e.target.value)} /></Td>
+                        <Td><input type="number" step="0.01" onFocus={e => e.target.select()} className="inp w-28" value={it.sale_price} onChange={e => upd(setItems, items, i, 'sale_price', e.target.value)} /></Td>
                         <Td><button onClick={() => delItem(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={16} /></button></Td>
                       </tr>
                     ))}
