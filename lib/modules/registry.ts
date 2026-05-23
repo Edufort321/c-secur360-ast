@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'inspections' | 'timesheets' | 'todo';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'inspections' | 'timesheets' | 'logbook' | 'todo';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -89,7 +89,14 @@ export const MODULES: ModuleDef[] = [
     labelFr: 'Feuille de temps', labelEn: 'Timesheets',
     descFr: 'Feuilles de temps des employés pour la paie (heures, approbation, export).',
     descEn: 'Employee timesheets for payroll (hours, approval, export).',
-    icon: CalendarClock, basePath: 'timesheets', color: 'text-sky-600', accent: 'bg-sky-600', status: 'soon',
+    icon: CalendarClock, basePath: 'timesheets', color: 'text-sky-600', accent: 'bg-sky-600', status: 'available',
+  },
+  {
+    key: 'logbook',
+    labelFr: 'Logbook véhicules', labelEn: 'Vehicle logbook',
+    descFr: "Odomètre hebdomadaire, déduction personnel/professionnel, export TP-41 / T777.",
+    descEn: 'Weekly odometer log, personal/professional split, TP-41 / T777 export.',
+    icon: Car, basePath: 'logbook', color: 'text-teal-600', accent: 'bg-teal-600', status: 'available',
   },
   {
     key: 'todo',
