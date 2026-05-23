@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2 } from 'lucide-react';
+import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'profils' | 'abonnement' | 'facturation'>('sites');
+  const [tab, setTab] = useState<'sites' | 'vehicules' | 'profils' | 'abonnement' | 'facturation'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -24,10 +24,11 @@ export default function AdminPage() {
         <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
         <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
           {[
-            { k: 'sites', label: tr('Sites', 'Sites'), icon: MapPin },
-            { k: 'profils', label: tr('Employés', 'Employees'), icon: Users },
+            { k: 'sites',      label: tr('Sites', 'Sites'),           icon: MapPin },
+            { k: 'vehicules',  label: tr('Véhicules', 'Vehicles'),    icon: Car },
+            { k: 'profils',    label: tr('Employés', 'Employees'),    icon: Users },
             { k: 'abonnement', label: tr('Abonnement', 'Subscription'), icon: CreditCard },
-            { k: 'facturation', label: tr('Facturation', 'Billing'), icon: Settings },
+            { k: 'facturation',label: tr('Facturation', 'Billing'),   icon: Settings },
           ].map(x => {
             const Icon = x.icon as any;
             return (
@@ -40,6 +41,7 @@ export default function AdminPage() {
         </div>
 
         {tab === 'sites' && <Sites tenant={tenant} tr={tr} />}
+        {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
@@ -269,6 +271,145 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
           {tr('Pour modifier votre abonnement, contactez votre administrateur C-Secur360.', 'To modify your subscription, contact your C-Secur360 administrator.')}
         </p>
       </div>
+    </div>
+  );
+}
+
+function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type VRow = {
+    id?: string; type: 'company' | 'personal'; name: string;
+    make: string; model: string; year: string; plate: string;
+    employee_name: string; km_rate_override: string; active: boolean; notes: string;
+  };
+  const [rows, setRows] = useState<VRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
+    setRows((data || []).map((v: any) => ({ ...v, year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+
+  const addCompany  = () => setRows(p => [...p, { type: 'company',  name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+  const addPersonal = () => setRows(p => [...p, { type: 'personal', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.make?.trim() && !r.name?.trim()) continue;
+        const payload: any = {
+          tenant_id: tenant, type: r.type,
+          name: r.name || `${r.make} ${r.model} ${r.year}`.trim(),
+          make: r.make, model: r.model,
+          year: r.year ? Number(r.year) : null,
+          plate: r.plate, employee_name: r.employee_name,
+          km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
+          active: r.active, notes: r.notes,
+        };
+        if (r.id) await supabase.from('vehicles').update(payload).eq('id', r.id);
+        else await supabase.from('vehicles').insert(payload);
+      }
+      setNotice(tr('Véhicules enregistrés ✓', 'Vehicles saved ✓'));
+      load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('vehicles').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  const companyRows  = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'company');
+  const personalRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'personal');
+
+  const VehicleTable = ({ label, badge, items, onAdd }: { label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void }) => (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <h2 className="font-bold">{label}</h2>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">{badge}</span>
+        </div>
+        <button onClick={onAdd} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+          <Plus size={15} /> {tr('Ajouter', 'Add')}
+        </button>
+      </div>
+      <div className="overflow-x-auto p-2">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('Marque', 'Make')}</th>
+            <th className="px-2">{tr('Modèle', 'Model')}</th>
+            <th className="px-2">{tr('Année', 'Year')}</th>
+            <th className="px-2">{tr('Plaque', 'Plate')}</th>
+            <th className="px-2">{tr('Employé / Propriétaire', 'Employee / Owner')}</th>
+            <th className="px-2">{tr('Taux km $', 'Km rate $')}</th>
+            <th className="px-2">{tr('Actif', 'Active')}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {items.map(({ r, i }) => (
+              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
+                <td className="px-2"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
+                <td className="px-2"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2022" /></td>
+                <td className="px-2"><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
+                <td className="px-2"><input className={inp} value={r.employee_name} onChange={e => upd(i, 'employee_name', e.target.value)} placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Assigné à', 'Assigned to')} /></td>
+                <td className="px-2">
+                  <div className="flex items-center gap-1">
+                    <input type="number" step="0.01" className={`${inp} w-20`} value={r.km_rate_override} onChange={e => upd(i, 'km_rate_override', e.target.value)} placeholder={tr('Global', 'Global')} />
+                    <span className="text-xs text-gray-400">/km</span>
+                  </div>
+                </td>
+                <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+              </tr>
+            ))}
+            {items.length === 0 && <tr><td colSpan={8} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {tr('Véhicules d\'entreprise fournis + personnels autorisés. Utilisés dans les feuilles de temps pour calculer les remboursements km.', 'Company vehicles provided + authorized personal vehicles. Used in timesheets to calculate km reimbursements.')}
+        </p>
+        <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+        </button>
+      </div>
+      {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
+
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+        <strong>{tr('Véhicule entreprise', 'Company vehicle')} :</strong> {tr('fourni par l\'employeur — 0 $ de remboursement à l\'employé dans la feuille de temps.', 'provided by employer — $0 reimbursement to employee in timesheet.')}<br />
+        <strong>{tr('Véhicule personnel autorisé', 'Authorized personal vehicle')} :</strong> {tr('employé utilise son véhicule — remboursé au taux km configuré.', 'employee uses own vehicle — reimbursed at configured km rate.')}
+      </div>
+
+      <VehicleTable
+        label={tr('Véhicules entreprise', 'Company vehicles')}
+        badge={tr(`${companyRows.length} véhicule(s)`, `${companyRows.length} vehicle(s)`)}
+        items={companyRows}
+        onAdd={addCompany}
+      />
+      <VehicleTable
+        label={tr('Véhicules personnels autorisés', 'Authorized personal vehicles')}
+        badge={tr(`${personalRows.length} véhicule(s)`, `${personalRows.length} vehicle(s)`)}
+        items={personalRows}
+        onAdd={addPersonal}
+      />
     </div>
   );
 }
