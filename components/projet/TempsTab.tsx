@@ -200,8 +200,8 @@ export function TempsTab({ tenant, projectId, initialActuals }: { tenant: string
                         </optgroup>
                       )}
                     </select>
-                    {e.vehicle_type === 'company' && <Building2 size={13} className="shrink-0 text-blue-500" title={tr('Entreprise — pas de remboursement', 'Company — no reimbursement')} />}
-                    {e.vehicle_type === 'personal' && <Car size={13} className="shrink-0 text-emerald-600" title={tr('Personnel — remboursement km', 'Personal — km reimbursement')} />}
+                    {e.vehicle_type === 'company' && <Building2 size={13} className="shrink-0 text-blue-500" />}
+                    {e.vehicle_type === 'personal' && <Car size={13} className="shrink-0 text-emerald-600" />}
                   </div>
                 </td>
                 <td className="px-2"><input type="number" step="0.01" onFocus={ev => ev.target.select()} className="inp w-24" value={e.materiel} onChange={ev => upd(i, 'materiel', +ev.target.value)} /></td>
