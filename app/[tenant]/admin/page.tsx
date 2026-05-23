@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car } from 'lucide-react';
+import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'vehicules' | 'profils' | 'abonnement' | 'facturation'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'abonnement' | 'facturation'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -25,6 +25,7 @@ export default function AdminPage() {
         <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
           {[
             { k: 'sites',      label: tr('Sites', 'Sites'),           icon: MapPin },
+            { k: 'clients',    label: tr('Clients', 'Clients'),       icon: Building2 },
             { k: 'vehicules',  label: tr('Véhicules', 'Vehicles'),    icon: Car },
             { k: 'profils',    label: tr('Employés', 'Employees'),    icon: Users },
             { k: 'abonnement', label: tr('Abonnement', 'Subscription'), icon: CreditCard },
@@ -41,6 +42,7 @@ export default function AdminPage() {
         </div>
 
         {tab === 'sites' && <Sites tenant={tenant} tr={tr} />}
+        {tab === 'clients' && <Clients tenant={tenant} tr={tr} />}
         {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
@@ -271,6 +273,163 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
           {tr('Pour modifier votre abonnement, contactez votre administrateur C-Secur360.', 'To modify your subscription, contact your C-Secur360 administrator.')}
         </p>
       </div>
+    </div>
+  );
+}
+
+function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type CRow = { id?: string; name: string; contact_name: string; contact_email: string; contact_phone: string; phone: string; email: string; address: string; city: string; province: string; postal_code: string; notes: string; active: boolean };
+  const empty = (): CRow => ({ name: '', contact_name: '', contact_email: '', contact_phone: '', phone: '', email: '', address: '', city: '', province: 'QC', postal_code: '', notes: '', active: true });
+  const [rows, setRows] = useState<CRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [form, setForm] = useState<CRow>(empty());
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('clients').select('*').eq('tenant_id', tenant).order('name');
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  function select(i: number) { setSelected(i); setForm({ ...rows[i] }); }
+  function deselect() { setSelected(null); setForm(empty()); }
+
+  async function save() {
+    if (!form.name.trim()) return;
+    setSaving(true); setNotice(null);
+    try {
+      const payload = { tenant_id: tenant, ...form };
+      if (form.id) { await supabase.from('clients').update(payload).eq('id', form.id); }
+      else { await supabase.from('clients').insert(payload); }
+      setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
+      deselect(); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
+    finally { setSaving(false); }
+  }
+
+  async function del(id: string) {
+    await supabase.from('clients').delete().eq('id', id);
+    deselect(); load();
+  }
+
+  const provinces = ['QC','ON','BC','AB','SK','MB','NB','NS','PE','NL','NT','YT','NU'];
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Liste */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <div><h2 className="font-bold">{tr('Répertoire clients', 'Client directory')}</h2>
+          <p className="text-xs text-gray-500">{tr('Prérempli automatiquement lors de la création de projets.', 'Auto-fills when creating projects.')}</p></div>
+          <button onClick={() => { deselect(); setForm(empty()); setSelected(-1); }}
+            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">
+            <Plus size={15} /> {tr('Nouveau', 'New')}
+          </button>
+        </div>
+        {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {rows.map((r, i) => (
+              <div key={r.id} onClick={() => select(i)}
+                className={`flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${selected === i ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 dark:bg-slate-700">
+                  <Building2 size={16} className="text-slate-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-sm">{r.name}</div>
+                  <div className="truncate text-xs text-gray-500">{[r.contact_name, r.city, r.province].filter(Boolean).join(' · ')}</div>
+                </div>
+                {!r.active && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 dark:bg-gray-700">{tr('Inactif', 'Inactive')}</span>}
+              </div>
+            ))}
+            {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">{tr('Aucun client. Crée-en un.', 'No client. Create one.')}</div>}
+          </div>
+        )}
+      </div>
+
+      {/* Fiche client */}
+      {selected !== null && (
+        <div className="h-fit space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold">{form.id ? tr('Modifier client', 'Edit client') : tr('Nouveau client', 'New client')}</h2>
+            <button onClick={deselect} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+          </div>
+          {notice && <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Entreprise *', 'Company *')}</label>
+            <input className={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Hydro-Québec" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Contact', 'Contact')}</label>
+              <input className={inp} value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="Jean Dupont" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Tél. direct', 'Direct phone')}</label>
+              <input className={inp} value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="514-555-0001" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel contact', 'Contact email')}</label>
+              <input type="email" className={inp} value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} placeholder="jean@exemple.com" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Tél. bureau', 'Office phone')}</label>
+              <input className={inp} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="514-555-0000" />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel facturation', 'Billing email')}</label>
+            <input type="email" className={inp} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="facturation@exemple.com" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Adresse', 'Address')}</label>
+            <input className={inp} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 rue Principale" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Ville', 'City')}</label>
+              <input className={inp} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Montréal" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Province</label>
+              <select className={inp} value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))}>
+                {provinces.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Code postal', 'Postal code')}</label>
+            <input className={`${inp} uppercase`} value={form.postal_code} onChange={e => setForm(f => ({ ...f, postal_code: e.target.value.toUpperCase() }))} placeholder="H1A 2B3" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Notes</label>
+            <textarea className={inp} rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.active} onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
+            {tr('Client actif', 'Active client')}
+          </label>
+          <div className="flex gap-2 pt-1">
+            <button onClick={save} disabled={saving || !form.name.trim()}
+              className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
+            </button>
+            {form.id && (
+              <button onClick={() => del(form.id!)}
+                className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

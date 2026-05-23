@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   FolderKanban, Plus, Search, Building2, MapPin, Calendar,
-  FileText, X, DollarSign, Hash, Loader2, Download,
+  FileText, X, DollarSign, Hash, Loader2, Download, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
+
+type Client = { id: string; name: string; contact_name: string; contact_phone: string; email: string; address: string; city: string; province: string };
 
 type Project = {
   id: string;
@@ -50,6 +52,39 @@ export default function ProjectsPage() {
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Client search
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientQuery, setClientQuery] = useState('');
+  const [showClientDrop, setShowClientDrop] = useState(false);
+  const clientRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase.from('clients').select('id,name,contact_name,contact_phone,email,address,city,province').eq('tenant_id', tenant).eq('active', true).order('name')
+      .then(({ data }) => setClients(data || []));
+  }, [tenant]);
+
+  const filteredClients = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return clients.slice(0, 8);
+    return clients.filter(c => [c.name, c.contact_name, c.city].some(v => v?.toLowerCase().includes(q))).slice(0, 8);
+  }, [clients, clientQuery]);
+
+  function pickClient(c: Client) {
+    setForm(f => ({
+      ...f,
+      client_name: c.name,
+      location: c.city ? `${c.city}${c.province ? ', ' + c.province : ''}` : f.location,
+    }));
+    setClientQuery(c.name);
+    setShowClientDrop(false);
+  }
+
+  useEffect(() => {
+    function close(e: MouseEvent) { if (clientRef.current && !clientRef.current.contains(e.target as Node)) setShowClientDrop(false); }
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
 
   useEffect(() => {
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
@@ -139,6 +174,7 @@ export default function ProjectsPage() {
       setSaving(false);
       setShowForm(false);
       setForm({ ...emptyForm });
+      setClientQuery('');
     }
   }
 
@@ -276,7 +312,29 @@ export default function ProjectsPage() {
                   <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="inp" placeholder="Inspection transfo…" />
                 </Field>
                 <Field label="Client">
-                  <input value={form.client_name} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} className="inp" placeholder="Hydro…" />
+                  <div ref={clientRef} className="relative">
+                    <div className="relative">
+                      <input
+                        value={clientQuery}
+                        onChange={e => { setClientQuery(e.target.value); setForm(f => ({ ...f, client_name: e.target.value })); setShowClientDrop(true); }}
+                        onFocus={() => setShowClientDrop(true)}
+                        className="inp w-full pr-6"
+                        placeholder="Rechercher client…"
+                      />
+                      <ChevronDown size={13} className="pointer-events-none absolute right-2 top-2.5 text-slate-400" />
+                    </div>
+                    {showClientDrop && filteredClients.length > 0 && (
+                      <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                        {filteredClients.map(c => (
+                          <button key={c.id} type="button" onMouseDown={() => pickClient(c)}
+                            className="flex w-full flex-col px-3 py-2 text-left hover:bg-slate-50">
+                            <span className="text-sm font-semibold text-slate-800">{c.name}</span>
+                            <span className="text-xs text-slate-400">{[c.contact_name, c.city].filter(Boolean).join(' · ')}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </Field>
                 <Field label="Lieu">
                   <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="inp" placeholder="Sherbrooke" />

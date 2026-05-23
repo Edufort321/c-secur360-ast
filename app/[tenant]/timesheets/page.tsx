@@ -1,7 +1,280 @@
 'use client';
 
-import { ModulePlaceholder } from '@/components/ModulePlaceholder';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import {
+  Clock, Plus, ChevronRight, CheckCircle, XCircle,
+  AlertCircle, DollarSign, Loader2, Calendar, User, Send,
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { PortalHeader } from '@/components/PortalHeader';
+
+type Sheet = {
+  id: string; employee_name: string; employee_email: string;
+  period_start: string; period_end: string; status: string;
+  total_regular: number; total_overtime: number; total_premium: number;
+  total_km: number; total_km_personal: number; total_amount: number;
+  submitted_at: string | null; approved_at: string | null;
+  approved_by: string | null; rejection_note: string | null;
+};
+
+const STATUS: Record<string, { label: string; cls: string; icon: any }> = {
+  draft:     { label: 'Brouillon',  cls: 'bg-slate-100 text-slate-600',    icon: Clock },
+  submitted: { label: 'Soumis',     cls: 'bg-amber-100 text-amber-700',    icon: Send },
+  approved:  { label: 'Approuvé',   cls: 'bg-emerald-100 text-emerald-700',icon: CheckCircle },
+  rejected:  { label: 'Refusé',     cls: 'bg-red-100 text-red-700',        icon: XCircle },
+  paid:      { label: 'Payé',       cls: 'bg-blue-100 text-blue-700',      icon: DollarSign },
+};
+
+const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
+const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
+
+function weekStart(d = new Date()) {
+  const day = d.getDay(); const diff = (day === 0 ? -6 : 1 - day);
+  const mon = new Date(d); mon.setDate(d.getDate() + diff);
+  return mon.toISOString().slice(0, 10);
+}
+function weekEnd(start: string) {
+  const d = new Date(start + 'T00:00:00'); d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
 
 export default function TimesheetsPage() {
-  return <ModulePlaceholder titleFr="Feuille de temps (paie)" titleEn="Timesheets (payroll)" />;
+  const params = useParams();
+  const tenant = (params?.tenant as string) || 'demo';
+
+  const [sheets, setSheets] = useState<Sheet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
+  const [employeeFilter, setEmployeeFilter] = useState('');
+  const [isSupervisor] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('timesheets')
+      .select('*').eq('tenant_id', tenant)
+      .order('period_start', { ascending: false });
+    setSheets(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [tenant]); // eslint-disable-line
+
+  async function createNew() {
+    setCreating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const start = weekStart(); const end = weekEnd(start);
+      const { data: existing } = await supabase.from('timesheets')
+        .select('id').eq('tenant_id', tenant).eq('employee_id', user?.id || 'local')
+        .eq('period_start', start).maybeSingle();
+      if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
+      const { data, error } = await supabase.from('timesheets').insert({
+        tenant_id: tenant, employee_id: user?.id || 'local',
+        employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+        period_start: start, period_end: end, status: 'draft',
+      }).select().single();
+      if (error) throw error;
+      window.location.href = `/${tenant}/timesheets/${data.id}`;
+    } catch { setCreating(false); }
+  }
+
+  const employees = useMemo(() => [...new Set(sheets.map(s => s.employee_name))].sort(), [sheets]);
+  const years = useMemo(() => [...new Set(sheets.map(s => new Date(s.period_start).getFullYear()))].sort((a, b) => b - a), [sheets]);
+
+  const filtered = useMemo(() => sheets.filter(s => {
+    if (new Date(s.period_start).getFullYear() !== yearFilter) return false;
+    if (employeeFilter && s.employee_name !== employeeFilter) return false;
+    return true;
+  }), [sheets, yearFilter, employeeFilter]);
+
+  const ytd = useMemo(() => filtered.reduce((acc, s) => ({
+    hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
+    km:  acc.km  + Number(s.total_km_personal),
+    amt: acc.amt + Number(s.total_amount),
+    pending: acc.pending + (s.status === 'submitted' ? 1 : 0),
+  }), { hrs: 0, km: 0, amt: 0, pending: 0 }), [filtered]);
+
+  const pendingApproval = useMemo(() => sheets.filter(s => s.status === 'submitted'), [sheets]);
+
+  async function approve(id: string) {
+    await supabase.from('timesheets').update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: 'supervisor' }).eq('id', id);
+    load();
+  }
+  async function reject(id: string) {
+    const note = prompt('Motif de refus :') || '';
+    if (!note) return;
+    await supabase.from('timesheets').update({ status: 'rejected', rejection_note: note }).eq('id', id);
+    load();
+  }
+
+  function exportPayroll() {
+    const approved = sheets.filter(s => s.status === 'approved');
+    if (!approved.length) { alert('Aucune feuille approuvée à exporter.'); return; }
+    const rows = [
+      ['Employé','Email','Période début','Période fin','Hrs rég','Hrs supp','Hrs maj','Km pers.','Montant total','Statut'].join(','),
+      ...approved.map(s => [`"${s.employee_name}"`,s.employee_email,s.period_start,s.period_end,
+        s.total_regular,s.total_overtime,s.total_premium,s.total_km_personal,s.total_amount,s.status].join(',')),
+    ].join('\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' })),
+      download: `paie_${yearFilter}_${tenant}.csv`,
+    });
+    a.click();
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      <PortalHeader tenant={tenant} />
+      <div className="w-full px-4 py-8 lg:px-6">
+        {/* En-tête */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-violet-600 text-white shadow-sm"><Clock size={22} /></div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Feuilles de temps</h1>
+              <p className="text-sm text-slate-500">Espace <span className="font-medium text-slate-700">{tenant}</span> · saisie, approbation, export paie</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {isSupervisor && (
+              <button onClick={exportPayroll} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <DollarSign size={16} /> Export paie CSV
+              </button>
+            )}
+            <button onClick={createNew} disabled={creating}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60">
+              {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={18} />} Nouvelle feuille
+            </button>
+          </div>
+        </div>
+
+        {/* Approbations en attente */}
+        {isSupervisor && pendingApproval.length > 0 && (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50">
+            <div className="border-b border-amber-200 px-4 py-3">
+              <h2 className="flex items-center gap-2 font-bold text-amber-800">
+                <AlertCircle size={16} /> {pendingApproval.length} feuille{pendingApproval.length > 1 ? 's' : ''} en attente d&apos;approbation
+              </h2>
+            </div>
+            <div className="divide-y divide-amber-100">
+              {pendingApproval.map(s => (
+                <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <User size={14} className="text-amber-600" />
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-amber-900">{s.employee_name}</span>
+                    <span className="ml-2 text-xs text-amber-700">{fmt(s.period_start)} – {fmt(s.period_end)}</span>
+                  </div>
+                  <span className="text-sm font-medium text-amber-800">{money(Number(s.total_amount))}</span>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => approve(s.id)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Approuver</button>
+                    <button onClick={() => reject(s.id)} className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Refuser</button>
+                    <Link href={`/${tenant}/timesheets/${s.id}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Voir</Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats annuelles */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { k: 'Heures totales',        v: `${ytd.hrs.toFixed(1)} h`, c: 'text-slate-900' },
+            { k: 'Km remboursables',      v: `${ytd.km.toFixed(0)} km`, c: 'text-emerald-600' },
+            { k: 'Montant total',          v: money(ytd.amt),            c: 'text-violet-600' },
+            { k: 'En attente approbation', v: String(ytd.pending),       c: 'text-amber-600' },
+          ].map(s => (
+            <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className={`text-2xl font-bold ${s.c}`}>{s.v}</div>
+              <div className="text-xs text-slate-500">{s.k}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filtres */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            {(years.length ? years : [new Date().getFullYear()]).map(y => (
+              <button key={y} onClick={() => setYearFilter(y)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${yearFilter === y ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                {y}
+              </button>
+            ))}
+          </div>
+          {isSupervisor && employees.length > 1 && (
+            <select value={employeeFilter} onChange={e => setEmployeeFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
+              <option value="">Tous les employés</option>
+              {employees.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Liste */}
+        {loading ? (
+          <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16"><Loader2 className="animate-spin text-slate-400" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Clock size={26} /></div>
+            <p className="font-medium text-slate-700">Aucune feuille de temps</p>
+            <button onClick={createNew} disabled={creating} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700">
+              <Plus size={18} /> Nouvelle feuille
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-4 py-3">Employé</th><th className="px-4 py-3">Période</th>
+                  <th className="px-4 py-3">Heures</th><th className="px-4 py-3">Km pers.</th>
+                  <th className="px-4 py-3">Montant</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(s => {
+                  const st = STATUS[s.status] || STATUS.draft;
+                  const Icon = st.icon;
+                  const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
+                  return (
+                    <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="grid h-7 w-7 place-items-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
+                            {(s.employee_name || '?')[0].toUpperCase()}
+                          </div>
+                          <span className="font-medium">{s.employee_name || s.employee_email}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        <div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />{fmt(s.period_start)} – {fmt(s.period_end)}</div>
+                      </td>
+                      <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
+                      <td className="px-4 py-3 text-slate-600">{Number(s.total_km_personal).toFixed(0)} km</td>
+                      <td className="px-4 py-3 font-semibold text-violet-700">{money(Number(s.total_amount))}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
+                          <Icon size={11} /> {st.label}
+                        </span>
+                        {s.rejection_note && <div className="mt-0.5 text-xs text-red-500">{s.rejection_note}</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link href={`/${tenant}/timesheets/${s.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                          Ouvrir <ChevronRight size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
