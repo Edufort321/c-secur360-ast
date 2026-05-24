@@ -1710,7 +1710,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     fontWeight: '500',
                     lineHeight: 1.4
                   }}>
-                    ⚠¡ {label}
+                    ⚠️ {label}
                   </span>
                 </div>
               ))}

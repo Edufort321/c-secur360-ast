@@ -704,6 +704,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [sectionValidation, setSectionValidation] = useState<Record<string, boolean>>({});
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [expandedView, setExpandedView] = useState(!compactMode);
+  const [showMenu, setShowMenu] = useState(false);
   
   // ✅ FIX CRITIQUE: État pour forcer la non-lecture seule
   const [forceEditable, setForceEditable] = useState(true);
@@ -1248,44 +1249,6 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         margin: '0 auto'
       }}>
         
-        {/* ✅ FIX: Indicateur de mode éditable pour debug */}
-        {!isActuallyReadOnly && (
-          <div style={{
-            position: 'fixed',
-            top: '10px',
-            right: '10px',
-            backgroundColor: '#10b981',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: '600',
-            zIndex: 9999,
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-          }}>
-            ✏️ MODE ÉDITABLE ACTIF
-          </div>
-        )}
-        
-        {/* SafetyManager Status */}
-        {isSafetyManagerEnabled && (
-          <div style={{
-            position: 'fixed',
-            top: '10px',
-            left: '10px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: '600',
-            zIndex: 9999,
-            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-          }}>
-            ✅ SAFETYMANAGER CONNECTÉ
-          </div>
-        )}
-        
         {/* En-tête principal */}
         <div style={{
           ...actualStyles.card,
@@ -1357,155 +1320,99 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
                   {texts.subtitle}
                 </p>
                 
-                <div style={{
-                  marginTop: '16px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '12px'
-                }}>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    color: '#86efac'
-                  }}>
-                    <CheckCircle style={{ width: '16px', height: '16px' }} />
-                    {texts.complianceNote} {actualRegulations[selectedProvince].authority}
-                  </div>
-                  
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: `rgba(${isSafetyManagerEnabled ? '59, 130, 246' : '156, 163, 175'}, 0.2)`,
-                    border: `1px solid rgba(${isSafetyManagerEnabled ? '59, 130, 246' : '156, 163, 175'}, 0.3)`,
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    color: isSafetyManagerEnabled ? '#93c5fd' : '#9ca3af'
-                  }}>
-                    <Activity style={{ width: '16px', height: '16px' }} />
-                    {isSafetyManagerEnabled ? texts.safetyManager : texts.basicMode}
-                  </div>
-                  
-                  {/* ✅ FIX: Indicateur Auto-save avec statut */}
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: `rgba(${enableAutoSave ? '251, 191, 36' : '156, 163, 175'}, 0.2)`,
-                    border: `1px solid rgba(${enableAutoSave ? '251, 191, 36' : '156, 163, 175'}, 0.3)`,
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    color: enableAutoSave ? '#fcd34d' : '#9ca3af'
-                  }}>
-                    <Save style={{ width: '16px', height: '16px' }} />
-                    Auto-save: {enableAutoSave ? 'ON' : 'OFF'}
-                  </div>
-                  
-                  {showAdvancedFeatures && (
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      background: 'rgba(139, 92, 246, 0.2)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#c4b5fd'
-                    }}>
-                      <Star style={{ width: '16px', height: '16px' }} />
-                      {texts.advancedFeatures}
-                    </div>
-                  )}
-                  
-                  {saveStatus === 'saved' && (
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      background: 'rgba(16, 185, 129, 0.2)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#86efac'
-                    }}>
-                      <Save style={{ width: '16px', height: '16px' }} />
-                      {texts.status.saved}
-                    </div>
-                  )}
-                  
-                  {saveStatus === 'autoSaving' && (
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 16px',
-                      background: 'rgba(251, 191, 36, 0.2)',
-                      border: '1px solid rgba(251, 191, 36, 0.3)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#fcd34d'
-                    }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid #fcd34d',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }} />
-                      {texts.status.autoSaving}
-                    </div>
-                  )}
-                </div>
               </div>
-              
-              {/* Actions rapides */}
+
+              {/* Actions header */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                flexDirection: actualIsMobile ? 'column' : 'row'
+                gap: '8px',
+                flexShrink: 0
               }}>
-                <button
-                  onClick={() => setExpandedView(!expandedView)}
-                  style={{
-                    ...actualStyles.button,
-                    background: 'rgba(75, 85, 99, 0.3)',
-                    border: '1px solid rgba(156, 163, 175, 0.3)',
-                    color: theme === 'dark' ? '#d1d5db' : '#374151',
-                    width: 'auto',
-                    padding: actualIsMobile ? '10px 16px' : '12px 20px'
-                  }}
-                >
-                  <Eye style={{ width: '16px', height: '16px' }} />
-                  {!actualIsMobile && (expandedView ? texts.compactView : texts.expandedView)}
-                </button>
-                
-                <button
-                  onClick={() => setShowManager(true)}
-                  style={{
-                    ...actualStyles.button,
-                    background: 'rgba(75, 85, 99, 0.3)',
-                    border: '1px solid rgba(156, 163, 175, 0.3)',
-                    color: theme === 'dark' ? '#d1d5db' : '#374151',
-                    width: 'auto',
-                    padding: actualIsMobile ? '10px 16px' : '12px 20px'
-                  }}
-                >
-                  <Wrench style={{ width: '16px', height: '16px' }} />
-                  {!actualIsMobile && texts.navigation.manager}
-                </button>
-                
+                {/* Save status indicator */}
+                {saveStatus === 'saved' && (
+                  <span style={{ fontSize: '13px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <CheckCircle style={{ width: '14px', height: '14px' }} />
+                    {texts.status.saved}
+                  </span>
+                )}
+                {saveStatus === 'autoSaving' && (
+                  <span style={{ fontSize: '13px', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ width: '14px', height: '14px', border: '2px solid transparent', borderTop: '2px solid #fbbf24', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    {texts.status.autoSaving}
+                  </span>
+                )}
+
+                {/* Hamburger menu */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowMenu(v => !v)}
+                    style={{
+                      ...actualStyles.button,
+                      background: 'rgba(75, 85, 99, 0.3)',
+                      border: `1px solid rgba(156, 163, 175, ${showMenu ? '0.6' : '0.3'})`,
+                      color: theme === 'dark' ? '#d1d5db' : '#374151',
+                      width: 'auto',
+                      padding: '10px 14px',
+                      gap: '6px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ width: '16px', height: '2px', background: 'currentColor', borderRadius: '1px' }} />
+                      <div style={{ width: '16px', height: '2px', background: 'currentColor', borderRadius: '1px' }} />
+                      <div style={{ width: '16px', height: '2px', background: 'currentColor', borderRadius: '1px' }} />
+                    </div>
+                  </button>
+                  {showMenu && (
+                    <>
+                    <div onClick={() => setShowMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        right: 0,
+                        background: theme === 'dark' ? '#1f2937' : 'white',
+                        border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                        minWidth: '200px',
+                        zIndex: 100,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <button
+                        onClick={() => { setExpandedView(!expandedView); setShowMenu(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          width: '100%', padding: '12px 16px',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: theme === 'dark' ? '#d1d5db' : '#374151',
+                          fontSize: '14px', textAlign: 'left'
+                        }}
+                      >
+                        <Eye style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                        {expandedView ? texts.compactView : texts.expandedView}
+                      </button>
+                      <div style={{ height: '1px', background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }} />
+                      <button
+                        onClick={() => { setShowManager(true); setShowMenu(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          width: '100%', padding: '12px 16px',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: theme === 'dark' ? '#d1d5db' : '#374151',
+                          fontSize: '14px', textAlign: 'left'
+                        }}
+                      >
+                        <Wrench style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                        {texts.navigation.manager}
+                      </button>
+                    </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Save button */}
                 <button
                   onClick={() => savePermitData(true)}
                   disabled={isLoading || isActuallyReadOnly}
