@@ -1,366 +1,332 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import AccidentDeclarationSystem, { AccidentDeclaration } from '../../../components/AccidentDeclaration';
-import { getClientById } from '../../../data/clients';
-import { 
-  ArrowLeft, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
-  Shield
+import { createClient } from '@supabase/supabase-js';
+import {
+  ArrowLeft, Plus, AlertTriangle, Shield, Truck, Building2,
+  Activity, Clock, Filter, Search, ChevronRight,
 } from 'lucide-react';
+import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+interface IncidentRow {
+  id: string;
+  report_number: string;
+  incident_type: IncidentType;
+  province: string;
+  status: 'draft' | 'submitted' | 'closed';
+  created_at: string;
+  submitted_at: string | null;
+  data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string };
+}
+
+const TYPE_LABEL: Record<IncidentType, string> = {
+  accident:  'Accident de travail',
+  near_miss: 'Passé proche',
+  vehicle:   'Accident de véhicule',
+  property:  'Dommages matériels',
+  medical:   'Maladie professionnelle',
+};
+
+const TYPE_COLOR: Record<IncidentType, string> = {
+  accident:  'bg-red-100 text-red-700 border-red-200',
+  near_miss: 'bg-orange-100 text-orange-700 border-orange-200',
+  vehicle:   'bg-blue-100 text-blue-700 border-blue-200',
+  property:  'bg-purple-100 text-purple-700 border-purple-200',
+  medical:   'bg-yellow-100 text-yellow-700 border-yellow-200',
+};
+
+const TYPE_ICON: Record<IncidentType, React.ReactNode> = {
+  accident:  <AlertTriangle size={16} />,
+  near_miss: <Shield size={16} />,
+  vehicle:   <Truck size={16} />,
+  property:  <Building2 size={16} />,
+  medical:   <Activity size={16} />,
+};
+
+const STATUS_LABEL = { draft: 'Brouillon', submitted: 'Soumis', closed: 'Fermé' };
+const STATUS_COLOR = {
+  draft:     'bg-gray-100 text-gray-600',
+  submitted: 'bg-green-100 text-green-700',
+  closed:    'bg-slate-100 text-slate-600',
+};
+
+type FilterType = 'all' | IncidentType;
 
 export default function AccidentsPage() {
   const params = useParams();
   const tenant = params.tenant as string;
-  
-  const [client, setClient] = useState<any>(null);
-  const [declarations, setDeclarations] = useState<AccidentDeclaration[]>([]);
-  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  useEffect(() => {
-    // Charger les informations du client
-    const clientData = getClientById(tenant);
-    if (clientData) {
-      setClient(clientData);
-    }
+  const [reports, setReports] = useState<IncidentRow[]>([]);
+  const [counter, setCounter] = useState<DayCounter | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [search, setSearch] = useState('');
+  const [activeReport, setActiveReport] = useState<string | null | 'new'>(null);
+  const [defaultType, setDefaultType] = useState<IncidentType>('accident');
+  const [resetConfirm, setResetConfirm] = useState<'accident' | 'near_miss' | null>(null);
 
-    // Charger les déclarations existantes (mock data)
-    const mockDeclarations: AccidentDeclaration[] = [
-      {
-        id: 'decl_001',
-        organizationId: tenant,
-        type: 'workplace_accident',
-        province: 'QC',
-        status: 'submitted',
-        formData: {
-          basicInfo: {
-            accidentDate: '2024-01-15',
-            description: 'Chute de hauteur lors de travaux sur toiture'
-          }
-        },
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2024-01-15'),
-        submittedAt: new Date('2024-01-15'),
-        referenceNumber: 'AST-2024-001'
-      },
-      {
-        id: 'decl_002',
-        organizationId: tenant,
-        type: 'near_miss',
-        province: 'QC',
-        status: 'draft',
-        formData: {
-          basicInfo: {
-            incidentDate: '2024-01-20',
-            description: 'Presque collision avec équipement mobile'
-          }
-        },
-        createdAt: new Date('2024-01-20'),
-        updatedAt: new Date('2024-01-20')
-      }
-    ];
-    setDeclarations(mockDeclarations);
+  const load = useCallback(async () => {
+    if (!supabase) { setLoading(false); return; }
+    setLoading(true);
+
+    const [{ data: rows }, { data: cnt }] = await Promise.all([
+      supabase.from('incident_reports').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }),
+      supabase.from('incident_day_counters').select('*').eq('tenant_id', tenant).single(),
+    ]);
+
+    setReports((rows as IncidentRow[]) ?? []);
+    setCounter(cnt as DayCounter | null);
+    setLoading(false);
   }, [tenant]);
 
-  const handleSaveDeclaration = (declaration: AccidentDeclaration) => {
-    console.log('Sauvegarde déclaration:', declaration);
-    // Sauvegarder en base de données
-    setDeclarations(prev => {
-      const existing = prev.find(d => d.id === declaration.id);
-      if (existing) {
-        return prev.map(d => d.id === declaration.id ? declaration : d);
-      } else {
-        return [...prev, declaration];
-      }
-    });
-    alert('Déclaration sauvegardée avec succès');
-  };
+  useEffect(() => { load(); }, [load]);
 
-  const handleSubmitDeclaration = (declaration: AccidentDeclaration) => {
-    console.log('Soumission déclaration:', declaration);
-    // Soumettre aux autorités compétentes
-    const updatedDeclaration = {
-      ...declaration,
-      status: 'submitted' as const,
-      submittedAt: new Date(),
-      referenceNumber: `AST-${new Date().getFullYear()}-${String(declarations.length + 1).padStart(3, '0')}`
-    };
-    
-    setDeclarations(prev => {
-      const existing = prev.find(d => d.id === declaration.id);
-      if (existing) {
-        return prev.map(d => d.id === declaration.id ? updatedDeclaration : d);
-      } else {
-        return [...prev, updatedDeclaration];
-      }
-    });
-    
-    setShowCreateForm(false);
-    alert(`Déclaration soumise avec succès!\nNuméro de référence: ${updatedDeclaration.referenceNumber}`);
-  };
+  async function handleReset(type: 'accident' | 'near_miss') {
+    if (!supabase) return;
+    const today = new Date().toISOString().split('T')[0];
+    const field = type === 'near_miss' ? 'last_near_miss_date' : 'last_accident_date';
+    const recordField = type === 'near_miss' ? 'near_miss_record_days' : 'accident_record_days';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return '#6b7280';
-      case 'pending': return '#f59e0b';
-      case 'submitted': return '#3b82f6';
-      case 'approved': return '#10b981';
-      case 'rejected': return '#ef4444';
-      default: return '#6b7280';
+    if (counter) {
+      const lastDate: string | null = counter[field];
+      const prevRecord: number = counter[recordField] ?? 0;
+      const daysSince = lastDate ? Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000) : 0;
+      await supabase!.from('incident_day_counters').update({
+        [field]: today,
+        [recordField]: Math.max(prevRecord, daysSince),
+        updated_at: new Date().toISOString(),
+      }).eq('tenant_id', tenant);
+    } else {
+      await supabase!.from('incident_day_counters').insert({
+        tenant_id: tenant,
+        [field]: today,
+        [recordField]: 0,
+        updated_at: new Date().toISOString(),
+      });
     }
-  };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return 'Brouillon';
-      case 'pending': return 'En attente';
-      case 'submitted': return 'Soumise';
-      case 'approved': return 'Approuvée';
-      case 'rejected': return 'Rejetée';
-      default: return status;
-    }
-  };
+    setResetConfirm(null);
+    load();
+  }
 
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case 'workplace_accident': return 'Accident de travail';
-      case 'near_miss': return 'Événement sans blessure';
-      case 'vehicle_accident': return 'Accident de véhicule';
-      case 'first_aid': return 'Premiers secours';
-      default: return type;
-    }
-  };
+  function newReport(type: IncidentType) {
+    setDefaultType(type);
+    setActiveReport('new');
+  }
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'workplace_accident': return AlertTriangle;
-      case 'near_miss': return Shield;
-      case 'vehicle_accident': return FileText;
-      case 'first_aid': return CheckCircle;
-      default: return FileText;
-    }
-  };
+  function openReport(id: string) {
+    setActiveReport(id);
+  }
 
-  if (showCreateForm) {
+  if (activeReport !== null) {
     return (
-      <AccidentDeclarationSystem
-        organizationId={tenant}
-        userProvinces={client?.provinces || ['QC']}
-        currentProvince={client?.currentProvince}
-        onSave={handleSaveDeclaration}
-        onSubmit={handleSubmitDeclaration}
+      <IncidentReportForm
+        tenant={tenant}
+        reportId={activeReport === 'new' ? undefined : activeReport}
+        defaultType={defaultType}
+        onClose={() => { setActiveReport(null); load(); }}
+        onSaved={() => {}}
       />
     );
   }
 
+  const filtered = reports.filter(r => {
+    if (filter !== 'all' && r.incident_type !== filter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        r.report_number.toLowerCase().includes(q) ||
+        TYPE_LABEL[r.incident_type].toLowerCase().includes(q) ||
+        (r.data?.description ?? '').toLowerCase().includes(q) ||
+        (r.data?.reportedBy ?? '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      color: 'white',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div style={{
-        padding: '24px',
-        borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
-        background: 'rgba(15, 23, 42, 0.8)'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link href={`/${tenant}/dashboard`} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#94a3b8',
-              textDecoration: 'none',
-              fontSize: '14px'
-            }}>
-              <ArrowLeft size={16} />
-              Retour au dashboard
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link href={`/${tenant}/dashboard`} className="text-gray-500 hover:text-gray-700">
+              <ArrowLeft size={20} />
             </Link>
-            
-            <h1 style={{
-              fontSize: '28px',
-              fontWeight: 'bold',
-              margin: 0,
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Déclarations d'Accidents
-            </h1>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Incidents & Accidents</h1>
+              <p className="text-xs text-gray-400">Déclarations, analyses et décompte sécuritaire</p>
+            </div>
           </div>
-          
-          <button
-            onClick={() => setShowCreateForm(true)}
-            style={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <AlertTriangle size={20} />
-            Nouvelle Déclaration
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => newReport('near_miss')}
+              className="flex items-center gap-1.5 text-sm px-3 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-lg font-medium"
+            >
+              <Shield size={15} />
+              Passé proche
+            </button>
+            <button
+              onClick={() => newReport('accident')}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+            >
+              <Plus size={15} />
+              Nouveau rapport
+            </button>
+          </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
-        {/* Statistiques */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '24px',
-          marginBottom: '32px'
-        }}>
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.6)',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', color: '#94a3b8', fontSize: '14px' }}>
-              Total déclarations
-            </h3>
-            <p style={{ margin: 0, fontSize: '32px', fontWeight: 'bold', color: '#e2e8f0' }}>
-              {declarations.length}
-            </p>
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        {/* Day counters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DaySafetyCounter
+            label="jours sans accident"
+            lastDate={counter?.last_accident_date ?? null}
+            recordDays={counter?.accident_record_days ?? 0}
+            color="green"
+            onReset={() => setResetConfirm('accident')}
+          />
+          <DaySafetyCounter
+            label="jours sans passé proche"
+            lastDate={counter?.last_near_miss_date ?? null}
+            recordDays={counter?.near_miss_record_days ?? 0}
+            color="orange"
+            onReset={() => setResetConfirm('near_miss')}
+          />
+        </div>
+
+        {/* Reset confirm modal */}
+        {resetConfirm && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+              <AlertTriangle className="text-red-500 mb-3" size={32} />
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Réinitialiser le compteur</h3>
+              <p className="text-sm text-gray-500 mb-5">
+                Ceci enregistre aujourd'hui comme date du dernier {resetConfirm === 'accident' ? 'accident' : 'passé proche'} et remet le compteur à zéro. Le record précédent sera conservé.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setResetConfirm(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600">
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleReset(resetConfirm)}
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-medium"
+                >
+                  Confirmer la réinitialisation
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.6)',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', color: '#94a3b8', fontSize: '14px' }}>
-              En cours
-            </h3>
-            <p style={{ margin: 0, fontSize: '32px', fontWeight: 'bold', color: '#f59e0b' }}>
-              {declarations.filter(d => d.status === 'draft' || d.status === 'pending').length}
-            </p>
+        )}
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Total', value: reports.length, color: 'text-gray-700' },
+            { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
+            { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+              <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+              <div className="text-xs text-gray-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters + search */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex flex-wrap gap-3 mb-3">
+            {(['all', 'accident', 'near_miss', 'vehicle', 'property', 'medical'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  filter === f ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                {f === 'all' ? 'Tous' : TYPE_LABEL[f]}
+              </button>
+            ))}
           </div>
-          
-          <div style={{
-            background: 'rgba(30, 41, 59, 0.6)',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <h3 style={{ margin: '0 0 8px 0', color: '#94a3b8', fontSize: '14px' }}>
-              Soumises
-            </h3>
-            <p style={{ margin: 0, fontSize: '32px', fontWeight: 'bold', color: '#10b981' }}>
-              {declarations.filter(d => d.status === 'submitted' || d.status === 'approved').length}
-            </p>
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher par numéro, description…"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
           </div>
         </div>
 
-        {/* Liste des déclarations */}
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.6)',
-          borderRadius: '16px',
-          border: '1px solid rgba(100, 116, 139, 0.3)',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            padding: '24px',
-            borderBottom: '1px solid rgba(100, 116, 139, 0.3)'
-          }}>
-            <h2 style={{ margin: 0, fontSize: '20px' }}>
-              Historique des déclarations
-            </h2>
+        {/* List */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">
+              {filtered.length} rapport{filtered.length !== 1 ? 's' : ''}
+            </span>
           </div>
-          
-          {declarations.length === 0 ? (
-            <div style={{
-              padding: '48px',
-              textAlign: 'center',
-              color: '#94a3b8'
-            }}>
-              <AlertTriangle size={48} style={{ marginBottom: '16px' }} />
-              <h3 style={{ margin: '0 0 8px 0' }}>Aucune déclaration</h3>
-              <p style={{ margin: 0 }}>
-                Cliquez sur "Nouvelle Déclaration" pour commencer
+
+          {loading ? (
+            <div className="py-16 text-center text-sm text-gray-400">Chargement…</div>
+          ) : filtered.length === 0 ? (
+            <div className="py-16 text-center">
+              <AlertTriangle size={40} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-sm text-gray-400">
+                {search || filter !== 'all' ? 'Aucun résultat' : 'Aucun rapport enregistré'}
               </p>
+              {!search && filter === 'all' && (
+                <button
+                  onClick={() => newReport('accident')}
+                  className="mt-4 text-sm text-red-600 hover:underline"
+                >
+                  Créer le premier rapport
+                </button>
+              )}
             </div>
           ) : (
-            <div style={{ padding: '24px' }}>
-              <div style={{
-                display: 'grid',
-                gap: '16px'
-              }}>
-                {declarations.map((declaration) => {
-                  const TypeIcon = getTypeIcon(declaration.type);
-                  return (
-                    <div
-                      key={declaration.id}
-                      style={{
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(100, 116, 139, 0.3)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <TypeIcon size={24} style={{ color: getStatusColor(declaration.status) }} />
-                        
-                        <div>
-                          <h4 style={{ margin: '0 0 4px 0', fontSize: '16px' }}>
-                            {getTypeText(declaration.type)}
-                          </h4>
-                          <p style={{ margin: '0 0 4px 0', color: '#94a3b8', fontSize: '14px' }}>
-                            {declaration.referenceNumber || declaration.id}
-                          </p>
-                          <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>
-                            Créé le {declaration.createdAt.toLocaleDateString('fr-CA')}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{
-                          background: getStatusColor(declaration.status),
-                          color: 'white',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          marginBottom: '8px'
-                        }}>
-                          {getStatusText(declaration.status)}
-                        </div>
-                        <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>
-                          Province: {declaration.province}
-                        </p>
-                      </div>
+            <div className="divide-y divide-gray-100">
+              {filtered.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => openReport(r.id)}
+                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${TYPE_COLOR[r.incident_type]}`}>
+                    {TYPE_ICON[r.incident_type]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                      <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${TYPE_COLOR[r.incident_type]}`}>
+                        {TYPE_LABEL[r.incident_type]}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
+                        {STATUS_LABEL[r.status]}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {r.data?.incidentDate ?? ''}{r.data?.address ? ` · ${r.data.address}` : ''}
+                      {r.data?.reportedBy ? ` · ${r.data.reportedBy}` : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-400 shrink-0">
+                    <Clock size={13} />
+                    <span className="text-xs">
+                      {new Date(r.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <ChevronRight size={15} className="ml-1" />
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>
