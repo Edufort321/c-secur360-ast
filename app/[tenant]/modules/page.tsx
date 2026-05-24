@@ -60,9 +60,9 @@ export default function ModulesPage() {
           pr.amount += Number(p.po_amount || 0);
         });
 
-        const { data: asts } = await supabase.from('ast_forms').select('status').eq('tenant_id', tenant);
-        const a = { total: 0, draft: 0, in_progress: 0, completed: 0, approved: 0 } as any;
-        (asts || []).forEach((x: any) => { a.total += 1; if (a[x.status] !== undefined) a[x.status] += 1; });
+        const { data: asts } = await supabase.from('ast_permits').select('data').eq('tenant_id', tenant);
+        const a = { total: 0, draft: 0, active: 0, completed: 0, cancelled: 0 } as any;
+        (asts || []).forEach((x: any) => { a.total += 1; const s = x.data?.status || 'draft'; if (a[s] !== undefined) a[s] += 1; });
 
         const { data: permits } = await supabase.from('confined_space_permits').select('status');
         const pm = { total: 0, active: 0 };

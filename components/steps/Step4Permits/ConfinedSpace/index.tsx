@@ -4,8 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapPin, Wind, Users, Shield, CheckCircle, Menu, X, Save, Download,
   Printer, History, Plus, ChevronRight, AlertTriangle, Clock, Home,
-  FileText, BarChart3
+  FileText, BarChart3, QrCode,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
 import { ProvinceCode, ConfinedSpacePermit, generatePermitNumber, generateId } from './SafetyManager';
 import SiteInformation from './SiteInformation';
@@ -460,10 +461,10 @@ export default function ConfinedSpace({
   };
 
   return (
-    <div className="flex flex-col bg-slate-50" style={{ minHeight: 'calc(100vh - 64px)' }}>
+    <div className="flex flex-col bg-slate-50 dark:bg-slate-900" style={{ minHeight: 'calc(100vh - 64px)' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
 
         {/* Row 1: breadcrumb + permit info + menu */}
         <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
@@ -471,7 +472,7 @@ export default function ConfinedSpace({
             <button
               type="button"
               onClick={onCancel}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shrink-0"
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">{t.back}</span>
@@ -482,8 +483,8 @@ export default function ConfinedSpace({
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="w-5 h-5 text-blue-600 shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-base font-semibold text-slate-900 truncate">{t.title}</h1>
-              <p className="text-xs text-slate-500 truncate">{permit.permit_number}</p>
+              <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate">{t.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{permit.permit_number}</p>
             </div>
           </div>
 
@@ -494,7 +495,7 @@ export default function ConfinedSpace({
             </span>
 
             {/* Completion */}
-            <span className="hidden md:flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <BarChart3 className="w-3.5 h-3.5" />
               {completion}%
             </span>
@@ -517,44 +518,44 @@ export default function ConfinedSpace({
               <button
                 type="button"
                 onClick={() => setMenuOpen(v => !v)}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600"
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
                 aria-label="Menu"
               >
                 {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-lg py-1 z-50">
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg py-1 z-50">
                   <button type="button" onClick={() => { handleSaveNow(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <Save className="w-4 h-4 text-slate-400" />
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Save className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     {t.menu.saveNow}
                   </button>
-                  <hr className="my-1 border-slate-100" />
+                  <hr className="my-1 border-slate-100 dark:border-slate-700" />
                   <button type="button" onClick={() => { exportJson(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <Download className="w-4 h-4 text-slate-400" />
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Download className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     {t.menu.exportJson}
                   </button>
                   <button type="button" onClick={() => { exportCsv(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <Download className="w-4 h-4 text-slate-400" />
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Download className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     {t.menu.exportCsv}
                   </button>
                   <button type="button" onClick={() => { window.print(); setMenuOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <Printer className="w-4 h-4 text-slate-400" />
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Printer className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     {t.menu.print}
                   </button>
-                  <hr className="my-1 border-slate-100" />
+                  <hr className="my-1 border-slate-100 dark:border-slate-700" />
                   <button type="button" onClick={() => {
                     const newPermit = createDefaultPermit(activeProvince);
                     setPermit(newPermit);
                     setSection('site');
                     setMenuOpen(false);
                   }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                    <Plus className="w-4 h-4 text-slate-400" />
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Plus className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     {t.menu.newPermit}
                   </button>
                 </div>
@@ -573,7 +574,7 @@ export default function ConfinedSpace({
               className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                 section === s.id
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-500'
               }`}
             >
               {s.icon}
@@ -582,13 +583,13 @@ export default function ConfinedSpace({
           ))}
           {/* Progress bar slot */}
           <div className="ml-auto hidden md:flex items-center gap-2 pb-2 shrink-0">
-            <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 rounded-full transition-all"
                 style={{ width: `${completion}%` }}
               />
             </div>
-            <span className="text-xs text-slate-500">{completion}%</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{completion}%</span>
           </div>
         </div>
       </header>
@@ -643,6 +644,7 @@ export default function ConfinedSpace({
               permit={permit}
               completion={completion}
               readOnly={readOnly}
+              tenant={tenant}
               onUpdate={updatePermit}
               onSave={handleSaveNow}
             />
@@ -659,11 +661,12 @@ interface FinalizationProps {
   permit: ConfinedSpacePermit;
   completion: number;
   readOnly: boolean;
+  tenant: string;
   onUpdate: (updater: (p: ConfinedSpacePermit) => ConfinedSpacePermit) => void;
   onSave: () => void;
 }
 
-function FinalizationSection({ language, permit, completion, readOnly, onUpdate, onSave }: FinalizationProps) {
+function FinalizationSection({ language, permit, completion, readOnly, tenant, onUpdate, onSave }: FinalizationProps) {
   const t = T[language].finalization;
   const statusT = T[language].status;
 
@@ -674,10 +677,10 @@ function FinalizationSection({ language, permit, completion, readOnly, onUpdate,
     onUpdate(p => ({ ...p, status }));
 
   const Card = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
         <span className="text-blue-600">{icon}</span>
-        <h3 className="font-semibold text-slate-800">{title}</h3>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
       </div>
       <div className="p-5">{children}</div>
     </div>
@@ -694,7 +697,7 @@ function FinalizationSection({ language, permit, completion, readOnly, onUpdate,
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={readOnly}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
+        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
       />
     </div>
   );
@@ -712,18 +715,18 @@ function FinalizationSection({ language, permit, completion, readOnly, onUpdate,
       {/* Progress */}
       <Card title={t.validation} icon={<BarChart3 className="w-5 h-5" />}>
         <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden">
+          <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${completion >= 80 ? 'bg-green-500' : completion >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
               style={{ width: `${completion}%` }}
             />
           </div>
-          <span className="text-lg font-bold text-slate-800 w-12 text-right">{completion}%</span>
+          <span className="text-lg font-bold text-slate-800 dark:text-slate-100 w-12 text-right">{completion}%</span>
         </div>
         {warnings.length > 0 && (
           <div className="space-y-2">
             {warnings.map((w, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+              <div key={i} className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{w}</span>
               </div>
@@ -766,36 +769,36 @@ function FinalizationSection({ language, permit, completion, readOnly, onUpdate,
       <Card title={t.permittedWork} icon={<FileText className="w-5 h-5" />}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">{t.permittedWork}</label>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t.permittedWork}</label>
             <textarea
               value={(permit as any).permitted_work ?? ''}
               onChange={e => field('permitted_work', e.target.value)}
               placeholder={t.permittedWorkPh}
               rows={3}
               disabled={readOnly}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50"
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">{t.restrictions}</label>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t.restrictions}</label>
             <textarea
               value={(permit as any).restrictions ?? ''}
               onChange={e => field('restrictions', e.target.value)}
               placeholder={t.restrictionsPh}
               rows={3}
               disabled={readOnly}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50"
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-1">{t.notes}</label>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{t.notes}</label>
             <textarea
               value={(permit as any).finalization_notes ?? ''}
               onChange={e => field('finalization_notes', e.target.value)}
               placeholder={t.notesPlaceholder}
               rows={3}
               disabled={readOnly}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50"
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none resize-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
             />
           </div>
         </div>
@@ -837,13 +840,60 @@ function FinalizationSection({ language, permit, completion, readOnly, onUpdate,
           <button
             type="button"
             onClick={onSave}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors"
           >
             <Save className="w-4 h-4" />
             {language === 'fr' ? 'Enregistrer' : 'Save'}
           </button>
         </div>
       )}
+
+      {/* QR Code card */}
+      <CSQRCard permitNumber={permit.permit_number} tenant={tenant} language={language} />
+    </div>
+  );
+}
+
+// ── QR Code card for ConfinedSpace ─────────────────────────────────────────
+function CSQRCard({ permitNumber, tenant, language }: {
+  permitNumber: string; tenant: string; language: Language;
+}) {
+  const [origin, setOrigin] = React.useState('');
+  React.useEffect(() => { setOrigin(window.location.origin); }, []);
+
+  const url = `${origin}/${tenant}/permits/view/${permitNumber}`;
+  if (!origin) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mt-6 print:mt-4">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+        <span className="text-blue-600"><QrCode className="w-5 h-5" /></span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex-1">
+          {language === 'fr' ? 'Code QR — Accès lecture seule' : 'QR Code — Read-only access'}
+        </h3>
+      </div>
+      <div className="p-5 flex flex-col sm:flex-row items-center gap-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm shrink-0">
+          <QRCodeSVG value={url} size={140} level="M" includeMargin={false} />
+        </div>
+        <div className="flex flex-col gap-2 min-w-0">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {language === 'fr'
+              ? "Scannez ce code avec n'importe quel téléphone pour consulter ce permis en lecture seule — aucune connexion requise."
+              : "Scan this code with any phone to view this permit in read-only mode — no login required."}
+          </p>
+          <code className="mt-1 block rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 break-all select-all">
+            {url}
+          </code>
+          <button
+            type="button"
+            onClick={() => navigator.clipboard?.writeText(url)}
+            className="self-start mt-1 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors print:hidden"
+          >
+            {language === 'fr' ? 'Copier le lien' : 'Copy link'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

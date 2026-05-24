@@ -112,9 +112,9 @@ export default function ProjectsPage() {
         if (!active) return;
         if (error) throw error;
         setProjects(data || []);
-        const { data: asts } = await supabase.from('ast_forms').select('project_number').eq('tenant_id', tenant);
+        const { data: asts } = await supabase.from('ast_permits').select('data').eq('tenant_id', tenant);
         const counts: Record<string, number> = {};
-        (asts || []).forEach((a: any) => { if (a.project_number) counts[a.project_number] = (counts[a.project_number] || 0) + 1; });
+        (asts || []).forEach((a: any) => { const pn = a.data?.taskInfo?.projectNumber; if (pn) counts[pn] = (counts[pn] || 0) + 1; });
         if (active) setAstCounts(counts);
       } catch {
         // mode local (pas de DB / clé placeholder) : on démarre à vide

@@ -123,18 +123,18 @@ function readingStatus(r: AtmosphericReading['readings'], limits: typeof LIMITS[
   return 'safe';
 }
 
-const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50';
-const labelClass = 'block text-xs font-medium text-slate-500 mb-1';
+const inputClass = 'w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400';
+const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
 
 function Card({ title, icon, children, collapsible = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; collapsible?: boolean }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
       <button type="button" onClick={() => collapsible && setOpen(v => !v)}
-        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left ${collapsible ? 'hover:bg-slate-50 transition-colors' : ''}`}>
+        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700 text-left ${collapsible ? 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors' : ''}`}>
         <span className="text-blue-600">{icon}</span>
-        <h3 className="font-semibold text-slate-800 flex-1">{title}</h3>
-        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />)}
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-100 flex-1">{title}</h3>
+        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />)}
       </button>
       {open && <div className="p-5">{children}</div>}
     </div>
@@ -209,7 +209,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
     const bad = (min !== undefined && value < min) || value > max;
     return (
       <div className="flex items-center justify-between py-1 text-sm">
-        <span className="text-slate-600">{label}</span>
+        <span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{label}</span>
         <span className={`font-semibold ${bad ? 'text-red-600' : 'text-green-700'}`}>
           {value}{unit}
         </span>
@@ -223,13 +223,13 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
       <Card title={t.limits} icon={<Info className="w-5 h-5" />} collapsible>
         <div className="text-xs text-slate-500 mb-3">{limits.name} — {limits.ref}</div>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="bg-slate-50 rounded-lg p-4 space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-slate-600">{t.oxygenRange}</span><span className="font-medium">{limits.o2min}–{limits.o2max}%</span></div>
-            <div className="flex justify-between"><span className="text-slate-600">{t.lelRange}</span><span className="font-medium">&lt; {limits.lelMax}% LEL</span></div>
-            <div className="flex justify-between"><span className="text-slate-600">{t.h2sRange}</span><span className="font-medium">&lt; {limits.h2sMax} ppm</span></div>
-            <div className="flex justify-between"><span className="text-slate-600">{t.coRange}</span><span className="font-medium">&lt; {limits.coMax} ppm</span></div>
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 space-y-1 text-sm">
+            <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{t.oxygenRange}</span><span className="font-medium">{limits.o2min}–{limits.o2max}%</span></div>
+            <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{t.lelRange}</span><span className="font-medium">&lt; {limits.lelMax}% LEL</span></div>
+            <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{t.h2sRange}</span><span className="font-medium">&lt; {limits.h2sMax} ppm</span></div>
+            <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400 dark:text-slate-500">{t.coRange}</span><span className="font-medium">&lt; {limits.coMax} ppm</span></div>
           </div>
-          <div className="flex items-center gap-3 bg-blue-50 rounded-lg p-4 text-sm text-blue-800">
+          <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
             <Info className="w-5 h-5 shrink-0 text-blue-500" />
             <span>{language === 'fr' ? 'Tests requis avant toute entrée et en continu si détecteurs présents.' : 'Testing required before any entry and continuously if detectors are present.'}</span>
           </div>
@@ -259,7 +259,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
               onChange={e => onUpdate({ continuousMonitoring: e.target.checked })}
               disabled={readOnly}
               className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-            <span className="text-sm text-slate-700">{t.continuousMonitoring}</span>
+            <span className="text-sm text-slate-700 dark:text-slate-200">{t.continuousMonitoring}</span>
           </label>
         </div>
       </Card>
@@ -276,8 +276,8 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
 
         {/* Form */}
         {showForm && (
-          <div className="mb-6 border border-slate-200 rounded-xl bg-slate-50 p-5 space-y-4">
-            <h4 className="font-medium text-slate-800">{t.newReading}</h4>
+          <div className="mb-6 border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-700/50 p-5 space-y-4">
+            <h4 className="font-medium text-slate-800 dark:text-slate-100">{t.newReading}</h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{t.location}</label>
@@ -313,7 +313,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
                 {t.save}
               </button>
               <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm()); }}
-                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition-colors">
+                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
                 {t.cancel}
               </button>
             </div>
@@ -322,7 +322,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
 
         {/* Reading list */}
         {(at.readings ?? []).length === 0 ? (
-          <div className="text-center py-10 text-sm text-slate-400">{t.noReadings}</div>
+          <div className="text-center py-10 text-sm text-slate-400 dark:text-slate-500">{t.noReadings}</div>
         ) : (
           <div className="space-y-4">
             {(at.readings ?? []).slice().reverse().map(r => (
@@ -333,7 +333,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
                       {r.status === 'danger' ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
                       {t.status[r.status]}
                     </span>
-                    <p className="text-sm font-medium text-slate-800 mt-1">{r.location || '—'}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mt-1">{r.location || '—'}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       <Clock className="w-3 h-3 inline mr-1" />
                       {new Date(r.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
@@ -347,7 +347,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 bg-white/60 rounded-lg px-3 py-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 bg-white/60 dark:bg-slate-800/60 rounded-lg px-3 py-2">
                   <GasRow label={t.oxygen} value={r.readings.oxygen} min={limits.o2min} max={limits.o2max} unit="%" />
                   <GasRow label={t.lel} value={r.readings.combustibleGas} max={limits.lelMax} unit="%" />
                   <GasRow label={t.h2s} value={r.readings.hydrogenSulfide} max={limits.h2sMax} unit=" ppm" />
@@ -355,7 +355,7 @@ export default function AtmosphericTesting({ language, permitData, selectedProvi
                   <GasRow label={t.temp} value={r.readings.temperature} max={9999} unit="°C" />
                   <GasRow label={t.humidity} value={r.readings.humidity} max={100} unit="%" />
                 </div>
-                {r.notes && <p className="mt-2 text-xs text-slate-500">{r.notes}</p>}
+                {r.notes && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{r.notes}</p>}
               </div>
             ))}
           </div>

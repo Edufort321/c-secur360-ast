@@ -159,23 +159,23 @@ const T = {
 } as const;
 
 // ── UI primitives ──────────────────────────────────────────────────────────
-const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50';
-const labelClass = 'block text-xs font-medium text-slate-500 mb-1';
+const inputClass = 'w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400';
+const labelClass = 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
 
 function Card({
   title, icon, children, collapsible = false,
 }: { title: string; icon: React.ReactNode; children: React.ReactNode; collapsible?: boolean }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
       <button
         type="button"
         onClick={() => collapsible && setOpen(v => !v)}
-        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left ${collapsible ? 'hover:bg-slate-50 transition-colors' : ''}`}
+        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700 text-left ${collapsible ? 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors' : ''}`}
       >
         <span className="text-blue-600">{icon}</span>
-        <h3 className="font-semibold text-slate-800 flex-1">{title}</h3>
-        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />)}
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-100 flex-1">{title}</h3>
+        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />)}
       </button>
       {open && <div className="p-5">{children}</div>}
     </div>
@@ -244,7 +244,7 @@ export default function RescuePlan({
           </button>
         )}
         {showContactForm && (
-          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 p-4 space-y-3">
+          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               {([
                 ['name', t.name, t.namePh, 'text'],
@@ -264,7 +264,7 @@ export default function RescuePlan({
               <input type="checkbox" checked={contactForm.isPrimary}
                 onChange={e => setContactForm(f => ({ ...f, isPrimary: e.target.checked }))}
                 className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-              <span className="text-sm text-slate-700">{t.isPrimary}</span>
+              <span className="text-sm text-slate-700 dark:text-slate-200">{t.isPrimary}</span>
             </label>
             <div className="flex gap-2">
               <button type="button" onClick={addContact} disabled={!contactForm.name || !contactForm.phone}
@@ -272,14 +272,14 @@ export default function RescuePlan({
                 {t.save}
               </button>
               <button type="button" onClick={() => setShowContactForm(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium">
+                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
                 {t.cancel}
               </button>
             </div>
           </div>
         )}
         {(rp.emergencyContacts ?? []).length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400">{t.noContacts}</div>
+          <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">{t.noContacts}</div>
         ) : (
           <div className="space-y-3">
             {(rp.emergencyContacts ?? []).map(c => (
@@ -293,7 +293,7 @@ export default function RescuePlan({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {c.role && <span className="mr-3">{c.role}</span>}
                     {c.phone && <span><Phone className="w-3 h-3 inline mr-0.5" />{c.phone}</span>}
                   </div>
@@ -320,7 +320,7 @@ export default function RescuePlan({
           </button>
         )}
         {showMemberForm && (
-          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 p-4 space-y-3">
+          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               {([
                 ['name', t.name, t.namePh, 'text'],
@@ -340,7 +340,7 @@ export default function RescuePlan({
               <input type="checkbox" checked={memberForm.isOnCall}
                 onChange={e => setMemberForm(f => ({ ...f, isOnCall: e.target.checked }))}
                 className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-              <span className="text-sm text-slate-700">{t.isOnCall}</span>
+              <span className="text-sm text-slate-700 dark:text-slate-200">{t.isOnCall}</span>
             </label>
             <div className="flex gap-2">
               <button type="button" onClick={addMember} disabled={!memberForm.name}
@@ -348,18 +348,18 @@ export default function RescuePlan({
                 {t.save}
               </button>
               <button type="button" onClick={() => setShowMemberForm(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium">
+                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
                 {t.cancel}
               </button>
             </div>
           </div>
         )}
         {(rp.rescueTeam ?? []).length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400">{t.noTeam}</div>
+          <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">{t.noTeam}</div>
         ) : (
           <div className="space-y-2">
             {(rp.rescueTeam ?? []).map(m => (
-              <div key={m.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 bg-white">
+              <div key={m.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-slate-800">{m.name}</span>
@@ -369,7 +369,7 @@ export default function RescuePlan({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {m.role && <span className="mr-3">{m.role}</span>}
                     {m.phone && <span><Phone className="w-3 h-3 inline mr-0.5" />{m.phone}</span>}
                     {m.certification?.length > 0 && <span className="ml-3">{m.certification.join(', ')}</span>}
@@ -397,7 +397,7 @@ export default function RescuePlan({
           </button>
         )}
         {showEquipmentForm && (
-          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 p-4 space-y-3">
+          <div className="mb-5 border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{t.equipmentName}</label>
@@ -431,7 +431,7 @@ export default function RescuePlan({
               <input type="checkbox" checked={equipForm.isAvailable}
                 onChange={e => setEquipForm(f => ({ ...f, isAvailable: e.target.checked }))}
                 className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-              <span className="text-sm text-slate-700">{t.isAvailable}</span>
+              <span className="text-sm text-slate-700 dark:text-slate-200">{t.isAvailable}</span>
             </label>
             <div className="flex gap-2">
               <button type="button" onClick={addEquipment} disabled={!equipForm.name}
@@ -439,19 +439,19 @@ export default function RescuePlan({
                 {t.save}
               </button>
               <button type="button" onClick={() => setShowEquipmentForm(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium">
+                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
                 {t.cancel}
               </button>
             </div>
           </div>
         )}
         {(rp.rescueEquipment ?? []).length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400">{t.noEquipment}</div>
+          <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">{t.noEquipment}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-medium text-slate-500 border-b border-slate-200">
+                <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                   <th className="pb-2 pr-4">{t.equipmentName}</th>
                   <th className="pb-2 pr-4">{t.equipmentType}</th>
                   <th className="pb-2 pr-4">{t.nextInspection}</th>
@@ -461,9 +461,9 @@ export default function RescuePlan({
               </thead>
               <tbody>
                 {(rp.rescueEquipment ?? []).map(e => (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-2 pr-4 font-medium text-slate-700">{e.name}</td>
-                    <td className="py-2 pr-4 text-slate-500">{(t.equipmentTypes as any)[e.type] ?? e.type}</td>
+                  <tr key={e.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <td className="py-2 pr-4 font-medium text-slate-700 dark:text-slate-200">{e.name}</td>
+                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400 dark:text-slate-500">{(t.equipmentTypes as any)[e.type] ?? e.type}</td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{e.nextInspection || '—'}</td>
                     <td className="py-2">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${e.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -561,7 +561,7 @@ export default function RescuePlan({
           {complianceKeys.map(key => {
             const checked = !!(rp as any)[key];
             return (
-              <label key={key} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 cursor-pointer select-none">
+              <label key={key} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer select-none">
                 <input type="checkbox" checked={checked} disabled={readOnly}
                   onChange={e => save({ [key]: e.target.checked } as any)}
                   className="w-4 h-4 rounded border-slate-300 text-blue-600" />

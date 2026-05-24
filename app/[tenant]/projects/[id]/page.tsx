@@ -77,11 +77,13 @@ export default function ProjectDetailPage() {
     if (!p?.project_number) { setLinkedAst([]); return; }
     let active = true;
     (async () => {
-      const { data } = await supabase.from('ast_forms')
-        .select('id, ast_number, status, created_at')
-        .eq('tenant_id', tenant).eq('project_number', p.project_number)
-        .order('created_at', { ascending: false });
-      if (active) setLinkedAst(data || []);
+      const { data } = await supabase.from('ast_permits')
+        .select('permit_number, data, updated_at')
+        .eq('tenant_id', tenant)
+        .order('updated_at', { ascending: false });
+      const filtered = (data || []).filter((r: any) => r.data?.taskInfo?.projectNumber === p.project_number)
+        .map((r: any) => ({ id: r.permit_number, ast_number: r.permit_number, status: r.data?.status || 'draft', created_at: r.updated_at }));
+      if (active) setLinkedAst(filtered);
     })();
     return () => { active = false; };
   }, [p?.project_number, tenant]);

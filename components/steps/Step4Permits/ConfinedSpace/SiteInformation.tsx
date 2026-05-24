@@ -201,8 +201,8 @@ const T = {
 } as const;
 
 // ── Shared UI primitives ───────────────────────────────────────────────────
-const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50 disabled:text-slate-400';
-const labelClass = 'block text-sm font-medium text-slate-600 mb-1';
+const inputClass = 'w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400';
+const labelClass = 'block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -223,15 +223,15 @@ function Card({
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
       <button
         type="button"
         onClick={() => collapsible && setOpen(v => !v)}
-        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left ${collapsible ? 'hover:bg-slate-50 transition-colors' : ''}`}
+        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700 text-left ${collapsible ? 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors' : ''}`}
       >
         <span className="text-blue-600">{icon}</span>
-        <h3 className="font-semibold text-slate-800 flex-1">{title}</h3>
-        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />)}
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 dark:text-slate-100 flex-1">{title}</h3>
+        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />)}
       </button>
       {open && <div className="p-5">{children}</div>}
     </div>
@@ -272,7 +272,7 @@ export default function SiteInformation({ language, permitData, selectedProvince
       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
         active
           ? 'bg-red-600 border-red-600 text-white'
-          : 'bg-white border-slate-300 text-slate-600 hover:border-red-400 hover:text-red-600'
+          : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-red-400 hover:text-red-600'
       } disabled:opacity-50`}
     >
       {label}
@@ -418,9 +418,9 @@ export default function SiteInformation({ language, permitData, selectedProvince
             </div>
           )}
 
-          <div className="flex items-center gap-3 bg-slate-50 rounded-lg px-4 py-3 text-sm">
-            <span className="font-medium text-slate-600">{t.volume}:</span>
-            <span className="font-bold text-slate-900">
+          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-3 text-sm">
+            <span className="font-medium text-slate-600 dark:text-slate-400 dark:text-slate-500">{t.volume}:</span>
+            <span className="font-bold text-slate-900 dark:text-white">
               {volume > 0 ? `${volume} ${si.unitSystem === 'imperial' ? 'pi³' : 'm³'}` : '—'}
             </span>
           </div>

@@ -1,0 +1,1986 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  ClipboardList, List, Shield, Wrench, Users, CheckCircle,
+  Menu, X, Save, Download, Printer, Plus, ChevronRight,
+  AlertTriangle, Home, FileText, BarChart3, Trash2,
+  ChevronUp, ChevronDown, AlertCircle, QrCode,
+} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { createClient } from '@supabase/supabase-js';
+
+// ── Supabase (best-effort) ─────────────────────────────────────────────────
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+// ── Types ──────────────────────────────────────────────────────────────────
+export type Language = 'fr' | 'en';
+export type ProvinceCode = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+export type PermitStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+
+export interface JobStep {
+  id: string;
+  stepNumber: number;
+  description: string;
+  hazards: string[];
+  hazardNotes: string;
+  controls: string[];
+  controlNotes: string;
+  riskBefore: number;
+  riskAfter: number;
+  riskBeforeProb: number;
+  riskBeforeSev: number;
+  riskAfterProb: number;
+  riskAfterSev: number;
+  responsible: string;
+  verified: boolean;
+}
+
+export interface PPEItem {
+  id: string;
+  category: string;
+  item: string;
+  required: boolean;
+  specification: string;
+}
+
+export interface Participant {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  acknowledged: boolean;
+  acknowledgedAt: string;
+}
+
+export interface ASTPermit {
+  permit_number: string;
+  status: PermitStatus;
+  province: ProvinceCode;
+  created_at: string;
+  updated_at: string;
+
+  taskInfo: {
+    projectNumber: string;
+    projectName: string;
+    workLocation: string;
+    department: string;
+    contractor: string;
+    supervisor: string;
+    supervisorCert: string;
+    taskDate: string;
+    estimatedDuration: string;
+    workerCount: number;
+    taskDescription: string;
+    taskType: string;
+    equipmentInvolved: string;
+    specialConditions: string;
+    regulatoryRef: string;
+  };
+
+  jobSteps: JobStep[];
+
+  ppeRequirements: PPEItem[];
+  ppeNotes: string;
+
+  equipment: {
+    tools: Array<{ id: string; name: string; condition: 'bon' | 'acceptable' | 'mauvais' | 'remplacé'; inspectedBy: string; notes: string }>;
+    vehicles: Array<{ id: string; type: string; license: string; inspected: boolean }>;
+    specialEquipment: string;
+    energySources: string[];
+    lotoRequired: boolean;
+    lotoRef: string;
+  };
+
+  participants: Participant[];
+  supervisorSigName: string;
+  supervisorSigCert: string;
+  supervisorSigDate: string;
+  supervisorSigNotes: string;
+
+  supervisor_name: string;
+  supervisor_cert: string;
+  permit_valid_from: string;
+  permit_valid_to: string;
+  permitted_work: string;
+  restrictions: string;
+  finalization_notes: string;
+
+  validation: { isComplete: boolean; percentage: number };
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function generateId(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+export function generatePermitNumber(type: string, province: ProvinceCode): string {
+  return `${type}-${province}-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
+}
+
+export function computeCompletion(ast: ASTPermit): number {
+  let score = 0;
+  if (ast.taskInfo.workLocation) score++;
+  if (ast.taskInfo.supervisor) score++;
+  if (ast.taskInfo.taskDescription) score++;
+  if (ast.jobSteps.length > 0) score += 2;
+  if (ast.jobSteps.some(s => s.hazards.length > 0)) score++;
+  if (ast.jobSteps.length === 0 || ast.jobSteps.every(s => s.controls.length > 0 || s.hazards.length === 0)) score++;
+  if (ast.ppeRequirements.some(p => p.required)) score++;
+  if (ast.participants.length > 0) score++;
+  if (ast.participants.length > 0 && ast.participants.every(p => p.acknowledged)) score++;
+  return Math.round((score / 9) * 100);
+}
+
+function getRiskColor(score: number): string {
+  if (score <= 4) return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+  if (score <= 8) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
+  if (score <= 16) return 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300';
+  return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+}
+
+function getRiskLabel(score: number, lang: Language): string {
+  if (score <= 4) return lang === 'fr' ? 'Faible' : 'Low';
+  if (score <= 8) return lang === 'fr' ? 'Moyen' : 'Medium';
+  if (score <= 16) return lang === 'fr' ? 'Élevé' : 'High';
+  return lang === 'fr' ? 'Critique' : 'Critical';
+}
+
+function getRiskCellColor(score: number): string {
+  if (score <= 4) return 'bg-green-400';
+  if (score <= 8) return 'bg-yellow-400';
+  if (score <= 16) return 'bg-orange-400';
+  return 'bg-red-500';
+}
+
+// ── Default PPE list ───────────────────────────────────────────────────────
+function defaultPPE(): PPEItem[] {
+  const items: Omit<PPEItem, 'id'>[] = [
+    { category: 'Tête', item: 'Casque de sécurité', required: false, specification: 'CSA Z94.1' },
+    { category: 'Tête', item: 'Cagoule/capuchon', required: false, specification: '' },
+    { category: 'Yeux/Visage', item: 'Lunettes de sécurité', required: false, specification: 'CSA Z94.3' },
+    { category: 'Yeux/Visage', item: 'Lunettes étanches', required: false, specification: 'CSA Z94.3' },
+    { category: 'Yeux/Visage', item: 'Écran facial', required: false, specification: '' },
+    { category: 'Yeux/Visage', item: 'Filtre de soudage', required: false, specification: '' },
+    { category: 'Ouïe', item: 'Bouchons auriculaires', required: false, specification: 'CSA Z94.2' },
+    { category: 'Ouïe', item: 'Coquilles anti-bruit', required: false, specification: 'CSA Z94.2' },
+    { category: 'Respiratoire', item: 'Masque N95/P100', required: false, specification: 'NIOSH' },
+    { category: 'Respiratoire', item: 'Demi-masque filtrant', required: false, specification: 'CSA Z94.4' },
+    { category: 'Respiratoire', item: 'Masque complet', required: false, specification: 'CSA Z94.4' },
+    { category: 'Respiratoire', item: 'Appareil respiratoire autonome', required: false, specification: 'NFPA 1981' },
+    { category: 'Mains', item: 'Gants résistants aux coupures', required: false, specification: 'EN 388' },
+    { category: 'Mains', item: 'Gants isolants', required: false, specification: 'ASTM D120' },
+    { category: 'Mains', item: 'Gants chimiques', required: false, specification: '' },
+    { category: 'Mains', item: 'Gants de soudage', required: false, specification: '' },
+    { category: 'Pieds', item: 'Chaussures de sécurité', required: false, specification: 'CSA Z195' },
+    { category: 'Pieds', item: 'Bottes imperméables', required: false, specification: '' },
+    { category: 'Pieds', item: 'Bottes chimiques', required: false, specification: '' },
+    { category: 'Corps', item: 'Vêtements haute visibilité', required: false, specification: 'CSA Z96' },
+    { category: 'Corps', item: 'Vêtements ignifuges', required: false, specification: '' },
+    { category: 'Corps', item: 'Combinaison Tyvek', required: false, specification: '' },
+    { category: 'Chute', item: 'Harnais complet', required: false, specification: 'CSA Z259.10' },
+    { category: 'Chute', item: 'Longe/dispositif antichute', required: false, specification: 'CSA Z259.11' },
+    { category: 'Chute', item: 'Ligne de vie', required: false, specification: 'CSA Z259.2' },
+  ];
+  return items.map(i => ({ ...i, id: generateId() }));
+}
+
+// ── Default permit ─────────────────────────────────────────────────────────
+function createDefaultPermit(province: ProvinceCode): ASTPermit {
+  const now = new Date().toISOString();
+  return {
+    permit_number: generatePermitNumber('AST', province),
+    status: 'draft',
+    province,
+    created_at: now,
+    updated_at: now,
+    taskInfo: {
+      projectNumber: '', projectName: '', workLocation: '', department: '',
+      contractor: '', supervisor: '', supervisorCert: '',
+      taskDate: now.slice(0, 10), estimatedDuration: '', workerCount: 1,
+      taskDescription: '', taskType: '', equipmentInvolved: '',
+      specialConditions: '', regulatoryRef: '',
+    },
+    jobSteps: [],
+    ppeRequirements: defaultPPE(),
+    ppeNotes: '',
+    equipment: {
+      tools: [], vehicles: [], specialEquipment: '',
+      energySources: [], lotoRequired: false, lotoRef: '',
+    },
+    participants: [],
+    supervisorSigName: '', supervisorSigCert: '', supervisorSigDate: '', supervisorSigNotes: '',
+    supervisor_name: '', supervisor_cert: '',
+    permit_valid_from: '', permit_valid_to: '',
+    permitted_work: '', restrictions: '', finalization_notes: '',
+    validation: { isComplete: false, percentage: 0 },
+  };
+}
+
+// ── Translations ───────────────────────────────────────────────────────────
+const T = {
+  fr: {
+    title: 'Analyse Sécurité Travail',
+    back: 'Retour aux permis',
+    permit: 'Permis',
+    completion: 'Complétion',
+    sections: {
+      task: 'Tâche',
+      steps: 'Étapes',
+      ppe: 'EPI',
+      equipment: 'Équipement',
+      participants: 'Participants',
+      finalization: 'Finalisation',
+    },
+    menu: {
+      saveNow: 'Enregistrer maintenant',
+      exportJson: 'Exporter JSON',
+      print: 'Imprimer',
+      newPermit: 'Nouvel AST',
+    },
+    save: {
+      saving: 'Enregistrement…',
+      saved: 'Enregistré',
+      error: 'Erreur sauvegarde',
+      unsaved: 'Non enregistré',
+    },
+    status: {
+      draft: 'Brouillon',
+      active: 'Actif',
+      completed: 'Complété',
+      cancelled: 'Annulé',
+    },
+    task: {
+      cardGeneral: 'Informations générales',
+      cardDescription: 'Description de la tâche',
+      cardRegulatory: 'Références réglementaires',
+      projectNumber: 'N° de projet',
+      projectName: 'Nom du projet',
+      workLocation: 'Lieu des travaux *',
+      department: 'Département',
+      contractor: 'Entrepreneur',
+      supervisor: 'Superviseur *',
+      supervisorCert: 'Certif. superviseur',
+      taskDate: 'Date des travaux',
+      estimatedDuration: 'Durée estimée',
+      workerCount: 'Nb de travailleurs',
+      taskType: 'Type de tâche',
+      equipmentInvolved: 'Équipements impliqués',
+      taskDescription: 'Description de la tâche *',
+      specialConditions: 'Conditions particulières',
+      regulatoryRef: 'Références réglementaires',
+      regulatoryRefPh: 'Ex: CSA Z432, RSST art. 2, procédure interne XYZ-001',
+      taskTypes: {
+        maintenance: 'Maintenance',
+        construction: 'Construction/Installation',
+        inspection: 'Inspection',
+        nettoyage: 'Nettoyage/Décontamination',
+        demarrage: 'Démarrage/Arrêt',
+        reparation: "Réparation d'urgence",
+        formation: 'Formation/Exercice',
+        autre: 'Autre',
+      },
+      provinceNote: {
+        QC: 'Réglements applicables : RSST, LSST (CNESST)',
+        ON: 'Applicable regulations: Occupational Health and Safety Act (OHSA)',
+        AB: 'Applicable regulations: OHS Act (Alberta)',
+        BC: 'Applicable regulations: Workers Compensation Act (WorkSafeBC)',
+        SK: 'Applicable regulations: Saskatchewan Employment Act, OHS Regulations',
+        MB: 'Applicable regulations: Workplace Safety and Health Act (Manitoba)',
+        NB: 'Applicable regulations: Occupational Health and Safety Act (NB)',
+        NS: 'Applicable regulations: Occupational Health and Safety Act (Nova Scotia)',
+        PE: 'Applicable regulations: Occupational Health and Safety Act (PEI)',
+        NL: 'Applicable regulations: Occupational Health and Safety Act (NL)',
+      },
+    },
+    steps: {
+      cardTitle: 'Étapes du travail — Analyse des dangers',
+      instructions: "Pour chaque étape du travail, identifier les dangers et les mesures préventives selon la hiérarchie des contrôles.",
+      addStep: 'Ajouter une étape',
+      stepLabel: 'Étape',
+      description: 'Description de l\'étape *',
+      descriptionPh: 'Que fait-on lors de cette étape?',
+      hazards: 'Dangers identifiés',
+      hazardNotes: 'Notes sur les dangers',
+      hazardNotesPh: 'Description libre des dangers…',
+      controls: 'Mesures préventives',
+      controlNotes: 'Notes sur les mesures',
+      controlNotesPh: 'Description libre des mesures préventives…',
+      riskBefore: 'Risque avant mesures',
+      riskAfter: 'Risque résiduel',
+      probability: 'Probabilité',
+      severity: 'Gravité',
+      responsible: 'Responsable',
+      responsiblePh: 'Nom du responsable',
+      verified: 'Vérifié superviseur',
+      noSteps: 'Aucune étape définie. Cliquez sur "Ajouter une étape" pour commencer.',
+      summary: (steps: number, hazards: number, controls: number) =>
+        `${steps} étape(s) | ${hazards} danger(s) identifié(s) | ${controls} mesure(s) préventive(s)`,
+      riskMatrix: 'Matrice de risque',
+      probLabels: ['', 'Très improbable', 'Improbable', 'Possible', 'Probable', 'Très probable'],
+      sevLabels: ['', 'Négligeable', 'Mineur', 'Modéré', 'Sévère', 'Catastrophique'],
+      hazardOptions: [
+        'Chute de plain-pied', 'Chute de hauteur', 'Objet tombant', 'Pincement/écrasement',
+        'Coupure/lacération', 'Brûlure thermique', 'Brûlure chimique', 'Choc électrique',
+        'Exposition gaz/vapeurs', 'Bruit excessif', 'Vibrations', 'Contrainte thermique',
+        'Manutention manuelle', 'Collision véhicule', 'Espace clos', 'Explosif/incendie', 'Autre',
+      ],
+      controlOptions: [
+        'Élimination', 'Substitution', 'Contrôle technique', 'Contrôle administratif',
+        'Procédure de travail', 'EPI requis',
+      ],
+    },
+    ppe: {
+      cardTitle: 'Équipement de protection individuel requis',
+      cardNotes: 'Notes EPI',
+      notesLabel: 'Exigences particulières ou spécifications additionnelles',
+      notesPh: 'Exigences additionnelles, spécifications particulières…',
+      required: 'Requis',
+      specification: 'Spécification',
+      requiredCount: (n: number) => `${n} EPI requis`,
+    },
+    equipment: {
+      cardTools: 'Outils et équipements',
+      cardVehicles: 'Véhicules/Équipements motorisés',
+      cardEnergy: "Sources d'énergie et LOTO",
+      toolName: 'Nom de l\'outil/équipement',
+      toolCondition: 'État',
+      toolInspectedBy: 'Inspecté par',
+      toolNotes: 'Notes',
+      addTool: 'Ajouter un outil',
+      vehicleType: 'Type de véhicule',
+      vehicleLicense: 'Plaque/matricule',
+      vehicleInspected: 'Inspecté',
+      addVehicle: 'Ajouter un véhicule',
+      specialEquipment: 'Équipements spéciaux',
+      specialEquipmentPh: 'Équipements spéciaux ou non-standard…',
+      energySources: "Sources d'énergie présentes",
+      lotoRequired: 'Permis LOTO requis',
+      lotoRef: 'Référence procédure LOTO',
+      lotoRefPh: 'N° ou référence de la procédure LOTO…',
+      lotoWarning: 'Un permis LOTO séparé est requis pour ces travaux.',
+      conditions: {
+        bon: 'Bon état',
+        acceptable: 'Acceptable',
+        mauvais: 'À remplacer',
+        remplacé: 'Remplacé',
+      },
+      energyOptions: ['Électrique', 'Mécanique', 'Pneumatique', 'Hydraulique', 'Thermique', 'Chimique', 'Gravitationnel'],
+    },
+    participants: {
+      cardPersonnel: 'Personnel',
+      cardSupervisor: 'Superviseur responsable',
+      name: 'Nom',
+      role: 'Rôle',
+      company: 'Entreprise',
+      acknowledged: 'Prise de connaissance',
+      acknowledgedAt: 'Date/heure',
+      addParticipant: 'Ajouter un participant',
+      totalCount: (total: number, ack: number) => `${total} participant(s) — ${ack} prise(s) de connaissance`,
+      ackStatement: "Je déclare avoir lu, compris et accepté les mesures préventives décrites dans cette AST. Je m'engage à respecter ces mesures lors de l'exécution des travaux.",
+      supervisorName: 'Nom du superviseur',
+      supervisorCert: 'Certification',
+      supervisorDate: 'Date/heure de signature',
+      supervisorNotes: 'Notes du superviseur',
+      roles: {
+        travailleur: 'Travailleur',
+        superviseur: 'Superviseur',
+        visiteur: 'Visiteur',
+        sous_traitant: 'Sous-traitant',
+        secouriste: 'Secouriste',
+      },
+    },
+    finalization: {
+      cardValidation: "Validation de l'AST",
+      cardApproval: 'Approbation superviseur',
+      cardWork: 'Travaux autorisés',
+      supervisorName: 'Nom du superviseur',
+      supervisorNamePh: 'Prénom et nom',
+      supervisorCert: 'Certification',
+      supervisorCertPh: 'N° de certification',
+      validFrom: 'Valide du',
+      validTo: 'Valide jusqu\'au',
+      permittedWork: 'Travaux autorisés',
+      permittedWorkPh: 'Description des travaux autorisés…',
+      restrictions: 'Restrictions',
+      restrictionsPh: 'Conditions ou restrictions particulières…',
+      finalNotes: 'Notes finales',
+      finalNotesPh: 'Notes, observations ou conditions particulières…',
+      activate: 'Approuver et activer',
+      complete: 'Compléter et archiver',
+      save: 'Enregistrer',
+      reopen: 'Rouvrir',
+      warnings: {
+        noSteps: 'Aucune étape de travail définie',
+        noPPE: 'Aucun EPI requis sélectionné',
+        noParticipants: 'Aucun participant enregistré',
+        criticalRisk: (n: number) => `${n} étape(s) avec risque résiduel critique`,
+        notAcknowledged: (n: number) => `${n} participant(s) n'ont pas confirmé la lecture`,
+      },
+    },
+    add: 'Ajouter',
+    remove: 'Supprimer',
+    moveUp: 'Monter',
+    moveDown: 'Descendre',
+  },
+  en: {
+    title: 'Job Safety Analysis',
+    back: 'Back to permits',
+    permit: 'Permit',
+    completion: 'Completion',
+    sections: {
+      task: 'Task',
+      steps: 'Steps',
+      ppe: 'PPE',
+      equipment: 'Equipment',
+      participants: 'Participants',
+      finalization: 'Finalization',
+    },
+    menu: {
+      saveNow: 'Save now',
+      exportJson: 'Export JSON',
+      print: 'Print',
+      newPermit: 'New JSA',
+    },
+    save: {
+      saving: 'Saving…',
+      saved: 'Saved',
+      error: 'Save error',
+      unsaved: 'Unsaved',
+    },
+    status: {
+      draft: 'Draft',
+      active: 'Active',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+    },
+    task: {
+      cardGeneral: 'General information',
+      cardDescription: 'Task description',
+      cardRegulatory: 'Regulatory references',
+      projectNumber: 'Project #',
+      projectName: 'Project name',
+      workLocation: 'Work location *',
+      department: 'Department',
+      contractor: 'Contractor',
+      supervisor: 'Supervisor *',
+      supervisorCert: 'Supervisor cert.',
+      taskDate: 'Task date',
+      estimatedDuration: 'Estimated duration',
+      workerCount: 'Worker count',
+      taskType: 'Task type',
+      equipmentInvolved: 'Equipment involved',
+      taskDescription: 'Task description *',
+      specialConditions: 'Special conditions',
+      regulatoryRef: 'Regulatory references',
+      regulatoryRefPh: 'E.g.: CSA Z432, OHSA s.25, internal procedure XYZ-001',
+      taskTypes: {
+        maintenance: 'Maintenance',
+        construction: 'Construction/Installation',
+        inspection: 'Inspection',
+        nettoyage: 'Cleaning/Decontamination',
+        demarrage: 'Start-up/Shut-down',
+        reparation: 'Emergency repair',
+        formation: 'Training/Drill',
+        autre: 'Other',
+      },
+      provinceNote: {
+        QC: 'Applicable regulations: RSST, LSST (CNESST)',
+        ON: 'Applicable regulations: Occupational Health and Safety Act (OHSA)',
+        AB: 'Applicable regulations: OHS Act (Alberta)',
+        BC: 'Applicable regulations: Workers Compensation Act (WorkSafeBC)',
+        SK: 'Applicable regulations: Saskatchewan Employment Act, OHS Regulations',
+        MB: 'Applicable regulations: Workplace Safety and Health Act (Manitoba)',
+        NB: 'Applicable regulations: Occupational Health and Safety Act (NB)',
+        NS: 'Applicable regulations: Occupational Health and Safety Act (Nova Scotia)',
+        PE: 'Applicable regulations: Occupational Health and Safety Act (PEI)',
+        NL: 'Applicable regulations: Occupational Health and Safety Act (NL)',
+      },
+    },
+    steps: {
+      cardTitle: 'Work steps — Hazard analysis',
+      instructions: 'For each work step, identify hazards and preventive measures following the hierarchy of controls.',
+      addStep: 'Add a step',
+      stepLabel: 'Step',
+      description: 'Step description *',
+      descriptionPh: 'What is done in this step?',
+      hazards: 'Identified hazards',
+      hazardNotes: 'Hazard notes',
+      hazardNotesPh: 'Free-text hazard description…',
+      controls: 'Control measures',
+      controlNotes: 'Control notes',
+      controlNotesPh: 'Free-text control description…',
+      riskBefore: 'Risk before controls',
+      riskAfter: 'Residual risk',
+      probability: 'Probability',
+      severity: 'Severity',
+      responsible: 'Responsible',
+      responsiblePh: 'Name of responsible person',
+      verified: 'Supervisor verified',
+      noSteps: 'No steps defined. Click "Add a step" to begin.',
+      summary: (steps: number, hazards: number, controls: number) =>
+        `${steps} step(s) | ${hazards} hazard(s) identified | ${controls} control measure(s)`,
+      riskMatrix: 'Risk matrix',
+      probLabels: ['', 'Very unlikely', 'Unlikely', 'Possible', 'Likely', 'Very likely'],
+      sevLabels: ['', 'Negligible', 'Minor', 'Moderate', 'Severe', 'Catastrophic'],
+      hazardOptions: [
+        'Slip/trip on same level', 'Fall from height', 'Falling object', 'Pinching/crushing',
+        'Cut/laceration', 'Thermal burn', 'Chemical burn', 'Electric shock',
+        'Gas/vapour exposure', 'Excessive noise', 'Vibration', 'Thermal stress',
+        'Manual handling', 'Vehicle collision', 'Confined space', 'Explosion/fire', 'Other',
+      ],
+      controlOptions: [
+        'Elimination', 'Substitution', 'Engineering control', 'Administrative control',
+        'Work procedure', 'PPE required',
+      ],
+    },
+    ppe: {
+      cardTitle: 'Required personal protective equipment',
+      cardNotes: 'PPE notes',
+      notesLabel: 'Special requirements or additional specifications',
+      notesPh: 'Additional requirements, special specifications…',
+      required: 'Required',
+      specification: 'Specification',
+      requiredCount: (n: number) => `${n} PPE required`,
+    },
+    equipment: {
+      cardTools: 'Tools and equipment',
+      cardVehicles: 'Vehicles/Motorized equipment',
+      cardEnergy: 'Energy sources and LOTO',
+      toolName: 'Tool/equipment name',
+      toolCondition: 'Condition',
+      toolInspectedBy: 'Inspected by',
+      toolNotes: 'Notes',
+      addTool: 'Add a tool',
+      vehicleType: 'Vehicle type',
+      vehicleLicense: 'License/serial',
+      vehicleInspected: 'Inspected',
+      addVehicle: 'Add a vehicle',
+      specialEquipment: 'Special equipment',
+      specialEquipmentPh: 'Special or non-standard equipment…',
+      energySources: 'Energy sources present',
+      lotoRequired: 'LOTO permit required',
+      lotoRef: 'LOTO procedure reference',
+      lotoRefPh: 'LOTO procedure number or reference…',
+      lotoWarning: 'A separate LOTO permit is required for this work.',
+      conditions: {
+        bon: 'Good condition',
+        acceptable: 'Acceptable',
+        mauvais: 'Replace needed',
+        remplacé: 'Replaced',
+      },
+      energyOptions: ['Electrical', 'Mechanical', 'Pneumatic', 'Hydraulic', 'Thermal', 'Chemical', 'Gravitational'],
+    },
+    participants: {
+      cardPersonnel: 'Personnel',
+      cardSupervisor: 'Responsible supervisor',
+      name: 'Name',
+      role: 'Role',
+      company: 'Company',
+      acknowledged: 'Acknowledgement',
+      acknowledgedAt: 'Date/time',
+      addParticipant: 'Add a participant',
+      totalCount: (total: number, ack: number) => `${total} participant(s) — ${ack} acknowledgement(s)`,
+      ackStatement: 'I declare that I have read, understood and accepted the preventive measures described in this JSA. I commit to following these measures during the work.',
+      supervisorName: 'Supervisor name',
+      supervisorCert: 'Certification',
+      supervisorDate: 'Signature date/time',
+      supervisorNotes: 'Supervisor notes',
+      roles: {
+        travailleur: 'Worker',
+        superviseur: 'Supervisor',
+        visiteur: 'Visitor',
+        sous_traitant: 'Subcontractor',
+        secouriste: 'First-aider',
+      },
+    },
+    finalization: {
+      cardValidation: 'JSA validation',
+      cardApproval: 'Supervisor approval',
+      cardWork: 'Authorized work',
+      supervisorName: 'Supervisor name',
+      supervisorNamePh: 'First and last name',
+      supervisorCert: 'Certification',
+      supervisorCertPh: 'Certification number',
+      validFrom: 'Valid from',
+      validTo: 'Valid to',
+      permittedWork: 'Authorized work',
+      permittedWorkPh: 'Description of authorized work…',
+      restrictions: 'Restrictions',
+      restrictionsPh: 'Special conditions or restrictions…',
+      finalNotes: 'Final notes',
+      finalNotesPh: 'Notes, observations or special conditions…',
+      activate: 'Approve and activate',
+      complete: 'Complete and archive',
+      save: 'Save',
+      reopen: 'Reopen',
+      warnings: {
+        noSteps: 'No work steps defined',
+        noPPE: 'No PPE items selected as required',
+        noParticipants: 'No participants registered',
+        criticalRisk: (n: number) => `${n} step(s) with critical residual risk`,
+        notAcknowledged: (n: number) => `${n} participant(s) have not confirmed acknowledgement`,
+      },
+    },
+    add: 'Add',
+    remove: 'Remove',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+  },
+} as const;
+
+// ── Shared sub-components ──────────────────────────────────────────────────
+function Card({ title, icon, accent = 'text-teal-600', badge, children }: {
+  title: string; icon: React.ReactNode; accent?: string; badge?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+        <span className={accent}>{icon}</span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex-1">{title}</h3>
+        {badge}
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder = '', disabled = false, type = 'text' }: {
+  value: string | number; onChange: (v: string) => void; placeholder?: string; disabled?: boolean; type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value as string}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
+    />
+  );
+}
+
+function SelectInput({ value, onChange, options, disabled = false }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      disabled={disabled}
+      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50 dark:disabled:bg-slate-800"
+    >
+      <option value="">—</option>
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+function Toggle({ checked, onChange, label, disabled = false }: {
+  checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2.5 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-slate-300 accent-teal-600"
+        disabled={disabled}
+      />
+      <span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
+    </label>
+  );
+}
+
+function Textarea({ label, value, onChange, placeholder = '', rows = 3, disabled = false }: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; rows?: number; disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">{label}</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        disabled={disabled}
+        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none resize-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
+      />
+    </div>
+  );
+}
+
+// ── TagSelector ────────────────────────────────────────────────────────────
+function TagSelector({ label, options, selected, onChange, disabled = false }: {
+  label: string; options: string[]; selected: string[];
+  onChange: (v: string[]) => void; disabled?: boolean;
+}) {
+  const toggle = (opt: string) => {
+    if (disabled) return;
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
+  };
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{label}</label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => (
+          <button
+            key={opt}
+            type="button"
+            disabled={disabled}
+            onClick={() => toggle(opt)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+              selected.includes(opt)
+                ? 'bg-teal-600 border-teal-600 text-white'
+                : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-teal-400 hover:text-teal-600'
+            } disabled:opacity-50 disabled:cursor-default`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Risk mini-matrix ───────────────────────────────────────────────────────
+function RiskMatrix({ prob, sev, lang }: { prob: number; sev: number; lang: Language }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="text-xs border-collapse">
+        <thead>
+          <tr>
+            <th className="w-8 h-6" />
+            {[1, 2, 3, 4, 5].map(s => (
+              <th key={s} className={`w-8 h-6 text-center font-medium text-slate-500 dark:text-slate-400 ${sev === s ? 'font-bold text-slate-800 dark:text-slate-100' : ''}`}>{s}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {[5, 4, 3, 2, 1].map(p => (
+            <tr key={p}>
+              <td className={`w-8 h-6 text-center font-medium text-slate-500 dark:text-slate-400 ${prob === p ? 'font-bold text-slate-800 dark:text-slate-100' : ''}`}>{p}</td>
+              {[1, 2, 3, 4, 5].map(s => {
+                const score = p * s;
+                const isActive = p === prob && s === sev;
+                return (
+                  <td key={s} className={`w-8 h-6 text-center rounded ${getRiskCellColor(score)} ${isActive ? 'ring-2 ring-slate-800 dark:ring-white font-bold' : ''} opacity-80 text-[10px] text-white font-semibold`}>
+                    {score}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+        {lang === 'fr' ? '↕ Probabilité × → Gravité' : '↕ Probability × → Severity'}
+      </div>
+    </div>
+  );
+}
+
+// ── Section: Task ──────────────────────────────────────────────────────────
+function TaskSection({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const t = T[language].task;
+  const ti = ast.taskInfo;
+
+  const set = (key: keyof ASTPermit['taskInfo'], val: string | number) =>
+    onChange(p => ({ ...p, taskInfo: { ...p.taskInfo, [key]: val } }));
+
+  const taskTypeOptions = Object.entries(t.taskTypes).map(([k, v]) => ({ value: k, label: v }));
+
+  return (
+    <div>
+      <Card title={t.cardGeneral} icon={<ClipboardList className="w-5 h-5" />}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label={t.projectNumber}>
+            <TextInput value={ti.projectNumber} onChange={v => set('projectNumber', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.projectName}>
+            <TextInput value={ti.projectName} onChange={v => set('projectName', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.workLocation}>
+            <TextInput value={ti.workLocation} onChange={v => set('workLocation', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.department}>
+            <TextInput value={ti.department} onChange={v => set('department', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.contractor}>
+            <TextInput value={ti.contractor} onChange={v => set('contractor', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.supervisor}>
+            <TextInput value={ti.supervisor} onChange={v => set('supervisor', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.supervisorCert}>
+            <TextInput value={ti.supervisorCert} onChange={v => set('supervisorCert', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.taskDate}>
+            <TextInput type="date" value={ti.taskDate} onChange={v => set('taskDate', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.estimatedDuration}>
+            <TextInput value={ti.estimatedDuration} onChange={v => set('estimatedDuration', v)} placeholder={language === 'fr' ? 'Ex: 4 heures' : 'E.g.: 4 hours'} disabled={readOnly} />
+          </Field>
+          <Field label={t.workerCount}>
+            <TextInput type="number" value={ti.workerCount} onChange={v => set('workerCount', parseInt(v) || 1)} disabled={readOnly} />
+          </Field>
+          <Field label={t.taskType}>
+            <SelectInput value={ti.taskType} onChange={v => set('taskType', v)} options={taskTypeOptions} disabled={readOnly} />
+          </Field>
+        </div>
+        <div className="mt-4">
+          <Textarea label={t.equipmentInvolved} value={ti.equipmentInvolved} onChange={v => set('equipmentInvolved', v)} rows={2} disabled={readOnly} />
+        </div>
+      </Card>
+
+      <Card title={t.cardDescription} icon={<FileText className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <Textarea label={t.taskDescription} value={ti.taskDescription} onChange={v => set('taskDescription', v)} rows={4} disabled={readOnly} />
+          <Textarea label={t.specialConditions} value={ti.specialConditions} onChange={v => set('specialConditions', v)} rows={2} disabled={readOnly} />
+        </div>
+      </Card>
+
+      <Card title={t.cardRegulatory} icon={<AlertCircle className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <Field label={t.regulatoryRef}>
+            <TextInput value={ti.regulatoryRef} onChange={v => set('regulatoryRef', v)} placeholder={t.regulatoryRefPh} disabled={readOnly} />
+          </Field>
+          <div className="flex items-start gap-2 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg px-4 py-3 text-sm text-teal-800 dark:text-teal-300">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{t.provinceNote[ast.province] ?? t.provinceNote.QC}</span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── Section: Steps ─────────────────────────────────────────────────────────
+function StepsSection({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const t = T[language].steps;
+  const steps = ast.jobSteps;
+
+  const totalHazards = steps.reduce((acc, s) => acc + s.hazards.length, 0);
+  const totalControls = steps.reduce((acc, s) => acc + s.controls.length, 0);
+
+  const addStep = () => {
+    onChange(p => ({
+      ...p,
+      jobSteps: [...p.jobSteps, {
+        id: generateId(),
+        stepNumber: p.jobSteps.length + 1,
+        description: '', hazards: [], hazardNotes: '',
+        controls: [], controlNotes: '',
+        riskBefore: 0, riskAfter: 0,
+        riskBeforeProb: 1, riskBeforeSev: 1,
+        riskAfterProb: 1, riskAfterSev: 1,
+        responsible: '', verified: false,
+      }],
+    }));
+  };
+
+  const updateStep = (id: string, updater: (s: JobStep) => JobStep) => {
+    onChange(p => ({
+      ...p,
+      jobSteps: p.jobSteps.map(s => s.id === id ? updater(s) : s),
+    }));
+  };
+
+  const removeStep = (id: string) => {
+    onChange(p => ({
+      ...p,
+      jobSteps: p.jobSteps.filter(s => s.id !== id).map((s, i) => ({ ...s, stepNumber: i + 1 })),
+    }));
+  };
+
+  const moveStep = (id: string, dir: 'up' | 'down') => {
+    onChange(p => {
+      const arr = [...p.jobSteps];
+      const idx = arr.findIndex(s => s.id === id);
+      const target = dir === 'up' ? idx - 1 : idx + 1;
+      if (target < 0 || target >= arr.length) return p;
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { ...p, jobSteps: arr.map((s, i) => ({ ...s, stepNumber: i + 1 })) };
+    });
+  };
+
+  const probOptions = t.probLabels.slice(1).map((l, i) => ({ value: String(i + 1), label: `${i + 1} — ${l}` }));
+  const sevOptions = t.sevLabels.slice(1).map((l, i) => ({ value: String(i + 1), label: `${i + 1} — ${l}` }));
+
+  return (
+    <div>
+      <Card
+        title={t.cardTitle}
+        icon={<List className="w-5 h-5" />}
+        badge={
+          steps.length > 0 ? (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {t.summary(steps.length, totalHazards, totalControls)}
+            </span>
+          ) : undefined
+        }
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-4 py-3">
+            {t.instructions}
+          </div>
+
+          {steps.length === 0 && (
+            <div className="text-center py-10 text-sm text-slate-400 dark:text-slate-500">
+              {t.noSteps}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {steps.map((step, idx) => (
+              <StepCard
+                key={step.id}
+                step={step}
+                idx={idx}
+                total={steps.length}
+                language={language}
+                readOnly={readOnly}
+                t={t}
+                probOptions={probOptions}
+                sevOptions={sevOptions}
+                onUpdate={(updater) => updateStep(step.id, updater)}
+                onRemove={() => removeStep(step.id)}
+                onMoveUp={() => moveStep(step.id, 'up')}
+                onMoveDown={() => moveStep(step.id, 'down')}
+              />
+            ))}
+          </div>
+
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={addStep}
+              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              {t.addStep}
+            </button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── Individual step card ───────────────────────────────────────────────────
+function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOptions, onUpdate, onRemove, onMoveUp, onMoveDown }: {
+  step: JobStep; idx: number; total: number; language: Language; readOnly: boolean;
+  t: typeof T['fr']['steps'] | typeof T['en']['steps'];
+  probOptions: { value: string; label: string }[];
+  sevOptions: { value: string; label: string }[];
+  onUpdate: (updater: (s: JobStep) => JobStep) => void;
+  onRemove: () => void; onMoveUp: () => void; onMoveDown: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  const riskBefore = step.riskBeforeProb * step.riskBeforeSev;
+  const riskAfter = step.riskAfterProb * step.riskAfterSev;
+
+  return (
+    <div className="border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-700/50">
+        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-teal-600 text-white text-xs font-bold shrink-0">
+          {step.stepNumber}
+        </span>
+        <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+          {step.description || (language === 'fr' ? 'Nouvelle étape…' : 'New step…')}
+        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {riskBefore > 0 && (
+            <span className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getRiskColor(riskBefore)}`}>
+              {riskBefore} → {riskAfter > 0 ? riskAfter : '?'}
+            </span>
+          )}
+          {!readOnly && (
+            <>
+              <button type="button" onClick={onMoveUp} disabled={idx === 0}
+                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={t.moveUp}>
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={onMoveDown} disabled={idx === total - 1}
+                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={t.moveDown}>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={onRemove}
+                className="p-1 text-red-400 hover:text-red-600 transition-colors" title={language === 'fr' ? 'Supprimer' : 'Remove'}>
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button type="button" onClick={() => setExpanded(v => !v)}
+            className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="p-4 space-y-4">
+          <Textarea
+            label={t.description}
+            value={step.description}
+            onChange={v => onUpdate(s => ({ ...s, description: v }))}
+            placeholder={t.descriptionPh}
+            rows={2}
+            disabled={readOnly}
+          />
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <TagSelector
+                label={t.hazards}
+                options={t.hazardOptions as unknown as string[]}
+                selected={step.hazards}
+                onChange={v => onUpdate(s => ({ ...s, hazards: v }))}
+                disabled={readOnly}
+              />
+              <Textarea label={t.hazardNotes} value={step.hazardNotes} onChange={v => onUpdate(s => ({ ...s, hazardNotes: v }))} placeholder={t.hazardNotesPh} rows={2} disabled={readOnly} />
+            </div>
+
+            <div className="space-y-2">
+              <TagSelector
+                label={t.controls}
+                options={t.controlOptions as unknown as string[]}
+                selected={step.controls}
+                onChange={v => onUpdate(s => ({ ...s, controls: v }))}
+                disabled={readOnly}
+              />
+              <Textarea label={t.controlNotes} value={step.controlNotes} onChange={v => onUpdate(s => ({ ...s, controlNotes: v }))} placeholder={t.controlNotesPh} rows={2} disabled={readOnly} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="bg-slate-50 dark:bg-slate-700/40 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t.riskBefore}</span>
+                {riskBefore > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getRiskColor(riskBefore)}`}>
+                    {riskBefore} — {getRiskLabel(riskBefore, language)}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label={t.probability}>
+                  <SelectInput value={String(step.riskBeforeProb)} onChange={v => onUpdate(s => ({ ...s, riskBeforeProb: parseInt(v) || 1, riskBefore: (parseInt(v) || 1) * s.riskBeforeSev }))} options={probOptions} disabled={readOnly} />
+                </Field>
+                <Field label={t.severity}>
+                  <SelectInput value={String(step.riskBeforeSev)} onChange={v => onUpdate(s => ({ ...s, riskBeforeSev: parseInt(v) || 1, riskBefore: s.riskBeforeProb * (parseInt(v) || 1) }))} options={sevOptions} disabled={readOnly} />
+                </Field>
+              </div>
+              <RiskMatrix prob={step.riskBeforeProb} sev={step.riskBeforeSev} lang={language} />
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-700/40 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t.riskAfter}</span>
+                {riskAfter > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getRiskColor(riskAfter)}`}>
+                    {riskAfter} — {getRiskLabel(riskAfter, language)}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label={t.probability}>
+                  <SelectInput value={String(step.riskAfterProb)} onChange={v => onUpdate(s => ({ ...s, riskAfterProb: parseInt(v) || 1, riskAfter: (parseInt(v) || 1) * s.riskAfterSev }))} options={probOptions} disabled={readOnly} />
+                </Field>
+                <Field label={t.severity}>
+                  <SelectInput value={String(step.riskAfterSev)} onChange={v => onUpdate(s => ({ ...s, riskAfterSev: parseInt(v) || 1, riskAfter: s.riskAfterProb * (parseInt(v) || 1) }))} options={sevOptions} disabled={readOnly} />
+                </Field>
+              </div>
+              <RiskMatrix prob={step.riskAfterProb} sev={step.riskAfterSev} lang={language} />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t.responsible}>
+              <TextInput value={step.responsible} onChange={v => onUpdate(s => ({ ...s, responsible: v }))} placeholder={t.responsiblePh} disabled={readOnly} />
+            </Field>
+            <div className="pt-5">
+              <Toggle
+                label={t.verified}
+                checked={step.verified}
+                onChange={v => onUpdate(s => ({ ...s, verified: v }))}
+                disabled={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Section: PPE ───────────────────────────────────────────────────────────
+function PPESection({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const t = T[language].ppe;
+  const items = ast.ppeRequirements;
+  const requiredCount = items.filter(i => i.required).length;
+
+  const categories = Array.from(new Set(items.map(i => i.category)));
+
+  const updateItem = (id: string, updater: (item: PPEItem) => PPEItem) => {
+    onChange(p => ({
+      ...p,
+      ppeRequirements: p.ppeRequirements.map(i => i.id === id ? updater(i) : i),
+    }));
+  };
+
+  return (
+    <div>
+      <Card
+        title={t.cardTitle}
+        icon={<Shield className="w-5 h-5" />}
+        badge={
+          requiredCount > 0 ? (
+            <span className="px-2.5 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full text-xs font-medium">
+              {t.requiredCount(requiredCount)}
+            </span>
+          ) : undefined
+        }
+      >
+        <div className="space-y-6">
+          {categories.map(cat => (
+            <div key={cat}>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">{cat}</h4>
+              <div className="space-y-2">
+                {items.filter(i => i.category === cat).map(item => (
+                  <div key={item.id} className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${item.required ? 'border-teal-300 dark:border-teal-700 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+                    <div className="flex items-center pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={item.required}
+                        onChange={e => updateItem(item.id, i => ({ ...i, required: e.target.checked }))}
+                        disabled={readOnly}
+                        className="w-4 h-4 accent-teal-600"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-sm font-medium ${item.required ? 'text-teal-800 dark:text-teal-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                          {item.item}
+                        </span>
+                        {item.required && <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">{t.required}</span>}
+                      </div>
+                      {item.required && (
+                        <input
+                          type="text"
+                          value={item.specification}
+                          onChange={e => updateItem(item.id, i => ({ ...i, specification: e.target.value }))}
+                          placeholder={t.specification}
+                          disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card title={t.cardNotes} icon={<FileText className="w-5 h-5" />}>
+        <Textarea
+          label={t.notesLabel}
+          value={ast.ppeNotes}
+          onChange={v => onChange(p => ({ ...p, ppeNotes: v }))}
+          placeholder={t.notesPh}
+          rows={3}
+          disabled={readOnly}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ── Section: Equipment ─────────────────────────────────────────────────────
+function EquipmentSection({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const t = T[language].equipment;
+  const eq = ast.equipment;
+
+  const setEq = (updater: (e: ASTPermit['equipment']) => ASTPermit['equipment']) =>
+    onChange(p => ({ ...p, equipment: updater(p.equipment) }));
+
+  const conditionOptions = Object.entries(t.conditions).map(([k, v]) => ({ value: k, label: v }));
+
+  const addTool = () => setEq(e => ({ ...e, tools: [...e.tools, { id: generateId(), name: '', condition: 'bon', inspectedBy: '', notes: '' }] }));
+  const removeTool = (id: string) => setEq(e => ({ ...e, tools: e.tools.filter(tool => tool.id !== id) }));
+  const updateTool = (id: string, key: string, val: string) => setEq(e => ({
+    ...e, tools: e.tools.map(tool => tool.id === id ? { ...tool, [key]: val } : tool),
+  }));
+
+  const addVehicle = () => setEq(e => ({ ...e, vehicles: [...e.vehicles, { id: generateId(), type: '', license: '', inspected: false }] }));
+  const removeVehicle = (id: string) => setEq(e => ({ ...e, vehicles: e.vehicles.filter(v => v.id !== id) }));
+  const updateVehicle = (id: string, key: string, val: string | boolean) => setEq(e => ({
+    ...e, vehicles: e.vehicles.map(v => v.id === id ? { ...v, [key]: val } : v),
+  }));
+
+  const toggleEnergy = (source: string) => setEq(e => ({
+    ...e, energySources: e.energySources.includes(source) ? e.energySources.filter(x => x !== source) : [...e.energySources, source],
+  }));
+
+  return (
+    <div>
+      <Card title={t.cardTools} icon={<Wrench className="w-5 h-5" />}>
+        <div className="space-y-4">
+          {eq.tools.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left pb-2 pr-3 font-medium">{t.toolName}</th>
+                    <th className="text-left pb-2 pr-3 font-medium w-36">{t.toolCondition}</th>
+                    <th className="text-left pb-2 pr-3 font-medium">{t.toolInspectedBy}</th>
+                    <th className="text-left pb-2 pr-3 font-medium">{t.toolNotes}</th>
+                    {!readOnly && <th className="w-8" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {eq.tools.map(tool => (
+                    <tr key={tool.id}>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={tool.name} onChange={e => updateTool(tool.id, 'name', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <select value={tool.condition} onChange={e => updateTool(tool.id, 'condition', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50">
+                          {conditionOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={tool.inspectedBy} onChange={e => updateTool(tool.id, 'inspectedBy', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={tool.notes} onChange={e => updateTool(tool.id, 'notes', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      {!readOnly && (
+                        <td className="py-2">
+                          <button type="button" onClick={() => removeTool(tool.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!readOnly && (
+            <button type="button" onClick={addTool}
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors">
+              <Plus className="w-4 h-4" /> {t.addTool}
+            </button>
+          )}
+          <Textarea label={t.specialEquipment} value={eq.specialEquipment} onChange={v => setEq(e => ({ ...e, specialEquipment: v }))} placeholder={t.specialEquipmentPh} rows={2} disabled={readOnly} />
+        </div>
+      </Card>
+
+      <Card title={t.cardVehicles} icon={<Wrench className="w-5 h-5" />}>
+        <div className="space-y-4">
+          {eq.vehicles.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left pb-2 pr-3 font-medium">{t.vehicleType}</th>
+                    <th className="text-left pb-2 pr-3 font-medium">{t.vehicleLicense}</th>
+                    <th className="text-left pb-2 pr-3 font-medium w-24">{t.vehicleInspected}</th>
+                    {!readOnly && <th className="w-8" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {eq.vehicles.map(v => (
+                    <tr key={v.id}>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={v.type} onChange={e => updateVehicle(v.id, 'type', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={v.license} onChange={e => updateVehicle(v.id, 'license', e.target.value)} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3 text-center">
+                        <input type="checkbox" checked={v.inspected} onChange={e => updateVehicle(v.id, 'inspected', e.target.checked)} disabled={readOnly}
+                          className="w-4 h-4 accent-teal-600" />
+                      </td>
+                      {!readOnly && (
+                        <td className="py-2">
+                          <button type="button" onClick={() => removeVehicle(v.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!readOnly && (
+            <button type="button" onClick={addVehicle}
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors">
+              <Plus className="w-4 h-4" /> {t.addVehicle}
+            </button>
+          )}
+        </div>
+      </Card>
+
+      <Card title={t.cardEnergy} icon={<AlertTriangle className="w-5 h-5" />} accent="text-amber-500">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{t.energySources}</label>
+            <div className="flex flex-wrap gap-2">
+              {t.energyOptions.map(src => (
+                <button
+                  key={src}
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => toggleEnergy(src)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    eq.energySources.includes(src)
+                      ? 'bg-orange-500 border-orange-500 text-white'
+                      : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-orange-400'
+                  } disabled:opacity-50 disabled:cursor-default`}
+                >
+                  {src}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Toggle
+            label={t.lotoRequired}
+            checked={eq.lotoRequired}
+            onChange={v => setEq(ex => ({ ...ex, lotoRequired: v }))}
+            disabled={readOnly}
+          />
+
+          {eq.lotoRequired && (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{t.lotoWarning}</span>
+              </div>
+              <Field label={t.lotoRef}>
+                <TextInput value={eq.lotoRef} onChange={v => setEq(ex => ({ ...ex, lotoRef: v }))} placeholder={t.lotoRefPh} disabled={readOnly} />
+              </Field>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── Section: Participants ──────────────────────────────────────────────────
+function ParticipantsSection({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const t = T[language].participants;
+  const participants = ast.participants;
+  const acknowledgedCount = participants.filter(p => p.acknowledged).length;
+
+  const roleOptions = Object.entries(t.roles).map(([k, v]) => ({ value: k, label: v }));
+
+  const addParticipant = () => onChange(p => ({
+    ...p,
+    participants: [...p.participants, { id: generateId(), name: '', role: 'travailleur', company: '', acknowledged: false, acknowledgedAt: '' }],
+  }));
+
+  const removeParticipant = (id: string) => onChange(p => ({
+    ...p, participants: p.participants.filter(x => x.id !== id),
+  }));
+
+  const updateParticipant = (id: string, updater: (x: Participant) => Participant) => onChange(p => ({
+    ...p, participants: p.participants.map(x => x.id === id ? updater(x) : x),
+  }));
+
+  const toggleAcknowledged = (id: string, val: boolean) => updateParticipant(id, x => ({
+    ...x, acknowledged: val, acknowledgedAt: val ? new Date().toISOString() : '',
+  }));
+
+  return (
+    <div>
+      <Card
+        title={t.cardPersonnel}
+        icon={<Users className="w-5 h-5" />}
+        badge={
+          participants.length > 0 ? (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {t.totalCount(participants.length, acknowledgedCount)}
+            </span>
+          ) : undefined
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg px-4 py-3">
+            <p className="text-sm text-teal-800 dark:text-teal-300 italic">{t.ackStatement}</p>
+          </div>
+
+          {participants.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left pb-2 pr-3 font-medium">{t.name}</th>
+                    <th className="text-left pb-2 pr-3 font-medium w-40">{t.role}</th>
+                    <th className="text-left pb-2 pr-3 font-medium">{t.company}</th>
+                    <th className="text-center pb-2 pr-3 font-medium w-28">{t.acknowledged}</th>
+                    <th className="text-left pb-2 pr-3 font-medium">{t.acknowledgedAt}</th>
+                    {!readOnly && <th className="w-8" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {participants.map(par => (
+                    <tr key={par.id}>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={par.name} onChange={e => updateParticipant(par.id, x => ({ ...x, name: e.target.value }))} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <select value={par.role} onChange={e => updateParticipant(par.id, x => ({ ...x, role: e.target.value }))} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50">
+                          {roleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <input type="text" value={par.company} onChange={e => updateParticipant(par.id, x => ({ ...x, company: e.target.value }))} disabled={readOnly}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                      </td>
+                      <td className="py-2 pr-3 text-center">
+                        <input type="checkbox" checked={par.acknowledged} onChange={e => toggleAcknowledged(par.id, e.target.checked)} disabled={readOnly}
+                          className="w-4 h-4 accent-teal-600" />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {par.acknowledgedAt ? new Date(par.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '—'}
+                        </span>
+                      </td>
+                      {!readOnly && (
+                        <td className="py-2">
+                          <button type="button" onClick={() => removeParticipant(par.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!readOnly && (
+            <button type="button" onClick={addParticipant}
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors">
+              <Plus className="w-4 h-4" /> {t.addParticipant}
+            </button>
+          )}
+        </div>
+      </Card>
+
+      <Card title={t.cardSupervisor} icon={<CheckCircle className="w-5 h-5" />}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.supervisorName}>
+            <TextInput value={ast.supervisorSigName} onChange={v => onChange(p => ({ ...p, supervisorSigName: v }))} disabled={readOnly} />
+          </Field>
+          <Field label={t.supervisorCert}>
+            <TextInput value={ast.supervisorSigCert} onChange={v => onChange(p => ({ ...p, supervisorSigCert: v }))} disabled={readOnly} />
+          </Field>
+          <Field label={t.supervisorDate}>
+            <TextInput type="datetime-local" value={ast.supervisorSigDate} onChange={v => onChange(p => ({ ...p, supervisorSigDate: v }))} disabled={readOnly} />
+          </Field>
+          <div className="sm:col-span-2">
+            <Textarea label={t.supervisorNotes} value={ast.supervisorSigNotes} onChange={v => onChange(p => ({ ...p, supervisorSigNotes: v }))} rows={2} disabled={readOnly} />
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── Section: Finalization ──────────────────────────────────────────────────
+function FinalizationSection({ ast, completion, language, readOnly, onChange, onSave, tenant }: {
+  ast: ASTPermit; completion: number; language: Language; readOnly: boolean;
+  onChange: (updater: (p: ASTPermit) => ASTPermit) => void; onSave: () => void; tenant: string;
+}) {
+  const t = T[language].finalization;
+
+  const field = (key: keyof ASTPermit, val: string) =>
+    onChange(p => ({ ...p, [key]: val }));
+
+  const setStatus = (status: PermitStatus) =>
+    onChange(p => ({ ...p, status }));
+
+  const warnings: string[] = [];
+  if (ast.jobSteps.length === 0) warnings.push(t.warnings.noSteps);
+  if (!ast.ppeRequirements.some(p => p.required)) warnings.push(t.warnings.noPPE);
+  if (ast.participants.length === 0) warnings.push(t.warnings.noParticipants);
+  const criticalSteps = ast.jobSteps.filter(s => (s.riskAfterProb * s.riskAfterSev) >= 17).length;
+  if (criticalSteps > 0) warnings.push(t.warnings.criticalRisk(criticalSteps));
+  const notAck = ast.participants.filter(p => !p.acknowledged).length;
+  if (notAck > 0) warnings.push(t.warnings.notAcknowledged(notAck));
+
+  return (
+    <div>
+      <Card title={t.cardValidation} icon={<BarChart3 className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${completion >= 80 ? 'bg-green-500' : completion >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+            <span className="text-lg font-bold text-slate-800 dark:text-slate-100 w-14 text-right">{completion}%</span>
+          </div>
+          {warnings.length > 0 ? (
+            <div className="space-y-2">
+              {warnings.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 border border-amber-200 dark:border-amber-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>{language === 'fr' ? 'Aucun avertissement — AST complète.' : 'No warnings — JSA complete.'}</span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card title={t.cardApproval} icon={<CheckCircle className="w-5 h-5" />}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.supervisorName}>
+            <TextInput value={ast.supervisor_name} onChange={v => field('supervisor_name', v)} placeholder={t.supervisorNamePh} disabled={readOnly} />
+          </Field>
+          <Field label={t.supervisorCert}>
+            <TextInput value={ast.supervisor_cert} onChange={v => field('supervisor_cert', v)} placeholder={t.supervisorCertPh} disabled={readOnly} />
+          </Field>
+          <Field label={t.validFrom}>
+            <TextInput type="datetime-local" value={ast.permit_valid_from} onChange={v => field('permit_valid_from', v)} disabled={readOnly} />
+          </Field>
+          <Field label={t.validTo}>
+            <TextInput type="datetime-local" value={ast.permit_valid_to} onChange={v => field('permit_valid_to', v)} disabled={readOnly} />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title={t.cardWork} icon={<FileText className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <Textarea label={t.permittedWork} value={ast.permitted_work} onChange={v => field('permitted_work', v)} placeholder={t.permittedWorkPh} rows={3} disabled={readOnly} />
+          <Textarea label={t.restrictions} value={ast.restrictions} onChange={v => field('restrictions', v)} placeholder={t.restrictionsPh} rows={3} disabled={readOnly} />
+          <Textarea label={t.finalNotes} value={ast.finalization_notes} onChange={v => field('finalization_notes', v)} placeholder={t.finalNotesPh} rows={3} disabled={readOnly} />
+        </div>
+      </Card>
+
+      {!readOnly && (
+        <div className="flex flex-wrap gap-3 mb-6">
+          {ast.status === 'draft' && (
+            <button
+              type="button"
+              onClick={() => { setStatus('active'); onSave(); }}
+              disabled={completion < 60}
+              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {t.activate}
+            </button>
+          )}
+          {ast.status === 'active' && (
+            <button
+              type="button"
+              onClick={() => { setStatus('completed'); onSave(); }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {t.complete}
+            </button>
+          )}
+          {(ast.status === 'completed' || ast.status === 'cancelled') && (
+            <button
+              type="button"
+              onClick={() => setStatus('draft')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {t.reopen}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onSave}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            {t.save}
+          </button>
+        </div>
+      )}
+
+      <QRCard permitNumber={ast.permit_number} tenant={tenant} type="ast" language={language} />
+    </div>
+  );
+}
+
+// ── QR Code card ───────────────────────────────────────────────────────────
+function QRCard({ permitNumber, tenant, type, language }: {
+  permitNumber: string; tenant: string; type: 'ast' | 'confined_space'; language: Language;
+}) {
+  const [origin, setOrigin] = React.useState('');
+  React.useEffect(() => { setOrigin(window.location.origin); }, []);
+
+  const url = type === 'ast'
+    ? `${origin}/${tenant}/ast/view/${permitNumber}`
+    : `${origin}/${tenant}/permits/view/${permitNumber}`;
+
+  if (!origin) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-6 print:mt-4">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+        <span className="text-teal-600"><QrCode className="w-5 h-5" /></span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex-1">
+          {language === 'fr' ? 'Code QR — Accès lecture seule' : 'QR Code — Read-only access'}
+        </h3>
+      </div>
+      <div className="p-5 flex flex-col sm:flex-row items-center gap-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm shrink-0">
+          <QRCodeSVG value={url} size={140} level="M" includeMargin={false} />
+        </div>
+        <div className="flex flex-col gap-2 min-w-0">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {language === 'fr'
+              ? "Scannez ce code avec n'importe quel téléphone pour consulter ce permis en lecture seule — aucune connexion requise."
+              : "Scan this code with any phone to view this permit in read-only mode — no login required."}
+          </p>
+          <code className="mt-1 block rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 break-all select-all">
+            {url}
+          </code>
+          <button
+            type="button"
+            onClick={() => navigator.clipboard?.writeText(url)}
+            className="self-start mt-1 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors print:hidden"
+          >
+            {language === 'fr' ? 'Copier le lien' : 'Copy link'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Props ──────────────────────────────────────────────────────────────────
+interface ASTPermitProps {
+  tenant?: string;
+  language?: Language;
+  selectedProvince?: ProvinceCode;
+  province?: ProvinceCode;
+  enableAutoSave?: boolean;
+  onSave?: (data: ASTPermit) => void;
+  onCancel?: () => void;
+  readOnly?: boolean;
+  initialData?: Partial<ASTPermit>;
+}
+
+type SectionId = 'task' | 'steps' | 'ppe' | 'equipment' | 'participants' | 'finalization';
+
+// ── Main component ─────────────────────────────────────────────────────────
+export default function ASTPermit({
+  tenant = 'demo',
+  language = 'fr',
+  selectedProvince,
+  province = 'QC',
+  enableAutoSave = true,
+  onSave,
+  onCancel,
+  readOnly = false,
+  initialData,
+}: ASTPermitProps) {
+  const resolvedProvince: ProvinceCode = (selectedProvince ?? province) as ProvinceCode;
+  const t = T[language];
+
+  const [ast, setAst] = useState<ASTPermit>(() => ({
+    ...createDefaultPermit(resolvedProvince),
+    ...initialData,
+  }));
+
+  const [section, setSection] = useState<SectionId>('task');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const menuRef = useRef<HTMLDivElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setAst(p => ({ ...p, province: resolvedProvince }));
+  }, [resolvedProvince]);
+
+  const persistAst = useCallback(async (data: ASTPermit) => {
+    setSaveStatus('saving');
+    try {
+      const payload = { ...data, updated_at: new Date().toISOString() };
+      if (supabase) {
+        await supabase.from('ast_permits').upsert({
+          permit_number: payload.permit_number,
+          tenant_id: tenant,
+          data: payload,
+          updated_at: payload.updated_at,
+        });
+      }
+      localStorage.setItem(`ast-permit-${payload.permit_number}`, JSON.stringify(payload));
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch {
+      setSaveStatus('error');
+    }
+  }, [tenant]);
+
+  useEffect(() => {
+    if (!enableAutoSave) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => persistAst(ast), 2000);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [ast, enableAutoSave, persistAst]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const goToSection = (s: SectionId) => {
+    setSection(s);
+    requestAnimationFrame(() => contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' }));
+  };
+
+  const updateAst = useCallback((updater: (p: ASTPermit) => ASTPermit) => {
+    setAst(updater);
+  }, []);
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(ast, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${ast.permit_number}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveNow = async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    await persistAst(ast);
+    if (onSave) onSave(ast);
+  };
+
+  const completion = computeCompletion(ast);
+
+  const SECTIONS: { id: SectionId; icon: React.ReactNode; label: string }[] = [
+    { id: 'task', icon: <ClipboardList className="w-4 h-4" />, label: t.sections.task },
+    { id: 'steps', icon: <List className="w-4 h-4" />, label: t.sections.steps },
+    { id: 'ppe', icon: <Shield className="w-4 h-4" />, label: t.sections.ppe },
+    { id: 'equipment', icon: <Wrench className="w-4 h-4" />, label: t.sections.equipment },
+    { id: 'participants', icon: <Users className="w-4 h-4" />, label: t.sections.participants },
+    { id: 'finalization', icon: <CheckCircle className="w-4 h-4" />, label: t.sections.finalization },
+  ];
+
+  const statusColors: Record<PermitStatus, string> = {
+    draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  };
+
+  return (
+    <div className="flex flex-col bg-slate-50 dark:bg-slate-900" style={{ minHeight: 'calc(100vh - 64px)' }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+
+        {/* Row 1 */}
+        <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors shrink-0"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.back}</span>
+            </button>
+          )}
+          {onCancel && <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />}
+
+          <div className="flex items-center gap-2 min-w-0">
+            <ClipboardList className="w-5 h-5 text-teal-600 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate">{t.title}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{ast.permit_number}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <span className={`hidden sm:inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[ast.status]}`}>
+              {t.status[ast.status]}
+            </span>
+            <span className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <BarChart3 className="w-3.5 h-3.5" />
+              {completion}%
+            </span>
+            <span className={`hidden sm:block text-xs font-medium transition-colors ${
+              saveStatus === 'saved' ? 'text-green-600' :
+              saveStatus === 'saving' ? 'text-blue-500' :
+              saveStatus === 'error' ? 'text-red-600' : 'text-slate-400'
+            }`}>
+              {saveStatus !== 'idle' ? t.save[saveStatus] : ''}
+            </span>
+
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(v => !v)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
+                aria-label="Menu"
+              >
+                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg py-1 z-50">
+                  <button type="button" onClick={() => { handleSaveNow(); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Save className="w-4 h-4 text-slate-400" />
+                    {t.menu.saveNow}
+                  </button>
+                  <hr className="my-1 border-slate-100 dark:border-slate-700" />
+                  <button type="button" onClick={() => { exportJson(); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Download className="w-4 h-4 text-slate-400" />
+                    {t.menu.exportJson}
+                  </button>
+                  <button type="button" onClick={() => { window.print(); setMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Printer className="w-4 h-4 text-slate-400" />
+                    {t.menu.print}
+                  </button>
+                  <hr className="my-1 border-slate-100 dark:border-slate-700" />
+                  <button type="button" onClick={() => {
+                    setAst(createDefaultPermit(resolvedProvince));
+                    setSection('task');
+                    setMenuOpen(false);
+                  }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <Plus className="w-4 h-4 text-slate-400" />
+                    {t.menu.newPermit}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: tabs + progress */}
+        <div className="flex items-center gap-1 px-4 pb-0 lg:px-6 overflow-x-auto scrollbar-none">
+          {SECTIONS.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => goToSection(s.id)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                section === s.id
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-500'
+              }`}
+            >
+              {s.icon}
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+          ))}
+          <div className="ml-auto hidden md:flex items-center gap-2 pb-2 shrink-0">
+            <div className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full bg-teal-500 rounded-full transition-all" style={{ width: `${completion}%` }} />
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{completion}%</span>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Content ─────────────────────────────────────────────────────── */}
+      <main ref={contentRef} className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+        <div className="max-w-5xl mx-auto">
+          {section === 'task' && (
+            <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'steps' && (
+            <StepsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'ppe' && (
+            <PPESection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'equipment' && (
+            <EquipmentSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'participants' && (
+            <ParticipantsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'finalization' && (
+            <FinalizationSection
+              ast={ast}
+              completion={completion}
+              language={language}
+              readOnly={readOnly}
+              onChange={updateAst}
+              onSave={handleSaveNow}
+              tenant={tenant}
+            />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
