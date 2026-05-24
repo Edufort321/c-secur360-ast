@@ -328,8 +328,39 @@ const T = {
         'Manutention manuelle', 'Collision véhicule', 'Espace clos', 'Explosif/incendie', 'Autre',
       ],
       controlOptions: [
-        'Élimination', 'Substitution', 'Contrôle technique', 'Contrôle administratif',
-        'Procédure de travail', 'EPI requis',
+        // Hiérarchie des contrôles
+        'Élimination du danger', 'Substitution', 'Contrôle technique',
+        'Contrôle administratif', 'EPI requis',
+        // Travail en hauteur / chute
+        'Garde-corps / rampe de sécurité', 'Filet de sécurité',
+        'Plate-forme de travail sécurisée', 'Harnais de sécurité + longe',
+        'Harnais + ligne de vie antichute', 'Ancrage certifié',
+        // LOTO / Énergie
+        'Cadenassage (LOTO)', "Vérification absence d'énergie", 'Blocage mécanique',
+        "Permis de travail sur l'énergie",
+        // Espace clos
+        "Analyse atmosphérique continue (O₂, LEL, H₂S)", 'Ventilation mécanique forcée',
+        'Surveillance par vigie en permanence', 'Équipe de sauvetage en place',
+        'Communication radio/vocale régulière',
+        // Chimique / respiratoire
+        "Ventilation locale par aspiration à la source", 'Masque filtrant approprié',
+        'Appareil respiratoire autonome (ARA)', 'Combinaison de protection chimique',
+        'Douche de décontamination à proximité',
+        // Électrique
+        "Mise à la terre et court-circuit", 'Isolation électrique (nappe/tapis)',
+        "Distance de sécurité d'approche respectée", 'Équipement Classe II ou mieux',
+        // Levage / manutention
+        'Inspection pré-utilisation de l\'équipement de levage',
+        'Plan de levage approuvé', 'Zone de levage balisée et évacuée',
+        'Matériel de manutention mécanique utilisé',
+        // Feu / chaud
+        'Permis de travail à chaud en vigueur', 'Surveillance anti-incendie (30 min post)',
+        'Extincteur à portée de main', 'Surface dégagée de matières combustibles',
+        // Général
+        "Signalisation et périmètre de sécurité", 'Procédure de travail sécuritaire écrite',
+        'Formation spécifique vérifiée', 'Supervision continue par responsable désigné',
+        "Inspection avant utilisation", "Plan d'urgence et évacuation affiché",
+        'Outillage et équipements en bon état certifié',
       ],
     },
     ppe: {
@@ -532,8 +563,30 @@ const T = {
         'Manual handling', 'Vehicle collision', 'Confined space', 'Explosion/fire', 'Other',
       ],
       controlOptions: [
-        'Elimination', 'Substitution', 'Engineering control', 'Administrative control',
-        'Work procedure', 'PPE required',
+        'Élimination du danger', 'Substitution', 'Contrôle technique',
+        'Contrôle administratif', 'EPI requis',
+        'Garde-corps / rampe de sécurité', 'Filet de sécurité',
+        'Plate-forme de travail sécurisée', 'Harnais de sécurité + longe',
+        'Harnais + ligne de vie antichute', 'Ancrage certifié',
+        'Cadenassage (LOTO)', "Vérification absence d'énergie", 'Blocage mécanique',
+        "Permis de travail sur l'énergie",
+        "Analyse atmosphérique continue (O₂, LEL, H₂S)", 'Ventilation mécanique forcée',
+        'Surveillance par vigie en permanence', 'Équipe de sauvetage en place',
+        'Communication radio/vocale régulière',
+        "Ventilation locale par aspiration à la source", 'Masque filtrant approprié',
+        'Appareil respiratoire autonome (ARA)', 'Combinaison de protection chimique',
+        'Douche de décontamination à proximité',
+        "Mise à la terre et court-circuit", 'Isolation électrique (nappe/tapis)',
+        "Distance de sécurité d'approche respectée", 'Équipement Classe II ou mieux',
+        "Inspection pré-utilisation de l'équipement de levage",
+        'Plan de levage approuvé', 'Zone de levage balisée et évacuée',
+        'Matériel de manutention mécanique utilisé',
+        'Permis de travail à chaud en vigueur', 'Surveillance anti-incendie (30 min post)',
+        'Extincteur à portée de main', 'Surface dégagée de matières combustibles',
+        "Signalisation et périmètre de sécurité", 'Procédure de travail sécuritaire écrite',
+        'Formation spécifique vérifiée', 'Supervision continue par responsable désigné',
+        "Inspection avant utilisation", "Plan d'urgence et évacuation affiché",
+        'Outillage et équipements en bon état certifié',
       ],
     },
     ppe: {
@@ -727,19 +780,32 @@ function Textarea({ label, value, onChange, placeholder = '', rows = 3, disabled
 }
 
 // ── TagSelector ────────────────────────────────────────────────────────────
-function TagSelector({ label, options, selected, onChange, disabled = false }: {
+function TagSelector({ label, options, selected, onChange, disabled = false, allowCustom = false, customPlaceholder = 'Ajouter…' }: {
   label: string; options: string[]; selected: string[];
   onChange: (v: string[]) => void; disabled?: boolean;
+  allowCustom?: boolean; customPlaceholder?: string;
 }) {
+  const [input, setInput] = useState('');
+
   const toggle = (opt: string) => {
     if (disabled) return;
     onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
   };
+
+  const addCustom = () => {
+    const val = input.trim();
+    if (!val || selected.includes(val)) { setInput(''); return; }
+    onChange([...selected, val]);
+    setInput('');
+  };
+
+  const allOptions = [...options, ...selected.filter(s => !options.includes(s))];
+
   return (
     <div>
       <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">{label}</label>
       <div className="flex flex-wrap gap-1.5">
-        {options.map(opt => (
+        {allOptions.map(opt => (
           <button
             key={opt}
             type="button"
@@ -755,6 +821,22 @@ function TagSelector({ label, options, selected, onChange, disabled = false }: {
           </button>
         ))}
       </div>
+      {allowCustom && !disabled && (
+        <div className="flex gap-1.5 mt-2">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+            placeholder={customPlaceholder}
+            className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+          />
+          <button type="button" onClick={addCustom} disabled={!input.trim()}
+            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1">
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1060,6 +1142,8 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
                 selected={step.hazards}
                 onChange={v => onUpdate(s => ({ ...s, hazards: v }))}
                 disabled={readOnly}
+                allowCustom
+                customPlaceholder={language === 'fr' ? 'Danger personnalisé…' : 'Custom hazard…'}
               />
               <Textarea label={t.hazardNotes} value={step.hazardNotes} onChange={v => onUpdate(s => ({ ...s, hazardNotes: v }))} placeholder={t.hazardNotesPh} rows={2} disabled={readOnly} />
             </div>
@@ -1071,6 +1155,8 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
                 selected={step.controls}
                 onChange={v => onUpdate(s => ({ ...s, controls: v }))}
                 disabled={readOnly}
+                allowCustom
+                customPlaceholder={language === 'fr' ? 'Moyen de contrôle personnalisé…' : 'Custom control measure…'}
               />
               <Textarea label={t.controlNotes} value={step.controlNotes} onChange={v => onUpdate(s => ({ ...s, controlNotes: v }))} placeholder={t.controlNotesPh} rows={2} disabled={readOnly} />
             </div>

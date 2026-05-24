@@ -45,6 +45,27 @@ function isoWeek(dateStr: string): number {
   const w1 = new Date(d.getFullYear(), 0, 4);
   return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
 }
+function isoW1Monday(year: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const dow = jan4.getDay();
+  const d = new Date(jan4);
+  d.setDate(jan4.getDate() - (dow === 0 ? 6 : dow - 1));
+  return d;
+}
+function generatePeriods(year: number): { week: number; start: string; end: string }[] {
+  const periods: { week: number; start: string; end: string }[] = [];
+  const d = isoW1Monday(year);
+  for (;;) {
+    const start = d.toISOString().slice(0, 10);
+    const wn = isoWeek(start);
+    if (periods.length > 0 && wn === 1) break;
+    const endD = new Date(d); endD.setDate(d.getDate() + 6);
+    periods.push({ week: wn, start, end: endD.toISOString().slice(0, 10) });
+    d.setDate(d.getDate() + 7);
+    if (periods.length > 53) break;
+  }
+  return periods;
+}
 
 export default function TimesheetsPage() {
   const params = useParams();
@@ -137,6 +158,30 @@ export default function TimesheetsPage() {
   }), { hrs: 0, km: 0, amt: 0, pending: 0 }), [filtered]);
 
   const pendingApproval = useMemo(() => sheets.filter(s => s.status === 'submitted'), [sheets]);
+
+  const allPeriods = useMemo(() => generatePeriods(yearFilter), [yearFilter]);
+  const fullGrid = useMemo(() => {
+    const byStart: Record<string, Sheet> = {};
+    sheets.forEach(s => { if (new Date(s.period_start).getFullYear() === yearFilter) byStart[s.period_start] = s; });
+    return allPeriods.map(p => ({ ...p, sheet: byStart[p.start] as Sheet | undefined }));
+  }, [allPeriods, sheets, yearFilter]);
+
+  async function createForPeriod(start: string, end: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const uid = user?.id || 'local';
+      const { data: existing } = await supabase.from('timesheets').select('id')
+        .eq('tenant_id', tenant).eq('employee_id', uid).eq('period_start', start).maybeSingle();
+      if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
+      const { data, error } = await supabase.from('timesheets').insert({
+        tenant_id: tenant, employee_id: uid,
+        employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+        period_start: start, period_end: end, status: 'draft',
+      }).select().single();
+      if (error) throw error;
+      window.location.href = `/${tenant}/timesheets/${data.id}`;
+    } catch { /* silently ignore */ }
+  }
 
   async function approve(id: string) {
     const { data: { user } } = await supabase.auth.getUser();
@@ -237,61 +282,134 @@ export default function TimesheetsPage() {
         {/* Liste */}
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16"><Loader2 className="animate-spin text-slate-400" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Clock size={26} /></div>
-            <p className="font-medium text-slate-700">Aucune feuille de temps</p>
-            <button onClick={createNew} disabled={creating} className="mt-1 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700">
-              <Plus size={18} /> Nouvelle feuille
-            </button>
-          </div>
+        ) : isSupervisor ? (
+          /* Supervisor : table plate de toutes les feuilles filtrées */
+          filtered.length === 0 ? (
+            <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Clock size={26} /></div>
+              <p className="font-medium text-slate-700">Aucune feuille de temps</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
+                    <th className="px-4 py-3">Employé</th><th className="px-4 py-3">Période</th>
+                    <th className="px-4 py-3">Heures</th><th className="px-4 py-3">Km pers.</th>
+                    <th className="px-4 py-3">Montant</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(s => {
+                    const st = STATUS[s.status] || STATUS.draft;
+                    const Icon = st.icon;
+                    const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
+                    return (
+                      <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="grid h-7 w-7 place-items-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
+                              {(s.employee_name || '?')[0].toUpperCase()}
+                            </div>
+                            <span className="font-medium">{s.employee_name || s.employee_email}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">
+                          <div className="text-xs font-semibold text-violet-500 mb-0.5">P.{isoWeek(s.period_start)}</div>
+                          <div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />{fmt(s.period_start)} – {fmt(s.period_end)}</div>
+                        </td>
+                        <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
+                        <td className="px-4 py-3 text-slate-600">{Number(s.total_km_personal).toFixed(0)} km</td>
+                        <td className="px-4 py-3 font-semibold text-violet-700">{money(Number(s.total_amount))}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
+                            <Icon size={11} /> {st.label}
+                          </span>
+                          {s.rejection_note && <div className="mt-0.5 text-xs text-red-500">{s.rejection_note}</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link href={`/${tenant}/timesheets/${s.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                            Ouvrir <ChevronRight size={12} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
+          /* Employé : grille complète des 52 périodes de l'année */
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
-                  <th className="px-4 py-3">Employé</th><th className="px-4 py-3">Période</th>
-                  <th className="px-4 py-3">Heures</th><th className="px-4 py-3">Km pers.</th>
-                  <th className="px-4 py-3">Montant</th><th className="px-4 py-3">Statut</th><th className="px-4 py-3"></th>
+                  <th className="px-4 py-3">Période</th>
+                  <th className="px-4 py-3">Dates</th>
+                  <th className="px-3 py-3">Heures</th>
+                  <th className="px-3 py-3 hidden sm:table-cell">Km pers.</th>
+                  <th className="px-3 py-3 hidden sm:table-cell">Montant</th>
+                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(s => {
-                  const st = STATUS[s.status] || STATUS.draft;
-                  const Icon = st.icon;
-                  const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
-                  return (
-                    <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="grid h-7 w-7 place-items-center rounded-full bg-slate-200 text-xs font-bold text-slate-600">
-                            {(s.employee_name || '?')[0].toUpperCase()}
-                          </div>
-                          <span className="font-medium">{s.employee_name || s.employee_email}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        <div className="text-xs font-semibold text-violet-500 mb-0.5">P.{isoWeek(s.period_start)}</div>
-                        <div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />{fmt(s.period_start)} – {fmt(s.period_end)}</div>
-                      </td>
-                      <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
-                      <td className="px-4 py-3 text-slate-600">{Number(s.total_km_personal).toFixed(0)} km</td>
-                      <td className="px-4 py-3 font-semibold text-violet-700">{money(Number(s.total_amount))}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
-                          <Icon size={11} /> {st.label}
-                        </span>
-                        {s.rejection_note && <div className="mt-0.5 text-xs text-red-500">{s.rejection_note}</div>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/${tenant}/timesheets/${s.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                          Ouvrir <ChevronRight size={12} />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  const today = new Date().toISOString().slice(0, 10);
+                  return fullGrid.map(({ week, start, end, sheet }) => {
+                    const isPast = end < today;
+                    const isFuture = start > today;
+                    const st = sheet ? (STATUS[sheet.status] || STATUS.draft) : null;
+                    const Icon = st?.icon;
+                    const hrs = sheet ? Number(sheet.total_regular) + Number(sheet.total_overtime) + Number(sheet.total_premium) : 0;
+                    const isCurrentWeek = start <= today && today <= end;
+                    return (
+                      <tr key={week}
+                        className={`border-t border-slate-100 ${isFuture && !sheet ? 'opacity-40' : 'hover:bg-slate-50'} ${isCurrentWeek ? 'bg-violet-50/40 dark:bg-violet-900/10' : ''}`}>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isCurrentWeek ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            P.{week}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-600 text-xs whitespace-nowrap">
+                          <div className="flex items-center gap-1"><Calendar size={11} className="text-slate-400" />{fmt(start)} – {fmt(end)}</div>
+                        </td>
+                        <td className="px-3 py-2.5 font-medium text-xs">{sheet ? `${hrs.toFixed(1)} h` : '—'}</td>
+                        <td className="px-3 py-2.5 text-slate-600 text-xs hidden sm:table-cell">{sheet ? `${Number(sheet.total_km_personal).toFixed(0)} km` : '—'}</td>
+                        <td className="px-3 py-2.5 font-semibold text-violet-700 text-xs hidden sm:table-cell">{sheet ? money(Number(sheet.total_amount)) : '—'}</td>
+                        <td className="px-4 py-2.5">
+                          {st && Icon ? (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>
+                              <Icon size={10} /> {st.label}
+                            </span>
+                          ) : isPast ? (
+                            <span className="text-xs text-orange-500 font-medium">Non soumise</span>
+                          ) : isCurrentWeek ? (
+                            <span className="text-xs text-violet-500 font-medium">Semaine courante</span>
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                          {sheet?.rejection_note && <div className="mt-0.5 text-xs text-red-500">{sheet.rejection_note}</div>}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {sheet ? (
+                            <Link href={`/${tenant}/timesheets/${sheet.id}`}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                              Ouvrir <ChevronRight size={11} />
+                            </Link>
+                          ) : !isFuture ? (
+                            <button onClick={() => createForPeriod(start, end)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700">
+                              <Plus size={11} /> Créer
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>

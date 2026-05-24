@@ -177,8 +177,18 @@ export default function ProjectDetailPage() {
 
             {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">{notice}</div>}
 
-            {/* Onglets */}
-            <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+            {/* Onglets — mobile dropdown */}
+            <div className="mb-4 sm:hidden">
+              <select
+                value={tab}
+                onChange={e => setTab(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                {tabs.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            </div>
+            {/* Onglets — desktop */}
+            <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:flex dark:border-gray-700 dark:bg-gray-800">
               {tabs.map(t => {
                 const Icon = t.icon;
                 return (
