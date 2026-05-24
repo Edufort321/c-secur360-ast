@@ -7,6 +7,7 @@ import {
   FileCheck, Plus, Search, MapPin, Calendar, User,
   Clock, CheckCircle, AlertTriangle, XCircle, Loader2,
   Flame, Zap, Shovel, Wind, FlaskConical, BarChart3,
+  Lock, ArrowUp, Gauge,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -43,11 +44,14 @@ const STATUS: Record<PermitStatus, { label: string; cls: string; icon: React.Ele
 };
 
 const PERMIT_TYPES = [
-  { key: 'confined_space', labelFr: 'Espace clos',       icon: Wind,        color: 'text-cyan-600',   accent: 'bg-cyan-50' },
-  { key: 'hot_work',       labelFr: 'Travail à chaud',    icon: Flame,       color: 'text-orange-600', accent: 'bg-orange-50' },
-  { key: 'electrical',     labelFr: 'Électrique',          icon: Zap,         color: 'text-yellow-600', accent: 'bg-yellow-50' },
-  { key: 'excavation',     labelFr: 'Excavation',          icon: Shovel,      color: 'bg-amber-600',    accent: 'bg-amber-50' },
-  { key: 'chemical',       labelFr: 'Produits chimiques',  icon: FlaskConical,color: 'text-purple-600', accent: 'bg-purple-50' },
+  { key: 'confined_space', labelFr: 'Espace clos',           icon: Wind,         color: 'text-cyan-600',   accent: 'bg-cyan-50',   built: true  },
+  { key: 'hot_work',       labelFr: 'Travail à chaud',       icon: Flame,        color: 'text-orange-600', accent: 'bg-orange-50', built: false },
+  { key: 'loto',           labelFr: 'LOTO / Cadenassage',    icon: Lock,         color: 'text-slate-600',  accent: 'bg-slate-100', built: false },
+  { key: 'electrical',     labelFr: 'Travail électrique',    icon: Zap,          color: 'text-yellow-600', accent: 'bg-yellow-50', built: false },
+  { key: 'height_work',    labelFr: 'Travail en hauteur',    icon: ArrowUp,      color: 'text-blue-600',   accent: 'bg-blue-50',   built: false },
+  { key: 'excavation',     labelFr: 'Excavation / Tranchée', icon: Shovel,       color: 'text-amber-700',  accent: 'bg-amber-50',  built: false },
+  { key: 'chemical',       labelFr: 'Matières dangereuses',  icon: FlaskConical, color: 'text-purple-600', accent: 'bg-purple-50', built: false },
+  { key: 'pressure',       labelFr: 'Tuyauterie / Pression', icon: Gauge,        color: 'text-red-600',    accent: 'bg-red-50',    built: false },
 ];
 
 export default function PermitsPage() {
@@ -141,20 +145,31 @@ export default function PermitsPage() {
         </div>
 
         {/* Types de permis */}
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8">
           {PERMIT_TYPES.map(pt => {
             const Icon = pt.icon;
+            if (pt.built) {
+              return (
+                <Link key={pt.key} href={`/${tenant}/permits/nouveau?type=${pt.key}`}
+                  className="flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-cyan-300">
+                  <div className={`grid h-10 w-10 place-items-center rounded-xl ${pt.accent}`}>
+                    <Icon size={20} className={pt.color} />
+                  </div>
+                  <span className="text-center text-xs font-semibold text-slate-700 leading-tight">{pt.labelFr}</span>
+                </Link>
+              );
+            }
             return (
-              <Link
-                key={pt.key}
-                href={`/${tenant}/permits/nouveau?type=${pt.key}`}
-                className={`flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-slate-300`}
-              >
+              <div key={pt.key}
+                className="relative flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm opacity-50 cursor-not-allowed select-none">
                 <div className={`grid h-10 w-10 place-items-center rounded-xl ${pt.accent}`}>
                   <Icon size={20} className={pt.color} />
                 </div>
-                <span className="text-center text-xs font-semibold text-slate-700">{pt.labelFr}</span>
-              </Link>
+                <span className="text-center text-xs font-semibold text-slate-500 leading-tight">{pt.labelFr}</span>
+                <span className="absolute -right-1 -top-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                  🚧
+                </span>
+              </div>
             );
           })}
         </div>

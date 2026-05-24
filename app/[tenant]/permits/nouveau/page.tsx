@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, HardHat, Loader2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import dynamic from 'next/dynamic';
@@ -35,13 +35,34 @@ function NouveauPermisInner() {
   const { lang } = useLanguage();
   const [province, setProvince] = useState<typeof PROVINCES[number]['code']>('QC');
 
-  const handleSave = (data: any) => {
-    router.push(`/${tenant}/permits`);
-  };
+  const handleSave = (_data: any) => router.push(`/${tenant}/permits`);
+  const handleCancel = () => router.push(`/${tenant}/permits`);
 
-  const handleCancel = () => {
-    router.push(`/${tenant}/permits`);
-  };
+  if (type !== 'confined_space') {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <PortalHeader tenant={tenant} />
+        <div className="flex flex-col items-center justify-center px-4 py-32 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-8">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-amber-100">
+              <HardHat size={32} className="text-amber-600" />
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-amber-900">En construction</h2>
+            <p className="mb-6 text-sm text-amber-700">
+              Ce type de permis sera disponible prochainement.<br />
+              Seul le permis <strong>Espace clos</strong> est actif pour le moment.
+            </p>
+            <button
+              onClick={() => router.push(`/${tenant}/permits`)}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 font-semibold text-white hover:bg-amber-700"
+            >
+              <ArrowLeft size={16} /> Retour aux permis
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
