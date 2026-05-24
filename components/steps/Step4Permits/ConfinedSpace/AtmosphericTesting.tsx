@@ -85,7 +85,7 @@ interface LegalAtmosphericData {
   atmospheric_stability_confirmed: boolean;
 }
 
-// =================== TRADUCTIONS COMPLÃˆTES ===================
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     title: "Tests Atmosphériques Obligatoires",
@@ -101,9 +101,9 @@ const translations = {
     topLevel: "Niveau supérieur",
     middleLevel: "Niveau moyen", 
     bottomLevel: "Niveau inférieur",
-    oxygen: "Oxygène (Oâ‚‚)",
+    oxygen: "Oxygène (O₂)",
     lel: "Limite explosive (LEL)",
-    h2s: "Sulfure d'hydrogène (Hâ‚‚S)",
+    h2s: "Sulfure d'hydrogène (H₂S)",
     co: "Monoxyde de carbone (CO)",
     temperature: "Température",
     humidity: "Humidité",
@@ -116,7 +116,7 @@ const translations = {
     retestRequired: "RETEST OBLIGATOIRE",
     evacuationRequired: "ÉVACUATION REQUISE",
     startMonitoring: "Démarrer Surveillance",
-    stopMonitoring: "ArrÃªter Surveillance",
+    stopMonitoring: "Arrêter Surveillance",
     resetTimer: "Réinitialiser Timer",
     timeRemaining: "Temps restant",
     frequencyMinutes: "Fréquence réglementaire",
@@ -138,9 +138,9 @@ const translations = {
     topLevel: "Top level",
     middleLevel: "Middle level",
     bottomLevel: "Bottom level", 
-    oxygen: "Oxygen (Oâ‚‚)",
+    oxygen: "Oxygen (O₂)",
     lel: "Lower Explosive Limit (LEL)",
-    h2s: "Hydrogen Sulfide (Hâ‚‚S)",
+    h2s: "Hydrogen Sulfide (H₂S)",
     co: "Carbon Monoxide (CO)",
     temperature: "Temperature",
     humidity: "Humidity",
@@ -313,7 +313,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
         setRetestTimer(prev => {
           if (prev <= 1) {
             setRetestActive(false);
-            alert('ðŸš¨ RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
+            alert('🚨 RETEST OBLIGATOIRE: 15 minutes écoulées. Effectuez immédiatement de nouveaux tests atmosphériques!');
             return 0;
           }
           return prev - 1;
@@ -335,7 +335,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           if (prev <= 1) {
             // ✅ CORRECTION RUNTIME ERROR : Utiliser atmosphere_testing_frequency qui existe
             const frequencyMinutes = regulations[selectedProvince]?.atmosphere_testing_frequency || 30;
-            alert(`â° SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
+            alert(`⏰ SURVEILLANCE CONTINUE: ${frequencyMinutes} minutes écoulées. Nouveau test atmosphérique requis selon ${regulations[selectedProvince]?.code || 'réglementation'}!`);
             return frequencyMinutes * 60;
           }
           return prev - 1;
@@ -369,7 +369,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== FONCTIONS DE GESTION ===================
   const addManualReading = useCallback(() => {
     if (!manualReading.oxygen || !manualReading.lel || !manualReading.h2s || !manualReading.co) {
-      alert('⚠ ï¸ Veuillez saisir toutes les valeurs obligatoires (Oâ‚‚, LEL, Hâ‚‚S, CO)');
+      alert('⚠️ Veuillez saisir toutes les valeurs obligatoires (O₂, LEL, H₂S, CO)');
       return;
     }
 
@@ -379,7 +379,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     const co = parseFloat(manualReading.co);
 
     if (oxygen < 0 || oxygen > 30 || lel < 0 || lel > 100 || h2s < 0 || h2s > 1000 || co < 0 || co > 1000) {
-      alert('⚠ ï¸ Valeurs hors plage acceptable. Vérifiez vos mesures.');
+      alert('⚠️ Valeurs hors plage acceptable. Vérifiez vos mesures.');
       return;
     }
 
@@ -425,9 +425,9 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
     });
 
     if (overallStatus === 'danger') {
-      alert('ðŸš¨ DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Évacuation immédiate requise!');
+      alert('🚨 DANGER CRITIQUE: Les valeurs atmosphériques sont dangereuses! Évacuation immédiate requise!');
     } else if (overallStatus === 'caution') {
-      alert('⚠ ï¸ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
+      alert('⚠️ ATTENTION: Certaines valeurs sont hors limites acceptables. Surveillance renforcée requise.');
     }
   }, [manualReading, atmosphericReadings, updateReadings, t, validateAtmosphericValue]);
 
@@ -470,7 +470,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
       }
     });
     
-    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise Ã  jour permis
+    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise à jour permis
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -549,7 +549,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
           gap: '12px'
         }}>
           <Gauge style={{ width: '24px', height: '24px', color: '#fecaca' }} />
-          ⚠–ï¸ {t.legalCompliance}
+          ⚠️ {t.legalCompliance}
         </h3>
         
         <div style={{ 
@@ -574,7 +574,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            â° <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immédiat si valeurs critiques.
+            ⏰ <strong>Fréquence réglementaire</strong> : Nouveau test toutes les {safeRegulations.atmosphere_testing_frequency} minutes + retest immédiat si valeurs critiques.
           </p>
         </div>
         
@@ -586,7 +586,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             color: '#fecaca',
             marginBottom: '16px'
           }}>
-            ðŸ”§ {t.deviceCalibration}
+            🔧 {t.deviceCalibration}
           </h4>
           
           <div style={styles.grid2}>
@@ -645,7 +645,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              ðŸ”§ <strong>DÉTECTEUR CALIBRÉ</strong> : Je certifie que le détecteur multi-gaz est calibré dans les 24h selon les spécifications du fabricant *
+              🔧 <strong>DÉTECTEUR CALIBRÉ</strong> : Je certifie que le détecteur multi-gaz est calibré dans les 24h selon les spécifications du fabricant *
             </label>
           </div>
         </div>
@@ -683,7 +683,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               flex: 1
             }}
           >
-            ðŸ“Š <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l'espace clos *
+            📊 <strong>TESTS MULTI-NIVEAUX</strong> : Tests atmosphériques effectués aux niveaux supérieur, moyen et inférieur de l'espace clos *
           </label>
         </div>
         
@@ -736,7 +736,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
             borderRadius: '16px',
             fontWeight: '700'
           }}>
-            â±ï¸ {safeRegulations.atmosphere_testing_frequency} min
+            ⏱️ {safeRegulations.atmosphere_testing_frequency} min
           </span>
         </h3>
         
@@ -758,10 +758,10 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                {gas === 'oxygen' ? 'ðŸ« Oâ‚‚' : 
-                 gas === 'lel' ? 'ðŸ”¥ LEL' : 
-                 gas === 'h2s' ? 'â˜ ï¸ Hâ‚‚S' : 
-                 'ðŸ’¨ CO'}
+                {gas === 'oxygen' ? '🫁 O₂' : 
+                 gas === 'lel' ? '🔥 LEL' : 
+                 gas === 'h2s' ? '☠️ H₂S' : 
+                 '💨 CO'}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: isMobile ? '13px' : '14px' }}>
                 {gas === 'oxygen' ? (
@@ -770,16 +770,16 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                       ✅ {(limits as AtmosphericLimits['oxygen']).min}-{(limits as AtmosphericLimits['oxygen']).max}%
                     </div>
                     <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                      ðŸš¨ â‰¤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou â‰¥{(limits as AtmosphericLimits['oxygen']).critical_high}%
+                      🚨 ≤{(limits as AtmosphericLimits['oxygen']).critical_low}% ou ≥{(limits as AtmosphericLimits['oxygen']).critical_high}%
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ color: '#86efac', fontWeight: '600' }}>
-                      ✅ â‰¤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}
+                      ✅ ≤{(limits as AtmosphericLimits['lel']).max} {gas === 'lel' ? '%' : 'ppm'}
                     </div>
                     <div style={{ color: '#fca5a5', fontWeight: '600' }}>
-                      ðŸš¨ â‰¥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}
+                      🚨 ≥{(limits as AtmosphericLimits['lel']).critical} {gas === 'lel' ? '%' : 'ppm'}
                     </div>
                   </>
                 )}
@@ -949,7 +949,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
               <AlertTriangle style={{ width: '36px', height: '36px', color: '#f87171' }} />
               <div>
                 <h3 style={{ color: '#fecaca', fontWeight: 'bold', fontSize: isMobile ? '18px' : '20px' }}>
-                  â° {t.retestRequired}
+                  ⏰ {t.retestRequired}
                 </h3>
                 <p style={{ color: '#fca5a5', fontSize: isMobile ? '14px' : '16px' }}>
                   {t.criticalValues} - {t.evacuationRequired}
@@ -1218,8 +1218,8 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                               '#86efac',
                         fontSize: isMobile ? '15px' : '17px'
                       }}>
-                        {reading.status === 'danger' ? `ðŸš¨ ${t.danger}` :
-                         reading.status === 'caution' ? `⚠ ï¸ ${t.warning}` :
+                        {reading.status === 'danger' ? `🚨 ${t.danger}` :
+                         reading.status === 'caution' ? `⚠️ ${t.warning}` :
                          `✅ ${t.safe}`}
                       </span>
                       <span style={{
@@ -1238,15 +1238,15 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                       fontSize: isMobile ? '13px' : '14px', 
                       textAlign: isMobile ? 'center' : 'right'
                     }}>
-                      ðŸ“… {new Date(reading.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                      📅 {new Date(reading.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                       <br />
-                      ðŸ‘¤ {reading.testedBy}
+                      👤 {reading.testedBy}
                     </div>
                   </div>
                   
                   <div style={styles.grid4}>
                     <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>Oâ‚‚:</span>
+                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>O₂:</span>
                       <span style={{
                         marginLeft: '8px',
                         fontWeight: '600',
@@ -1272,7 +1272,7 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>Hâ‚‚S:</span>
+                      <span style={{ color: '#9ca3af', fontSize: '13px' }}>H₂S:</span>
                       <span style={{
                         marginLeft: '8px',
                         fontWeight: '600',
@@ -1307,9 +1307,9 @@ const AtmosphericTesting: React.FC<ConfinedSpaceComponentProps> = ({
                       fontSize: '14px',
                       color: '#d1d5db'
                     }}>
-                      {reading.readings.temperature && <span>ðŸŒ¡ï¸ {reading.readings.temperature}°C </span>}
-                      {reading.readings.humidity && <span>ðŸ’§ {reading.readings.humidity}% </span>}
-                      {reading.notes && <div style={{ marginTop: '6px' }}>ðŸ“ {reading.notes}</div>}
+                      {reading.readings.temperature && <span>🌡️ {reading.readings.temperature}°C </span>}
+                      {reading.readings.humidity && <span>💧 {reading.readings.humidity}% </span>}
+                      {reading.notes && <div style={{ marginTop: '6px' }}>📝 {reading.notes}</div>}
                     </div>
                   )}
                 </div>

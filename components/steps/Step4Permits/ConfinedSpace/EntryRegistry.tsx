@@ -96,7 +96,7 @@ interface CommunicationLog {
   emergency_indicated: boolean;
 }
 
-// =================== TRADUCTIONS COMPLÃˆTES ===================
+// =================== TRADUCTIONS COMPLÈTES ===================
 const translations = {
   fr: {
     title: "Registre d'Entrée Obligatoire",
@@ -111,32 +111,32 @@ const translations = {
     recordExit: "Enregistrer Sortie",
     emergencyEvacuation: "Évacuation d'Urgence",
     communicationCheck: "Vérification Communication",
-    personnelInside: "Personnel Ã  l'intérieur",
-    personnelOutside: "Personnel Ã  l'extérieur",
+    personnelInside: "Personnel à l'intérieur",
+    personnelOutside: "Personnel à l'extérieur",
     maxOccupancy: "Occupation maximale",
-    timeInside: "Temps Ã  l'intérieur",
+    timeInside: "Temps à l'intérieur",
     lastCommunication: "Dernière communication",
-    equipmentStatus: "Ã‰tat équipement",
+    equipmentStatus: "État équipement",
     entrant: "Entrant",
     attendant: "Surveillant",
     supervisor: "Superviseur",
     rescuer: "Sauveteur",
     emergency: "Urgence",
     verified: "Vérifié",
-    needsCheck: "Ã€ vérifier",
+    needsCheck: "À vérifier",
     expired: "Expiré",
-    inside: "Ã€ l'intérieur",
-    outside: "Ã€ l'extérieur",
+    inside: "À l'intérieur",
+    outside: "À l'extérieur",
     unknown: "Inconnu",
     signalStrength: "Force signal",
-    responseReceived: "Réponse reÃ§ue",
+    responseReceived: "Réponse reçue",
     emergencySignal: "Signal d'urgence",
     authorized: "Autorisé",
     unauthorized: "Non autorisé",
     attendantRequired: "Surveillant obligatoire",
     communicationRequired: "Communication obligatoire",
     maxTimeExceeded: "Temps maximum dépassé",
-    emergencyEvacuationInitiated: "Ã‰vacuation d'urgence déclenchée"
+    emergencyEvacuationInitiated: "Évacuation d'urgence déclenchée"
   },
   en: {
     title: "Mandatory Entry Registry",
@@ -180,7 +180,7 @@ const translations = {
   }
 };
 
-// =================== COMPOSANT PRINCIPAL REFACTORISÃ‰ ===================
+// =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
 const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   language,
   permitData,
@@ -207,14 +207,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const personnel = entryRegistryData?.personnel || [];
   const entryLogs = entryRegistryData?.entryLogs || [];
   
-  // Ã‰tats locaux pour l'interface
+  // États locaux pour l'interface
   const [showAddPersonForm, setShowAddPersonForm] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState<string>('');
   const [communicationTimer, setCommunicationTimer] = useState(0);
   const [communicationActive, setCommunicationActive] = useState(false);
   const [emergencyMode, setEmergencyMode] = useState(false);
   
-  // Ã‰tats pour nouveau personnel
+  // États pour nouveau personnel
   const [newPerson, setNewPerson] = useState({
     name: '',
     role: 'entrant' as SafetyRole,
@@ -227,7 +227,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     notes: ''
   });
 
-  // Ã‰tats pour communication
+  // États pour communication
   const [communicationCheck, setCommunicationCheck] = useState({
     person_id: '',
     communication_type: 'radio' as 'radio' | 'visual' | 'hand_signal' | 'emergency_signal',
@@ -237,7 +237,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     emergency_indicated: false
   });
 
-  // Ã‰tats monitoring personnel
+  // États monitoring personnel
   const [personnelStatuses, setPersonnelStatuses] = useState<PersonnelStatus[]>([]);
   const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
   const [localCommunicationChecks, setLocalCommunicationChecks] = useState<CommunicationCheckLog[]>([]); // ✅ Logs locaux pour communication
@@ -245,7 +245,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
   const t = translations[language];
 
-  // =================== HANDLERS SAFETYMANAGER CORRIGÃ‰S ===================
+  // =================== HANDLERS SAFETYMANAGER CORRIGÉS ===================
   const updateEntryRegistryData = React.useCallback((updates: Partial<EntryRegistryData>) => {
     // ✅ CORRECTION 1 : Vérification SafetyManager
     if (safetyManager) {
@@ -299,7 +299,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   });
 
   const updateEntryLogs = React.useCallback((newLogs: EntryLog[]) => {
-    // Mettre Ã  jour les logs locaux pour l'affichage
+    // Mettre à jour les logs locaux pour l'affichage
     setLocalEntryLogs(newLogs);
     
     // ✅ Convertir et envoyer au SafetyManager
@@ -347,9 +347,9 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const getRoleEmoji = (role: SafetyRole): string => {
     const emojis = {
       entrant: 'ðŸ‘·',
-      attendant: 'ðŸ‘ï¸',
+      attendant: '👁️',
       supervisor: 'ðŸ‘¨â€ðŸ’¼',
-      rescue: 'ðŸš‘', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
+      rescue: '🚑', // ✅ CORRECTION: 'rescue' au lieu de 'rescuer'
       admin: '🚨'
     };
     return emojis[role] || '👤';
@@ -378,7 +378,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   const handleAttendantPresent = React.useCallback((checked: boolean) => {
     updateEntryRegistryData({ attendantPresent: checked });
     
-    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise Ã  jour permis
+    // ✅ CORRECTION 3 : Vérification SafetyManager pour mise à jour permis
     if (safetyManager) {
       try {
         const currentPermit = safetyManager.currentPermit;
@@ -441,7 +441,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== GESTION DU PERSONNEL ===================
   const addNewPerson = React.useCallback(() => {
     if (!newPerson.name || !newPerson.role || !newPerson.phone) {
-      alert('⚠ ï¸ Veuillez remplir tous les champs obligatoires (nom, rÃ´le, téléphone)');
+      alert('⚠️ Veuillez remplir tous les champs obligatoires (nom, rôle, téléphone)');
       return;
     }
 
@@ -499,7 +499,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const status = getPersonnelStatus(personId);
     
     if (status?.current_status === 'inside') {
-      alert('⚠ ï¸ Impossible de supprimer : cette personne est actuellement Ã  l\'intérieur de l\'espace clos');
+      alert('⚠️ Impossible de supprimer : cette personne est actuellement à l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -513,18 +513,18 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       alert(`Personnel supprimé: ${person.name}`);
     }
   }, [personnel, personnelStatuses, updatePersonnel, getPersonById, getPersonnelStatus]);
-  // =================== GESTION ENTRÃ‰ES/SORTIES ===================
+  // =================== GESTION ENTRÉES/SORTIES ===================
   const recordEntry = React.useCallback((personId: string) => {
     const person = getPersonById(personId);
     const status = getPersonnelStatus(personId);
     
     if (!person) {
-      alert('⚠ ï¸ Personne non trouvée dans le registre');
+      alert('⚠️ Personne non trouvée dans le registre');
       return;
     }
 
     if (status?.current_status === 'inside') {
-      alert('⚠ ï¸ Cette personne est déjÃ  Ã  l\'intérieur de l\'espace clos');
+      alert('⚠️ Cette personne est déjà à l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -537,7 +537,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
 
     // Vérification surveillant présent
     if (!ensureBoolean(entryRegistryData.attendantPresent) && person.role !== 'attendant') {
-      alert('⚠ ï¸ Un surveillant doit Ãªtre présent avant toute entrée d\'entrant');
+      alert('⚠️ Un surveillant doit être présent avant toute entrée d\'entrant');
       return;
     }
 
@@ -558,14 +558,14 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       notes: `Entrée autorisée - ${person.role}`
     };
 
-    // Mise Ã  jour statut personnel
+    // Mise à jour statut personnel
     const updatedStatuses = personnelStatuses.map(s => 
       s.person_id === personId 
         ? { ...s, current_status: 'inside' as const, last_entry_time: now }
         : s
     );
 
-    // Mise Ã  jour personnel
+    // Mise à jour personnel
     const updatedPersonnel = personnel.map(p => 
       p.id === personId 
         ? { ...p, entryTime: now, status: 'inside' as const }
@@ -587,12 +587,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const status = getPersonnelStatus(personId);
     
     if (!person) {
-      alert('⚠ ï¸ Personne non trouvée dans le registre');
+      alert('⚠️ Personne non trouvée dans le registre');
       return;
     }
 
     if (status?.current_status !== 'inside') {
-      alert('⚠ ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -616,7 +616,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       notes: `Sortie normale - Durée : ${formatDuration(sessionDuration)}`
     };
 
-    // Mise Ã  jour statut personnel
+    // Mise à jour statut personnel
     const updatedStatuses = personnelStatuses.map(s => 
       s.person_id === personId 
         ? { 
@@ -628,7 +628,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
         : s
     );
 
-    // Mise Ã  jour personnel
+    // Mise à jour personnel
     const updatedPersonnel = personnel.map(p => 
       p.id === personId 
         ? { ...p, exitTime: now, status: 'outside' as const }
@@ -646,7 +646,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   }, [personnel, personnelStatuses, entryRegistryData, entryLogs, getPersonById, getPersonnelStatus, updatePersonnel, updateEntryLogs, updateEntryRegistryData]);
 
   const initiateEmergencyEvacuation = React.useCallback(() => {
-    if (!confirm('⚠ ï¸ CONFIRMER L\'Ã‰VACUATION D\'URGENCE de tous les entrants ?')) {
+    if (!confirm('⚠️ CONFIRMER L\'ÉVACUATION D\'URGENCE de tous les entrants ?')) {
       return;
     }
 
@@ -654,7 +654,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const currentInside = getCurrentPersonnelInside();
     
     if (currentInside.length === 0) {
-      alert('ℹ️ Aucune personne Ã  évacuer actuellement');
+      alert('ℹ️ Aucune personne à évacuer actuellement');
       return;
     }
 
@@ -675,7 +675,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           timestamp: now,
           action: 'emergency_exit',
           personnelId: person.id, // ✅ REQUIS pour SafetyManager
-          authorizedBy: 'Ã‰VACUATION D\'URGENCE', // ✅ REQUIS pour SafetyManager
+          authorizedBy: 'ÉVACUATION D\'URGENCE', // ✅ REQUIS pour SafetyManager
           person_id: person.id,
           person_name: person.name,
           role: person.role,
@@ -683,10 +683,10 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           communication_verified: false,
           equipment_verified: false,
           emergency: true,
-          notes: `Ã‰VACUATION D'URGENCE - Durée : ${formatDuration(sessionDuration)}`
+          notes: `ÉVACUATION D'URGENCE - Durée : ${formatDuration(sessionDuration)}`
         });
 
-        // Mise Ã  jour statut
+        // Mise à jour statut
         const statusIndex = updatedStatuses.findIndex(s => s.person_id === person.id);
         if (statusIndex !== -1) {
           updatedStatuses[statusIndex] = {
@@ -697,7 +697,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
           };
         }
 
-        // Mise Ã  jour personnel
+        // Mise à jour personnel
         const personIndex = updatedPersonnel.findIndex(p => p.id === person.id);
         if (personIndex !== -1) {
           updatedPersonnel[personIndex] = {
@@ -724,19 +724,19 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
   // =================== GESTION COMMUNICATION ===================
   const performCommunicationCheck = React.useCallback(() => {
     if (!communicationCheck.person_id) {
-      alert('⚠ ï¸ Veuillez sélectionner une personne pour la vérification');
+      alert('⚠️ Veuillez sélectionner une personne pour la vérification');
       return;
     }
 
     const person = getPersonById(communicationCheck.person_id);
     if (!person) {
-      alert('⚠ ï¸ Personne non trouvée');
+      alert('⚠️ Personne non trouvée');
       return;
     }
 
     const status = getPersonnelStatus(communicationCheck.person_id);
     if (status?.current_status !== 'inside') {
-      alert('⚠ ï¸ Cette personne n\'est pas Ã  l\'intérieur de l\'espace clos');
+      alert('⚠️ Cette personne n\'est pas à l\'intérieur de l\'espace clos');
       return;
     }
 
@@ -757,7 +757,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
     const updatedCommLogs = [...communicationLogs, commLog];
     setCommunicationLogs(updatedCommLogs);
 
-    // Mise Ã  jour statut personnel
+    // Mise à jour statut personnel
     const updatedStatuses = personnelStatuses.map(s => 
       s.person_id === communicationCheck.person_id 
         ? { ...s, communication_last_verified: now }
@@ -779,7 +779,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
       communication_verified: communicationCheck.response_received,
       equipment_verified: true,
       emergency: communicationCheck.emergency_indicated,
-      notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÃ‰E' : ''}`
+      notes: `Communication ${communicationCheck.communication_type} - Signal: ${communicationCheck.signal_strength}/5 ${communicationCheck.emergency_indicated ? ' - URGENCE SIGNALÉE' : ''}`
     };
 
     // Ajouter aux logs locaux de communication (pas dans SafetyManager)
@@ -842,7 +842,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             margin: '0 0 12px 0',
             fontWeight: '600'
           }}>
-            ðŸ‘¥ <strong>SURVEILLANCE OBLIGATOIRE</strong> : Surveillant qualifié requis en permanence + communication bidirectionnelle selon {safeRegulations.code}.
+            👥 <strong>SURVEILLANCE OBLIGATOIRE</strong> : Surveillant qualifié requis en permanence + communication bidirectionnelle selon {safeRegulations.code}.
           </p>
           <p style={{ 
             color: '#fca5a5', 
@@ -850,7 +850,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             margin: 0,
             fontStyle: 'italic'
           }}>
-            â° <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l'espace clos.
+            ⏰ <strong>Durée maximale</strong> : {safeRegulations.permit_validity_hours}h consécutives maximum par personne dans l'espace clos.
           </p>
         </div>
         
@@ -862,7 +862,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             color: '#fecaca',
             marginBottom: '16px'
           }}>
-            ðŸ‘ï¸ {t.attendantRequired}
+            👁️ {t.attendantRequired}
           </h4>
           
           <div style={{ 
@@ -897,7 +897,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              ðŸ‘ï¸ <strong>SURVEILLANT PRÃ‰SENT</strong> : Je confirme qu'un surveillant qualifié est présent et maintient une surveillance constante *
+              👁️ <strong>SURVEILLANT PRÉSENT</strong> : Je confirme qu'un surveillant qualifié est présent et maintient une surveillance constante *
             </label>
           </div>
           
@@ -933,7 +933,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              ðŸ“¡ <strong>COMMUNICATION TESTÃ‰E</strong> : Système de communication bidirectionnelle testé et fonctionnel entre surveillant et entrants *
+              📡 <strong>COMMUNICATION TESTÉE</strong> : Système de communication bidirectionnelle testé et fonctionnel entre surveillant et entrants *
             </label>
           </div>
           
@@ -968,7 +968,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 flex: 1
               }}
             >
-              ðŸš‘ <strong>SAUVETAGE PRÃŠT</strong> : Ã‰quipe et équipement de sauvetage d'urgence prÃªts Ã  intervenir immédiatement *
+              🚑 <strong>SAUVETAGE PRÊT</strong> : Équipe et équipement de sauvetage d'urgence prêts à intervenir immédiatement *
             </label>
           </div>
         </div>
@@ -1033,7 +1033,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               borderRadius: '16px',
               fontWeight: '700'
             }}>
-              ðŸ‘¥ {entryRegistryData?.currentOccupancy || 0}/{entryRegistryData?.maxOccupancy}
+              👥 {entryRegistryData?.currentOccupancy || 0}/{entryRegistryData?.maxOccupancy}
             </span>
             <button
               onClick={initiateEmergencyEvacuation}
@@ -1183,7 +1183,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               color: 'white', 
               marginBottom: '20px' 
             }}>
-              ðŸ‘¤ Nouveau Personnel
+              👤 Nouveau Personnel
             </h4>
             
             <div style={styles.grid2}>
@@ -1199,7 +1199,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 />
               </div>
               <div>
-                <label style={styles.label}>RÃ´le *</label>
+                <label style={styles.label}>Rôle *</label>
                 <select
                   value={newPerson.role}
                   onChange={(e) => setNewPerson(prev => ({ ...prev, role: e.target.value as SafetyRole }))}
@@ -1207,9 +1207,9 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                   required
                 >
                   <option value="entrant">ðŸ‘· Entrant</option>
-                  <option value="attendant">ðŸ‘ï¸ Surveillant</option>
+                  <option value="attendant">👁️ Surveillant</option>
                   <option value="supervisor">ðŸ‘¨â€ðŸ’¼ Superviseur</option>
-                  <option value="rescue">ðŸš‘ Sauveteur</option>
+                  <option value="rescue">🚑 Sauveteur</option>
                 </select>
               </div>
               <div>
@@ -1338,7 +1338,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               Aucun personnel enregistré
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Ajoutez du personnel ci-dessus pour commencer Ã  gérer les entrées/sorties.
+              Ajoutez du personnel ci-dessus pour commencer à gérer les entrées/sorties.
             </p>
           </div>
         ) : (
@@ -1488,7 +1488,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     </div>
                     {status && (
                       <div>
-                        <span style={{ color: '#9ca3af' }}>â±ï¸ {t.timeInside}:</span>
+                        <span style={{ color: '#9ca3af' }}>⏱️ {t.timeInside}:</span>
                         <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
                           {formatDuration(status.total_time_inside)}
                         </span>
@@ -1496,7 +1496,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     )}
                     {status?.communication_last_verified && (
                       <div>
-                        <span style={{ color: '#9ca3af' }}>ðŸ“¡ {t.lastCommunication}:</span>
+                        <span style={{ color: '#9ca3af' }}>📡 {t.lastCommunication}:</span>
                         <span style={{ marginLeft: '8px', color: '#d1d5db', fontWeight: '600' }}>
                           {new Date(status.communication_last_verified).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                         </span>
@@ -1511,7 +1511,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                     fontSize: '13px',
                     color: '#d1d5db'
                   }}>
-                    <div>ðŸš‘ <strong>Contact d'urgence:</strong> {person.emergencyContact?.name || 'N/A'} - {person.emergencyContact?.phone || 'N/A'}</div>
+                    <div>🚑 <strong>Contact d'urgence:</strong> {person.emergencyContact?.name || 'N/A'} - {person.emergencyContact?.phone || 'N/A'}</div>
                   </div>
                 </div>
               );
@@ -1540,12 +1540,12 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
             color: 'white', 
             marginBottom: '20px' 
           }}>
-            ðŸ“¡ {t.communicationCheck}
+            📡 {t.communicationCheck}
           </h4>
           
           <div style={styles.grid2}>
             <div>
-              <label style={styles.label}>Personne Ã  contacter *</label>
+              <label style={styles.label}>Personne à contacter *</label>
               <select
                 value={communicationCheck.person_id}
                 onChange={(e) => setCommunicationCheck(prev => ({ ...prev, person_id: e.target.value }))}
@@ -1572,7 +1572,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                 required
               >
                 <option value="radio">ðŸ“» Radio</option>
-                <option value="visual">ðŸ‘ï¸ Visuel</option>
+                <option value="visual">👁️ Visuel</option>
                 <option value="hand_signal">âœ‹ Signal manuel</option>
                 <option value="emergency_signal">🚨 Signal d'urgence</option>
               </select>
@@ -1719,7 +1719,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
               Aucune entrée enregistrée
             </p>
             <p style={{ fontSize: '15px', lineHeight: 1.5 }}>
-              Les entrées/sorties et vérifications de communication apparaÃ®tront ici.
+              Les entrées/sorties et vérifications de communication apparaîtront ici.
             </p>
           </div>
         ) : (
@@ -1782,9 +1782,9 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                         backgroundColor: actionColor,
                         color: 'white'
                       }}>
-                        {log.action === 'entry' ? 'ENTRÃ‰E' :
+                        {log.action === 'entry' ? 'ENTRÉE' :
                          log.action === 'exit' ? 'SORTIE' :
-                         log.action === 'emergency_exit' ? 'Ã‰VACUATION' :
+                         log.action === 'emergency_exit' ? 'ÉVACUATION' :
                          'COMM'}
                       </span>
                       {log.emergency && (
@@ -1806,9 +1806,9 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                       fontSize: isMobile ? '12px' : '13px', 
                       textAlign: isMobile ? 'center' : 'right'
                     }}>
-                      ðŸ“… {new Date(log.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                      📅 {new Date(log.timestamp).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
                       <br />
-                      ðŸ‘¤ {log.authorizedBy}
+                      👤 {log.authorizedBy}
                     </div>
                   </div>
                   
@@ -1820,7 +1820,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#9ca3af' }}>ðŸ“¡ Comm:</span>
+                      <span style={{ color: '#9ca3af' }}>📡 Comm:</span>
                       <span style={{ 
                         marginLeft: '6px', 
                         color: log.communication_verified ? '#86efac' : '#fca5a5', 
@@ -1830,7 +1830,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#9ca3af' }}>🛡️ Ã‰quip:</span>
+                      <span style={{ color: '#9ca3af' }}>🛡️ Équip:</span>
                       <span style={{ 
                         marginLeft: '6px', 
                         color: log.equipment_verified ? '#86efac' : '#fca5a5', 
@@ -1849,7 +1849,7 @@ const EntryRegistry: React.FC<ConfinedSpaceComponentProps> = ({
                       fontSize: '12px',
                       color: '#d1d5db'
                     }}>
-                      ðŸ“ {log.notes}
+                      📝 {log.notes}
                     </div>
                   )}
                 </div>

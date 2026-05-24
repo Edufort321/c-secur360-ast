@@ -705,6 +705,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [expandedView, setExpandedView] = useState(!compactMode);
   const [showMenu, setShowMenu] = useState(false);
+  const sectionContentRef = useRef<HTMLDivElement>(null);
   
   // ✅ FIX CRITIQUE: État pour forcer la non-lecture seule
   const [forceEditable, setForceEditable] = useState(true);
@@ -1046,8 +1047,8 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
       // ⚠️ SAFETYMANAGER DÉSACTIVÉ - Pas de sauvegarde en base pour l'instant
       console.log('🔇 SafetyManager désactivé - sauvegarde locale seulement');
       
-      // ✅ Callback onSave sécurisé
-      if (onSave) {
+      // ✅ Callback onSave uniquement pour sauvegarde explicite (pas auto-save)
+      if (onSave && !isAutoSave) {
         await onSave(dataToSave);
       }
       
@@ -1073,8 +1074,10 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
   };
 
   const navigateToSection = (section: 'site' | 'rescue' | 'atmospheric' | 'registry' | 'finalization') => {
-    console.log(`🧭 Navigation vers: ${section}`);
     setCurrentSection(section);
+    setTimeout(() => {
+      sectionContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const getSectionIcon = (section: string) => {
@@ -1571,6 +1574,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
               
               return (
                 <button
+                  type="button"
                   key={section}
                   onClick={() => navigateToSection(section)}
                   disabled={isActuallyReadOnly}
@@ -1631,7 +1635,7 @@ const ConfinedSpace: React.FC<ConfinedSpaceProps> = ({
         </div>
 
         {/* Contenu de la section active */}
-        <div style={{
+        <div ref={sectionContentRef} style={{
           ...actualStyles.card,
           backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(255, 255, 255, 0.8)',
           minHeight: '600px'
