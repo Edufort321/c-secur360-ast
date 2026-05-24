@@ -200,6 +200,9 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
 }
 
 function isPublicRoute(pathname: string): boolean {
+  // Dynamic tenant login pages: /{tenant}/login
+  if (/^\/[^/]+\/login$/.test(pathname)) return true;
+
   return publicRoutes.some(route => {
     if (route.endsWith('(.*)')) {
       const baseRoute = route.replace('(.*)', '');
@@ -219,14 +222,25 @@ function getRequiredRoles(pathname: string): string[] {
   return [];
 }
 
+const NON_TENANT_PREFIXES = new Set(['auth', 'admin', 'api', '_next', 'public', 'login']);
+
 function redirectToLogin(request: NextRequest, originalPath: string): NextResponse {
+  // Detect tenant from paths like /cerdia/timesheets → redirect to /cerdia/login
+  const tenantMatch = originalPath.match(/^\/([^/]+)(\/|$)/);
+  const segment = tenantMatch?.[1];
+
+  if (segment && !NON_TENANT_PREFIXES.has(segment)) {
+    const loginUrl = new URL(`/${segment}/login`, request.url);
+    if (!originalPath.endsWith('/login')) {
+      loginUrl.searchParams.set('redirect', originalPath);
+    }
+    return NextResponse.redirect(loginUrl);
+  }
+
   const loginUrl = new URL('/auth/admin', request.url);
-  
-  // Add redirect parameter for post-login navigation
   if (originalPath !== '/' && !originalPath.startsWith('/auth')) {
     loginUrl.searchParams.set('redirect', originalPath);
   }
-  
   return NextResponse.redirect(loginUrl);
 }
 

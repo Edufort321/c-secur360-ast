@@ -5,7 +5,7 @@ import { verifyPassword, createSession, AUTH_COOKIE, SESSION_TTL_SECONDS } from 
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { email, password, rememberMe } = await req.json();
     if (!email || !password) {
       return NextResponse.json({ error: 'Email et mot de passe requis' }, { status: 400 });
     }
@@ -31,9 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Identifiants invalides' }, { status: 401 });
     }
 
+    const TTL_7_DAYS = 7 * 24 * 60 * 60;
+    const ttlSeconds = rememberMe ? TTL_7_DAYS : SESSION_TTL_SECONDS;
+
     const { token } = await createSession(user.id, {
       ip: req.headers.get('x-forwarded-for') ?? undefined,
       userAgent: req.headers.get('user-agent') ?? undefined,
+      ttlSeconds,
     });
 
     cookies().set(AUTH_COOKIE, token, {
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: SESSION_TTL_SECONDS,
+      maxAge: ttlSeconds,
     });
 
     // best-effort (non bloquant)

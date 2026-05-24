@@ -35,9 +35,10 @@ export function generateToken(): string {
 }
 
 /** Crée une ligne auth_sessions et renvoie {token, expiresAt}. */
-export async function createSession(userId: string, meta?: { ip?: string; userAgent?: string }) {
+export async function createSession(userId: string, meta?: { ip?: string; userAgent?: string; ttlSeconds?: number }) {
   const token = generateToken();
-  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString();
+  const ttl = meta?.ttlSeconds ?? SESSION_TTL_SECONDS;
+  const expiresAt = new Date(Date.now() + ttl * 1000).toISOString();
   const { error } = await supabase.from('auth_sessions').insert({
     token,
     user_id: userId,
