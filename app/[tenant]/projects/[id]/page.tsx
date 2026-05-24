@@ -181,7 +181,7 @@ export default function ProjectDetailPage() {
             <div className="mb-4 sm:hidden">
               <select
                 value={tab}
-                onChange={e => setTab(e.target.value)}
+                onChange={e => setTab(e.target.value as Tab)}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               >
                 {tabs.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}

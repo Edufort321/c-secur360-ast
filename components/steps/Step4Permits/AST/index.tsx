@@ -6,6 +6,7 @@ import {
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
   AlertTriangle, Home, FileText, BarChart3, Trash2,
   ChevronUp, ChevronDown, AlertCircle, QrCode, Lock, Zap,
+  Camera, UserCheck, UserX, BookMarked, Star,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -53,6 +54,32 @@ export interface Participant {
   company: string;
   acknowledged: boolean;
   acknowledgedAt: string;
+}
+
+export type LOTOPhotoState = 'before' | 'during' | 'after' | 'verification';
+
+export interface LOTOPhoto {
+  id: string;
+  url: string; // base64 data URL
+  timestamp: string;
+  gpsLatitude?: number;
+  gpsLongitude?: number;
+  description: string;
+  lockState: LOTOPhotoState;
+}
+
+export interface Worker {
+  id: string;
+  name: string;
+  role: string;
+  company: string;
+  badgeNumber: string;
+  certifications: string[];
+  emergencyContact: string;
+  emergencyPhone: string;
+  present: boolean;
+  checkedInAt: string;
+  checkedOutAt: string;
 }
 
 export type ASTModel = 'simple' | 'complet';
@@ -111,9 +138,13 @@ export interface ASTPermit {
   restrictions: string;
   finalization_notes: string;
 
+  workers: Worker[];
+  workerNotes: string;
+
   loto: {
     required: boolean;
     ref: string;
+    templateName: string;
     energySources: Array<{
       id: string;
       type: string;
@@ -123,6 +154,7 @@ export interface ASTPermit {
       isolationMethod: string;
       verifiedBy: string;
       verified: boolean;
+      photos: LOTOPhoto[];
     }>;
     locks: Array<{
       id: string;
@@ -378,12 +410,14 @@ function createDefaultPermit(province: ProvinceCode): ASTPermit {
       energySources: [], lotoRequired: false, lotoRef: '',
     },
     participants: [],
+    workers: [],
+    workerNotes: '',
     supervisorSigName: '', supervisorSigCert: '', supervisorSigDate: '', supervisorSigNotes: '',
     supervisor_name: '', supervisor_cert: '',
     permit_valid_from: '', permit_valid_to: '',
     permitted_work: '', restrictions: '', finalization_notes: '',
     loto: {
-      required: false, ref: '',
+      required: false, ref: '', templateName: '',
       energySources: [], locks: [],
       verificationDone: false, verificationBy: '', verificationDate: '',
       reenergizationAuthBy: '', reenergizationAuthDate: '', notes: '',
@@ -1014,6 +1048,142 @@ function TagSelector({ label, options, selected, onChange, disabled = false, all
   );
 }
 
+// ── HazardDropdown — liste déroulante avec cases à cocher ─────────────────
+function HazardDropdown({ label, options, selected, onChange, disabled = false, language = 'fr', customPlaceholder }: {
+  label: string; options: string[]; selected: string[];
+  onChange: (v: string[]) => void; disabled?: boolean; language?: Language;
+  customPlaceholder?: string;
+}) {
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
+  const [open, setOpen] = useState(false);
+  const [customInput, setCustomInput] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggle = (opt: string) => {
+    if (disabled) return;
+    onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]);
+  };
+
+  const addCustom = () => {
+    const val = customInput.trim();
+    if (!val || selected.includes(val)) { setCustomInput(''); return; }
+    onChange([...selected, val]);
+    setCustomInput('');
+  };
+
+  // Options non connues = ajoutées via custom
+  const customSelected = selected.filter(s => !options.includes(s));
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300">{label}</label>
+
+      {/* Badges sélectionnés */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map(opt => (
+            <span key={opt}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700">
+              <AlertTriangle className="w-3 h-3 shrink-0" />
+              {opt}
+              {!disabled && (
+                <button type="button" onClick={() => toggle(opt)}
+                  className="ml-0.5 hover:text-red-900 dark:hover:text-red-100 transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Bouton ouverture */}
+      {!disabled && (
+        <div className="relative" ref={panelRef}>
+          <button
+            type="button"
+            onClick={() => setOpen(v => !v)}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:border-teal-400 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors"
+          >
+            <Menu className="w-4 h-4" />
+            {selected.length === 0
+              ? tr('Sélectionner les dangers…', 'Select hazards…')
+              : tr(`Modifier (${selected.length} sélectionné${selected.length > 1 ? 's' : ''})`, `Edit (${selected.length} selected)`)}
+          </button>
+
+          {open && (
+            <div className="absolute left-0 top-full mt-1.5 z-40 w-80 max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl">
+              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                  {tr('Dangers identifiés', 'Identified hazards')}
+                </span>
+                {selected.length > 0 && (
+                  <button type="button" onClick={() => onChange([])}
+                    className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                    {tr('Tout effacer', 'Clear all')}
+                  </button>
+                )}
+              </div>
+              <div className="py-1">
+                {options.map(opt => (
+                  <label key={opt}
+                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${selected.includes(opt) ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(opt)}
+                      onChange={() => toggle(opt)}
+                      className="h-4 w-4 shrink-0 rounded border-slate-300 accent-red-500"
+                    />
+                    <span className={`text-sm ${selected.includes(opt) ? 'text-red-700 dark:text-red-300 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>
+                      {opt}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {/* Ajout custom */}
+              <div className="border-t border-slate-100 dark:border-slate-700 px-3 py-2.5">
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={customInput}
+                    onChange={e => setCustomInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+                    placeholder={customPlaceholder ?? tr('Danger personnalisé…', 'Custom hazard…')}
+                    className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+                  />
+                  <button type="button" onClick={addCustom} disabled={!customInput.trim()}
+                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors">
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* custom options en lecture seule */}
+      {disabled && customSelected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {customSelected.map(opt => (
+            <span key={opt} className="px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700">
+              {opt}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Contrôles contextuels (modèle complet) ────────────────────────────────
 function ContextualControls({ hazards, controls, onChange, disabled, language = 'fr' }: {
   hazards: string[]; controls: string[];
@@ -1465,13 +1635,13 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
-              <TagSelector
+              <HazardDropdown
                 label={t.hazards}
                 options={t.hazardOptions as unknown as string[]}
                 selected={step.hazards}
                 onChange={v => onUpdate(s => ({ ...s, hazards: v }))}
                 disabled={readOnly}
-                allowCustom
+                language={language}
                 customPlaceholder={language === 'fr' ? 'Danger personnalisé…' : 'Custom hazard…'}
               />
               <Textarea label={t.hazardNotes} value={step.hazardNotes} onChange={v => onUpdate(s => ({ ...s, hazardNotes: v }))} placeholder={t.hazardNotesPh} rows={2} disabled={readOnly} />
@@ -1563,15 +1733,20 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
 }
 
 // ── Section: PPE ───────────────────────────────────────────────────────────
-function PPESection({ ast, onChange, language, readOnly }: {
+function PPESection({ ast, onChange, language, readOnly, tenant }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  language: Language; readOnly: boolean;
+  language: Language; readOnly: boolean; tenant?: string;
 }) {
   const t = T[language].ppe;
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
   const items = ast.ppeRequirements;
   const requiredCount = items.filter(i => i.required).length;
-
   const categories = Array.from(new Set(items.map(i => i.category)));
+
+  // Options EPI custom du tenant
+  const [customInput, setCustomInput] = useState('');
+  const [customPermanent, setCustomPermanent] = useState(true);
+  const [savingCustom, setSavingCustom] = useState(false);
 
   const updateItem = (id: string, updater: (item: PPEItem) => PPEItem) => {
     onChange(p => ({
@@ -1579,6 +1754,25 @@ function PPESection({ ast, onChange, language, readOnly }: {
       ppeRequirements: p.ppeRequirements.map(i => i.id === id ? updater(i) : i),
     }));
   };
+
+  const removeCustomItem = (id: string) =>
+    onChange(p => ({ ...p, ppeRequirements: p.ppeRequirements.filter(i => i.id !== id) }));
+
+  const addCustomPPE = async () => {
+    const label = customInput.trim();
+    if (!label) return;
+    const newItem: PPEItem = { id: generateId(), category: tr('Personnalisé', 'Custom'), item: label, required: true, specification: '' };
+    onChange(p => ({ ...p, ppeRequirements: [...p.ppeRequirements, newItem] }));
+    // Sauvegarder en permanent si demandé
+    if (customPermanent && supabase && tenant) {
+      setSavingCustom(true);
+      await supabase.from('tenant_ast_options').insert({ tenant_id: tenant, category: 'ppe', label, permanent: true });
+      setSavingCustom(false);
+    }
+    setCustomInput('');
+  };
+
+  const customCategory = tr('Personnalisé', 'Custom');
 
   return (
     <div>
@@ -1627,11 +1821,47 @@ function PPESection({ ast, onChange, language, readOnly }: {
                         />
                       )}
                     </div>
+                    {cat === customCategory && !readOnly && (
+                      <button type="button" onClick={() => removeCustomItem(item.id)} className="p-1 text-red-400 hover:text-red-600 mt-0.5 shrink-0">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           ))}
+
+          {/* Ajout EPI custom */}
+          {!readOnly && (
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {tr('Ajouter un EPI personnalisé', 'Add custom PPE')}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomPPE(); } }}
+                  placeholder={tr('Ex: Combinaison anti-arc, Bottes diélectriques…', 'E.g.: Arc-flash suit, Dielectric boots…')}
+                  className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none"
+                />
+                <button type="button" onClick={addCustomPPE} disabled={!customInput.trim() || savingCustom}
+                  className="px-3 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg transition-colors">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={customPermanent} onChange={e => setCustomPermanent(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-teal-600" />
+                <span className="text-xs text-slate-600 dark:text-slate-300">
+                  {tr('Sauvegarder comme option permanente pour ce tenant', 'Save as permanent option for this tenant')}
+                </span>
+                <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              </label>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -2136,20 +2366,372 @@ function QRCard({ permitNumber, tenant, type, language }: {
   );
 }
 
-// ── Section: Énergie / LOTO (modèle complet) ──────────────────────────────
-function LotoSection({ ast, onChange, readOnly, language }: {
+// ── Utilitaire photos ──────────────────────────────────────────────────────
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Composant galerie photo ────────────────────────────────────────────────
+function PhotoCapture({ photos, onChange, readOnly, language, label }: {
+  photos: LOTOPhoto[];
+  onChange: (photos: LOTOPhoto[]) => void;
+  readOnly: boolean;
+  language: Language;
+  label?: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const added: LOTOPhoto[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        const url = await readFileAsDataUrl(file);
+        // Tentative de géolocalisation (best-effort)
+        let gpsLatitude: number | undefined;
+        let gpsLongitude: number | undefined;
+        if (navigator.geolocation) {
+          await new Promise<void>(res => {
+            navigator.geolocation.getCurrentPosition(
+              pos => { gpsLatitude = pos.coords.latitude; gpsLongitude = pos.coords.longitude; res(); },
+              () => res(),
+              { timeout: 3000, maximumAge: 60000 }
+            );
+          });
+        }
+        added.push({ id: generateId(), url, timestamp: new Date().toISOString(), description: '', lockState: 'before', gpsLatitude, gpsLongitude });
+      } catch { /* ignore */ }
+    }
+    if (added.length > 0) onChange([...photos, ...added]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {label && <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>}
+      <div className="flex flex-wrap gap-2">
+        {photos.map(photo => (
+          <div key={photo.id} className="relative group w-20 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo.url} alt="" className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+            {photo.gpsLatitude && (
+              <span className="absolute bottom-5 left-0.5 text-[9px] bg-black/50 text-white rounded px-0.5">GPS</span>
+            )}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onChange(photos.filter(p => p.id !== photo.id))}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full hidden group-hover:flex items-center justify-center shadow transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <p className="text-[9px] text-slate-400 mt-0.5 truncate text-center">
+              {new Date(photo.timestamp).toLocaleTimeString(language === 'fr' ? 'fr-CA' : 'en-CA', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        ))}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-400 hover:border-teal-400 hover:text-teal-500 dark:hover:border-teal-500 transition-colors shrink-0"
+          >
+            <Camera className="w-5 h-5 mb-1" />
+            <span className="text-[10px]">{tr('Photo', 'Photo')}</span>
+          </button>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
+      />
+    </div>
+  );
+}
+
+// ── Section: Gestion des travailleurs (modèle complet) ────────────────────
+function WorkersSection({ ast, onChange, language, readOnly }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  readOnly: boolean; language: Language;
+  language: Language; readOnly: boolean;
 }) {
   const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
-  const loto = ast.loto ?? { required: false, ref: '', energySources: [], locks: [], verificationDone: false, verificationBy: '', verificationDate: '', reenergizationAuthBy: '', reenergizationAuthDate: '', notes: '' };
+  const workers = ast.workers ?? [];
+  const present = workers.filter(w => w.checkedInAt && !w.checkedOutAt).length;
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const addWorker = () => {
+    const id = generateId();
+    onChange(p => ({
+      ...p,
+      workers: [...(p.workers ?? []), {
+        id, name: '', role: 'travailleur', company: '', badgeNumber: '',
+        certifications: [], emergencyContact: '', emergencyPhone: '',
+        present: false, checkedInAt: '', checkedOutAt: '',
+      }],
+    }));
+    setExpandedId(id);
+  };
+
+  const removeWorker = (id: string) =>
+    onChange(p => ({ ...p, workers: (p.workers ?? []).filter(w => w.id !== id) }));
+
+  const updateWorker = (id: string, key: keyof Worker, val: unknown) =>
+    onChange(p => ({ ...p, workers: (p.workers ?? []).map(w => w.id === id ? { ...w, [key]: val } : w) }));
+
+  const checkIn = (id: string) => updateWorker(id, 'checkedInAt', new Date().toISOString());
+  const checkOut = (id: string) => updateWorker(id, 'checkedOutAt', new Date().toISOString());
+
+  const roleOptions = [
+    { value: 'travailleur', label: tr('Travailleur', 'Worker') },
+    { value: 'superviseur', label: tr('Superviseur', 'Supervisor') },
+    { value: 'sous_traitant', label: tr('Sous-traitant', 'Subcontractor') },
+    { value: 'visiteur', label: tr('Visiteur', 'Visitor') },
+    { value: 'secouriste', label: tr('Secouriste', 'First aider') },
+  ];
+
+  return (
+    <div>
+      <Card
+        title={tr('Gestion des travailleurs', 'Worker management')}
+        icon={<Users className="w-5 h-5" />}
+        badge={workers.length > 0 ? (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${present > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+            {present} / {workers.length} {tr('présent(s)', 'present')}
+          </span>
+        ) : undefined}
+      >
+        <div className="space-y-3">
+          {workers.length === 0 && (
+            <p className="text-center py-6 text-sm text-slate-400 dark:text-slate-500 italic">
+              {tr('Aucun travailleur enregistré.', 'No workers registered.')}
+            </p>
+          )}
+
+          {workers.map((w, i) => {
+            const isCheckedIn = !!w.checkedInAt && !w.checkedOutAt;
+            const isExpanded = expandedId === w.id;
+            return (
+              <div key={w.id} className={`rounded-xl border overflow-hidden transition-colors ${isCheckedIn ? 'border-green-300 dark:border-green-700' : 'border-slate-200 dark:border-slate-600'}`}>
+                {/* Header */}
+                <div className={`flex items-center gap-3 px-4 py-3 ${isCheckedIn ? 'bg-green-50 dark:bg-green-900/20' : 'bg-slate-50 dark:bg-slate-700/50'}`}>
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-teal-600 text-white text-xs font-bold shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                      {w.name || tr('(Sans nom)', '(No name)')}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {roleOptions.find(r => r.value === w.role)?.label ?? w.role}
+                      {w.badgeNumber && ` · #${w.badgeNumber}`}
+                      {w.company && ` · ${w.company}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Check-in / check-out */}
+                    {!readOnly && !w.checkedInAt && (
+                      <button type="button" onClick={() => checkIn(w.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        {tr('Check-in', 'Check-in')}
+                      </button>
+                    )}
+                    {!readOnly && w.checkedInAt && !w.checkedOutAt && (
+                      <button type="button" onClick={() => checkOut(w.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium rounded-lg transition-colors">
+                        <UserX className="w-3.5 h-3.5" />
+                        {tr('Check-out', 'Check-out')}
+                      </button>
+                    )}
+                    {w.checkedInAt && !w.checkedOutAt && (
+                      <span className="text-[10px] text-green-600 font-semibold">✓ {tr('Présent', 'Present')}</span>
+                    )}
+                    {w.checkedOutAt && (
+                      <span className="text-[10px] text-slate-500">{tr('Sorti', 'Checked out')}</span>
+                    )}
+                    <button type="button" onClick={() => setExpandedId(isExpanded ? null : w.id)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {!readOnly && (
+                      <button type="button" onClick={() => removeWorker(w.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Détails expandés */}
+                {isExpanded && (
+                  <div className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 border-t border-slate-100 dark:border-slate-700">
+                    <Field label={tr('Nom complet', 'Full name')}>
+                      <TextInput value={w.name} onChange={v => updateWorker(w.id, 'name', v)}
+                        placeholder={tr('Prénom et nom', 'First and last name')} disabled={readOnly} />
+                    </Field>
+                    <Field label={tr('Rôle', 'Role')}>
+                      <SelectInput value={w.role} onChange={v => updateWorker(w.id, 'role', v)}
+                        options={roleOptions} disabled={readOnly} />
+                    </Field>
+                    <Field label={tr('Entreprise', 'Company')}>
+                      <TextInput value={w.company} onChange={v => updateWorker(w.id, 'company', v)} disabled={readOnly} />
+                    </Field>
+                    <Field label={tr('N° badge', 'Badge #')}>
+                      <TextInput value={w.badgeNumber} onChange={v => updateWorker(w.id, 'badgeNumber', v)}
+                        placeholder="EMP-042" disabled={readOnly} />
+                    </Field>
+                    <Field label={tr('Contact urgence', 'Emergency contact')}>
+                      <TextInput value={w.emergencyContact} onChange={v => updateWorker(w.id, 'emergencyContact', v)}
+                        placeholder={tr('Nom', 'Name')} disabled={readOnly} />
+                    </Field>
+                    <Field label={tr('Tél. urgence', 'Emergency phone')}>
+                      <TextInput value={w.emergencyPhone} onChange={v => updateWorker(w.id, 'emergencyPhone', v)}
+                        placeholder="514-555-0000" disabled={readOnly} />
+                    </Field>
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <TagSelector
+                        label={tr('Certifications / formations', 'Certifications / training')}
+                        options={['RCR/DEA', tr('Espace clos — Entrant', 'Confined space — Entrant'), tr('Espace clos — Superviseur', 'Confined space — Supervisor'), 'SIMDUT/GHS', 'CADENASSAGE (LOTO)', tr('Travail en hauteur', 'Work at height'), tr('Chariots élévateurs', 'Forklift'), tr('Grue/Levage', 'Crane/Rigging'), tr('Électricien qualifié', 'Qualified electrician'), tr('Travail à chaud', 'Hot work')]}
+                        selected={w.certifications}
+                        onChange={v => updateWorker(w.id, 'certifications', v)}
+                        disabled={readOnly}
+                        allowCustom
+                        customPlaceholder={tr('Autre certification…', 'Other certification…')}
+                      />
+                    </div>
+                    {/* Horaires check-in/out */}
+                    {(w.checkedInAt || w.checkedOutAt) && (
+                      <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-6 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-3">
+                        {w.checkedInAt && (
+                          <div>
+                            <span className="font-medium text-green-600">{tr('Check-in : ', 'Check-in: ')}</span>
+                            {new Date(w.checkedInAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                          </div>
+                        )}
+                        {w.checkedOutAt && (
+                          <div>
+                            <span className="font-medium text-amber-600">{tr('Check-out : ', 'Check-out: ')}</span>
+                            {new Date(w.checkedOutAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* QR Code identifiant */}
+                    {w.name && (
+                      <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-4">
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white p-2 shadow-sm shrink-0">
+                          <QRCodeSVG
+                            value={JSON.stringify({ name: w.name, badge: w.badgeNumber, company: w.company, permit: ast.permit_number })}
+                            size={96}
+                            level="M"
+                          />
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="font-medium text-slate-700 dark:text-slate-200">{tr('QR identifiant', 'ID QR code')}</p>
+                          <p className="mt-0.5">{tr('Scannez pour identifier ce travailleur sur le site.', 'Scan to identify this worker on site.')}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {!readOnly && (
+            <button type="button" onClick={addWorker}
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors">
+              <Plus className="w-4 h-4" /> {tr('Ajouter un travailleur', 'Add a worker')}
+            </button>
+          )}
+        </div>
+      </Card>
+
+      <Card title={tr('Notes — gestion des travailleurs', 'Worker management notes')} icon={<FileText className="w-5 h-5" />}>
+        <Textarea
+          label={tr('Observations, consignes particulières…', 'Observations, special instructions…')}
+          value={ast.workerNotes ?? ''}
+          onChange={v => onChange(p => ({ ...p, workerNotes: v }))}
+          rows={3}
+          disabled={readOnly}
+        />
+      </Card>
+    </div>
+  );
+}
+
+// ── Section: Énergie / LOTO (modèle complet) ──────────────────────────────
+function LotoSection({ ast, onChange, readOnly, language, tenant }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  readOnly: boolean; language: Language; tenant: string;
+}) {
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
+  const loto = ast.loto ?? {
+    required: false, ref: '', templateName: '', energySources: [], locks: [],
+    verificationDone: false, verificationBy: '', verificationDate: '',
+    reenergizationAuthBy: '', reenergizationAuthDate: '', notes: '',
+  };
+
+  // ── Gabarits LOTO ─────────────────────────────────────────────────────────
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; description: string; energy_sources: typeof loto.energySources }>>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDesc, setTemplateDesc] = useState('');
+  const [showSaveForm, setShowSaveForm] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || !tenant) return;
+    supabase.from('tenant_loto_templates').select('id,name,description,energy_sources').eq('tenant_id', tenant)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setTemplates(data as typeof templates); });
+  }, [tenant]);
+
+  const saveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name || !supabase) return;
+    setSavingTemplate(true);
+    const sourcesWithoutPhotos = loto.energySources.map(s => ({ ...s, photos: [] }));
+    const { data } = await supabase.from('tenant_loto_templates').insert({
+      tenant_id: tenant, name, description: templateDesc.trim(),
+      energy_sources: sourcesWithoutPhotos,
+    }).select('id,name,description,energy_sources').single();
+    if (data) setTemplates(prev => [data as typeof templates[0], ...prev]);
+    setSavingTemplate(false);
+    setTemplateName('');
+    setTemplateDesc('');
+    setShowSaveForm(false);
+  };
+
+  const loadTemplate = (tpl: typeof templates[0]) => {
+    const sources = (tpl.energy_sources ?? []).map((s: typeof loto.energySources[0]) => ({
+      ...s, id: generateId(), photos: [],
+    }));
+    onChange(p => ({ ...p, loto: { ...p.loto, energySources: sources, templateName: tpl.name } }));
+    setShowTemplates(false);
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (!supabase) return;
+    await supabase.from('tenant_loto_templates').delete().eq('id', id);
+    setTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  // ── Sources d'énergie ─────────────────────────────────────────────────────
   const setL = (key: keyof typeof loto, val: unknown) =>
     onChange(p => ({ ...p, loto: { ...p.loto, [key]: val } }));
 
   const addSource = () => setL('energySources', [...loto.energySources, {
     id: generateId(), type: tr('Électrique', 'Electrical'), description: '', magnitude: '',
-    location: '', isolationMethod: '', verifiedBy: '', verified: false,
+    location: '', isolationMethod: '', verifiedBy: '', verified: false, photos: [],
   }]);
   const updateSource = (id: string, field: string, val: unknown) =>
     setL('energySources', loto.energySources.map(s => s.id === id ? { ...s, [field]: val } : s));
@@ -2171,8 +2753,108 @@ function LotoSection({ ast, onChange, readOnly, language }: {
     tr('Gravitationnel', 'Gravitational'), tr('Rayonnement', 'Radiation'),
   ];
 
+  const photoLabels: Record<LOTOPhotoState, string> = {
+    before: tr('Avant isolation', 'Before isolation'),
+    during: tr('Pendant isolation', 'During isolation'),
+    after: tr('Après isolation', 'After isolation'),
+    verification: tr("Vérification absence d'énergie", 'Zero energy verification'),
+  };
+
   return (
     <div className="space-y-0">
+      {/* ── Gabarits LOTO ─────────────────────────────────────────────────── */}
+      <Card title={tr('Gabarits LOTO', 'LOTO Templates')} icon={<BookMarked className="w-5 h-5" />}>
+        <div className="space-y-3">
+          {loto.templateName && (
+            <div className="flex items-center gap-2 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 px-3 py-2 text-sm">
+              <Star className="w-4 h-4 text-teal-500 shrink-0" />
+              <span className="text-teal-700 dark:text-teal-300 font-medium">{tr('Gabarit chargé : ', 'Template loaded: ')}</span>
+              <span className="text-teal-600 dark:text-teal-400">{loto.templateName}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {!readOnly && (
+              <button type="button" onClick={() => { setShowTemplates(v => !v); setShowSaveForm(false); }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors">
+                <BookMarked className="w-4 h-4" />
+                {tr('Charger un gabarit', 'Load a template')} ({templates.length})
+              </button>
+            )}
+            {!readOnly && loto.energySources.length > 0 && (
+              <button type="button" onClick={() => { setShowSaveForm(v => !v); setShowTemplates(false); }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm transition-colors">
+                <Save className="w-4 h-4" />
+                {tr('Sauvegarder comme gabarit', 'Save as template')}
+              </button>
+            )}
+          </div>
+
+          {/* Formulaire sauvegarde */}
+          {showSaveForm && !readOnly && (
+            <div className="rounded-lg border border-teal-200 dark:border-teal-700 bg-teal-50 dark:bg-teal-900/10 p-4 space-y-3">
+              <p className="text-sm font-semibold text-teal-800 dark:text-teal-200">
+                {tr('Sauvegarder la procédure LOTO', 'Save LOTO procedure')}
+              </p>
+              <Field label={tr('Nom du gabarit *', 'Template name *')}>
+                <TextInput value={templateName} onChange={setTemplateName}
+                  placeholder={tr('Ex: Presse hydraulique P-42', 'E.g.: Hydraulic press P-42')} />
+              </Field>
+              <Field label={tr('Description', 'Description')}>
+                <TextInput value={templateDesc} onChange={setTemplateDesc}
+                  placeholder={tr('Brève description de l\'équipement ou de la procédure', 'Brief equipment or procedure description')} />
+              </Field>
+              <div className="flex gap-2">
+                <button type="button" onClick={saveTemplate} disabled={!templateName.trim() || savingTemplate}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+                  {savingTemplate ? tr('Sauvegarde…', 'Saving…') : tr('Sauvegarder', 'Save')}
+                </button>
+                <button type="button" onClick={() => setShowSaveForm(false)}
+                  className="px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm rounded-lg hover:bg-slate-50 transition-colors">
+                  {tr('Annuler', 'Cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste des gabarits */}
+          {showTemplates && (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+              {templates.length === 0 ? (
+                <p className="text-center py-6 text-sm text-slate-400 italic">
+                  {tr('Aucun gabarit sauvegardé pour ce tenant.', 'No templates saved for this tenant.')}
+                </p>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {templates.map(tpl => (
+                    <div key={tpl.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{tpl.name}</p>
+                        {tpl.description && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{tpl.description}</p>}
+                        <p className="text-xs text-slate-400">{tpl.energy_sources?.length ?? 0} {tr('source(s) d\'énergie', 'energy source(s)')}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button type="button" onClick={() => loadTemplate(tpl)}
+                          className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg transition-colors">
+                          {tr('Charger', 'Load')}
+                        </button>
+                        {!readOnly && (
+                          <button type="button" onClick={() => deleteTemplate(tpl.id)}
+                            className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Cadenassage toggle ─────────────────────────────────────────────── */}
       <Card title={tr('Cadenassage / LOTO', 'Lockout / Tagout (LOTO)')} icon={<Lock className="w-5 h-5" />}>
         <div className="space-y-4">
           <Toggle checked={loto.required} onChange={v => setL('required', v)}
@@ -2195,8 +2877,9 @@ function LotoSection({ ast, onChange, readOnly, language }: {
         </div>
       </Card>
 
+      {/* ── Sources d'énergie ──────────────────────────────────────────────── */}
       <Card title={tr("Sources d'énergie identifiées", 'Identified energy sources')} icon={<Zap className="w-5 h-5" />}>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {loto.energySources.length === 0 && (
             <p className="text-center py-6 text-sm text-slate-400 dark:text-slate-500 italic">
               {tr("Aucune source d'énergie identifiée.", 'No energy sources identified.')}
@@ -2204,10 +2887,16 @@ function LotoSection({ ast, onChange, readOnly, language }: {
           )}
           {loto.energySources.map((src, i) => (
             <div key={src.id} className="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
+              {/* En-tête source */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold shrink-0">{i + 1}</span>
                 <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">{src.type}{src.description ? ` — ${src.description}` : ''}</span>
                 <div className="flex items-center gap-2">
+                  {(src.photos?.length ?? 0) > 0 && (
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      <Camera className="w-3.5 h-3.5 inline mr-0.5" />{src.photos.length}
+                    </span>
+                  )}
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <input type="checkbox" checked={src.verified}
                       onChange={e => updateSource(src.id, 'verified', e.target.checked)}
@@ -2219,6 +2908,8 @@ function LotoSection({ ast, onChange, readOnly, language }: {
                   {!readOnly && <button type="button" onClick={() => removeSource(src.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}
                 </div>
               </div>
+
+              {/* Champs */}
               <div className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label={tr("Type d'énergie", 'Energy type')}>
                   <SelectInput value={src.type} onChange={v => updateSource(src.id, 'type', v)}
@@ -2245,6 +2936,33 @@ function LotoSection({ ast, onChange, readOnly, language }: {
                     placeholder={tr('Nom de la personne', 'Person name')} disabled={readOnly} />
                 </Field>
               </div>
+
+              {/* Photos par état d'isolation */}
+              <div className="border-t border-slate-100 dark:border-slate-700 px-4 pb-4 pt-3 space-y-4">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                  {tr('Photos de documentation', 'Documentation photos')}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(['before', 'during', 'after', 'verification'] as LOTOPhotoState[]).map(state => {
+                    const statePhotos = (src.photos ?? []).filter(p => p.lockState === state);
+                    return (
+                      <div key={state} className="space-y-1.5">
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{photoLabels[state]}</p>
+                        <PhotoCapture
+                          photos={statePhotos}
+                          onChange={newPhotos => {
+                            const otherPhotos = (src.photos ?? []).filter(p => p.lockState !== state);
+                            const tagged = newPhotos.map(p => ({ ...p, lockState: state }));
+                            updateSource(src.id, 'photos', [...otherPhotos, ...tagged]);
+                          }}
+                          readOnly={readOnly}
+                          language={language}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ))}
           {!readOnly && (
@@ -2256,6 +2974,7 @@ function LotoSection({ ast, onChange, readOnly, language }: {
         </div>
       </Card>
 
+      {/* ── Registre cadenas ───────────────────────────────────────────────── */}
       <Card title={tr('Registre des cadenas', 'Lock register')} icon={<Lock className="w-5 h-5" />}>
         <div className="space-y-3">
           {loto.locks.length === 0 && (
@@ -2291,6 +3010,7 @@ function LotoSection({ ast, onChange, readOnly, language }: {
         </div>
       </Card>
 
+      {/* ── Vérification et re-énergisation ────────────────────────────────── */}
       <Card title={tr('Vérification et re-énergisation', 'Verification and re-energization')} icon={<CheckCircle className="w-5 h-5" />}>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -2344,7 +3064,7 @@ interface ASTPermitProps {
   initialData?: Partial<ASTPermit>;
 }
 
-type SectionId = 'task' | 'energy' | 'steps' | 'ppe' | 'equipment' | 'participants' | 'finalization';
+type SectionId = 'task' | 'energy' | 'steps' | 'ppe' | 'equipment' | 'workers' | 'participants' | 'finalization';
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function ASTPermit({
@@ -2447,6 +3167,7 @@ export default function ASTPermit({
     { id: 'steps', icon: <List className="w-4 h-4" />, label: t.sections.steps },
     { id: 'ppe', icon: <Shield className="w-4 h-4" />, label: t.sections.ppe },
     { id: 'equipment', icon: <Wrench className="w-4 h-4" />, label: t.sections.equipment },
+    ...(isComplet ? [{ id: 'workers' as SectionId, icon: <UserCheck className="w-4 h-4" />, label: language === 'fr' ? 'Travailleurs' : 'Workers' }] : []),
     { id: 'participants', icon: <Users className="w-4 h-4" />, label: t.sections.participants },
     { id: 'finalization', icon: <CheckCircle className="w-4 h-4" />, label: t.sections.finalization },
   ];
@@ -2579,16 +3300,19 @@ export default function ASTPermit({
             <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
           )}
           {section === 'energy' && (
-            <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} />
+            <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} tenant={tenant} />
           )}
           {section === 'steps' && (
             <StepsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
           )}
           {section === 'ppe' && (
-            <PPESection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+            <PPESection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} tenant={tenant} />
           )}
           {section === 'equipment' && (
             <EquipmentSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'workers' && (
+            <WorkersSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
           )}
           {section === 'participants' && (
             <ParticipantsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
