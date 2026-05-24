@@ -61,8 +61,8 @@ export default function TenantManagePage() {
       if (bc) setCfg({ discount_per_module: Number(bc.discount_per_module), discount_cap: Number(bc.discount_cap) });
       const { data: s } = await supabase.from('tenant_subscriptions').select('*').eq('tenant_id', id).maybeSingle();
       setSub(s);
-      const { data: t } = await supabase.from('tenant_transactions').select('*').eq('tenant_id', id).order('created_at', { ascending: false });
-      setTxs(t || []);
+      const { data: txData } = await supabase.from('tenant_transactions').select('*').eq('tenant_id', id).order('created_at', { ascending: false });
+      setTxs(txData || []);
     } catch { /* dégradé */ } finally { setLoading(false); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
