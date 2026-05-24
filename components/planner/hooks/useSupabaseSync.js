@@ -17,9 +17,9 @@ import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
  * @param {string} storageKey - Clé localStorage
  * @param {Array} defaultData - Données par défaut si aucune donnée
  */
-export function useSupabaseSync(table, storageKey, defaultData = []) {
+export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = null) {
   const [data, setData] = useState([]);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [syncQueue, setSyncQueue] = useState([]);
   const [lastSync, setLastSync] = useState(null);
   const channelRef = useRef(null);
@@ -57,10 +57,9 @@ export function useSupabaseSync(table, storageKey, defaultData = []) {
 
     const syncFromSupabase = async () => {
       try {
-        const { data: remoteData, error } = await supabase
-          .from(table)
-          .select('*')
-          .order('created_at', { ascending: false });
+        let q = supabase.from(table).select('*');
+        if (tenantId) q = q.eq('tenant_id', tenantId);
+        const { data: remoteData, error } = await q.order('created_at', { ascending: false });
 
         if (error) throw error;
 
@@ -90,7 +89,8 @@ export function useSupabaseSync(table, storageKey, defaultData = []) {
         {
           event: '*', // INSERT, UPDATE, DELETE
           schema: 'public',
-          table: table
+          table: table,
+          ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {})
         },
         (payload) => {
           console.log(`= [${table}] Changement reçu:`, payload.eventType, payload.new || payload.old);

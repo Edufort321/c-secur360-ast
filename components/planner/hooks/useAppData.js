@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DEFAULT_PERSONNEL, DEFAULT_EQUIPMENTS, DEFAULT_JOBS, STORAGE_CONFIG } from '@/components/planner/config/constants.js';
 import { useSupabaseSync } from './useSupabaseSync.js';
 
-export function useAppData() {
+export function useAppData(tenant = null) {
     // ========== SYNC SUPABASE (Offline-first + Realtime) ==========
     const {
         data: jobs,
@@ -15,7 +15,7 @@ export function useAppData() {
         remove: removeJobSync,
         isOnline: jobsOnline,
         syncQueue: jobsSyncQueue
-    } = useSupabaseSync('jobs', 'c-secur360-jobs', DEFAULT_JOBS);
+    } = useSupabaseSync('planner_jobs', `c-secur360-${tenant || 'local'}-jobs`, DEFAULT_JOBS, tenant);
 
     const {
         data: personnel,
@@ -24,7 +24,7 @@ export function useAppData() {
         remove: removePersonnelSync,
         isOnline: personnelOnline,
         syncQueue: personnelSyncQueue
-    } = useSupabaseSync('personnel', 'c-secur360-personnel', DEFAULT_PERSONNEL);
+    } = useSupabaseSync('planner_personnel', `c-secur360-${tenant || 'local'}-personnel`, DEFAULT_PERSONNEL, tenant);
 
     const {
         data: equipements,
@@ -33,35 +33,35 @@ export function useAppData() {
         remove: removeEquipementSync,
         isOnline: equipementsOnline,
         syncQueue: equipementsSyncQueue
-    } = useSupabaseSync('equipements', 'c-secur360-equipements', DEFAULT_EQUIPMENTS);
+    } = useSupabaseSync('planner_equipements', `c-secur360-${tenant || 'local'}-equipements`, DEFAULT_EQUIPMENTS, tenant);
 
     const {
         data: postes,
         add: addPosteSync,
         update: updatePosteSync,
         remove: removePosteSync
-    } = useSupabaseSync('postes', 'c-secur360-postes', []);
+    } = useSupabaseSync('planner_postes', `c-secur360-${tenant || 'local'}-postes`, [], tenant);
 
     const {
         data: succursales,
         add: addSuccursaleSync,
         update: updateSuccursaleSync,
         remove: removeSuccursaleSync
-    } = useSupabaseSync('succursales', 'c-secur360-succursales', []);
+    } = useSupabaseSync('planner_succursales', `c-secur360-${tenant || 'local'}-succursales`, [], tenant);
 
     const {
         data: conges,
         add: addCongeSync,
         update: updateCongeSync,
         remove: removeCongeSync
-    } = useSupabaseSync('conges', 'c-secur360-conges', []);
+    } = useSupabaseSync('planner_conges', `c-secur360-${tenant || 'local'}-conges`, [], tenant);
 
     const {
         data: departements,
         add: addDepartementSync,
         update: updateDepartementSync,
         remove: removeDepartementSync
-    } = useSupabaseSync('departements', 'c-secur360-departements', []);
+    } = useSupabaseSync('planner_departements', `c-secur360-${tenant || 'local'}-departements`, [], tenant);
 
     // ========== ÉTATS LOCAUX (Non synchronisés - navigation uniquement) ==========
     const [sousTraitants, setSousTraitants] = useState([]);
@@ -131,6 +131,7 @@ export function useAppData() {
         const newJob = {
             ...job,
             id: job.id || crypto.randomUUID(),
+            tenant_id: job.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -160,6 +161,7 @@ export function useAppData() {
         const newPerson = {
             ...person,
             id: person.id || crypto.randomUUID(),
+            tenant_id: person.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -198,6 +200,7 @@ export function useAppData() {
         const newEquipement = {
             ...equipement,
             id: equipement.id || crypto.randomUUID(),
+            tenant_id: equipement.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -236,6 +239,7 @@ export function useAppData() {
         const newPoste = {
             ...poste,
             id: poste.id || crypto.randomUUID(),
+            tenant_id: poste.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -261,6 +265,7 @@ export function useAppData() {
         const newSuccursale = {
             ...succursale,
             id: succursale.id || crypto.randomUUID(),
+            tenant_id: succursale.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -282,6 +287,7 @@ export function useAppData() {
         const newDepartement = {
             ...departement,
             id: departement.id || crypto.randomUUID(),
+            tenant_id: departement.tenant_id || tenant,
             created_at: new Date().toISOString()
         };
         return await addDepartementSync(newDepartement);
@@ -292,6 +298,7 @@ export function useAppData() {
         const newConge = {
             ...conge,
             id: conge.id || crypto.randomUUID(),
+            tenant_id: conge.tenant_id || tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };

@@ -1711,12 +1711,15 @@ const LanguageContext = createContext();
 export function LanguageProvider({ children }) {
     const [currentLanguage, setCurrentLanguage] = useState('fr');
 
-    // Charger la langue depuis localStorage au démarrage
+    // Charger la langue depuis localStorage + écouter les changements de l'app principale
     useEffect(() => {
-        const savedLanguage = localStorage.getItem('preferred-language');
-        if (savedLanguage && LANGUAGES[savedLanguage]) {
-            setCurrentLanguage(savedLanguage);
-        }
+        const syncLang = () => {
+            const saved = localStorage.getItem('preferred-language');
+            if (saved && LANGUAGES[saved]) setCurrentLanguage(saved);
+        };
+        syncLang();
+        window.addEventListener('storage', syncLang);
+        return () => window.removeEventListener('storage', syncLang);
     }, []);
 
     // Fonction pour changer de langue

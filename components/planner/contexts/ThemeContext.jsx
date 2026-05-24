@@ -22,24 +22,37 @@ export function ThemeProvider({ children }) {
         compactMode: false
     });
 
-    // Chargement des préférences depuis localStorage
-    useEffect(() => {
+    // Chargement des préférences + sync avec l'app principale (storage events)
+    const syncTheme = () => {
         const savedTheme = localStorage.getItem('c-secur360-theme');
-        const savedPreferences = localStorage.getItem('c-secur360-theme-preferences');
-
         if (savedTheme) {
-            const themeData = JSON.parse(savedTheme);
-            setIsDarkMode(themeData.isDarkMode);
-            setIsSystemTheme(themeData.isSystemTheme);
+            try {
+                const themeData = JSON.parse(savedTheme);
+                setIsDarkMode(themeData.isDarkMode ?? false);
+                setIsSystemTheme(themeData.isSystemTheme ?? true);
+            } catch {
+                // Valeur héritée de l'app hôte (ex: "light" / "dark") — pas du JSON
+                setIsDarkMode(savedTheme === 'dark');
+                setIsSystemTheme(false);
+            }
         } else {
-            // Détecter le thème système par défaut
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             setIsDarkMode(prefersDark);
         }
+    };
+
+    useEffect(() => {
+        const savedPreferences = localStorage.getItem('c-secur360-theme-preferences');
+        syncTheme();
 
         if (savedPreferences) {
-            setUserPreferences(JSON.parse(savedPreferences));
+            try {
+                setUserPreferences(JSON.parse(savedPreferences));
+            } catch { /* valeur corrompue, garder les défauts */ }
         }
+
+        window.addEventListener('storage', syncTheme);
+        return () => window.removeEventListener('storage', syncTheme);
     }, []);
 
     // Écoute des changements du thème système

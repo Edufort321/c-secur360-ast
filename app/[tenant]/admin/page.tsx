@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2 } from 'lucide-react';
+import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'abonnement' | 'facturation'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'ressources' | 'abonnement' | 'facturation'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -28,6 +28,7 @@ export default function AdminPage() {
             { k: 'clients',    label: tr('Clients', 'Clients'),       icon: Building2 },
             { k: 'vehicules',  label: tr('Véhicules', 'Vehicles'),    icon: Car },
             { k: 'profils',    label: tr('Employés', 'Employees'),    icon: Users },
+            { k: 'ressources', label: tr('Ressources', 'Resources'),   icon: Wrench },
             { k: 'abonnement', label: tr('Abonnement', 'Subscription'), icon: CreditCard },
             { k: 'facturation',label: tr('Facturation', 'Billing'),   icon: Settings },
           ].map(x => {
@@ -46,6 +47,7 @@ export default function AdminPage() {
         {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
+        {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
     </div>
@@ -632,6 +634,363 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
         .inp2:focus { border-color: rgb(37 99 235); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
         :global(.dark) .inp2 { border-color: rgb(75 85 99); }
       `}</style>
+    </div>
+  );
+}
+
+// ============================================================
+// RESSOURCES PLANNER
+// ============================================================
+
+function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [subTab, setSubTab] = useState<'personnel' | 'equipements' | 'postes' | 'succursales'>('personnel');
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {tr('Personnel et équipements utilisés par le planificateur. Ces données sont synchronisées en temps réel.', 'Staff and equipment used by the planner. This data is synced in real time.')}
+      </p>
+      <div className="flex gap-1 overflow-x-auto">
+        {[
+          { k: 'personnel',   label: tr('Personnel', 'Staff') },
+          { k: 'equipements', label: tr('Équipements', 'Equipment') },
+          { k: 'postes',      label: tr('Postes', 'Positions') },
+          { k: 'succursales', label: tr('Succursales', 'Branches') },
+        ].map(x => (
+          <button key={x.k} onClick={() => setSubTab(x.k as any)}
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
+            {x.label}
+          </button>
+        ))}
+      </div>
+      {subTab === 'personnel'   && <PersonnelPlanner   tenant={tenant} tr={tr} inp={inp} />}
+      {subTab === 'equipements' && <EquipementsPlanner tenant={tenant} tr={tr} inp={inp} />}
+      {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} />}
+      {subTab === 'succursales' && <SuccursalesPlanner tenant={tenant} tr={tr} inp={inp} />}
+    </div>
+  );
+}
+
+function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean };
+  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true });
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('planner_personnel').select('id, name, role, phone, email, is_active').eq('tenant_id', tenant).order('name');
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, empty()]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
+        if (r.id) await supabase.from('planner_personnel').update(payload).eq('id', r.id);
+        else await supabase.from('planner_personnel').insert(payload);
+      }
+      setNotice(tr('Personnel enregistré ✓', 'Staff saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('planner_personnel').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div>
+          <h2 className="font-bold">{tr('Personnel du planificateur', 'Planner staff')}</h2>
+          <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        </div>
+      </div>
+      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+      <div className="overflow-x-auto p-2">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
+            <th className="px-2">{tr('Rôle / Poste', 'Role / Position')}</th>
+            <th className="px-2">{tr('Téléphone', 'Phone')}</th>
+            <th className="px-2">{tr('Courriel', 'Email')}</th>
+            <th className="px-2">{tr('Actif', 'Active')}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
+                <td className="px-2"><input className={inp} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} /></td>
+                <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
+                <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
+                <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+  type Row = { id?: string; name: string; type: string; serial_number: string; is_active: boolean };
+  const empty = (): Row => ({ name: '', type: '', serial_number: '', is_active: true });
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('planner_equipements').select('id, name, type, serial_number, is_active').eq('tenant_id', tenant).order('name');
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, empty()]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const payload = { tenant_id: tenant, name: r.name, type: r.type || null, serial_number: r.serial_number || null, is_active: r.is_active !== false };
+        if (r.id) await supabase.from('planner_equipements').update(payload).eq('id', r.id);
+        else await supabase.from('planner_equipements').insert(payload);
+      }
+      setNotice(tr('Équipements enregistrés ✓', 'Equipment saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('planner_equipements').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div>
+          <h2 className="font-bold">{tr('Équipements du planificateur', 'Planner equipment')}</h2>
+          <p className="text-xs text-gray-500">{tr('Instruments et outils assignables aux chantiers.', 'Instruments and tools assignable to job sites.')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        </div>
+      </div>
+      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+      <div className="overflow-x-auto p-2">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
+            <th className="px-2">{tr('Type', 'Type')}</th>
+            <th className="px-2">{tr('N° série', 'Serial #')}</th>
+            <th className="px-2">{tr('Actif', 'Active')}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Mégohmmètre', 'Megohmmeter')} /></td>
+                <td className="px-2"><input className={inp} value={r.type || ''} onChange={e => upd(i, 'type', e.target.value)} placeholder={tr('Analyseur', 'Analyzer')} /></td>
+                <td className="px-2"><input className={`${inp} w-32`} value={r.serial_number || ''} onChange={e => upd(i, 'serial_number', e.target.value)} placeholder="SN-001" /></td>
+                <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={5} className="px-2 py-6 text-center text-gray-400">{tr('Aucun équipement. Ajoute-en un.', 'No equipment yet. Add one.')}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+  type Row = { id?: string; name: string; code: string; color: string };
+  const empty = (): Row => ({ name: '', code: '', color: '#6b7280' });
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('planner_postes').select('id, name, code, color').eq('tenant_id', tenant).order('name');
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, empty()]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const payload = { tenant_id: tenant, name: r.name, code: r.code || null, color: r.color || '#6b7280' };
+        if (r.id) await supabase.from('planner_postes').update(payload).eq('id', r.id);
+        else await supabase.from('planner_postes').insert(payload);
+      }
+      setNotice(tr('Postes enregistrés ✓', 'Positions saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('planner_postes').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div>
+          <h2 className="font-bold">{tr('Postes / Rôles', 'Positions / Roles')}</h2>
+          <p className="text-xs text-gray-500">{tr('Types de postes disponibles dans le calendrier.', 'Position types available in the calendar.')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        </div>
+      </div>
+      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+      <div className="overflow-x-auto p-2">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
+            <th className="px-2">{tr('Code', 'Code')}</th>
+            <th className="px-2">{tr('Couleur', 'Color')}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} /></td>
+                <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" /></td>
+                <td className="px-2">
+                  <div className="flex items-center gap-2">
+                    <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
+                    <span className="text-xs text-gray-500">{r.color || '#6b7280'}</span>
+                  </div>
+                </td>
+                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={4} className="px-2 py-6 text-center text-gray-400">{tr('Aucun poste. Ajoute-en un.', 'No position yet. Add one.')}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SuccursalesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+  type Row = { id?: string; name: string; code: string; address: string };
+  const empty = (): Row => ({ name: '', code: '', address: '' });
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('planner_succursales').select('id, name, code, address').eq('tenant_id', tenant).order('name');
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, empty()]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const payload = { tenant_id: tenant, name: r.name, code: r.code || null, address: r.address || null };
+        if (r.id) await supabase.from('planner_succursales').update(payload).eq('id', r.id);
+        else await supabase.from('planner_succursales').insert(payload);
+      }
+      setNotice(tr('Succursales enregistrées ✓', 'Branches saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('planner_succursales').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div>
+          <h2 className="font-bold">{tr('Succursales / Bureaux', 'Branches / Offices')}</h2>
+          <p className="text-xs text-gray-500">{tr('Bureaux régionaux utilisés pour regrouper le personnel.', 'Regional offices used to group staff.')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        </div>
+      </div>
+      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+      <div className="overflow-x-auto p-2">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
+            <th className="px-2">{tr('Code', 'Code')}</th>
+            <th className="px-2">{tr('Adresse', 'Address')}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Bureau Sherbrooke', 'Sherbrooke Office')} /></td>
+                <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="SHE" /></td>
+                <td className="px-2"><input className={inp} value={r.address || ''} onChange={e => upd(i, 'address', e.target.value)} placeholder="123 rue Principale" /></td>
+                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={4} className="px-2 py-6 text-center text-gray-400">{tr('Aucune succursale. Ajoute-en une.', 'No branch yet. Add one.')}</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

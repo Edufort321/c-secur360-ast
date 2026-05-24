@@ -4,8 +4,8 @@
 
 import { useAppData } from './useAppData.js';
 
-export function useAppDataWithSync() {
-    const appData = useAppData();
+export function useAppDataWithSync(tenant = null) {
+    const appData = useAppData(tenant);
 
     // Retourner toutes les fonctionnalités de useAppData
     // Supabase sync est déjà géré dans useAppData via useSupabaseSync

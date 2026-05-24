@@ -49,7 +49,7 @@ export function PlanificateurFinal({
     const [travailleurSelectionne, setTravailleurSelectionne] = useState('');
     const [selectedJob, setSelectedJob] = useState(null);
     const [conflictJob, setConflictJob] = useState(null); // Job en conflit ouvert en parallèle
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Effet pour ajuster numberOfDays selon la vue temporelle
     useEffect(() => {
@@ -265,6 +265,7 @@ export function PlanificateurFinal({
 
     // Responsive
     useEffect(() => {
+        setIsMobile(window.innerWidth < 768);
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);

@@ -1,10 +1,10 @@
 {
-  "name": "C-SECUR360 - Plateforme Sécurité",
-  "short_name": "C-SECUR360",
-  "description": "Plateforme SaaS de sécurité industrielle - AST, permis de travail, conformité",
+  "name": "C-Secur360 — Sécurité Industrielle",
+  "short_name": "C-Secur360",
+  "description": "Plateforme SaaS de sécurité industrielle — AST, permis, planificateur, inventaire",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#0f172a",
   "theme_color": "#10b981",
   "scope": "/",
@@ -14,43 +14,34 @@
       "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/logo.png", 
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/csecur360-logo-v2025.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "640x1136",
-      "type": "image/png",
-      "form_factor": "narrow"
+      "purpose": "any"
     },
     {
-      "src": "/screenshot-desktop.png", 
-      "sizes": "1280x720",
+      "src": "/csecur360-logo-v2025.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "wide"
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Nouveau AST",
-      "short_name": "AST",
-      "description": "Créer une nouvelle analyse sécuritaire de tâches",
-      "url": "/demo/ast/nouveau",
-      "icons": [{ "src": "/csecur360-logo-v2025.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Dashboard",
-      "short_name": "Dashboard", 
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
       "description": "Accéder au tableau de bord",
-      "url": "/demo/dashboard",
-      "icons": [{ "src": "/csecur360-logo-v2025.png", "sizes": "96x96" }]
+      "url": "/cerdia/modules",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
     }
   ],
   "related_applications": [],

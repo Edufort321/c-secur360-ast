@@ -3,13 +3,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { computeSubState } from '@/lib/subscription';
 
 type Mod = { key: string; name_fr: string; monthly_price: number; sort_order: number; enabled: boolean };
+type Tx  = { id: string; type: string; amount: number; status: string; description: string | null; reference: string | null; period_start: string | null; period_end: string | null; created_by: string | null; created_at: string };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' });
+
+const TX_TYPE: Record<string, { label: string; cls: string }> = {
+  payment:    { label: 'Paiement',      cls: 'bg-emerald-100 text-emerald-700' },
+  refund:     { label: 'Remboursement', cls: 'bg-amber-100 text-amber-700' },
+  credit:     { label: 'Crédit',        cls: 'bg-blue-100 text-blue-700' },
+  adjustment: { label: 'Ajustement',    cls: 'bg-purple-100 text-purple-700' },
+};
+const TX_STATUS: Record<string, string> = {
+  completed:  'text-emerald-600',
+  pending:    'text-amber-600',
+  failed:     'text-red-600',
+  cancelled:  'text-gray-400',
+};
 
 export default function TenantManagePage() {
   const params = useParams();
@@ -20,6 +35,8 @@ export default function TenantManagePage() {
   const [mods, setMods] = useState<Mod[]>([]);
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30 });
   const [sub, setSub] = useState<any>(null);
+  const [txs, setTxs] = useState<Tx[]>([]);
+  const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -44,6 +61,8 @@ export default function TenantManagePage() {
       if (bc) setCfg({ discount_per_module: Number(bc.discount_per_module), discount_cap: Number(bc.discount_cap) });
       const { data: s } = await supabase.from('tenant_subscriptions').select('*').eq('tenant_id', id).maybeSingle();
       setSub(s);
+      const { data: t } = await supabase.from('tenant_transactions').select('*').eq('tenant_id', id).order('created_at', { ascending: false });
+      setTxs(t || []);
     } catch { /* dégradé */ } finally { setLoading(false); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
@@ -68,12 +87,39 @@ export default function TenantManagePage() {
   }
 
   async function markPaid() {
+    const now = new Date();
     const next = new Date(); next.setFullYear(next.getFullYear() + 1);
     await supabase.from('tenant_subscriptions').upsert({
-      tenant_id: id, status: 'active', last_payment_at: new Date().toISOString(),
+      tenant_id: id, status: 'active', last_payment_at: now.toISOString(),
       next_billing_date: next.toISOString().slice(0, 10),
     }, { onConflict: 'tenant_id' });
+    // Logger la transaction
+    await supabase.from('tenant_transactions').insert({
+      tenant_id: id, type: 'payment', amount: total, status: 'completed',
+      description: 'Paiement annuel', period_start: now.toISOString().slice(0, 10),
+      period_end: next.toISOString().slice(0, 10),
+    });
     setNotice('Paiement enregistré ✓ (prochaine facturation +1 an)'); load();
+  }
+
+  async function addTransaction() {
+    const amt = parseFloat(txForm.amount);
+    if (!amt || isNaN(amt)) { setNotice('Montant invalide.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('tenant_transactions').insert({
+      tenant_id: id, type: txForm.type, amount: amt, status: 'completed',
+      description: txForm.description || null, reference: txForm.reference || null,
+      period_start: txForm.period_start || null, period_end: txForm.period_end || null,
+    });
+    if (error) { setNotice('Erreur : ' + error.message + ' — migration 031 exécutée ?'); }
+    else { setNotice('Transaction ajoutée ✓'); setTxForm(f => ({ ...f, open: false, amount: '', description: '', reference: '', period_start: '', period_end: '' })); load(); }
+    setSaving(false);
+  }
+
+  async function deleteTx(txId: string) {
+    if (!confirm('Supprimer cette transaction ?')) return;
+    await supabase.from('tenant_transactions').delete().eq('id', txId);
+    load();
   }
 
   async function toggleBillable(v: boolean) {
@@ -255,6 +301,99 @@ export default function TenantManagePage() {
                   <p className="mt-1 text-xs text-gray-400">Redirection vers la plateforme de facturation Commerce CERDIA (à brancher).</p>
                 </div>
               </div>
+            </div>
+
+            {/* Section Transactions */}
+            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <h2 className="flex items-center gap-2 font-bold"><CreditCard size={16} /> Transactions</h2>
+                <button onClick={() => setTxForm(f => ({ ...f, open: !f.open }))}
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                  <Plus size={14} /> Ajouter
+                </button>
+              </div>
+
+              {/* Formulaire ajout */}
+              {txForm.open && (
+                <div className="border-b border-gray-100 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/40">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-gray-500">Type</span>
+                      <select value={txForm.type} onChange={e => setTxForm(f => ({ ...f, type: e.target.value }))} className={inputCls}>
+                        <option value="payment">Paiement</option>
+                        <option value="refund">Remboursement</option>
+                        <option value="credit">Crédit</option>
+                        <option value="adjustment">Ajustement</option>
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-gray-500">Montant ($)</span>
+                      <input type="number" step="0.01" value={txForm.amount} onChange={e => setTxForm(f => ({ ...f, amount: e.target.value }))} className={inputCls} placeholder="0.00" />
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="mb-1 block text-xs font-semibold text-gray-500">Description</span>
+                      <input value={txForm.description} onChange={e => setTxForm(f => ({ ...f, description: e.target.value }))} className={inputCls} placeholder="Paiement annuel…" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-gray-500">Réf. / N° facture</span>
+                      <input value={txForm.reference} onChange={e => setTxForm(f => ({ ...f, reference: e.target.value }))} className={inputCls} placeholder="INV-2026-001" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-gray-500">Période début</span>
+                      <input type="date" value={txForm.period_start} onChange={e => setTxForm(f => ({ ...f, period_start: e.target.value }))} className={inputCls} />
+                    </label>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={addTransaction} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />} Enregistrer
+                    </button>
+                    <button onClick={() => setTxForm(f => ({ ...f, open: false }))} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">Annuler</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste */}
+              {txs.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-gray-400">Aucune transaction enregistrée.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700">
+                        <th className="px-4 py-2">Date</th>
+                        <th className="px-4 py-2">Type</th>
+                        <th className="px-4 py-2">Description</th>
+                        <th className="px-4 py-2">Réf.</th>
+                        <th className="px-4 py-2">Période</th>
+                        <th className="px-4 py-2 text-right">Montant</th>
+                        <th className="px-4 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {txs.map(tx => {
+                        const ttype = TX_TYPE[tx.type] || TX_TYPE.payment;
+                        return (
+                          <tr key={tx.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                            <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 whitespace-nowrap">{fmtDate(tx.created_at)}</td>
+                            <td className="px-4 py-2.5"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${ttype.cls}`}>{ttype.label}</span></td>
+                            <td className="px-4 py-2.5 text-gray-700 dark:text-gray-200">{tx.description || '—'}</td>
+                            <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{tx.reference || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">
+                              {tx.period_start ? `${fmtDate(tx.period_start)}${tx.period_end ? ' → ' + fmtDate(tx.period_end) : ''}` : '—'}
+                            </td>
+                            <td className={`px-4 py-2.5 text-right font-semibold whitespace-nowrap ${TX_STATUS[tx.status] || ''}`}>
+                              {tx.type === 'refund' || tx.type === 'credit' ? '−' : ''}{money(Number(tx.amount))}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <button onClick={() => deleteTx(tx.id)} className="rounded p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </>
         )}

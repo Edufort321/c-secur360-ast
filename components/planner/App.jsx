@@ -20,9 +20,9 @@ import { JobModal } from './modules/NewJob/JobModal.jsx';
 // Import des styles de la version originale
 // styles chargés via le layout /planificateur (scopés .planner-app)
 
-function AppContent() {
+function AppContent({ tenant = 'cerdia' }) {
     // Hook pour les données de l'application
-    const appData = useAppDataWithSync();
+    const appData = useAppDataWithSync(tenant);
     const { notifications, addNotification } = useNotifications();
     const { isMobile, isTablet } = useScreenSize();
     const { t } = useLanguage();
@@ -202,18 +202,8 @@ function AppContent() {
                 {/* Application principale - visible seulement si connecté */}
                 {utilisateurConnecte && !showUserLogin && (
                     <>
-                        {/* Header avec logo officiel et menu hamburger */}
+                        {/* Menu hamburger planner (EN/FR et Jour/Nuit sont dans le PortalHeader de l'app principale) */}
                         <Header
-                            utilisateurConnecte={utilisateurConnecte}
-                            onLogout={() => {
-                                // Nettoyer la session
-                                localStorage.removeItem(SESSION_STORAGE_KEY);
-                                localStorage.removeItem(USER_STORAGE_KEY);
-                                setUtilisateurConnecte(null);
-                                setShowUserLogin(true);
-                                addNotification('Déconnexion réussie', 'info');
-                                console.log('🚪 Déconnexion - Session supprimée');
-                            }}
                             onCreateEvent={() => setShowCreateEvent(true)}
                             onManageConges={() => setShowCongesManagement(true)}
                             onManageResources={() => setShowResourcesManagement(true)}
@@ -314,10 +304,10 @@ function AppContent() {
     );
 }
 
-export function App() {
+export function App({ tenant = 'cerdia' }) {
     return (
         <LanguageProvider>
-            <AppContent />
+            <AppContent tenant={tenant} />
         </LanguageProvider>
     );
 }

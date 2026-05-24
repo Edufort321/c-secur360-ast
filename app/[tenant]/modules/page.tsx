@@ -39,11 +39,12 @@ export default function ModulesPage() {
   const [invCount, setInvCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
 
-  // Modules activés = vrai abonnement (tenant_modules). Fallback : liste codée puis tous (le temps du chargement).
+  // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
-  const enabledKeys = (entitlements && entitlements.length)
-    ? entitlements
-    : (entitlements === null ? (ENABLED_BY_TENANT[tenant] ?? MODULES.map(m => m.key)) : []);
+  const enabledKeys = ENABLED_BY_TENANT[tenant]
+    ?? ((entitlements && entitlements.length > 0)
+      ? entitlements
+      : MODULES.map(m => m.key));
 
   useEffect(() => {
     let active = true;

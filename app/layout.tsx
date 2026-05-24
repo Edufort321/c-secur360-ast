@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 
 import { TwilioProvider } from '../contexts/TwilioContext'
 import { Providers } from './providers'
+import { SwRegister } from '@/components/SwRegister'
 
 export default function RootLayout({
   children,
@@ -36,11 +37,12 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="AST MDL" />
+        <meta name="apple-mobile-web-app-title" content="C-Secur360" />
       </head>
       <body className={inter.className}>
         <Providers>
           <TwilioProvider>
+            <SwRegister />
             {children}
           </TwilioProvider>
         </Providers>
