@@ -5,7 +5,7 @@ import {
   ClipboardList, List, Shield, Wrench, Users, CheckCircle,
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
   AlertTriangle, Home, FileText, BarChart3, Trash2,
-  ChevronUp, ChevronDown, AlertCircle, QrCode,
+  ChevronUp, ChevronDown, AlertCircle, QrCode, Lock, Zap,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -55,10 +55,13 @@ export interface Participant {
   acknowledgedAt: string;
 }
 
+export type ASTModel = 'simple' | 'complet';
+
 export interface ASTPermit {
   permit_number: string;
   status: PermitStatus;
   province: ProvinceCode;
+  model: ASTModel;
   created_at: string;
   updated_at: string;
 
@@ -108,6 +111,34 @@ export interface ASTPermit {
   restrictions: string;
   finalization_notes: string;
 
+  loto: {
+    required: boolean;
+    ref: string;
+    energySources: Array<{
+      id: string;
+      type: string;
+      description: string;
+      magnitude: string;
+      location: string;
+      isolationMethod: string;
+      verifiedBy: string;
+      verified: boolean;
+    }>;
+    locks: Array<{
+      id: string;
+      lockId: string;
+      owner: string;
+      placedAt: string;
+      removedAt: string;
+    }>;
+    verificationDone: boolean;
+    verificationBy: string;
+    verificationDate: string;
+    reenergizationAuthBy: string;
+    reenergizationAuthDate: string;
+    notes: string;
+  };
+
   validation: { isComplete: boolean; percentage: number };
 }
 
@@ -155,6 +186,141 @@ function getRiskCellColor(score: number): string {
   return 'bg-red-500';
 }
 
+// ── Contrôles pré-remplis par danger (modèle complet) ─────────────────────
+const HAZARD_CONTROLS: Record<string, string[]> = {
+  'Chute de plain-pied': [
+    'Dégager les zones de passage',
+    'Signalisation au sol (ruban, cônes)',
+    'Revêtement antidérapant appliqué',
+    'Chaussures de sécurité CSA Z195 obligatoires',
+    'Éclairage adéquat assuré',
+  ],
+  'Chute de hauteur': [
+    'Garde-corps / rampe de sécurité installés',
+    'Plate-forme de travail sécurisée',
+    'Harnais de sécurité + longe certifiés',
+    'Harnais + ligne de vie antichute',
+    'Ancrage certifié (≥22 kN)',
+    'Filet de sécurité horizontal',
+    'Permis de travail en hauteur en vigueur',
+    'Inspection du harnais avant utilisation',
+  ],
+  'Objet tombant': [
+    'Zone balisée et évacuée en dessous',
+    'Filet de protection horizontal',
+    'Tablier / planche de pied sur échafaudage',
+    'Casque de sécurité CSA Z94.1 obligatoire',
+    'Coordination des opérations par niveaux',
+    'Attache de sécurité sur tous les outils',
+  ],
+  'Pincement/écrasement': [
+    'Protecteurs de machines en place et verrouillés',
+    'Procédure de démarrage/arrêt sécuritaire',
+    'Cadenassage (LOTO) si applicable',
+    'Formation spécifique à l\'équipement',
+    'Zone de dégagement maintenue libre',
+    'Gants anti-vibration si requis',
+  ],
+  'Coupure/lacération': [
+    'Gants résistants aux coupures (EN 388)',
+    'Protège-bras si requis',
+    'Couteau de sécurité à lame rétractable',
+    'Formation à l\'utilisation sécuritaire des outils',
+    'Rangement sécuritaire des outils tranchants',
+  ],
+  'Brûlure thermique': [
+    'Gants de soudage / thermiques appropriés',
+    'Vêtements ignifuges (FR)',
+    'Écran facial anti-chaleur',
+    'Distance de sécurité respectée',
+    'Signalisation « surface chaude »',
+    'Extincteur à portée de main',
+  ],
+  'Brûlure chimique': [
+    'Gants chimiques appropriés au produit',
+    'Combinaison de protection chimique',
+    'Lunettes étanches / écran facial',
+    'Douche de décontamination à moins de 10 secondes',
+    'Fiche de données de sécurité (FDS) consultée et affichée',
+    'Ventilation locale par aspiration',
+  ],
+  'Choc électrique': [
+    'Cadenassage (LOTO) appliqué',
+    'Vérification absence d\'énergie (VAE) effectuée',
+    'Isolation électrique (nappe, tapis, gants de la bonne classe)',
+    'Distance d\'approche sécuritaire respectée',
+    'Protection contre arc flash (EPI arc flash si requis)',
+    'Travaux effectués hors tension si possible',
+    'Permis de travail électrique en vigueur',
+  ],
+  'Exposition gaz/vapeurs': [
+    'Ventilation mécanique forcée (apport + extraction)',
+    'Ventilation locale par aspiration à la source',
+    'Détecteur de gaz multi-critères (O₂, LEL, H₂S, CO)',
+    'Masque filtrant adapté au contaminant',
+    'Appareil respiratoire autonome (ARA) si requis',
+    'Fiche de données de sécurité (FDS) consultée',
+    'Surveillance continue de l\'atmosphère de travail',
+  ],
+  'Bruit excessif': [
+    'Bouchons auriculaires CSA Z94.2 (NRR approprié)',
+    'Coquilles anti-bruit si >100 dB(A)',
+    'Rotation des travailleurs exposés',
+    'Réduction à la source (capot acoustique, isolation)',
+    'Limite de temps d\'exposition respectée (RSST)',
+    'Zone calme de repos à proximité',
+  ],
+  'Vibrations': [
+    'Gants anti-vibration homologués',
+    'Limitation du temps d\'exposition quotidien',
+    'Rotation des travailleurs',
+    'Maintenance préventive des équipements vibrants',
+    'Outils anti-vibration si disponibles',
+  ],
+  'Contrainte thermique': [
+    'Pauses régulières en zone tempérée',
+    'Hydratation fréquente (eau, électrolytes)',
+    'Surveillance mutuelle par binôme',
+    'Vêtements adaptés aux conditions (chaud/froid)',
+    'Rotation des équipes selon indice WBGT / facteur vent-froid',
+    'Suivi de la condition physique des travailleurs',
+  ],
+  'Manutention manuelle': [
+    'Aide mécanique (chariot, transpalette, grue)',
+    'Charge maximale individuelle respectée (23 kg — RSST)',
+    'Formation aux techniques de levage sécuritaire',
+    'Fractionnement des charges si possible',
+    'Travail en équipe pour charges lourdes',
+  ],
+  'Collision véhicule': [
+    'Périmètre piétons/véhicules balisé et respecté',
+    'Vêtements haute visibilité CSA Z96',
+    'Signalisation et guides de circulation en place',
+    'Vitesse limitée sur le site (affichée)',
+    'Contact radio entre conducteurs et piétons',
+    'Plan de circulation affiché et communiqué',
+  ],
+  'Espace clos': [
+    'Analyse atmosphérique obligatoire (O₂ 19,5–23 %, LEL <10 %, H₂S <10 ppm)',
+    'Ventilation mécanique forcée (apport + extraction)',
+    'Surveillance permanente par vigie qualifiée',
+    'Équipe de sauvetage en place avant toute entrée',
+    'Communication radio / vocale continue',
+    'Appareil respiratoire autonome (ARA) de sauvetage prêt',
+    'Permis d\'entrée en espace clos en vigueur',
+    'Procédure d\'évacuation d\'urgence affichée',
+  ],
+  'Explosif/incendie': [
+    'Permis de travail à chaud en vigueur',
+    'Surveillance anti-incendie 30 min après la fin des travaux',
+    'Extincteur à portée de main (type approprié au risque)',
+    'Surface dégagée de matières combustibles (min. 3 m)',
+    'Protection des ouvertures et surfaces à proximité',
+    'Vêtements ignifuges / EPI arc flash si requis',
+    'Détecteur gaz / explosimètre vérifié avant début',
+  ],
+};
+
 // ── Default PPE list ───────────────────────────────────────────────────────
 function defaultPPE(): PPEItem[] {
   const items: Omit<PPEItem, 'id'>[] = [
@@ -194,6 +360,7 @@ function createDefaultPermit(province: ProvinceCode): ASTPermit {
     permit_number: generatePermitNumber('AST', province),
     status: 'draft',
     province,
+    model: 'simple',
     created_at: now,
     updated_at: now,
     taskInfo: {
@@ -215,6 +382,12 @@ function createDefaultPermit(province: ProvinceCode): ASTPermit {
     supervisor_name: '', supervisor_cert: '',
     permit_valid_from: '', permit_valid_to: '',
     permitted_work: '', restrictions: '', finalization_notes: '',
+    loto: {
+      required: false, ref: '',
+      energySources: [], locks: [],
+      verificationDone: false, verificationBy: '', verificationDate: '',
+      reenergizationAuthBy: '', reenergizationAuthDate: '', notes: '',
+    },
     validation: { isComplete: false, percentage: 0 },
   };
 }
@@ -841,6 +1014,114 @@ function TagSelector({ label, options, selected, onChange, disabled = false, all
   );
 }
 
+// ── Contrôles contextuels (modèle complet) ────────────────────────────────
+function ContextualControls({ hazards, controls, onChange, disabled, language = 'fr' }: {
+  hazards: string[]; controls: string[];
+  onChange: (v: string[]) => void; disabled: boolean; language?: Language;
+}) {
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
+  const [customInput, setCustomInput] = useState('');
+
+  const toggle = (ctrl: string) => {
+    if (disabled) return;
+    onChange(controls.includes(ctrl) ? controls.filter(c => c !== ctrl) : [...controls, ctrl]);
+  };
+
+  const addCustom = () => {
+    const val = customInput.trim();
+    if (!val || controls.includes(val)) { setCustomInput(''); return; }
+    onChange([...controls, val]);
+    setCustomInput('');
+  };
+
+  const knownHazards = hazards.filter(h => HAZARD_CONTROLS[h]);
+  const allSuggested = new Set(knownHazards.flatMap(h => HAZARD_CONTROLS[h]));
+  const customControls = controls.filter(c => !allSuggested.has(c));
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-slate-600 dark:text-slate-300">
+        {tr('Mesures de contrôle de danger', 'Hazard control measures')}
+      </label>
+
+      {knownHazards.length === 0 && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+          {tr("Sélectionnez d'abord les dangers identifiés pour afficher les mesures suggérées.", 'Select identified hazards above to display suggested control measures.')}
+        </p>
+      )}
+
+      {knownHazards.map(hazard => (
+        <div key={hazard} className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-800">
+            <AlertTriangle className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">{hazard}</span>
+          </div>
+          <div className="p-3 space-y-1.5">
+            {HAZARD_CONTROLS[hazard].map(ctrl => (
+              <label key={ctrl} className={`flex items-start gap-2.5 cursor-pointer rounded px-2 py-1.5 transition-colors ${controls.includes(ctrl) ? 'bg-teal-50 dark:bg-teal-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
+                <input
+                  type="checkbox"
+                  checked={controls.includes(ctrl)}
+                  onChange={() => toggle(ctrl)}
+                  disabled={disabled}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600"
+                />
+                <span className={`text-xs leading-relaxed ${controls.includes(ctrl) ? 'text-teal-800 dark:text-teal-300 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
+                  {ctrl}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Contrôles personnalisés déjà ajoutés */}
+      {customControls.length > 0 && (
+        <div className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+          <div className="px-3 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{tr('Contrôles personnalisés', 'Custom controls')}</span>
+          </div>
+          <div className="p-3 space-y-1.5">
+            {customControls.map(ctrl => (
+              <label key={ctrl} className="flex items-start gap-2.5 cursor-pointer rounded px-2 py-1.5 bg-teal-50 dark:bg-teal-900/20">
+                <input type="checkbox" checked onChange={() => toggle(ctrl)} disabled={disabled}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600" />
+                <span className="text-xs leading-relaxed text-teal-800 dark:text-teal-300 font-medium">{ctrl}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ajout personnalisé */}
+      {!disabled && (
+        <div className="flex gap-1.5">
+          <input
+            type="text"
+            value={customInput}
+            onChange={e => setCustomInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+            placeholder={tr('Ajouter un moyen de contrôle personnalisé…', 'Add a custom control measure…')}
+            className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+          />
+          <button type="button" onClick={addCustom} disabled={!customInput.trim()}
+            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1">
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {controls.length > 0 && (
+        <div className="text-xs text-teal-600 dark:text-teal-400 font-medium">
+          {language === 'fr'
+            ? `${controls.length} mesure${controls.length > 1 ? 's' : ''} de contrôle sélectionnée${controls.length > 1 ? 's' : ''}`
+            : `${controls.length} control measure${controls.length > 1 ? 's' : ''} selected`}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Risk mini-matrix ───────────────────────────────────────────────────────
 function RiskMatrix({ prob, sev, lang }: { prob: number; sev: number; lang: Language }) {
   return (
@@ -885,6 +1166,7 @@ function TaskSection({ ast, onChange, language, readOnly }: {
 }) {
   const t = T[language].task;
   const ti = ast.taskInfo;
+  const model = ast.model ?? 'simple';
 
   const set = (key: keyof ASTPermit['taskInfo'], val: string | number) =>
     onChange(p => ({ ...p, taskInfo: { ...p.taskInfo, [key]: val } }));
@@ -893,6 +1175,50 @@ function TaskSection({ ast, onChange, language, readOnly }: {
 
   return (
     <div>
+      {/* Sélecteur de modèle */}
+      {!readOnly && (
+        <div className="mb-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+            {language === 'fr' ? 'Modèle d\'AST' : 'JSA Model'}
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => onChange(p => ({ ...p, model: 'simple' }))}
+              className={`flex-1 rounded-xl border-2 px-4 py-3 text-left transition-all ${model === 'simple' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-600 hover:border-teal-300'}`}
+            >
+              <div className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+                {language === 'fr' ? 'Simple' : 'Simple'}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {language === 'fr'
+                  ? 'Sélection rapide des dangers et mesures — idéal pour tâches courantes'
+                  : 'Quick hazard and control selection — ideal for routine tasks'}
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(p => ({ ...p, model: 'complet' }))}
+              className={`flex-1 rounded-xl border-2 px-4 py-3 text-left transition-all ${model === 'complet' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-600 hover:border-teal-300'}`}
+            >
+              <div className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+                {language === 'fr' ? 'Complet ✦' : 'Complete ✦'}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {language === 'fr'
+                  ? 'Mesures de contrôle pré-remplies par danger + onglet Énergie/LOTO — conformité maximale'
+                  : 'Pre-filled control measures per hazard + Energy/LOTO tab — maximum compliance'}
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+      {readOnly && model === 'complet' && (
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-teal-100 dark:bg-teal-900/30 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
+          ✦ {language === 'fr' ? 'Modèle complet' : 'Complete model'}
+        </div>
+      )}
+
       <Card title={t.cardGeneral} icon={<ClipboardList className="w-5 h-5" />}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={t.projectNumber}>
@@ -963,6 +1289,7 @@ function StepsSection({ ast, onChange, language, readOnly }: {
 }) {
   const t = T[language].steps;
   const steps = ast.jobSteps;
+  const model = ast.model ?? 'simple';
 
   const totalHazards = steps.reduce((acc, s) => acc + s.hazards.length, 0);
   const totalControls = steps.reduce((acc, s) => acc + s.controls.length, 0);
@@ -1047,6 +1374,7 @@ function StepsSection({ ast, onChange, language, readOnly }: {
                 t={t}
                 probOptions={probOptions}
                 sevOptions={sevOptions}
+                model={model}
                 onUpdate={(updater) => updateStep(step.id, updater)}
                 onRemove={() => removeStep(step.id)}
                 onMoveUp={() => moveStep(step.id, 'up')}
@@ -1072,11 +1400,12 @@ function StepsSection({ ast, onChange, language, readOnly }: {
 }
 
 // ── Individual step card ───────────────────────────────────────────────────
-function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOptions, onUpdate, onRemove, onMoveUp, onMoveDown }: {
+function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOptions, model, onUpdate, onRemove, onMoveUp, onMoveDown }: {
   step: JobStep; idx: number; total: number; language: Language; readOnly: boolean;
   t: typeof T['fr']['steps'] | typeof T['en']['steps'];
   probOptions: { value: string; label: string }[];
   sevOptions: { value: string; label: string }[];
+  model: ASTModel;
   onUpdate: (updater: (s: JobStep) => JobStep) => void;
   onRemove: () => void; onMoveUp: () => void; onMoveDown: () => void;
 }) {
@@ -1149,15 +1478,25 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
             </div>
 
             <div className="space-y-2">
-              <TagSelector
-                label={t.controls}
-                options={t.controlOptions as unknown as string[]}
-                selected={step.controls}
-                onChange={v => onUpdate(s => ({ ...s, controls: v }))}
-                disabled={readOnly}
-                allowCustom
-                customPlaceholder={language === 'fr' ? 'Moyen de contrôle personnalisé…' : 'Custom control measure…'}
-              />
+              {model === 'complet' ? (
+                <ContextualControls
+                  hazards={step.hazards}
+                  controls={step.controls}
+                  onChange={v => onUpdate(s => ({ ...s, controls: v }))}
+                  disabled={readOnly}
+                  language={language}
+                />
+              ) : (
+                <TagSelector
+                  label={t.controls}
+                  options={t.controlOptions as unknown as string[]}
+                  selected={step.controls}
+                  onChange={v => onUpdate(s => ({ ...s, controls: v }))}
+                  disabled={readOnly}
+                  allowCustom
+                  customPlaceholder={language === 'fr' ? 'Moyen de contrôle personnalisé…' : 'Custom control measure…'}
+                />
+              )}
               <Textarea label={t.controlNotes} value={step.controlNotes} onChange={v => onUpdate(s => ({ ...s, controlNotes: v }))} placeholder={t.controlNotesPh} rows={2} disabled={readOnly} />
             </div>
           </div>
@@ -1797,6 +2136,201 @@ function QRCard({ permitNumber, tenant, type, language }: {
   );
 }
 
+// ── Section: Énergie / LOTO (modèle complet) ──────────────────────────────
+function LotoSection({ ast, onChange, readOnly, language }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  readOnly: boolean; language: Language;
+}) {
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
+  const loto = ast.loto ?? { required: false, ref: '', energySources: [], locks: [], verificationDone: false, verificationBy: '', verificationDate: '', reenergizationAuthBy: '', reenergizationAuthDate: '', notes: '' };
+
+  const setL = (key: keyof typeof loto, val: unknown) =>
+    onChange(p => ({ ...p, loto: { ...p.loto, [key]: val } }));
+
+  const addSource = () => setL('energySources', [...loto.energySources, {
+    id: generateId(), type: tr('Électrique', 'Electrical'), description: '', magnitude: '',
+    location: '', isolationMethod: '', verifiedBy: '', verified: false,
+  }]);
+  const updateSource = (id: string, field: string, val: unknown) =>
+    setL('energySources', loto.energySources.map(s => s.id === id ? { ...s, [field]: val } : s));
+  const removeSource = (id: string) =>
+    setL('energySources', loto.energySources.filter(s => s.id !== id));
+
+  const addLock = () => setL('locks', [...loto.locks, {
+    id: generateId(), lockId: '', owner: '', placedAt: new Date().toISOString().slice(0, 16), removedAt: '',
+  }]);
+  const updateLock = (id: string, field: string, val: string) =>
+    setL('locks', loto.locks.map(l => l.id === id ? { ...l, [field]: val } : l));
+  const removeLock = (id: string) =>
+    setL('locks', loto.locks.filter(l => l.id !== id));
+
+  const energyTypes = [
+    tr('Électrique', 'Electrical'), tr('Mécanique', 'Mechanical'),
+    tr('Pneumatique', 'Pneumatic'), tr('Hydraulique', 'Hydraulic'),
+    tr('Thermique', 'Thermal'), tr('Chimique', 'Chemical'),
+    tr('Gravitationnel', 'Gravitational'), tr('Rayonnement', 'Radiation'),
+  ];
+
+  return (
+    <div className="space-y-0">
+      <Card title={tr('Cadenassage / LOTO', 'Lockout / Tagout (LOTO)')} icon={<Lock className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <Toggle checked={loto.required} onChange={v => setL('required', v)}
+            label={tr('Cadenassage (LOTO) requis pour ces travaux', 'Lockout/Tagout (LOTO) required for this work')} disabled={readOnly} />
+          {loto.required && (
+            <Field label={tr('Référence procédure LOTO', 'LOTO procedure reference')}>
+              <TextInput value={loto.ref} onChange={v => setL('ref', v)}
+                placeholder={tr('N° ou référence de la procédure LOTO…', 'LOTO procedure number or reference…')} disabled={readOnly} />
+            </Field>
+          )}
+          {loto.required && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+              <span>{tr(
+                'Un permis de cadenassage distinct doit être émis conformément à la procédure LOTO du site avant le début des travaux.',
+                'A separate lockout permit must be issued in accordance with the site LOTO procedure before work begins.'
+              )}</span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card title={tr("Sources d'énergie identifiées", 'Identified energy sources')} icon={<Zap className="w-5 h-5" />}>
+        <div className="space-y-3">
+          {loto.energySources.length === 0 && (
+            <p className="text-center py-6 text-sm text-slate-400 dark:text-slate-500 italic">
+              {tr("Aucune source d'énergie identifiée.", 'No energy sources identified.')}
+            </p>
+          )}
+          {loto.energySources.map((src, i) => (
+            <div key={src.id} className="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold shrink-0">{i + 1}</span>
+                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">{src.type}{src.description ? ` — ${src.description}` : ''}</span>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={src.verified}
+                      onChange={e => updateSource(src.id, 'verified', e.target.checked)}
+                      disabled={readOnly} className="h-3.5 w-3.5 accent-teal-600" />
+                    <span className={src.verified ? 'text-teal-600 font-semibold' : 'text-slate-500'}>
+                      {tr('Isolée ✓', 'Isolated ✓')}
+                    </span>
+                  </label>
+                  {!readOnly && <button type="button" onClick={() => removeSource(src.id)} className="p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}
+                </div>
+              </div>
+              <div className="p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label={tr("Type d'énergie", 'Energy type')}>
+                  <SelectInput value={src.type} onChange={v => updateSource(src.id, 'type', v)}
+                    options={energyTypes.map(t => ({ value: t, label: t }))} disabled={readOnly} />
+                </Field>
+                <Field label={tr('Description / équipement', 'Description / equipment')}>
+                  <TextInput value={src.description} onChange={v => updateSource(src.id, 'description', v)}
+                    placeholder={tr('Ex: Moteur convoyeur M-01', 'E.g.: Conveyor motor M-01')} disabled={readOnly} />
+                </Field>
+                <Field label={tr('Magnitude (V, kPa, kN…)', 'Magnitude (V, kPa, kN…)')}>
+                  <TextInput value={src.magnitude} onChange={v => updateSource(src.id, 'magnitude', v)}
+                    placeholder="480 V, 700 kPa…" disabled={readOnly} />
+                </Field>
+                <Field label={tr("Emplacement / point d'isolation", 'Location / isolation point')}>
+                  <TextInput value={src.location} onChange={v => updateSource(src.id, 'location', v)}
+                    placeholder={tr('Ex: Panneau P-12, salle électrique A', 'E.g.: Panel P-12, electrical room A')} disabled={readOnly} />
+                </Field>
+                <Field label={tr("Méthode d'isolation", 'Isolation method')}>
+                  <TextInput value={src.isolationMethod} onChange={v => updateSource(src.id, 'isolationMethod', v)}
+                    placeholder={tr('Ex: Disjoncteur D-12 verrouillé', 'E.g.: Breaker D-12 locked out')} disabled={readOnly} />
+                </Field>
+                <Field label={tr('Vérifiée par', 'Verified by')}>
+                  <TextInput value={src.verifiedBy} onChange={v => updateSource(src.id, 'verifiedBy', v)}
+                    placeholder={tr('Nom de la personne', 'Person name')} disabled={readOnly} />
+                </Field>
+              </div>
+            </div>
+          ))}
+          {!readOnly && (
+            <button type="button" onClick={addSource}
+              className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors">
+              <Plus className="w-4 h-4" /> {tr("Ajouter une source d'énergie", 'Add an energy source')}
+            </button>
+          )}
+        </div>
+      </Card>
+
+      <Card title={tr('Registre des cadenas', 'Lock register')} icon={<Lock className="w-5 h-5" />}>
+        <div className="space-y-3">
+          {loto.locks.length === 0 && (
+            <p className="text-center py-6 text-sm text-slate-400 dark:text-slate-500 italic">
+              {tr('Aucun cadenas enregistré.', 'No locks registered.')}
+            </p>
+          )}
+          {loto.locks.map((lk, i) => (
+            <div key={lk.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-600 px-4 py-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-teal-600 text-white text-xs font-bold shrink-0">{i + 1}</span>
+              <Field label={tr('N° cadenas', 'Lock #')}>
+                <TextInput value={lk.lockId} onChange={v => updateLock(lk.id, 'lockId', v)} placeholder="L-042" disabled={readOnly} />
+              </Field>
+              <Field label={tr('Propriétaire', 'Owner')}>
+                <TextInput value={lk.owner} onChange={v => updateLock(lk.id, 'owner', v)}
+                  placeholder={tr('Nom et prénom', 'First and last name')} disabled={readOnly} />
+              </Field>
+              <Field label={tr('Posé le', 'Placed at')}>
+                <TextInput type="datetime-local" value={lk.placedAt} onChange={v => updateLock(lk.id, 'placedAt', v)} disabled={readOnly} />
+              </Field>
+              <Field label={tr('Retiré le', 'Removed at')}>
+                <TextInput type="datetime-local" value={lk.removedAt} onChange={v => updateLock(lk.id, 'removedAt', v)} disabled={readOnly} />
+              </Field>
+              {!readOnly && <button type="button" onClick={() => removeLock(lk.id)} className="mt-4 p-1.5 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}
+            </div>
+          ))}
+          {!readOnly && (
+            <button type="button" onClick={addLock}
+              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors">
+              <Plus className="w-4 h-4" /> {tr('Ajouter un cadenas', 'Add a lock')}
+            </button>
+          )}
+        </div>
+      </Card>
+
+      <Card title={tr('Vérification et re-énergisation', 'Verification and re-energization')} icon={<CheckCircle className="w-5 h-5" />}>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {tr("Vérification absence d'énergie", 'Zero energy verification')}
+              </div>
+              <Toggle checked={loto.verificationDone} onChange={v => setL('verificationDone', v)}
+                label={tr("Vérification effectuée — absence d'énergie confirmée", 'Verification done — zero energy confirmed')}
+                disabled={readOnly} />
+              <Field label={tr('Vérifiée par', 'Verified by')}>
+                <TextInput value={loto.verificationBy} onChange={v => setL('verificationBy', v)}
+                  placeholder={tr('Nom', 'Name')} disabled={readOnly} />
+              </Field>
+              <Field label={tr('Date / heure', 'Date / time')}>
+                <TextInput type="datetime-local" value={loto.verificationDate} onChange={v => setL('verificationDate', v)} disabled={readOnly} />
+              </Field>
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {tr('Autorisation re-énergisation', 'Re-energization authorization')}
+              </div>
+              <Field label={tr('Autorisée par', 'Authorized by')}>
+                <TextInput value={loto.reenergizationAuthBy} onChange={v => setL('reenergizationAuthBy', v)}
+                  placeholder={tr('Nom du superviseur', 'Supervisor name')} disabled={readOnly} />
+              </Field>
+              <Field label={tr('Date / heure', 'Date / time')}>
+                <TextInput type="datetime-local" value={loto.reenergizationAuthDate} onChange={v => setL('reenergizationAuthDate', v)} disabled={readOnly} />
+              </Field>
+            </div>
+          </div>
+          <Textarea label={tr('Notes LOTO', 'LOTO notes')} value={loto.notes} onChange={v => setL('notes', v)}
+            placeholder={tr('Observations, conditions particulières, dérogations approuvées…', 'Observations, special conditions, approved deviations…')}
+            rows={3} disabled={readOnly} />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── Props ──────────────────────────────────────────────────────────────────
 interface ASTPermitProps {
   tenant?: string;
@@ -1810,7 +2344,7 @@ interface ASTPermitProps {
   initialData?: Partial<ASTPermit>;
 }
 
-type SectionId = 'task' | 'steps' | 'ppe' | 'equipment' | 'participants' | 'finalization';
+type SectionId = 'task' | 'energy' | 'steps' | 'ppe' | 'equipment' | 'participants' | 'finalization';
 
 // ── Main component ─────────────────────────────────────────────────────────
 export default function ASTPermit({
@@ -1906,8 +2440,10 @@ export default function ASTPermit({
 
   const completion = computeCompletion(ast);
 
+  const isComplet = (ast.model ?? 'simple') === 'complet';
   const SECTIONS: { id: SectionId; icon: React.ReactNode; label: string }[] = [
     { id: 'task', icon: <ClipboardList className="w-4 h-4" />, label: t.sections.task },
+    ...(isComplet ? [{ id: 'energy' as SectionId, icon: <Lock className="w-4 h-4" />, label: language === 'fr' ? 'Énergie / LOTO' : 'Energy / LOTO' }] : []),
     { id: 'steps', icon: <List className="w-4 h-4" />, label: t.sections.steps },
     { id: 'ppe', icon: <Shield className="w-4 h-4" />, label: t.sections.ppe },
     { id: 'equipment', icon: <Wrench className="w-4 h-4" />, label: t.sections.equipment },
@@ -2041,6 +2577,9 @@ export default function ASTPermit({
         <div className="max-w-5xl mx-auto">
           {section === 'task' && (
             <TaskSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+          )}
+          {section === 'energy' && (
+            <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} />
           )}
           {section === 'steps' && (
             <StepsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
