@@ -1,1901 +1,479 @@
-﻿// SiteInformation.tsx - PARTIE 1/2 - Version Complète Corrigée Compatible SafetyManager Build Ready
-"use client";
+'use client';
 
-import React, { useState, useRef, useCallback, memo } from 'react';
-import { 
-  FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase, 
-  AlertTriangle, Camera, Upload, X, Settings, Wrench, Droplets, 
-  Wind, Flame, Eye, Trash2, Plus, ArrowLeft, ArrowRight, Home, Layers, 
-  Ruler, Gauge, Thermometer, Activity, Shield, Zap, CheckCircle, 
-  ChevronDown, ChevronUp, Info, Star, Globe, Wifi, Navigation, Check
-} from 'lucide-react';
-
-// Import des types et du hook centralisé
+import React, { useState } from 'react';
 import {
-  ConfinedSpaceComponentProps,
-  ConfinedSpaceDetails,
-  Dimensions,
-  EntryPoint,
-  SpacePhoto,
-  generatePermitId
-} from './SafetyManager';
+  MapPin, Building, Calendar, Clock, Users, FileText, Layers,
+  Ruler, AlertTriangle, Wind, Flame, Zap, Droplets, ChevronDown, ChevronUp, Plus, X
+} from 'lucide-react';
+import { ConfinedSpacePermit, ProvinceCode } from './SafetyManager';
 
-import { styles, isMobile } from './styles';
+// ── Types ──────────────────────────────────────────────────────────────────
+type Language = 'fr' | 'en';
 
-// =================== TYPES LOCAUX ===================
-type UnitSystem = 'metric' | 'imperial';
+interface Props {
+  language: Language;
+  permitData: ConfinedSpacePermit;
+  selectedProvince: ProvinceCode;
+  readOnly?: boolean;
+  onUpdate: (data: Partial<ConfinedSpacePermit['siteInformation']>) => void;
+}
 
-// =================== TRADUCTIONS COMPLÈTES ===================
-const translations = {
+// ── Translations ───────────────────────────────────────────────────────────
+const T = {
   fr: {
-    title: "Informations du Site - Espace Clos",
-    subtitle: "Identification et évaluation complète de l'espace de travail confiné",
-    
-    // Sections principales
-    projectInfo: "Informations du Projet",
-    planning: "Planification",
-    spaceIdentification: "Identification de l'Espace Clos",
-    spaceDimensions: "Dimensions et Volume",
-    entryPoints: "Points d'Entrée et Accès",
-    hazardAssessment: "Évaluation des Dangers",
-    environmentalConditions: "Conditions Environnementales",
-    spaceContent: "Contenu et Historique",
-    safetyMeasures: "Mesures de Sécurité",
-    photoDocumentation: "Documentation Photographique",
-    
-    // Champs du formulaire
-    projectNumber: "Numéro de projet",
-    workLocation: "Lieu des travaux",
-    contractor: "Entrepreneur",
-    supervisor: "Superviseur",
+    sections: {
+      project: 'Informations du projet',
+      space: "Identification de l'espace clos",
+      dimensions: 'Dimensions et volume',
+      hazards: 'Évaluation des dangers',
+      safety: 'Mesures de sécurité',
+    },
+    projectNumber: 'Numéro de projet',
+    projectNumberPh: 'EX-2024-001',
+    workLocation: 'Lieu des travaux',
+    workLocationPh: 'Adresse ou description du lieu',
+    contractor: 'Entrepreneur',
+    contractorPh: "Nom de l'entreprise",
+    supervisor: 'Superviseur responsable',
+    supervisorPh: 'Prénom et nom',
     entryDate: "Date d'entrée prévue",
-    duration: "Durée estimée",
-    workerCount: "Nombre de travailleurs",
-    workDescription: "Description des travaux",
-    
-    // Unités
-    unitSystem: "Système d'unités",
-    metric: "Métrique (m)",
-    imperial: "Impérial (ft)",
-    
-    // Formes d'espaces
-    spaceShape: "Forme de l'espace",
-    rectangular: "Rectangulaire",
-    cylindrical: "Cylindrique",
-    spherical: "Sphérique",
-    irregular: "Irrégulier",
-    
-    // Types d'espaces
-    spaceType: "Type d'espace",
+    duration: 'Durée estimée',
+    durationPh: 'ex. 4h, 2 jours',
+    workerCount: 'Nombre de travailleurs',
+    workDescription: 'Description des travaux',
+    workDescriptionPh: "Décrivez les travaux à effectuer dans l'espace clos…",
+    spaceType: "Type d'espace clos",
     spaceTypes: {
-      tank: "Réservoir",
-      vessel: "Cuve/Récipient", 
-      silo: "Silo",
-      pit: "Fosse",
-      vault: "Voà»te",
-      tunnel: "Tunnel",
-      trench: "Tranchée",
+      tank: 'Réservoir',
+      vessel: 'Cuve / Récipient',
+      silo: 'Silo',
+      pit: 'Fosse',
+      vault: 'Voûte',
+      tunnel: 'Tunnel',
+      trench: 'Tranchée',
       manhole: "Regard d'égout",
-      storage: "Espace de stockage",
-      boiler: "Chaudière",
-      duct: "Conduit",
-      chamber: "Chambre",
-      other: "Autre"
+      storage: 'Espace de stockage',
+      boiler: 'Chaudière',
+      pipeline: 'Canalisation',
+      other: 'Autre',
     },
-    
-    // Classifications CSA
-    csaClass: "Classification CSA",
+    csaClass: 'Classe CSA Z1006',
     csaClasses: {
-      class1: "Classe 1 - Danger immédiat pour la vie",
-      class2: "Classe 2 - Risque potentiel",
-      class3: "Classe 3 - Risque minimal"
+      A: 'Classe A — Danger immédiat pour la vie',
+      B: 'Classe B — Danger potentiel',
+      C: 'Classe C — Danger faible',
     },
-    
-    // Dimensions
-    length: "Longueur",
-    width: "Largeur", 
-    height: "Hauteur",
-    diameter: "Diamètre",
-    volume: "Volume calculé",
-    calculateVolume: "Calculer Volume",
-    
-    // Points d'entrée
-    entryPoint: "Point d'entrée",
-    entryType: "Type d'entrée",
-    entryDimensions: "Dimensions",
-    entryLocation: "Localisation",
-    entryCondition: "État",
-    entryAccessibility: "Accessibilité",
-    addEntryPoint: "Ajouter point d'entrée",
-    
-    // Dangers
-    atmosphericHazards: "Dangers Atmosphériques",
-    physicalHazards: "Dangers Physiques",
-    selectHazards: "Sélectionnez tous les dangers présents",
-    
-    // Photos
-    addPhoto: "Ajouter photo",
-    takePhoto: "Prendre photo",
-    noPhotos: "Aucune photo",
-    photoCategories: {
-      exterior: "Extérieur",
-      interior: "Intérieur",
-      entry: "Points d'entrée",
-      hazards: "Dangers",
-      equipment: "Équipement",
-      safety: "Sécurité"
+    entryMethod: "Méthode d'entrée",
+    entryMethods: { vertical: 'Verticale', horizontal: 'Horizontale', restricted: 'Restreinte' },
+    spaceDescription: "Description de l'espace",
+    spaceDescriptionPh: 'Dimensions, caractéristiques, accès…',
+    spaceShape: "Forme de l'espace",
+    shapes: { rectangular: 'Rectangulaire', cylindrical: 'Cylindrique', spherical: 'Sphérique', irregular: 'Irrégulier' },
+    unitSystem: "Système d'unités",
+    metric: 'Métrique (m)',
+    imperial: 'Impérial (pi)',
+    length: 'Longueur',
+    width: 'Largeur',
+    height: 'Hauteur',
+    diameter: 'Diamètre',
+    volume: 'Volume calculé',
+    atmosphericHazards: 'Dangers atmosphériques',
+    physicalHazards: 'Dangers physiques',
+    atmoHazardList: {
+      oxygen_deficiency: 'Déficience en oxygène',
+      oxygen_enrichment: 'Enrichissement en oxygène',
+      flammable_gas: 'Gaz inflammable',
+      toxic_gas: 'Gaz toxique',
+      combustible_dust: 'Poussière combustible',
+      vapors: 'Vapeurs',
+      asphyxiation: 'Asphyxie',
     },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Déficience en oxygène (<19.5%)",
-      oxygen_enrichment: "Enrichissement en oxygène (>23%)",
-      flammable_gases: "Gaz inflammables/combustibles",
-      toxic_gases: "Gaz toxiques",
-      hydrogen_sulfide: "Sulfure d'hydrogène (H2S)",
-      carbon_monoxide: "Monoxyde de carbone (CO)",
-      carbon_dioxide: "Dioxyde de carbone (CO2)",
-      methane: "Méthane (CH4)",
-      ammonia: "Ammoniac (NH3)",
-      chlorine: "Chlore (Cl2)",
-      nitrogen: "Azote (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Fumées de soudage"
+    physHazardList: {
+      engulfment: 'Ensevelissement',
+      entrapment: 'Piégeage',
+      falls: 'Chutes',
+      electrical: 'Électricité',
+      mechanical: 'Mécanique',
+      thermal: 'Thermique',
+      noise: 'Bruit',
+      radiation: 'Rayonnement',
     },
-
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Ensevelissement/Engloutissement",
-      crushing: "Écrasement par équipement",
-      electrical: "Dangers électriques",
-      mechanical: "Dangers mécaniques",
-      structural_collapse: "Effondrement structural",
-      falls: "Chutes de hauteur",
-      temperature_extreme: "Températures extrêmes",
-      noise: "Bruit excessif",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Exposition chimique",
-      biological: "Dangers biologiques",
-      confined_space_hazard: "Configuration de l'espace",
-      traffic: "Circulation/Trafic"
-    },
-
-    // Actions
-    save: "Sauvegarder",
-    delete: "Supprimer",
-    edit: "Modifier",
-    add: "Ajouter",
-    remove: "Retirer",
-    select: "Sélectionner",
-    required: "Requis",
-    optional: "Optionnel",
-    yes: "Oui",
-    no: "Non"
+    communicationMethod: 'Méthode de communication',
+    communicationMethods: { radio: 'Radio', cellular: 'Cellulaire', hardline: 'Filaire', visual: 'Visuelle' },
+    emergencyEgress: "Sortie de secours",
+    emergencyEgressPh: "Procédure et voie d'évacuation",
+    ventilationEquipment: 'Ventilation',
+    emergencyEquipment: "Équipement d'urgence",
+    addHazard: 'Ajouter',
+    remove: 'Retirer',
+    collapse: 'Réduire',
+    expand: 'Développer',
   },
   en: {
-    title: "Site Information - Confined Space",
-    subtitle: "Complete identification and assessment of the confined workspace",
-    
-    // Sections principales
-    projectInfo: "Project Information",
-    planning: "Planning",
-    spaceIdentification: "Confined Space Identification",
-    spaceDimensions: "Dimensions and Volume",
-    entryPoints: "Entry Points and Access",
-    hazardAssessment: "Hazard Assessment",
-    environmentalConditions: "Environmental Conditions",
-    spaceContent: "Content and History",
-    safetyMeasures: "Safety Measures",
-    photoDocumentation: "Photo Documentation",
-    
-    // Champs du formulaire
-    projectNumber: "Project number",
-    workLocation: "Work location",
-    contractor: "Contractor",
-    supervisor: "Supervisor",
-    entryDate: "Planned entry date",
-    duration: "Estimated duration",
-    workerCount: "Number of workers",
-    workDescription: "Work description",
-    
-    // Unités
-    unitSystem: "Unit system",
-    metric: "Metric (m)",
-    imperial: "Imperial (ft)",
-    
-    // Formes d'espaces
-    spaceShape: "Space shape",
-    rectangular: "Rectangular",
-    cylindrical: "Cylindrical",
-    spherical: "Spherical",
-    irregular: "Irregular",
-    
-    // Types d'espaces
-    spaceType: "Space type",
+    sections: {
+      project: 'Project information',
+      space: 'Confined space identification',
+      dimensions: 'Dimensions and volume',
+      hazards: 'Hazard assessment',
+      safety: 'Safety measures',
+    },
+    projectNumber: 'Project number',
+    projectNumberPh: 'EX-2024-001',
+    workLocation: 'Work location',
+    workLocationPh: 'Address or location description',
+    contractor: 'Contractor',
+    contractorPh: 'Company name',
+    supervisor: 'Responsible supervisor',
+    supervisorPh: 'First and last name',
+    entryDate: 'Planned entry date',
+    duration: 'Estimated duration',
+    durationPh: 'e.g. 4h, 2 days',
+    workerCount: 'Number of workers',
+    workDescription: 'Work description',
+    workDescriptionPh: 'Describe the work to be performed in the confined space…',
+    spaceType: 'Confined space type',
     spaceTypes: {
-      tank: "Tank",
-      vessel: "Vessel/Container",
-      silo: "Silo",
-      pit: "Pit",
-      vault: "Vault",
-      tunnel: "Tunnel",
-      trench: "Trench",
-      manhole: "Manhole",
-      storage: "Storage space",
-      boiler: "Boiler",
-      duct: "Duct",
-      chamber: "Chamber",
-      other: "Other"
+      tank: 'Tank',
+      vessel: 'Vessel / Container',
+      silo: 'Silo',
+      pit: 'Pit',
+      vault: 'Vault',
+      tunnel: 'Tunnel',
+      trench: 'Trench',
+      manhole: 'Manhole',
+      storage: 'Storage space',
+      boiler: 'Boiler',
+      pipeline: 'Pipeline',
+      other: 'Other',
     },
-    
-    // Classifications CSA
-    csaClass: "CSA Classification",
+    csaClass: 'CSA Z1006 Class',
     csaClasses: {
-      class1: "Class 1 - Immediate danger to life",
-      class2: "Class 2 - Potential risk",
-      class3: "Class 3 - Minimal risk"
+      A: 'Class A — Immediate danger to life',
+      B: 'Class B — Potential danger',
+      C: 'Class C — Low danger',
     },
-    
-    // Dimensions
-    length: "Length",
-    width: "Width",
-    height: "Height",
-    diameter: "Diameter",
-    volume: "Calculated volume",
-    calculateVolume: "Calculate Volume",
-    
-    // Points d'entrée
-    entryPoint: "Entry point",
-    entryType: "Entry type",
-    entryDimensions: "Dimensions",
-    entryLocation: "Location",
-    entryCondition: "Condition",
-    entryAccessibility: "Accessibility",
-    addEntryPoint: "Add entry point",
-    
-    // Dangers
-    atmosphericHazards: "Atmospheric Hazards",
-    physicalHazards: "Physical Hazards",
-    selectHazards: "Select all present hazards",
-    
-    // Photos
-    addPhoto: "Add photo",
-    takePhoto: "Take photo",
-    noPhotos: "No photos",
-    photoCategories: {
-      exterior: "Exterior",
-      interior: "Interior",
-      entry: "Entry points",
-      hazards: "Hazards",
-      equipment: "Equipment",
-      safety: "Safety"
+    entryMethod: 'Entry method',
+    entryMethods: { vertical: 'Vertical', horizontal: 'Horizontal', restricted: 'Restricted' },
+    spaceDescription: 'Space description',
+    spaceDescriptionPh: 'Dimensions, features, access…',
+    spaceShape: 'Space shape',
+    shapes: { rectangular: 'Rectangular', cylindrical: 'Cylindrical', spherical: 'Spherical', irregular: 'Irregular' },
+    unitSystem: 'Unit system',
+    metric: 'Metric (m)',
+    imperial: 'Imperial (ft)',
+    length: 'Length',
+    width: 'Width',
+    height: 'Height',
+    diameter: 'Diameter',
+    volume: 'Calculated volume',
+    atmosphericHazards: 'Atmospheric hazards',
+    physicalHazards: 'Physical hazards',
+    atmoHazardList: {
+      oxygen_deficiency: 'Oxygen deficiency',
+      oxygen_enrichment: 'Oxygen enrichment',
+      flammable_gas: 'Flammable gas',
+      toxic_gas: 'Toxic gas',
+      combustible_dust: 'Combustible dust',
+      vapors: 'Vapors',
+      asphyxiation: 'Asphyxiation',
     },
-    
-    // Dangers atmosphériques
-    atmosphericHazardTypes: {
-      oxygen_deficiency: "Oxygen deficiency (<19.5%)",
-      oxygen_enrichment: "Oxygen enrichment (>23%)",
-      flammable_gases: "Flammable/combustible gases",
-      toxic_gases: "Toxic gases",
-      hydrogen_sulfide: "Hydrogen sulfide (H2S)",
-      carbon_monoxide: "Carbon monoxide (CO)",
-      carbon_dioxide: "Carbon dioxide (CO2)",
-      methane: "Methane (CH4)",
-      ammonia: "Ammonia (NH3)",
-      chlorine: "Chlorine (Cl2)",
-      nitrogen: "Nitrogen (N2)",
-      argon: "Argon (Ar)",
-      welding_fumes: "Welding fumes"
+    physHazardList: {
+      engulfment: 'Engulfment',
+      entrapment: 'Entrapment',
+      falls: 'Falls',
+      electrical: 'Electrical',
+      mechanical: 'Mechanical',
+      thermal: 'Thermal',
+      noise: 'Noise',
+      radiation: 'Radiation',
     },
+    communicationMethod: 'Communication method',
+    communicationMethods: { radio: 'Radio', cellular: 'Cellular', hardline: 'Hardline', visual: 'Visual' },
+    emergencyEgress: 'Emergency egress',
+    emergencyEgressPh: 'Evacuation path and procedure',
+    ventilationEquipment: 'Ventilation',
+    emergencyEquipment: 'Emergency equipment',
+    addHazard: 'Add',
+    remove: 'Remove',
+    collapse: 'Collapse',
+    expand: 'Expand',
+  },
+} as const;
 
-    // Dangers physiques
-    physicalHazardTypes: {
-      engulfment: "Engulfment",
-      crushing: "Crushing by equipment",
-      electrical: "Electrical hazards",
-      mechanical: "Mechanical hazards",
-      structural_collapse: "Structural collapse",
-      falls: "Falls from height",
-      temperature_extreme: "Extreme temperatures",
-      noise: "Excessive noise",
-      vibration: "Vibrations",
-      radiation: "Radiation",
-      chemical_exposure: "Chemical exposure",
-      biological: "Biological hazards",
-      confined_space_hazard: "Space configuration",
-      traffic: "Traffic/Circulation"
-    },
+// ── Shared UI primitives ───────────────────────────────────────────────────
+const inputClass = 'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-slate-50 disabled:text-slate-400';
+const labelClass = 'block text-sm font-medium text-slate-600 mb-1';
 
-    // Actions
-    save: "Save",
-    delete: "Delete",
-    edit: "Edit",
-    add: "Add",
-    remove: "Remove",
-    select: "Select",
-    required: "Required",
-    optional: "Optional",
-    yes: "Yes",
-    no: "No"
-  }
-};
-
-// =================== COMPOSANT PRINCIPAL REFACTORISÉ ===================
-const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
-  language,
-  permitData,
-  selectedProvince,
-  regulations,
-  isMobile,
-  safetyManager,
-  onUpdate,
-  onSectionComplete,
-  onValidationChange
-}) => {
-  // ✅ CORRECTION 1 & 2 : Accès sécurisé aux données avec fallbacks SafetyManager
-  const siteInfo = React.useMemo(() => {
-    // Essai avec permitData fourni en props
-    if (permitData?.siteInformation) {
-      return permitData.siteInformation;
-    }
-    
-    // Essai avec SafetyManager currentPermit
-    if (safetyManager) {
-      try {
-        const currentPermit = safetyManager.currentPermit;
-        if (currentPermit?.siteInformation) {
-          return currentPermit.siteInformation;
-        }
-      } catch (error) {
-        console.warn('SafetyManager currentPermit.siteInformation access failed:', error);
-      }
-    }
-    
-    // Fallback : objet vide avec structure par défaut
-    return {
-      projectNumber: '',
-      workLocation: '',
-      contractor: '',
-      supervisor: '',
-      entryDate: '',
-      duration: '',
-      workerCount: 1,
-      workDescription: '',
-      spaceType: '',
-      csaClass: '',
-      unitSystem: 'metric' as UnitSystem,
-      dimensions: {
-        length: 0,
-        width: 0,
-        height: 0,
-        diameter: 0,
-        volume: 0,
-        spaceShape: 'rectangular' as any
-      },
-      entryPoints: [{
-        id: generatePermitId(),
-        type: 'circular',
-        dimensions: '',
-        location: '',
-        condition: 'good',
-        accessibility: 'normal',
-        photos: []
-      }],
-      atmosphericHazards: [],
-      physicalHazards: [],
-      environmentalConditions: {},
-      spacePhotos: []
-    };
-  }, [permitData, safetyManager]);
-  
-  // États pour l'interface seulement
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  
-  const t = translations[language];
-
-  // =================== HANDLERS CORRIGÉS - UTILISENT SAFETYMANAGER SÉCURISÉ ===================
-  // ✅ CORRECTION 3 : Handler updateSiteInfo avec vérifications SafetyManager
-  const updateSiteInfo = useCallback((field: string, value: any) => {
-    const updates = { [field]: value };
-    
-    // Vérification SafetyManager disponible
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation(updates);
-      } catch (error) {
-        console.warn('SafetyManager updateSiteInformation failed:', error);
-      }
-    }
-    
-    // Callback vers le parent si fourni
-    if (onUpdate) {
-      onUpdate('siteInformation', updates);
-    }
-    
-    // ✅ CORRECTION 4 : Validation avec vérifications SafetyManager
-    if (onValidationChange && safetyManager) {
-      try {
-        const validation = safetyManager.validateSection('siteInformation');
-        onValidationChange(validation.isValid, validation.errors);
-      } catch (error) {
-        console.warn('SafetyManager validateSection failed:', error);
-        // Fallback validation basique
-        const isValid = Boolean(updates.projectNumber || siteInfo.projectNumber) && 
-                        Boolean(updates.workLocation || siteInfo.workLocation);
-        onValidationChange(isValid, isValid ? [] : ['Projet et lieu requis']);
-      }
-    }
-    
-    // Fallback : si pas de SafetyManager, log des données
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateSiteInfo:', { field, value });
-    }
-  }, [safetyManager, onUpdate, onValidationChange, siteInfo.projectNumber, siteInfo.workLocation]);
-
-  // ✅ CORRECTION 5 : Handler updateDimensions avec vérifications SafetyManager
-  const updateDimensions = useCallback((dimensionUpdates: Partial<Dimensions>) => {
-    const updatedDimensions = { ...siteInfo.dimensions, ...dimensionUpdates };
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ dimensions: updatedDimensions });
-      } catch (error) {
-        console.warn('SafetyManager updateSiteInformation dimensions failed:', error);
-      }
-    }
-    
-    if (onUpdate) {
-      onUpdate('siteInformation', { dimensions: updatedDimensions });
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateDimensions:', dimensionUpdates);
-    }
-  }, [safetyManager, siteInfo.dimensions, onUpdate]);
-
-  // ✅ CORRECTION BUILD CRITIQUE 6 : Handler updateEnvironmentalCondition avec conversion des types undefined -> boolean
-  const updateEnvironmentalCondition = useCallback((field: string, value: any) => {
-    // ✅ SOLUTION POUR L'ERREUR DE BUILD : Conversion des valeurs undefined vers des booléens par défaut
-    const sanitizedValue = value === undefined ? false : value;
-    const currentConditions = siteInfo.environmentalConditions || {};
-    
-    // ✅ TYPE ASSERTION EXPLICITE pour éviter l'erreur Property does not exist on type '{}'
-    const typedCurrentConditions = currentConditions as {
-      ventilationRequired?: boolean;
-      ventilationType?: string;
-      lightingConditions?: string;
-      temperatureRange?: string;
-      moistureLevel?: string;
-      noiseLevel?: string;
-      weatherConditions?: string;
-    };
-    
-    // ✅ Construire updatedConditions avec type assertion
-    const updatedConditions = { 
-      ...typedCurrentConditions, 
-      [field]: sanitizedValue 
-    };
-    
-    // ✅ CONVERSION EXPLICITE pour respecter l'interface EnvironmentalConditions stricte
-    const typeSafeConditions = {
-      ventilationRequired: Boolean(updatedConditions.ventilationRequired ?? false),
-      ventilationType: String(updatedConditions.ventilationType ?? ''),
-      lightingConditions: String(updatedConditions.lightingConditions ?? ''),
-      temperatureRange: String(updatedConditions.temperatureRange ?? ''),
-      moistureLevel: String(updatedConditions.moistureLevel ?? ''),
-      noiseLevel: String(updatedConditions.noiseLevel ?? ''),
-      weatherConditions: String(updatedConditions.weatherConditions ?? '')
-    };
-    
-    if (safetyManager) {
-      try {
-        // ✅ UTILISER typeSafeConditions au lieu de updatedConditions pour éliminer l'erreur de build
-        safetyManager.updateSiteInformation({ environmentalConditions: typeSafeConditions });
-      } catch (error) {
-        console.warn('SafetyManager updateSiteInformation environmentalConditions failed:', error);
-      }
-    }
-    
-    if (onUpdate) {
-      onUpdate('siteInformation', { environmentalConditions: typeSafeConditions });
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateEnvironmentalCondition:', { field, value: sanitizedValue });
-    }
-  }, [safetyManager, siteInfo.environmentalConditions, onUpdate]);
-  // SiteInformation.tsx - PARTIE 2/2 - Fonctions Avancées et Rendu JSX Complet
-
-  // =================== CALCUL VOLUME ===================
-  const calculateVolume = useCallback(() => {
-    const { length, width, height, diameter, spaceShape } = siteInfo.dimensions;
-    let volume = 0;
-
-    switch (spaceShape) {
-      case 'rectangular':
-        if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height;
-        }
-        break;
-      case 'cylindrical':
-        if (diameter > 0 && height > 0) {
-          const radius = diameter / 2;
-          volume = Math.PI * Math.pow(radius, 2) * height;
-        }
-        break;
-      case 'spherical':
-        if (diameter > 0) {
-          const radius = diameter / 2;
-          volume = (4/3) * Math.PI * Math.pow(radius, 3);
-        }
-        break;
-      case 'irregular':
-        if (length > 0 && width > 0 && height > 0) {
-          volume = length * width * height * 0.85;
-        }
-        break;
-    }
-
-    updateDimensions({ volume: Math.round(volume * 100) / 100 });
-  }, [siteInfo.dimensions, updateDimensions]);
-
-  // =================== CONVERSION D'UNITÉS ===================
-  const convertUnits = useCallback((fromSystem: UnitSystem, toSystem: UnitSystem) => {
-    if (fromSystem === toSystem) return;
-    
-    const conversionFactor = fromSystem === 'metric' ? 3.28084 : 0.3048;
-    const { dimensions } = siteInfo;
-    
-    const convertedDimensions = {
-      ...dimensions,
-      length: Math.round(dimensions.length * conversionFactor * 100) / 100,
-      width: Math.round(dimensions.width * conversionFactor * 100) / 100,
-      height: Math.round(dimensions.height * conversionFactor * 100) / 100,
-      diameter: Math.round(dimensions.diameter * conversionFactor * 100) / 100,
-      volume: 0
-    };
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ 
-          dimensions: convertedDimensions,
-          unitSystem: toSystem 
-        });
-      } catch (error) {
-        console.warn('SafetyManager convertUnits failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour convertUnits');
-    }
-  }, [safetyManager, siteInfo]);
-
-  // =================== GESTION DES POINTS D'ENTRÉE ===================
-  const addEntryPoint = useCallback(() => {
-    const newEntryPoint = {
-      id: generatePermitId(),
-      type: 'circular',
-      dimensions: '',
-      location: '',
-      condition: 'good',
-      accessibility: 'normal',
-      photos: []
-    };
-    
-    const updatedEntryPoints = [...(siteInfo.entryPoints || []), newEntryPoint];
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
-      } catch (error) {
-        console.warn('SafetyManager addEntryPoint failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour addEntryPoint');
-    }
-  }, [safetyManager, siteInfo.entryPoints]);
-
-  const removeEntryPoint = useCallback((entryId: string) => {
-    const currentEntryPoints = siteInfo.entryPoints || [];
-    if (currentEntryPoints.length <= 1) {
-      alert(language === 'fr' ? 'Au moins un point d\'entrée est requis' : 'At least one entry point is required');
-      return;
-    }
-    
-    const updatedEntryPoints = currentEntryPoints.filter(entry => entry.id !== entryId);
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
-      } catch (error) {
-        console.warn('SafetyManager removeEntryPoint failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour removeEntryPoint');
-    }
-  }, [safetyManager, siteInfo.entryPoints, language]);
-
-  const updateEntryPoint = useCallback((entryId: string, field: string, value: any) => {
-    const currentEntryPoints = siteInfo.entryPoints || [];
-    const updatedEntryPoints = currentEntryPoints.map(entry =>
-      entry.id === entryId ? { ...entry, [field]: value } : entry
-    );
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ entryPoints: updatedEntryPoints });
-      } catch (error) {
-        console.warn('SafetyManager updateEntryPoint failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour updateEntryPoint');
-    }
-  }, [safetyManager, siteInfo.entryPoints]);
-
-  // =================== GESTION DES SECTIONS COLLAPSIBLES ===================
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
-    });
-  };
-
-  // =================== COMPOSANT SECTION COLLAPSIBLE ===================
-  const CollapsibleSection = ({ 
-    id, 
-    title, 
-    icon, 
-    children, 
-    defaultCollapsed = false 
-  }: {
-    id: string;
-    title: string;
-    icon: React.ReactNode;
-    children: React.ReactNode;
-    defaultCollapsed?: boolean;
-  }) => {
-    const isCollapsed = collapsedSections.has(id) || (defaultCollapsed && !collapsedSections.has(id));
-
-    return (
-      <div style={styles.card}>
-        <button 
-          onClick={() => toggleSection(id)}
-          style={{
-            width: '100%',
-            padding: isMobile ? '16px' : '20px',
-            background: 'transparent',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: isMobile ? '16px' : '18px',
-            fontWeight: '600',
-            transition: 'all 0.3s ease',
-            minHeight: isMobile ? '60px' : '70px',
-            touchAction: 'manipulation'
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: isMobile ? '12px' : '16px',
-            flex: 1
-          }}>
-            <div style={{
-              width: isMobile ? '20px' : '24px',
-              height: isMobile ? '20px' : '24px',
-              color: '#3b82f6',
-              flexShrink: 0
-            }}>{icon}</div>
-            <h3 style={{
-              margin: 0,
-              fontSize: isMobile ? '16px' : '18px',
-              fontWeight: '700',
-              color: 'white',
-              textAlign: 'left'
-            }}>{title}</h3>
-          </div>
-          <div style={{
-            color: '#9ca3af',
-            transition: 'transform 0.2s ease'
-          }}>
-            {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-          </div>
-        </button>
-        
-        {!isCollapsed && (
-          <div style={{
-            padding: isMobile ? '16px' : '24px',
-            borderTop: '1px solid #374151'
-          }}>
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // =================== COMPOSANT SÉLECTEUR CSA ===================
-  const CSAClassificationSelector = () => {
-    const csaClassifications = {
-      fr: {
-        class1: {
-          title: "Classe 1 - Danger immédiat pour la vie",
-          description: "Atmosphère dangereuse ou risque immédiat de mort",
-          color: '#dc2626'
-        },
-        class2: {
-          title: "Classe 2 - Risque potentiel", 
-          description: "Conditions dangereuses possibles nécessitant précautions",
-          color: '#f59e0b'
-        },
-        class3: {
-          title: "Classe 3 - Risque minimal",
-          description: "Espace avec configuration d'espace clos mais risques minimes",
-          color: '#059669'
-        }
-      },
-      en: {
-        class1: {
-          title: "Class 1 - Immediate danger to life",
-          description: "Hazardous atmosphere or immediate risk of death",
-          color: '#dc2626'
-        },
-        class2: {
-          title: "Class 2 - Potential risk",
-          description: "Potentially hazardous conditions requiring precautions", 
-          color: '#f59e0b'
-        },
-        class3: {
-          title: "Class 3 - Minimal risk",
-          description: "Confined space configuration but minimal hazards",
-          color: '#059669'
-        }
-      }
-    };
-
-    const classifications = csaClassifications[language];
-    const currentClassification = siteInfo.csaClass ? 
-      classifications[siteInfo.csaClass as keyof typeof classifications] : null;
-
-    return (
-      <div style={{ width: '100%' }}>
-        <label style={styles.label}>
-          <Shield style={{ width: '18px', height: '18px' }} />
-          {t.csaClass}<span style={{ color: '#dc2626' }}>*</span>
-        </label>
-
-        <div style={styles.grid2}>
-          <select
-            value={siteInfo.csaClass}
-            onChange={(e) => updateSiteInfo('csaClass', e.target.value)}
-            style={styles.select}
-          >
-            <option value="">{t.select}</option>
-            <option value="class1">{t.csaClasses.class1}</option>
-            <option value="class2">{t.csaClasses.class2}</option>
-            <option value="class3">{t.csaClasses.class3}</option>
-          </select>
-
-          <button
-            type="button"
-            onClick={() => {
-              const result = window.confirm(
-                language === 'fr' 
-                  ? 'Assistant de classification CSA disponible dans le module complet de gestion des permis.'
-                  : 'CSA classification assistant available in the complete permit management module.'
-              );
-            }}
-            style={{
-              ...styles.button,
-              ...styles.buttonWarning
-            }}
-          >
-            <Star size={16} />
-            <span>{language === 'fr' ? 'Assistant' : 'Wizard'}</span>
-          </button>
-        </div>
-
-        {currentClassification && (
-          <div style={{
-            padding: '12px 16px',
-            background: `${currentClassification.color}10`,
-            border: `1px solid ${currentClassification.color}30`,
-            borderRadius: '8px',
-            fontSize: isMobile ? '12px' : '13px',
-            lineHeight: 1.4,
-            marginTop: '12px'
-          }}>
-            <div style={{
-              fontWeight: '600',
-              color: `${currentClassification.color}`,
-              marginBottom: '4px'
-            }}>
-              {currentClassification.title}
-            </div>
-            <div style={{ color: '#d1d5db' }}>
-              {currentClassification.description}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // =================== COMPOSANT SÉLECTEUR DIMENSIONS ===================
-  const DimensionsSelector = () => (
-    <div style={{
-      background: 'rgba(16, 185, 129, 0.1)',
-      border: '1px solid rgba(16, 185, 129, 0.3)',
-      borderRadius: '16px',
-      padding: '20px'
-    }}>
-      {/* Sélecteurs de forme et unités */}
-      <div style={styles.grid2}>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={styles.label}>
-            <Layers style={{ width: '18px', height: '18px' }} />
-            {t.spaceShape}<span style={{ color: '#dc2626' }}>*</span>
-          </label>
-          <select
-            value={siteInfo.dimensions.spaceShape}
-            onChange={(e) => updateDimensions({
-              spaceShape: e.target.value as any,
-              volume: 0
-            })}
-            style={styles.select}
-          >
-            <option value="rectangular">📐 {t.rectangular}</option>
-            <option value="cylindrical">🔵 {t.cylindrical}</option>
-            <option value="spherical">⚠ª {t.spherical}</option>
-            <option value="irregular">🔷 {t.irregular}</option>
-          </select>
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={styles.label}>
-            <Ruler style={{ width: '18px', height: '18px' }} />
-            {t.unitSystem}
-          </label>
-          <select
-            value={siteInfo.unitSystem}
-            onChange={(e) => {
-              const newSystem = e.target.value as UnitSystem;
-              convertUnits(siteInfo.unitSystem, newSystem);
-            }}
-            style={styles.select}
-          >
-            <option value="metric">📏 {t.metric}</option>
-            <option value="imperial">📐 {t.imperial}</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Champs de dimensions adaptatifs */}
-      <div style={styles.grid4}>
-        {/* Longueur - toujours visible sauf pour sphérique */}
-        {siteInfo.dimensions.spaceShape !== 'spherical' && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              {t.length} ({siteInfo.unitSystem === 'metric' ? 'm' : 'ft'})
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={siteInfo.dimensions.length || ''}
-              onChange={(e) => updateDimensions({
-                length: parseFloat(e.target.value) || 0
-              })}
-              style={styles.input}
-            />
-          </div>
-        )}
-
-        {/* Largeur - seulement pour rectangulaire et irrégulier */}
-        {(siteInfo.dimensions.spaceShape === 'rectangular' || 
-          siteInfo.dimensions.spaceShape === 'irregular') && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              {t.width} ({siteInfo.unitSystem === 'metric' ? 'm' : 'ft'})
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={siteInfo.dimensions.width || ''}
-              onChange={(e) => updateDimensions({
-                width: parseFloat(e.target.value) || 0
-              })}
-              style={styles.input}
-            />
-          </div>
-        )}
-
-        {/* Hauteur - pour toutes les formes sauf sphérique */}
-        {siteInfo.dimensions.spaceShape !== 'spherical' && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              {t.height} ({siteInfo.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={siteInfo.dimensions.height || ''}
-              onChange={(e) => updateDimensions({
-                height: parseFloat(e.target.value) || 0
-              })}
-              style={styles.input}
-            />
-          </div>
-        )}
-
-        {/* Diamètre - pour cylindrique et sphérique */}
-        {(siteInfo.dimensions.spaceShape === 'cylindrical' || 
-          siteInfo.dimensions.spaceShape === 'spherical') && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              {t.diameter} ({siteInfo.unitSystem === 'metric' ? 'm' : 'ft'})<span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={siteInfo.dimensions.diameter || ''}
-              onChange={(e) => updateDimensions({
-                diameter: parseFloat(e.target.value) || 0
-              })}
-              style={styles.input}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Bouton de calcul et affichage du volume */}
-      <div style={{ textAlign: 'center', margin: '20px 0' }}>
-        <button 
-          onClick={calculateVolume}
-          style={{
-            ...styles.button,
-            ...styles.buttonSuccess,
-            width: 'auto',
-            margin: '0 auto'
-          }}
-        >
-          <Gauge size={20} />
-          {t.calculateVolume}
-        </button>
-      </div>
-
-      {/* Affichage du volume calculé */}
-      {siteInfo.dimensions.volume > 0 && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.2)',
-          border: '1px solid rgba(16, 185, 129, 0.4)',
-          borderRadius: '12px',
-          padding: '16px',
-          textAlign: 'center'
-        }}>
-          <div style={{ 
-            fontSize: isMobile ? '20px' : '24px', 
-            fontWeight: '700', 
-            color: '#10b981', 
-            marginBottom: '4px'
-          }}>
-            {siteInfo.dimensions.volume}
-          </div>
-          <div style={{ fontSize: '14px', color: '#6ee7b7' }}>
-            {siteInfo.unitSystem === 'metric' ? 'm³' : 'ft³'} - {t.volume}
-          </div>
-        </div>
-      )}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className={labelClass}>{label}</label>
+      {children}
     </div>
   );
+}
 
-  // =================== GESTION DES DANGERS AVEC SAFETYMANAGER SÉCURISÉ ===================
-  // ✅ CORRECTION 7 : toggleAtmosphericHazard avec vérifications SafetyManager
-  const toggleAtmosphericHazard = useCallback((hazardType: string) => {
-    const currentHazards = (siteInfo.atmosphericHazards || []) as string[];
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ atmosphericHazards: updatedHazards });
-      } catch (error) {
-        console.warn('SafetyManager toggleAtmosphericHazard failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour toggleAtmosphericHazard:', hazardType);
-    }
-  }, [safetyManager, siteInfo.atmosphericHazards]);
-
-  // ✅ CORRECTION 8 : togglePhysicalHazard avec vérifications SafetyManager
-  const togglePhysicalHazard = useCallback((hazardType: string) => {
-    const currentHazards = (siteInfo.physicalHazards || []) as string[];
-    const updatedHazards = currentHazards.includes(hazardType)
-      ? currentHazards.filter(h => h !== hazardType)
-      : [...currentHazards, hazardType];
-    
-    if (safetyManager) {
-      try {
-        safetyManager.updateSiteInformation({ physicalHazards: updatedHazards });
-      } catch (error) {
-        console.warn('SafetyManager togglePhysicalHazard failed:', error);
-      }
-    }
-    
-    if (!safetyManager) {
-      console.warn('SafetyManager non disponible pour togglePhysicalHazard:', hazardType);
-    }
-  }, [safetyManager, siteInfo.physicalHazards]);
-
-  // =================== GESTION DES PHOTOS AVEC SAFETYMANAGER SÉCURISÉ ===================
-  // ✅ CORRECTION 9 : handlePhotoCapture avec vérifications SafetyManager
-  const handlePhotoCapture = useCallback(async (category: string) => {
-    if (photoInputRef.current) {
-      photoInputRef.current.accept = "image/*";
-      photoInputRef.current.capture = "environment";
-      photoInputRef.current.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            const newPhoto: SpacePhoto = {
-              id: generatePermitId(),
-              url: event.target?.result as string,
-              category,
-              caption: `${t.photoCategories?.[category as keyof typeof t.photoCategories] || category} - ${new Date().toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}`,
-              timestamp: new Date().toISOString(),
-              location: 'Localisation en cours...'
-            };
-
-            // Géolocalisation
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  newPhoto.location = `GPS: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
-                  newPhoto.gpsCoords = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  };
-                  
-                  const currentPhotos = siteInfo.spacePhotos || [];
-                  const updatedPhotos = [...currentPhotos, newPhoto];
-                  
-                  // ✅ Vérification SafetyManager pour photos
-                  if (safetyManager) {
-                    try {
-                      safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
-                    } catch (error) {
-                      console.warn('SafetyManager photo update with GPS failed:', error);
-                    }
-                  }
-                  
-                  if (!safetyManager) {
-                    console.warn('SafetyManager non disponible pour photo GPS:', newPhoto);
-                  }
-                }, 
-                () => {
-                  newPhoto.location = 'Localisation non disponible';
-                  const currentPhotos = siteInfo.spacePhotos || [];
-                  const updatedPhotos = [...currentPhotos, newPhoto];
-                  
-                  // ✅ Vérification SafetyManager pour photos sans GPS
-                  if (safetyManager) {
-                    try {
-                      safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
-                    } catch (error) {
-                      console.warn('SafetyManager photo update without GPS failed:', error);
-                    }
-                  }
-                  
-                  if (!safetyManager) {
-                    console.warn('SafetyManager non disponible pour photo sans GPS:', newPhoto);
-                  }
-                }
-              );
-            } else {
-              const currentPhotos = siteInfo.spacePhotos || [];
-              const updatedPhotos = [...currentPhotos, newPhoto];
-              
-              // ✅ Vérification SafetyManager pour photos sans géolocalisation
-              if (safetyManager) {
-                try {
-                  safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
-                } catch (error) {
-                  console.warn('SafetyManager photo update no geolocation failed:', error);
-                }
-              }
-              
-              if (!safetyManager) {
-                console.warn('SafetyManager non disponible pour photo no geolocation:', newPhoto);
-              }
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-      photoInputRef.current.click();
-    }
-  }, [safetyManager, siteInfo.spacePhotos, t.photoCategories, language]);
-
-  // ✅ CORRECTION 10 : handlePhotoDelete avec vérifications SafetyManager
-  const handlePhotoDelete = useCallback((photoId: string) => {
-    if (confirm(language === 'fr' ? 'Supprimer cette photo?' : 'Delete this photo?')) {
-      const updatedPhotos = (siteInfo.spacePhotos || []).filter(p => p.id !== photoId);
-      
-      if (safetyManager) {
-        try {
-          safetyManager.updateSiteInformation({ spacePhotos: updatedPhotos });
-        } catch (error) {
-          console.warn('SafetyManager handlePhotoDelete failed:', error);
-        }
-      }
-      
-      if (!safetyManager) {
-        console.warn('SafetyManager non disponible pour handlePhotoDelete:', photoId);
-      }
-    }
-  }, [safetyManager, siteInfo.spacePhotos, language]);
-
-  // =================== RENDU JSX PRINCIPAL ===================
+function Card({
+  title, icon, children, collapsible = false,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  collapsible?: boolean;
+}) {
+  const [open, setOpen] = useState(true);
   return (
-    <>
-      <input
-        type="file"
-        ref={photoInputRef}
-        style={{ display: 'none' }}
-        accept="image/*"
-        capture="environment"
-      />
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+      <button
+        type="button"
+        onClick={() => collapsible && setOpen(v => !v)}
+        className={`w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 text-left ${collapsible ? 'hover:bg-slate-50 transition-colors' : ''}`}
+      >
+        <span className="text-blue-600">{icon}</span>
+        <h3 className="font-semibold text-slate-800 flex-1">{title}</h3>
+        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />)}
+      </button>
+      {open && <div className="p-5">{children}</div>}
+    </div>
+  );
+}
 
-      <div style={styles.container}>
-        {/* Header principal */}
-        <div style={{
-          ...styles.card,
-          background: 'linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9))',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.05), rgba(245, 158, 11, 0.05))',
-            zIndex: 0
-          }}></div>
-          
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: isMobile ? '16px' : '20px', 
-              marginBottom: isMobile ? '20px' : '24px' 
-            }}>
-              <div style={{
-                width: isMobile ? '48px' : '60px',
-                height: isMobile ? '48px' : '60px',
-                background: 'rgba(220, 38, 38, 0.2)',
-                borderRadius: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid rgba(220, 38, 38, 0.3)'
-              }}>
-                <Building style={{ 
-                  width: isMobile ? '24px' : '30px', 
-                  height: isMobile ? '24px' : '30px', 
-                  color: '#f87171' 
-                }} />
-              </div>
-              <div>
-                <h2 style={styles.title}>
-                  🏗️ {t.title}
-                </h2>
-                <p style={styles.subtitle}>
-                  {t.subtitle}
-                </p>
-              </div>
-            </div>
-            
-            {/* Statistiques globales */}
-            <div style={styles.grid4}>
-              <div style={{
-                background: 'rgba(17, 24, 39, 0.6)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: isMobile ? '20px' : '28px', 
-                  fontWeight: '700', 
-                  color: '#3b82f6',
-                  marginBottom: '4px'
-                }}>
-                  {selectedProvince}
-                </div>
-                <div style={{ 
-                  color: '#9ca3af', 
-                  fontSize: isMobile ? '12px' : '14px'
-                }}>
-                  Province
-                </div>
-              </div>
-              <div style={{
-                background: 'rgba(17, 24, 39, 0.6)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: isMobile ? '20px' : '28px', 
-                  fontWeight: '700', 
-                  color: '#f59e0b',
-                  marginBottom: '4px'
-                }}>
-                  {((siteInfo.atmosphericHazards?.length || 0) + (siteInfo.physicalHazards?.length || 0))}
-                </div>
-                <div style={{ 
-                  color: '#9ca3af', 
-                  fontSize: isMobile ? '12px' : '14px'
-                }}>
-                  {language === 'fr' ? 'Dangers' : 'Hazards'}
-                </div>
-              </div>
-              <div style={{
-                background: 'rgba(17, 24, 39, 0.6)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: isMobile ? '20px' : '28px', 
-                  fontWeight: '700', 
-                  color: '#10b981',
-                  marginBottom: '4px'
-                }}>
-                  {siteInfo.spacePhotos?.length || 0}
-                </div>
-                <div style={{ 
-                  color: '#9ca3af', 
-                  fontSize: isMobile ? '12px' : '14px'
-                }}>
-                  Photos
-                </div>
-              </div>
-              <div style={{
-                background: 'rgba(17, 24, 39, 0.6)',
-                borderRadius: '12px',
-                padding: isMobile ? '16px' : '20px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: isMobile ? '20px' : '28px', 
-                  fontWeight: '700', 
-                  color: '#8b5cf6',
-                  marginBottom: '4px'
-                }}>
-                  {siteInfo.dimensions?.volume || 0}
-                </div>
-                <div style={{ 
-                  color: '#9ca3af', 
-                  fontSize: isMobile ? '12px' : '14px'
-                }}>
-                  {siteInfo.unitSystem === 'metric' ? 'm³' : 'ft³'}
-                </div>
-              </div>
-            </div>
+// ── Component ──────────────────────────────────────────────────────────────
+export default function SiteInformation({ language, permitData, selectedProvince, readOnly = false, onUpdate }: Props) {
+  const t = T[language];
+  const si = permitData.siteInformation;
+
+  const update = (field: string, value: any) => onUpdate({ [field]: value } as any);
+  const updateDim = (field: string, value: number) =>
+    onUpdate({ dimensions: { ...si.dimensions, [field]: value } } as any);
+  const updateEnv = (field: string, value: any) =>
+    onUpdate({ environmentalConditions: { ...si.environmentalConditions, [field]: value } } as any);
+  const updateSafety = (field: string, value: any) =>
+    onUpdate({ safetyMeasures: { ...si.safetyMeasures, [field]: value } } as any);
+
+  // Volume auto-calculation
+  const calcVolume = (dim: typeof si.dimensions): number => {
+    if (dim.spaceShape === 'cylindrical') return Math.round(Math.PI * (dim.diameter / 2) ** 2 * dim.height * 100) / 100;
+    if (dim.spaceShape === 'spherical') return Math.round((4 / 3) * Math.PI * (dim.diameter / 2) ** 3 * 100) / 100;
+    return Math.round(dim.length * dim.width * dim.height * 100) / 100;
+  };
+
+  const toggleHazard = (list: 'atmosphericHazards' | 'physicalHazards', val: string) => {
+    const current: string[] = (si[list] as string[]) ?? [];
+    const next = current.includes(val) ? current.filter(h => h !== val) : [...current, val];
+    onUpdate({ [list]: next } as any);
+  };
+
+  const HazardChip = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={readOnly}
+      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+        active
+          ? 'bg-red-600 border-red-600 text-white'
+          : 'bg-white border-slate-300 text-slate-600 hover:border-red-400 hover:text-red-600'
+      } disabled:opacity-50`}
+    >
+      {label}
+    </button>
+  );
+
+  const dim = si.dimensions;
+  const volume = calcVolume(dim);
+
+  return (
+    <div>
+      {/* Project info */}
+      <Card title={t.sections.project} icon={<Building className="w-5 h-5" />}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.projectNumber}>
+            <input type="text" value={si.projectNumber ?? ''} onChange={e => update('projectNumber', e.target.value)}
+              placeholder={t.projectNumberPh} disabled={readOnly} className={inputClass} />
+          </Field>
+          <Field label={t.workLocation}>
+            <input type="text" value={si.workLocation ?? ''} onChange={e => update('workLocation', e.target.value)}
+              placeholder={t.workLocationPh} disabled={readOnly} className={inputClass} />
+          </Field>
+          <Field label={t.contractor}>
+            <input type="text" value={si.contractor ?? ''} onChange={e => update('contractor', e.target.value)}
+              placeholder={t.contractorPh} disabled={readOnly} className={inputClass} />
+          </Field>
+          <Field label={t.supervisor}>
+            <input type="text" value={si.supervisor ?? ''} onChange={e => update('supervisor', e.target.value)}
+              placeholder={t.supervisorPh} disabled={readOnly} className={inputClass} />
+          </Field>
+          <Field label={t.entryDate}>
+            <input type="datetime-local" value={si.entryDate ?? ''} onChange={e => update('entryDate', e.target.value)}
+              disabled={readOnly} className={inputClass} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t.duration}>
+              <input type="text" value={si.duration ?? ''} onChange={e => update('duration', e.target.value)}
+                placeholder={t.durationPh} disabled={readOnly} className={inputClass} />
+            </Field>
+            <Field label={t.workerCount}>
+              <input type="number" min={1} max={99} value={si.workerCount ?? 1}
+                onChange={e => update('workerCount', parseInt(e.target.value) || 1)}
+                disabled={readOnly} className={inputClass} />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
+            <Field label={t.workDescription}>
+              <textarea value={si.workDescription ?? ''} onChange={e => update('workDescription', e.target.value)}
+                placeholder={t.workDescriptionPh} rows={3} disabled={readOnly}
+                className={`${inputClass} resize-none`} />
+            </Field>
           </div>
         </div>
+      </Card>
 
-        {/* Section Informations du Projet */}
-        <CollapsibleSection
-          id="project-info"
-          title={t.projectInfo}
-          icon={<Building />}
-        >
-          <div style={styles.grid2}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <Building style={{ width: '18px', height: '18px' }} />
-                {t.projectNumber}<span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input 
-                type="text" 
-                style={styles.input}
-                placeholder="Ex: CS-2024-001"
-                value={siteInfo.projectNumber}
-                onChange={(e) => updateSiteInfo('projectNumber', e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <MapPin style={{ width: '18px', height: '18px' }} />
-                {t.workLocation}<span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input 
-                type="text" 
-                style={styles.input}
-                placeholder={language === 'fr' ? 'Adresse complète du site' : 'Complete site address'}
-                value={siteInfo.workLocation}
-                onChange={(e) => updateSiteInfo('workLocation', e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <User style={{ width: '18px', height: '18px' }} />
-                {t.contractor}<span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input 
-                type="text" 
-                style={styles.input}
-                placeholder={language === 'fr' ? 'Nom de l\'entreprise contractante' : 'Contracting company name'}
-                value={siteInfo.contractor}
-                onChange={(e) => updateSiteInfo('contractor', e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <User style={{ width: '18px', height: '18px' }} />
-                {t.supervisor}<span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input 
-                type="text" 
-                style={styles.input}
-                placeholder={language === 'fr' ? 'Nom du superviseur' : 'Supervisor name'}
-                value={siteInfo.supervisor}
-                onChange={(e) => updateSiteInfo('supervisor', e.target.value)}
-              />
-            </div>
+      {/* Space identification */}
+      <Card title={t.sections.space} icon={<Layers className="w-5 h-5" />}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.spaceType}>
+            <select value={si.spaceType ?? ''} onChange={e => update('spaceType', e.target.value)}
+              disabled={readOnly} className={inputClass}>
+              <option value="">{language === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
+              {Object.entries(t.spaceTypes).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t.csaClass}>
+            <select value={si.csaClass ?? ''} onChange={e => update('csaClass', e.target.value)}
+              disabled={readOnly} className={inputClass}>
+              <option value="">{language === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
+              {Object.entries(t.csaClasses).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t.entryMethod}>
+            <select value={si.entryMethod ?? ''} onChange={e => update('entryMethod', e.target.value)}
+              disabled={readOnly} className={inputClass}>
+              <option value="">{language === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
+              {Object.entries(t.entryMethods).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t.unitSystem}>
+            <select value={si.unitSystem ?? 'metric'} onChange={e => update('unitSystem', e.target.value)}
+              disabled={readOnly} className={inputClass}>
+              <option value="metric">{t.metric}</option>
+              <option value="imperial">{t.imperial}</option>
+            </select>
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label={t.spaceDescription}>
+              <textarea value={si.spaceDescription ?? ''} onChange={e => update('spaceDescription', e.target.value)}
+                placeholder={t.spaceDescriptionPh} rows={2} disabled={readOnly}
+                className={`${inputClass} resize-none`} />
+            </Field>
           </div>
-        </CollapsibleSection>
+        </div>
+      </Card>
 
-        {/* Section Planification */}
-        <CollapsibleSection
-          id="planning"
-          title={t.planning}
-          icon={<Calendar />}
-        >
-          <div style={styles.grid2}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <Calendar style={{ width: '18px', height: '18px' }} />
-                {t.entryDate}<span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <input 
-                type="datetime-local" 
-                style={styles.input}
-                value={siteInfo.entryDate}
-                onChange={(e) => updateSiteInfo('entryDate', e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <Clock style={{ width: '18px', height: '18px' }} />
-                {t.duration}
-              </label>
-              <input 
-                type="text" 
-                style={styles.input}
-                placeholder={language === 'fr' ? 'Ex: 4 heures' : 'Ex: 4 hours'}
-                value={siteInfo.duration}
-                onChange={(e) => updateSiteInfo('duration', e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <Users style={{ width: '18px', height: '18px' }} />
-                {t.workerCount}
-              </label>
-              <input 
-                type="number" 
-                min="1" 
-                style={styles.input}
-                value={siteInfo.workerCount}
-                onChange={(e) => updateSiteInfo('workerCount', parseInt(e.target.value) || 1)}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.label}>
-                <FileText style={{ width: '18px', height: '18px' }} />
-                {t.workDescription}
-              </label>
-              <textarea 
-                style={styles.textarea}
-                placeholder={language === 'fr' ? 'Description détaillée des travaux' : 'Detailed work description'}
-                value={siteInfo.workDescription}
-                onChange={(e) => updateSiteInfo('workDescription', e.target.value)}
-              />
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Identification de l'Espace Clos */}
-        <CollapsibleSection
-          id="space-identification"
-          title={t.spaceIdentification}
-          icon={<Home />}
-        >
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              {t.spaceType}<span style={{ color: '#dc2626' }}>*</span>
-            </label>
-            <div style={styles.grid4}>
-              {Object.entries(t.spaceTypes).map(([key, label]) => (
-                <div
-                  key={key}
-                  style={{
-                    padding: '16px 12px',
-                    background: siteInfo.spaceType === key ? 'rgba(59, 130, 246, 0.2)' : 'rgba(15, 23, 42, 0.8)',
-                    border: `2px solid ${siteInfo.spaceType === key ? '#3b82f6' : '#374151'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    textAlign: 'center',
-                    minHeight: '80px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                  onClick={() => updateSiteInfo('spaceType', key)}
+      {/* Dimensions */}
+      <Card title={t.sections.dimensions} icon={<Ruler className="w-5 h-5" />} collapsible>
+        <div className="space-y-4">
+          <Field label={t.spaceShape}>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(t.shapes).map(([k, v]) => (
+                <button key={k} type="button"
+                  onClick={() => !readOnly && onUpdate({ dimensions: { ...dim, spaceShape: k as any } } as any)}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${dim.spaceShape === k ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 text-slate-600 hover:border-blue-400'}`}
                 >
-                  <div style={{ fontSize: '24px' }}>
-                    {key === 'tank' ? '🏗️' : key === 'vessel' ? '⚠️' : key === 'silo' ? '🌾' : 
-                     key === 'pit' ? '🕳️' : key === 'vault' ? '🏛️' : key === 'tunnel' ? '🚇' : 
-                     key === 'trench' ? '🚧' : key === 'manhole' ? '🔧' : key === 'storage' ? '📦' : 
-                     key === 'boiler' ? '🔥' : key === 'duct' ? '🌪️' : key === 'chamber' ? '🏢' : '❓'}
-                  </div>
-                  <div style={{ 
-                    fontSize: isMobile ? '12px' : '13px', 
-                    fontWeight: '600', 
-                    textAlign: 'center', 
-                    wordWrap: 'break-word',
-                    color: 'white'
-                  }}>
-                    {label}
-                  </div>
-                </div>
+                  {v}
+                </button>
               ))}
             </div>
-          </div>
+          </Field>
 
-          <CSAClassificationSelector />
-        </CollapsibleSection>
-
-        {/* Section Dimensions et Volume */}
-        <CollapsibleSection
-          id="dimensions"
-          title={t.spaceDimensions}
-          icon={<Ruler />}
-        >
-          <DimensionsSelector />
-        </CollapsibleSection>
-
-        {/* Section Points d'Entrée */}
-        <CollapsibleSection
-          id="entry-points"
-          title={t.entryPoints}
-          icon={<Home />}
-        >
-          {(siteInfo.entryPoints || []).map((entry, index) => (
-            <div key={entry.id} style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(139, 92, 246, 0.3)',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '1px solid rgba(139, 92, 246, 0.2)'
-              }}>
-                <h4 style={{ 
-                  color: '#a78bfa', 
-                  margin: 0, 
-                  fontSize: '16px', 
-                  fontWeight: '600' 
-                }}>
-                  🚪 {t.entryPoint} {index + 1}
-                </h4>
-                {(siteInfo.entryPoints || []).length > 1 && (
-                  <button 
-                    onClick={() => removeEntryPoint(entry.id)}
-                    type="button"
-                    style={{
-                      ...styles.button,
-                      ...styles.buttonDanger,
-                      width: 'auto',
-                      padding: '8px 12px', 
-                      fontSize: '12px'
-                    }}
-                  >
-                    <Trash2 size={14} />
-                    {t.remove}
-                  </button>
-                )}
-              </div>
-
-              <div style={styles.grid3}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.label}>{t.entryType}</label>
-                  <select
-                    style={styles.select}
-                    value={entry.type}
-                    onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
-                  >
-                    <option value="circular">🔵 {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
-                    <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
-                    <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
-                    <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
-                    <option value="irregular">🔷 {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.label}>{t.entryDimensions}</label>
-                  <input 
-                    type="text" 
-                    style={styles.input}
-                    placeholder={language === 'fr' ? 'Ex: 60cm x 40cm ou ø80cm' : 'Ex: 60cm x 40cm or ø80cm'}
-                    value={entry.dimensions}
-                    onChange={(e) => updateEntryPoint(entry.id, 'dimensions', e.target.value)}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.label}>{t.entryLocation}</label>
-                  <input 
-                    type="text" 
-                    style={styles.input}
-                    placeholder={language === 'fr' ? 'Ex: Partie supérieure, côté nord' : 'Ex: Top section, north side'}
-                    value={entry.location}
-                    onChange={(e) => updateEntryPoint(entry.id, 'location', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <button 
-              onClick={addEntryPoint}
-              style={{
-                ...styles.button,
-                ...styles.buttonPrimary,
-                width: 'auto'
-              }}
-            >
-              <Plus size={20} />
-              {t.addEntryPoint}
-            </button>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Évaluation des Dangers */}
-        <CollapsibleSection
-          id="hazard-assessment"
-          title={t.hazardAssessment}
-          icon={<AlertTriangle />}
-        >
-          <div style={{ marginBottom: '24px' }}>
-            <label style={styles.label}>
-              <Wind style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
-              {t.atmosphericHazards}
-            </label>
-            <div style={styles.gridMobile}>
-              {Object.entries(t.atmosphericHazardTypes).map(([key, label]) => (
-                <div
-                  key={key}
-                  style={{
-                    padding: '12px',
-                    background: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
-                    border: `2px solid ${((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px'
-                  }}
-                  onClick={() => toggleAtmosphericHazard(key)}
-                >
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: `2px solid ${((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
-                    borderRadius: '4px',
-                    background: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#dc2626' : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: '2px'
-                  }}>
-                    {((siteInfo.atmosphericHazards || []) as string[]).includes(key) && <Check size={12} color="white" />}
-                  </div>
-                  <span style={{ 
-                    color: ((siteInfo.atmosphericHazards || []) as string[]).includes(key) ? '#fecaca' : '#d1d5db', 
-                    fontSize: isMobile ? '13px' : '14px', 
-                    fontWeight: '500',
-                    lineHeight: 1.4
-                  }}>
-                    🌪️ {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>
-              <AlertTriangle style={{ width: '18px', height: '18px', color: '#dc2626' }} />
-              {t.physicalHazards}
-            </label>
-            <div style={styles.gridMobile}>
-              {Object.entries(t.physicalHazardTypes).map(([key, label]) => (
-                <div
-                  key={key}
-                  style={{
-                    padding: '12px',
-                    background: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(15, 23, 42, 0.8)',
-                    border: `2px solid ${((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px'
-                  }}
-                  onClick={() => togglePhysicalHazard(key)}
-                >
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: `2px solid ${((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : '#374151'}`,
-                    borderRadius: '4px',
-                    background: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#dc2626' : 'transparent',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: '2px'
-                  }}>
-                    {((siteInfo.physicalHazards || []) as string[]).includes(key) && <Check size={12} color="white" />}
-                  </div>
-                  <span style={{ 
-                    color: ((siteInfo.physicalHazards || []) as string[]).includes(key) ? '#fecaca' : '#d1d5db', 
-                    fontSize: isMobile ? '13px' : '14px', 
-                    fontWeight: '500',
-                    lineHeight: 1.4
-                  }}>
-                    ⚠️ {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Section Documentation Photographique */}
-        <CollapsibleSection
-          id="photo-documentation"
-          title={t.photoDocumentation}
-          icon={<Camera />}
-        >
-          <div style={styles.grid3}>
-            {Object.entries(t.photoCategories).map(([key, label]) => (
-              <button 
-                key={key}
-                onClick={() => handlePhotoCapture(key)}
-                style={{
-                  ...styles.button,
-                  background: key === 'hazards' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                  border: `1px solid ${key === 'hazards' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
-                  color: key === 'hazards' ? '#dc2626' : '#3b82f6',
-                  fontSize: isMobile ? '12px' : '13px'
-                }}
-              >
-                <Camera size={14} />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {(siteInfo.spacePhotos || []).length > 0 ? (
-            <div style={{
-              marginTop: '16px',
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-              gap: '12px'
-            }}>
-              {(siteInfo.spacePhotos || []).map((photo) => (
-                <div key={photo.id} style={{
-                  position: 'relative',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid #374151'
-                }}>
-                  <img 
-                    src={photo.url} 
-                    alt={photo.caption}
-                    style={{
-                      width: '100%',
-                      height: isMobile ? '120px' : '150px',
-                      objectFit: 'cover'
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.8))',
-                    color: 'white',
-                    padding: '8px',
-                    fontSize: '12px'
-                  }}>
-                    <div style={{ fontWeight: '600', marginBottom: '2px' }}>
-                      {t.photoCategories[photo.category as keyof typeof t.photoCategories] || photo.category}
-                    </div>
-                    <div style={{ opacity: 0.8 }}>
-                      {new Date(photo.timestamp).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handlePhotoDelete(photo.id)}
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      background: 'rgba(239, 68, 68, 0.8)',
-                      border: 'none',
-                      color: 'white',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
+          {dim.spaceShape === 'cylindrical' || dim.spaceShape === 'spherical' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={`${t.diameter} (${si.unitSystem === 'imperial' ? 'pi' : 'm'})`}>
+                <input type="number" min={0} step={0.01} value={dim.diameter || ''}
+                  onChange={e => { const v = parseFloat(e.target.value) || 0; const newDim = { ...dim, diameter: v }; onUpdate({ dimensions: { ...newDim, volume: calcVolume(newDim) } } as any); }}
+                  disabled={readOnly} className={inputClass} />
+              </Field>
+              {dim.spaceShape === 'cylindrical' && (
+                <Field label={`${t.height} (${si.unitSystem === 'imperial' ? 'pi' : 'm'})`}>
+                  <input type="number" min={0} step={0.01} value={dim.height || ''}
+                    onChange={e => { const v = parseFloat(e.target.value) || 0; const newDim = { ...dim, height: v }; onUpdate({ dimensions: { ...newDim, volume: calcVolume(newDim) } } as any); }}
+                    disabled={readOnly} className={inputClass} />
+                </Field>
+              )}
             </div>
           ) : (
-            <div 
-              onClick={() => handlePhotoCapture('exterior')}
-              style={{
-                border: '2px dashed #60a5fa',
-                borderRadius: '16px',
-                padding: isMobile ? '30px 20px' : '40px 20px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-                minHeight: isMobile ? '120px' : '150px',
-                justifyContent: 'center',
-                background: 'rgba(96, 165, 250, 0.1)',
-                marginTop: '16px'
-              }}
-            >
-              <Camera size={isMobile ? 28 : 32} color="#60a5fa" />
-              <h4 style={{ color: '#60a5fa', margin: 0, fontSize: isMobile ? '14px' : '16px' }}>
-                {t.noPhotos}
-              </h4>
-              <p style={{ margin: 0, fontSize: isMobile ? '12px' : '14px', color: '#9ca3af' }}>
-                {t.takePhoto}
-              </p>
+            <div className="grid grid-cols-3 gap-4">
+              {[['length', t.length], ['width', t.width], ['height', t.height]].map(([field, label]) => (
+                <Field key={field} label={`${label} (${si.unitSystem === 'imperial' ? 'pi' : 'm'})`}>
+                  <input type="number" min={0} step={0.01} value={(dim as any)[field] || ''}
+                    onChange={e => { const v = parseFloat(e.target.value) || 0; const newDim = { ...dim, [field]: v }; onUpdate({ dimensions: { ...newDim, volume: calcVolume(newDim) } } as any); }}
+                    disabled={readOnly} className={inputClass} />
+                </Field>
+              ))}
             </div>
           )}
-        </CollapsibleSection>
 
-        {/* Footer avec informations légales */}
-        <div style={{
-          ...styles.card,
-          textAlign: 'center',
-          marginTop: '40px'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '12px', 
-            marginBottom: '12px' 
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '16px'
-            }}>C</div>
-            <h3 style={{ 
-              color: 'white', 
-              margin: 0, 
-              fontSize: '18px', 
-              fontWeight: '700' 
-            }}>
-              C-SECUR360
-            </h3>
+          <div className="flex items-center gap-3 bg-slate-50 rounded-lg px-4 py-3 text-sm">
+            <span className="font-medium text-slate-600">{t.volume}:</span>
+            <span className="font-bold text-slate-900">
+              {volume > 0 ? `${volume} ${si.unitSystem === 'imperial' ? 'pi³' : 'm³'}` : '—'}
+            </span>
           </div>
-          <p style={{ 
-            color: '#d1d5db', 
-            fontSize: '12px', 
-            margin: 0, 
-            lineHeight: 1.5 
-          }}>
-            {language === 'fr' ? 
-              'Système de Gestion de Sécurité Industrielle - Conformité Réglementaire Provinciale' :
-              'Industrial Safety Management System - Provincial Regulatory Compliance'
-            }
-            <br />
-            {language === 'fr' ? 
-              `Province: ${selectedProvince} - ${regulations[selectedProvince]?.authority || 'Autorité Compétente'}` :
-              `Province: ${selectedProvince} - ${regulations[selectedProvince]?.authority || 'Competent Authority'}`
-            }
-            <br />
-            {language === 'fr' ? 
-              'Gestion complète via SafetyManager - Sauvegarde automatique activée' :
-              'Complete management via SafetyManager - Auto-save enabled'
-            }
-          </p>
         </div>
-      </div>
-    </>
-  );
-};
+      </Card>
 
-export default memo(SiteInformation);
+      {/* Hazards */}
+      <Card title={t.sections.hazards} icon={<AlertTriangle className="w-5 h-5" />}>
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-medium text-slate-600 mb-3">{t.atmosphericHazards}</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(t.atmoHazardList).map(([k, v]) => (
+                <HazardChip key={k} label={v}
+                  active={(si.atmosphericHazards ?? []).includes(k)}
+                  onClick={() => toggleHazard('atmosphericHazards', k)} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-600 mb-3">{t.physicalHazards}</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(t.physHazardList).map(([k, v]) => (
+                <HazardChip key={k} label={v}
+                  active={(si.physicalHazards ?? []).includes(k)}
+                  onClick={() => toggleHazard('physicalHazards', k)} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Safety measures */}
+      <Card title={t.sections.safety} icon={<Wind className="w-5 h-5" />} collapsible>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t.communicationMethod}>
+            <select value={si.safetyMeasures?.communicationMethod ?? ''} onChange={e => updateSafety('communicationMethod', e.target.value)}
+              disabled={readOnly} className={inputClass}>
+              <option value="">{language === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
+              {Object.entries(t.communicationMethods).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label={t.emergencyEgress}>
+              <textarea value={si.safetyMeasures?.emergencyEgress ?? ''} onChange={e => updateSafety('emergencyEgress', e.target.value)}
+                placeholder={t.emergencyEgressPh} rows={2} disabled={readOnly}
+                className={`${inputClass} resize-none`} />
+            </Field>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
