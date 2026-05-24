@@ -351,6 +351,125 @@ const HAZARD_CONTROLS: Record<string, string[]> = {
     'Vêtements ignifuges / EPI arc flash si requis',
     'Détecteur gaz / explosimètre vérifié avant début',
   ],
+  'Projection de fragments': [
+    'Lunettes de sécurité ou écran facial',
+    'Zone d\'exclusion balisée autour du périmètre',
+    'Protège-corps ou blindage si requis',
+    'Inspection de l\'outillage avant utilisation',
+    'Procédure de changement d\'outil sécuritaire',
+  ],
+  'Pression / Équipement sous pression': [
+    'Dépressurisation avant toute intervention (LOTO)',
+    'Inspection de l\'équipement avant utilisation (CSA B51)',
+    'Vérification manomètre / soupape de sécurité',
+    'Formation spécifique aux équipements sous pression',
+    'EPI résistant à la pression (lunettes, gants)',
+    'Zone d\'exclusion pendant les tests de pression',
+  ],
+  'Contact substance dangereuse (SIMDUT)': [
+    'Fiche de données de sécurité (FDS) consultée et affichée',
+    'Formation SIMDUT/GHS à jour',
+    'EPI approprié selon FDS (gants, lunettes, masque)',
+    'Ventilation locale ou générale adéquate',
+    'Douche de décontamination accessible',
+    'Contenants étiquetés selon SIMDUT 2015',
+  ],
+  'Arc électrique / Flash': [
+    'Analyse du risque d\'arc électrique (IEEE 1584 / NFPA 70E)',
+    'EPI arc flash (vêtement ATPV approprié, écran facial)',
+    'Travaux hors tension si possible',
+    'Barricade et signalisation de zone dangereuse',
+    'Formation travaux sous tension (NFPA 70E)',
+    'Permis de travail électrique spécial arc flash',
+  ],
+  'Travaux sous tension': [
+    'Permis de travail sous tension émis et approuvé',
+    'Deux électriciens qualifiés présents',
+    'Outils isolés et testés',
+    'EPI arc flash complet (vêtement, gants, écran)',
+    'Isolation des parties adjacentes sous tension',
+    'Plan d\'urgence électrique affiché',
+  ],
+  'Stress musculosquelettique (TMS)': [
+    'Évaluation ergonomique du poste de travail',
+    'Aide mécanique (chariot, bras articulé)',
+    'Rotation des travailleurs toutes les 1-2 heures',
+    'Formation aux techniques de levage sécuritaire',
+    'Pauses de récupération régulières',
+    'Charge individuelle ≤ 23 kg (RSST)',
+  ],
+  'Collision — engin de chantier': [
+    'Plan de circulation séparant piétons et engins',
+    'Vêtements haute visibilité CSA Z96 obligatoires',
+    'Signaleur (signaler) lors des manœuvres',
+    'Klaxon / sirène de recul sur tous les engins',
+    'Vitesse limitée sur site (≤ 15 km/h)',
+    'Zone d\'exclusion autour des engins en opération',
+  ],
+  'Excavation / Effondrement de tranchée': [
+    'Vérification de la stabilité des parois avant entrée',
+    'Étaiement, blindage ou talutage des parois (RSST)',
+    'Inspection quotidienne par une personne compétente',
+    'Localisation des services souterrains (Info-Excavation)',
+    'Échelle d\'accès à ≤ 8 m de tout travailleur',
+    'Zone d\'exclusion = profondeur + 1 m autour de l\'excavation',
+  ],
+  'Atmosphère explosive (ATEX)': [
+    'Classification de zone ATEX (zone 0/1/2 gaz ou 20/21/22 poussière)',
+    'Équipements certifiés ATEX (Ex-proof)',
+    'Détecteur de gaz / explosimètre continu',
+    'Mise à la terre antistatique des équipements',
+    'Permis de travail spécial zone ATEX',
+    'Interdiction de fumer / flamme nue / téléphone standard',
+  ],
+  'Ligne de tir / Dynamitage': [
+    'Permis d\'utilisation d\'explosifs (LSST / loi C-15.1)',
+    'Boutefeu certifié présent en tout temps',
+    'Périmètre de sécurité établi et balisé (signaleur en place)',
+    'Vérification des ratés selon procédure',
+    'Communication radio avec tous les postes avant mise à feu',
+    'Plan de tir approuvé et affiché',
+    'Interdiction de réentrée avant délai réglementaire (gaz)',
+  ],
+  'Agents biologiques (virus, bactéries, moisissures)': [
+    'EPI adapté au risque (masque N95/P100, gants nitrile, lunettes)',
+    'Formation SIMDUT bio et procédures de décontamination',
+    'Douche de décontamination accessible',
+    'Vaccination à jour si applicable (tétanos, hépatite B)',
+    'Procédure de collecte et d\'élimination des déchets bio',
+    'Ventilation par pression négative si confinement requis',
+  ],
+  'Travail isolé / sans surveillance': [
+    'Procédure de travail isolé documentée (RSST art. 2.10.7)',
+    'Système de check-in régulier (radio, téléphone, app)',
+    'Plan d\'urgence connu du travailleur et du superviseur',
+    'Équipement de communication fonctionnel et chargé',
+    'Registre de présence et d\'heure de retour',
+    'Formation aux premiers soins pour le travailleur isolé',
+  ],
+  'Agression / Violence': [
+    'Procédure de prévention de la violence au travail (LSST)',
+    'Formation de reconnaissance des comportements à risque',
+    'Système d\'alarme ou bouton panique disponible',
+    'Travail en équipe ou sous surveillance si risque élevé',
+    'Plan d\'intervention d\'urgence connu de tous',
+  ],
+  'Conditions météorologiques extrêmes': [
+    'Consultation météo avant et pendant les travaux',
+    'Vêtements adaptés (imperméable, anti-froid, anti-UV)',
+    'Pauses à l\'abri selon indice WBGT ou facteur vent-froid',
+    'Hydratation renforcée (chaleur) — eau chaude (froid)',
+    'Arrêt des travaux si foudre à ≤ 30 km (règle 30/30)',
+    'Protection UV (crème, chapeau) si travaux en plein soleil',
+  ],
+  'Travail près de l\'eau / Noyade': [
+    'VFI (veste de flottaison individuelle) homologuée obligatoire',
+    'Bouée de sauvetage avec corde à ≤ 3 m du point de travail',
+    'Garde-corps ou ligne de vie au-dessus de l\'eau',
+    'Formation aux procédures de récupération en eau froide',
+    'Communication continue avec une personne à terre',
+    'Embarcation de sauvetage disponible si plan d\'eau important',
+  ],
 };
 
 // ── Default PPE list ───────────────────────────────────────────────────────
@@ -529,10 +648,43 @@ const T = {
       probLabels: ['', 'Très improbable', 'Improbable', 'Possible', 'Probable', 'Très probable'],
       sevLabels: ['', 'Négligeable', 'Mineur', 'Modéré', 'Sévère', 'Catastrophique'],
       hazardOptions: [
-        'Chute de plain-pied', 'Chute de hauteur', 'Objet tombant', 'Pincement/écrasement',
-        'Coupure/lacération', 'Brûlure thermique', 'Brûlure chimique', 'Choc électrique',
-        'Exposition gaz/vapeurs', 'Bruit excessif', 'Vibrations', 'Contrainte thermique',
-        'Manutention manuelle', 'Collision véhicule', 'Espace clos', 'Explosif/incendie', 'Autre',
+        // Chutes
+        'Chute de plain-pied', 'Chute de hauteur', 'Objet tombant',
+        // Mécanique
+        'Pincement/écrasement', 'Coupure/lacération', 'Projection de fragments',
+        'Pression / Équipement sous pression',
+        // Thermique / Chimique
+        'Brûlure thermique', 'Brûlure chimique', 'Exposition gaz/vapeurs',
+        'Contact substance dangereuse (SIMDUT)',
+        // Électrique
+        'Choc électrique', 'Arc électrique / Flash', 'Travaux sous tension',
+        // Ergonomie
+        'Bruit excessif', 'Vibrations', 'Contrainte thermique', 'Manutention manuelle',
+        'Stress musculosquelettique (TMS)',
+        // Circulation / Espaces
+        'Collision véhicule', 'Collision — engin de chantier',
+        'Espace clos', 'Excavation / Effondrement de tranchée',
+        // Incendie / Explosion
+        'Explosif/incendie', 'Atmosphère explosive (ATEX)', 'Ligne de tir / Dynamitage',
+        // Biologique / Psychosocial
+        'Agents biologiques (virus, bactéries, moisissures)',
+        'Travail isolé / sans surveillance',
+        'Agression / Violence',
+        // Intempéries
+        'Conditions météorologiques extrêmes', 'Travail près de l\'eau / Noyade',
+        'Autre',
+      ],
+      hazardGroups: [
+        { label: 'Chutes',                   options: ['Chute de plain-pied', 'Chute de hauteur', 'Objet tombant'] },
+        { label: 'Mécanique',                options: ['Pincement/écrasement', 'Coupure/lacération', 'Projection de fragments', 'Pression / Équipement sous pression'] },
+        { label: 'Thermique / Chimique',     options: ['Brûlure thermique', 'Brûlure chimique', 'Exposition gaz/vapeurs', 'Contact substance dangereuse (SIMDUT)'] },
+        { label: 'Électrique',               options: ['Choc électrique', 'Arc électrique / Flash', 'Travaux sous tension'] },
+        { label: 'Ergonomie',                options: ['Bruit excessif', 'Vibrations', 'Contrainte thermique', 'Manutention manuelle', 'Stress musculosquelettique (TMS)'] },
+        { label: 'Circulation / Espaces',    options: ['Collision véhicule', 'Collision — engin de chantier', 'Espace clos', 'Excavation / Effondrement de tranchée'] },
+        { label: 'Incendie / Explosion',     options: ['Explosif/incendie', 'Atmosphère explosive (ATEX)', 'Ligne de tir / Dynamitage'] },
+        { label: 'Biologique / Psychosocial', options: ['Agents biologiques (virus, bactéries, moisissures)', 'Travail isolé / sans surveillance', 'Agression / Violence'] },
+        { label: 'Intempéries / Milieu',     options: ['Conditions météorologiques extrêmes', 'Travail près de l\'eau / Noyade'] },
+        { label: 'Autre',                    options: ['Autre'] },
       ],
       controlOptions: [
         // Hiérarchie des contrôles
@@ -764,10 +916,34 @@ const T = {
       probLabels: ['', 'Very unlikely', 'Unlikely', 'Possible', 'Likely', 'Very likely'],
       sevLabels: ['', 'Negligible', 'Minor', 'Moderate', 'Severe', 'Catastrophic'],
       hazardOptions: [
-        'Slip/trip on same level', 'Fall from height', 'Falling object', 'Pinching/crushing',
-        'Cut/laceration', 'Thermal burn', 'Chemical burn', 'Electric shock',
-        'Gas/vapour exposure', 'Excessive noise', 'Vibration', 'Thermal stress',
-        'Manual handling', 'Vehicle collision', 'Confined space', 'Explosion/fire', 'Other',
+        'Slip/trip on same level', 'Fall from height', 'Falling object',
+        'Pinching/crushing', 'Cut/laceration', 'Fragment/object projection',
+        'Pressure / Pressurized equipment',
+        'Thermal burn', 'Chemical burn', 'Gas/vapour exposure',
+        'Hazardous substance contact (WHMIS)',
+        'Electric shock', 'Electrical arc flash', 'Live electrical work',
+        'Excessive noise', 'Vibration', 'Thermal stress', 'Manual handling',
+        'Musculoskeletal disorder (MSD)',
+        'Vehicle collision', 'Mobile equipment collision',
+        'Confined space', 'Excavation / Trench collapse',
+        'Explosion/fire', 'Explosive atmosphere (ATEX)', 'Blasting / Firing line',
+        'Biological agents (virus, bacteria, mould)',
+        'Working alone / unsupervised',
+        'Assault / Violence',
+        'Extreme weather conditions', 'Work near water / Drowning',
+        'Other',
+      ],
+      hazardGroups: [
+        { label: 'Falls',                    options: ['Slip/trip on same level', 'Fall from height', 'Falling object'] },
+        { label: 'Mechanical',               options: ['Pinching/crushing', 'Cut/laceration', 'Fragment/object projection', 'Pressure / Pressurized equipment'] },
+        { label: 'Thermal / Chemical',       options: ['Thermal burn', 'Chemical burn', 'Gas/vapour exposure', 'Hazardous substance contact (WHMIS)'] },
+        { label: 'Electrical',               options: ['Electric shock', 'Electrical arc flash', 'Live electrical work'] },
+        { label: 'Ergonomics',               options: ['Excessive noise', 'Vibration', 'Thermal stress', 'Manual handling', 'Musculoskeletal disorder (MSD)'] },
+        { label: 'Traffic / Spaces',         options: ['Vehicle collision', 'Mobile equipment collision', 'Confined space', 'Excavation / Trench collapse'] },
+        { label: 'Fire / Explosion',         options: ['Explosion/fire', 'Explosive atmosphere (ATEX)', 'Blasting / Firing line'] },
+        { label: 'Biological / Psychosocial', options: ['Biological agents (virus, bacteria, mould)', 'Working alone / unsupervised', 'Assault / Violence'] },
+        { label: 'Weather / Environment',    options: ['Extreme weather conditions', 'Work near water / Drowning'] },
+        { label: 'Other',                    options: ['Other'] },
       ],
       controlOptions: [
         'Élimination du danger', 'Substitution', 'Contrôle technique',
@@ -1048,10 +1224,15 @@ function TagSelector({ label, options, selected, onChange, disabled = false, all
   );
 }
 
-// ── HazardDropdown — liste déroulante avec cases à cocher ─────────────────
-function HazardDropdown({ label, options, selected, onChange, disabled = false, language = 'fr', customPlaceholder }: {
-  label: string; options: string[]; selected: string[];
-  onChange: (v: string[]) => void; disabled?: boolean; language?: Language;
+// ── HazardDropdown — liste déroulante par catégorie ───────────────────────
+function HazardDropdown({ label, options, groups, selected, onChange, disabled = false, language = 'fr', customPlaceholder }: {
+  label: string;
+  options: string[];
+  groups?: { label: string; options: string[] }[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+  disabled?: boolean;
+  language?: Language;
   customPlaceholder?: string;
 }) {
   const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
@@ -1079,8 +1260,20 @@ function HazardDropdown({ label, options, selected, onChange, disabled = false, 
     setCustomInput('');
   };
 
-  // Options non connues = ajoutées via custom
-  const customSelected = selected.filter(s => !options.includes(s));
+  const allKnown = new Set(options);
+  const customSelected = selected.filter(s => !allKnown.has(s));
+
+  // Couleurs par catégorie (index)
+  const groupColors = [
+    'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20',
+    'text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/40',
+    'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20',
+    'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20',
+    'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
+    'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20',
+    'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20',
+    'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/30',
+  ];
 
   return (
     <div className="space-y-2">
@@ -1111,7 +1304,7 @@ function HazardDropdown({ label, options, selected, onChange, disabled = false, 
           <button
             type="button"
             onClick={() => setOpen(v => !v)}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:border-teal-400 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:border-red-400 text-slate-700 dark:text-slate-200 rounded-lg text-sm transition-colors"
           >
             <Menu className="w-4 h-4" />
             {selected.length === 0
@@ -1120,8 +1313,9 @@ function HazardDropdown({ label, options, selected, onChange, disabled = false, 
           </button>
 
           {open && (
-            <div className="absolute left-0 top-full mt-1.5 z-40 w-80 max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl">
-              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <div className="absolute left-0 top-full mt-1.5 z-40 w-80 max-h-96 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl">
+              {/* En-tête */}
+              <div className="sticky top-0 z-10 px-3 py-2 border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
                   {tr('Dangers identifiés', 'Identified hazards')}
                 </span>
@@ -1132,24 +1326,71 @@ function HazardDropdown({ label, options, selected, onChange, disabled = false, 
                   </button>
                 )}
               </div>
-              <div className="py-1">
-                {options.map(opt => (
-                  <label key={opt}
-                    className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${selected.includes(opt) ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(opt)}
-                      onChange={() => toggle(opt)}
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 accent-red-500"
-                    />
-                    <span className={`text-sm ${selected.includes(opt) ? 'text-red-700 dark:text-red-300 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>
-                      {opt}
-                    </span>
-                  </label>
-                ))}
-              </div>
+
+              {/* Groupes */}
+              {groups ? (
+                <div className="py-1">
+                  {groups.map((group, gi) => (
+                    <div key={group.label}>
+                      {/* En-tête de groupe */}
+                      <div className={`flex items-center gap-2 px-3 py-1.5 mt-1 ${groupColors[gi % groupColors.length]}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{group.label}</span>
+                        {group.options.some(o => selected.includes(o)) && (
+                          <span className="ml-auto text-[10px] font-semibold">
+                            {group.options.filter(o => selected.includes(o)).length} ✓
+                          </span>
+                        )}
+                      </div>
+                      {/* Options du groupe */}
+                      {group.options.map(opt => (
+                        <label key={opt}
+                          className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${selected.includes(opt) ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(opt)}
+                            onChange={() => toggle(opt)}
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 accent-red-500"
+                          />
+                          <span className={`text-sm ${selected.includes(opt) ? 'text-red-700 dark:text-red-300 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>
+                            {opt}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                  {/* Options custom déjà sélectionnées */}
+                  {customSelected.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 px-3 py-1.5 mt-1 text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{tr('Personnalisé', 'Custom')}</span>
+                      </div>
+                      {customSelected.map(opt => (
+                        <label key={opt}
+                          className="flex items-center gap-3 px-4 py-2 cursor-pointer bg-red-50 dark:bg-red-900/10">
+                          <input type="checkbox" checked onChange={() => toggle(opt)}
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 accent-red-500" />
+                          <span className="text-sm text-red-700 dark:text-red-300 font-medium">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Fallback liste plate
+                <div className="py-1">
+                  {options.map(opt => (
+                    <label key={opt}
+                      className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40 ${selected.includes(opt) ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                      <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)}
+                        className="h-4 w-4 shrink-0 rounded border-slate-300 accent-red-500" />
+                      <span className={`text-sm ${selected.includes(opt) ? 'text-red-700 dark:text-red-300 font-medium' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
               {/* Ajout custom */}
-              <div className="border-t border-slate-100 dark:border-slate-700 px-3 py-2.5">
+              <div className="sticky bottom-0 border-t border-slate-100 dark:border-slate-700 px-3 py-2.5 bg-white dark:bg-slate-800">
                 <div className="flex gap-1.5">
                   <input
                     type="text"
@@ -1170,7 +1411,7 @@ function HazardDropdown({ label, options, selected, onChange, disabled = false, 
         </div>
       )}
 
-      {/* custom options en lecture seule */}
+      {/* Lecture seule — custom */}
       {disabled && customSelected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {customSelected.map(opt => (
@@ -1638,6 +1879,7 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
               <HazardDropdown
                 label={t.hazards}
                 options={t.hazardOptions as unknown as string[]}
+                groups={((t as typeof T['fr']['steps']).hazardGroups ?? (t as typeof T['en']['steps']).hazardGroups) as unknown as { label: string; options: string[] }[]}
                 selected={step.hazards}
                 onChange={v => onUpdate(s => ({ ...s, hazards: v }))}
                 disabled={readOnly}
@@ -1648,25 +1890,13 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
             </div>
 
             <div className="space-y-2">
-              {model === 'complet' ? (
-                <ContextualControls
-                  hazards={step.hazards}
-                  controls={step.controls}
-                  onChange={v => onUpdate(s => ({ ...s, controls: v }))}
-                  disabled={readOnly}
-                  language={language}
-                />
-              ) : (
-                <TagSelector
-                  label={t.controls}
-                  options={t.controlOptions as unknown as string[]}
-                  selected={step.controls}
-                  onChange={v => onUpdate(s => ({ ...s, controls: v }))}
-                  disabled={readOnly}
-                  allowCustom
-                  customPlaceholder={language === 'fr' ? 'Moyen de contrôle personnalisé…' : 'Custom control measure…'}
-                />
-              )}
+              <ContextualControls
+                hazards={step.hazards}
+                controls={step.controls}
+                onChange={v => onUpdate(s => ({ ...s, controls: v }))}
+                disabled={readOnly}
+                language={language}
+              />
               <Textarea label={t.controlNotes} value={step.controlNotes} onChange={v => onUpdate(s => ({ ...s, controlNotes: v }))} placeholder={t.controlNotesPh} rows={2} disabled={readOnly} />
             </div>
           </div>
