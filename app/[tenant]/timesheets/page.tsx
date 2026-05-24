@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   Clock, Plus, ChevronRight, CheckCircle, XCircle,
-  AlertCircle, Loader2, Calendar, User, Send,
+  AlertCircle, DollarSign, Loader2, Calendar, User, Send,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
