@@ -1021,11 +1021,11 @@ function StepCard({ step, idx, total, language, readOnly, t, probOptions, sevOpt
           {!readOnly && (
             <>
               <button type="button" onClick={onMoveUp} disabled={idx === 0}
-                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={t.moveUp}>
+                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={language === 'fr' ? 'Monter' : 'Move up'}>
                 <ChevronUp className="w-4 h-4" />
               </button>
               <button type="button" onClick={onMoveDown} disabled={idx === total - 1}
-                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={t.moveDown}>
+                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 transition-colors" title={language === 'fr' ? 'Descendre' : 'Move down'}>
                 <ChevronDown className="w-4 h-4" />
               </button>
               <button type="button" onClick={onRemove}
