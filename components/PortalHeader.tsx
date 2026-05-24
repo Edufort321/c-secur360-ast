@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { MODULES } from '@/lib/modules/registry';
 import { supabase } from '@/lib/supabase';
+import { InstallPWA } from '@/components/InstallPWA';
 
 const QUICK_CREATES = [
   { key: 'project', path: 'projects', labelFr: 'Nouveau projet',  labelEn: 'New project',  icon: FolderKanban, color: 'bg-blue-600' },
@@ -67,6 +68,8 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
             <button onClick={() => setLang('fr')} className={lang === 'fr' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>FR</button>
             <button onClick={() => setLang('en')} className={lang === 'en' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>EN</button>
           </div>
+
+          <InstallPWA />
 
           {/* Hamburger : navigation + actions rapides */}
           {tenant && (

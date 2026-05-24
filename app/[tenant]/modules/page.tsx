@@ -11,7 +11,6 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
-import { InstallPWA } from '@/components/InstallPWA';
 import { supabase } from '@/lib/supabase';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
@@ -145,7 +144,6 @@ export default function ModulesPage() {
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">{tr('Tableau de bord', 'Dashboard')}</h1>
             <div className="flex items-center gap-2">
-              <InstallPWA />
               {/* Sélecteur de vue */}
               <div className="flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
                 <button onClick={() => setView('grid')} title={tr('Galerie', 'Gallery')} className={`p-2 ${view === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><LayoutGrid size={16} /></button>
