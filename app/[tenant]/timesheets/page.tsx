@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   Clock, Plus, ChevronRight, CheckCircle, XCircle,
-  AlertCircle, DollarSign, Loader2, Calendar, User, Send,
+  AlertCircle, Loader2, Calendar, User, Send,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -39,6 +39,12 @@ function weekEnd(start: string) {
   const d = new Date(start + 'T00:00:00'); d.setDate(d.getDate() + 6);
   return d.toISOString().slice(0, 10);
 }
+function isoWeek(dateStr: string): number {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const w1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
+}
 
 export default function TimesheetsPage() {
   const params = useParams();
@@ -70,6 +76,30 @@ export default function TimesheetsPage() {
   }
 
   useEffect(() => { load(); }, [tenant, isSupervisor, currentUserId]); // eslint-disable-line
+
+  // Auto-generate next week's draft 7 days in advance
+  useEffect(() => {
+    if (!currentUserId || isSupervisor) return;
+    (async () => {
+      const today = new Date();
+      const day = today.getDay();
+      const daysToNextMon = day === 0 ? 1 : 8 - day;
+      const nextMon = new Date(today); nextMon.setDate(today.getDate() + daysToNextMon);
+      const start = nextMon.toISOString().slice(0, 10);
+      const end = new Date(nextMon.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      const { data: exists } = await supabase.from('timesheets').select('id')
+        .eq('tenant_id', tenant).eq('employee_id', currentUserId).eq('period_start', start).maybeSingle();
+      if (!exists) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('timesheets').insert({
+          tenant_id: tenant, employee_id: currentUserId,
+          employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+          period_start: start, period_end: end, status: 'draft',
+        });
+        load();
+      }
+    })();
+  }, [currentUserId, tenant, isSupervisor]); // eslint-disable-line
 
   async function createNew() {
     setCreating(true);
@@ -121,21 +151,6 @@ export default function TimesheetsPage() {
     load();
   }
 
-  function exportPayroll() {
-    const approved = sheets.filter(s => s.status === 'approved');
-    if (!approved.length) { alert('Aucune feuille approuvée à exporter.'); return; }
-    const rows = [
-      ['Employé','Email','Période début','Période fin','Hrs rég','Hrs supp','Hrs maj','Km pers.','Montant total','Statut'].join(','),
-      ...approved.map(s => [`"${s.employee_name}"`,s.employee_email,s.period_start,s.period_end,
-        s.total_regular,s.total_overtime,s.total_premium,s.total_km_personal,s.total_amount,s.status].join(',')),
-    ].join('\n');
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' })),
-      download: `paie_${yearFilter}_${tenant}.csv`,
-    });
-    a.click();
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <PortalHeader tenant={tenant} />
@@ -150,11 +165,6 @@ export default function TimesheetsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {isSupervisor && (
-              <button onClick={exportPayroll} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                <DollarSign size={16} /> Export paie CSV
-              </button>
-            )}
             <button onClick={createNew} disabled={creating}
               className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60">
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={18} />} Nouvelle feuille
@@ -261,6 +271,7 @@ export default function TimesheetsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
+                        <div className="text-xs font-semibold text-violet-500 mb-0.5">P.{isoWeek(s.period_start)}</div>
                         <div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" />{fmt(s.period_start)} – {fmt(s.period_end)}</div>
                       </td>
                       <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>

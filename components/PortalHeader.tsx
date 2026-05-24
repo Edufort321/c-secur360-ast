@@ -35,7 +35,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
     <header className="sticky top-0 z-40 bg-gray-900 text-white shadow">
       <div className="flex w-full items-center justify-between px-4 py-2 lg:px-6">
         <Link href={tenant ? `/${tenant}/modules` : '/admin/dashboard'} className="flex items-center gap-3">
-          <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-12 w-auto" />
+          <img src={logoUrl || "/logo.png"} alt="C-Secur360" className="h-16 w-auto" />
           <div className="leading-tight hidden sm:block">
             <div className="font-bold text-white">C-Secur360</div>
             <div className="text-xs text-gray-400">{subtitle || (tenant ? `${t('platform')} · ${tenant}` : (lang === 'fr' ? 'Panneau multi-clients' : 'Multi-client panel'))}</div>

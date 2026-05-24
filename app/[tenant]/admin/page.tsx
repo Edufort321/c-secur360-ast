@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench } from 'lucide-react';
+import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'ressources' | 'abonnement' | 'facturation'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -29,6 +29,7 @@ export default function AdminPage() {
             { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),       icon: Car },
             { k: 'profils',     label: tr('Employés', 'Employees'),       icon: Users },
             { k: 'ressources',  label: tr('Ressources', 'Resources'),     icon: Wrench },
+            { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'), icon: Clock },
             { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),  icon: CreditCard },
             { k: 'facturation', label: tr('Facturation', 'Billing'),      icon: Settings },
           ];
@@ -63,7 +64,183 @@ export default function AdminPage() {
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
+        {tab === 'feuilles' && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// FEUILLES DE TEMPS — admin payroll view + export
+// ============================================================
+
+function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [sheets, setSheets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
+  const [empFilter, setEmpFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('timesheets').select('*').eq('tenant_id', tenant).order('period_start', { ascending: false });
+    setSheets(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const employees = useMemo(() => [...new Set(sheets.map((s: any) => s.employee_name))].sort(), [sheets]);
+  const years = useMemo(() => {
+    const ys = [...new Set(sheets.map((s: any) => new Date(s.period_start).getFullYear()))].sort((a: any, b: any) => b - a) as number[];
+    return ys.length ? ys : [new Date().getFullYear()];
+  }, [sheets]);
+
+  const filtered = useMemo(() => sheets.filter((s: any) => {
+    if (new Date(s.period_start).getFullYear() !== yearFilter) return false;
+    if (empFilter && s.employee_name !== empFilter) return false;
+    if (statusFilter && s.status !== statusFilter) return false;
+    return true;
+  }), [sheets, yearFilter, empFilter, statusFilter]);
+
+  const totals = useMemo(() => filtered.reduce((acc: any, s: any) => ({
+    hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
+    km: acc.km + Number(s.total_km_personal),
+    amt: acc.amt + Number(s.total_amount),
+  }), { hrs: 0, km: 0, amt: 0 }), [filtered]);
+
+  function weekNum(dateStr: string) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const w1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
+  }
+
+  function exportCSV() {
+    const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'paid');
+    if (!toExport.length) { alert(tr('Aucune feuille approuvée dans la sélection.', 'No approved sheet in selection.')); return; }
+    const rows = [
+      ['Employé', 'Email', 'Période #', 'Période début', 'Période fin', 'Hrs rég', 'Hrs supp', 'Hrs maj', 'Km pers.', 'Montant total', 'Statut'].join(','),
+      ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
+        s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, s.total_amount, s.status].join(',')),
+    ].join('\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' })),
+      download: `paie_${yearFilter}_${tenant}${empFilter ? `_${empFilter.replace(/\s+/g, '_')}` : ''}.csv`,
+    });
+    a.click();
+  }
+
+  const mny = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
+  const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' });
+
+  const STATUS_CLS: Record<string, string> = {
+    draft: 'bg-slate-100 text-slate-600', submitted: 'bg-amber-100 text-amber-700',
+    approved: 'bg-emerald-100 text-emerald-700', rejected: 'bg-red-100 text-red-700', paid: 'bg-blue-100 text-blue-700',
+  };
+  const STATUS_LBL: Record<string, string> = { draft: tr('Brouillon','Draft'), submitted: tr('Soumis','Submitted'), approved: tr('Approuvé','Approved'), rejected: tr('Refusé','Rejected'), paid: tr('Payé','Paid') };
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: tr('Heures totales', 'Total hours'),      value: `${totals.hrs.toFixed(1)} h`, tone: 'text-slate-900 dark:text-white' },
+          { label: tr('Km remboursables', 'Reimbursable km'), value: `${totals.km.toFixed(0)} km`, tone: 'text-emerald-600' },
+          { label: tr('Montant total', 'Total amount'),       value: mny(totals.amt),              tone: 'text-violet-600' },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className={`text-2xl font-bold ${s.tone}`}>{s.value}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters + export */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          {years.map(y => (
+            <button key={y} onClick={() => setYearFilter(y)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${yearFilter === y ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+              {y}
+            </button>
+          ))}
+        </div>
+        {employees.length > 0 && (
+          <select value={empFilter} onChange={e => setEmpFilter(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
+            <option value="">{tr('Tous les employés', 'All employees')}</option>
+            {employees.map(emp => <option key={emp as string} value={emp as string}>{emp as string}</option>)}
+          </select>
+        )}
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
+          <option value="">{tr('Tous les statuts', 'All statuses')}</option>
+          <option value="draft">{tr('Brouillon', 'Draft')}</option>
+          <option value="submitted">{tr('Soumis', 'Submitted')}</option>
+          <option value="approved">{tr('Approuvé', 'Approved')}</option>
+          <option value="paid">{tr('Payé', 'Paid')}</option>
+          <option value="rejected">{tr('Refusé', 'Rejected')}</option>
+        </select>
+        <div className="ml-auto">
+          <button onClick={exportCSV}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700">
+            <DollarSign size={15} /> {tr('Export paie CSV', 'Export payroll CSV')}
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                <th className="px-4 py-3">{tr('Employé', 'Employee')}</th>
+                <th className="px-4 py-3">{tr('Période', 'Period')}</th>
+                <th className="px-4 py-3">{tr('Heures', 'Hours')}</th>
+                <th className="px-4 py-3">{tr('Km pers.', 'Pers. km')}</th>
+                <th className="px-4 py-3">{tr('Montant', 'Amount')}</th>
+                <th className="px-4 py-3">{tr('Statut', 'Status')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s: any) => {
+                const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
+                return (
+                  <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="grid h-7 w-7 place-items-center rounded-full bg-gray-200 text-xs font-bold dark:bg-gray-600">{(s.employee_name || '?')[0].toUpperCase()}</div>
+                        <div>
+                          <div className="font-medium">{s.employee_name}</div>
+                          <div className="text-xs text-gray-400">{s.employee_email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-xs font-semibold text-violet-500">P.{weekNum(s.period_start)}</div>
+                      <div className="text-gray-600 dark:text-gray-300">{fmt(s.period_start)} – {fmt(s.period_end)}</div>
+                    </td>
+                    <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{Number(s.total_km_personal).toFixed(0)} km</td>
+                    <td className="px-4 py-3 font-semibold text-violet-700">{mny(Number(s.total_amount))}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLS[s.status] || STATUS_CLS.draft}`}>
+                        {STATUS_LBL[s.status] || s.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">{tr('Aucune feuille de temps pour cette sélection.', 'No timesheet for this selection.')}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
