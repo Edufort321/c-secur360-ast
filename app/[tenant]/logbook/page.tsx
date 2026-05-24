@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import {
   Car, ChevronLeft, ChevronRight, Download, Loader2,
   Plus, Save, Truck, AlertCircle,
@@ -52,13 +52,14 @@ const km = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} km`;
 /* ================================================================ PAGE === */
 export default function LogbookPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const tenant = (params?.tenant as string) || 'demo';
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [weekStart, setWeekStart] = useState(weekMonday());
+  const [weekStart, setWeekStart] = useState(() => searchParams?.get('week') || weekMonday());
   const [employeeId, setEmployeeId] = useState('');
   const [employeeName, setEmployeeName] = useState('');
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
@@ -66,9 +67,17 @@ export default function LogbookPage() {
   /* load current user + vehicles */
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      const uid = user?.id || 'local';
-      const uname = user?.user_metadata?.name || user?.email || 'Employé';
+      // Priorité : session custom (/api/auth/me), fallback Supabase Auth
+      let uid = 'local'; let uname = 'Employé';
+      try {
+        const res = await fetch('/api/auth/me');
+        const { user } = await res.json();
+        if (user) { uid = user.id; uname = user.name || user.email || 'Employé'; }
+      } catch {}
+      if (uid === 'local') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) { uid = user.id; uname = user.user_metadata?.name || user.email || 'Employé'; }
+      }
       setEmployeeId(uid);
       setEmployeeName(uname);
       const { data } = await supabase.from('vehicles')

@@ -49,18 +49,27 @@ export default function TimesheetsPage() {
   const [creating, setCreating] = useState(false);
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
   const [employeeFilter, setEmployeeFilter] = useState('');
-  const [isSupervisor] = useState(true);
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
+      if (!user) return;
+      setCurrentUserId(user.id);
+      setIsSupervisor(user.role === 'client_admin' || user.role === 'super_admin');
+    }).catch(() => {});
+  }, []);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('timesheets')
-      .select('*').eq('tenant_id', tenant)
-      .order('period_start', { ascending: false });
+    let q = supabase.from('timesheets').select('*').eq('tenant_id', tenant);
+    if (!isSupervisor && currentUserId) q = q.eq('employee_id', currentUserId);
+    const { data } = await q.order('period_start', { ascending: false });
     setSheets(data || []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [tenant]); // eslint-disable-line
+  useEffect(() => { load(); }, [tenant, isSupervisor, currentUserId]); // eslint-disable-line
 
   async function createNew() {
     setCreating(true);
@@ -100,7 +109,9 @@ export default function TimesheetsPage() {
   const pendingApproval = useMemo(() => sheets.filter(s => s.status === 'submitted'), [sheets]);
 
   async function approve(id: string) {
-    await supabase.from('timesheets').update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: 'supervisor' }).eq('id', id);
+    const { data: { user } } = await supabase.auth.getUser();
+    const approver = user?.user_metadata?.name || user?.email || 'Superviseur';
+    await supabase.from('timesheets').update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: approver }).eq('id', id);
     load();
   }
   async function reject(id: string) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Send, Loader2, Plus, Trash2,
@@ -200,10 +201,18 @@ export default function TimesheetDetailPage() {
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 pb-10 pt-5 lg:px-6">
         {/* Fil d'Ariane */}
-        <button onClick={() => router.push(`/${tenant}/timesheets`)}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
-          <ArrowLeft size={16} /> Feuilles de temps
-        </button>
+        <div className="mb-4 flex items-center justify-between">
+          <button onClick={() => router.push(`/${tenant}/timesheets`)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
+            <ArrowLeft size={16} /> Feuilles de temps
+          </button>
+          {sheet?.period_start && (
+            <Link href={`/${tenant}/logbook?week=${sheet.period_start}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-100">
+              <Car size={13} /> Logbook semaine
+            </Link>
+          )}
+        </div>
 
         {/* En-tête feuille */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
