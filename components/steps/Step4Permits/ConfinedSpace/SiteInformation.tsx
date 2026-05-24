@@ -862,10 +862,10 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
             })}
             style={styles.select}
           >
-            <option value="rectangular">ðŸ“ {t.rectangular}</option>
-            <option value="cylindrical">ðŸ”µ {t.cylindrical}</option>
+            <option value="rectangular">📐 {t.rectangular}</option>
+            <option value="cylindrical">🔵 {t.cylindrical}</option>
             <option value="spherical">⚠ª {t.spherical}</option>
-            <option value="irregular">ðŸ”· {t.irregular}</option>
+            <option value="irregular">🔷 {t.irregular}</option>
           </select>
         </div>
 
@@ -882,8 +882,8 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
             }}
             style={styles.select}
           >
-            <option value="metric">ðŸ“ {t.metric}</option>
-            <option value="imperial">ðŸ“ {t.imperial}</option>
+            <option value="metric">📏 {t.metric}</option>
+            <option value="imperial">📐 {t.imperial}</option>
           </select>
         </div>
       </div>
@@ -1216,7 +1216,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
               </div>
               <div>
                 <h2 style={styles.title}>
-                  ðŸ—ï¸ {t.title}
+                  🏗️ {t.title}
                 </h2>
                 <p style={styles.subtitle}>
                   {t.subtitle}
@@ -1478,10 +1478,10 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   onClick={() => updateSiteInfo('spaceType', key)}
                 >
                   <div style={{ fontSize: '24px' }}>
-                    {key === 'tank' ? 'ðŸ—ï¸' : key === 'vessel' ? '⚠—ï¸' : key === 'silo' ? 'ðŸŒ¾' : 
-                     key === 'pit' ? 'ðŸ•³ï¸' : key === 'vault' ? 'ðŸ›ï¸' : key === 'tunnel' ? 'ðŸš‡' : 
-                     key === 'trench' ? 'ðŸš§' : key === 'manhole' ? 'ðŸ”§' : key === 'storage' ? 'ðŸ“¦' : 
-                     key === 'boiler' ? 'ðŸ”¥' : key === 'duct' ? 'ðŸŒªï¸' : key === 'chamber' ? 'ðŸ¢' : 'â“'}
+                    {key === 'tank' ? '🏗️' : key === 'vessel' ? '⚠️' : key === 'silo' ? '🌾' : 
+                     key === 'pit' ? '🕳️' : key === 'vault' ? '🏛️' : key === 'tunnel' ? '🚇' : 
+                     key === 'trench' ? '🚧' : key === 'manhole' ? '🔧' : key === 'storage' ? '📦' : 
+                     key === 'boiler' ? '🔥' : key === 'duct' ? '🌪️' : key === 'chamber' ? '🏢' : '❓'}
                   </div>
                   <div style={{ 
                     fontSize: isMobile ? '12px' : '13px', 
@@ -1537,7 +1537,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                   fontSize: '16px', 
                   fontWeight: '600' 
                 }}>
-                  ðŸšª {t.entryPoint} {index + 1}
+                  🚪 {t.entryPoint} {index + 1}
                 </h4>
                 {(siteInfo.entryPoints || []).length > 1 && (
                   <button 
@@ -1565,11 +1565,11 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     value={entry.type}
                     onChange={(e) => updateEntryPoint(entry.id, 'type', e.target.value)}
                   >
-                    <option value="circular">ðŸ”µ {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
+                    <option value="circular">🔵 {language === 'fr' ? 'Circulaire' : 'Circular'}</option>
                     <option value="rectangular">🟨 {language === 'fr' ? 'Rectangulaire' : 'Rectangular'}</option>
                     <option value="square">🟫 {language === 'fr' ? 'Carré' : 'Square'}</option>
                     <option value="oval">🥚 {language === 'fr' ? 'Ovale' : 'Oval'}</option>
-                    <option value="irregular">ðŸ”· {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
+                    <option value="irregular">🔷 {language === 'fr' ? 'Irrégulier' : 'Irregular'}</option>
                   </select>
                 </div>
 
@@ -1661,7 +1661,7 @@ const SiteInformation: React.FC<ConfinedSpaceComponentProps> = ({
                     fontWeight: '500',
                     lineHeight: 1.4
                   }}>
-                    ðŸŒªï¸ {label}
+                    🌪️ {label}
                   </span>
                 </div>
               ))}
