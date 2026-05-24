@@ -22,25 +22,40 @@ export default function AdminPage() {
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-6 lg:px-6">
         <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {[
-            { k: 'sites',      label: tr('Sites', 'Sites'),           icon: MapPin },
-            { k: 'clients',    label: tr('Clients', 'Clients'),       icon: Building2 },
-            { k: 'vehicules',  label: tr('Véhicules', 'Vehicles'),    icon: Car },
-            { k: 'profils',    label: tr('Employés', 'Employees'),    icon: Users },
-            { k: 'ressources', label: tr('Ressources', 'Resources'),   icon: Wrench },
-            { k: 'abonnement', label: tr('Abonnement', 'Subscription'), icon: CreditCard },
-            { k: 'facturation',label: tr('Facturation', 'Billing'),   icon: Settings },
-          ].map(x => {
-            const Icon = x.icon as any;
-            return (
-              <button key={x.k} onClick={() => setTab(x.k as any)}
-                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-                <Icon size={16} /> {x.label}
-              </button>
-            );
-          })}
-        </div>
+        {(() => {
+          const tabs = [
+            { k: 'sites',       label: tr('Sites', 'Sites'),              icon: MapPin },
+            { k: 'clients',     label: tr('Clients', 'Clients'),          icon: Building2 },
+            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),       icon: Car },
+            { k: 'profils',     label: tr('Employés', 'Employees'),       icon: Users },
+            { k: 'ressources',  label: tr('Ressources', 'Resources'),     icon: Wrench },
+            { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),  icon: CreditCard },
+            { k: 'facturation', label: tr('Facturation', 'Billing'),      icon: Settings },
+          ];
+          return (
+            <>
+              {/* Mobile : sélecteur */}
+              <div className="mb-4 sm:hidden">
+                <select value={tab} onChange={e => setTab(e.target.value as any)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                  {tabs.map(x => <option key={x.k} value={x.k}>{x.label}</option>)}
+                </select>
+              </div>
+              {/* Desktop : onglets */}
+              <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800 sm:flex">
+                {tabs.map(x => {
+                  const Icon = x.icon as any;
+                  return (
+                    <button key={x.k} onClick={() => setTab(x.k as any)}
+                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                      <Icon size={16} /> {x.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
 
         {tab === 'sites' && <Sites tenant={tenant} tr={tr} />}
         {tab === 'clients' && <Clients tenant={tenant} tr={tr} />}
