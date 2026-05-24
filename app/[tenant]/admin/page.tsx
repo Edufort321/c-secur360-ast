@@ -249,64 +249,233 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
 function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from('projects').select('id, project_number, title, client_name, status, po_amount, estimate, actuals').eq('tenant_id', tenant).order('created_at', { ascending: false });
-      setRows(data || []); setLoading(false);
-    })();
-  }, [tenant]);
+  const [subTab, setSubTab] = useState<'resume' | 'factures'>('resume');
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const sum = (st: string) => rows.filter(r => r.status === st).reduce((s, r) => s + Number(r.po_amount || 0), 0);
-  const totalFacture = sum('facture');
-  const totalEnCours = sum('en-cours');
-  const totalSoumission = sum('soumission');
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('projects')
+      .select('id, project_number, title, client_name, status, po_amount, estimate, actuals, facture')
+      .eq('tenant_id', tenant).order('created_at', { ascending: false });
+    setRows(data || []); setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
   const reelOf = (r: any) => Number(r.actuals?.total || 0);
+  const sum = (st: string) => rows.filter(r => r.status === st).reduce((s, r) => s + Number(r.po_amount || 0), 0);
   const margeTotale = rows.filter(r => r.status === 'facture').reduce((s, r) => s + (Number(r.po_amount || 0) - reelOf(r)), 0);
+
+  const INV: Record<string, { label: string; cls: string }> = {
+    draft:     { label: tr('Brouillon', 'Draft'),   cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
+    sent:      { label: tr('Envoyée', 'Sent'),      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
+    paid:      { label: tr('Payée', 'Paid'),        cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' },
+    cancelled: { label: tr('Annulée', 'Cancelled'), cls: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' },
+  };
+
+  function startEdit(row: any) {
+    setEditing(row.id);
+    const idx = rows.findIndex(r => r.id === row.id);
+    setForm(row.facture || {
+      invoice_number: `F-${new Date().getFullYear()}-${String(idx + 1).padStart(3, '0')}`,
+      invoice_date: new Date().toISOString().slice(0, 10),
+      due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      status: 'draft', notes: '',
+    });
+  }
+
+  async function saveInvoice(projectId: string) {
+    setSaving(true); setNotice(null);
+    try {
+      await supabase.from('projects').update({ facture: form }).eq('id', projectId);
+      setRows(p => p.map(r => r.id === projectId ? { ...r, facture: form } : r));
+      setEditing(null); setNotice(tr('Facture enregistrée ✓', 'Invoice saved ✓'));
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
+    finally { setSaving(false); }
+  }
+
+  const fmtDate = (d?: string) => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  const inp = 'w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800';
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
-  const Stat = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
-      <div className={`mt-1 text-2xl font-bold ${tone || ''}`}>{value}</div>
-    </div>
-  );
-
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500 dark:text-gray-400">{tr('Comptabilité de la facturation des projets (données réelles). La facturation est émise par Commerce CERDIA.', 'Project billing accounting (real data). Invoicing is issued by Commerce CERDIA.')}</p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={tr('Facturé', 'Invoiced')} value={money(totalFacture)} tone="text-emerald-600" />
-        <Stat label={tr('En cours', 'In progress')} value={money(totalEnCours)} tone="text-blue-600" />
-        <Stat label={tr('Soumissions', 'Quotes')} value={money(totalSoumission)} tone="text-amber-600" />
-        <Stat label={tr('Marge (facturé − réel)', 'Margin (invoiced − actual)')} value={money(margeTotale)} tone={margeTotale >= 0 ? 'text-emerald-600' : 'text-red-600'} />
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Projets', 'Projects')}</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-gray-500 dark:text-gray-400"><th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3">{tr('Client', 'Client')}</th><th className="px-3">{tr('Statut', 'Status')}</th><th className="px-3 text-right">{tr('Estimé', 'Estimated')}</th><th className="px-3 text-right">{tr('Réel', 'Actual')}</th><th className="px-3 text-right">{tr('Facturé', 'Invoiced')}</th><th className="px-3 text-right">{tr('Marge', 'Margin')}</th></tr></thead>
-            <tbody>
-              {rows.map(r => {
-                const est = Number(r.estimate?.total || 0); const reel = reelOf(r); const fac = Number(r.po_amount || 0); const marge = fac - reel;
-                return (
-                  <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="px-3 py-2"><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
-                    <td className="px-3 text-gray-600 dark:text-gray-300">{r.client_name || '—'}</td>
-                    <td className="px-3"><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{r.status || 'soumission'}</span></td>
-                    <td className="px-3 text-right">{money(est)}</td>
-                    <td className="px-3 text-right">{money(reel)}</td>
-                    <td className="px-3 text-right font-medium">{money(fac)}</td>
-                    <td className={`px-3 text-right font-medium ${marge >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.status === 'facture' ? money(marge) : '—'}</td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400">{tr('Aucun projet.', 'No project.')}</td></tr>}
-            </tbody>
-          </table>
+      {/* Commerce CERDIA banner */}
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-xs font-bold text-white">CC</div>
+        <div>
+          <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Commerce CERDIA</div>
+          <div className="text-xs text-emerald-700 dark:text-emerald-300">
+            {tr('Toutes les factures sont émises par Commerce CERDIA. Aucun lien avec les finances personnelles.', 'All invoices are issued by Commerce CERDIA. No link to personal finances.')}
+          </div>
         </div>
       </div>
+
+      {/* Sub-tabs */}
+      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        {[
+          { k: 'resume',   label: tr('Résumé', 'Summary') },
+          { k: 'factures', label: tr('Factures émises', 'Issued invoices') },
+        ].map(x => (
+          <button key={x.k} onClick={() => setSubTab(x.k as any)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
+
+      {/* ── Résumé ── */}
+      {subTab === 'resume' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[
+              { label: tr('Facturé', 'Invoiced'),          value: money(sum('facture')),   tone: 'text-emerald-600' },
+              { label: tr('En cours', 'In progress'),      value: money(sum('en-cours')),  tone: 'text-blue-600' },
+              { label: tr('Soumissions', 'Quotes'),        value: money(sum('soumission')), tone: 'text-amber-600' },
+              { label: tr('Marge (facturé − réel)', 'Margin (invoiced − actual)'), value: money(margeTotale), tone: margeTotale >= 0 ? 'text-emerald-600' : 'text-red-600' },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="text-xs text-gray-500 dark:text-gray-400">{s.label}</div>
+                <div className={`mt-1 text-2xl font-bold ${s.tone}`}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Projets', 'Projects')}</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+                  <th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3">{tr('Client', 'Client')}</th>
+                  <th className="px-3">{tr('Statut projet', 'Project status')}</th><th className="px-3 text-right">{tr('Estimé', 'Est.')}</th>
+                  <th className="px-3 text-right">{tr('Réel', 'Actual')}</th><th className="px-3 text-right">{tr('Facturé', 'Invoiced')}</th><th className="px-3 text-right">{tr('Marge', 'Margin')}</th>
+                </tr></thead>
+                <tbody>
+                  {rows.map(r => {
+                    const est = Number(r.estimate?.total || 0); const reel = reelOf(r); const fac = Number(r.po_amount || 0); const marge = fac - reel;
+                    return (
+                      <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700">
+                        <td className="px-3 py-2"><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
+                        <td className="px-3 text-gray-600 dark:text-gray-300">{r.client_name || '—'}</td>
+                        <td className="px-3"><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{r.status || 'soumission'}</span></td>
+                        <td className="px-3 text-right">{money(est)}</td>
+                        <td className="px-3 text-right">{money(reel)}</td>
+                        <td className="px-3 text-right font-medium">{money(fac)}</td>
+                        <td className={`px-3 text-right font-medium ${marge >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.status === 'facture' ? money(marge) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                  {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">{tr('Aucun projet.', 'No project.')}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Factures émises ── */}
+      {subTab === 'factures' && (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+            <div className="font-bold">{tr('Factures émises', 'Issued invoices')}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{tr('Une facture par projet — stockée directement sur le projet.', 'One invoice per project — stored directly on the project.')}</div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  <th className="px-4 py-3">{tr('Projet', 'Project')}</th>
+                  <th className="px-4 py-3">{tr('Client', 'Client')}</th>
+                  <th className="px-4 py-3">{tr('N° facture', 'Invoice #')}</th>
+                  <th className="px-4 py-3">{tr('Date', 'Date')}</th>
+                  <th className="px-4 py-3">{tr('Échéance', 'Due')}</th>
+                  <th className="px-4 py-3 text-right">{tr('Montant', 'Amount')}</th>
+                  <th className="px-4 py-3">{tr('Statut', 'Status')}</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => {
+                  const inv = r.facture;
+                  const st = inv ? (INV[inv.status] || INV.draft) : null;
+                  return (
+                    <React.Fragment key={r.id}>
+                      <tr className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                        <td className="px-4 py-3"><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{r.client_name || '—'}</td>
+                        <td className="px-4 py-3 font-mono">{inv?.invoice_number || <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{fmtDate(inv?.invoice_date)}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{fmtDate(inv?.due_date)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">{Number(r.po_amount) > 0 ? money(Number(r.po_amount)) : '—'}</td>
+                        <td className="px-4 py-3">
+                          {st ? <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>{st.label}</span>
+                              : <span className="text-xs text-gray-400 dark:text-gray-500">{tr('Non facturé', 'Not invoiced')}</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => editing === r.id ? setEditing(null) : startEdit(r)}
+                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                            {editing === r.id ? '✕' : (inv ? tr('Modifier', 'Edit') : tr('+ Créer', '+ Create'))}
+                          </button>
+                        </td>
+                      </tr>
+                      {editing === r.id && (
+                        <tr className="border-t border-blue-100 bg-blue-50/60 dark:border-blue-500/20 dark:bg-blue-500/5">
+                          <td colSpan={8} className="px-4 py-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('N° facture', 'Invoice #')}</label>
+                                <input className={inp} value={form.invoice_number || ''} onChange={e => setForm((f: any) => ({ ...f, invoice_number: e.target.value }))} placeholder="F-2026-001" />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Date facture', 'Invoice date')}</label>
+                                <input type="date" className={inp} value={form.invoice_date || ''} onChange={e => setForm((f: any) => ({ ...f, invoice_date: e.target.value }))} />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Échéance', 'Due date')}</label>
+                                <input type="date" className={inp} value={form.due_date || ''} onChange={e => setForm((f: any) => ({ ...f, due_date: e.target.value }))} />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Statut', 'Status')}</label>
+                                <select className={inp} value={form.status || 'draft'} onChange={e => setForm((f: any) => ({ ...f, status: e.target.value }))}>
+                                  <option value="draft">{tr('Brouillon', 'Draft')}</option>
+                                  <option value="sent">{tr('Envoyée', 'Sent')}</option>
+                                  <option value="paid">{tr('Payée', 'Paid')}</option>
+                                  <option value="cancelled">{tr('Annulée', 'Cancelled')}</option>
+                                </select>
+                              </div>
+                              {form.status === 'paid' && (
+                                <div>
+                                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Date paiement', 'Payment date')}</label>
+                                  <input type="date" className={inp} value={form.paid_date || ''} onChange={e => setForm((f: any) => ({ ...f, paid_date: e.target.value }))} />
+                                </div>
+                              )}
+                              <div className="flex items-end">
+                                <button onClick={() => saveInvoice(r.id)} disabled={saving}
+                                  className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Notes</label>
+                              <input className={inp} value={form.notes || ''} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder={tr('Notes internes...', 'Internal notes...')} />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                {rows.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">{tr('Aucun projet.', 'No project.')}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
