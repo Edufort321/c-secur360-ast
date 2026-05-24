@@ -33,7 +33,7 @@ export const isSupabaseConfigured = () => {
 // Helper: Vérifier la connexion
 export const checkConnection = async () => {
   try {
-    const { error } = await supabase.from('personnel').select('count', { count: 'exact', head: true });
+    const { error } = await supabase.from('planner_personnel').select('count', { count: 'exact', head: true });
     return !error;
   } catch (error) {
     console.error('L Supabase non accessible:', error);
