@@ -221,40 +221,51 @@ export default function ConfinedSpacePublicView() {
               </p>
             )}
             <div className="space-y-2">
-              {atm.readings.map((r: any, i: number) => (
+              {atm.readings.map((r: any, i: number) => {
+                // Support both old field names (r.o2) and new ones (r.readings.oxygen)
+                const rv = r.readings ?? r;
+                const o2  = rv.oxygen   ?? r.o2;
+                const lel = rv.combustibleGas ?? r.lel;
+                const co  = rv.carbonMonoxide  ?? r.co;
+                const h2s = rv.hydrogenSulfide  ?? r.h2s;
+                const ts  = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : (r.time ?? '');
+                const tester = r.testedBy ?? r.tester;
+                return (
                 <div key={r.id ?? i} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
                   <p className="font-semibold text-slate-700 mb-2">
-                    Lecture {i + 1} — {r.time ?? ''}
-                    {r.tester ? ` — ${r.tester}` : ''}
+                    Lecture {i + 1} {ts ? `— ${ts}` : ''}
+                    {tester ? ` — ${tester}` : ''}
+                    {r.location ? ` — ${r.location}` : ''}
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {r.o2 != null && (
-                      <div className={`rounded px-2 py-1 text-center ${r.o2 >= 19.5 && r.o2 <= 23 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                        <div className="font-bold">{r.o2}%</div>
+                    {o2 != null && (
+                      <div className={`rounded px-2 py-1 text-center ${o2 >= 19.5 && o2 <= 23 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                        <div className="font-bold">{o2}%</div>
                         <div className="text-slate-500">O₂</div>
                       </div>
                     )}
-                    {r.lel != null && (
-                      <div className={`rounded px-2 py-1 text-center ${r.lel < 10 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                        <div className="font-bold">{r.lel}%</div>
+                    {lel != null && (
+                      <div className={`rounded px-2 py-1 text-center ${lel < 10 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                        <div className="font-bold">{lel}%</div>
                         <div className="text-slate-500">LIE</div>
                       </div>
                     )}
-                    {r.co != null && (
-                      <div className={`rounded px-2 py-1 text-center ${r.co < 25 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                        <div className="font-bold">{r.co} ppm</div>
+                    {co != null && (
+                      <div className={`rounded px-2 py-1 text-center ${co < 35 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                        <div className="font-bold">{co} ppm</div>
                         <div className="text-slate-500">CO</div>
                       </div>
                     )}
-                    {r.h2s != null && (
-                      <div className={`rounded px-2 py-1 text-center ${r.h2s < 1 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                        <div className="font-bold">{r.h2s} ppm</div>
+                    {h2s != null && (
+                      <div className={`rounded px-2 py-1 text-center ${h2s < 10 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                        <div className="font-bold">{h2s} ppm</div>
                         <div className="text-slate-500">H₂S</div>
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </Section>
         )}
