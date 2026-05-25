@@ -2681,7 +2681,6 @@ function PhotoCapture({ photos, onChange, readOnly, language, label }: {
         ref={fileRef}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         className="hidden"
         onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}

@@ -1690,7 +1690,7 @@ const Step1ProjectInfo = memo(({
         }
       `}</style>
       {/* Input caché pour capture photo */}
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} />
       
       {/* Header uniforme */}
       <Header 
