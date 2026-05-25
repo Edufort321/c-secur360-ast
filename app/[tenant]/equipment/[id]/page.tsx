@@ -65,6 +65,7 @@ export default function EquipmentPublicPage() {
   const [inspections, setInspections] = useState<InspRow[]>([]);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sb) return;
@@ -175,7 +176,7 @@ export default function EquipmentPublicPage() {
               <div className="flex gap-2 mt-2 flex-wrap">
                 {equipment.equipment_photos.map((src, i) => (
                   <img key={i} src={src} alt="" className="h-16 w-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
-                    onClick={() => window.open(src, '_blank')} />
+                    onClick={() => setLightbox(src)} />
                 ))}
               </div>
             )}
@@ -278,6 +279,16 @@ export default function EquipmentPublicPage() {
         <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-8 mx-auto mb-1 opacity-60" />
         c-secur360.ca
       </footer>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

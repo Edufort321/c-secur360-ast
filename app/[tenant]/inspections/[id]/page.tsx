@@ -79,9 +79,10 @@ export default function InspectionPublicPage() {
   const id      = params.id as string;
   const { lang } = useLanguage();
 
-  const [row,     setRow]     = useState<InspRow | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [row,      setRow]     = useState<InspRow | null>(null);
+  const [loading,  setLoading] = useState(true);
+  const [logoUrl,  setLogoUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const fr = lang === 'fr';
 
@@ -219,7 +220,7 @@ export default function InspectionPublicPage() {
               {photos.slice(0, 4).map((src, i) => (
                 <img key={i} src={src} alt={`Photo ${i + 1}`}
                   className="w-full h-36 object-cover cursor-pointer"
-                  onClick={() => window.open(src, '_blank')} />
+                  onClick={() => setLightbox(src)} />
               ))}
             </div>
           )}
@@ -310,7 +311,7 @@ export default function InspectionPublicPage() {
                     {photo && (
                       <img src={photo} alt="Défaut"
                         className="h-24 rounded-lg object-cover border border-slate-200 cursor-pointer"
-                        onClick={() => window.open(photo, '_blank')} />
+                        onClick={() => setLightbox(photo)} />
                     )}
 
                     {/* Corrective action */}
@@ -388,6 +389,16 @@ export default function InspectionPublicPage() {
         </div>
 
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

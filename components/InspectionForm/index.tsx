@@ -17,6 +17,7 @@ import {
 } from './checklists';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { uploadPhoto } from '@/lib/utils/photo';
 
 // ─── Supabase ────────────────────────────────────────────────────────────────
 
@@ -127,30 +128,6 @@ const RESULT_CONFIG: Record<OverallResult, { label: string; color: string; bgCol
   incomplete:   { label: 'En cours',         color: 'text-gray-600',   bgColor: 'bg-gray-100 border-gray-300',     Icon: ClipboardCheck },
 };
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
-
-async function compressPhoto(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const MAX = 900;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', 0.72));
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Erreur chargement image')); };
-    img.src = url;
-  });
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ResultBadge({ result, size = 'sm' }: { result: OverallResult | null; size?: 'sm' | 'md' }) {
@@ -196,21 +173,27 @@ function ResultToggle({ value, onChange, disabled }: {
   );
 }
 
-function PhotoInput({ value, onChange, disabled, label }: {
+function PhotoInput({ value, onChange, onUpload, disabled, label, onOpenLightbox }: {
   value: string | null;
   onChange: (v: string | null) => void;
+  onUpload?: (file: File) => Promise<string>;
   disabled?: boolean;
   label?: string;
+  onOpenLightbox?: (src: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div className="flex items-center gap-2">
       <input
-        ref={ref} type="file" accept="image/*"         className="hidden"
+        ref={ref} type="file" accept="image/*" className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
-          try { onChange(await compressPhoto(file)); } catch { /* ignore */ }
+          try {
+            if (onUpload) {
+              onChange(await onUpload(file));
+            }
+          } catch { /* ignore */ }
           e.target.value = '';
         }}
         disabled={disabled}
@@ -218,7 +201,7 @@ function PhotoInput({ value, onChange, disabled, label }: {
       {value ? (
         <div className="flex items-center gap-1.5">
           <img src={value} alt="" className="h-10 w-10 rounded object-cover border border-gray-200 cursor-pointer"
-            onClick={() => window.open(value, '_blank')} />
+            onClick={() => onOpenLightbox ? onOpenLightbox(value) : window.open(value, '_blank')} />
           {!disabled && (
             <button type="button" onClick={() => onChange(null)} className="text-gray-400 hover:text-red-500">
               <Trash2 size={13} />
@@ -395,8 +378,15 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
   const [logoUrl, setLogoUrl]             = useState<string | null>(null);
   const [deletingInspection, setDeletingInspection] = useState(false);
   const [linkedEquipment, setLinkedEquipment] = useState<LinkedEquipment | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const savingRef = useRef(false);
+
+  // ── Upload helper ─────────────────────────────────────────────────────────
+  async function handleUploadPhoto(file: File): Promise<string> {
+    if (!supabase) throw new Error('Supabase not initialized');
+    return uploadPhoto(file, tenant, supabase);
+  }
 
   // ── Tenant logo ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -758,8 +748,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
         <div className="max-w-3xl mx-auto px-4">
 
           {/* Row 1: back | title+badge | action buttons */}
-          <div className="py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="py-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <button onClick={onClose} className="text-gray-500 hover:text-gray-700 shrink-0">
                 <ArrowLeft size={20} />
               </button>
@@ -781,7 +771,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
             </div>
 
             {/* Header right buttons */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {/* Toast */}
               {saveMsg && (
                 <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1 font-medium">
@@ -795,14 +785,14 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                   <button
                     disabled={saving}
                     onClick={() => handleSave('draft')}
-                    className="px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="px-2.5 py-1.5 text-xs border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
                   >
                     {I.draft}
                   </button>
                   <button
                     disabled={saving}
                     onClick={() => handleSave('submitted')}
-                    className="px-4 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50 whitespace-nowrap"
                   >
                     {saving ? I.saving : I.submit}
                   </button>
@@ -932,7 +922,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                     {linkedEquipment.equipment_photos?.[0] && (
                       <img src={linkedEquipment.equipment_photos[0]} alt=""
                         className="h-14 w-14 rounded-lg object-cover border border-gray-200 shrink-0 cursor-pointer"
-                        onClick={() => window.open(linkedEquipment.equipment_photos[0], '_blank')} />
+                        onClick={() => setLightbox(linkedEquipment.equipment_photos[0])} />
                     )}
                   </div>
                   {/* Norme + réglementation */}
@@ -1134,7 +1124,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                       <div key={idx} className="relative">
                         <img src={src} alt={`Équipement ${idx + 1}`}
                           className="h-24 w-24 rounded-xl border border-gray-200 object-cover cursor-pointer"
-                          onClick={() => window.open(src, '_blank')} />
+                          onClick={() => setLightbox(src)} />
                         {!isReadOnly && (
                           <button
                             onClick={() => setForm(f => ({ ...f, equipmentPhotos: f.equipmentPhotos.filter((_, i) => i !== idx) }))}
@@ -1150,11 +1140,12 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                         {I.addPhoto}
                         <input type="file" accept="image/*" multiple className="hidden"
                           onChange={async (e) => {
+                            if (!supabase) return;
                             const files = Array.from(e.target.files ?? []);
                             for (const file of files) {
                               try {
-                                const b64 = await compressPhoto(file);
-                                setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, b64] }));
+                                const url = await uploadPhoto(file, tenant, supabase);
+                                setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, url] }));
                               } catch { /* ignore */ }
                             }
                             e.target.value = '';
@@ -1252,6 +1243,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                                       <PhotoInput
                                         value={form.itemPhotos[item.id] ?? null}
                                         onChange={v => setItemPhoto(item.id, v)}
+                                        onUpload={handleUploadPhoto}
+                                        onOpenLightbox={src => setLightbox(src)}
                                         label="Photo du bris"
                                       />
                                     </div>
@@ -1264,7 +1257,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                                       {form.itemPhotos[item.id] && (
                                         <img src={form.itemPhotos[item.id]} alt="Bris"
                                           className="h-16 rounded object-cover border border-gray-200 cursor-pointer"
-                                          onClick={() => window.open(form.itemPhotos[item.id], '_blank')} />
+                                          onClick={() => setLightbox(form.itemPhotos[item.id])} />
                                       )}
                                     </div>
                                   )}
@@ -1634,6 +1627,15 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
         </div>
       )}
 
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

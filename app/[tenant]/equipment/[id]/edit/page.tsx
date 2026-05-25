@@ -10,7 +10,7 @@ export default function EquipmentEditPage() {
       tenant={tenant}
       equipmentId={id}
       onClose={() => router.push(`/${tenant}/equipment/${id}`)}
-      onSaved={() => router.push(`/${tenant}/equipment/${id}`)}
+      onSaved={() => {/* rester sur le formulaire — le Code QR reste visible */}}
     />
   );
 }

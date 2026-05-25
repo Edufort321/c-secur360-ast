@@ -14,11 +14,11 @@ function EquipmentNewInner() {
     <EquipmentForm
       tenant={tenant}
       onClose={() => router.push(`/${tenant}/equipment`)}
-      onSaved={(id) => router.push(
-        redirectToInspect
-          ? `/${tenant}/equipment/${id}/inspect`
-          : `/${tenant}/equipment/${id}`
-      )}
+      onSaved={(id) => {
+        // Si redirect=inspect, naviguer vers l'inspection; sinon rester sur le formulaire
+        // pour que la section Code QR soit visible immédiatement après la sauvegarde.
+        if (redirectToInspect) router.push(`/${tenant}/equipment/${id}/inspect`);
+      }}
     />
   );
 }

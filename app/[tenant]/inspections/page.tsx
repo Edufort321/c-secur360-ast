@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   ClipboardCheck, Plus, Search, Clock, CheckCircle, XCircle,
   AlertTriangle, AlertOctagon, Loader2, ChevronRight, Wrench,
-  CalendarClock, TrendingUp,
+  CalendarClock, TrendingUp, QrCode, Edit2, SlidersHorizontal,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -76,10 +76,12 @@ export default function InspectionsPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
 
-  const [cards,    setCards]    = useState<EquipmentCard[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [query,    setQuery]    = useState('');
-  const [typeFilter, setTypeFilter] = useState<InspectionType | 'all'>('all');
+  const [cards,       setCards]       = useState<EquipmentCard[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [query,       setQuery]       = useState('');
+  const [typeFilter,  setTypeFilter]  = useState<InspectionType | 'all'>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [lightbox,    setLightbox]    = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
@@ -210,38 +212,50 @@ export default function InspectionsPage() {
           ))}
         </div>
 
-        {/* Filtres */}
-        <div className="mb-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        {/* Barre recherche + bouton filtres */}
+        <div className="mb-4 flex gap-2">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
             <Search size={15} className="text-slate-400 shrink-0" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Rechercher (nom, série, emplacement, inspecteur…)"
+              placeholder="Rechercher (nom, série, emplacement…)"
               className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
           </div>
-
           {presentTypes.length > 0 && (
-            <div className="flex gap-1 flex-wrap rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-              <button
-                onClick={() => setTypeFilter('all')}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === 'all' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-              >
-                Tous les types
-              </button>
-              {presentTypes.map(t => {
-                const opt = INSPECTION_TYPE_OPTIONS.find(o => o.value === t);
-                return opt ? (
-                  <button key={t} onClick={() => setTypeFilter(t)}
-                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === t ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
-                    {opt.label}
-                  </button>
-                ) : null;
-              })}
-            </div>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium shadow-sm transition ${showFilters || typeFilter !== 'all' ? 'border-teal-400 bg-teal-50 text-teal-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              <SlidersHorizontal size={15} />
+              {typeFilter !== 'all'
+                ? INSPECTION_TYPE_OPTIONS.find(o => o.value === typeFilter)?.label ?? 'Filtre'
+                : 'Filtres'}
+            </button>
           )}
         </div>
+
+        {/* Chips de type — panneau dépliable */}
+        {showFilters && presentTypes.length > 0 && (
+          <div className="mb-4 flex gap-1 flex-wrap rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+            <button
+              onClick={() => { setTypeFilter('all'); setShowFilters(false); }}
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === 'all' ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              Tous les types
+            </button>
+            {presentTypes.map(t => {
+              const opt = INSPECTION_TYPE_OPTIONS.find(o => o.value === t);
+              return opt ? (
+                <button key={t} onClick={() => { setTypeFilter(t); setShowFilters(false); }}
+                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === t ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  {opt.label}
+                </button>
+              ) : null;
+            })}
+          </div>
+        )}
 
         {/* Liste */}
         {loading ? (
@@ -275,11 +289,13 @@ export default function InspectionsPage() {
                   {/* Barre urgence */}
                   <div className={`h-1 ${URGENCY_BAR[urgency]}`} />
 
-                  <div className="flex items-center gap-4 px-4 py-4">
-                    {/* Photo */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* Photo — cliquable lightbox */}
                     {eq.equipment_photos?.[0] ? (
-                      <img src={eq.equipment_photos[0]} alt=""
-                        className="h-12 w-12 rounded-xl object-cover border border-gray-100 shrink-0" />
+                      <button onClick={() => setLightbox(eq.equipment_photos[0])} className="shrink-0">
+                        <img src={eq.equipment_photos[0]} alt=""
+                          className="h-12 w-12 rounded-xl object-cover border border-gray-100" />
+                      </button>
                     ) : (
                       <div className="h-12 w-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
                         <Wrench size={18} className="text-teal-500" />
@@ -318,7 +334,7 @@ export default function InspectionsPage() {
                           {daysLeft < 0
                             ? `En retard de ${Math.abs(daysLeft)} jour${Math.abs(daysLeft) > 1 ? 's' : ''}`
                             : daysLeft === 0 ? 'Inspection due aujourd\'hui'
-                            : `Prochaine inspection dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`}
+                            : `Prochaine dans ${daysLeft} j.`}
                         </div>
                       )}
 
@@ -330,15 +346,27 @@ export default function InspectionsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-1.5 shrink-0">
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {/* Inspecter */}
                       <Link href={`/${tenant}/equipment/${eq.id}/inspect`}
                         className="flex items-center gap-1 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg">
                         <Plus size={12} /> Inspecter
                       </Link>
+                      {/* Modifier la fiche */}
+                      <Link href={`/${tenant}/equipment/${eq.id}/edit`}
+                        className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-lg">
+                        <Edit2 size={11} /> Modifier
+                      </Link>
+                      {/* QR / Fiche publique */}
+                      <Link href={`/${tenant}/equipment/${eq.id}`}
+                        className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium rounded-lg">
+                        <QrCode size={11} /> Fiche QR
+                      </Link>
+                      {/* Dernière inspection */}
                       {latest && (
                         <Link href={`/${tenant}/inspections/${latest.id}/edit`}
-                          className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-lg">
-                          <ChevronRight size={12} /> Dernière
+                          className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium rounded-lg">
+                          <ChevronRight size={11} /> Dernière
                         </Link>
                       )}
                     </div>
@@ -349,6 +377,17 @@ export default function InspectionsPage() {
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain"
+            onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

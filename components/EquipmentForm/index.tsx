@@ -10,7 +10,7 @@ import {
 } from '@/components/InspectionForm/checklists';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { compressPhoto } from '@/lib/utils/photo';
+import { uploadPhoto } from '@/lib/utils/photo';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -77,6 +77,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
   const [logoUrl,   setLogoUrl]   = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<string | null>(equipmentId ?? null);
   const [copied,    setCopied]    = useState(false);
+  const [lightbox,  setLightbox]  = useState<string | null>(null);
 
   // Load logo
   useEffect(() => {
@@ -307,7 +308,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
                 <div key={idx} className="relative">
                   <img src={src} alt={`Photo ${idx + 1}`}
                     className="h-24 w-24 rounded-xl border border-gray-200 object-cover cursor-pointer"
-                    onClick={() => window.open(src, '_blank')} />
+                    onClick={() => setLightbox(src)} />
                   <button onClick={() => setForm(f => ({ ...f, equipmentPhotos: f.equipmentPhotos.filter((_, i) => i !== idx) }))}
                     className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow text-gray-500 hover:text-red-500">
                     <Trash2 size={12} />
@@ -319,21 +320,12 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
                 {fr ? 'Ajouter' : 'Add'}
                 <input type="file" accept="image/*" multiple className="hidden"
                   onChange={async (e) => {
+                    if (!supabase) return;
                     const files = Array.from(e.target.files ?? []);
-                    let tooLarge = 0;
                     const results = await Promise.all(files.map(async f => {
-                      try { return await compressPhoto(f); }
-                      catch (err) {
-                        if (err instanceof Error && err.message === 'PHOTO_TOO_LARGE') tooLarge++;
-                        return null;
-                      }
+                      try { return await uploadPhoto(f, tenant, supabase); }
+                      catch { return null; }
                     }));
-                    if (tooLarge > 0) {
-                      setMsg(fr
-                        ? `Photo trop volumineuse — prenez-la en résolution standard ou en mode portrait.`
-                        : `Photo too large — use standard resolution or portrait mode.`);
-                      setTimeout(() => setMsg(''), 5000);
-                    }
                     const valid = results.filter(Boolean) as string[];
                     if (valid.length > 0) setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, ...valid] }));
                     e.target.value = '';
@@ -414,6 +406,16 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
         )}
 
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-h-full max-w-full rounded-xl object-contain" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }
