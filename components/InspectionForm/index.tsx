@@ -335,17 +335,22 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   }
 
   function setCA(itemId: string, patch: Partial<CorrectiveAction>) {
-    setForm(f => ({
-      ...f,
-      correctiveActions: {
-        ...f.correctiveActions,
-        [itemId]: {
-          note: '', deadline: '', assigned: '', usable: false,
-          ...f.correctiveActions[itemId],
-          ...patch,
+    setForm(f => {
+      const existing = f.correctiveActions[itemId];
+      return {
+        ...f,
+        correctiveActions: {
+          ...f.correctiveActions,
+          [itemId]: {
+            note:     existing?.note     ?? '',
+            deadline: existing?.deadline ?? '',
+            assigned: existing?.assigned ?? '',
+            usable:   existing?.usable   ?? false,
+            ...patch,
+          },
         },
-      },
-    }));
+      };
+    });
   }
 
   function toggleSection(sectionId: string) {
