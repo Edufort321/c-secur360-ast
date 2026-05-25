@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const BUCKET    = 'equipment-photos';
-const MAX_B64   = 2_000_000; // 2 MB max pour le fallback base64
+const BUCKET  = 'equipment-photos';
+const MAX_B64 = 2_000_000;
 
 // ─── Upload vers Supabase Storage (fallback base64 si bucket absent) ──────────
 
@@ -11,16 +11,10 @@ export async function uploadPhoto(
   supabase: SupabaseClient,
 ): Promise<string> {
   const blob = await compressToBlob(file);
-
-  // Si compressToBlob a retourné le fichier original (HEIC, canvas raté),
-  // on utilise le vrai type MIME + extension du fichier.
+  // compressToBlob retourne toujours un JPEG (ou original si tout a échoué)
   const compressed = blob !== file;
   const mime = compressed ? 'image/jpeg' : (file.type || 'image/jpeg');
-  const ext  = mime === 'image/png'  ? 'png'
-             : mime === 'image/webp' ? 'webp'
-             : mime === 'image/heic' ? 'heic'
-             : mime === 'image/heif' ? 'heif'
-             : 'jpg';
+  const ext  = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
 
   try {
     const path = `${tenant}/${crypto.randomUUID()}.${ext}`;
@@ -31,22 +25,37 @@ export async function uploadPhoto(
     if (!error) {
       return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
     }
-    // Bucket absent ou autre erreur Storage → fallback base64
-  } catch {
-    // Network error → fallback base64
-  }
+  } catch { /* réseau → fallback */ }
 
-  // Fallback base64 (seulement si Storage indisponible — HEIC peut échouer ici)
-  if (!compressed) throw new Error('HEIC_NO_STORAGE');
+  if (!compressed) throw new Error('PHOTO_NO_STORAGE');
   return blobToDataUrl(blob);
 }
 
-// ─── Compression vers Blob ────────────────────────────────────────────────────
+// ─── Compression vers JPEG Blob ───────────────────────────────────────────────
 
 export async function compressToBlob(file: File): Promise<Blob> {
+  // HEIC/HEIF : canvas ne peut pas décoder → convertir en JPEG d'abord
+  const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
+    || /\.(heic|heif)$/i.test(file.name);
+
+  if (isHeic) {
+    try {
+      const { default: heic2any } = await import('heic2any');
+      const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 });
+      const jpeg = Array.isArray(result) ? result[0] : result;
+      // Compresser davantage via canvas
+      const asFile = new File([jpeg], 'photo.jpg', { type: 'image/jpeg' });
+      const dataUrl = await tryCanvas(asFile);
+      if (dataUrl) return await fetch(dataUrl).then(r => r.blob());
+      return jpeg;
+    } catch {
+      // heic2any indisponible → retourner l'original (Storage peut le stocker)
+      return file;
+    }
+  }
+
   const dataUrl = await tryCanvas(file);
   if (dataUrl) return await fetch(dataUrl).then(r => r.blob());
-  // Fallback : fichier original (Storage peut gérer jusqu'à 10 MB)
   return file;
 }
 
@@ -72,7 +81,6 @@ async function tryCanvas(file: File): Promise<string | null> {
           if (!ctx) continue;
           ctx.drawImage(img, 0, 0, w, h);
           const result = canvas.toDataURL('image/jpeg', quality);
-          // drawImage échoue silencieusement sur iOS OOM → canvas vide
           if (!result || result === 'data:,' || result.length < 200) continue;
           URL.revokeObjectURL(url);
           resolve(result);
