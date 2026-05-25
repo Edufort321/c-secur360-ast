@@ -1,6 +1,7 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
+  "toolbar": { "enabled": false },
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   
