@@ -12,11 +12,21 @@ export async function uploadPhoto(
 ): Promise<string> {
   const blob = await compressToBlob(file);
 
+  // Si compressToBlob a retourné le fichier original (HEIC, canvas raté),
+  // on utilise le vrai type MIME + extension du fichier.
+  const compressed = blob !== file;
+  const mime = compressed ? 'image/jpeg' : (file.type || 'image/jpeg');
+  const ext  = mime === 'image/png'  ? 'png'
+             : mime === 'image/webp' ? 'webp'
+             : mime === 'image/heic' ? 'heic'
+             : mime === 'image/heif' ? 'heif'
+             : 'jpg';
+
   try {
-    const path = `${tenant}/${crypto.randomUUID()}.jpg`;
+    const path = `${tenant}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
       .from(BUCKET)
-      .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      .upload(path, blob, { contentType: mime, upsert: false });
 
     if (!error) {
       return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
@@ -26,7 +36,8 @@ export async function uploadPhoto(
     // Network error → fallback base64
   }
 
-  // Fallback : convertir le blob en base64 (compatible ancien fonctionnement)
+  // Fallback base64 (seulement si Storage indisponible — HEIC peut échouer ici)
+  if (!compressed) throw new Error('HEIC_NO_STORAGE');
   return blobToDataUrl(blob);
 }
 
