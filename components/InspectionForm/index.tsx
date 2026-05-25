@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
   ClipboardCheck, ArrowLeft, AlertTriangle, CheckCircle, XCircle,
@@ -14,6 +14,8 @@ import {
   calcOverallResult, getNonConformities,
   type InspectionType, type ItemResult, type OverallResult, type InspectionFrequency,
 } from './checklists';
+import { PortalHeader } from '@/components/PortalHeader';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ─── Supabase ────────────────────────────────────────────────────────────────
 
@@ -233,7 +235,7 @@ function PhotoInput({ value, onChange, disabled, label }: {
 
 // ─── AddCustomItemRow ────────────────────────────────────────────────────────
 
-function AddCustomItemRow({ onAdd }: { onAdd: (label: string) => void }) {
+function AddCustomItemRow({ onAdd, placeholder, addLabel }: { onAdd: (label: string) => void; placeholder: string; addLabel: string }) {
   const [label, setLabel] = useState('');
   function submit() {
     const t = label.trim();
@@ -248,7 +250,7 @@ function AddCustomItemRow({ onAdd }: { onAdd: (label: string) => void }) {
         value={label}
         onChange={e => setLabel(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-        placeholder="Nouveau point d'inspection…"
+        placeholder={placeholder}
         className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
       />
       <button
@@ -258,7 +260,7 @@ function AddCustomItemRow({ onAdd }: { onAdd: (label: string) => void }) {
         className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-40"
       >
         <Check size={13} />
-        Ajouter
+        {addLabel}
       </button>
     </div>
   );
@@ -277,6 +279,81 @@ interface Props {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function InspectionForm({ tenant, inspectionId, onClose, onSaved: _onSaved, readOnly }: Props) {
+  const { lang } = useLanguage();
+
+  const I = useMemo(() => ({
+    fr: lang === 'fr',
+    tabForm:       lang === 'fr' ? 'Formulaire'       : 'Form',
+    tabQR:         lang === 'fr' ? 'Code QR'          : 'QR Code',
+    tabHistory:    lang === 'fr' ? 'Historique'       : 'History',
+    newInspection: lang === 'fr' ? 'Nouvelle inspection' : 'New inspection',
+    draft:         lang === 'fr' ? 'Brouillon'        : 'Draft',
+    submit:        lang === 'fr' ? 'Soumettre'        : 'Submit',
+    saving:        lang === 'fr' ? 'Sauvegarde…'      : 'Saving…',
+    saved:         lang === 'fr' ? 'Enregistré'       : 'Saved',
+    submitted:     lang === 'fr' ? 'Inspection soumise' : 'Inspection submitted',
+    printQR:       lang === 'fr' ? 'Imprimer QR'      : 'Print QR',
+    print:         lang === 'fr' ? 'Imprimer'         : 'Print',
+    share:         lang === 'fr' ? 'Partager'         : 'Share',
+    delete:        lang === 'fr' ? 'Supprimer cette inspection' : 'Delete this inspection',
+    confirmDelete: lang === 'fr' ? 'Supprimer cette inspection ? Cette action est irréversible.' : 'Delete this inspection? This action cannot be undone.',
+    // Section 1
+    equipInfo:     lang === 'fr' ? 'Informations équipement' : 'Equipment information',
+    eqType:        lang === 'fr' ? 'Type d\'équipement'      : 'Equipment type',
+    standard:      lang === 'fr' ? 'Norme'                   : 'Standard',
+    eqName:        lang === 'fr' ? 'Nom / Désignation'       : 'Name / Description',
+    eqSerial:      lang === 'fr' ? 'N° de série'             : 'Serial #',
+    eqLocation:    lang === 'fr' ? 'Emplacement / Chantier'  : 'Location / Site',
+    inspDate:      lang === 'fr' ? 'Date d\'inspection'      : 'Inspection date',
+    inspector:     lang === 'fr' ? 'Inspecteur'              : 'Inspector',
+    frequency:     lang === 'fr' ? 'Fréquence d\'inspection' : 'Inspection frequency',
+    selectFreq:    lang === 'fr' ? '— Sélectionner —'        : '— Select —',
+    photos:        lang === 'fr' ? 'Photos de l\'équipement' : 'Equipment photos',
+    addPhoto:      lang === 'fr' ? 'Ajouter'                 : 'Add',
+    noPhoto:       lang === 'fr' ? 'Aucune photo'            : 'No photo',
+    // Section 2
+    checklist:     lang === 'fr' ? 'Liste de vérification'   : 'Checklist',
+    itemsAnswered: lang === 'fr' ? 'items répondus'          : 'items answered',
+    withdrawal:    lang === 'fr' ? 'retrait'                 : 'withdrawal',
+    nonConformes:  lang === 'fr' ? 'non-conforme'            : 'non-conforming',
+    addPoints:     lang === 'fr' ? 'Points additionnels'     : 'Additional points',
+    pointCount:    (n: number) => lang === 'fr' ? `${n} point${n !== 1 ? 's' : ''}` : `${n} point${n !== 1 ? 's' : ''}`,
+    newPoint:      lang === 'fr' ? 'Nouveau point d\'inspection…' : 'New inspection point…',
+    add:           lang === 'fr' ? 'Ajouter'                 : 'Add',
+    // Section 3 — NC
+    ncDetected:    (n: number) => lang === 'fr' ? `Non-conformités détectées (${n})` : `Non-conformities detected (${n})`,
+    caTitle:       lang === 'fr' ? 'Action corrective'       : 'Corrective action',
+    caDesc:        lang === 'fr' ? 'Description de l\'action' : 'Action description',
+    caPlaceholder: lang === 'fr' ? 'Mesure corrective prévue ou prise…' : 'Corrective measure planned or taken…',
+    caAssigned:    lang === 'fr' ? 'Responsable'             : 'Responsible',
+    caDeadline:    lang === 'fr' ? 'Échéance'                : 'Deadline',
+    caUsable:      (d: string) => lang === 'fr' ? `Utilisation autorisée jusqu'à l'échéance${d ? ` (${d})` : ''}` : `Use authorized until deadline${d ? ` (${d})` : ''}`,
+    caAction:      lang === 'fr' ? 'Action :'                : 'Action:',
+    caResponsible: lang === 'fr' ? 'Responsable :'           : 'Responsible:',
+    caDeadlineLabel: lang === 'fr' ? 'Échéance :'            : 'Deadline:',
+    caUsableConfirm: lang === 'fr' ? '✓ Utilisation autorisée jusqu\'à l\'échéance' : '✓ Use authorized until deadline',
+    // Section 4
+    notes:         lang === 'fr' ? 'Notes et observations'  : 'Notes and observations',
+    notesPlaceholder: lang === 'fr' ? 'Observations générales, actions correctives prévues…' : 'General observations, planned corrective actions…',
+    // Section 5
+    overallResult: lang === 'fr' ? 'Résultat global'        : 'Overall result',
+    // QR tab
+    qrSubmitFirst: lang === 'fr' ? 'Soumettez l\'inspection pour générer le code QR.' : 'Submit the inspection to generate the QR code.',
+    qrInstruction: lang === 'fr' ? 'Imprimez ce QR et fixez-le sur l\'équipement.\nScannez pour accéder à la dernière inspection.' : 'Print this QR and attach it to the equipment.\nScan to access the latest inspection.',
+    // History tab
+    prevInspections: lang === 'fr' ? 'Inspections précédentes' : 'Previous inspections',
+    serie:           lang === 'fr' ? '— série'               : '— serial',
+    noHistory:       lang === 'fr' ? 'Aucune inspection précédente trouvée.' : 'No previous inspections found.',
+    // eqType options
+    eqTypePlaceholder: lang === 'fr' ? 'ex. Chariot #12'    : 'e.g. Forklift #12',
+    serialPlaceholder: lang === 'fr' ? 'ex. SN-2024-ABC'    : 'e.g. SN-2024-ABC',
+    locationPlaceholder: lang === 'fr' ? 'ex. Site A, Zone 3' : 'e.g. Site A, Zone 3',
+    inspectorPlaceholder: lang === 'fr' ? 'Nom complet'     : 'Full name',
+    defectPlaceholder: lang === 'fr' ? 'Description du défaut (optionnel)' : 'Defect description (optional)',
+    photoBtn:      lang === 'fr' ? 'Prendre ou sélectionner une photo' : 'Take or select a photo',
+    photoDefect:   lang === 'fr' ? 'Photo du bris'          : 'Damage photo',
+  }), [lang]);
+
   const [existingRow, setExistingRow]     = useState<InspectionRow | null>(null);
   const [internalId, setInternalId]       = useState<string | undefined>(inspectionId);
   const [form, setForm]                   = useState<FormState>(EMPTY_FORM);
@@ -369,6 +446,18 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   const nonConformities = [...stdNCs, ...customNCs];
   const hasWithdrawal   = nonConformities.some(nc => nc.withdrawal);
   const isSaved         = !!internalId;
+
+  // ── Auto-expand NCs (surtout retrait) ────────────────────────────────────
+  const ncIds = nonConformities.map(nc => nc.id).join(',');
+  useEffect(() => {
+    if (!ncIds) return;
+    setExpandedNCs(prev => {
+      const next = new Set(prev);
+      ncIds.split(',').filter(Boolean).forEach(id => next.add(id));
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ncIds]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -522,7 +611,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
   async function handleDeleteSelf() {
     if (!internalId || !supabase) return;
-    if (!confirm('Supprimer cette inspection ? Cette action est irréversible.')) return;
+    if (!confirm(I.confirmDelete)) return;
     setDeletingInspection(true);
     await supabase.from('equipment_inspections').delete().eq('id', internalId);
     onClose();
@@ -587,16 +676,18 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   // ─────────────────────────────────────────────────────────────────────────
 
   const tabs: { id: TabId; label: string; Icon: React.ElementType }[] = [
-    { id: 'form',    label: 'Formulaire', Icon: FileText  },
-    { id: 'qr',      label: 'Code QR',    Icon: QrCode    },
-    { id: 'history', label: 'Historique', Icon: History   },
+    { id: 'form',    label: I.tabForm,    Icon: FileText  },
+    { id: 'qr',      label: I.tabQR,      Icon: QrCode    },
+    { id: 'history', label: I.tabHistory, Icon: History   },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <PortalHeader tenant={tenant} />
+
+      {/* ── Sticky sub-header (below PortalHeader) ────────────────────────── */}
+      <div className="bg-white border-b border-gray-200 sticky top-[80px] z-20">
         <div className="max-w-3xl mx-auto px-4">
 
           {/* Row 1: back | title+badge | action buttons */}
@@ -608,7 +699,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-900 truncate">
-                    {!internalId ? 'Nouvelle inspection' : existingRow?.inspection_number ?? '…'}
+                    {!internalId ? I.newInspection : existingRow?.inspection_number ?? '…'}
                   </span>
                   {existingRow?.overall_result && (
                     <ResultBadge result={existingRow.overall_result} />
@@ -639,14 +730,14 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                     onClick={() => handleSave('draft')}
                     className="px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Brouillon
+                    {I.draft}
                   </button>
                   <button
                     disabled={saving}
                     onClick={() => handleSave('submitted')}
                     className="px-4 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50"
                   >
-                    {saving ? 'Sauvegarde…' : 'Soumettre'}
+                    {saving ? I.saving : I.submit}
                   </button>
                 </>
               )}
@@ -657,7 +748,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium"
                 >
                   <Printer size={14} />
-                  Imprimer QR
+                  {I.printQR}
                 </button>
               )}
               {/* Delete button — visible when editing an existing record */}
@@ -666,7 +757,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   onClick={handleDeleteSelf}
                   disabled={deletingInspection}
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                  title="Supprimer cette inspection"
+                  title={I.delete}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -739,13 +830,13 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
               <FileText size={16} className="text-teal-600" />
-              <span className="text-sm font-semibold text-gray-700">Informations sur l&apos;équipement</span>
+              <span className="text-sm font-semibold text-gray-700">{I.equipInfo}</span>
             </div>
             <div className="p-5 space-y-4">
 
               {/* Type d'équipement */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Type d&apos;équipement *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqType} *</label>
                 <select
                   value={form.equipmentType}
                   disabled={!!internalId || isReadOnly}
@@ -757,24 +848,24 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   ))}
                 </select>
                 {checklist && (
-                  <p className="mt-1 text-xs text-gray-400">Norme : {checklist.standard} · {checklist.frequency}</p>
+                  <p className="mt-1 text-xs text-gray-400">{I.standard} : {checklist.standard} · {checklist.frequency}</p>
                 )}
               </div>
 
               {/* Nom / Série */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Nom / Désignation</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqName}</label>
                   <input type="text" value={form.equipmentName} disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, equipmentName: e.target.value }))}
-                    placeholder="ex. Chariot #12"
+                    placeholder={I.eqTypePlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">N° de série</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqSerial}</label>
                   <input type="text" value={form.equipmentSerial} disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, equipmentSerial: e.target.value }))}
-                    placeholder="ex. SN-2024-ABC"
+                    placeholder={I.serialPlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                 </div>
               </div>
@@ -782,14 +873,14 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
               {/* Emplacement / Date / Inspecteur / Fréquence */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Emplacement / Chantier</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqLocation}</label>
                   <input type="text" value={form.equipmentLocation} disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
-                    placeholder="ex. Site A, Zone 3"
+                    placeholder={I.locationPlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Date d&apos;inspection</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspDate}</label>
                   <input type="date" value={form.inspectionDate} disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, inspectionDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
@@ -798,21 +889,21 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Inspecteur</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
                   <input type="text" value={form.inspectorName} disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
-                    placeholder="Nom complet"
+                    placeholder={I.inspectorPlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Fréquence d&apos;inspection</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.frequency}</label>
                   <select
                     value={form.inspectionFrequency ?? ''}
                     disabled={isReadOnly}
                     onChange={e => setForm(f => ({ ...f, inspectionFrequency: (e.target.value || null) as InspectionFrequency | null }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
                   >
-                    <option value="">— Sélectionner —</option>
+                    <option value="">{I.selectFreq}</option>
                     {FREQUENCY_OPTIONS.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
@@ -822,7 +913,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
               {/* Photos équipement (multiple) */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Photos de l&apos;équipement</label>
+                <label className="block text-xs font-medium text-gray-600 mb-2">{I.photos}</label>
                 <div className="flex flex-wrap gap-2">
                   {form.equipmentPhotos.map((src, idx) => (
                     <div key={idx} className="relative">
@@ -856,7 +947,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                     </label>
                   )}
                   {isReadOnly && form.equipmentPhotos.length === 0 && (
-                    <p className="text-xs text-gray-400">Aucune photo</p>
+                    <p className="text-xs text-gray-400">{I.noPhoto}</p>
                   )}
                 </div>
               </div>
@@ -868,9 +959,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <ClipboardCheck size={16} className="text-teal-600" />
-                Liste de vérification
+                {I.checklist}
                 <span className="text-xs font-normal text-gray-400 ml-1">
-                  ({Object.keys(form.results).length} / {(checklist?.sections.flatMap(s => s.items).length ?? 0) + form.customItems.length} items répondus)
+                  ({Object.keys(form.results).length} / {(checklist?.sections.flatMap(s => s.items).length ?? 0) + form.customItems.length} {I.itemsAnswered})
                 </span>
               </h2>
 
@@ -889,7 +980,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                         <span className="text-sm font-semibold text-gray-800">{section.title}</span>
                         {sectionWithdraws > 0 && (
                           <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold border border-red-200">
-                            <AlertOctagon size={10} /> {sectionWithdraws} retrait
+                            <AlertOctagon size={10} /> {sectionWithdraws} {I.withdrawal}
                           </span>
                         )}
                         {sectionFails > sectionWithdraws && (
@@ -939,7 +1030,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                                         type="text"
                                         value={form.itemNotes[item.id] ?? ''}
                                         onChange={e => setItemNote(item.id, e.target.value)}
-                                        placeholder="Description du défaut (optionnel)"
+                                        placeholder={I.defectPlaceholder}
                                         className="w-full px-2 py-1 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-400"
                                       />
                                       <PhotoInput
@@ -981,8 +1072,8 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
               {(!isReadOnly || form.customItems.length > 0) && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-800">Points additionnels</span>
-                  <span className="text-xs text-gray-400">{form.customItems.length} point{form.customItems.length !== 1 ? 's' : ''}</span>
+                  <span className="text-sm font-semibold text-gray-800">{I.addPoints}</span>
+                  <span className="text-xs text-gray-400">{I.pointCount(form.customItems.length)}</span>
                 </div>
                 {form.customItems.length > 0 && (
                   <div className="divide-y divide-gray-50">
@@ -1012,10 +1103,14 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   </div>
                 )}
                 {!isReadOnly && (
-                  <AddCustomItemRow onAdd={label => {
-                    const id = `custom_${Date.now()}`;
-                    setForm(f => ({ ...f, customItems: [...f.customItems, { id, label }] }));
-                  }} />
+                  <AddCustomItemRow
+                    placeholder={I.newPoint}
+                    addLabel={I.add}
+                    onAdd={label => {
+                      const id = `custom_${Date.now()}`;
+                      setForm(f => ({ ...f, customItems: [...f.customItems, { id, label }] }));
+                    }}
+                  />
                 )}
               </div>
               )}
@@ -1029,7 +1124,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={16} className="text-red-600" />
                   <span className="text-sm font-semibold text-red-700">
-                    Non-conformités détectées ({nonConformities.length})
+                    {I.ncDetected(nonConformities.length)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1043,7 +1138,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                     className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-gray-50"
                   >
                     <Share2 size={12} />
-                    Partager
+                    {I.share}
                   </button>
                 </div>
               </div>
@@ -1093,32 +1188,32 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                       {/* Corrective action panel */}
                       {expanded && !isReadOnly && (
                         <div className="px-5 pb-4 bg-orange-50/40 border-t border-orange-100 space-y-3">
-                          <p className="text-xs font-semibold text-gray-500 pt-3">Action corrective</p>
+                          <p className="text-xs font-semibold text-gray-500 pt-3">{I.caTitle}</p>
 
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Description de l&apos;action</label>
+                            <label className="block text-xs text-gray-500 mb-1">{I.caDesc}</label>
                             <textarea
                               rows={2}
                               value={ca.note}
                               onChange={e => setCA(nc.id, { note: e.target.value })}
-                              placeholder="Mesure corrective prévue ou prise…"
+                              placeholder={I.caPlaceholder}
                               className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-400 resize-none"
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs text-gray-500 mb-1">Responsable</label>
+                              <label className="block text-xs text-gray-500 mb-1">{I.caAssigned}</label>
                               <input
                                 type="text"
                                 value={ca.assigned}
                                 onChange={e => setCA(nc.id, { assigned: e.target.value })}
-                                placeholder="Nom"
+                                placeholder={I.caAssigned}
                                 className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-400"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-500 mb-1">Échéance</label>
+                              <label className="block text-xs text-gray-500 mb-1">{I.caDeadline}</label>
                               <input
                                 type="date"
                                 value={ca.deadline}
@@ -1137,8 +1232,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                                 className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-teal-600 focus:ring-teal-400"
                               />
                               <span className="text-xs text-gray-600">
-                                Utilisation autorisée jusqu&apos;à l&apos;échéance
-                                {ca.deadline ? ` (${ca.deadline})` : ''}
+                                {I.caUsable(ca.deadline)}
                               </span>
                             </label>
                           )}
@@ -1148,10 +1242,10 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                       {/* Read-only corrective action display */}
                       {expanded && isReadOnly && (ca.note || ca.assigned || ca.deadline) && (
                         <div className="px-5 pb-4 bg-orange-50/40 border-t border-orange-100 space-y-1 pt-3">
-                          {ca.note     && <p className="text-xs text-gray-700"><strong>Action :</strong> {ca.note}</p>}
-                          {ca.assigned && <p className="text-xs text-gray-500"><strong>Responsable :</strong> {ca.assigned}</p>}
-                          {ca.deadline && <p className="text-xs text-gray-500"><strong>Échéance :</strong> {ca.deadline}</p>}
-                          {ca.usable   && <p className="text-xs text-teal-700 font-medium">✓ Utilisation autorisée jusqu&apos;à l&apos;échéance</p>}
+                          {ca.note     && <p className="text-xs text-gray-700"><strong>{I.caAction}</strong> {ca.note}</p>}
+                          {ca.assigned && <p className="text-xs text-gray-500"><strong>{I.caResponsible}</strong> {ca.assigned}</p>}
+                          {ca.deadline && <p className="text-xs text-gray-500"><strong>{I.caDeadlineLabel}</strong> {ca.deadline}</p>}
+                          {ca.usable   && <p className="text-xs text-teal-700 font-medium">{I.caUsableConfirm}</p>}
                         </div>
                       )}
                     </div>
@@ -1163,20 +1257,20 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
           {/* Section 4 — Notes */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <label className="block text-xs font-medium text-gray-600 mb-2">Notes et observations</label>
+            <label className="block text-xs font-medium text-gray-600 mb-2">{I.notes}</label>
             <textarea
               value={form.notes}
               disabled={isReadOnly}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               rows={3}
-              placeholder="Observations générales, actions correctives prévues…"
+              placeholder={I.notesPlaceholder}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50 resize-none"
             />
           </div>
 
           {/* Section 5 — Résultat global + save bottom */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-xs font-medium text-gray-600 mb-3">Résultat global</p>
+            <p className="text-xs font-medium text-gray-600 mb-3">{I.overallResult}</p>
             <div className="flex items-center justify-between gap-4">
               <ResultBadge result={overallResult} size="md" />
               <div className="text-xs text-gray-400 text-right">
@@ -1190,19 +1284,19 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
               <div className="mt-4 flex gap-3 justify-end">
                 <button onClick={onClose}
                   className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
-                  Retour
+                  {I.fr ? 'Retour' : 'Back'}
                 </button>
                 <button
                   disabled={saving}
                   onClick={() => handleSave('draft')}
                   className="px-4 py-2 text-sm border border-teal-300 text-teal-700 rounded-lg hover:bg-teal-50 disabled:opacity-50">
-                  Sauvegarder brouillon
+                  {I.fr ? 'Sauvegarder brouillon' : 'Save draft'}
                 </button>
                 <button
                   disabled={saving}
                   onClick={() => handleSave('submitted')}
                   className="px-5 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-50">
-                  {saving ? 'Sauvegarde…' : "Soumettre l'inspection"}
+                  {saving ? I.saving : (I.fr ? "Soumettre l'inspection" : 'Submit inspection')}
                 </button>
               </div>
             )}
@@ -1217,14 +1311,12 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           {!internalId ? (
             <div className="text-center space-y-3 py-16">
               <QrCode size={48} className="text-gray-300 mx-auto" />
-              <p className="text-gray-500 text-sm">Soumettez l&apos;inspection pour générer le code QR.</p>
+              <p className="text-gray-500 text-sm">{I.qrSubmitFirst}</p>
             </div>
           ) : (
             <>
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col items-center gap-4 w-full max-w-xs">
-                {logoUrl && (
-                  <img src={logoUrl} alt="Logo" className="h-14 w-auto object-contain" />
-                )}
+                <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-14 w-auto object-contain" />
                 <QRCodeSVG
                   value={`${window.location.origin}/${tenant}/inspections/${internalId}`}
                   size={220}
@@ -1242,16 +1334,13 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                     <p className="text-xs text-gray-400 mt-0.5">{form.equipmentSerial}</p>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 text-center">
-                  Imprimez ce QR et fixez-le sur l&apos;équipement.<br />
-                  Scannez pour accéder à la dernière inspection.
-                </p>
+                <p className="text-xs text-gray-400 text-center whitespace-pre-line">{I.qrInstruction}</p>
                 <button
                   onClick={handlePrintQR}
                   className="w-full flex items-center justify-center gap-2 py-2.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium"
                 >
                   <Printer size={15} />
-                  Imprimer
+                  {I.print}
                 </button>
               </div>
               {existingRow?.overall_result && (
@@ -1267,9 +1356,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
         <div className="max-w-3xl mx-auto px-4 py-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <History size={16} className="text-teal-600" />
-            Inspections précédentes
+            {I.prevInspections}
             {form.equipmentSerial
-              ? <span className="text-xs font-normal text-gray-400">— série {form.equipmentSerial}</span>
+              ? <span className="text-xs font-normal text-gray-400">{I.serie} {form.equipmentSerial}</span>
               : form.equipmentName
                 ? <span className="text-xs font-normal text-gray-400">— {form.equipmentName}</span>
                 : null
@@ -1283,7 +1372,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           ) : historyRows.length === 0 ? (
             <div className="text-center py-16 text-gray-400 space-y-2">
               <History size={40} className="mx-auto text-gray-200" />
-              <p className="text-sm">Aucune inspection précédente trouvée.</p>
+              <p className="text-sm">{I.noHistory}</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
