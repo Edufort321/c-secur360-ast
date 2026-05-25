@@ -11,5 +11,12 @@ CREATE INDEX IF NOT EXISTS idx_ei_frequency ON equipment_inspections(inspection_
 CREATE INDEX IF NOT EXISTS idx_ei_serial    ON equipment_inspections(equipment_serial);
 
 -- Politique de suppression (manquante dans la migration 035)
-CREATE POLICY IF NOT EXISTS "ei_anon_delete" ON equipment_inspections
-  FOR DELETE USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'equipment_inspections' AND policyname = 'ei_anon_delete'
+  ) THEN
+    EXECUTE 'CREATE POLICY "ei_anon_delete" ON equipment_inspections FOR DELETE USING (true)';
+  END IF;
+END $$;
