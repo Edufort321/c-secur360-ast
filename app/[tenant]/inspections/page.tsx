@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   ClipboardCheck, Plus, Search, Clock, CheckCircle, XCircle,
   AlertTriangle, AlertOctagon, Loader2, ChevronRight, Wrench,
-  CalendarClock, TrendingUp, QrCode, SlidersHorizontal,
+  CalendarClock, TrendingUp, QrCode, SlidersHorizontal, Edit2, History,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -352,18 +352,23 @@ export default function InspectionsPage() {
                         className="flex items-center gap-1 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg">
                         <Plus size={12} /> Inspecter
                       </Link>
-                      {/* Fiche & QR — mène au formulaire d'édition qui contient le code QR */}
+                      {/* Modifier la fiche équipement */}
                       <Link href={`/${tenant}/equipment/${eq.id}/edit`}
                         className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-lg">
-                        <QrCode size={11} /> Fiche / QR
+                        <Edit2 size={11} /> Modifier
                       </Link>
-                      {/* Dernière inspection */}
-                      {latest && (
+                      {latest && (<>
+                        {/* QR — ouvre la dernière inspection sur l'onglet QR */}
                         <Link href={`/${tenant}/inspections/${latest.id}/edit`}
                           className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium rounded-lg">
-                          <ChevronRight size={11} /> Dernière
+                          <QrCode size={11} /> QR
                         </Link>
-                      )}
+                        {/* Historique — page publique de l'équipement avec liste des inspections */}
+                        <Link href={`/${tenant}/equipment/${eq.id}`}
+                          className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium rounded-lg">
+                          <History size={11} /> Historique
+                        </Link>
+                      </>)}
                     </div>
                   </div>
                 </div>
