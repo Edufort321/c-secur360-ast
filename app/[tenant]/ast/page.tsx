@@ -53,7 +53,7 @@ export default function ASTListPage() {
 
   const [origin, setOrigin] = useState('');
   useEffect(() => { setOrigin(window.location.origin); }, []);
-  const qrUrl = origin ? `${origin}/${tenant}/ast/nouveau` : '';
+  const qrUrl = origin ? `${origin}/${tenant}/ast/acces` : '';
   const qrPosterRef = useRef<HTMLDivElement>(null);
 
   const statusLabel = (s: PermitStatus) => ({
@@ -315,8 +315,8 @@ export default function ASTListPage() {
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-600">
                 {tr(
-                  "Imprimez et affichez ce code à l'entrée du site. N'importe qui (ex. un sous-traitant) peut le scanner pour remplir l'AST — aucune connexion requise. L'AST complété est enregistré dans votre répertoire et le sous-traitant peut télécharger le PDF.",
-                  'Print and post this code at the site entrance. Anyone (e.g. a subcontractor) can scan it to fill out the JSA — no login required. The completed JSA is saved to your repository and the subcontractor can download the PDF.',
+                  "Imprimez et affichez ce code à l'entrée du site. En le scannant, on choisit de créer un nouvel AST ou d'en consulter un existant — aucune connexion requise. L'AST complété est enregistré dans votre répertoire et le sous-traitant peut télécharger le PDF.",
+                  'Print and post this code at the site entrance. Scanning it lets anyone create a new JSA or look up an existing one — no login required. The completed JSA is saved to your repository and the subcontractor can download the PDF.',
                 )}
               </p>
               {qrUrl && (

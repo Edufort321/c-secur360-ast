@@ -209,6 +209,10 @@ function isPublicRoute(pathname: string): boolean {
   // Marketing page — unauthenticated landing
   if (/^\/[^/]+\/bienvenue$/.test(pathname)) return true;
 
+  // Public AST landing via printable QR — a subcontractor scans and chooses to
+  // create a new JSA or look up an existing one (avoids creating empty drafts).
+  if (/^\/[^/]+\/ast\/acces$/.test(pathname)) return true;
+
   // Public AST creation via printable QR — a subcontractor scans and fills the
   // client's AST without login (saved under the tenant's repository).
   if (/^\/[^/]+\/ast\/nouveau$/.test(pathname)) return true;

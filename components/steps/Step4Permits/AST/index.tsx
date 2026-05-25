@@ -3577,6 +3577,18 @@ export default function ASTPermit({
 
   useEffect(() => {
     if (!enableAutoSave) return;
+    // Ne pas créer de brouillon vide : n'enregistrer automatiquement que si l'AST
+    // contient au moins une information réelle (évite les AST fantômes au simple accès).
+    const ti = ast.taskInfo;
+    const hasContent = !!(
+      ti.workLocation?.trim() || ti.taskDescription?.trim() || ti.projectNumber?.trim() ||
+      ti.supervisor?.trim() || ti.contractor?.trim() || ti.projectName?.trim() ||
+      ast.jobSteps.some(s => s.description?.trim() || s.hazards.length > 0 || s.controls.length > 0) ||
+      ast.participants.some(p => p.name?.trim()) ||
+      (ast.equipment?.tools?.length ?? 0) > 0 ||
+      (ast.workers?.length ?? 0) > 0
+    );
+    if (!hasContent) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => persistAst(ast), 2000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
