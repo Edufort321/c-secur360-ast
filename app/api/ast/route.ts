@@ -8,11 +8,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId and formData are required' }, { status: 400 });
     }
     const { tenantId, formData } = jsonData;
-    
-    // Générer un numéro AST automatique (format démo)
-    const existingForms = await getASTFormsByTenant(tenantId);
-    const astNumber = `AST-${new Date().getFullYear()}-${String(existingForms.length + 1).padStart(3, '0')}`
-    
+
+    // Générer un numéro AST unique : AST-{TENANT}-{AAAA-MM-JJ}-{CODE}
+    // ex: AST-QC-2026-05-25-VVTJ
+    const tenantCode = String(tenantId).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'AST';
+    const now = new Date();
+    const datePart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const ALPHABET = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789'; // sans I,O,0,1,L pour lisibilité
+    const randomPart = Array.from({ length: 4 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
+    const astNumber = `AST-${tenantCode}-${datePart}-${randomPart}`;
+
     const astForm = await createASTForm({
       tenantId,
       userId: '', // À remplacer par l'authentification

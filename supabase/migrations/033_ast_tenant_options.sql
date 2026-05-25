@@ -15,6 +15,7 @@ create table if not exists public.tenant_ast_options (
 alter table public.tenant_ast_options enable row level security;
 
 -- Lecture : tenant courant seulement
+drop policy if exists "tenant_ast_options_select" on public.tenant_ast_options;
 create policy "tenant_ast_options_select" on public.tenant_ast_options
   for select using (
     tenant_id = coalesce(
@@ -24,6 +25,7 @@ create policy "tenant_ast_options_select" on public.tenant_ast_options
   );
 
 -- Insertion
+drop policy if exists "tenant_ast_options_insert" on public.tenant_ast_options;
 create policy "tenant_ast_options_insert" on public.tenant_ast_options
   for insert with check (
     tenant_id = coalesce(
@@ -33,6 +35,7 @@ create policy "tenant_ast_options_insert" on public.tenant_ast_options
   );
 
 -- Suppression
+drop policy if exists "tenant_ast_options_delete" on public.tenant_ast_options;
 create policy "tenant_ast_options_delete" on public.tenant_ast_options
   for delete using (
     tenant_id = coalesce(
@@ -55,6 +58,7 @@ create table if not exists public.tenant_loto_templates (
 
 alter table public.tenant_loto_templates enable row level security;
 
+drop policy if exists "loto_templates_select" on public.tenant_loto_templates;
 create policy "loto_templates_select" on public.tenant_loto_templates
   for select using (
     tenant_id = coalesce(
@@ -63,6 +67,7 @@ create policy "loto_templates_select" on public.tenant_loto_templates
     )
   );
 
+drop policy if exists "loto_templates_insert" on public.tenant_loto_templates;
 create policy "loto_templates_insert" on public.tenant_loto_templates
   for insert with check (
     tenant_id = coalesce(
@@ -71,6 +76,7 @@ create policy "loto_templates_insert" on public.tenant_loto_templates
     )
   );
 
+drop policy if exists "loto_templates_update" on public.tenant_loto_templates;
 create policy "loto_templates_update" on public.tenant_loto_templates
   for update using (
     tenant_id = coalesce(
@@ -79,6 +85,7 @@ create policy "loto_templates_update" on public.tenant_loto_templates
     )
   );
 
+drop policy if exists "loto_templates_delete" on public.tenant_loto_templates;
 create policy "loto_templates_delete" on public.tenant_loto_templates
   for delete using (
     tenant_id = coalesce(

@@ -172,6 +172,7 @@ interface ProjectInfo {
   // Client et projet
   clientName: string;
   clientRep: string;
+  clientAddress: string;
   clientPhone: string;
   clientEmail: string;
   projectNumber: string;
@@ -254,6 +255,7 @@ const translations = {
     clientSection: "Informations Client",
     clientName: "Nom du client",
     clientRep: "Représentant client",
+    clientAddress: "Adresse",
     clientPhone: "Téléphone client",
     clientEmail: "Email client",
     
@@ -488,6 +490,7 @@ const translations = {
     clientSection: "Client Information",
     clientName: "Client name",
     clientRep: "Client representative",
+    clientAddress: "Address",
     clientPhone: "Client phone",
     clientEmail: "Client email",
     
@@ -727,6 +730,7 @@ const Step1ProjectInfo = memo(({
     // Le numéro AST vient directement de formData, pas besoin de le stocker dans localData
     clientName: formData?.projectInfo?.clientName || '',
     clientRep: formData?.projectInfo?.clientRep || '',
+    clientAddress: formData?.projectInfo?.clientAddress || '',
     clientPhone: formData?.projectInfo?.clientPhone || '',
     clientEmail: formData?.projectInfo?.clientEmail || '',
     projectNumber: formData?.projectInfo?.projectNumber || '',
@@ -1844,16 +1848,28 @@ const Step1ProjectInfo = memo(({
                 />
               </div>
               
-              <div>
-                <label style={labelStyle}>{t.clientRep}</label>
-                <input
-                  type="text"
-                  value={localData.clientRep}
-                  onChange={(e) => updateField('clientRep', e.target.value)}
-                  style={inputStyle}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>{t.clientRep}</label>
+                  <input
+                    type="text"
+                    value={localData.clientRep}
+                    onChange={(e) => updateField('clientRep', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>{t.clientAddress}</label>
+                  <input
+                    type="text"
+                    value={localData.clientAddress}
+                    onChange={(e) => updateField('clientAddress', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
               </div>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>{t.clientPhone}</label>
