@@ -5,19 +5,17 @@ import './styles/design-system.css'
 import './styles/components.css'
 const inter = Inter({ subsets: ['latin'] })
 
-// ✅ VIEWPORT SÉPARÉ (obligatoire Next.js 14+)
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
   userScalable: false,
+  themeColor: '#10b981',
 }
 
-// ✅ METADATA SANS VIEWPORT
 export const metadata: Metadata = {
-  title: 'C-Secur360 - Analyse Sécuritaire de Tâches',
-  description: 'Application d\'analyse sécuritaire de tâches pour MDL',
+  title: 'C-Secur360 — Sécurité Industrielle',
+  description: 'Plateforme SaaS de sécurité industrielle — AST, permis, inspections, conformité provinciale.',
   manifest: '/manifest.json',
-  themeColor: '#3498db',
 }
 
 import { TwilioProvider } from '../contexts/TwilioContext'

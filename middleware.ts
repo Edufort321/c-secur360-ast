@@ -66,16 +66,19 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const { pathname } = request.nextUrl;
   
-  // Skip middleware for static assets
+  // Skip middleware for static assets and system files
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/') ||
     pathname === '/favicon.ico' ||
     pathname === '/logo.png' ||
     pathname === '/manifest.json' ||
+    pathname === '/manifest.webmanifest' ||
+    pathname === '/sw.js' ||
+    pathname.startsWith('/.well-known/') ||
     pathname === '/c-secur360-logo.png' ||
     pathname === '/csecur360-logo-v2025.png' ||
-    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/.test(pathname)
+    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot|webmanifest)$/.test(pathname)
   ) {
     return NextResponse.next();
   }
