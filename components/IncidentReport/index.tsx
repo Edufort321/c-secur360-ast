@@ -168,7 +168,9 @@ const BODY_REGION_LABELS: Record<string, string> = {
   'gluteal':        'Fessiers',
   'left-soleus':    'Soléaire gauche',
   'right-soleus':   'Soléaire droit',
-  // ── Zones overlay (mains / pieds — gauche/droite distincts) ──
+  // ── Zones overlay (yeux, mains, pieds — gauche/droite distincts) ──
+  'left-eye':         'Œil gauche',
+  'right-eye':        'Œil droit',
   'left-hand':        'Main gauche',
   'right-hand':       'Main droite',
   'left-hand-back':   'Main gauche (arrière)',
@@ -478,11 +480,14 @@ function Toggle({ checked, onChange, label, disabled }: {
   );
 }
 
-// ── Body Diagram (react-body-highlighter + overlay SVG pour yeux/mains/pieds) ──
+// ── Body Diagram (react-body-highlighter + overlay SVG) ──
 
 const OVERLAY_IDS = new Set([
+  'left-eye', 'right-eye',
   'left-hand', 'right-hand', 'left-hand-back', 'right-hand-back',
   'left-foot', 'right-foot', 'left-foot-back', 'right-foot-back',
+  // Genoux individuels + 'knees' bilateral (rétrocompat) géré par overlay
+  'knees', 'left-knee', 'right-knee', 'left-knee-back', 'right-knee-back',
 ]);
 
 function BodyDiagram({ selected, onChange, readOnly }: {
@@ -492,57 +497,63 @@ function BodyDiagram({ selected, onChange, readOnly }: {
 }) {
   const [view, setView] = useState<'anterior' | 'posterior'>('anterior');
 
+  const on = (id: string) => selected.includes(id);
+
   const toggle = (id: string) => {
     if (readOnly) return;
-    onChange(selected.includes(id) ? selected.filter(m => m !== id) : [...selected, id]);
+    onChange(on(id) ? selected.filter(m => m !== id) : [...selected, id]);
   };
 
-  // Données pour la librairie (sans les zones overlay)
+  // Clic sur un genou individuel : retire le bilatéral 'knees' si présent
+  const clickKnee = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (readOnly) return;
+    const clean = selected.filter(m => m !== 'knees');
+    onChange(clean.includes(id) ? clean.filter(m => m !== id) : [...clean, id]);
+  };
+
   const modelData = selected
     .filter(id => !OVERLAY_IDS.has(id))
     .map(m => ({ name: m, muscles: [m] }));
 
-  // Attributs SVG pour les zones overlay (mains / pieds)
-  const op = (id: string): React.SVGProps<SVGRectElement> => ({
-    fill: selected.includes(id) ? '#ef4444' : '#c8d3db',
-    stroke: selected.includes(id) ? '#b91c1c' : '#8fa0ad',
+  // Attributs overlay standard
+  const op = (id: string) => ({
+    fill: on(id) ? '#ef4444' : '#c8d3db',
+    stroke: on(id) ? '#b91c1c' : '#8fa0ad',
     strokeWidth: 0.7,
-    style: {
-      cursor: readOnly ? 'default' : 'pointer',
-      transition: 'fill 0.1s',
-      pointerEvents: 'all',
-    },
-    onClick: (e) => { e.stopPropagation(); toggle(id); },
+    style: { cursor: readOnly ? 'default' : 'pointer', transition: 'fill 0.15s', pointerEvents: 'all' as React.CSSProperties['pointerEvents'] },
+    onClick: (e: React.MouseEvent) => { e.stopPropagation(); toggle(id); },
   });
 
-  // Container : librairie 320px + pieds 22px = 342px ; viewBox overlay = 342/1.6 = 213.75
-  const W = 160;
-  const H_LIB = 320;
-  const H_TOTAL = 342;
-  const VB_H = 213.75; // même échelle que la librairie (1.6 px/unité)
+  // Attributs overlay genou (tient compte de l'ancien bilatéral 'knees')
+  const kop = (id: string) => {
+    const sel = on(id) || on('knees');
+    return {
+      fill: sel ? '#ef4444' : '#c8d3db',
+      stroke: sel ? '#b91c1c' : '#8fa0ad',
+      strokeWidth: 0.7,
+      style: { cursor: readOnly ? 'default' : 'pointer', transition: 'fill 0.15s', pointerEvents: 'all' as React.CSSProperties['pointerEvents'] },
+      onClick: clickKnee(id),
+    };
+  };
+
+  // Container : librairie 320 px + pieds ~24 px ; viewBox = (320+24)/1.6 = 215
+  const W = 160, H_LIB = 320, H_TOTAL = 344, VB_H = 215;
 
   return (
     <div className="flex flex-col items-center">
-      {/* Vue toggle */}
       <div className="flex gap-2 mb-4">
         {(['anterior', 'posterior'] as const).map(v => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
+          <button key={v} onClick={() => setView(v)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-              view === v
-                ? 'bg-red-600 text-white border-red-600'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-red-400'
-            }`}
-          >
+              view === v ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-300 hover:border-red-400'
+            }`}>
             {v === 'anterior' ? 'Vue avant' : 'Vue arrière'}
           </button>
         ))}
       </div>
 
-      {/* Schéma : librairie + overlay */}
       <div className="relative select-none" style={{ width: W, height: H_TOTAL }}>
-        {/* Modèle principal react-body-highlighter */}
         <div style={{ width: W, height: H_LIB }}>
           <BodyModel
             data={modelData}
@@ -554,66 +565,128 @@ function BodyDiagram({ selected, onChange, readOnly }: {
           />
         </div>
 
-        {/* Overlay SVG : yeux (déco), mains et pieds */}
-        <svg
-          style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-          width={W}
-          height={H_TOTAL}
-          viewBox={`0 0 100 ${VB_H}`}
-        >
-          {/* Yeux (vue avant uniquement — décoratifs, la tête est cliquable via la librairie) */}
+        <svg style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+          width={W} height={H_TOTAL} viewBox={`0 0 100 ${VB_H}`}>
+
+          {/* ── Yeux (vue avant, cliquables) — tête de la librairie : x≈40-59, y≈0-25 ── */}
+          {view === 'anterior' && (['left-eye', 'right-eye'] as const).map((id, i) => {
+            const cx = i === 0 ? 44 : 56;
+            return (
+              <g key={id}
+                onClick={readOnly ? undefined : (e) => { e.stopPropagation(); toggle(id); }}
+                style={{ cursor: readOnly ? 'default' : 'pointer', pointerEvents: 'all' }}>
+                <title>{BODY_REGION_LABELS[id]}</title>
+                <ellipse cx={cx} cy="11" rx="2.8" ry="1.8"
+                  fill={on(id) ? '#ef4444' : '#f0f5f7'}
+                  stroke={on(id) ? '#b91c1c' : '#8fa0ad'} strokeWidth="0.5"
+                  style={{ transition: 'fill 0.15s' }} />
+                <ellipse cx={cx} cy="11" rx="1.4" ry="1.1"
+                  fill={on(id) ? '#b91c1c' : '#2c4a5e'}
+                  style={{ pointerEvents: 'none', transition: 'fill 0.15s' }} />
+              </g>
+            );
+          })}
+
+          {/* ── Genoux vue avant — polygones calqués sur la librairie (coordonnées exactes) ── */}
           {view === 'anterior' && (
             <>
-              <ellipse cx="44.5" cy="10" rx="2.4" ry="1.6" fill="rgba(30,40,50,0.45)" style={{ pointerEvents: 'none' }} />
-              <ellipse cx="55.5" cy="10" rx="2.4" ry="1.6" fill="rgba(30,40,50,0.45)" style={{ pointerEvents: 'none' }} />
+              <polygon
+                points="33.9,140 34.7,143.3 35.5,147.3 36.3,151 35.1,156.7 29.8,156.7 27.3,152.7 27.3,147.3 30.2,144.1"
+                {...kop('left-knee')}>
+                <title>{BODY_REGION_LABELS['left-knee']}</title>
+              </polygon>
+              <polygon
+                points="65.7,140 72.2,147.8 72.2,152.2 69.8,157.1 64.9,156.7 62.9,151"
+                {...kop('right-knee')}>
+                <title>{BODY_REGION_LABELS['right-knee']}</title>
+              </polygon>
             </>
           )}
 
-          {/* Mains — vue avant */}
+          {/* ── Genoux vue arrière ── */}
+          {view === 'posterior' && (
+            <>
+              <polygon
+                points="34.5,153.2 31.1,159.1 33.6,166.4 37.4,162.6"
+                {...kop('left-knee-back')}>
+                <title>{BODY_REGION_LABELS['left-knee-back']}</title>
+              </polygon>
+              <polygon
+                points="66.4,153.6 63,163 66.8,166.4 69.4,159.1"
+                {...kop('right-knee-back')}>
+                <title>{BODY_REGION_LABELS['right-knee-back']}</title>
+              </polygon>
+            </>
+          )}
+
+          {/* ── Mains — ovale allongé vertical avec 3 bosses de doigts
+              Avant-bras gauche finit ≈ x=4-19, y=101 / droit ≈ x=81-97, y=101
+              Bosses doigts (2 unités) → indication stylisée sans griffes              ── */}
           {view === 'anterior' && (
             <>
-              <rect x="1" y="101" width="20" height="16" rx="5" {...op('left-hand')}>
+              {/* Main gauche avant */}
+              <polygon
+                points="5,101 17,101 20,106 21,113 20,119 17,124 14,122 11,124 8,122 5,124 2,119 0,113 0,106"
+                {...op('left-hand')}>
                 <title>{BODY_REGION_LABELS['left-hand']}</title>
-              </rect>
-              <rect x="79" y="101" width="20" height="16" rx="5" {...op('right-hand')}>
+              </polygon>
+              {/* Main droite avant */}
+              <polygon
+                points="83,101 95,101 100,106 100,113 98,119 95,124 92,122 89,124 86,122 83,124 80,119 79,113 80,106"
+                {...op('right-hand')}>
                 <title>{BODY_REGION_LABELS['right-hand']}</title>
-              </rect>
+              </polygon>
             </>
           )}
-
-          {/* Mains — vue arrière */}
           {view === 'posterior' && (
             <>
-              <rect x="1" y="109" width="20" height="16" rx="5" {...op('left-hand-back')}>
+              {/* Main gauche arrière (avant-bras finit ≈ y=108) */}
+              <polygon
+                points="5,108 17,108 20,113 21,120 20,126 17,131 14,129 11,131 8,129 5,131 2,126 0,120 0,113"
+                {...op('left-hand-back')}>
                 <title>{BODY_REGION_LABELS['left-hand-back']}</title>
-              </rect>
-              <rect x="79" y="109" width="20" height="16" rx="5" {...op('right-hand-back')}>
+              </polygon>
+              {/* Main droite arrière */}
+              <polygon
+                points="83,108 95,108 100,113 100,120 98,126 95,131 92,129 89,131 86,129 83,131 80,126 79,120 80,113"
+                {...op('right-hand-back')}>
                 <title>{BODY_REGION_LABELS['right-hand-back']}</title>
-              </rect>
+              </polygon>
             </>
           )}
 
-          {/* Pieds — vue avant (y=200+ = sous la librairie) */}
+          {/* ── Pieds — vue dorsale (de face/dessus), forme simple en trapèze arrondi
+              Cheville étroite (≈14u) en haut, s'élargit vers les orteils (≈26u) en bas
+              Pied gauche incline légèrement vers la gauche (latéral), droit vers la droite
+              PAS de griffes ni de profil latéral — vue de face anatomique              ── */}
           {view === 'anterior' && (
             <>
-              <rect x="14" y="200" width="26" height="12" rx="4" {...op('left-foot')}>
+              {/* Pied gauche */}
+              <polygon
+                points="21,196 35,196 38,200 38,208 34,213 26,214 18,213 13,208 12,200"
+                {...op('left-foot')}>
                 <title>{BODY_REGION_LABELS['left-foot']}</title>
-              </rect>
-              <rect x="58" y="200" width="26" height="12" rx="4" {...op('right-foot')}>
+              </polygon>
+              {/* Pied droit */}
+              <polygon
+                points="63,196 77,196 88,200 88,208 82,213 74,214 66,213 61,208 62,200"
+                {...op('right-foot')}>
                 <title>{BODY_REGION_LABELS['right-foot']}</title>
-              </rect>
+              </polygon>
             </>
           )}
-
-          {/* Pieds — vue arrière */}
           {view === 'posterior' && (
             <>
-              <rect x="14" y="200" width="26" height="12" rx="4" {...op('left-foot-back')}>
+              <polygon
+                points="21,196 35,196 38,200 38,208 34,213 26,214 18,213 13,208 12,200"
+                {...op('left-foot-back')}>
                 <title>{BODY_REGION_LABELS['left-foot-back']}</title>
-              </rect>
-              <rect x="58" y="200" width="26" height="12" rx="4" {...op('right-foot-back')}>
+              </polygon>
+              <polygon
+                points="63,196 77,196 88,200 88,208 82,213 74,214 66,213 61,208 62,200"
+                {...op('right-foot-back')}>
                 <title>{BODY_REGION_LABELS['right-foot-back']}</title>
-              </rect>
+              </polygon>
             </>
           )}
         </svg>
@@ -628,16 +701,12 @@ function BodyDiagram({ selected, onChange, readOnly }: {
       {selected.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5 justify-center max-w-xs">
           {selected.map(id => (
-            <span
-              key={id}
-              className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs border border-red-200 font-medium"
-            >
+            <span key={id}
+              className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs border border-red-200 font-medium">
               {BODY_REGION_LABELS[id] || id}
               {!readOnly && (
-                <button
-                  onClick={() => onChange(selected.filter(m => m !== id))}
-                  className="hover:text-red-900 font-bold text-sm leading-none ml-0.5"
-                >×</button>
+                <button onClick={() => onChange(selected.filter(m => m !== id))}
+                  className="hover:text-red-900 font-bold text-sm leading-none ml-0.5">×</button>
               )}
             </span>
           ))}
