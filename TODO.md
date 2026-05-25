@@ -1,5 +1,39 @@
 # 🚀 C-SECUR360 - PLAN D'INTÉGRATION PROGRESSIVE
 
+---
+
+## ✅ RESTE À FAIRE — Session AST (mis à jour 2026-05-25)
+
+### 🔴 BLOQUANT — Migrations Supabase à exécuter manuellement (SQL Editor)
+> Sans elles : l'AST ne se sauvegarde pas, le QR/partage affiche « introuvable »,
+> la prise de connaissance, la suppression et les moyens de contrôle standards ne marchent pas.
+- [ ] `032_work_permits_tables.sql` — crée `ast_permits` / `work_permits`
+- [ ] `033_ast_tenant_options.sql` — crée `tenant_ast_options` (options par tenant)
+- [ ] `044_fix_ast_permits_rls.sql` — RLS lecture publique + écriture anon (corrige « introuvable »)
+- [ ] `045_ast_permits_delete_rls.sql` — RLS DELETE (suppression dashboard)
+- [ ] `046_tenant_ast_options_controls.sql` — colonne `hazard` + RLS anon (moyens de contrôle standards)
+- [ ] (base fraîche) `004_create_ast_forms.sql` — crée `ast_forms` (ancien chemin /api/ast)
+
+### 🟡 Inter-reliage des modules (demandé — partiellement fait)
+- [x] Liste pré-remplie de véhicules/équipements industriels dans l'AST
+- [ ] **Équipement → Inspection dans l'AST** : choisir « nacelle » (type `aerial`) → si le tenant a un équipement de ce type, afficher dans l'AST son **QR + lien inspection journalière** (`/equipment/{id}/inspect`)
+- [ ] **AST ↔ Projet** : saisir un # projet existant → **auto-remplit** l'AST (client, lieu…) et le lie ; si absent → bouton **« Créer ce projet »** (décision retenue : proposer de créer)
+- [ ] Scanner les autres liens possibles : Projets ↔ Permis, Planner ↔ Équipement/Personnel, Inventaire ↔ Projet, etc.
+
+### 🟢 Améliorations / suivis notés
+- [ ] Unifier les 2 rendus PDF (finalisation = tableaux jsPDF ; vue partagée = capture html2canvas) si on veut un rendu identique
+- [ ] Inclure (optionnel) les **documents client** (`clientDocs`) et la fiche LOTO dans le PDF
+- [ ] Bouton **« Télécharger PNG »** du QR dans le dashboard (comme l'inspection d'équipement)
+- [ ] Décider si `clientAddress` (Informations Client) doit devenir une **colonne dédiée** en base (vit actuellement dans le JSON `projectInfo`)
+- [ ] **Sécurité** : les policies RLS AST sont permissives (clé anon). À durcir si une vraie auth Supabase est mise en place
+
+### 📌 Notes techniques (pour les prochaines sessions)
+- Le dossier `C:\CLAUDE\C-Secur360\c-secur360-ast-main` EST le dépôt git/Vercel (branche `main`).
+- Type-check : `node node_modules/typescript/bin/tsc --noEmit` — ⚠️ `npx tsc` ne valide RIEN ici.
+- L'AST se sauvegarde dans la table **`ast_permits`** (pas `ast_forms`).
+
+---
+
 ## 📊 STATUT GLOBAL
 - **Version Base**: 8zZdkQ4mW (Logo fonctionnel ✅)
 - **Version Avancée**: main-2025-08-25 (Features avancées ✅)
