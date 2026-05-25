@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   ClipboardCheck, Plus, Search, Clock, CheckCircle, XCircle,
-  AlertTriangle, AlertOctagon, Loader2, ChevronRight, Trash2,
-  LayoutGrid, List, CalendarClock, TrendingUp,
+  AlertTriangle, AlertOctagon, Loader2, ChevronRight, Wrench,
+  CalendarClock, TrendingUp,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -14,6 +14,7 @@ import {
   INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
   type InspectionType, type OverallResult, type InspectionFrequency,
 } from '@/components/InspectionForm/checklists';
+import type { EquipmentRow } from '@/components/EquipmentForm';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -21,32 +22,23 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InspectionRow = {
+type LatestInsp = {
   id: string;
+  equipment_id: string;
   inspection_number: string;
-  equipment_type: InspectionType;
-  equipment_name: string | null;
-  equipment_serial: string | null;
-  equipment_location: string | null;
-  inspector_name: string | null;
   inspection_date: string | null;
-  inspection_frequency: InspectionFrequency | null;
-  status: 'draft' | 'submitted' | 'closed';
   overall_result: OverallResult | null;
-  created_at: string;
+  inspector_name: string | null;
+  status: 'draft' | 'submitted' | 'closed';
+  inspection_count: number;
 };
 
-type EquipmentGroup = {
-  key: string;
-  equipmentType: InspectionType;
-  equipmentName: string | null;
-  equipmentSerial: string | null;
-  equipmentLocation: string | null;
-  latestRow: InspectionRow;
-  allRows: InspectionRow[];
-  frequency: InspectionFrequency | null;
+type EquipmentCard = {
+  equipment: EquipmentRow;
+  latest: LatestInsp | null;
   daysLeft: number | null;
   urgency: 'overdue' | 'soon' | 'ok' | 'unknown';
+  inspectionCount: number;
 };
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -59,118 +51,23 @@ const RESULT_CONFIG: Record<OverallResult, { label: string; color: string; bg: s
   incomplete:   { label: 'En cours',      color: 'text-gray-600',   bg: 'bg-gray-100 border-gray-300',     Icon: ClipboardCheck },
 };
 
-const STATUS_LABEL: Record<string, string> = { draft: 'Brouillon', submitted: 'Soumis', closed: 'Fermé' };
-const STATUS_COLOR: Record<string, string> = {
-  draft:     'bg-slate-100 text-slate-600',
-  submitted: 'bg-teal-100 text-teal-700',
-  closed:    'bg-slate-100 text-slate-600',
+const URGENCY_BAR: Record<string, string> = {
+  overdue: 'bg-red-500', soon: 'bg-amber-400', ok: 'bg-teal-500', unknown: 'bg-gray-200',
 };
-
-const URGENCY_CONFIG = {
-  overdue: { bar: 'bg-red-500',    text: 'text-red-700',    label: 'EN RETARD',   dot: 'bg-red-500'    },
-  soon:    { bar: 'bg-amber-400',  text: 'text-amber-700',  label: 'Bientôt dû',  dot: 'bg-amber-400'  },
-  ok:      { bar: 'bg-teal-500',   text: 'text-teal-700',   label: 'À jour',      dot: 'bg-teal-400'   },
-  unknown: { bar: 'bg-gray-300',   text: 'text-gray-500',   label: '',            dot: 'bg-gray-300'   },
+const URGENCY_TEXT: Record<string, string> = {
+  overdue: 'text-red-600', soon: 'text-amber-600', ok: 'text-teal-600', unknown: 'text-gray-400',
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function equipmentKey(row: InspectionRow): string {
-  if (row.equipment_serial?.trim()) return `serial:${row.equipment_serial.trim()}`;
-  return `type:${row.equipment_type}:${(row.equipment_name ?? '').trim()}`;
-}
-
-function calcUrgency(row: InspectionRow): { daysLeft: number | null; urgency: EquipmentGroup['urgency'] } {
-  if (!row.inspection_frequency || !row.inspection_date) return { daysLeft: null, urgency: 'unknown' };
-  const freqDays = FREQUENCY_OPTIONS.find(f => f.value === row.inspection_frequency)?.days ?? null;
-  if (!freqDays) return { daysLeft: null, urgency: 'unknown' };
-  const lastDate = new Date(row.inspection_date);
-  const nextDue = new Date(lastDate.getTime() + freqDays * 86400_000);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const daysLeft = Math.round((nextDue.getTime() - today.getTime()) / 86400_000);
-  const soonThreshold = Math.max(1, Math.round(freqDays * 0.2));
-  const urgency = daysLeft < 0 ? 'overdue' : daysLeft <= soonThreshold ? 'soon' : 'ok';
-  return { daysLeft, urgency };
-}
-
-function groupByEquipment(rows: InspectionRow[]): EquipmentGroup[] {
-  const map = new Map<string, InspectionRow[]>();
-  rows.forEach(r => {
-    const k = equipmentKey(r);
-    map.set(k, [...(map.get(k) ?? []), r]);
-  });
-  const groups: EquipmentGroup[] = [];
-  map.forEach((all, key) => {
-    const sorted = [...all].sort((a, b) => {
-      const da = a.inspection_date ?? a.created_at;
-      const db = b.inspection_date ?? b.created_at;
-      return db.localeCompare(da);
-    });
-    const latest = sorted[0];
-    const { daysLeft, urgency } = calcUrgency(latest);
-    groups.push({
-      key,
-      equipmentType: latest.equipment_type,
-      equipmentName: latest.equipment_name,
-      equipmentSerial: latest.equipment_serial,
-      equipmentLocation: latest.equipment_location,
-      latestRow: latest,
-      allRows: sorted,
-      frequency: latest.inspection_frequency,
-      daysLeft,
-      urgency,
-    });
-  });
-  const order = { overdue: 0, soon: 1, ok: 2, unknown: 3 };
-  groups.sort((a, b) => {
-    const od = order[a.urgency] - order[b.urgency];
-    if (od !== 0) return od;
-    if (a.daysLeft !== null && b.daysLeft !== null) return a.daysLeft - b.daysLeft;
-    return 0;
-  });
-  return groups;
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function ResultBadge({ result }: { result: OverallResult | null }) {
-  if (!result) return null;
-  const cfg = RESULT_CONFIG[result];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.color}`}>
-      <cfg.Icon size={11} />
-      {cfg.label}
-    </span>
-  );
-}
-
-function ProgressBar({ daysLeft, frequency, urgency }: {
-  daysLeft: number | null;
-  frequency: InspectionFrequency | null;
-  urgency: EquipmentGroup['urgency'];
-}) {
-  if (daysLeft === null || !frequency) return null;
-  const freqDays = FREQUENCY_OPTIONS.find(f => f.value === frequency)?.days ?? 0;
-  if (!freqDays) return null;
-  const elapsed = freqDays - daysLeft;
-  const pct = Math.min(100, Math.max(0, Math.round((elapsed / freqDays) * 100)));
-  const cfg = URGENCY_CONFIG[urgency];
-  return (
-    <div className="mt-2">
-      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full ${cfg.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-      </div>
-      <div className={`text-xs mt-0.5 font-medium ${cfg.text}`}>
-        {daysLeft < 0
-          ? `En retard de ${Math.abs(daysLeft)} jour${Math.abs(daysLeft) > 1 ? 's' : ''}`
-          : daysLeft === 0
-          ? 'Inspection due aujourd\'hui'
-          : `Prochaine inspection dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`
-        }
-      </div>
-    </div>
-  );
+function calcUrgency(eq: EquipmentRow, lastDate: string | null) {
+  if (!eq.inspection_frequency || !lastDate) return { daysLeft: null, urgency: 'unknown' as const };
+  const days = FREQUENCY_OPTIONS.find(f => f.value === eq.inspection_frequency)?.days;
+  if (!days) return { daysLeft: null, urgency: 'unknown' as const };
+  const daysLeft = Math.round((new Date(lastDate).getTime() + days * 86400_000 - Date.now()) / 86400_000);
+  const soon = Math.max(1, Math.round(days * 0.2));
+  const urgency = daysLeft < 0 ? 'overdue' : daysLeft <= soon ? 'soon' : 'ok';
+  return { daysLeft, urgency } as { daysLeft: number; urgency: 'overdue' | 'soon' | 'ok' };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -179,67 +76,87 @@ export default function InspectionsPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'demo';
 
-  const [rows, setRows] = useState<InspectionRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
+  const [cards,    setCards]    = useState<EquipmentCard[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [query,    setQuery]    = useState('');
   const [typeFilter, setTypeFilter] = useState<InspectionType | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'equipment' | 'list'>('equipment');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!supabase) { setLoading(false); return; }
     let active = true;
     (async () => {
-      if (!supabase) { setLoading(false); return; }
-      const { data } = await supabase
-        .from('equipment_inspections')
-        .select('id, inspection_number, equipment_type, equipment_name, equipment_serial, equipment_location, inspector_name, inspection_date, inspection_frequency, status, overall_result, created_at')
+      // 1. Tous les équipements du tenant
+      const { data: eqs } = await supabase
+        .from('equipment')
+        .select('*')
         .eq('tenant_id', tenant)
-        .order('created_at', { ascending: false });
-      if (active) {
-        setRows((data as InspectionRow[]) ?? []);
-        setLoading(false);
+        .order('updated_at', { ascending: false });
+
+      if (!active) return;
+      if (!eqs || eqs.length === 0) { setCards([]); setLoading(false); return; }
+
+      // 2. Dernière inspection + compteur par equipment_id
+      const ids = (eqs as EquipmentRow[]).map(e => e.id);
+      const { data: insps } = await supabase
+        .from('equipment_inspections')
+        .select('id, equipment_id, inspection_number, inspection_date, overall_result, inspector_name, status')
+        .in('equipment_id', ids)
+        .eq('tenant_id', tenant)
+        .order('inspection_date', { ascending: false });
+
+      if (!active) return;
+
+      // Map: equipmentId → latest inspection + count
+      const latestMap: Record<string, LatestInsp> = {};
+      const countMap: Record<string, number> = {};
+      for (const r of (insps ?? []) as any[]) {
+        countMap[r.equipment_id] = (countMap[r.equipment_id] ?? 0) + 1;
+        if (!latestMap[r.equipment_id]) latestMap[r.equipment_id] = { ...r, inspection_count: 0 };
       }
+
+      const built: EquipmentCard[] = (eqs as EquipmentRow[]).map(eq => {
+        const latest = latestMap[eq.id] ?? null;
+        const { daysLeft, urgency } = calcUrgency(eq, latest?.inspection_date ?? null);
+        return { equipment: eq, latest, daysLeft, urgency, inspectionCount: countMap[eq.id] ?? 0 };
+      });
+
+      // Sort: overdue → soon → ok → unknown; then daysLeft asc
+      const order: Record<string, number> = { overdue: 0, soon: 1, ok: 2, unknown: 3 };
+      built.sort((a, b) => {
+        const od = order[a.urgency] - order[b.urgency];
+        if (od !== 0) return od;
+        if (a.daysLeft !== null && b.daysLeft !== null) return a.daysLeft - b.daysLeft;
+        return 0;
+      });
+
+      if (active) { setCards(built); setLoading(false); }
     })();
     return () => { active = false; };
   }, [tenant]);
 
-  async function handleDelete(id: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm('Supprimer cette inspection ? Cette action est irréversible.')) return;
-    if (!supabase) return;
-    setDeletingId(id);
-    await supabase.from('equipment_inspections').delete().eq('id', id);
-    setRows(prev => prev.filter(r => r.id !== id));
-    setDeletingId(null);
-  }
-
-  const filteredRows = useMemo(() => {
-    let r = rows;
-    if (typeFilter !== 'all') r = r.filter(x => x.equipment_type === typeFilter);
+  const filtered = useMemo(() => {
+    let list = cards;
+    if (typeFilter !== 'all') list = list.filter(c => c.equipment.equipment_type === typeFilter);
     const q = query.trim().toLowerCase();
-    if (!q) return r;
-    return r.filter(x =>
-      [x.inspection_number, x.equipment_name, x.equipment_serial, x.inspector_name]
+    if (!q) return list;
+    return list.filter(c =>
+      [c.equipment.equipment_name, c.equipment.equipment_serial,
+       c.equipment.equipment_location, c.latest?.inspector_name,
+       INSPECTION_TYPE_OPTIONS.find(o => o.value === c.equipment.equipment_type)?.label]
         .filter(Boolean).some(v => String(v).toLowerCase().includes(q))
     );
-  }, [rows, typeFilter, query]);
+  }, [cards, typeFilter, query]);
 
-  const groups = useMemo(() => groupByEquipment(filteredRows), [filteredRows]);
-
-  const stats = useMemo(() => {
-    const allGroups = groupByEquipment(rows);
-    return {
-      equipment:    allGroups.length,
-      overdue:      allGroups.filter(g => g.urgency === 'overdue').length,
-      soon:         allGroups.filter(g => g.urgency === 'soon').length,
-      nonConforme:  rows.filter(r => r.overall_result === 'non_conforme' || r.overall_result === 'retrait').length,
-    };
-  }, [rows]);
+  const stats = useMemo(() => ({
+    total:       cards.length,
+    overdue:     cards.filter(c => c.urgency === 'overdue').length,
+    soon:        cards.filter(c => c.urgency === 'soon').length,
+    nonConforme: cards.filter(c => c.latest?.overall_result === 'non_conforme' || c.latest?.overall_result === 'retrait').length,
+  }), [cards]);
 
   const presentTypes = useMemo(() =>
-    [...new Set(rows.map(r => r.equipment_type))] as InspectionType[]
-  , [rows]);
+    [...new Set(cards.map(c => c.equipment.equipment_type))] as InspectionType[]
+  , [cards]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -259,65 +176,52 @@ export default function InspectionsPage() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/${tenant}/inspections/nouveau`}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
-          >
-            <Plus size={18} />
-            Nouvelle inspection
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/${tenant}/equipment/new`}
+              className="inline-flex items-center gap-2 rounded-xl border border-teal-300 bg-white px-4 py-2.5 font-semibold text-teal-700 shadow-sm transition hover:bg-teal-50"
+            >
+              <Wrench size={16} />
+              Nouvelle fiche
+            </Link>
+            <Link
+              href={`/${tenant}/inspections/nouveau`}
+              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
+            >
+              <Plus size={18} />
+              Nouvelle inspection
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { k: 'Équipements',  v: stats.equipment,   c: 'text-slate-900', Icon: LayoutGrid },
-            { k: 'En retard',    v: stats.overdue,     c: 'text-red-600',   Icon: AlertOctagon },
-            { k: 'Bientôt dûs',  v: stats.soon,        c: 'text-amber-600', Icon: CalendarClock },
-            { k: 'Non conformes', v: stats.nonConforme, c: 'text-red-700',  Icon: XCircle },
+            { k: 'Équipements',   v: stats.total,       c: 'text-slate-900', Icon: Wrench },
+            { k: 'En retard',     v: stats.overdue,     c: 'text-red-600',   Icon: AlertOctagon },
+            { k: 'Bientôt dûs',   v: stats.soon,        c: 'text-amber-600', Icon: CalendarClock },
+            { k: 'Non conformes', v: stats.nonConforme, c: 'text-red-700',   Icon: XCircle },
           ].map(s => (
             <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <s.Icon size={16} className={s.c} />
-              </div>
-              <div className={`text-2xl font-bold ${s.c}`}>{s.v}</div>
+              <s.Icon size={16} className={s.c} />
+              <div className={`text-2xl font-bold mt-1 ${s.c}`}>{s.v}</div>
               <div className="text-sm text-slate-500">{s.k}</div>
             </div>
           ))}
         </div>
 
-        {/* Barre de filtres + vue */}
+        {/* Filtres */}
         <div className="mb-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            {/* Toggle vue */}
-            <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <button
-                onClick={() => setViewMode('equipment')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition ${viewMode === 'equipment' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-              >
-                <LayoutGrid size={13} /> Équipements
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition ${viewMode === 'list' ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-              >
-                <List size={13} /> Toutes
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <Search size={15} className="text-slate-400 shrink-0" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Rechercher (numéro, nom, série, inspecteur…)"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              />
-            </div>
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <Search size={15} className="text-slate-400 shrink-0" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Rechercher (nom, série, emplacement, inspecteur…)"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            />
           </div>
 
-          {/* Filtre type */}
           {presentTypes.length > 0 && (
             <div className="flex gap-1 flex-wrap rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               <button
@@ -329,11 +233,8 @@ export default function InspectionsPage() {
               {presentTypes.map(t => {
                 const opt = INSPECTION_TYPE_OPTIONS.find(o => o.value === t);
                 return opt ? (
-                  <button
-                    key={t}
-                    onClick={() => setTypeFilter(t)}
-                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === t ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-                  >
+                  <button key={t} onClick={() => setTypeFilter(t)}
+                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${typeFilter === t ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
                     {opt.label}
                   </button>
                 ) : null;
@@ -342,147 +243,109 @@ export default function InspectionsPage() {
           )}
         </div>
 
-        {/* Contenu */}
+        {/* Liste */}
         {loading ? (
-          <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400">
-            <Loader2 className="animate-spin" />
+          <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16">
+            <Loader2 className="animate-spin text-teal-600" />
           </div>
-        ) : filteredRows.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400">
-              <ClipboardCheck size={26} />
+              <Wrench size={26} />
             </div>
-            <p className="font-medium text-slate-700">Aucune inspection</p>
-            <p className="max-w-sm text-sm text-slate-500">
-              {query || typeFilter !== 'all'
-                ? 'Aucun résultat pour ce filtre.'
-                : 'Créez votre première inspection.'}
+            <p className="font-medium text-slate-700">
+              {query || typeFilter !== 'all' ? 'Aucun résultat pour ce filtre.' : 'Aucun équipement enregistré.'}
             </p>
             {!query && typeFilter === 'all' && (
-              <Link href={`/${tenant}/inspections/nouveau`}
+              <Link href={`/${tenant}/equipment/new`}
                 className="mt-1 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700">
-                <Plus size={18} /> Nouvelle inspection
+                <Plus size={18} /> Créer une fiche équipement
               </Link>
             )}
           </div>
-
-        ) : viewMode === 'equipment' ? (
-          /* ── Vue équipements ─────────────────────────────── */
-          <div className="space-y-3">
-            {groups.map(g => {
-              const typOpt = INSPECTION_TYPE_OPTIONS.find(o => o.value === g.equipmentType);
-              const freqOpt = FREQUENCY_OPTIONS.find(f => f.value === g.frequency);
-              const urg = URGENCY_CONFIG[g.urgency];
-              const result = g.latestRow.overall_result;
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(({ equipment: eq, latest, daysLeft, urgency, inspectionCount }) => {
+              const typeLabel = INSPECTION_TYPE_OPTIONS.find(o => o.value === eq.equipment_type)?.label ?? eq.equipment_type;
+              const resultCfg = latest?.overall_result ? RESULT_CONFIG[latest.overall_result] : null;
 
               return (
-                <Link
-                  key={g.key}
-                  href={`/${tenant}/inspections/${g.latestRow.id}/edit`}
-                  className="block rounded-2xl border bg-white shadow-sm p-5 hover:bg-slate-50 transition-colors overflow-hidden"
-                  style={{ borderColor: g.urgency === 'overdue' ? '#fca5a5' : g.urgency === 'soon' ? '#fcd34d' : '#e2e8f0' }}
-                >
-                  <div className="flex items-start justify-between gap-4">
+                <div key={eq.id} className="rounded-2xl border bg-white shadow-sm overflow-hidden"
+                  style={{ borderColor: urgency === 'overdue' ? '#fca5a5' : urgency === 'soon' ? '#fcd34d' : '#e2e8f0' }}>
+                  {/* Barre urgence */}
+                  <div className={`h-1 ${URGENCY_BAR[urgency]}`} />
+
+                  <div className="flex items-center gap-4 px-4 py-4">
+                    {/* Photo */}
+                    {eq.equipment_photos?.[0] ? (
+                      <img src={eq.equipment_photos[0]} alt=""
+                        className="h-12 w-12 rounded-xl object-cover border border-gray-100 shrink-0" />
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+                        <Wrench size={18} className="text-teal-500" />
+                      </div>
+                    )}
+
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        {g.urgency !== 'unknown' && (
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${urg.dot}`} />
-                        )}
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <span className="text-sm font-bold text-slate-900">
-                          {g.equipmentName || typOpt?.label || g.equipmentType}
+                          {eq.equipment_name || typeLabel}
                         </span>
-                        {g.equipmentSerial && (
-                          <span className="text-xs text-slate-400 font-mono">{g.equipmentSerial}</span>
+                        {eq.equipment_serial && (
+                          <span className="text-xs text-slate-400 font-mono">#{eq.equipment_serial}</span>
                         )}
-                        {result && <ResultBadge result={result} />}
-                        {freqOpt && (
-                          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">
-                            {freqOpt.label}
+                        {resultCfg ? (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${resultCfg.bg} ${resultCfg.color}`}>
+                            <resultCfg.Icon size={11} />{resultCfg.label}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                            <Clock size={10} /> Non inspecté
                           </span>
                         )}
                       </div>
+
                       <div className="text-xs text-slate-500">
-                        {typOpt?.label}
-                        {g.equipmentLocation ? ` · ${g.equipmentLocation}` : ''}
-                        {g.latestRow.inspector_name ? ` · ${g.latestRow.inspector_name}` : ''}
+                        {typeLabel}
+                        {eq.equipment_location ? ` · ${eq.equipment_location}` : ''}
+                        {latest?.inspector_name ? ` · ${latest.inspector_name}` : ''}
+                        {latest?.inspection_date ? ` · ${new Date(latest.inspection_date).toLocaleDateString('fr-CA')}` : ''}
                       </div>
-                      <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                        <Clock size={11} />
-                        Dernière inspection : {g.latestRow.inspection_date
-                          ? new Date(g.latestRow.inspection_date).toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' })
-                          : 'N/A'}
-                        {g.allRows.length > 1 && (
-                          <span className="ml-2 flex items-center gap-0.5 text-teal-600">
-                            <TrendingUp size={11} /> {g.allRows.length} inspections
-                          </span>
-                        )}
-                      </div>
-                      <ProgressBar daysLeft={g.daysLeft} frequency={g.frequency} urgency={g.urgency} />
+
+                      {daysLeft !== null && (
+                        <div className={`text-xs font-medium mt-0.5 ${URGENCY_TEXT[urgency]}`}>
+                          {daysLeft < 0
+                            ? `En retard de ${Math.abs(daysLeft)} jour${Math.abs(daysLeft) > 1 ? 's' : ''}`
+                            : daysLeft === 0 ? 'Inspection due aujourd\'hui'
+                            : `Prochaine inspection dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`}
+                        </div>
+                      )}
+
+                      {inspectionCount > 0 && (
+                        <div className="text-xs text-teal-600 mt-0.5 flex items-center gap-1">
+                          <TrendingUp size={11} /> {inspectionCount} inspection{inspectionCount > 1 ? 's' : ''}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <ChevronRight size={16} className="text-slate-300" />
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      <Link href={`/${tenant}/equipment/${eq.id}/inspect`}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg">
+                        <Plus size={12} /> Inspecter
+                      </Link>
+                      {latest && (
+                        <Link href={`/${tenant}/inspections/${latest.id}/edit`}
+                          className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-lg">
+                          <ChevronRight size={12} /> Dernière
+                        </Link>
+                      )}
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
-          </div>
-
-        ) : (
-          /* ── Vue liste (toutes inspections + suppression) ── */
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="divide-y divide-slate-100">
-              {filteredRows.map(r => {
-                const opt = INSPECTION_TYPE_OPTIONS.find(o => o.value === r.equipment_type);
-                const { daysLeft, urgency } = calcUrgency(r);
-                const urg = URGENCY_CONFIG[urgency];
-                return (
-                  <div key={r.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group">
-                    <Link href={`/${tenant}/inspections/${r.id}/edit`} className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
-                        <ClipboardCheck size={16} className="text-teal-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <span className="text-sm font-semibold text-slate-900">{r.inspection_number}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status]}`}>
-                            {STATUS_LABEL[r.status]}
-                          </span>
-                          {r.overall_result && <ResultBadge result={r.overall_result} />}
-                          {daysLeft !== null && (
-                            <span className={`text-xs font-medium ${urg.text}`}>
-                              {daysLeft < 0 ? `↑ ${Math.abs(daysLeft)}j retard` : `${daysLeft}j restants`}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-slate-500 truncate">
-                          {opt?.label}
-                          {r.equipment_name ? ` · ${r.equipment_name}` : ''}
-                          {r.equipment_serial ? ` · ${r.equipment_serial}` : ''}
-                        </div>
-                        {r.inspector_name && (
-                          <div className="text-xs text-slate-400">
-                            {r.inspector_name}
-                            {r.inspection_date ? ` · ${new Date(r.inspection_date).toLocaleDateString('fr-CA')}` : ''}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    <button
-                      onClick={e => handleDelete(r.id, e)}
-                      disabled={deletingId === r.id}
-                      className="p-1.5 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50 disabled:opacity-50"
-                      title="Supprimer"
-                    >
-                      {deletingId === r.id
-                        ? <Loader2 size={15} className="animate-spin" />
-                        : <Trash2 size={15} />
-                      }
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>
