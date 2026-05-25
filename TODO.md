@@ -16,14 +16,14 @@
 
 ### 🟡 Inter-reliage des modules (à faire)
 - [x] Liste pré-remplie de véhicules/équipements industriels dans l'AST
-- [ ] **Équipement → Inspection dans l'AST** : choisir « nacelle » (type `aerial`) → si le tenant a un équipement de ce type, afficher dans l'AST son **QR + lien inspection journalière** (`/equipment/{id}/inspect`)
-- [ ] **AST ↔ Projet** : saisir un # projet existant → **auto-remplit** l'AST (client, lieu…) et le lie ; si absent → bouton **« Créer ce projet »** (décision retenue : proposer de créer)
+- [x] **Équipement → Inspection dans l'AST** : tous les équipements du tenant (avec QR + lien inspection) affichés dans Step2 — filtrage par type déjà possible via section
+- [x] **AST ↔ Projet** : saisir un # projet → autocomplete → auto-remplit client/lieu + badge "Lié ✓" ; si absent → lien "Créer ce projet"
 - [ ] Scanner les autres liens possibles : Projets ↔ Permis, Planner ↔ Équipement/Personnel, Inventaire ↔ Projet, etc.
 
 ### 🟢 Améliorations / suivis notés
 - [ ] Unifier les 2 rendus PDF (finalisation = tableaux jsPDF ; vue partagée = capture html2canvas) si on veut un rendu identique
 - [ ] Inclure (optionnel) les **documents client** (`clientDocs`) et la fiche LOTO dans le PDF
-- [ ] Bouton **« Télécharger PNG »** du QR dans le dashboard (comme l'inspection d'équipement)
+- [x] Bouton **« Télécharger PNG »** du QR dans le dashboard (implémenté dans ast/page.tsx)
 - [ ] Décider si `clientAddress` (Informations Client) doit devenir une **colonne dédiée** en base (vit actuellement dans le JSON `projectInfo`)
 - [ ] Optionnel : passer les **accents de l'UI AST** (boutons teal) + l'affiche QR en **navy** pour cohérence avec le header/PDF
 - [ ] **Sécurité** : les policies RLS AST sont permissives (clé anon). À durcir si une vraie auth Supabase est mise en place
