@@ -8,8 +8,8 @@ export function SwRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      // Vérifie immédiatement si une mise à jour est disponible
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(reg => {
+      // Vérifie immédiatement si une mise à jour est disponible (bypasse le cache HTTP)
       reg.update().catch(() => {});
     }).catch(() => {});
 
