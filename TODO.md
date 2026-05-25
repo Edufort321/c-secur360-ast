@@ -6,7 +6,7 @@
 
 ### 🔴 BLOQUANT — Migrations Supabase à exécuter manuellement (SQL Editor)
 > Sans elles : l'AST ne se sauvegarde pas, le QR/partage affiche « introuvable »,
-> la prise de connaissance, la suppression et les moyens de contrôle standards ne marchent pas.
+> la prise de connaissance, la suppression, les statuts et les moyens de contrôle standards ne marchent pas.
 - [ ] `032_work_permits_tables.sql` — crée `ast_permits` / `work_permits`
 - [ ] `033_ast_tenant_options.sql` — crée `tenant_ast_options` (options par tenant)
 - [ ] `044_fix_ast_permits_rls.sql` — RLS lecture publique + écriture anon (corrige « introuvable »)
@@ -14,7 +14,7 @@
 - [ ] `046_tenant_ast_options_controls.sql` — colonne `hazard` + RLS anon (moyens de contrôle standards)
 - [ ] (base fraîche) `004_create_ast_forms.sql` — crée `ast_forms` (ancien chemin /api/ast)
 
-### 🟡 Inter-reliage des modules (demandé — partiellement fait)
+### 🟡 Inter-reliage des modules (à faire)
 - [x] Liste pré-remplie de véhicules/équipements industriels dans l'AST
 - [ ] **Équipement → Inspection dans l'AST** : choisir « nacelle » (type `aerial`) → si le tenant a un équipement de ce type, afficher dans l'AST son **QR + lien inspection journalière** (`/equipment/{id}/inspect`)
 - [ ] **AST ↔ Projet** : saisir un # projet existant → **auto-remplit** l'AST (client, lieu…) et le lie ; si absent → bouton **« Créer ce projet »** (décision retenue : proposer de créer)
@@ -25,12 +25,32 @@
 - [ ] Inclure (optionnel) les **documents client** (`clientDocs`) et la fiche LOTO dans le PDF
 - [ ] Bouton **« Télécharger PNG »** du QR dans le dashboard (comme l'inspection d'équipement)
 - [ ] Décider si `clientAddress` (Informations Client) doit devenir une **colonne dédiée** en base (vit actuellement dans le JSON `projectInfo`)
+- [ ] Optionnel : passer les **accents de l'UI AST** (boutons teal) + l'affiche QR en **navy** pour cohérence avec le header/PDF
 - [ ] **Sécurité** : les policies RLS AST sont permissives (clé anon). À durcir si une vraie auth Supabase est mise en place
+
+### ✔️ Complété cette session (AST)
+- [x] Table `ast_forms` (migration 004) + 033 rendue idempotente
+- [x] Numéro AST unique `AST-{TENANT}-{AAAA-MM-JJ}-{CODE}` (+ date complète)
+- [x] Champ « Adresse » (Informations Client)
+- [x] Retrait de la section « Travailleurs » en double (mode complet)
+- [x] Git initialisé dans `-main` + push continu sur `main` (Vercel)
+- [x] AST entièrement bilingue via le sélecteur FR/EN du header ; libellé « Retour à AST tableau de bord »
+- [x] Participants : recherche intelligente d'employés (admin), entreprise auto = nom du tenant **à la sélection** d'un employé, liste déroulante en `fixed` (plus masquée)
+- [x] QR public imprimable (logo tenant/C-Secur, mention « Pense à faire ton AST », logo en haut/QR centré) → page d'accueil `/ast/acces` (Nouveau / Recherche complète)
+- [x] Vue partagée bilingue + **prise de connaissance** cochable par l'équipe + lien « Partager à l'équipe » en finalisation
+- [x] Dashboard : galerie/liste, filtres semaine/mois/année, multi-sélection + suppression, indicateurs HSE
+- [x] Export PDF (champs remplis) : dans la finalisation **et** en lot depuis le dashboard ; structure Étape→Danger→Moyens de contrôle ; bloc Approbation superviseur ; **logo+titre+numéro répétés sur chaque page** ; couleurs **navy**
+- [x] Moyens de contrôle ajout/édition par danger + standards persistants du tenant
+- [x] Joindre AST/fiche LOTO du client (photo ou document)
+- [x] Statuts fonctionnels (brouillon/actif/complété/annulé) — persistance immédiate
+- [x] « Nb de travailleurs » écrasable au focus
+- [x] Plus de brouillons vides (auto-save seulement si contenu réel)
 
 ### 📌 Notes techniques (pour les prochaines sessions)
 - Le dossier `C:\CLAUDE\C-Secur360\c-secur360-ast-main` EST le dépôt git/Vercel (branche `main`).
 - Type-check : `node node_modules/typescript/bin/tsc --noEmit` — ⚠️ `npx tsc` ne valide RIEN ici.
 - L'AST se sauvegarde dans la table **`ast_permits`** (pas `ast_forms`).
+- Export PDF : `generateAstsPdf()` exporté depuis `components/steps/Step4Permits/AST` ; rendu via `renderAstSection`.
 
 ---
 
