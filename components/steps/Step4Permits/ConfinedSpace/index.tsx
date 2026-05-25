@@ -362,12 +362,13 @@ export default function ConfinedSpace({
     try {
       const payload = { ...data, updated_at: new Date().toISOString() };
       if (supabase) {
-        await supabase.from('confined_space_permits').upsert({
+        const { error } = await supabase.from('confined_space_permits').upsert({
           permit_number: payload.permit_number,
           tenant_id: tenant,
           data: payload,
           updated_at: payload.updated_at,
         });
+        if (error) { setSaveStatus('error'); return; }
       }
       localStorage.setItem(`cs-permit-${payload.permit_number}`, JSON.stringify(payload));
       setSaveStatus('saved');

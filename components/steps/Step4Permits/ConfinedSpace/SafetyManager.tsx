@@ -583,9 +583,9 @@ export function generatePermitNumber(province: ProvinceCode): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
-  
-  return `CS-${province}-${year}${month}${day}-${time}`;
+  const time = String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0') + String(date.getSeconds()).padStart(2, '0');
+  const rand = Math.random().toString(36).substr(2, 3).toUpperCase();
+  return `CS-${province}-${year}${month}${day}-${time}-${rand}`;
 }
 
 export function generateId(): string {

@@ -119,7 +119,8 @@ function readingStatus(r: AtmosphericReading['readings'], limits: typeof LIMITS[
   if (r.oxygen < limits.o2min || r.oxygen > limits.o2max) return 'danger';
   if (r.hydrogenSulfide > limits.h2sMax || r.carbonMonoxide > limits.coMax) return 'danger';
   if (r.combustibleGas > limits.lelMax) return 'danger';
-  if (r.oxygen < 20 || r.combustibleGas > 5 || r.hydrogenSulfide > 5) return 'caution';
+  // Caution: within 1% of O2 danger threshold, or > 50% of LEL/H2S/CO limits
+  if (r.oxygen < (limits.o2min + 1) || r.combustibleGas > limits.lelMax * 0.5 || r.hydrogenSulfide > limits.h2sMax * 0.5 || r.carbonMonoxide > limits.coMax * 0.5) return 'caution';
   return 'safe';
 }
 
