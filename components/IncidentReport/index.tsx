@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
@@ -17,16 +18,20 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 
 export type IncidentType = 'accident' | 'near_miss' | 'vehicle' | 'property' | 'medical';
 export type IncidentStatus = 'draft' | 'submitted' | 'closed';
-export type Province = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL';
+export type Province = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'YT' | 'NT' | 'NU';
 
-interface BodyRegionDef {
-  id: string;
-  label: string;
-  shape: 'ellipse' | 'rect';
-  cx?: number; cy?: number; rx?: number; ry?: number;
-  x?: number; y?: number; w?: number; h?: number;
-  rr?: number;
-}
+// Dynamic import du modèle corporel (MIT — react-body-highlighter)
+const BodyModel = dynamic<{
+  data: Array<{ name: string; muscles: string[]; frequency?: number }>;
+  onClick?: (p: { muscle: string }) => void;
+  type?: 'anterior' | 'posterior';
+  highlightedColors?: string[];
+  bodyColor?: string;
+  style?: React.CSSProperties;
+}>(
+  () => import('react-body-highlighter').then(m => ({ default: m.default || (m as any) })),
+  { ssr: false, loading: () => <div className="w-40 h-64 bg-gray-100 rounded-xl animate-pulse mx-auto" /> }
+);
 
 interface InjuredPerson {
   id: string;
@@ -126,6 +131,7 @@ export interface IncidentReportFormProps {
   defaultProvince?: Province;
   onClose?: () => void;
   onSaved?: (id: string) => void;
+  embedded?: boolean;
 }
 
 export interface DayCounter {
@@ -138,63 +144,33 @@ export interface DayCounter {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const FRONT_REGIONS: BodyRegionDef[] = [
-  { id: 'head-front',        label: 'Tête (avant)',             shape: 'ellipse', cx: 90, cy: 30, rx: 26, ry: 28 },
-  { id: 'face',              label: 'Visage',                   shape: 'ellipse', cx: 90, cy: 30, rx: 16, ry: 18 },
-  { id: 'neck-front',        label: 'Cou (avant)',              shape: 'rect', x: 82, y: 57,  w: 16, h: 14, rr: 3 },
-  { id: 'left-shoulder',     label: 'Épaule gauche',            shape: 'rect', x: 46, y: 71,  w: 18, h: 14, rr: 4 },
-  { id: 'right-shoulder',    label: 'Épaule droite',            shape: 'rect', x: 116, y: 71, w: 18, h: 14, rr: 4 },
-  { id: 'chest-left',        label: 'Thorax gauche',            shape: 'rect', x: 64, y: 71,  w: 18, h: 46, rr: 3 },
-  { id: 'chest-right',       label: 'Thorax droit',             shape: 'rect', x: 82, y: 71,  w: 18, h: 46, rr: 3 },
-  { id: 'abdomen',           label: 'Abdomen',                  shape: 'rect', x: 64, y: 117, w: 36, h: 36, rr: 3 },
-  { id: 'groin',             label: 'Bassin / Aine',            shape: 'rect', x: 64, y: 153, w: 36, h: 18, rr: 3 },
-  { id: 'left-upper-arm',    label: 'Bras gauche (haut)',       shape: 'rect', x: 40, y: 71,  w: 18, h: 54, rr: 5 },
-  { id: 'right-upper-arm',   label: 'Bras droit (haut)',        shape: 'rect', x: 122, y: 71, w: 18, h: 54, rr: 5 },
-  { id: 'left-forearm',      label: 'Avant-bras gauche',        shape: 'rect', x: 40, y: 127, w: 16, h: 46, rr: 5 },
-  { id: 'right-forearm',     label: 'Avant-bras droit',         shape: 'rect', x: 124, y: 127, w: 16, h: 46, rr: 5 },
-  { id: 'left-hand',         label: 'Main gauche',              shape: 'rect', x: 38, y: 175, w: 18, h: 22, rr: 3 },
-  { id: 'right-hand',        label: 'Main droite',              shape: 'rect', x: 124, y: 175, w: 18, h: 22, rr: 3 },
-  { id: 'left-thigh',        label: 'Cuisse gauche',            shape: 'rect', x: 65, y: 171, w: 14, h: 56, rr: 5 },
-  { id: 'right-thigh',       label: 'Cuisse droite',            shape: 'rect', x: 81, y: 171, w: 14, h: 56, rr: 5 },
-  { id: 'left-knee',         label: 'Genou gauche',             shape: 'rect', x: 65, y: 227, w: 14, h: 16, rr: 3 },
-  { id: 'right-knee',        label: 'Genou droit',              shape: 'rect', x: 81, y: 227, w: 14, h: 16, rr: 3 },
-  { id: 'left-shin',         label: 'Tibia / Jambe gauche',     shape: 'rect', x: 65, y: 243, w: 12, h: 54, rr: 4 },
-  { id: 'right-shin',        label: 'Tibia / Jambe droite',     shape: 'rect', x: 81, y: 243, w: 12, h: 54, rr: 4 },
-  { id: 'left-foot',         label: 'Pied gauche',              shape: 'rect', x: 56, y: 297, w: 22, h: 16, rr: 3 },
-  { id: 'right-foot',        label: 'Pied droit',               shape: 'rect', x: 80, y: 297, w: 22, h: 16, rr: 3 },
-];
-
-const BACK_REGIONS: BodyRegionDef[] = [
-  { id: 'head-back',         label: 'Tête (arrière)',           shape: 'ellipse', cx: 90, cy: 30, rx: 26, ry: 28 },
-  { id: 'neck-back',         label: 'Cou (arrière)',            shape: 'rect', x: 82, y: 57,  w: 16, h: 14, rr: 3 },
-  { id: 'left-trap',         label: 'Trapèze gauche',           shape: 'rect', x: 46, y: 71,  w: 18, h: 14, rr: 4 },
-  { id: 'right-trap',        label: 'Trapèze droit',            shape: 'rect', x: 116, y: 71, w: 18, h: 14, rr: 4 },
-  { id: 'upper-back',        label: 'Haut du dos',              shape: 'rect', x: 64, y: 71,  w: 36, h: 40, rr: 3 },
-  { id: 'lower-back',        label: 'Bas du dos',               shape: 'rect', x: 64, y: 111, w: 36, h: 38, rr: 3 },
-  { id: 'buttock-left',      label: 'Fesse gauche',             shape: 'rect', x: 64, y: 149, w: 18, h: 24, rr: 4 },
-  { id: 'buttock-right',     label: 'Fesse droite',             shape: 'rect', x: 82, y: 149, w: 18, h: 24, rr: 4 },
-  { id: 'left-ua-back',      label: 'Bras gauche (arrière)',    shape: 'rect', x: 40, y: 71,  w: 18, h: 54, rr: 5 },
-  { id: 'right-ua-back',     label: 'Bras droit (arrière)',     shape: 'rect', x: 122, y: 71, w: 18, h: 54, rr: 5 },
-  { id: 'left-elbow',        label: 'Coude gauche',             shape: 'rect', x: 40, y: 127, w: 16, h: 14, rr: 3 },
-  { id: 'right-elbow',       label: 'Coude droit',              shape: 'rect', x: 124, y: 127, w: 16, h: 14, rr: 3 },
-  { id: 'left-fa-back',      label: 'Avant-bras gauche (arr.)', shape: 'rect', x: 40, y: 141, w: 16, h: 32, rr: 5 },
-  { id: 'right-fa-back',     label: 'Avant-bras droit (arr.)',  shape: 'rect', x: 124, y: 141, w: 16, h: 32, rr: 5 },
-  { id: 'left-hand-back',    label: 'Main gauche (arrière)',    shape: 'rect', x: 38, y: 175, w: 18, h: 22, rr: 3 },
-  { id: 'right-hand-back',   label: 'Main droite (arrière)',    shape: 'rect', x: 124, y: 175, w: 18, h: 22, rr: 3 },
-  { id: 'left-hamstring',    label: 'Ischio-jambier gauche',    shape: 'rect', x: 65, y: 173, w: 14, h: 52, rr: 5 },
-  { id: 'right-hamstring',   label: 'Ischio-jambier droit',     shape: 'rect', x: 81, y: 173, w: 14, h: 52, rr: 5 },
-  { id: 'left-knee-back',    label: 'Creux poplité gauche',     shape: 'rect', x: 65, y: 225, w: 14, h: 16, rr: 3 },
-  { id: 'right-knee-back',   label: 'Creux poplité droit',      shape: 'rect', x: 81, y: 225, w: 14, h: 16, rr: 3 },
-  { id: 'left-calf',         label: 'Mollet gauche',            shape: 'rect', x: 65, y: 241, w: 12, h: 54, rr: 4 },
-  { id: 'right-calf',        label: 'Mollet droit',             shape: 'rect', x: 81, y: 241, w: 12, h: 54, rr: 4 },
-  { id: 'left-heel',         label: 'Talon gauche',             shape: 'rect', x: 56, y: 295, w: 22, h: 18, rr: 3 },
-  { id: 'right-heel',        label: 'Talon droit',              shape: 'rect', x: 80, y: 295, w: 22, h: 18, rr: 3 },
-];
-
-const ALL_REGIONS = [...FRONT_REGIONS, ...BACK_REGIONS];
+// Libellés FR pour chaque zone anatomique (slugs de react-body-highlighter)
+const MUSCLE_LABELS: Record<string, string> = {
+  'head':            'Tête',
+  'neck':            'Cou',
+  'trapezius':       'Trapèze / Épaules',
+  'front-deltoids':  'Épaule — avant',
+  'back-deltoids':   'Épaule — arrière',
+  'chest':           'Poitrine / Thorax',
+  'biceps':          'Biceps (bras avant)',
+  'triceps':         'Triceps (bras arrière)',
+  'forearm':         'Avant-bras',
+  'abs':             'Abdomen',
+  'obliques':        'Flancs / Obliques',
+  'upper-back':      'Haut du dos',
+  'lower-back':      'Bas du dos',
+  'gluteal':         'Fessier',
+  'adductor':        'Adducteurs (intérieur cuisse)',
+  'abductors':       'Abducteurs (hanche / extérieur)',
+  'quadriceps':      'Quadriceps (cuisse avant)',
+  'hamstring':       'Ischio-jambiers (cuisse arrière)',
+  'knees':           'Genoux',
+  'left-soleus':     'Mollet gauche',
+  'right-soleus':    'Mollet droit',
+};
 
 const PROVINCE_INFO: Record<Province, {
-  name: string; authority: string; deadline: string; form: string; requirements: string[];
+  name: string; authority: string; deadline: string; form: string; requirements: string[]; territory?: boolean;
 }> = {
   QC: {
     name: 'Québec', authority: 'CNESST',
@@ -297,6 +273,42 @@ const PROVINCE_INFO: Record<Province, {
       'Rapport dans les 3 jours ouvrables',
       'Blessure grave : notification immédiate',
       'Conformité à la Workplace Health, Safety and Compensation Act',
+    ],
+  },
+  YT: {
+    name: 'Yukon', authority: 'YWCHSB (Yukon Workers\' Compensation Health and Safety Board)',
+    deadline: '3 jours ouvrables',
+    form: 'Employer\'s Report of Injury or Occupational Disease',
+    territory: true,
+    requirements: [
+      'Rapport à la YWCHSB dans les 3 jours ouvrables suivant la blessure',
+      'Blessure grave ou décès : notification immédiate',
+      'Conformité à la Workers\' Compensation Act (Yukon)',
+      'Enquête d\'incident requise pour tout accident grave',
+    ],
+  },
+  NT: {
+    name: 'Territoires du Nord-Ouest', authority: 'WSCC (Workers\' Safety and Compensation Commission)',
+    deadline: '3 jours ouvrables',
+    form: 'Employer\'s Report of Accident/Injury (Form W1)',
+    territory: true,
+    requirements: [
+      'Rapport à la WSCC dans les 3 jours ouvrables',
+      'Blessure grave : aviser OHS dans les 24h (Sécurité au travail et indemnisation des travailleurs)',
+      'Conformité à la Safety Act (T.N.-O.)',
+      'Formulaire W1 à compléter pour toute blessure nécessitant des soins médicaux',
+    ],
+  },
+  NU: {
+    name: 'Nunavut', authority: 'WSCC (Workers\' Safety and Compensation Commission)',
+    deadline: '3 jours ouvrables',
+    form: 'Employer\'s Report of Accident/Injury (Form W1)',
+    territory: true,
+    requirements: [
+      'Rapport à la WSCC dans les 3 jours ouvrables',
+      'Blessure grave : aviser OHS dans les 24h',
+      'Conformité à la Safety Act (Nunavut)',
+      'Même commission que les T.N.-O. (WSCC) — wscc.nu.ca',
     ],
   },
 };
@@ -423,117 +435,91 @@ function Toggle({ checked, onChange, label, disabled }: {
   );
 }
 
-// ── Body Diagram ─────────────────────────────────────────────────────────────
+// ── Body Diagram (react-body-highlighter — MIT) ───────────────────────────────
 
 function BodyDiagram({ selected, onChange, readOnly }: {
   selected: string[];
   onChange: (sel: string[]) => void;
   readOnly: boolean;
 }) {
-  const [view, setView] = useState<'front' | 'back'>('front');
-  const [hovered, setHovered] = useState<string | null>(null);
-  const regions = view === 'front' ? FRONT_REGIONS : BACK_REGIONS;
+  const [view, setView] = useState<'anterior' | 'posterior'>('anterior');
 
-  function toggle(id: string) {
+  // Construire le dataset pour surligner les zones sélectionnées
+  const modelData = selected.length > 0
+    ? [{ name: 'Blessures', muscles: selected, frequency: 2 }]
+    : [];
+
+  function handleClick({ muscle }: { muscle: string }) {
     if (readOnly) return;
-    onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]);
-  }
-
-  function regionFill(id: string) {
-    if (selected.includes(id)) return '#ef4444';
-    if (hovered === id) return '#fca5a5';
-    return '#e2e8f0';
-  }
-
-  function regionStroke(id: string) {
-    return selected.includes(id) ? '#b91c1c' : '#94a3b8';
+    onChange(
+      selected.includes(muscle)
+        ? selected.filter(m => m !== muscle)
+        : [...selected, muscle]
+    );
   }
 
   return (
     <div className="flex flex-col items-center">
-      <div className="flex gap-2 mb-3">
-        {(['front', 'back'] as const).map(v => (
+      {/* Vue toggle */}
+      <div className="flex gap-2 mb-4">
+        {(['anterior', 'posterior'] as const).map(v => (
           <button
             key={v}
             onClick={() => setView(v)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-              view === v ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-300 hover:border-red-400'
+              view === v
+                ? 'bg-red-600 text-white border-red-600'
+                : 'bg-white text-gray-600 border-gray-300 hover:border-red-400'
             }`}
           >
-            {v === 'front' ? 'Vue avant' : 'Vue arrière'}
+            {v === 'anterior' ? 'Vue avant' : 'Vue arrière'}
           </button>
         ))}
       </div>
 
-      <div className="relative">
-        <svg
-          viewBox="0 0 180 320"
-          className="w-44 cursor-default select-none"
-          style={{ userSelect: 'none' }}
-        >
-          {/* Body silhouette background */}
-          <ellipse cx="90" cy="30" rx="30" ry="32" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
-          <rect x="81" y="58" width="18" height="16" rx="3" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="40" y="70" width="100" height="88" rx="6" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
-          <rect x="36" y="70" width="22" height="60" rx="7" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="122" y="70" width="22" height="60" rx="7" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="36" y="128" width="20" height="50" rx="6" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="124" y="128" width="20" height="50" rx="6" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="35" y="176" width="22" height="24" rx="5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="123" y="176" width="22" height="24" rx="5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="62" y="156" width="56" height="62" rx="5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="63" y="218" width="24" height="24" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="93" y="218" width="24" height="24" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="64" y="242" width="20" height="56" rx="5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="96" y="242" width="20" height="56" rx="5" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="56" y="296" width="30" height="18" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-          <rect x="94" y="296" width="30" height="18" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
-
-          {/* Interactive regions */}
-          {regions.map(r => {
-            const fill = regionFill(r.id);
-            const stroke = regionStroke(r.id);
-            const props = {
-              key: r.id,
-              fill, stroke, strokeWidth: 1,
-              opacity: 0.85,
-              style: { cursor: readOnly ? 'default' : 'pointer' },
-              onClick: () => toggle(r.id),
-              onMouseEnter: () => setHovered(r.id),
-              onMouseLeave: () => setHovered(null),
-            };
-            if (r.shape === 'ellipse') {
-              return <ellipse {...props} cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry}><title>{r.label}</title></ellipse>;
-            }
-            return <rect {...props} x={r.x} y={r.y} width={r.w} height={r.h} rx={r.rr || 3}><title>{r.label}</title></rect>;
-          })}
-        </svg>
-
-        {/* Hover label */}
-        {hovered && (
-          <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none">
-            {ALL_REGIONS.find(r => r.id === hovered)?.label}
-          </div>
-        )}
+      {/* Modèle corporel SVG */}
+      <div
+        className="w-44 select-none"
+        style={{ cursor: readOnly ? 'default' : 'pointer' }}
+      >
+        <BodyModel
+          data={modelData}
+          onClick={handleClick}
+          type={view}
+          highlightedColors={['#ef4444']}
+          bodyColor="#dde3ea"
+          style={{ width: '100%' }}
+        />
       </div>
 
-      {/* Selected tags */}
-      <div className="mt-8 flex flex-wrap gap-1 justify-center max-w-xs">
-        {selected.length === 0 && (
-          <span className="text-xs text-gray-400">Cliquer sur les zones blessées</span>
-        )}
-        {selected.map(id => {
-          const region = ALL_REGIONS.find(r => r.id === id);
-          return region ? (
-            <span key={id} className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs border border-red-200">
-              {region.label}
+      {/* Indication */}
+      {!readOnly && selected.length === 0 && (
+        <p className="mt-3 text-xs text-gray-400 text-center">
+          Cliquer sur les zones blessées du schéma
+        </p>
+      )}
+
+      {/* Badges zones sélectionnées */}
+      {selected.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-1.5 justify-center max-w-xs">
+          {selected.map(muscle => (
+            <span
+              key={muscle}
+              className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs border border-red-200 font-medium"
+            >
+              {MUSCLE_LABELS[muscle] || muscle}
               {!readOnly && (
-                <button onClick={() => toggle(id)} className="hover:text-red-900 font-bold leading-none">×</button>
+                <button
+                  onClick={() => onChange(selected.filter(m => m !== muscle))}
+                  className="hover:text-red-900 font-bold text-sm leading-none ml-0.5"
+                >
+                  ×
+                </button>
               )}
             </span>
-          ) : null;
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -668,6 +654,7 @@ export default function IncidentReportForm({
   defaultProvince = 'QC',
   onClose,
   onSaved,
+  embedded = false,
 }: IncidentReportFormProps) {
   const [section, setSection] = useState<SectionId>('general');
   const [report, setReport] = useState<IncidentReportData>(emptyReport(defaultType, defaultProvince));
@@ -835,7 +822,7 @@ export default function IncidentReportForm({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <div className={`bg-white border-b border-gray-200 sticky z-20 ${embedded ? 'top-20' : 'top-0'}`}>
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {onClose && (
@@ -906,7 +893,7 @@ export default function IncidentReportForm({
       <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
         {/* Sidebar */}
         <div className="w-48 shrink-0">
-          <nav className="sticky top-20 space-y-1">
+          <nav className={`sticky space-y-1 ${embedded ? 'top-36' : 'top-20'}`}>
             {SECTIONS.map(s => (
               <button
                 key={s.id}
@@ -951,7 +938,8 @@ function GeneralSection({ report, onChange, readOnly }: {
     { value: 'medical',   label: 'Maladie professionnelle' },
   ];
 
-  const provinces: { value: Province; label: string }[] = [
+  const provinces: { value: Province; label: string; group?: string }[] = [
+    // ─ Provinces
     { value: 'QC', label: 'Québec (CNESST)' },
     { value: 'ON', label: 'Ontario (WSIB)' },
     { value: 'BC', label: 'Colombie-Britannique (WorkSafeBC)' },
@@ -962,6 +950,10 @@ function GeneralSection({ report, onChange, readOnly }: {
     { value: 'NS', label: 'Nouvelle-Écosse (WCB-NS)' },
     { value: 'PE', label: 'Île-du-Prince-Édouard (WCB-PEI)' },
     { value: 'NL', label: 'Terre-Neuve-et-Labrador (WorkplaceNL)' },
+    // ─ Territoires
+    { value: 'YT', label: 'Yukon (YWCHSB)' },
+    { value: 'NT', label: 'Territoires du Nord-Ouest (WSCC)' },
+    { value: 'NU', label: 'Nunavut (WSCC)' },
   ];
 
   return (

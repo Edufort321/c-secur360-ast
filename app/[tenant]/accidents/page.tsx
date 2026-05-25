@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import {
   ArrowLeft, Plus, AlertTriangle, Shield, Truck, Building2,
-  Activity, Clock, Filter, Search, ChevronRight,
+  Activity, Clock, Search, ChevronRight,
 } from 'lucide-react';
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
+import { PortalHeader } from '@/components/PortalHeader';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -120,22 +121,6 @@ export default function AccidentsPage() {
     setActiveReport('new');
   }
 
-  function openReport(id: string) {
-    setActiveReport(id);
-  }
-
-  if (activeReport !== null) {
-    return (
-      <IncidentReportForm
-        tenant={tenant}
-        reportId={activeReport === 'new' ? undefined : activeReport}
-        defaultType={defaultType}
-        onClose={() => { setActiveReport(null); load(); }}
-        onSaved={() => {}}
-      />
-    );
-  }
-
   const filtered = reports.filter(r => {
     if (filter !== 'all' && r.incident_type !== filter) return false;
     if (search) {
@@ -152,185 +137,200 @@ export default function AccidentsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href={`/${tenant}/dashboard`} className="text-gray-500 hover:text-gray-700">
-              <ArrowLeft size={20} />
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Incidents & Accidents</h1>
-              <p className="text-xs text-gray-400">Déclarations, analyses et décompte sécuritaire</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => newReport('near_miss')}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-lg font-medium"
-            >
-              <Shield size={15} />
-              Passé proche
-            </button>
-            <button
-              onClick={() => newReport('accident')}
-              className="flex items-center gap-1.5 text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
-            >
-              <Plus size={15} />
-              Nouveau rapport
-            </button>
-          </div>
-        </div>
-      </div>
+      <PortalHeader tenant={tenant} />
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {/* Day counters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <DaySafetyCounter
-            label="jours sans accident"
-            lastDate={counter?.last_accident_date ?? null}
-            recordDays={counter?.accident_record_days ?? 0}
-            color="green"
-            onReset={() => setResetConfirm('accident')}
-          />
-          <DaySafetyCounter
-            label="jours sans passé proche"
-            lastDate={counter?.last_near_miss_date ?? null}
-            recordDays={counter?.near_miss_record_days ?? 0}
-            color="orange"
-            onReset={() => setResetConfirm('near_miss')}
-          />
-        </div>
-
-        {/* Reset confirm modal */}
-        {resetConfirm && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
-              <AlertTriangle className="text-red-500 mb-3" size={32} />
-              <h3 className="text-base font-semibold text-gray-900 mb-2">Réinitialiser le compteur</h3>
-              <p className="text-sm text-gray-500 mb-5">
-                Ceci enregistre aujourd'hui comme date du dernier {resetConfirm === 'accident' ? 'accident' : 'passé proche'} et remet le compteur à zéro. Le record précédent sera conservé.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button onClick={() => setResetConfirm(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600">
-                  Annuler
+      {activeReport !== null ? (
+        <IncidentReportForm
+          tenant={tenant}
+          reportId={activeReport === 'new' ? undefined : activeReport}
+          defaultType={defaultType}
+          onClose={() => { setActiveReport(null); load(); }}
+          onSaved={() => {}}
+          embedded
+        />
+      ) : (
+        <>
+          {/* Sub-header */}
+          <div className="bg-white border-b border-gray-200">
+            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Link href={`/${tenant}/modules`} className="text-gray-500 hover:text-gray-700">
+                  <ArrowLeft size={20} />
+                </Link>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Accidents</h1>
+                  <p className="text-xs text-gray-400">Déclarations, analyses et décompte sécuritaire</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => newReport('near_miss')}
+                  className="flex items-center gap-1.5 text-sm px-3 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-lg font-medium"
+                >
+                  <Shield size={15} />
+                  Passé proche
                 </button>
                 <button
-                  onClick={() => handleReset(resetConfirm)}
-                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-medium"
+                  onClick={() => newReport('accident')}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
                 >
-                  Confirmer la réinitialisation
+                  <Plus size={15} />
+                  Nouveau rapport
                 </button>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Total', value: reports.length, color: 'text-gray-700' },
-            { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
-            { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-              <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-              <div className="text-xs text-gray-500">{s.label}</div>
+          <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+            {/* Day counters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <DaySafetyCounter
+                label="jours sans accident"
+                lastDate={counter?.last_accident_date ?? null}
+                recordDays={counter?.accident_record_days ?? 0}
+                color="green"
+                onReset={() => setResetConfirm('accident')}
+              />
+              <DaySafetyCounter
+                label="jours sans passé proche"
+                lastDate={counter?.last_near_miss_date ?? null}
+                recordDays={counter?.near_miss_record_days ?? 0}
+                color="orange"
+                onReset={() => setResetConfirm('near_miss')}
+              />
             </div>
-          ))}
-        </div>
 
-        {/* Filters + search */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex flex-wrap gap-3 mb-3">
-            {(['all', 'accident', 'near_miss', 'vehicle', 'property', 'medical'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  filter === f ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                }`}
-              >
-                {f === 'all' ? 'Tous' : TYPE_LABEL[f]}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher par numéro, description…"
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-            />
-          </div>
-        </div>
+            {/* Reset confirm modal */}
+            {resetConfirm && (
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+                  <AlertTriangle className="text-red-500 mb-3" size={32} />
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">Réinitialiser le compteur</h3>
+                  <p className="text-sm text-gray-500 mb-5">
+                    Ceci enregistre aujourd'hui comme date du dernier {resetConfirm === 'accident' ? 'accident' : 'passé proche'} et remet le compteur à zéro. Le record précédent sera conservé.
+                  </p>
+                  <div className="flex gap-3 justify-end">
+                    <button onClick={() => setResetConfirm(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600">
+                      Annuler
+                    </button>
+                    <button
+                      onClick={() => handleReset(resetConfirm)}
+                      className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg font-medium"
+                    >
+                      Confirmer la réinitialisation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-        {/* List */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">
-              {filtered.length} rapport{filtered.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="py-16 text-center text-sm text-gray-400">Chargement…</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <AlertTriangle size={40} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-sm text-gray-400">
-                {search || filter !== 'all' ? 'Aucun résultat' : 'Aucun rapport enregistré'}
-              </p>
-              {!search && filter === 'all' && (
-                <button
-                  onClick={() => newReport('accident')}
-                  className="mt-4 text-sm text-red-600 hover:underline"
-                >
-                  Créer le premier rapport
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {filtered.map(r => (
-                <button
-                  key={r.id}
-                  onClick={() => openReport(r.id)}
-                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${TYPE_COLOR[r.incident_type]}`}>
-                    {TYPE_ICON[r.incident_type]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                      <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${TYPE_COLOR[r.incident_type]}`}>
-                        {TYPE_LABEL[r.incident_type]}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
-                        {STATUS_LABEL[r.status]}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {r.data?.incidentDate ?? ''}{r.data?.address ? ` · ${r.data.address}` : ''}
-                      {r.data?.reportedBy ? ` · ${r.data.reportedBy}` : ''}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-400 shrink-0">
-                    <Clock size={13} />
-                    <span className="text-xs">
-                      {new Date(r.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
-                    </span>
-                    <ChevronRight size={15} className="ml-1" />
-                  </div>
-                </button>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Total', value: reports.length, color: 'text-gray-700' },
+                { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
+                { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                  <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+                  <div className="text-xs text-gray-500">{s.label}</div>
+                </div>
               ))}
             </div>
-          )}
-        </div>
-      </div>
+
+            {/* Filters + search */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex flex-wrap gap-3 mb-3">
+                {(['all', 'accident', 'near_miss', 'vehicle', 'property', 'medical'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      filter === f ? 'bg-red-600 text-white border-red-600' : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {f === 'all' ? 'Tous' : TYPE_LABEL[f]}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Rechercher par numéro, description…"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">
+                  {filtered.length} rapport{filtered.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {loading ? (
+                <div className="py-16 text-center text-sm text-gray-400">Chargement…</div>
+              ) : filtered.length === 0 ? (
+                <div className="py-16 text-center">
+                  <AlertTriangle size={40} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-400">
+                    {search || filter !== 'all' ? 'Aucun résultat' : 'Aucun rapport enregistré'}
+                  </p>
+                  {!search && filter === 'all' && (
+                    <button
+                      onClick={() => newReport('accident')}
+                      className="mt-4 text-sm text-red-600 hover:underline"
+                    >
+                      Créer le premier rapport
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {filtered.map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => setActiveReport(r.id)}
+                      className="w-full px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${TYPE_COLOR[r.incident_type]}`}>
+                        {TYPE_ICON[r.incident_type]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                          <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${TYPE_COLOR[r.incident_type]}`}>
+                            {TYPE_LABEL[r.incident_type]}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
+                            {STATUS_LABEL[r.status]}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {r.data?.incidentDate ?? ''}{r.data?.address ? ` · ${r.data.address}` : ''}
+                          {r.data?.reportedBy ? ` · ${r.data.reportedBy}` : ''}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-400 shrink-0">
+                        <Clock size={13} />
+                        <span className="text-xs">
+                          {new Date(r.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <ChevronRight size={15} className="ml-1" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
