@@ -2803,14 +2803,15 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
   );
 }
 
-// ── Génération PDF de l'AST (champs remplis seulement) ─────────────────────
-async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: string | null) {
+// ── Génération PDF de l'AST (document professionnel, champs remplis seulement) ─
+// Rend une fiche AST sur le document courant (en haut de la page courante).
+async function renderAstSection(
+  doc: { [k: string]: any }, autoTable: (doc: any, opts: any) => void,
+  ast: ASTPermit, language: Language, logoDataUrl?: string | null,
+) {
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
-  const { default: jsPDF } = await import('jspdf');
-  const autoTable = (await import('jspdf-autotable')).default;
-
-  const doc = new jsPDF('p', 'mm', 'a4');
   const margin = 14;
+  const pageH = doc.internal.pageSize.getHeight();
   let y = 14;
 
   // Logo en haut à gauche (tenant ou C-Secur par défaut)
@@ -2842,7 +2843,6 @@ async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: 
     [tr('Projet', 'Project'), ti.projectNumber],
     [tr('Entrepreneur', 'Contractor'), ti.contractor],
     [tr('Superviseur', 'Supervisor'), ti.supervisor],
-    [tr('Certification superviseur', 'Supervisor certification'), ti.supervisorCert],
     [tr('Date', 'Date'), ti.taskDate],
     [tr('Durée estimée', 'Estimated duration'), ti.estimatedDuration],
     [tr('Description de la tâche', 'Task description'), ti.taskDescription],
@@ -2860,26 +2860,43 @@ async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: 
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
     margin: { left: margin, right: margin },
   });
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 6;
 
-  // Étapes de travail
+  // Étapes : chaque danger sur sa ligne avec ses moyens de contrôle (puces).
   if (ast.jobSteps.length > 0) {
+    const body: any[] = [];
+    ast.jobSteps.forEach((s, idx) => {
+      const used = new Set<string>();
+      const rows: { hazard: string; controls: string }[] = [];
+      (s.hazards || []).forEach(h => {
+        const known = HAZARD_CONTROLS[h] || [];
+        const ctrls = (s.controls || []).filter(c => known.includes(c));
+        ctrls.forEach(c => used.add(c));
+        rows.push({ hazard: h, controls: ctrls.length ? ctrls.map(c => `• ${c}`).join('\n') : '—' });
+      });
+      const others = (s.controls || []).filter(c => !used.has(c));
+      if (others.length) rows.push({ hazard: tr('Autres mesures', 'Other measures'), controls: others.map(c => `• ${c}`).join('\n') });
+      if (rows.length === 0) rows.push({ hazard: '—', controls: '—' });
+      const risk = `${s.riskBeforeProb * s.riskBeforeSev} → ${s.riskAfterProb * s.riskAfterSev}`;
+      rows.forEach((r, ri) => {
+        const row: any[] = [];
+        if (ri === 0) row.push({ content: `${idx + 1}. ${s.description || '—'}`, rowSpan: rows.length, styles: { fontStyle: 'bold', valign: 'top' } });
+        row.push(r.hazard, r.controls);
+        if (ri === 0) row.push({ content: risk, rowSpan: rows.length, styles: { halign: 'center', valign: 'middle' } });
+        body.push(row);
+      });
+    });
     autoTable(doc, {
       startY: y,
-      head: [[tr('Étape', 'Step'), tr('Dangers', 'Hazards'), tr('Moyens de contrôle', 'Controls'), tr('Risque', 'Risk')]],
-      body: ast.jobSteps.map(s => [
-        s.description || '—',
-        (s.hazards || []).join(', ') || '—',
-        (s.controls || []).join(', ') || '—',
-        `${s.riskBeforeProb * s.riskBeforeSev} → ${s.riskAfterProb * s.riskAfterSev}`,
-      ]),
-      theme: 'striped',
+      head: [[tr('Étape', 'Step'), tr('Danger', 'Hazard'), tr('Moyens de contrôle', 'Control measures'), tr('Risque', 'Risk')]],
+      body,
+      theme: 'grid',
       headStyles: { fillColor: [13, 148, 136] },
       styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
-      columnStyles: { 0: { cellWidth: 45 }, 3: { cellWidth: 22, halign: 'center' } },
+      columnStyles: { 0: { cellWidth: 42 }, 1: { cellWidth: 38 }, 3: { cellWidth: 18, halign: 'center' } },
       margin: { left: margin, right: margin },
     });
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 6;
   }
 
   // EPI requis
@@ -2894,7 +2911,7 @@ async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: 
       styles: { fontSize: 9, cellPadding: 2 },
       margin: { left: margin, right: margin },
     });
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    y = doc.lastAutoTable.finalY + 6;
   }
 
   // Participants
@@ -2913,9 +2930,48 @@ async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: 
       styles: { fontSize: 8, cellPadding: 2 },
       margin: { left: margin, right: margin },
     });
+    y = doc.lastAutoTable.finalY + 6;
   }
 
+  // Approbation — Superviseur / Responsable des travaux (page finalisation)
+  if (y > pageH - 55) { doc.addPage(); y = 16; }
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  doc.text(tr('Approbation — Superviseur / Responsable des travaux', 'Approval — Supervisor / Work manager'), margin, y);
+  y += 7;
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+  ([
+    [tr('Superviseur', 'Supervisor'), ast.supervisor_name || ast.supervisorSigName],
+    [tr('Certification', 'Certification'), ast.supervisor_cert || ast.supervisorSigCert],
+    [tr('Valide du', 'Valid from'), ast.permit_valid_from?.replace('T', ' ').slice(0, 16)],
+    [tr('Valide au', 'Valid to'), ast.permit_valid_to?.replace('T', ' ').slice(0, 16)],
+  ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim()).forEach(([k, v]) => {
+    doc.text(`${k} : ${v}`, margin, y); y += 6;
+  });
+  y += 6;
+  doc.text(tr('Signature : _______________________________', 'Signature: _______________________________'), margin, y);
+  y += 9;
+  doc.text(tr('Date : ____________________', 'Date: ____________________'), margin, y);
+}
+
+async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: string | null) {
+  const { default: jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, ast, language, logoDataUrl);
   doc.save(`${ast.permit_number}.pdf`);
+}
+
+// Export en lot : plusieurs AST dans un seul PDF (une fiche par page).
+export async function generateAstsPdf(asts: ASTPermit[], language: Language, logoDataUrl?: string | null) {
+  if (asts.length === 0) return;
+  const { default: jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  for (let i = 0; i < asts.length; i++) {
+    if (i > 0) doc.addPage();
+    await renderAstSection(doc as { [k: string]: any }, autoTable as unknown as (d: any, o: any) => void, asts[i], language, logoDataUrl);
+  }
+  doc.save(asts.length === 1 ? `${asts[0].permit_number}.pdf` : `AST-export-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 // ── Section: Finalization ──────────────────────────────────────────────────
