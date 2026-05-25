@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Camera, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react';
 import {
-  INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
-  type InspectionType, type InspectionFrequency,
+  INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS, CANADIAN_PROVINCES,
+  type InspectionType, type InspectionFrequency, type ProvinceCode,
 } from '@/components/InspectionForm/checklists';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -27,6 +27,7 @@ export interface EquipmentRow {
   equipment_photos: string[];
   inspection_frequency: InspectionFrequency | null;
   inspection_shifts: string[];
+  province: ProvinceCode;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -40,6 +41,7 @@ interface FormState {
   equipmentPhotos: string[];
   inspectionFrequency: InspectionFrequency | null;
   inspectionShifts: string[];
+  province: ProvinceCode;
   notes: string;
 }
 
@@ -51,6 +53,7 @@ const EMPTY: FormState = {
   equipmentPhotos:     [],
   inspectionFrequency: null,
   inspectionShifts:    [],
+  province:            'QC',
   notes:               '',
 };
 
@@ -94,6 +97,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
           equipmentPhotos:     r.equipment_photos ?? [],
           inspectionFrequency: r.inspection_frequency ?? null,
           inspectionShifts:    r.inspection_shifts ?? [],
+          province:            r.province ?? 'QC',
           notes:               r.notes ?? '',
         });
       });
@@ -111,6 +115,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
       equipment_photos:     form.equipmentPhotos,
       inspection_frequency: form.inspectionFrequency || null,
       inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
+      province:             form.province,
       notes:                form.notes || null,
       updated_at:           new Date().toISOString(),
     };
@@ -193,10 +198,24 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Emplacement / Chantier' : 'Location / Site'}</label>
-              <input type="text" value={form.equipmentLocation} onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
-                placeholder={fr ? 'ex. Site A, Zone 3' : 'e.g. Site A, Zone 3'} className={fieldClass} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Emplacement / Chantier' : 'Location / Site'}</label>
+                <input type="text" value={form.equipmentLocation} onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
+                  placeholder={fr ? 'ex. Site A, Zone 3' : 'e.g. Site A, Zone 3'} className={fieldClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Province' : 'Province'}</label>
+                <select
+                  value={form.province}
+                  onChange={e => setForm(f => ({ ...f, province: e.target.value as ProvinceCode }))}
+                  className={fieldClass}
+                >
+                  {CANADIAN_PROVINCES.map(p => (
+                    <option key={p.code} value={p.code}>{p.code} — {fr ? p.fr : p.en}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </section>

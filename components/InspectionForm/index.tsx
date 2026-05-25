@@ -11,8 +11,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
 import {
   EQUIPMENT_CHECKLISTS, INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS,
+  CANADIAN_PROVINCES, PROVINCE_REGULATION,
   calcOverallResult, getNonConformities,
-  type InspectionType, type ItemResult, type OverallResult, type InspectionFrequency,
+  type InspectionType, type ItemResult, type OverallResult, type InspectionFrequency, type ProvinceCode,
 } from './checklists';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -61,6 +62,8 @@ interface InspectionRow {
   usable_until_date: string | null;
   custom_items: CustomItem[] | null;
   inspection_shifts: string[] | null;
+  equipment_id: string | null;
+  province: ProvinceCode | null;
 }
 
 interface FormState {
@@ -74,6 +77,7 @@ interface FormState {
   inspectionDate: string;
   inspectionFrequency: InspectionFrequency | null;
   inspectionShifts: string[];
+  province: ProvinceCode;
   results: Record<string, ItemResult>;
   itemPhotos: Record<string, string>;
   itemNotes: Record<string, string>;
@@ -104,6 +108,7 @@ const EMPTY_FORM: FormState = {
   inspectionDate: new Date().toISOString().split('T')[0],
   inspectionFrequency: null,
   inspectionShifts: [],
+  province: 'QC',
   results: {},
   itemPhotos: {},
   itemNotes: {},
@@ -279,6 +284,7 @@ interface LinkedEquipment {
   equipment_photos: string[];
   inspection_frequency: InspectionFrequency | null;
   inspection_shifts: string[];
+  province: ProvinceCode;
 }
 
 interface Props {
@@ -320,6 +326,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
     eqLocation:    lang === 'fr' ? 'Emplacement / Chantier'  : 'Location / Site',
     inspDate:      lang === 'fr' ? 'Date d\'inspection'      : 'Inspection date',
     inspector:     lang === 'fr' ? 'Inspecteur'              : 'Inspector',
+    province:      lang === 'fr' ? 'Province'                : 'Province',
+    regulation:    lang === 'fr' ? 'Réglementation'          : 'Regulation',
     frequency:     lang === 'fr' ? 'Fréquence d\'inspection' : 'Inspection frequency',
     selectFreq:    lang === 'fr' ? '— Sélectionner —'        : '— Select —',
     shiftsLabel:   lang === 'fr' ? 'Quarts de travail applicables' : 'Applicable work shifts',
@@ -413,6 +421,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
           equipmentPhotos:     data.equipment_photos ?? [],
           inspectionFrequency: data.inspection_frequency ?? null,
           inspectionShifts:    data.inspection_shifts ?? [],
+          province:            data.province ?? 'QC',
         }));
       });
   }, [equipmentId]);
@@ -447,6 +456,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
           notes:              row.notes ?? '',
           customItems:        row.custom_items ?? [],
           inspectionShifts:   row.inspection_shifts ?? [],
+          province:           row.province ?? 'QC',
         });
       });
   }, [inspectionId]);
@@ -602,6 +612,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
       custom_items:         form.customItems,
       inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
       equipment_id:         effectiveEquipmentId,
+      province:             form.province,
       updated_at:           new Date().toISOString(),
       ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}),
     };
@@ -912,7 +923,20 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                   ))}
                 </select>
                 {checklist && (
-                  <p className="mt-1 text-xs text-gray-400">{I.standard} : {checklist.standard} · {checklist.frequency}</p>
+                  <div className="mt-1 space-y-0.5">
+                    <p className="text-xs text-gray-400">
+                      {I.standard} : <span className="font-medium text-gray-600">{checklist.standard}</span>
+                      {' · '}{checklist.frequency}
+                    </p>
+                    {PROVINCE_REGULATION[form.province] && (
+                      <p className="text-xs font-semibold text-teal-700">
+                        {I.regulation} : {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
+                        <span className="ml-1 font-normal text-gray-400">
+                          ({PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']})
+                        </span>
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -938,7 +962,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqLocation}</label>
-                  <input type="text" value={form.equipmentLocation} disabled={isReadOnly}
+                  <input type="text" value={form.equipmentLocation} disabled={isReadOnly || !!equipmentId}
                     onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
                     placeholder={I.locationPlaceholder}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
@@ -949,6 +973,29 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                     onChange={e => setForm(f => ({ ...f, inspectionDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
                 </div>
+              </div>
+
+              {/* Province */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{I.province}</label>
+                <select
+                  value={form.province}
+                  disabled={isReadOnly || !!equipmentId}
+                  onChange={e => setForm(f => ({ ...f, province: e.target.value as ProvinceCode }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
+                >
+                  {CANADIAN_PROVINCES.map(p => (
+                    <option key={p.code} value={p.code}>{p.code} — {I.fr ? p.fr : p.en}</option>
+                  ))}
+                </select>
+                {PROVINCE_REGULATION[form.province] && (
+                  <p className="mt-1 text-xs font-semibold text-teal-700">
+                    {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
+                    <span className="ml-1 font-normal text-gray-400">
+                      · {PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']}
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

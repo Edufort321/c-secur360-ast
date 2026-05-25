@@ -634,6 +634,49 @@ export const FREQUENCY_OPTIONS: { value: InspectionFrequency; label: string; lab
   { value: 'annuelle',          label: 'Annuelle',                 labelEn: 'Annual',       days: 365 },
 ];
 
+// ─── Provinces canadiennes ────────────────────────────────────────────────────
+
+export const CANADIAN_PROVINCES = [
+  { code: 'QC', fr: 'Québec',                    en: 'Quebec'                    },
+  { code: 'ON', fr: 'Ontario',                   en: 'Ontario'                   },
+  { code: 'BC', fr: 'Colombie-Britannique',      en: 'British Columbia'          },
+  { code: 'AB', fr: 'Alberta',                   en: 'Alberta'                   },
+  { code: 'SK', fr: 'Saskatchewan',              en: 'Saskatchewan'              },
+  { code: 'MB', fr: 'Manitoba',                  en: 'Manitoba'                  },
+  { code: 'NB', fr: 'Nouveau-Brunswick',         en: 'New Brunswick'             },
+  { code: 'NS', fr: 'Nouvelle-Écosse',           en: 'Nova Scotia'               },
+  { code: 'PE', fr: 'Île-du-Prince-Édouard',     en: 'Prince Edward Island'      },
+  { code: 'NL', fr: 'Terre-Neuve-et-Labrador',   en: 'Newfoundland & Labrador'   },
+  { code: 'NT', fr: 'Territoires du Nord-Ouest', en: 'Northwest Territories'     },
+  { code: 'NU', fr: 'Nunavut',                   en: 'Nunavut'                   },
+  { code: 'YT', fr: 'Yukon',                     en: 'Yukon'                     },
+] as const;
+
+export type ProvinceCode = typeof CANADIAN_PROVINCES[number]['code'];
+
+// Organisme de réglementation par province + références légales clés
+export const PROVINCE_REGULATION: Record<ProvinceCode, {
+  body: string;
+  fr: string;
+  en: string;
+  refFr: string;
+  refEn: string;
+}> = {
+  QC: { body: 'CNESST', fr: 'CNESST',      en: 'CNESST',       refFr: 'RSST, LSST',                   refEn: 'RSST, LSST'                   },
+  ON: { body: 'WSIB',   fr: 'WSIB',        en: 'WSIB',         refFr: 'LSST Ontario, O. Règl. 851',   refEn: 'OHSA Ontario, O. Reg. 851'    },
+  BC: { body: 'WSBC',   fr: 'WorkSafeBC',  en: 'WorkSafeBC',   refFr: 'Règlement OHS C.-B.',          refEn: 'BC OHS Regulation'            },
+  AB: { body: 'OHS-AB', fr: 'OHS Alberta', en: 'OHS Alberta',  refFr: 'Code OHS Alberta',             refEn: 'Alberta OHS Code'             },
+  SK: { body: 'OHS-SK', fr: 'OHS Sask.',   en: 'OHS Sask.',    refFr: 'Règl. OHS Saskatchewan',       refEn: 'SK OHS Regulations'           },
+  MB: { body: 'WSH-MB', fr: 'WSH Manitoba',en: 'WSH Manitoba', refFr: 'Code WSH Manitoba',            refEn: 'Manitoba WSH Code'            },
+  NB: { body: 'WSNB',   fr: 'WorkSafeNB', en: 'WorkSafeNB',   refFr: 'Règl. Travail sécuritaire NB', refEn: 'NB Regulation 91-191'         },
+  NS: { body: 'OHS-NS', fr: 'OHS N.-É.',   en: 'OHS N.S.',     refFr: 'Règl. OHS Nouvelle-Écosse',    refEn: 'NS OHS General Regulations'   },
+  PE: { body: 'OHS-PE', fr: 'OHS Î.-P.-É.',en: 'OHS P.E.I.',  refFr: 'Règl. OHS Î.-P.-É.',           refEn: 'PEI OHS Regulations'          },
+  NL: { body: 'OHS-NL', fr: 'OHS T.-N.',   en: 'OHS N.L.',     refFr: 'Règl. OHS Terre-Neuve',        refEn: 'NL OHS Regulations'           },
+  NT: { body: 'WSCC',   fr: 'CSST T.N.-O.',en: 'WSCC N.W.T.',  refFr: 'Règl. SST T.N.-O.',            refEn: 'N.W.T. OHS Regulations'       },
+  NU: { body: 'WSCC',   fr: 'CSST Nunavut',en: 'WSCC Nunavut', refFr: 'Règl. SST Nunavut',            refEn: 'Nunavut OHS Regulations'      },
+  YT: { body: 'OHS-YT', fr: 'OHS Yukon',   en: 'OHS Yukon',    refFr: 'Règl. SST Yukon',              refEn: 'Yukon OHS Regulations'        },
+};
+
 export function calcOverallResult(
   type: InspectionType,
   results: Record<string, ItemResult>,
