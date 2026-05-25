@@ -179,8 +179,17 @@ function generateId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function generatePermitNumber(type: string, province: ProvinceCode): string {
-  return `${type}-${province}-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
+export function generatePermitNumber(type: string, province: ProvinceCode, tenant?: string): string {
+  const code = Date.now().toString(36).toUpperCase().slice(-4);
+  // Avec tenant : TYPE-{TENANT}-{AAAA-MM-JJ}-{CODE}  (ex: AST-QC-2026-05-25-VVTJ)
+  if (tenant) {
+    const tenantCode = tenant.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || String(province);
+    const now = new Date();
+    const datePart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return `${type}-${tenantCode}-${datePart}-${code}`;
+  }
+  // Sans tenant (autres modules de permis) : format historique inchangé.
+  return `${type}-${province}-${new Date().getFullYear()}-${code}`;
 }
 
 export function computeCompletion(ast: ASTPermit): number {
@@ -505,10 +514,10 @@ function defaultPPE(): PPEItem[] {
 }
 
 // ── Default permit ─────────────────────────────────────────────────────────
-function createDefaultPermit(province: ProvinceCode): ASTPermit {
+function createDefaultPermit(province: ProvinceCode, tenant?: string): ASTPermit {
   const now = new Date().toISOString();
   return {
-    permit_number: generatePermitNumber('AST', province),
+    permit_number: generatePermitNumber('AST', province, tenant),
     status: 'draft',
     province,
     model: 'simple',
@@ -3397,7 +3406,7 @@ export default function ASTPermit({
   const t = T[language];
 
   const [ast, setAst] = useState<ASTPermit>(() => ({
-    ...createDefaultPermit(resolvedProvince),
+    ...createDefaultPermit(resolvedProvince, tenant),
     ...initialData,
   }));
 
@@ -3567,7 +3576,7 @@ export default function ASTPermit({
                   </button>
                   <hr className="my-1 border-slate-100 dark:border-slate-700" />
                   <button type="button" onClick={() => {
-                    setAst(createDefaultPermit(resolvedProvince));
+                    setAst(createDefaultPermit(resolvedProvince, tenant));
                     setSection('task');
                     setMenuOpen(false);
                   }}

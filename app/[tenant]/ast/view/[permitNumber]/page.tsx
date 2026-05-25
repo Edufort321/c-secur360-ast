@@ -108,6 +108,15 @@ export default function ASTPublicView() {
   }
 
   const d = data;
+  // L'AST est sauvegardé tel quel (ASTPermit) : les infos générales sont dans
+  // d.taskInfo (camelCase). On normalise pour la vue lecture seule.
+  const ti = d.taskInfo ?? {};
+  const workLocation = ti.workLocation ?? d.work_location;
+  const department = ti.department ?? d.department;
+  const taskDescription = ti.taskDescription ?? d.task_description;
+  const supervisorName = d.supervisor_name || ti.supervisor;
+  const supervisorCert = d.supervisor_cert || ti.supervisorCert;
+  const equipmentTools: any[] = d.equipment?.tools ?? d.equipmentList ?? [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -122,8 +131,8 @@ export default function ASTPublicView() {
               </span>
             </div>
             <h1 className="text-xl font-bold text-white">{permitNumber}</h1>
-            {d.task_description && (
-              <p className="mt-1 text-sm text-teal-100 line-clamp-2">{d.task_description}</p>
+            {taskDescription && (
+              <p className="mt-1 text-sm text-teal-100 line-clamp-2">{taskDescription}</p>
             )}
           </div>
           {d.status && <Badge status={d.status} />}
@@ -138,17 +147,17 @@ export default function ASTPublicView() {
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoRow label="Numéro" value={permitNumber} />
             <InfoRow label="Province" value={d.province} />
-            <InfoRow label="Lieu des travaux" value={d.work_location} />
-            <InfoRow label="Département" value={d.department} />
-            <InfoRow label="Superviseur" value={d.supervisor_name} />
-            <InfoRow label="Certification superviseur" value={d.supervisor_cert} />
+            <InfoRow label="Lieu des travaux" value={workLocation} />
+            <InfoRow label="Département" value={department} />
+            <InfoRow label="Superviseur" value={supervisorName} />
+            <InfoRow label="Certification superviseur" value={supervisorCert} />
             <InfoRow label="Valide du" value={d.permit_valid_from?.replace('T', ' ').slice(0, 16)} />
             <InfoRow label="Valide au" value={d.permit_valid_to?.replace('T', ' ').slice(0, 16)} />
           </div>
-          {d.task_description && (
+          {taskDescription && (
             <div className="pt-1">
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Description de la tâche</span>
-              <p className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{d.task_description}</p>
+              <p className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{taskDescription}</p>
             </div>
           )}
         </Section>
@@ -200,15 +209,15 @@ export default function ASTPublicView() {
         )}
 
         {/* Equipment */}
-        {d.equipmentList?.length > 0 && (
+        {equipmentTools.length > 0 && (
           <Section title="Équipements" icon={<Wrench size={16} />}>
             <div className="space-y-2">
-              {d.equipmentList.map((eq: any, i: number) => (
+              {equipmentTools.map((eq: any, i: number) => (
                 <div key={eq.id ?? i} className="flex items-center justify-between text-sm">
                   <span className="text-slate-700">{eq.name || '—'}</span>
-                  <span className={`text-xs font-medium ${eq.inspected ? 'text-green-700' : 'text-amber-700'}`}>
-                    {eq.inspected ? 'Inspecté' : 'Non inspecté'}
-                  </span>
+                  {eq.condition && (
+                    <span className="text-xs font-medium text-slate-500">{eq.condition}</span>
+                  )}
                 </div>
               ))}
             </div>
