@@ -80,6 +80,7 @@ export default function ASTPublicView() {
 
   const contentRef = useRef<HTMLDivElement>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [ackSavingId, setAckSavingId] = useState<string | null>(null);
 
   const downloadPDF = async () => {
     const node = contentRef.current;
@@ -166,6 +167,25 @@ export default function ASTPublicView() {
   const supervisorName = d.supervisor_name || ti.supervisor;
   const supervisorCert = d.supervisor_cert || ti.supervisorCert;
   const equipmentTools: any[] = d.equipment?.tools ?? d.equipmentList ?? [];
+
+  // Prise de connaissance : un membre de l'équipe coche sa ligne via le lien partagé.
+  const toggleAck = async (idx: number) => {
+    const list = [...(d.participants ?? [])];
+    const cur = list[idx];
+    if (!cur) return;
+    const now = new Date().toISOString();
+    const nextAck = !cur.acknowledged;
+    list[idx] = { ...cur, acknowledged: nextAck, acknowledgedAt: nextAck ? now : '' };
+    const updated = { ...d, participants: list, updated_at: now };
+    setData(updated);
+    setAckSavingId(cur.id ?? String(idx));
+    try {
+      await supabase.from('ast_permits').update({ data: updated, updated_at: now })
+        .eq('permit_number', permitNumber).eq('tenant_id', tenant);
+    } catch { /* conservé localement même si la persistance échoue */ } finally {
+      setAckSavingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -289,21 +309,40 @@ export default function ASTPublicView() {
           </Section>
         )}
 
-        {/* Participants */}
+        {/* Participants — prise de connaissance interactive */}
         {d.participants?.length > 0 && (
           <Section title={`Participants (${d.participants.length})`} icon={<Users size={16} />}>
+            <p className="mb-2 text-xs text-slate-500">
+              {tr('Trouvez votre nom et cochez votre prise de connaissance.', 'Find your name and check your acknowledgment.')}
+            </p>
             <div className="space-y-2">
-              {d.participants.map((p: any, i: number) => (
-                <div key={p.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
-                  <div>
-                    <p className="font-medium text-slate-800">{p.name}</p>
-                    {p.role && <p className="text-xs text-slate-500">{p.role}</p>}
+              {d.participants.map((p: any, i: number) => {
+                const saving = ackSavingId === (p.id ?? String(i));
+                return (
+                  <div key={p.id ?? i} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 truncate">{p.name || tr('(Sans nom)', '(No name)')}</p>
+                      {p.role && <p className="text-xs text-slate-500">{p.role}</p>}
+                      {p.acknowledged && p.acknowledgedAt && (
+                        <p className="text-[11px] text-green-600">{new Date(p.acknowledgedAt).toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA')}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleAck(i)}
+                      disabled={saving}
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                        p.acknowledged
+                          ? 'border-green-300 bg-green-50 text-green-700'
+                          : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} className={p.acknowledged ? 'text-green-600' : 'text-slate-400'} />}
+                      {p.acknowledged ? tr('Pris connaissance', 'Acknowledged') : tr('Prise de connaissance', 'Acknowledge')}
+                    </button>
                   </div>
-                  {p.acknowledged && (
-                    <CheckCircle size={16} className="text-green-500 shrink-0" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Section>
         )}

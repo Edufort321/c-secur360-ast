@@ -2431,12 +2431,15 @@ interface AdminEmployee { id: string; name: string | null; email: string; role?:
 
 // Combobox nom de participant : recherche intelligente parmi les employés du
 // tenant, avec saisie manuelle libre si aucun employé ne correspond.
-function EmployeeNameInput({ value, employees, onChange, disabled, language, className }: {
+function EmployeeNameInput({ value, employees, onChange, onSelectEmployee, disabled, language, className }: {
   value: string; employees: AdminEmployee[]; onChange: (name: string) => void;
+  onSelectEmployee?: (e: AdminEmployee) => void;
   disabled?: boolean; language: Language; className: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
 
   const matches = useMemo(() => {
@@ -2446,6 +2449,24 @@ function EmployeeNameInput({ value, employees, onChange, disabled, language, cla
       : employees;
     return base.slice(0, 8);
   }, [value, employees]);
+
+  // Position en `fixed` calculée depuis l'input : la liste échappe ainsi au
+  // conteneur `overflow` du tableau (qui la masquait auparavant).
+  const updateRect = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updateRect();
+    const onScroll = () => updateRect();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+  }, [open]);
 
   useEffect(() => {
     const h = (ev: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(ev.target as Node)) setOpen(false); };
@@ -2458,23 +2479,27 @@ function EmployeeNameInput({ value, employees, onChange, disabled, language, cla
       <div className="relative">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={e => { onChange(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => { setOpen(true); updateRect(); }}
           disabled={disabled}
           placeholder={tr('Rechercher un employé ou saisir…', 'Search an employee or type…')}
           className={`${className} pl-7`}
         />
       </div>
-      {open && !disabled && matches.length > 0 && (
-        <ul className="absolute z-30 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
+      {open && !disabled && matches.length > 0 && rect && (
+        <ul
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 60 }}
+          className="max-h-56 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl"
+        >
           {matches.map(e => (
             <li key={e.id}>
               <button
                 type="button"
                 onMouseDown={ev => ev.preventDefault()}
-                onClick={() => { onChange(e.name || e.email); setOpen(false); }}
+                onClick={() => { onChange(e.name || e.email); onSelectEmployee?.(e); setOpen(false); }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-teal-50 dark:hover:bg-teal-900/30"
               >
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-600 text-[10px] font-bold text-white shrink-0">
@@ -2530,7 +2555,7 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
 
   const addParticipant = () => onChange(p => ({
     ...p,
-    participants: [...p.participants, { id: generateId(), name: '', role: 'travailleur', company: defaultCompany, acknowledged: false, acknowledgedAt: '' }],
+    participants: [...p.participants, { id: generateId(), name: '', role: 'travailleur', company: '', acknowledged: false, acknowledgedAt: '' }],
   }));
 
   const removeParticipant = (id: string) => onChange(p => ({
@@ -2586,6 +2611,7 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
                           disabled={readOnly}
                           language={language}
                           onChange={name => updateParticipant(par.id, x => ({ ...x, name }))}
+                          onSelectEmployee={() => updateParticipant(par.id, x => ({ ...x, company: defaultCompany }))}
                           className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50"
                         />
                       </td>
@@ -2772,7 +2798,53 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
         </div>
       )}
 
+      <TeamShareLink permitNumber={ast.permit_number} tenant={tenant} language={language} />
       <QRCard permitNumber={ast.permit_number} tenant={tenant} type="ast" language={language} />
+    </div>
+  );
+}
+
+// ── Lien à partager à l'équipe (prise de connaissance) ─────────────────────
+function TeamShareLink({ permitNumber, tenant, language }: {
+  permitNumber: string; tenant: string; language: Language;
+}) {
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const [origin, setOrigin] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const url = origin ? `${origin}/${tenant}/ast/view/${permitNumber}` : '';
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* noop */ }
+  };
+  if (!origin) return null;
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-teal-200 dark:border-teal-800 shadow-sm overflow-hidden mb-6 print:hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-teal-100 dark:border-teal-800">
+        <span className="text-teal-600"><Users className="w-5 h-5" /></span>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex-1">
+          {tr("Partager à l'équipe", 'Share with the team')}
+        </h3>
+      </div>
+      <div className="p-5 space-y-3">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          {tr(
+            "Transmettez ce lien quand l'AST est prêt ou après une révision (ex. changement de verrouillage). Chaque membre l'ouvre, va dans la section Participants et coche sa prise de connaissance — aucune connexion requise.",
+            'Share this link when the JSA is ready or after a revision (e.g. lockout change). Each member opens it, goes to the Participants section and checks their acknowledgment — no login required.',
+          )}
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <code className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 break-all select-all">
+            {url}
+          </code>
+          <button
+            type="button"
+            onClick={copy}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
+          >
+            {copied ? <><Check className="w-4 h-4" /> {tr('Copié', 'Copied')}</> : tr('Copier le lien', 'Copy link')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
