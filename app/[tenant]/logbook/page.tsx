@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import {
   Car, ChevronLeft, ChevronRight, Download, Loader2,
@@ -50,7 +50,7 @@ function weekLabel(iso: string) {
 const km = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} km`;
 
 /* ================================================================ PAGE === */
-export default function LogbookPage() {
+function LogbookInner() {
   const params = useParams();
   const searchParams = useSearchParams();
   const tenant = (params?.tenant as string) || 'demo';
@@ -467,4 +467,8 @@ export default function LogbookPage() {
       </div>
     </div>
   );
+}
+
+export default function LogbookPage() {
+  return <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" /></div>}><LogbookInner /></Suspense>;
 }

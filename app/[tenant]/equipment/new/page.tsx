@@ -1,8 +1,10 @@
 'use client';
+import { Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import EquipmentForm from '@/components/EquipmentForm';
+import { Loader2 } from 'lucide-react';
 
-export default function EquipmentNewPage() {
+function EquipmentNewInner() {
   const { tenant } = useParams() as { tenant: string };
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,5 +20,17 @@ export default function EquipmentNewPage() {
           : `/${tenant}/equipment/${id}`
       )}
     />
+  );
+}
+
+export default function EquipmentNewPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="animate-spin text-teal-600" />
+      </div>
+    }>
+      <EquipmentNewInner />
+    </Suspense>
   );
 }
