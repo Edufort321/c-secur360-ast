@@ -60,6 +60,7 @@ interface InspectionRow {
   usable_with_conditions: boolean;
   usable_until_date: string | null;
   custom_items: CustomItem[] | null;
+  inspection_shifts: string[] | null;
 }
 
 interface FormState {
@@ -72,6 +73,7 @@ interface FormState {
   inspectorName: string;
   inspectionDate: string;
   inspectionFrequency: InspectionFrequency | null;
+  inspectionShifts: string[];
   results: Record<string, ItemResult>;
   itemPhotos: Record<string, string>;
   itemNotes: Record<string, string>;
@@ -101,6 +103,7 @@ const EMPTY_FORM: FormState = {
   inspectorName: '',
   inspectionDate: new Date().toISOString().split('T')[0],
   inspectionFrequency: null,
+  inspectionShifts: [],
   results: {},
   itemPhotos: {},
   itemNotes: {},
@@ -308,6 +311,10 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     inspector:     lang === 'fr' ? 'Inspecteur'              : 'Inspector',
     frequency:     lang === 'fr' ? 'Fréquence d\'inspection' : 'Inspection frequency',
     selectFreq:    lang === 'fr' ? '— Sélectionner —'        : '— Select —',
+    shiftsLabel:   lang === 'fr' ? 'Quarts de travail applicables' : 'Applicable work shifts',
+    shiftDay:      lang === 'fr' ? 'Jour'                    : 'Day',
+    shiftEvening:  lang === 'fr' ? 'Soir'                    : 'Evening',
+    shiftNight:    lang === 'fr' ? 'Nuit'                    : 'Night',
     photos:        lang === 'fr' ? 'Photos de l\'équipement' : 'Equipment photos',
     addPhoto:      lang === 'fr' ? 'Ajouter'                 : 'Add',
     noPhoto:       lang === 'fr' ? 'Aucune photo'            : 'No photo',
@@ -407,6 +414,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           correctiveActions:  row.corrective_actions ?? {},
           notes:              row.notes ?? '',
           customItems:        row.custom_items ?? [],
+          inspectionShifts:   row.inspection_shifts ?? [],
         });
       });
   }, [inspectionId]);
@@ -560,6 +568,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       usable_with_conditions: hasUsable,
       usable_until_date:    usableDeadlines.length > 0 ? usableDeadlines[0] : null,
       custom_items:         form.customItems,
+      inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
       updated_at:           new Date().toISOString(),
       ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}),
     };
@@ -917,9 +926,33 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   >
                     <option value="">{I.selectFreq}</option>
                     {FREQUENCY_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>{I.fr ? opt.label : opt.labelEn}</option>
                     ))}
                   </select>
+                  {form.inspectionFrequency === 'par_quart' && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs font-medium text-blue-700 mb-2">{I.shiftsLabel}</p>
+                      <div className="flex flex-wrap gap-4">
+                        {([['jour', I.shiftDay], ['soir', I.shiftEvening], ['nuit', I.shiftNight]] as [string, string][]).map(([val, lbl]) => (
+                          <label key={val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              disabled={isReadOnly}
+                              checked={form.inspectionShifts.includes(val)}
+                              onChange={e => setForm(f => ({
+                                ...f,
+                                inspectionShifts: e.target.checked
+                                  ? [...f.inspectionShifts, val]
+                                  : f.inspectionShifts.filter(s => s !== val),
+                              }))}
+                              className="w-4 h-4 rounded accent-teal-600 disabled:opacity-50"
+                            />
+                            {lbl}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

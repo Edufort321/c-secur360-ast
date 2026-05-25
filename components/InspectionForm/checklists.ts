@@ -615,6 +615,7 @@ export type OverallResult = 'conforme' | 'conditionnel' | 'non_conforme' | 'retr
 
 export type InspectionFrequency =
   | 'avant_utilisation'
+  | 'par_quart'
   | 'quotidienne'
   | 'hebdomadaire'
   | 'mensuelle'
@@ -622,14 +623,15 @@ export type InspectionFrequency =
   | 'semestrielle'
   | 'annuelle';
 
-export const FREQUENCY_OPTIONS: { value: InspectionFrequency; label: string; days: number }[] = [
-  { value: 'avant_utilisation', label: 'Avant chaque utilisation', days: 1   },
-  { value: 'quotidienne',       label: 'Quotidienne',              days: 1   },
-  { value: 'hebdomadaire',      label: 'Hebdomadaire',             days: 7   },
-  { value: 'mensuelle',         label: 'Mensuelle',                days: 30  },
-  { value: 'trimestrielle',     label: 'Trimestrielle',            days: 90  },
-  { value: 'semestrielle',      label: 'Semestrielle',             days: 182 },
-  { value: 'annuelle',          label: 'Annuelle',                 days: 365 },
+export const FREQUENCY_OPTIONS: { value: InspectionFrequency; label: string; labelEn: string; days: number }[] = [
+  { value: 'avant_utilisation', label: 'Avant chaque utilisation', labelEn: 'Before each use',  days: 1   },
+  { value: 'par_quart',         label: 'Chaque quart de travail',  labelEn: 'Each work shift',  days: 1   },
+  { value: 'quotidienne',       label: 'Quotidienne',              labelEn: 'Daily',             days: 1   },
+  { value: 'hebdomadaire',      label: 'Hebdomadaire',             labelEn: 'Weekly',       days: 7   },
+  { value: 'mensuelle',         label: 'Mensuelle',                labelEn: 'Monthly',      days: 30  },
+  { value: 'trimestrielle',     label: 'Trimestrielle',            labelEn: 'Quarterly',    days: 90  },
+  { value: 'semestrielle',      label: 'Semestrielle',             labelEn: 'Semi-annual',  days: 182 },
+  { value: 'annuelle',          label: 'Annuelle',                 labelEn: 'Annual',       days: 365 },
 ];
 
 export function calcOverallResult(
