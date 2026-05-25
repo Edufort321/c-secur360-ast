@@ -242,9 +242,11 @@ function redirectToLogin(request: NextRequest, originalPath: string): NextRespon
   const segment = tenantMatch?.[1];
 
   if (segment && !NON_TENANT_PREFIXES.has(segment)) {
-    // Redirect to marketing page first; bienvenue has a "Se connecter" button
-    const bienvenueUrl = new URL(`/${segment}/bienvenue`, request.url);
-    return NextResponse.redirect(bienvenueUrl);
+    const loginUrl = new URL(`/${segment}/login`, request.url);
+    if (!originalPath.endsWith('/login')) {
+      loginUrl.searchParams.set('redirect', originalPath);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   const loginUrl = new URL('/auth/admin', request.url);

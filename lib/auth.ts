@@ -9,7 +9,7 @@ import { headers } from 'next/headers';
 import { supabaseAdmin as supabase } from '@/lib/supabaseAdmin';
 
 export const AUTH_COOKIE = 'auth_token';
-export const SESSION_TTL_SECONDS = 24 * 60 * 60; // 24 h
+export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 jours (PWA — cookie persistant)
 
 export interface SessionUser {
   id: string;

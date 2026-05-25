@@ -2,7 +2,7 @@
   "name": "C-Secur360 — Sécurité Industrielle",
   "short_name": "C-Secur360",
   "description": "Plateforme SaaS de sécurité industrielle — AST, permis, planificateur, inventaire",
-  "start_url": "/cerdia/login",
+  "start_url": "/cerdia/modules",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f172a",
