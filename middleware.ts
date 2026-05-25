@@ -203,8 +203,17 @@ function isPublicRoute(pathname: string): boolean {
   // Dynamic tenant login pages: /{tenant}/login
   if (/^\/[^/]+\/login$/.test(pathname)) return true;
 
-  // Public inspection access via QR code — anyone can view/record
+  // Marketing page — unauthenticated landing
+  if (/^\/[^/]+\/bienvenue$/.test(pathname)) return true;
+
+  // Public inspection via QR — view specific inspection (not /edit)
   if (/^\/[^/]+\/inspections\/[^/]+$/.test(pathname)) return true;
+
+  // Public equipment page via QR — view + history + new inspection (not /edit)
+  if (/^\/[^/]+\/equipment\/[^/]+$/.test(pathname)) return true;
+
+  // Public inspection creation from equipment QR
+  if (/^\/[^/]+\/equipment\/[^/]+\/inspect$/.test(pathname)) return true;
 
   return publicRoutes.some(route => {
     if (route.endsWith('(.*)')) {
@@ -233,11 +242,9 @@ function redirectToLogin(request: NextRequest, originalPath: string): NextRespon
   const segment = tenantMatch?.[1];
 
   if (segment && !NON_TENANT_PREFIXES.has(segment)) {
-    const loginUrl = new URL(`/${segment}/login`, request.url);
-    if (!originalPath.endsWith('/login')) {
-      loginUrl.searchParams.set('redirect', originalPath);
-    }
-    return NextResponse.redirect(loginUrl);
+    // Redirect to marketing page first; bienvenue has a "Se connecter" button
+    const bienvenueUrl = new URL(`/${segment}/bienvenue`, request.url);
+    return NextResponse.redirect(bienvenueUrl);
   }
 
   const loginUrl = new URL('/auth/admin', request.url);

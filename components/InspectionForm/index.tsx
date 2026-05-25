@@ -270,9 +270,21 @@ function AddCustomItemRow({ onAdd, placeholder, addLabel }: { onAdd: (label: str
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+interface LinkedEquipment {
+  id: string;
+  equipment_type: InspectionType;
+  equipment_name: string | null;
+  equipment_serial: string | null;
+  equipment_location: string | null;
+  equipment_photos: string[];
+  inspection_frequency: InspectionFrequency | null;
+  inspection_shifts: string[];
+}
+
 interface Props {
   tenant: string;
   inspectionId?: string;
+  equipmentId?: string;    // pre-linked equipment (public inspection from QR)
   onClose: () => void;
   onSaved?: () => void;
   readOnly?: boolean;
@@ -280,7 +292,7 @@ interface Props {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function InspectionForm({ tenant, inspectionId, onClose, onSaved: _onSaved, readOnly }: Props) {
+export default function InspectionForm({ tenant, inspectionId, equipmentId, onClose, onSaved: _onSaved, readOnly }: Props) {
   const { lang } = useLanguage();
 
   const I = useMemo(() => ({
@@ -374,6 +386,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   const [historyLoading, setHistoryLoading] = useState(false);
   const [logoUrl, setLogoUrl]             = useState<string | null>(null);
   const [deletingInspection, setDeletingInspection] = useState(false);
+  const [linkedEquipment, setLinkedEquipment] = useState<LinkedEquipment | null>(null);
 
   const savingRef = useRef(false);
 
@@ -383,6 +396,26 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
   }, [tenant]);
+
+  // ── Load linked equipment (when opened from equipment QR) ───────────────
+  useEffect(() => {
+    if (!equipmentId || !supabase) return;
+    supabase.from('equipment').select('*').eq('id', equipmentId).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setLinkedEquipment(data as LinkedEquipment);
+        setForm(f => ({
+          ...f,
+          equipmentType:       data.equipment_type,
+          equipmentName:       data.equipment_name ?? '',
+          equipmentSerial:     data.equipment_serial ?? '',
+          equipmentLocation:   data.equipment_location ?? '',
+          equipmentPhotos:     data.equipment_photos ?? [],
+          inspectionFrequency: data.inspection_frequency ?? null,
+          inspectionShifts:    data.inspection_shifts ?? [],
+        }));
+      });
+  }, [equipmentId]);
 
   // ── Load existing inspection ─────────────────────────────────────────────
   useEffect(() => {
@@ -450,6 +483,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   // ── Derived values ────────────────────────────────────────────────────────
   const isReadOnly      = readOnly ?? (existingRow?.status === 'closed');
   const checklist       = EQUIPMENT_CHECKLISTS[form.equipmentType];
+  const effectiveEquipmentId = equipmentId ?? (existingRow as any)?.equipment_id ?? null;
   const baseResult      = checklist ? calcOverallResult(form.equipmentType, form.results) : 'incomplete';
   const customNCs       = form.customItems.filter(ci => form.results[ci.id] === 'fail').map(ci => ({ id: ci.id, label: ci.label, critical: false, withdrawal: false }));
   const overallResult: OverallResult = customNCs.length > 0 && baseResult === 'conforme' ? 'conditionnel' : baseResult;
@@ -567,6 +601,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       usable_until_date:    usableDeadlines.length > 0 ? usableDeadlines[0] : null,
       custom_items:         form.customItems,
       inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
+      equipment_id:         effectiveEquipmentId,
       updated_at:           new Date().toISOString(),
       ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}),
     };
@@ -660,7 +695,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
   async function handlePrintQR() {
     if (!internalId) return;
-    const url     = `${window.location.origin}/${tenant}/inspections/${internalId}`;
+    const url = effectiveEquipmentId
+      ? `${window.location.origin}/${tenant}/equipment/${effectiveEquipmentId}`
+      : `${window.location.origin}/${tenant}/inspections/${internalId}`;
     const qrData  = await QRCode.toDataURL(url, { width: 400, margin: 2 });
     const win     = window.open('', '_blank', 'width=520,height=720');
     if (!win) return;
@@ -847,9 +884,17 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
           {/* Section 1 — Info équipement */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-              <FileText size={16} className="text-teal-600" />
-              <span className="text-sm font-semibold text-gray-700">{I.equipInfo}</span>
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-teal-600" />
+                <span className="text-sm font-semibold text-gray-700">{I.equipInfo}</span>
+              </div>
+              {linkedEquipment && (
+                <a href={`/${tenant}/equipment/${equipmentId}`}
+                  className="text-xs text-teal-600 hover:text-teal-800 font-medium">
+                  {I.fr ? '← Retour à la fiche' : '← Back to sheet'}
+                </a>
+              )}
             </div>
             <div className="p-5 space-y-4">
 
@@ -858,7 +903,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                 <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqType} *</label>
                 <select
                   value={form.equipmentType}
-                  disabled={!!internalId || isReadOnly}
+                  disabled={!!internalId || isReadOnly || !!equipmentId}
                   onChange={e => setForm(f => ({ ...f, equipmentType: e.target.value as InspectionType, results: {}, itemPhotos: {}, itemNotes: {}, correctiveActions: {} }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
                 >
@@ -1364,7 +1409,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   <span className="text-xs text-gray-400">c-secur360.ca</span>
                 </div>
                 <QRCodeSVG
-                  value={`${window.location.origin}/${tenant}/inspections/${internalId}`}
+                  value={effectiveEquipmentId
+                    ? `${window.location.origin}/${tenant}/equipment/${effectiveEquipmentId}`
+                    : `${window.location.origin}/${tenant}/inspections/${internalId}`}
                   size={220}
                   level="M"
                   bgColor="#ffffff"
