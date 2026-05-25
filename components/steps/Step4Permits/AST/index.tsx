@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ClipboardList, List, Shield, Wrench, Users, CheckCircle,
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
   AlertTriangle, Home, FileText, BarChart3, Trash2,
   ChevronUp, ChevronDown, AlertCircle, QrCode, Lock, Zap,
-  Camera, UserCheck, UserX, BookMarked, Star,
+  Camera, UserCheck, UserX, BookMarked, Star, Search,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -2295,14 +2295,94 @@ function EquipmentSection({ ast, onChange, language, readOnly }: {
   );
 }
 
+// ── Employé admin (source: onglet "Employés" de app/[tenant]/admin) ─────────
+interface AdminEmployee { id: string; name: string | null; email: string; role?: string }
+
+// Combobox nom de participant : recherche intelligente parmi les employés du
+// tenant, avec saisie manuelle libre si aucun employé ne correspond.
+function EmployeeNameInput({ value, employees, onChange, disabled, language, className }: {
+  value: string; employees: AdminEmployee[]; onChange: (name: string) => void;
+  disabled?: boolean; language: Language; className: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+
+  const matches = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    const base = q
+      ? employees.filter(e => (e.name || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q))
+      : employees;
+    return base.slice(0, 8);
+  }, [value, employees]);
+
+  useEffect(() => {
+    const h = (ev: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(ev.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+        <input
+          type="text"
+          value={value}
+          onChange={e => { onChange(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          disabled={disabled}
+          placeholder={tr('Rechercher un employé ou saisir…', 'Search an employee or type…')}
+          className={`${className} pl-7`}
+        />
+      </div>
+      {open && !disabled && matches.length > 0 && (
+        <ul className="absolute z-30 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg">
+          {matches.map(e => (
+            <li key={e.id}>
+              <button
+                type="button"
+                onMouseDown={ev => ev.preventDefault()}
+                onClick={() => { onChange(e.name || e.email); setOpen(false); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-teal-50 dark:hover:bg-teal-900/30"
+              >
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-600 text-[10px] font-bold text-white shrink-0">
+                  {((e.name || e.email || '?')[0] || '?').toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-100">{e.name || e.email}</span>
+                  {e.name && <span className="block truncate text-xs text-slate-400">{e.email}</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ── Section: Participants ──────────────────────────────────────────────────
-function ParticipantsSection({ ast, onChange, language, readOnly }: {
+function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  language: Language; readOnly: boolean;
+  language: Language; readOnly: boolean; tenant: string;
 }) {
   const t = T[language].participants;
   const participants = ast.participants;
   const acknowledgedCount = participants.filter(p => p.acknowledged).length;
+
+  // Employés du tenant (rafraîchis à chaque ouverture de la section : tout
+  // employé créé dans l'admin devient immédiatement recherchable).
+  const [employees, setEmployees] = useState<AdminEmployee[]>([]);
+  useEffect(() => {
+    if (!tenant) return;
+    let cancelled = false;
+    fetch(`/api/admin/users?tenant=${encodeURIComponent(tenant)}`)
+      .then(r => (r.ok ? r.json() : { users: [] }))
+      .then(d => { if (!cancelled) setEmployees((d.users || []).filter((u: AdminEmployee & { is_active?: boolean }) => u.is_active !== false)); })
+      .catch(() => { /* recherche désactivée si l'API échoue — saisie manuelle reste possible */ });
+    return () => { cancelled = true; };
+  }, [tenant]);
 
   const roleOptions = Object.entries(t.roles).map(([k, v]) => ({ value: k, label: v }));
 
@@ -2358,8 +2438,14 @@ function ParticipantsSection({ ast, onChange, language, readOnly }: {
                   {participants.map(par => (
                     <tr key={par.id}>
                       <td className="py-2 pr-3">
-                        <input type="text" value={par.name} onChange={e => updateParticipant(par.id, x => ({ ...x, name: e.target.value }))} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                        <EmployeeNameInput
+                          value={par.name}
+                          employees={employees}
+                          disabled={readOnly}
+                          language={language}
+                          onChange={name => updateParticipant(par.id, x => ({ ...x, name }))}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50"
+                        />
                       </td>
                       <td className="py-2 pr-3">
                         <select value={par.role} onChange={e => updateParticipant(par.id, x => ({ ...x, role: e.target.value }))} disabled={readOnly}
@@ -3540,7 +3626,7 @@ export default function ASTPermit({
             <EquipmentSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
           )}
           {section === 'participants' && (
-            <ParticipantsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+            <ParticipantsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} tenant={tenant} />
           )}
           {section === 'finalization' && (
             <FinalizationSection
