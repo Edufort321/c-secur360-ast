@@ -376,6 +376,7 @@ export default function ManagerDashboard({
       user={mockUser}
       notifications={3}
       isAdmin={false}
+      showHeader={false}
       sidebar={<DashboardSidebar tenant={tenant.subdomain} userRole="manager" />}
     >
       {/* CSS Animations Global */}
