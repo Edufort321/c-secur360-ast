@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
 import Header from '@/components/ui/Header';
@@ -242,6 +242,18 @@ export default function LandingPage() {
   const [showImageManager, setShowImageManager] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Si déjà connecté → aller directement au dashboard du tenant
+  useEffect(() => {
+    fetch('/api/auth/me').then(async res => {
+      if (res.ok) {
+        const { user } = await res.json();
+        if (user?.tenantId) {
+          window.location.href = `/${user.tenantId}/modules`;
+        }
+      }
+    }).catch(() => {});
+  }, []);
   
   const t = translations[language];
   const currentFeatures = features[language];
@@ -270,18 +282,13 @@ export default function LandingPage() {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Production password for development
-    if (adminPassword === 'CGEstion321$') {
-      window.location.href = '/admin/dashboard';
-    } else {
-      alert('Mot de passe incorrect');
-    }
+    window.location.href = '/auth/admin';
   };
 
   const handleClientAccess = (e: React.FormEvent) => {
     e.preventDefault();
     if (clientSubdomain.trim()) {
-      window.location.href = `/${clientSubdomain.trim().toLowerCase()}/modules`;
+      window.location.href = `/${clientSubdomain.trim().toLowerCase()}/login`;
     } else {
       alert('Veuillez entrer le nom du client');
     }
@@ -966,11 +973,7 @@ export default function LandingPage() {
             
             <form onSubmit={(e) => {
               e.preventDefault();
-              if (adminPassword === 'CGEstion321$') {
-                window.location.href = '/admin/gallery';
-              } else {
-                alert('Mot de passe incorrect');
-              }
+              window.location.href = '/admin/gallery';
             }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ position: 'relative' }}>
                 <input
