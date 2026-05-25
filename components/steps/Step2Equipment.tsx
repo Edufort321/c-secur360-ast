@@ -1,11 +1,19 @@
 "use client";
 
-import React, { useState } from 'react';
-import { 
-  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand, 
-  Zap, Activity, Star, AlertTriangle 
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+import {
+  Shield, Search, CheckCircle, HardHat, Eye, Wind, Hand,
+  Zap, Activity, Star, AlertTriangle, Wrench, QrCode, Plus,
+  ClipboardCheck, AlertOctagon, Clock,
 } from 'lucide-react';
 import LocationTabsContainer from '../shared/LocationTabsContainer';
+import { INSPECTION_TYPE_OPTIONS } from '@/components/InspectionForm/checklists';
+
+const _sb = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  : null;
 
 // =================== INTERFACES ===================
 interface Step2EquipmentProps {
@@ -638,10 +646,22 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
 }) => {
   // =================== TRADUCTIONS ET CONFIGURATION ===================
   const t = translations[language];
-  
+
   // =================== ÉTATS ===================
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Équipements enregistrés dans le module Inspections du tenant
+  const [tenantEquipment, setTenantEquipment] = useState<any[]>([]);
+  useEffect(() => {
+    if (!_sb || !tenant) return;
+    _sb.from('equipment')
+      .select('id, equipment_type, equipment_name, equipment_serial, equipment_location, inspection_frequency')
+      .eq('tenant_id', tenant)
+      .order('updated_at', { ascending: false })
+      .then(({ data }) => { if (data) setTenantEquipment(data); })
+      .catch(() => {});
+  }, [tenant]);
   
   
   // Initialiser avec la liste complète des équipements traduits
@@ -1603,6 +1623,54 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
         >
           {() => equipmentContent}
         </LocationTabsContainer>
+      )}
+
+      {/* ── Équipements à inspecter (module Inspections du tenant) ─────────── */}
+      {tenantEquipment.length > 0 && (
+        <div style={{ marginTop: '24px', borderRadius: '12px', border: '1px solid rgba(20,184,166,0.3)', overflow: 'hidden' }}>
+          <div style={{ background: 'rgba(20,184,166,0.1)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(20,184,166,0.2)' }}>
+            <ClipboardCheck size={16} style={{ color: '#0d9488' }} />
+            <span style={{ fontWeight: 700, fontSize: '14px', color: '#0d9488' }}>
+              {language === 'fr' ? 'Équipements à inspecter' : 'Equipment to inspect'}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#6b7280' }}>
+              {language === 'fr'
+                ? `${tenantEquipment.length} fiche${tenantEquipment.length > 1 ? 's' : ''} enregistrée${tenantEquipment.length > 1 ? 's' : ''}`
+                : `${tenantEquipment.length} registered sheet${tenantEquipment.length > 1 ? 's' : ''}`}
+            </span>
+          </div>
+          <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {tenantEquipment.map(eq => {
+              const typeLabel = INSPECTION_TYPE_OPTIONS.find(o => o.value === eq.equipment_type)?.label ?? eq.equipment_type;
+              return (
+                <div key={eq.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(100,116,139,0.2)' }}>
+                  <Wrench size={14} style={{ color: '#0d9488', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: 'inherit' }}>
+                      {eq.equipment_name || typeLabel}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                      {typeLabel}{eq.equipment_serial ? ` · #${eq.equipment_serial}` : ''}{eq.equipment_location ? ` · ${eq.equipment_location}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                    <Link href={`/${tenant}/equipment/${eq.id}`}
+                      target="_blank"
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(100,116,139,0.3)', fontSize: '11px', color: '#94a3b8', textDecoration: 'none' }}>
+                      <QrCode size={11} /> QR
+                    </Link>
+                    <Link href={`/${tenant}/equipment/${eq.id}/inspect`}
+                      target="_blank"
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', background: '#0d9488', fontSize: '11px', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+                      <Plus size={11} />
+                      {language === 'fr' ? 'Inspecter' : 'Inspect'}
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </>
   );

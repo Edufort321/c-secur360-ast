@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { MODULES } from '@/lib/modules/registry';
 import { supabase } from '@/lib/supabase';
+import { useEntitlements } from '@/lib/entitlements';
 import { InstallPWA } from '@/components/InstallPWA';
 
 const QUICK_CREATES = [
@@ -23,6 +24,17 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
   const { sites, siteId, setSiteId } = useSite();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const entitlements = useEntitlements(tenant || '');
+
+  // Modules visibles selon entitlements — admin toujours présent, fallback = tout afficher pendant le chargement
+  const visibleModules = !tenant || entitlements === null
+    ? MODULES
+    : MODULES.filter(m => m.key === 'admin' || entitlements.includes(m.key));
+
+  // Actions rapides filtrées (ne montrer que si le module est activé)
+  const visibleQuickCreates = !tenant || entitlements === null
+    ? QUICK_CREATES
+    : QUICK_CREATES.filter(a => entitlements.includes(a.key) || entitlements.includes(a.key.replace('permit', 'permits')));
 
   useEffect(() => {
     if (!tenant) return;
@@ -93,7 +105,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         <Plus size={12} /> {lang === 'fr' ? 'Créer' : 'Create'}
                       </div>
                       <div className="grid grid-cols-3 gap-1">
-                        {QUICK_CREATES.map(a => {
+                        {visibleQuickCreates.map(a => {
                           const Icon = a.icon;
                           return (
                             <Link key={a.key} href={`/${tenant}/${a.path}`} onClick={close}
@@ -119,7 +131,7 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         <span className="font-semibold">{t('modules')}</span>
                       </Link>
                       <div className="mt-1 max-h-64 overflow-y-auto">
-                        {MODULES.map(m => {
+                        {visibleModules.map(m => {
                           const Icon = m.icon;
                           const label = lang === 'fr' ? m.labelFr : m.labelEn;
                           const href = m.status === 'available' ? `/${tenant}/${m.basePath}` : `/${tenant}/modules`;

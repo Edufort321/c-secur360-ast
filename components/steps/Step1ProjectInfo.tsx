@@ -1,6 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+const _sbProjects = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  : null;
 import { 
   FileText, Building, Phone, MapPin, Calendar, Clock, Users, User, Briefcase,
   Copy, Check, AlertTriangle, Camera, Upload, X, Lock, Zap, Settings, Wrench,
@@ -725,6 +730,40 @@ const Step1ProjectInfo = memo(({
   userRole = 'worker'
 }: Step1ProjectInfoProps) => {
   const t = translations[language];
+
+  // ── Lien module Projets ───────────────────────────────────────────────────
+  const [projectSuggestions, setProjectSuggestions] = useState<any[]>([]);
+  const [showProjectSugg, setShowProjectSugg] = useState(false);
+  const [projectLinked, setProjectLinked] = useState(false);
+  const projectSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleProjectNumberChange = useCallback((val: string) => {
+    updateField('projectNumber', val);
+    setProjectLinked(false);
+    if (projectSearchTimeout.current) clearTimeout(projectSearchTimeout.current);
+    if (!val.trim() || !_sbProjects) { setProjectSuggestions([]); setShowProjectSugg(false); return; }
+    projectSearchTimeout.current = setTimeout(async () => {
+      const { data } = await _sbProjects
+        .from('projects')
+        .select('id, project_number, title, client_name, location')
+        .eq('tenant_id', tenant)
+        .ilike('project_number', `%${val.trim()}%`)
+        .limit(6);
+      setProjectSuggestions(data || []);
+      setShowProjectSugg((data || []).length > 0);
+    }, 300);
+  }, [tenant]);
+
+  const handleSelectProject = useCallback((proj: any) => {
+    updateField('projectNumber', proj.project_number);
+    if (proj.client_name) updateField('clientName', proj.client_name);
+    if (proj.title)       updateField('projectName', proj.title);
+    if (proj.location)    updateField('clientAddress', proj.location);
+    setProjectLinked(true);
+    setShowProjectSugg(false);
+    setProjectSuggestions([]);
+  }, []);
+
   const [localData, setLocalData] = useState<ProjectInfo>(() => ({
     // Initialisation avec données existantes ou valeurs par défaut
     // Le numéro AST vient directement de formData, pas besoin de le stocker dans localData
@@ -1912,16 +1951,52 @@ const Step1ProjectInfo = memo(({
             
             <div style={{ display: 'grid', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>{t.projectNumber} *</label>
+                <div style={{ position: 'relative' }}>
+                  <label style={labelStyle}>
+                    {t.projectNumber} *
+                    {projectLinked && (
+                      <span style={{ marginLeft: '8px', fontSize: '11px', color: '#10b981', fontWeight: 600 }}>
+                        ✓ {language === 'fr' ? 'Lié' : 'Linked'}
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     value={localData.projectNumber}
-                    onChange={(e) => updateField('projectNumber', e.target.value)}
+                    onChange={(e) => handleProjectNumberChange(e.target.value)}
+                    onFocus={() => projectSuggestions.length > 0 && setShowProjectSugg(true)}
+                    onBlur={() => setTimeout(() => setShowProjectSugg(false), 200)}
                     style={inputStyle}
                     placeholder={t.placeholders.projectNumber}
                     required
+                    autoComplete="off"
                   />
+                  {showProjectSugg && projectSuggestions.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#1e293b', border: '1px solid rgba(100,116,139,0.4)', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', marginTop: '4px' }}>
+                      {projectSuggestions.map(proj => (
+                        <button key={proj.id} type="button"
+                          onMouseDown={() => handleSelectProject(proj)}
+                          style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid rgba(100,116,139,0.2)', cursor: 'pointer', color: 'inherit' }}
+                          onMouseOver={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.15)')}
+                          onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{proj.project_number}</div>
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            {proj.title}{proj.client_name ? ` · ${proj.client_name}` : ''}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {localData.projectNumber && !projectLinked && projectSuggestions.length === 0 && _sbProjects && (
+                    <div style={{ marginTop: '6px' }}>
+                      <a href={`/${tenant}/projects?new=${encodeURIComponent(localData.projectNumber)}`}
+                        target="_blank" rel="noreferrer"
+                        style={{ fontSize: '11px', color: '#6366f1', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        + {language === 'fr' ? 'Créer ce projet' : 'Create this project'}
+                      </a>
+                    </div>
+                  )}
                 </div>
                 
                 <div>
