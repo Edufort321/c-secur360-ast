@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, XCircle, AlertTriangle, AlertOctagon,
-  Clock, ClipboardCheck, Plus, ChevronRight, Loader2,
+  Clock, ClipboardCheck, Plus, ChevronRight, Loader2, Edit2,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -61,11 +61,18 @@ export default function EquipmentPublicPage() {
   const { lang } = useLanguage();
   const fr = lang === 'fr';
 
-  const [equipment, setEquipment] = useState<EquipmentRow | null>(null);
+  const [equipment,  setEquipment]  = useState<EquipmentRow | null>(null);
   const [inspections, setInspections] = useState<InspRow[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [logoUrl,    setLogoUrl]    = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [lightbox,   setLightbox]   = useState<string | null>(null);
+  const [isTenant,   setIsTenant]   = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.user?.tenantId === tenant) setIsTenant(true); })
+      .catch(() => {});
+  }, [tenant]);
 
   useEffect(() => {
     if (!sb) return;
@@ -152,11 +159,17 @@ export default function EquipmentPublicPage() {
 
         {/* Equipment info card */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <ClipboardCheck size={15} className="text-teal-600" />
               {fr ? 'Fiche équipement' : 'Equipment sheet'}
             </span>
+            {isTenant && (
+              <Link href={`/${tenant}/equipment/${id}/edit`}
+                className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800">
+                <Edit2 size={12} /> {fr ? 'Modifier' : 'Edit'}
+              </Link>
+            )}
           </div>
           <div className="px-5 py-4 space-y-2">
             <div className="flex items-start justify-between">
