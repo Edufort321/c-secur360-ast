@@ -109,35 +109,46 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
   async function handleSave() {
     if (saving || !supabase) return;
     setSaving(true);
-    const payload = {
-      tenant_id:            tenant,
-      equipment_type:       form.equipmentType,
-      equipment_name:       form.equipmentName  || null,
-      equipment_serial:     form.equipmentSerial || null,
-      equipment_location:   form.equipmentLocation || null,
-      equipment_photos:     form.equipmentPhotos,
-      inspection_frequency: form.inspectionFrequency || null,
-      inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
-      province:             form.province,
-      notes:                form.notes || null,
-      updated_at:           new Date().toISOString(),
-    };
+    setMsg('');
+    try {
+      const payload = {
+        tenant_id:            tenant,
+        equipment_type:       form.equipmentType,
+        equipment_name:       form.equipmentName  || null,
+        equipment_serial:     form.equipmentSerial || null,
+        equipment_location:   form.equipmentLocation || null,
+        equipment_photos:     form.equipmentPhotos,
+        inspection_frequency: form.inspectionFrequency || null,
+        inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
+        province:             form.province,
+        notes:                form.notes || null,
+        updated_at:           new Date().toISOString(),
+      };
 
-    let savedId = equipmentId ?? null;
+      let savedId: string | null = equipmentId ?? null;
 
-    if (!equipmentId) {
-      const { data } = await supabase.from('equipment').insert(payload).select('id').single();
-      savedId = data?.id ?? null;
-    } else {
-      await supabase.from('equipment').update(payload).eq('id', equipmentId);
-    }
+      if (!equipmentId) {
+        const { data, error } = await supabase.from('equipment').insert(payload).select('id').single();
+        if (error) throw error;
+        savedId = data?.id ?? null;
+      } else {
+        const { error } = await supabase.from('equipment').update(payload).eq('id', equipmentId);
+        if (error) throw error;
+        savedId = equipmentId;
+      }
 
-    setSaving(false);
-    if (savedId) {
-      setCurrentId(savedId);
-      setMsg(fr ? 'Enregistré ✓' : 'Saved ✓');
-      setTimeout(() => setMsg(''), 2500);
-      onSaved?.(savedId);
+      if (savedId) {
+        setCurrentId(savedId);
+        setMsg(fr ? 'Enregistré ✓' : 'Saved ✓');
+        setTimeout(() => setMsg(''), 2500);
+        onSaved?.(savedId);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMsg(fr ? `Erreur : ${msg}` : `Error: ${msg}`);
+      setTimeout(() => setMsg(''), 6000);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -309,9 +320,22 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
                 <input type="file" accept="image/*" multiple className="hidden"
                   onChange={async (e) => {
                     const files = Array.from(e.target.files ?? []);
-                    const compressed = await Promise.all(files.map(f => compressPhoto(f).catch(() => null)));
-                    const valid = compressed.filter(Boolean) as string[];
-                    setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, ...valid] }));
+                    let tooLarge = 0;
+                    const results = await Promise.all(files.map(async f => {
+                      try { return await compressPhoto(f); }
+                      catch (err) {
+                        if (err instanceof Error && err.message === 'PHOTO_TOO_LARGE') tooLarge++;
+                        return null;
+                      }
+                    }));
+                    if (tooLarge > 0) {
+                      setMsg(fr
+                        ? `Photo trop volumineuse — prenez-la en résolution standard ou en mode portrait.`
+                        : `Photo too large — use standard resolution or portrait mode.`);
+                      setTimeout(() => setMsg(''), 5000);
+                    }
+                    const valid = results.filter(Boolean) as string[];
+                    if (valid.length > 0) setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, ...valid] }));
                     e.target.value = '';
                   }} />
               </label>
