@@ -56,6 +56,15 @@ export default function ASTListPage() {
   const qrUrl = origin ? `${origin}/${tenant}/ast/acces` : '';
   const qrPosterRef = useRef<HTMLDivElement>(null);
 
+  // Logo : celui du tenant s'il est défini, sinon le logo C-Secur par défaut.
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
+  const logoSrc = logoUrl || (origin ? `${origin}/logo.png` : '/logo.png');
+
   const statusLabel = (s: PermitStatus) => ({
     draft: tr('Brouillon', 'Draft'), active: tr('Actif', 'Active'),
     completed: tr('Complété', 'Completed'), cancelled: tr('Annulé', 'Cancelled'),
@@ -69,13 +78,16 @@ export default function ASTListPage() {
     w.document.write(
       `<html><head><title>AST QR — ${tenant}</title>` +
       `<style>body{font-family:system-ui,sans-serif;text-align:center;padding:48px;color:#0f172a}` +
-      `h1{font-size:22px;margin:24px 0 8px}p{color:#475569;font-size:15px;max-width:460px;margin:6px auto}` +
-      `.code{margin-top:16px;font-size:13px;color:#64748b;word-break:break-all}</style></head>` +
+      `img{max-height:80px;width:auto;margin:0 auto 8px}` +
+      `svg{width:230px;height:230px}` +
+      `.qrbox{display:inline-block;padding:18px;border:2px solid #e2e8f0;border-radius:18px;margin:12px auto}` +
+      `.caption{font-size:20px;font-weight:700;margin-top:18px}` +
+      `.code{margin-top:14px;font-size:13px;color:#64748b;word-break:break-all}</style></head>` +
       `<body>${node.innerHTML}</body></html>`,
     );
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 300);
+    setTimeout(() => { w.print(); }, 400);
   };
 
   const [rows, setRows]     = useState<ASTRow[]>([]);
@@ -301,16 +313,20 @@ export default function ASTListPage() {
               <Printer size={14} /> {tr('Imprimer', 'Print')}
             </button>
           </div>
-          <div className="flex flex-col items-center gap-5 p-5 sm:flex-row">
+          <div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
             {/* Bloc imprimable (capturé tel quel dans la fenêtre d'impression) */}
-            <div ref={qrPosterRef} className="shrink-0 text-center">
+            <div ref={qrPosterRef} className="shrink-0 flex flex-col items-center gap-3 text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoSrc} alt="C-Secur360" className="h-12 w-auto object-contain" />
               {qrUrl && (
-                <div className="inline-block rounded-xl border border-slate-200 bg-white p-3">
-                  <QRCodeSVG value={qrUrl} size={150} level="M" includeMargin={false} />
+                <div className="qrbox inline-block rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm">
+                  <QRCodeSVG value={qrUrl} size={180} level="M" includeMargin={false} />
                 </div>
               )}
-              <h1 style={{ display: 'none' }}>{tr('Analyse Sécurité au Travail', 'Job Safety Analysis')}</h1>
-              <p className="code" style={{ display: 'none' }}>{qrUrl}</p>
+              <p className="caption text-lg font-bold text-slate-800">
+                {tr('Pense à faire ton AST', 'Remember to do your JSA')}
+              </p>
+              <p className="code text-xs text-slate-400 break-all">{qrUrl}</p>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-600">
