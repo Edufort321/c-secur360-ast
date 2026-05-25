@@ -2811,11 +2811,15 @@ async function renderAstSection(
   ast: ASTPermit, language: Language, logoDataUrl?: string | null,
 ) {
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const NAVY: [number, number, number] = [17, 24, 39]; // = gray-900 (header principal)
   const margin = 14;
+  const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  let y = 14;
+  const HEADER_H = 30;
 
-  // Logo en haut à gauche (tenant ou C-Secur par défaut)
+  // Précharge le logo (dimensions connues) pour pouvoir le dessiner dans l'en-tête
+  // répété (didDrawPage est synchrone).
+  let logo: { dataUrl: string; fmt: string; w: number; h: number } | null = null;
   if (logoDataUrl) {
     try {
       const fmt = logoDataUrl.includes('image/jpeg') || logoDataUrl.includes('image/jpg') ? 'JPEG'
@@ -2823,19 +2827,28 @@ async function renderAstSection(
       const im = new Image();
       im.src = logoDataUrl;
       await new Promise<void>(res => { im.onload = () => res(); im.onerror = () => res(); });
-      const h = 14;
-      const w = im.naturalWidth && im.naturalHeight ? Math.min((im.naturalWidth / im.naturalHeight) * h, 50) : 28;
-      doc.addImage(logoDataUrl, fmt, margin, y, w, h);
-      y += h + 6;
+      const h = 13;
+      const w = im.naturalWidth && im.naturalHeight ? Math.min((im.naturalWidth / im.naturalHeight) * h, 42) : 24;
+      logo = { dataUrl: logoDataUrl, fmt, w, h };
     } catch { /* logo optionnel */ }
   }
 
-  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-  doc.text(tr('Analyse Sécurité au Travail', 'Job Safety Analysis'), margin, y);
-  y += 7;
-  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
-  doc.text(ast.permit_number, margin, y);
-  y += 6;
+  // En-tête répété sur CHAQUE page : logo + titre + numéro + filet navy.
+  const drawHeader = () => {
+    if (logo) { try { doc.addImage(logo.dataUrl, logo.fmt, margin, 6, logo.w, logo.h); } catch { /* noop */ } }
+    const tx = logo ? margin + logo.w + 6 : margin;
+    doc.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text(tr('Analyse Sécurité au Travail', 'Job Safety Analysis'), tx, 12);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text(ast.permit_number, tx, 18);
+    doc.setDrawColor(NAVY[0], NAVY[1], NAVY[2]); doc.setLineWidth(0.5);
+    doc.line(margin, HEADER_H - 4, pageW - margin, HEADER_H - 4);
+    doc.setTextColor(0, 0, 0);
+  };
+
+  const tableMargin = { top: HEADER_H, left: margin, right: margin };
+  let y = HEADER_H;
 
   const ti = ast.taskInfo;
   const infoRows = ([
@@ -2852,14 +2865,15 @@ async function renderAstSection(
   ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim());
 
   autoTable(doc, {
-    startY: y + 2,
+    startY: HEADER_H,
     head: [[tr('Informations générales', 'General information'), '']],
     body: infoRows.map(([k, v]) => [k, String(v)]),
     theme: 'striped',
-    headStyles: { fillColor: [13, 148, 136] },
+    headStyles: { fillColor: NAVY },
     styles: { fontSize: 9, cellPadding: 2 },
     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
+    didDrawPage: drawHeader,
   });
   y = doc.lastAutoTable.finalY + 6;
 
@@ -2892,10 +2906,11 @@ async function renderAstSection(
       head: [[tr('Étape', 'Step'), tr('Danger', 'Hazard'), tr('Moyens de contrôle', 'Control measures'), tr('Risque', 'Risk')]],
       body,
       theme: 'grid',
-      headStyles: { fillColor: [13, 148, 136] },
+      headStyles: { fillColor: NAVY },
       styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
       columnStyles: { 0: { cellWidth: 42 }, 1: { cellWidth: 38 }, 3: { cellWidth: 18, halign: 'center' } },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
+      didDrawPage: drawHeader,
     });
     y = doc.lastAutoTable.finalY + 6;
   }
@@ -2908,9 +2923,10 @@ async function renderAstSection(
       head: [[tr('EPI requis', 'Required PPE'), tr('Spécification', 'Specification')]],
       body: ppe.map(p => [p.item, p.specification || '—']),
       theme: 'striped',
-      headStyles: { fillColor: [13, 148, 136] },
+      headStyles: { fillColor: NAVY },
       styles: { fontSize: 9, cellPadding: 2 },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
+      didDrawPage: drawHeader,
     });
     y = doc.lastAutoTable.finalY + 6;
   }
@@ -2927,18 +2943,20 @@ async function renderAstSection(
         p.acknowledged ? (p.acknowledgedAt ? new Date(p.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : tr('Oui', 'Yes')) : tr('Non', 'No'),
       ]),
       theme: 'striped',
-      headStyles: { fillColor: [13, 148, 136] },
+      headStyles: { fillColor: NAVY },
       styles: { fontSize: 8, cellPadding: 2 },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
+      didDrawPage: drawHeader,
     });
     y = doc.lastAutoTable.finalY + 6;
   }
 
   // Approbation — Superviseur / Responsable des travaux (page finalisation)
-  if (y > pageH - 55) { doc.addPage(); y = 16; }
-  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  if (y > pageH - 55) { doc.addPage(); drawHeader(); y = HEADER_H + 4; }
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
   doc.text(tr('Approbation — Superviseur / Responsable des travaux', 'Approval — Supervisor / Work manager'), margin, y);
   y += 7;
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(10); doc.setFont('helvetica', 'normal');
   ([
     [tr('Superviseur', 'Supervisor'), ast.supervisor_name || ast.supervisorSigName],
