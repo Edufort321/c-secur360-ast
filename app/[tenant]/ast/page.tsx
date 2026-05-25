@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   ClipboardList, Plus, Search, MapPin, User, Calendar,
   Clock, CheckCircle, XCircle, Loader2, BarChart3, QrCode, Printer,
-  LayoutGrid, List as ListIcon, Trash2, Gauge, Download,
+  LayoutGrid, List as ListIcon, Trash2, Gauge, Download, ImageDown,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -71,6 +71,29 @@ export default function ASTListPage() {
     draft: tr('Brouillon', 'Draft'), active: tr('Actif', 'Active'),
     completed: tr('Complété', 'Completed'), cancelled: tr('Annulé', 'Cancelled'),
   }[s]);
+
+  // Téléchargement du QR en PNG via canvas
+  const downloadQRpng = () => {
+    const svgEl = qrPosterRef.current?.querySelector('svg');
+    if (!svgEl) return;
+    const size = 400;
+    const xml = new XMLSerializer().serializeToString(svgEl);
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const img = new window.Image();
+    img.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const a = document.createElement('a');
+      a.download = `qr-ast-${tenant}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(xml)))}`;
+  };
 
   // Impression d'une affiche QR centrée : logo en haut, QR au centre, texte dessous.
   const printPoster = () => {
@@ -349,13 +372,16 @@ export default function ASTListPage() {
             <h3 className="flex-1 text-sm font-semibold text-slate-800">
               {tr('Code QR public — Créer un AST', 'Public QR code — Create a JSA')}
             </h3>
-            <button
-              type="button"
-              onClick={printPoster}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700"
-            >
-              <Printer size={14} /> {tr('Imprimer', 'Print')}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={downloadQRpng}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-700 transition hover:bg-teal-50">
+                <ImageDown size={14} /> PNG
+              </button>
+              <button type="button" onClick={printPoster}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700">
+                <Printer size={14} /> {tr('Imprimer', 'Print')}
+              </button>
+            </div>
           </div>
           <div className="flex flex-col items-center gap-5 p-5 sm:flex-row sm:items-start">
             {/* Bloc imprimable (capturé tel quel dans la fenêtre d'impression) */}

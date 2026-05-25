@@ -30,7 +30,8 @@ export default function ProjectDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [p, setP] = useState<any>(null);
-  const [linkedAst, setLinkedAst] = useState<any[]>([]);
+  const [linkedAst,     setLinkedAst]     = useState<any[]>([]);
+  const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,6 +85,27 @@ export default function ProjectDetailPage() {
       const filtered = (data || []).filter((r: any) => r.data?.taskInfo?.projectNumber === p.project_number)
         .map((r: any) => ({ id: r.permit_number, ast_number: r.permit_number, status: r.data?.status || 'draft', created_at: r.updated_at }));
       if (active) setLinkedAst(filtered);
+    })();
+    return () => { active = false; };
+  }, [p?.project_number, tenant]);
+
+  // Permis liés à ce projet (work_permits + confined_space_permits contenant le n° de projet)
+  useEffect(() => {
+    if (!p?.project_number) { setLinkedPermits([]); return; }
+    let active = true;
+    (async () => {
+      const [wpRes, csRes] = await Promise.all([
+        supabase.from('work_permits').select('permit_number, type, data, updated_at').eq('tenant_id', tenant),
+        supabase.from('confined_space_permits').select('permit_number, data, updated_at').eq('tenant_id', tenant),
+      ]);
+      const pn = p.project_number;
+      const wp = (wpRes.data || [])
+        .filter((r: any) => r.data?.projectNumber === pn || r.data?.taskInfo?.projectNumber === pn)
+        .map((r: any) => ({ permit_number: r.permit_number, type: r.type || 'work', status: r.data?.status || 'draft', updated_at: r.updated_at }));
+      const cs = (csRes.data || [])
+        .filter((r: any) => r.data?.projectNumber === pn || r.data?.taskInfo?.projectNumber === pn)
+        .map((r: any) => ({ permit_number: r.permit_number, type: 'confined_space', status: r.data?.status || 'draft', updated_at: r.updated_at }));
+      if (active) setLinkedPermits([...wp, ...cs].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()));
     })();
     return () => { active = false; };
   }, [p?.project_number, tenant]);
@@ -238,6 +260,7 @@ export default function ProjectDetailPage() {
                   <Field label={tr('Début des travaux', 'Work start')}><input type="date" className="inp" value={p.date_work_start || ''} onChange={e => set('date_work_start', e.target.value)} /></Field>
                 </div>
 
+                {/* AST liés */}
                 <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-bold">{tr('AST liés', 'Linked JSAs')} ({linkedAst.length})</h3>
@@ -248,13 +271,38 @@ export default function ProjectDetailPage() {
                   ) : (
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
                       {linkedAst.map(a => (
-                        <div key={a.id} className="flex items-center justify-between py-2 text-sm">
+                        <Link key={a.id} href={`/${tenant}/ast/${a.ast_number || a.id}`}
+                          className="flex items-center justify-between py-2 text-sm hover:text-blue-600">
                           <span className="font-medium">{a.ast_number || a.id}</span>
                           <span className="flex items-center gap-3 text-xs text-gray-500">
                             <span>{(a.created_at || '').slice(0, 10)}</span>
                             <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{a.status || 'draft'}</span>
                           </span>
-                        </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Permis liés */}
+                <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-bold">{tr('Permis liés', 'Linked permits')} ({linkedPermits.length})</h3>
+                    <Link href={`/${tenant}/permits`} className="text-xs font-semibold text-cyan-600 hover:underline">+ {tr('Aller aux permis', 'Go to permits')}</Link>
+                  </div>
+                  {linkedPermits.length === 0 ? (
+                    <p className="text-sm text-gray-400">{tr('Aucun permis lié (associé par n° de projet).', 'No linked permit (matched by project #).')}</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {linkedPermits.map(pm => (
+                        <Link key={pm.permit_number} href={`/${tenant}/permits/${pm.permit_number}`}
+                          className="flex items-center justify-between py-2 text-sm hover:text-cyan-600">
+                          <span className="font-medium">{pm.permit_number}</span>
+                          <span className="flex items-center gap-3 text-xs text-gray-500">
+                            <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">{pm.type}</span>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-700">{pm.status}</span>
+                          </span>
+                        </Link>
                       ))}
                     </div>
                   )}

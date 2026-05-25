@@ -31,10 +31,11 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
     ? MODULES
     : MODULES.filter(m => m.key === 'admin' || entitlements.includes(m.key));
 
-  // Actions rapides filtrées (ne montrer que si le module est activé)
+  // Mapping clé QUICK_CREATES → clé module (les deux ne sont pas identiques)
+  const QC_MODULE: Record<string, string> = { project: 'projects', ast: 'ast', permit: 'permits' };
   const visibleQuickCreates = !tenant || entitlements === null
     ? QUICK_CREATES
-    : QUICK_CREATES.filter(a => entitlements.includes(a.key) || entitlements.includes(a.key.replace('permit', 'permits')));
+    : QUICK_CREATES.filter(a => entitlements.includes(QC_MODULE[a.key] ?? a.key));
 
   useEffect(() => {
     if (!tenant) return;
