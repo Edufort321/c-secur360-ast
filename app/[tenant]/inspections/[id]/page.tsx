@@ -49,12 +49,14 @@ interface InspRow {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function calcDaysLeft(row: InspRow): number | null {
+function calcDaysLeft(row: InspRow): { daysLeft: number; nextDueDate: string } | null {
   if (!row.inspection_frequency || !row.inspection_date) return null;
   const days = FREQUENCY_OPTIONS.find(f => f.value === row.inspection_frequency)?.days;
   if (!days) return null;
-  const nextDue = new Date(row.inspection_date).getTime() + days * 86400_000;
-  return Math.round((nextDue - Date.now()) / 86400_000);
+  const nextDueMs = new Date(row.inspection_date).getTime() + days * 86400_000;
+  const nextDueDate = new Date(nextDueMs).toISOString().split('T')[0];
+  const daysLeft = Math.round((nextDueMs - Date.now()) / 86400_000);
+  return { daysLeft, nextDueDate };
 }
 
 // ─── Urgency banner config ──────────────────────────────────────────────────
@@ -124,8 +126,10 @@ export default function InspectionPublicPage() {
     );
   }
 
-  const daysLeft = calcDaysLeft(row);
-  const urgency  = getUrgency(daysLeft);
+  const calcResult = calcDaysLeft(row);
+  const daysLeft   = calcResult?.daysLeft ?? null;
+  const nextDueDate = calcResult?.nextDueDate ?? null;
+  const urgency    = getUrgency(daysLeft);
   const result   = row.overall_result;
   const ncs      = row.non_conformities ?? [];
   const typeLabel = INSPECTION_TYPE_OPTIONS.find(o => o.value === row.equipment_type)?.label ?? row.equipment_type;
@@ -171,15 +175,16 @@ export default function InspectionPublicPage() {
       sub: fr ? 'Utilisation sous conditions — voir les notes.' : 'Use under conditions — see notes.',
     };
   } else if (result === 'conforme') {
+    const nextLabel = nextDueDate
+      ? new Date(nextDueDate).toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+      : null;
     banner = {
       bg: 'bg-green-600',
       text: 'text-white',
       Icon: CheckCircle,
       title: fr ? 'CONFORME ✓' : 'COMPLIANT ✓',
-      sub: daysLeft !== null
-        ? (daysLeft === 0
-          ? (fr ? 'Prochaine inspection aujourd\'hui.' : 'Next inspection today.')
-          : (fr ? `Prochaine inspection dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}.` : `Next inspection in ${daysLeft} day${daysLeft > 1 ? 's' : ''}.`))
+      sub: nextLabel
+        ? (fr ? `Prochaine inspection le ${nextLabel}` : `Next inspection on ${nextLabel}`)
         : undefined,
     };
   } else {

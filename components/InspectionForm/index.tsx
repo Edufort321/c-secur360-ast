@@ -360,7 +360,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   const [saving, setSaving]               = useState(false);
   const [saveMsg, setSaveMsg]             = useState('');
   const [shareMsg, setShareMsg]           = useState('');
-  const [activeTab, setActiveTab]         = useState<TabId>('form');
+  const [activeTab, setActiveTab]         = useState<TabId>(inspectionId ? 'qr' : 'form');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [expandedNCs, setExpandedNCs]     = useState<Set<string>>(new Set());
   const [historyRows, setHistoryRows]     = useState<HistoryRow[]>([]);
@@ -416,9 +416,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     setHistoryLoaded(false);
   }, [form.equipmentSerial, form.equipmentType, form.equipmentName]);
 
-  // ── History lazy load ────────────────────────────────────────────────────
+  // ── History — charge en arrière-plan dès que internalId est disponible ──
   useEffect(() => {
-    if (activeTab !== 'history' || !supabase || historyLoaded) return;
+    if (!supabase || historyLoaded || !internalId) return;
     setHistoryLoading(true);
     (async () => {
       let q = supabase!
@@ -439,7 +439,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       setHistoryLoaded(true);
       setHistoryLoading(false);
     })();
-  }, [activeTab, historyLoaded, form.equipmentSerial, form.equipmentType, form.equipmentName, internalId, tenant]);
+  }, [historyLoaded, form.equipmentSerial, form.equipmentType, form.equipmentName, internalId, tenant]);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const isReadOnly      = readOnly ?? (existingRow?.status === 'closed');

@@ -378,7 +378,7 @@ export default function InspectionsPage() {
               return (
                 <Link
                   key={g.key}
-                  href={`/${tenant}/inspections/${g.latestRow.id}`}
+                  href={`/${tenant}/inspections/${g.latestRow.id}/edit`}
                   className="block rounded-2xl border bg-white shadow-sm p-5 hover:bg-slate-50 transition-colors overflow-hidden"
                   style={{ borderColor: g.urgency === 'overdue' ? '#fca5a5' : g.urgency === 'soon' ? '#fcd34d' : '#e2e8f0' }}
                 >
@@ -438,7 +438,7 @@ export default function InspectionsPage() {
                 const urg = URGENCY_CONFIG[urgency];
                 return (
                   <div key={r.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors group">
-                    <Link href={`/${tenant}/inspections/${r.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                    <Link href={`/${tenant}/inspections/${r.id}/edit`} className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="w-9 h-9 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
                         <ClipboardCheck size={16} className="text-teal-600" />
                       </div>
