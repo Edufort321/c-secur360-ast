@@ -2975,9 +2975,10 @@ export async function generateAstsPdf(asts: ASTPermit[], language: Language, log
 }
 
 // ── Section: Finalization ──────────────────────────────────────────────────
-function FinalizationSection({ ast, completion, language, readOnly, onChange, onSave, tenant }: {
+function FinalizationSection({ ast, completion, language, readOnly, onChange, onSave, onApplyStatus, tenant }: {
   ast: ASTPermit; completion: number; language: Language; readOnly: boolean;
-  onChange: (updater: (p: ASTPermit) => ASTPermit) => void; onSave: () => void; tenant: string;
+  onChange: (updater: (p: ASTPermit) => ASTPermit) => void; onSave: () => void;
+  onApplyStatus: (status: PermitStatus, navigate?: boolean) => void; tenant: string;
 }) {
   const t = T[language].finalization;
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
@@ -3017,9 +3018,6 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
 
   const field = (key: keyof ASTPermit, val: string) =>
     onChange(p => ({ ...p, [key]: val }));
-
-  const setStatus = (status: PermitStatus) =>
-    onChange(p => ({ ...p, status }));
 
   const warnings: string[] = [];
   if (ast.jobSteps.length === 0) warnings.push(t.warnings.noSteps);
@@ -3086,36 +3084,67 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
         </div>
       </Card>
 
+      {/* Statut courant + définition */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm">
+        <span className="font-semibold text-slate-700 dark:text-slate-200">{tr('Statut', 'Status')} :</span>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+          ast.status === 'active' ? 'bg-green-100 text-green-700' :
+          ast.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+          ast.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
+        }`}>
+          {ast.status === 'active' ? tr('Actif (approuvé)', 'Active (approved)') :
+           ast.status === 'completed' ? tr('Complété', 'Completed') :
+           ast.status === 'cancelled' ? tr('Annulé', 'Cancelled') : tr('Brouillon', 'Draft')}
+        </span>
+        <span className="text-xs text-slate-400">
+          {ast.status === 'active' ? tr('— approuvé, travaux en cours', '— approved, work in progress') :
+           ast.status === 'completed' ? tr('— travaux terminés', '— work completed') :
+           ast.status === 'cancelled' ? tr('— AST annulé', '— JSA cancelled') :
+           tr('— en rédaction, non approuvé', '— in progress, not approved')}
+        </span>
+      </div>
+
       {!readOnly && (
         <div className="flex flex-wrap gap-3 mb-6">
-          {ast.status === 'draft' && (
+          {(ast.status === 'draft' || ast.status === 'cancelled') && (
             <button
               type="button"
-              onClick={() => { setStatus('active'); onSave(); }}
+              onClick={() => onApplyStatus('active')}
               disabled={completion < 60}
+              title={completion < 60 ? tr('Complétez au moins 60% pour approuver', 'Complete at least 60% to approve') : ''}
               className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
-              {t.activate}
+              {tr('Approuver / Activer', 'Approve / Activate')}
             </button>
           )}
           {ast.status === 'active' && (
             <button
               type="button"
-              onClick={() => { setStatus('completed'); onSave(); }}
+              onClick={() => onApplyStatus('completed')}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
               {t.complete}
             </button>
           )}
-          {(ast.status === 'completed' || ast.status === 'cancelled') && (
+          {(ast.status === 'completed' || ast.status === 'active' || ast.status === 'cancelled') && (
             <button
               type="button"
-              onClick={() => setStatus('draft')}
+              onClick={() => onApplyStatus('draft', false)}
               className="flex items-center gap-2 px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
-              {t.reopen}
+              {tr('Repasser en brouillon', 'Back to draft')}
+            </button>
+          )}
+          {ast.status !== 'cancelled' && (
+            <button
+              type="button"
+              onClick={() => { if (window.confirm(tr("Annuler cet AST ?", 'Cancel this JSA?'))) onApplyStatus('cancelled', false); }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-red-300 dark:border-red-700 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-sm font-medium transition-colors"
+            >
+              <X className="w-4 h-4" />
+              {tr('Annuler l\'AST', 'Cancel JSA')}
             </button>
           )}
           <button
@@ -4047,6 +4076,16 @@ export default function ASTPermit({
     if (onSave) onSave(ast);
   };
 
+  // Change le statut ET persiste immédiatement la nouvelle valeur (évite que le
+  // statut reste "draft" parce que la sauvegarde débouncée n'avait pas encore eu lieu).
+  const applyStatus = async (status: PermitStatus, navigate = true) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    const next: ASTPermit = { ...ast, status, updated_at: new Date().toISOString() };
+    setAst(next);
+    await persistAst(next);
+    if (navigate && onSave) onSave(next);
+  };
+
   const completion = computeCompletion(ast);
 
   const isComplet = (ast.model ?? 'simple') === 'complet';
@@ -4210,6 +4249,7 @@ export default function ASTPermit({
               readOnly={readOnly}
               onChange={updateAst}
               onSave={handleSaveNow}
+              onApplyStatus={applyStatus}
               tenant={tenant}
             />
           )}
