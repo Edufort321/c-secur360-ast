@@ -6,7 +6,7 @@ import {
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
   AlertTriangle, Home, FileText, BarChart3, Trash2,
   ChevronUp, ChevronDown, AlertCircle, QrCode, Lock, Zap,
-  Camera, UserCheck, UserX, BookMarked, Star, Search,
+  Camera, UserCheck, UserX, BookMarked, Star, Search, Pencil, Check,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -1435,28 +1435,141 @@ function HazardDropdown({ label, options, groups, selected, onChange, disabled =
 }
 
 // ── Contrôles contextuels (modèle complet) ────────────────────────────────
+// ── Store des moyens de contrôle "standard" du tenant (tenant_ast_options) ──
+interface TenantControl { id: string; label: string; hazard: string | null }
+interface TenantControlsApi {
+  byHazard: (hazard: string) => TenantControl[];
+  add: (hazard: string, label: string) => void;
+  update: (id: string, label: string) => void;
+  remove: (id: string) => void;
+}
+const TenantControlsCtx = React.createContext<TenantControlsApi | null>(null);
+
+// Boîte de contrôles pour UN danger : suggestions statiques + standards du tenant
+// (modifiables/supprimables) + ligne "ajouter un moyen de contrôle".
+function HazardControlBox({ hazard, staticControls, tenantControls, selected, disabled, language, onToggle, onReplace }: {
+  hazard: string; staticControls: string[]; tenantControls: TenantControl[];
+  selected: string[]; disabled: boolean; language: Language;
+  onToggle: (ctrl: string) => void; onReplace: (oldC: string, newC: string) => void;
+}) {
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const tc = useContext(TenantControlsCtx);
+  const [adding, setAdding] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState('');
+
+  const exists = (label: string) =>
+    staticControls.includes(label) || tenantControls.some(c => c.label === label);
+
+  const addControl = () => {
+    const v = adding.trim();
+    if (!v) return;
+    if (!selected.includes(v)) onToggle(v);          // coche pour cette étape
+    if (!exists(v)) tc?.add(hazard, v);              // devient un standard du tenant
+    setAdding('');
+  };
+
+  const saveEdit = (c: TenantControl) => {
+    const v = editVal.trim();
+    if (!v || v === c.label) { setEditingId(null); return; }
+    tc?.update(c.id, v);
+    if (selected.includes(c.label)) onReplace(c.label, v);
+    setEditingId(null);
+  };
+
+  const rowCls = (on: boolean) =>
+    `flex items-start gap-2.5 rounded px-2 py-1.5 transition-colors ${on ? 'bg-teal-50 dark:bg-teal-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`;
+
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-800">
+        <AlertTriangle className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+        <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">{hazard}</span>
+      </div>
+      <div className="p-3 space-y-1.5">
+        {/* Suggestions statiques */}
+        {staticControls.map(ctrl => (
+          <label key={ctrl} className={`cursor-pointer ${rowCls(selected.includes(ctrl))}`}>
+            <input type="checkbox" checked={selected.includes(ctrl)} onChange={() => onToggle(ctrl)} disabled={disabled}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600" />
+            <span className={`text-xs leading-relaxed ${selected.includes(ctrl) ? 'text-teal-800 dark:text-teal-300 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>{ctrl}</span>
+          </label>
+        ))}
+
+        {/* Standards du tenant (modifiables / supprimables) */}
+        {tenantControls.map(c => (
+          editingId === c.id ? (
+            <div key={c.id} className="flex items-center gap-1.5">
+              <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(c); } if (e.key === 'Escape') setEditingId(null); }}
+                className="flex-1 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none" />
+              <button type="button" onClick={() => saveEdit(c)} className="p-1 text-teal-600 hover:text-teal-700" title={tr('Enregistrer', 'Save')}><Check className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:text-slate-600" title={tr('Annuler', 'Cancel')}><X className="w-3.5 h-3.5" /></button>
+            </div>
+          ) : (
+            <div key={c.id} className={rowCls(selected.includes(c.label))}>
+              <input type="checkbox" checked={selected.includes(c.label)} onChange={() => onToggle(c.label)} disabled={disabled}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600" />
+              <span className={`flex-1 text-xs leading-relaxed ${selected.includes(c.label) ? 'text-teal-800 dark:text-teal-300 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
+                {c.label}
+                <span className="ml-1.5 rounded-full bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">{tr('standard', 'standard')}</span>
+              </span>
+              {!disabled && (
+                <span className="flex items-center gap-0.5 shrink-0">
+                  <button type="button" onClick={() => { setEditingId(c.id); setEditVal(c.label); }} className="p-1 text-slate-400 hover:text-teal-600" title={tr('Modifier', 'Edit')}><Pencil className="w-3 h-3" /></button>
+                  <button type="button" onClick={() => tc?.remove(c.id)} className="p-1 text-slate-400 hover:text-red-600" title={tr('Supprimer', 'Remove')}><Trash2 className="w-3 h-3" /></button>
+                </span>
+              )}
+            </div>
+          )
+        ))}
+
+        {staticControls.length === 0 && tenantControls.length === 0 && (
+          <p className="px-2 text-xs italic text-slate-400 dark:text-slate-500">
+            {tr('Aucune mesure suggérée — ajoutez-en une ci-dessous.', 'No suggested measure — add one below.')}
+          </p>
+        )}
+
+        {/* Ligne : ajouter un moyen de contrôle pour ce danger */}
+        {!disabled && (
+          <div className="flex gap-1.5 pt-1">
+            <input
+              type="text"
+              value={adding}
+              onChange={e => setAdding(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addControl(); } }}
+              placeholder={tr('Ajouter un moyen de contrôle…', 'Add a control measure…')}
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
+            />
+            <button type="button" onClick={addControl} disabled={!adding.trim()}
+              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1">
+              <Plus className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ContextualControls({ hazards, controls, onChange, disabled, language = 'fr' }: {
   hazards: string[]; controls: string[];
   onChange: (v: string[]) => void; disabled: boolean; language?: Language;
 }) {
   const tr = (fr: string, en: string) => language === 'fr' ? fr : en;
-  const [customInput, setCustomInput] = useState('');
+  const tc = useContext(TenantControlsCtx);
 
   const toggle = (ctrl: string) => {
     if (disabled) return;
     onChange(controls.includes(ctrl) ? controls.filter(c => c !== ctrl) : [...controls, ctrl]);
   };
+  const replace = (oldC: string, newC: string) => onChange(controls.map(c => (c === oldC ? newC : c)));
 
-  const addCustom = () => {
-    const val = customInput.trim();
-    if (!val || controls.includes(val)) { setCustomInput(''); return; }
-    onChange([...controls, val]);
-    setCustomInput('');
-  };
-
-  const knownHazards = hazards.filter(h => HAZARD_CONTROLS[h]);
-  const allSuggested = new Set(knownHazards.flatMap(h => HAZARD_CONTROLS[h]));
-  const customControls = controls.filter(c => !allSuggested.has(c));
+  // Contrôles déjà cochés qui ne correspondent à aucune suggestion (statique ou tenant)
+  const allSuggested = new Set(
+    hazards.flatMap(h => [...(HAZARD_CONTROLS[h] ?? []), ...((tc?.byHazard(h) ?? []).map(c => c.label))]),
+  );
+  const orphanControls = controls.filter(c => !allSuggested.has(c));
 
   return (
     <div className="space-y-3">
@@ -1464,45 +1577,35 @@ function ContextualControls({ hazards, controls, onChange, disabled, language = 
         {tr('Mesures de contrôle de danger', 'Hazard control measures')}
       </label>
 
-      {knownHazards.length === 0 && (
+      {hazards.length === 0 && (
         <p className="text-xs text-slate-400 dark:text-slate-500 italic">
           {tr("Sélectionnez d'abord les dangers identifiés pour afficher les mesures suggérées.", 'Select identified hazards above to display suggested control measures.')}
         </p>
       )}
 
-      {knownHazards.map(hazard => (
-        <div key={hazard} className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-800">
-            <AlertTriangle className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-            <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">{hazard}</span>
-          </div>
-          <div className="p-3 space-y-1.5">
-            {HAZARD_CONTROLS[hazard].map(ctrl => (
-              <label key={ctrl} className={`flex items-start gap-2.5 cursor-pointer rounded px-2 py-1.5 transition-colors ${controls.includes(ctrl) ? 'bg-teal-50 dark:bg-teal-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
-                <input
-                  type="checkbox"
-                  checked={controls.includes(ctrl)}
-                  onChange={() => toggle(ctrl)}
-                  disabled={disabled}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600"
-                />
-                <span className={`text-xs leading-relaxed ${controls.includes(ctrl) ? 'text-teal-800 dark:text-teal-300 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
-                  {ctrl}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
+      {/* Une boîte par danger sélectionné (avec ajout/édition de moyens de contrôle) */}
+      {hazards.map(hazard => (
+        <HazardControlBox
+          key={hazard}
+          hazard={hazard}
+          staticControls={HAZARD_CONTROLS[hazard] ?? []}
+          tenantControls={tc?.byHazard(hazard) ?? []}
+          selected={controls}
+          disabled={disabled}
+          language={language}
+          onToggle={toggle}
+          onReplace={replace}
+        />
       ))}
 
-      {/* Contrôles personnalisés déjà ajoutés */}
-      {customControls.length > 0 && (
+      {/* Contrôles libres déjà ajoutés sans danger associé */}
+      {orphanControls.length > 0 && (
         <div className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
           <div className="px-3 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{tr('Contrôles personnalisés', 'Custom controls')}</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{tr('Autres contrôles', 'Other controls')}</span>
           </div>
           <div className="p-3 space-y-1.5">
-            {customControls.map(ctrl => (
+            {orphanControls.map(ctrl => (
               <label key={ctrl} className="flex items-start gap-2.5 cursor-pointer rounded px-2 py-1.5 bg-teal-50 dark:bg-teal-900/20">
                 <input type="checkbox" checked onChange={() => toggle(ctrl)} disabled={disabled}
                   className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600" />
@@ -1510,24 +1613,6 @@ function ContextualControls({ hazards, controls, onChange, disabled, language = 
               </label>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Ajout personnalisé */}
-      {!disabled && (
-        <div className="flex gap-1.5">
-          <input
-            type="text"
-            value={customInput}
-            onChange={e => setCustomInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
-            placeholder={tr('Ajouter un moyen de contrôle personnalisé…', 'Add a custom control measure…')}
-            className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none"
-          />
-          <button type="button" onClick={addCustom} disabled={!customInput.trim()}
-            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors flex items-center gap-1">
-            <Plus className="w-3 h-3" />
-          </button>
         </div>
       )}
 
@@ -1703,9 +1788,9 @@ function TaskSection({ ast, onChange, language, readOnly }: {
 }
 
 // ── Section: Steps ─────────────────────────────────────────────────────────
-function StepsSection({ ast, onChange, language, readOnly }: {
+function StepsSection({ ast, onChange, language, readOnly, tenant }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
-  language: Language; readOnly: boolean;
+  language: Language; readOnly: boolean; tenant: string;
 }) {
   const t = T[language].steps;
   const steps = ast.jobSteps;
@@ -1713,6 +1798,41 @@ function StepsSection({ ast, onChange, language, readOnly }: {
 
   const totalHazards = steps.reduce((acc, s) => acc + s.hazards.length, 0);
   const totalControls = steps.reduce((acc, s) => acc + s.controls.length, 0);
+
+  // Moyens de contrôle "standard" du tenant (persistés dans tenant_ast_options).
+  const [tenantControls, setTenantControls] = useState<TenantControl[]>([]);
+  useEffect(() => {
+    if (!tenant || !supabase) return;
+    let cancelled = false;
+    supabase.from('tenant_ast_options').select('id, label, hazard').eq('tenant_id', tenant).eq('category', 'control')
+      .then(({ data }: { data: TenantControl[] | null }) => { if (!cancelled && data) setTenantControls(data); }, () => {});
+    return () => { cancelled = true; };
+  }, [tenant]);
+
+  const tcApi: TenantControlsApi = {
+    byHazard: (h) => tenantControls.filter(c => c.hazard === h),
+    add: async (hazard, label) => {
+      if (tenantControls.some(c => c.hazard === hazard && c.label === label)) return;
+      const tempId = generateId();
+      setTenantControls(prev => [...prev, { id: tempId, label, hazard }]);
+      if (supabase && tenant) {
+        try {
+          const { data } = await supabase.from('tenant_ast_options')
+            .insert({ tenant_id: tenant, category: 'control', label, hazard, permanent: true })
+            .select('id').single();
+          if (data?.id) setTenantControls(prev => prev.map(c => (c.id === tempId ? { ...c, id: data.id } : c)));
+        } catch { /* conservé localement même si la persistance échoue */ }
+      }
+    },
+    update: async (id, label) => {
+      setTenantControls(prev => prev.map(c => (c.id === id ? { ...c, label } : c)));
+      if (supabase) { try { await supabase.from('tenant_ast_options').update({ label }).eq('id', id); } catch { /* noop */ } }
+    },
+    remove: async (id) => {
+      setTenantControls(prev => prev.filter(c => c.id !== id));
+      if (supabase) { try { await supabase.from('tenant_ast_options').delete().eq('id', id); } catch { /* noop */ } }
+    },
+  };
 
   const addStep = () => {
     onChange(p => ({
@@ -1759,6 +1879,7 @@ function StepsSection({ ast, onChange, language, readOnly }: {
   const sevOptions = t.sevLabels.slice(1).map((l, i) => ({ value: String(i + 1), label: `${i + 1} — ${l}` }));
 
   return (
+    <TenantControlsCtx.Provider value={tcApi}>
     <div>
       <Card
         title={t.cardTitle}
@@ -1816,6 +1937,7 @@ function StepsSection({ ast, onChange, language, readOnly }: {
         </div>
       </Card>
     </div>
+    </TenantControlsCtx.Provider>
   );
 }
 
@@ -3637,7 +3759,7 @@ export default function ASTPermit({
             <LotoSection ast={ast} onChange={updateAst} readOnly={readOnly} language={language} tenant={tenant} />
           )}
           {section === 'steps' && (
-            <StepsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
+            <StepsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} tenant={tenant} />
           )}
           {section === 'ppe' && (
             <PPESection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} tenant={tenant} />
