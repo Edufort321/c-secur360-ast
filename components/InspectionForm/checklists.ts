@@ -597,21 +597,40 @@ export const EQUIPMENT_CHECKLISTS: Record<InspectionType, EquipmentChecklist> = 
   ppe_general:      ppeGeneral,
 };
 
-export const INSPECTION_TYPE_OPTIONS: { value: InspectionType; label: string; icon: string }[] = [
-  { value: 'harness',           label: 'Harnais antichute',               icon: '🦺' },
-  { value: 'forklift',          label: 'Chariot élévateur',               icon: '🏗️' },
-  { value: 'aerial',            label: 'Nacelle / Plateforme élévatrice', icon: '🚧' },
-  { value: 'scaffold',          label: 'Échafaudage',                     icon: '🏗️' },
-  { value: 'ladder',            label: 'Échelle portative',               icon: '🪜' },
-  { value: 'power_tools',       label: 'Outillage électrique',            icon: '🔧' },
-  { value: 'fire_extinguisher', label: 'Extincteur portatif',             icon: '🧯' },
-  { value: 'gas_detector',      label: 'Détecteur multigaz',              icon: '📡' },
-  { value: 'respiratory',       label: 'Protection respiratoire',         icon: '😷' },
-  { value: 'ppe_general',       label: 'EPI général',                    icon: '⛑️' },
+export const INSPECTION_TYPE_OPTIONS: { value: InspectionType; label: string }[] = [
+  { value: 'harness',           label: 'Harnais antichute'               },
+  { value: 'forklift',          label: 'Chariot élévateur'               },
+  { value: 'aerial',            label: 'Nacelle / Plateforme élévatrice' },
+  { value: 'scaffold',          label: 'Échafaudage'                     },
+  { value: 'ladder',            label: 'Échelle portative'               },
+  { value: 'power_tools',       label: 'Outillage électrique'            },
+  { value: 'fire_extinguisher', label: 'Extincteur portatif'             },
+  { value: 'gas_detector',      label: 'Détecteur multigaz'              },
+  { value: 'respiratory',       label: 'Protection respiratoire'         },
+  { value: 'ppe_general',       label: 'EPI général'                     },
 ];
 
 export type ItemResult = 'pass' | 'fail' | 'na';
 export type OverallResult = 'conforme' | 'conditionnel' | 'non_conforme' | 'retrait' | 'incomplete';
+
+export type InspectionFrequency =
+  | 'avant_utilisation'
+  | 'quotidienne'
+  | 'hebdomadaire'
+  | 'mensuelle'
+  | 'trimestrielle'
+  | 'semestrielle'
+  | 'annuelle';
+
+export const FREQUENCY_OPTIONS: { value: InspectionFrequency; label: string; days: number }[] = [
+  { value: 'avant_utilisation', label: 'Avant chaque utilisation', days: 1   },
+  { value: 'quotidienne',       label: 'Quotidienne',              days: 1   },
+  { value: 'hebdomadaire',      label: 'Hebdomadaire',             days: 7   },
+  { value: 'mensuelle',         label: 'Mensuelle',                days: 30  },
+  { value: 'trimestrielle',     label: 'Trimestrielle',            days: 90  },
+  { value: 'semestrielle',      label: 'Semestrielle',             days: 182 },
+  { value: 'annuelle',          label: 'Annuelle',                 days: 365 },
+];
 
 export function calcOverallResult(
   type: InspectionType,

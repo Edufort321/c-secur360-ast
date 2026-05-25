@@ -212,6 +212,19 @@ const BODY_REGION_LABELS: Record<string, string> = {
   'right-knee-back':    'Genou droit (arrière)',
   'left-calf':          'Mollet gauche',
   'right-calf':         'Mollet droit',
+  // ── Nouveaux IDs bilatéraux indépendants (overlay) ──
+  'left-biceps':           'Biceps gauche',
+  'right-biceps':          'Biceps droit',
+  'left-triceps':          'Triceps gauche',
+  'right-triceps':         'Triceps droit',
+  'left-quad':             'Quadriceps gauche',
+  'right-quad':            'Quadriceps droit',
+  'left-front-deltoid':    'Deltoïde avant gauche',
+  'right-front-deltoid':   'Deltoïde avant droit',
+  'left-back-deltoid':     'Deltoïde arrière gauche',
+  'right-back-deltoid':    'Deltoïde arrière droit',
+  'left-gluteal':          'Fessier gauche',
+  'right-gluteal':         'Fessier droit',
 };
 
 const PROVINCE_INFO: Record<Province, {
@@ -486,8 +499,17 @@ const OVERLAY_IDS = new Set([
   'left-eye', 'right-eye',
   'left-hand', 'right-hand', 'left-hand-back', 'right-hand-back',
   'left-foot', 'right-foot', 'left-foot-back', 'right-foot-back',
-  // Genoux individuels + 'knees' bilateral (rétrocompat) géré par overlay
   'knees', 'left-knee', 'right-knee', 'left-knee-back', 'right-knee-back',
+  // Muscles bilatéraux — intercept par overlay gauche/droite indépendant
+  'left-biceps', 'right-biceps',
+  'left-triceps', 'right-triceps',
+  'left-forearm', 'right-forearm',
+  'left-front-deltoid', 'right-front-deltoid',
+  'left-back-deltoid', 'right-back-deltoid',
+  'left-quad', 'right-quad',
+  'left-calf', 'right-calf',
+  'left-hamstring', 'right-hamstring',
+  'left-gluteal', 'right-gluteal',
 ]);
 
 function BodyDiagram({ selected, onChange, readOnly }: {
@@ -499,8 +521,17 @@ function BodyDiagram({ selected, onChange, readOnly }: {
 
   const on = (id: string) => selected.includes(id);
 
+  // IDs bilatéraux legacy que le clic librairie ne doit jamais ajouter directement
+  // (ils sont gérés via les rects overlay bop() qui rajoutent left-/right- indépendamment)
+  const BILATERAL_BLOCKED = new Set([
+    'biceps', 'triceps', 'forearm',
+    'front-deltoids', 'back-deltoids',
+    'quadriceps', 'calves', 'hamstring', 'gluteal',
+  ]);
+
   const toggle = (id: string) => {
     if (readOnly) return;
+    if (BILATERAL_BLOCKED.has(id)) return;
     onChange(on(id) ? selected.filter(m => m !== id) : [...selected, id]);
   };
 
@@ -537,6 +568,24 @@ function BodyDiagram({ selected, onChange, readOnly }: {
     };
   };
 
+  // Overlay muscle bilatéral : transparent si non sélectionné, rouge si sélectionné.
+  // legacyId = ID librairie bilatéral (rétrocompat données existantes)
+  const bop = (id: string, legacyId: string) => {
+    const sel = on(id) || on(legacyId);
+    return {
+      fill: sel ? '#ef4444' : 'transparent',
+      stroke: sel ? '#b91c1c' : 'none',
+      strokeWidth: 0.7,
+      style: { cursor: readOnly ? 'default' : 'pointer', transition: 'fill 0.15s', pointerEvents: 'all' as React.CSSProperties['pointerEvents'] },
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (readOnly) return;
+        const clean = selected.filter(m => m !== legacyId);
+        onChange(clean.includes(id) ? clean.filter(m => m !== id) : [...clean, id]);
+      },
+    };
+  };
+
   // Container : librairie 320 px + pieds ~24 px ; viewBox = (320+24)/1.6 = 215
   const W = 160, H_LIB = 320, H_TOTAL = 344, VB_H = 215;
 
@@ -567,6 +616,40 @@ function BodyDiagram({ selected, onChange, readOnly }: {
 
         <svg style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
           width={W} height={H_TOTAL} viewBox={`0 0 100 ${VB_H}`}>
+
+          {/* ── Muscles bilatéraux vue avant ── */}
+          {view === 'anterior' && (
+            <>
+              <rect x="11" y="37" width="16" height="23" rx="3" {...bop('left-front-deltoid', 'front-deltoids')}><title>{BODY_REGION_LABELS['left-front-deltoid']}</title></rect>
+              <rect x="73" y="37" width="16" height="23" rx="3" {...bop('right-front-deltoid', 'front-deltoids')}><title>{BODY_REGION_LABELS['right-front-deltoid']}</title></rect>
+              <rect x="4" y="60" width="14" height="24" rx="3" {...bop('left-biceps', 'biceps')}><title>{BODY_REGION_LABELS['left-biceps']}</title></rect>
+              <rect x="82" y="60" width="14" height="24" rx="3" {...bop('right-biceps', 'biceps')}><title>{BODY_REGION_LABELS['right-biceps']}</title></rect>
+              <rect x="0" y="84" width="10" height="17" rx="2" {...bop('left-forearm', 'forearm')}><title>{BODY_REGION_LABELS['left-forearm']}</title></rect>
+              <rect x="90" y="84" width="10" height="17" rx="2" {...bop('right-forearm', 'forearm')}><title>{BODY_REGION_LABELS['right-forearm']}</title></rect>
+              <rect x="22" y="115" width="17" height="37" rx="3" {...bop('left-quad', 'quadriceps')}><title>{BODY_REGION_LABELS['left-quad']}</title></rect>
+              <rect x="61" y="115" width="17" height="37" rx="3" {...bop('right-quad', 'quadriceps')}><title>{BODY_REGION_LABELS['right-quad']}</title></rect>
+              <rect x="20" y="157" width="20" height="38" rx="3" {...bop('left-calf', 'calves')}><title>{BODY_REGION_LABELS['left-calf']}</title></rect>
+              <rect x="60" y="157" width="20" height="38" rx="3" {...bop('right-calf', 'calves')}><title>{BODY_REGION_LABELS['right-calf']}</title></rect>
+            </>
+          )}
+
+          {/* ── Muscles bilatéraux vue arrière ── */}
+          {view === 'posterior' && (
+            <>
+              <rect x="11" y="37" width="16" height="23" rx="3" {...bop('left-back-deltoid', 'back-deltoids')}><title>{BODY_REGION_LABELS['left-back-deltoid']}</title></rect>
+              <rect x="73" y="37" width="16" height="23" rx="3" {...bop('right-back-deltoid', 'back-deltoids')}><title>{BODY_REGION_LABELS['right-back-deltoid']}</title></rect>
+              <rect x="4" y="60" width="13" height="24" rx="3" {...bop('left-triceps', 'triceps')}><title>{BODY_REGION_LABELS['left-triceps']}</title></rect>
+              <rect x="83" y="60" width="13" height="24" rx="3" {...bop('right-triceps', 'triceps')}><title>{BODY_REGION_LABELS['right-triceps']}</title></rect>
+              <rect x="0" y="84" width="10" height="24" rx="2" {...bop('left-forearm', 'forearm')}><title>{BODY_REGION_LABELS['left-forearm']}</title></rect>
+              <rect x="90" y="84" width="10" height="24" rx="2" {...bop('right-forearm', 'forearm')}><title>{BODY_REGION_LABELS['right-forearm']}</title></rect>
+              <rect x="28" y="92" width="20" height="24" rx="3" {...bop('left-gluteal', 'gluteal')}><title>{BODY_REGION_LABELS['left-gluteal']}</title></rect>
+              <rect x="52" y="92" width="20" height="24" rx="3" {...bop('right-gluteal', 'gluteal')}><title>{BODY_REGION_LABELS['right-gluteal']}</title></rect>
+              <rect x="22" y="115" width="17" height="37" rx="3" {...bop('left-hamstring', 'hamstring')}><title>{BODY_REGION_LABELS['left-hamstring']}</title></rect>
+              <rect x="62" y="115" width="17" height="37" rx="3" {...bop('right-hamstring', 'hamstring')}><title>{BODY_REGION_LABELS['right-hamstring']}</title></rect>
+              <rect x="18" y="155" width="22" height="42" rx="3" {...bop('left-calf', 'calves')}><title>{BODY_REGION_LABELS['left-calf']}</title></rect>
+              <rect x="60" y="155" width="22" height="42" rx="3" {...bop('right-calf', 'calves')}><title>{BODY_REGION_LABELS['right-calf']}</title></rect>
+            </>
+          )}
 
           {/* ── Yeux (vue avant, cliquables) — tête de la librairie : x≈40-59, y≈0-25 ── */}
           {view === 'anterior' && (['left-eye', 'right-eye'] as const).map((id, i) => {
@@ -619,80 +702,49 @@ function BodyDiagram({ selected, onChange, readOnly }: {
             </>
           )}
 
-          {/* ── Mains — ovale allongé vertical avec 3 bosses de doigts
-              Avant-bras gauche finit ≈ x=4-19, y=101 / droit ≈ x=81-97, y=101
-              Bosses doigts (2 unités) → indication stylisée sans griffes              ── */}
+          {/* ── Mains ── */}
           {view === 'anterior' && (
             <>
-              {/* Main gauche avant — avant-bras finit x=0-7, y=101 */}
-              <path
-                d="M 0,101 L 7,101 Q 13,106 13,113 Q 12,119 10,121 L 9,123 L 7,121 L 5.5,123 L 4,121 L 2.5,123 Q 0,121 0,115 Q 0,106 0,101 Z"
-                strokeLinejoin="round"
-                {...op('left-hand')}>
+              <ellipse cx="4" cy="109" rx="4" ry="8" {...op('left-hand')}>
                 <title>{BODY_REGION_LABELS['left-hand']}</title>
-              </path>
-              {/* Main droite avant — avant-bras finit x=93-100, y=101 */}
-              <path
-                d="M 100,101 L 93,101 Q 87,106 87,113 Q 88,119 90,121 L 91,123 L 93,121 L 94.5,123 L 96,121 L 97.5,123 Q 100,121 100,115 Q 100,106 100,101 Z"
-                strokeLinejoin="round"
-                {...op('right-hand')}>
+              </ellipse>
+              <ellipse cx="96" cy="109" rx="4" ry="8" {...op('right-hand')}>
                 <title>{BODY_REGION_LABELS['right-hand']}</title>
-              </path>
+              </ellipse>
             </>
           )}
           {view === 'posterior' && (
             <>
-              {/* Main gauche arrière — avant-bras finit x=0-7, y=108 */}
-              <path
-                d="M 0,108 L 7,108 Q 13,113 13,120 Q 12,126 10,128 L 9,130 L 7,128 L 5.5,130 L 4,128 L 2.5,130 Q 0,128 0,122 Q 0,113 0,108 Z"
-                strokeLinejoin="round"
-                {...op('left-hand-back')}>
+              <ellipse cx="4" cy="116" rx="4" ry="8" {...op('left-hand-back')}>
                 <title>{BODY_REGION_LABELS['left-hand-back']}</title>
-              </path>
-              {/* Main droite arrière — avant-bras finit x=93-100, y=108 */}
-              <path
-                d="M 100,108 L 93,108 Q 87,113 87,120 Q 88,126 90,128 L 91,130 L 93,128 L 94.5,130 L 96,128 L 97.5,130 Q 100,128 100,122 Q 100,113 100,108 Z"
-                strokeLinejoin="round"
-                {...op('right-hand-back')}>
+              </ellipse>
+              <ellipse cx="96" cy="116" rx="4" ry="8" {...op('right-hand-back')}>
                 <title>{BODY_REGION_LABELS['right-hand-back']}</title>
-              </path>
+              </ellipse>
             </>
           )}
 
-          {/* ── Pieds — vue dorsale (de face/dessus), forme simple en trapèze arrondi
-              Cheville étroite (≈14u) en haut, s'élargit vers les orteils (≈26u) en bas
-              Pied gauche incline légèrement vers la gauche (latéral), droit vers la droite
-              PAS de griffes ni de profil latéral — vue de face anatomique              ── */}
+          {/* ── Pieds ── */}
           {view === 'anterior' && (
             <>
-              {/* Pied gauche — mollet finit x=21-35 (centre=28), expansion symétrique */}
-              <path
-                d="M 21,196 L 35,196 Q 40,200 40,208 Q 38,214 28,214 Q 18,214 16,208 Q 16,200 21,196 Z"
-                strokeLinejoin="round"
-                {...op('left-foot')}>
+              <path d="M 30,196 L 23,197 Q 13,198 8,205 Q 14,208 21,206 Q 27,203 30,196 Z"
+                strokeLinejoin="round" {...op('left-foot')}>
                 <title>{BODY_REGION_LABELS['left-foot']}</title>
               </path>
-              {/* Pied droit — mollet finit x=63-77 (centre=70), expansion symétrique */}
-              <path
-                d="M 63,196 L 77,196 Q 84,200 84,208 Q 82,214 70,214 Q 58,214 56,208 Q 56,200 63,196 Z"
-                strokeLinejoin="round"
-                {...op('right-foot')}>
+              <path d="M 70,196 L 77,197 Q 87,198 92,205 Q 86,208 79,206 Q 73,203 70,196 Z"
+                strokeLinejoin="round" {...op('right-foot')}>
                 <title>{BODY_REGION_LABELS['right-foot']}</title>
               </path>
             </>
           )}
           {view === 'posterior' && (
             <>
-              <path
-                d="M 21,196 L 35,196 Q 40,200 40,208 Q 38,214 28,214 Q 18,214 16,208 Q 16,200 21,196 Z"
-                strokeLinejoin="round"
-                {...op('left-foot-back')}>
+              <path d="M 30,198 L 23,199 Q 13,200 8,207 Q 14,210 21,208 Q 27,205 30,198 Z"
+                strokeLinejoin="round" {...op('left-foot-back')}>
                 <title>{BODY_REGION_LABELS['left-foot-back']}</title>
               </path>
-              <path
-                d="M 63,196 L 77,196 Q 84,200 84,208 Q 82,214 70,214 Q 58,214 56,208 Q 56,200 63,196 Z"
-                strokeLinejoin="round"
-                {...op('right-foot-back')}>
+              <path d="M 70,198 L 77,199 Q 87,200 92,207 Q 86,210 79,208 Q 73,205 70,198 Z"
+                strokeLinejoin="round" {...op('right-foot-back')}>
                 <title>{BODY_REGION_LABELS['right-foot-back']}</title>
               </path>
             </>
