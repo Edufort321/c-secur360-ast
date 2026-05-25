@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, XCircle, AlertTriangle, AlertOctagon,
-  Clock, ClipboardCheck, Plus, Edit2, ChevronRight, Loader2,
+  Clock, ClipboardCheck, Plus, ChevronRight, Loader2,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -152,15 +152,11 @@ export default function EquipmentPublicPage() {
 
         {/* Equipment info card */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
             <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <ClipboardCheck size={15} className="text-teal-600" />
               {fr ? 'Fiche équipement' : 'Equipment sheet'}
             </span>
-            <Link href={`/${tenant}/equipment/${id}/edit`}
-              className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800">
-              <Edit2 size={12} /> {fr ? 'Modifier' : 'Edit'}
-            </Link>
           </div>
           <div className="px-5 py-4 space-y-2">
             <div className="flex items-start justify-between">

@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   ClipboardCheck, Plus, Search, Clock, CheckCircle, XCircle,
   AlertTriangle, AlertOctagon, Loader2, ChevronRight, Wrench,
-  CalendarClock, TrendingUp, QrCode, Edit2, SlidersHorizontal,
+  CalendarClock, TrendingUp, QrCode, SlidersHorizontal,
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -352,15 +352,10 @@ export default function InspectionsPage() {
                         className="flex items-center gap-1 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg">
                         <Plus size={12} /> Inspecter
                       </Link>
-                      {/* Modifier la fiche */}
+                      {/* Fiche & QR — mène au formulaire d'édition qui contient le code QR */}
                       <Link href={`/${tenant}/equipment/${eq.id}/edit`}
                         className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-lg">
-                        <Edit2 size={11} /> Modifier
-                      </Link>
-                      {/* QR / Fiche publique */}
-                      <Link href={`/${tenant}/equipment/${eq.id}`}
-                        className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium rounded-lg">
-                        <QrCode size={11} /> Fiche QR
+                        <QrCode size={11} /> Fiche / QR
                       </Link>
                       {/* Dernière inspection */}
                       {latest && (
