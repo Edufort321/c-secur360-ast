@@ -411,6 +411,11 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       });
   }, [inspectionId]);
 
+  // ── Reset history cache when equipment identifier changes ────────────────
+  useEffect(() => {
+    setHistoryLoaded(false);
+  }, [form.equipmentSerial, form.equipmentType, form.equipmentName]);
+
   // ── History lazy load ────────────────────────────────────────────────────
   useEffect(() => {
     if (activeTab !== 'history' || !supabase || historyLoaded) return;
@@ -600,10 +605,10 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     savingRef.current = false;
     setSaveMsg(status === 'draft' ? 'Brouillon enregistré' : 'Inspection soumise');
     setTimeout(() => setSaveMsg(''), 3000);
+    setHistoryLoaded(false);
 
     if (status === 'submitted') {
       setActiveTab('qr');
-      setHistoryLoaded(false);
     }
   }
 
@@ -648,24 +653,31 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
 
   async function handlePrintQR() {
     if (!internalId) return;
-    const url    = `${window.location.origin}/${tenant}/inspections/${internalId}`;
-    const dataUrl = await QRCode.toDataURL(url, { width: 400, margin: 2 });
-    const win    = window.open('', '_blank', 'width=520,height=640');
+    const url     = `${window.location.origin}/${tenant}/inspections/${internalId}`;
+    const qrData  = await QRCode.toDataURL(url, { width: 400, margin: 2 });
+    const win     = window.open('', '_blank', 'width=520,height=720');
     if (!win) return;
     const esc        = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const num        = existingRow?.inspection_number ?? '';
     const equipLabel = INSPECTION_TYPE_OPTIONS.find(o => o.value === form.equipmentType)?.label ?? form.equipmentType;
+    const logoSrc    = logoUrl || `${window.location.origin}/c-secur360-logo.png`;
+    const scanLabel  = I.fr ? 'Scannez pour voir la dernière inspection' : 'Scan to view the latest inspection';
     win.document.write(
-      `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>QR – ${esc(num)}</title>` +
-      `<style>body{font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px;background:#fff}` +
-      `img{width:280px;height:280px}h2{margin:14px 0 4px;font-size:22px;font-weight:700;text-align:center}` +
-      `p{margin:3px 0;color:#555;font-size:14px;text-align:center}.sub{color:#999;font-size:12px;margin-top:8px}` +
+      `<!DOCTYPE html><html lang="${I.fr ? 'fr' : 'en'}"><head><meta charset="utf-8"><title>QR – ${esc(num)}</title>` +
+      `<style>body{font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:32px;background:#fff;gap:0}` +
+      `.logo{height:56px;width:auto;margin-bottom:4px}.site{color:#94a3b8;font-size:11px;margin-bottom:16px}` +
+      `.qr{width:260px;height:260px;margin-bottom:16px}` +
+      `h2{margin:0 0 4px;font-size:20px;font-weight:800;text-align:center;color:#0f172a}` +
+      `p{margin:2px 0;color:#64748b;font-size:13px;text-align:center}.sub{color:#94a3b8;font-size:11px;margin-top:10px}` +
       `@media print{button{display:none}}</style>` +
-      `</head><body><img src="${dataUrl}" alt="QR"/>` +
+      `</head><body>` +
+      `<img class="logo" src="${logoSrc}" alt="Logo"/>` +
+      `<p class="site">c-secur360.ca</p>` +
+      `<img class="qr" src="${qrData}" alt="QR"/>` +
       `<h2>${esc(num)}</h2>` +
       `<p>${esc(equipLabel)}${form.equipmentName ? ' — ' + esc(form.equipmentName) : ''}</p>` +
       (form.equipmentSerial ? `<p>${esc(form.equipmentSerial)}</p>` : '') +
-      `<p class="sub">Scannez pour voir la dernière inspection</p>` +
+      `<p class="sub">${scanLabel}</p>` +
       `<script>window.onload=()=>window.print();<\/script></body></html>`
     );
     win.document.close();
@@ -1316,7 +1328,10 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           ) : (
             <>
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col items-center gap-4 w-full max-w-xs">
-                <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-14 w-auto object-contain" />
+                <div className="flex flex-col items-center gap-0.5">
+                  <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-14 w-auto object-contain" />
+                  <span className="text-xs text-gray-400">c-secur360.ca</span>
+                </div>
                 <QRCodeSVG
                   value={`${window.location.origin}/${tenant}/inspections/${internalId}`}
                   size={220}
@@ -1379,7 +1394,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
               {historyRows.map(row => (
                 <a
                   key={row.id}
-                  href={`/${tenant}/inspections/${row.id}`}
+                  href={`/${tenant}/inspections/${row.id}/edit`}
                   className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
