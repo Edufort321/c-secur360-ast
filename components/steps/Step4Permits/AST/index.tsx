@@ -2241,6 +2241,22 @@ function PPESection({ ast, onChange, language, readOnly, tenant }: {
 }
 
 // ── Section: Equipment ─────────────────────────────────────────────────────
+// Liste pré-remplie de véhicules / équipements industriels (suggestions non
+// restrictives : saisie libre toujours possible). Alignée sur les types
+// d'inspection d'équipement (aerial=nacelle, forklift, scaffold, ladder…).
+const INDUSTRIAL_VEHICLES: Record<Language, string[]> = {
+  fr: [
+    'Nacelle élévatrice', 'Plateforme à ciseaux', 'Chariot élévateur', 'Chariot télescopique',
+    'Camion-nacelle', 'Échafaudage roulant', 'Échelle', 'Grue mobile', 'Mini-excavatrice',
+    'Rétrocaveuse', 'Chargeuse', 'Génératrice', 'Compresseur', 'Camion-flèche', 'Tracteur',
+  ],
+  en: [
+    'Aerial lift', 'Scissor lift', 'Forklift', 'Telehandler', 'Bucket truck',
+    'Rolling scaffold', 'Ladder', 'Mobile crane', 'Mini excavator', 'Backhoe',
+    'Loader', 'Generator', 'Compressor', 'Boom truck', 'Tractor',
+  ],
+};
+
 function EquipmentSection({ ast, onChange, language, readOnly }: {
   ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
   language: Language; readOnly: boolean;
@@ -2331,6 +2347,9 @@ function EquipmentSection({ ast, onChange, language, readOnly }: {
 
       <Card title={t.cardVehicles} icon={<Wrench className="w-5 h-5" />}>
         <div className="space-y-4">
+          <datalist id="ast-industrial-vehicles">
+            {INDUSTRIAL_VEHICLES[language].map(v => <option key={v} value={v} />)}
+          </datalist>
           {eq.vehicles.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2346,7 +2365,8 @@ function EquipmentSection({ ast, onChange, language, readOnly }: {
                   {eq.vehicles.map(v => (
                     <tr key={v.id}>
                       <td className="py-2 pr-3">
-                        <input type="text" value={v.type} onChange={e => updateVehicle(v.id, 'type', e.target.value)} disabled={readOnly}
+                        <input type="text" list="ast-industrial-vehicles" value={v.type} onChange={e => updateVehicle(v.id, 'type', e.target.value)} disabled={readOnly}
+                          placeholder={language === 'fr' ? 'ex. Nacelle élévatrice' : 'e.g. Aerial lift'}
                           className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
                       </td>
                       <td className="py-2 pr-3">
@@ -2678,14 +2698,29 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
 }
 
 // ── Génération PDF de l'AST (champs remplis seulement) ─────────────────────
-async function generateAstPdf(ast: ASTPermit, language: Language) {
+async function generateAstPdf(ast: ASTPermit, language: Language, logoDataUrl?: string | null) {
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
   const { default: jsPDF } = await import('jspdf');
   const autoTable = (await import('jspdf-autotable')).default;
 
   const doc = new jsPDF('p', 'mm', 'a4');
   const margin = 14;
-  let y = 16;
+  let y = 14;
+
+  // Logo en haut à gauche (tenant ou C-Secur par défaut)
+  if (logoDataUrl) {
+    try {
+      const fmt = logoDataUrl.includes('image/jpeg') || logoDataUrl.includes('image/jpg') ? 'JPEG'
+        : logoDataUrl.includes('image/webp') ? 'WEBP' : 'PNG';
+      const im = new Image();
+      im.src = logoDataUrl;
+      await new Promise<void>(res => { im.onload = () => res(); im.onerror = () => res(); });
+      const h = 14;
+      const w = im.naturalWidth && im.naturalHeight ? Math.min((im.naturalWidth / im.naturalHeight) * h, 50) : 28;
+      doc.addImage(logoDataUrl, fmt, margin, y, w, h);
+      y += h + 6;
+    } catch { /* logo optionnel */ }
+  }
 
   doc.setFontSize(16); doc.setFont('helvetica', 'bold');
   doc.text(tr('Analyse Sécurité au Travail', 'Job Safety Analysis'), margin, y);
@@ -2786,9 +2821,34 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
   const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
   const [pdfBusy, setPdfBusy] = useState(false);
 
+  // Logo pour le PDF : celui du tenant (tenants.logo_url) sinon C-Secur par défaut.
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let url = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : '';
+      if (supabase && tenant) {
+        try {
+          const { data } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
+          if (data?.logo_url) url = data.logo_url as string;
+        } catch { /* défaut */ }
+      }
+      if (!url) return;
+      try {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise<string>((res, rej) => {
+          const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(blob);
+        });
+        if (!cancelled) setLogoDataUrl(dataUrl);
+      } catch { /* logo optionnel */ }
+    })();
+    return () => { cancelled = true; };
+  }, [tenant]);
+
   const downloadPdf = async () => {
     setPdfBusy(true);
-    try { await generateAstPdf(ast, language); }
+    try { await generateAstPdf(ast, language, logoDataUrl); }
     catch { alert(tr('Échec de la génération du PDF.', 'PDF generation failed.')); }
     finally { setPdfBusy(false); }
   };
