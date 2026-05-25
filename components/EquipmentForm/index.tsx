@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Camera, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react';
+import { Camera, Trash2, Save, ArrowLeft, Loader2, QrCode, ClipboardCopy, Download, ClipboardCheck } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   INSPECTION_TYPE_OPTIONS, FREQUENCY_OPTIONS, CANADIAN_PROVINCES,
   type InspectionType, type InspectionFrequency, type ProvinceCode,
@@ -70,10 +71,12 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
   const { lang } = useLanguage();
   const fr = lang === 'fr';
 
-  const [form,    setForm]    = useState<FormState>(EMPTY);
-  const [saving,  setSaving]  = useState(false);
-  const [msg,     setMsg]     = useState('');
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [form,      setForm]      = useState<FormState>(EMPTY);
+  const [saving,    setSaving]    = useState(false);
+  const [msg,       setMsg]       = useState('');
+  const [logoUrl,   setLogoUrl]   = useState<string | null>(null);
+  const [currentId, setCurrentId] = useState<string | null>(equipmentId ?? null);
+  const [copied,    setCopied]    = useState(false);
 
   // Load logo
   useEffect(() => {
@@ -131,10 +134,33 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
 
     setSaving(false);
     if (savedId) {
+      setCurrentId(savedId);
       setMsg(fr ? 'Enregistré ✓' : 'Saved ✓');
       setTimeout(() => setMsg(''), 2500);
       onSaved?.(savedId);
     }
+  }
+
+  function handleCopyLink() {
+    if (!currentId) return;
+    const url = `${window.location.origin}/${tenant}/equipment/${currentId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function handleDownloadQR() {
+    if (!currentId) return;
+    const svg = document.getElementById('equipment-qr-svg');
+    if (!svg) return;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([xml], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `qr-${form.equipmentName || currentId}.svg`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   const fieldClass = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400';
@@ -308,6 +334,60 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
             />
           </div>
         </section>
+
+        {/* Code QR — visible dès qu'un ID existe */}
+        {currentId && (
+          <section className="bg-white rounded-xl border border-teal-200 overflow-hidden">
+            <div className="px-5 py-3 bg-teal-50 border-b border-teal-100 flex items-center gap-2">
+              <QrCode size={15} className="text-teal-600" />
+              <span className="text-sm font-semibold text-teal-800">
+                {fr ? 'Code QR de l\'équipement' : 'Equipment QR code'}
+              </span>
+            </div>
+            <div className="p-5 flex flex-col items-center gap-4">
+              <p className="text-xs text-gray-500 text-center">
+                {fr
+                  ? 'Imprimez ce code et collez-le sur l\'équipement. Il donne accès à la fiche publique et permet de démarrer une inspection directement.'
+                  : 'Print and attach this code to the equipment. It gives access to the public sheet and allows starting an inspection directly.'}
+              </p>
+
+              <div className="p-4 bg-white border-2 border-gray-200 rounded-2xl shadow-sm">
+                <QRCodeSVG
+                  id="equipment-qr-svg"
+                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/${tenant}/equipment/${currentId}`}
+                  size={180}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+
+              <div className="flex gap-2 w-full max-w-xs">
+                <button
+                  onClick={handleCopyLink}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <ClipboardCopy size={14} />
+                  {copied ? (fr ? 'Copié ✓' : 'Copied ✓') : (fr ? 'Copier le lien' : 'Copy link')}
+                </button>
+                <button
+                  onClick={handleDownloadQR}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Download size={14} />
+                  {fr ? 'Télécharger' : 'Download'}
+                </button>
+              </div>
+
+              <a
+                href={`/${tenant}/equipment/${currentId}/inspect`}
+                className="flex items-center gap-1.5 text-xs text-teal-600 hover:text-teal-800"
+              >
+                <ClipboardCheck size={13} />
+                {fr ? 'Démarrer une inspection →' : 'Start inspection →'}
+              </a>
+            </div>
+          </section>
+        )}
 
       </div>
     </div>
