@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt, Download, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { computeSubState } from '@/lib/subscription';
@@ -41,6 +41,9 @@ export default function TenantManagePage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [savedJson, setSavedJson] = useState('');
+  const [tsYear, setTsYear] = useState(new Date().getFullYear());
+  const [tsData, setTsData] = useState<any[]>([]);
+  const [tsLoading, setTsLoading] = useState(false);
   const profileKey = (t: any) => JSON.stringify({
     c: t?.companyName ?? '', s: t?.subdomain ?? '', d: t?.domain ?? '', b: t?.billing_email ?? '',
     p: t?.plan ?? '', a: t?.isActive !== false, ar: t?.archived === true,
@@ -161,6 +164,43 @@ export default function TenantManagePage() {
   }
 
   const inputCls = 'w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function loadTimesheets(year: number) {
+    setTsLoading(true);
+    const start = `${year}-01-01`; const end = `${year}-12-31`;
+    const { data } = await supabase.from('timesheets').select('*')
+      .eq('tenant_id', id).gte('period_start', start).lte('period_start', end)
+      .order('period_start', { ascending: true });
+    setTsData(data || []);
+    setTsLoading(false);
+  }
+
+  function exportTimesheetsCSV() {
+    if (!tsData.length) return;
+    const headers = ['Employé', 'Courriel', 'Période début', 'Période fin', 'Semaine', 'Statut', 'Régulier (h)', 'Temps sup (h)', 'Majoration (h)', 'KM (travail)', 'KM (perso)', 'Montant ($)'];
+    const rows = tsData.map(r => {
+      const wn = isoWeek(r.period_start);
+      return [
+        r.employee_name ?? '', r.employee_email ?? '',
+        r.period_start ?? '', r.period_end ?? '',
+        `S${wn}`, r.status ?? '',
+        r.total_regular ?? 0, r.total_overtime ?? 0, r.total_premium ?? 0,
+        r.total_km ?? 0, r.total_km_personal ?? 0, r.total_amount ?? 0,
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = `data:text/csv;charset=utf-8,﻿${encodeURIComponent(csv)}`;
+    a.download = `feuilles-temps-${id}-${tsYear}.csv`;
+    a.click();
+  }
+
+  function isoWeek(dateStr: string): number {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const w1 = new Date(d.getFullYear(), 0, 4);
+    return 1 + Math.round(((d.getTime() - w1.getTime()) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
+  }
 
   const badge = {
     active: { label: 'Actif', cls: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
@@ -390,6 +430,74 @@ export default function TenantManagePage() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Section Feuilles de temps — export CSV */}
+            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <h2 className="flex items-center gap-2 font-bold"><Clock size={16} /> Feuilles de temps</h2>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={tsYear}
+                    onChange={e => { const y = Number(e.target.value); setTsYear(y); loadTimesheets(y); }}
+                    onFocus={() => !tsData.length && loadTimesheets(tsYear)}
+                    className="rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600"
+                  >
+                    {[tsYear + 1, tsYear, tsYear - 1, tsYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  <button onClick={() => { if (!tsData.length) loadTimesheets(tsYear); else loadTimesheets(tsYear); }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                    {tsLoading ? <Loader2 size={14} className="animate-spin" /> : 'Charger'}
+                  </button>
+                  <button onClick={exportTimesheetsCSV} disabled={!tsData.length}
+                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40">
+                    <Download size={14} /> Export CSV
+                  </button>
+                </div>
+              </div>
+              {tsData.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-gray-400">
+                  {tsLoading ? <Loader2 className="mx-auto animate-spin" /> : 'Cliquez « Charger » pour afficher les feuilles.'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700">
+                        <th className="px-4 py-2">Semaine</th>
+                        <th className="px-4 py-2">Employé</th>
+                        <th className="px-4 py-2">Période</th>
+                        <th className="px-4 py-2 text-center">Statut</th>
+                        <th className="px-4 py-2 text-right">Régul (h)</th>
+                        <th className="px-4 py-2 text-right">Sup (h)</th>
+                        <th className="px-4 py-2 text-right">KM</th>
+                        <th className="px-4 py-2 text-right">Montant</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tsData.map(r => (
+                        <tr key={r.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                          <td className="px-4 py-2 font-mono text-xs text-gray-400">S{isoWeek(r.period_start)}</td>
+                          <td className="px-4 py-2 font-medium">{r.employee_name || r.employee_email || '—'}</td>
+                          <td className="px-4 py-2 text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.period_start)} → {fmtDate(r.period_end)}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              r.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                              r.status === 'submitted' ? 'bg-amber-100 text-amber-700' :
+                              r.status === 'paid' ? 'bg-blue-100 text-blue-700' :
+                              r.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-slate-100 text-slate-600'}`}>{r.status}</span>
+                          </td>
+                          <td className="px-4 py-2 text-right">{r.total_regular ?? 0}</td>
+                          <td className="px-4 py-2 text-right">{r.total_overtime ?? 0}</td>
+                          <td className="px-4 py-2 text-right">{(r.total_km ?? 0) + (r.total_km_personal ?? 0)}</td>
+                          <td className="px-4 py-2 text-right font-semibold">{money(Number(r.total_amount ?? 0))}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
