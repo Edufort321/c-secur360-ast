@@ -655,12 +655,15 @@ const Step2Equipment: React.FC<Step2EquipmentProps> = ({
   const [tenantEquipment, setTenantEquipment] = useState<any[]>([]);
   useEffect(() => {
     if (!_sb || !tenant) return;
-    _sb.from('equipment')
-      .select('id, equipment_type, equipment_name, equipment_serial, equipment_location, inspection_frequency')
-      .eq('tenant_id', tenant)
-      .order('updated_at', { ascending: false })
-      .then(({ data }) => { if (data) setTenantEquipment(data); })
-      .catch(() => {});
+    (async () => {
+      try {
+        const { data } = await _sb.from('equipment')
+          .select('id, equipment_type, equipment_name, equipment_serial, equipment_location, inspection_frequency')
+          .eq('tenant_id', tenant)
+          .order('updated_at', { ascending: false });
+        if (data) setTenantEquipment(data);
+      } catch { /* module absent → section cachée */ }
+    })();
   }, [tenant]);
   
   
