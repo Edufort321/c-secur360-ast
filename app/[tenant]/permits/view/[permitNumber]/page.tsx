@@ -113,18 +113,27 @@ export default function ConfinedSpacePublicView() {
       const permit = latest?.data ?? data;
       const registry = permit.entryRegistry ?? { personnel: [], entryLog: [], activeEntrants: [] };
       // Find or create personnel entry
-      let person = (registry.personnel ?? []).find((p: any) => p.name?.toLowerCase() === entryName.trim().toLowerCase());
-      const newPersonId = person?.id ?? `anon-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-      if (!person) {
-        person = { id: newPersonId, name: entryName.trim(), company: entryCompany.trim(), role: 'entrant', addedAt: new Date().toISOString() };
-        registry.personnel = [...(registry.personnel ?? []), person];
+      const personnel = [...(registry.personnel ?? [])];
+      let personIdx = personnel.findIndex((p: any) => p.name?.toLowerCase() === entryName.trim().toLowerCase());
+      const newPersonId = personIdx >= 0 ? personnel[personIdx].id : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const now = new Date().toISOString();
+      if (personIdx < 0) {
+        personnel.push({ id: newPersonId, name: entryName.trim(), company: entryCompany.trim(), role: 'entrant', addedAt: now });
+        personIdx = personnel.length - 1;
       }
+      // Set entryTime / exitTime on the person record so the registry display reflects it
+      if (entryAction === 'entry') {
+        personnel[personIdx] = { ...personnel[personIdx], entryTime: now.slice(0, 16).replace('T', ' ') };
+      } else {
+        personnel[personIdx] = { ...personnel[personIdx], exitTime: now.slice(0, 16).replace('T', ' ') };
+      }
+      registry.personnel = personnel;
       // Add entry/exit log
-      const logEntry = { id: `log-${Date.now()}`, personnelId: newPersonId, action: entryAction, timestamp: new Date().toISOString(), authorizedBy: 'auto (QR)', notes: entryCompany.trim() || undefined };
+      const logEntry = { id: `log-${Date.now()}`, personnelId: newPersonId, action: entryAction, timestamp: now, authorizedBy: 'auto (QR)', notes: entryCompany.trim() || undefined };
       registry.entryLog = [...(registry.entryLog ?? []), logEntry];
       // Update activeEntrants
       if (entryAction === 'entry') {
-        registry.activeEntrants = [...(registry.activeEntrants ?? []), newPersonId];
+        registry.activeEntrants = [...new Set([...(registry.activeEntrants ?? []), newPersonId])];
       } else {
         registry.activeEntrants = (registry.activeEntrants ?? []).filter((id: string) => id !== newPersonId);
       }
@@ -189,6 +198,23 @@ export default function ConfinedSpacePublicView() {
 
       {/* Content */}
       <div className="mx-auto max-w-3xl px-4 py-6 lg:px-8">
+
+        {/* Active entrants banner */}
+        {d.status === 'active' && reg.activeEntrants?.length > 0 && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-green-300 bg-green-50 px-5 py-3.5 shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white font-bold text-lg">
+              {reg.activeEntrants.length}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-green-800">
+                {reg.activeEntrants.length === 1 ? '1 personne à l\'intérieur' : `${reg.activeEntrants.length} personnes à l'intérieur`}
+              </p>
+              <p className="text-xs text-green-700">
+                {(reg.personnel ?? []).filter((p: any) => (reg.activeEntrants ?? []).includes(p.id)).map((p: any) => p.name).join(', ')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Site information */}
         <Section title="Informations du site" icon={<MapPin size={16} />}>
@@ -274,18 +300,22 @@ export default function ConfinedSpacePublicView() {
         {reg.personnel?.length > 0 && (
           <Section title={`Registre d'entrée (${reg.personnel.length} personnes)`} icon={<Users size={16} />}>
             <div className="space-y-2">
-              {reg.personnel.map((p: any, i: number) => (
-                <div key={p.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
-                  <div>
-                    <p className="font-medium text-slate-800">{p.name}</p>
-                    {p.role && <p className="text-xs text-slate-500">{p.role}</p>}
+              {reg.personnel.map((p: any, i: number) => {
+                const isInside = (reg.activeEntrants ?? []).includes(p.id);
+                return (
+                  <div key={p.id ?? i} className={`flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm ${isInside ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-white'}`}>
+                    <div>
+                      <p className="font-medium text-slate-800">{p.name}</p>
+                      <p className="text-xs text-slate-500">{p.company ? `${p.company} · ` : ''}{p.role ?? 'entrant'}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 text-xs text-slate-500">
+                      {isInside && <span className="rounded-full bg-green-200 px-2 py-0.5 text-green-800 font-semibold">À l&apos;intérieur</span>}
+                      {p.entryTime && <span>Entrée : {p.entryTime.slice(0, 16).replace('T', ' ')}</span>}
+                      {p.exitTime && <span>Sortie : {p.exitTime.slice(0, 16).replace('T', ' ')}</span>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500">
-                    {p.entryTime && <span>Entrée : {p.entryTime}</span>}
-                    {p.exitTime && <span>Sortie : {p.exitTime}</span>}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Section>
         )}

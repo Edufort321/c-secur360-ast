@@ -870,7 +870,7 @@ function CSQRCard({ permitNumber, tenant, language }: {
       <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-700">
         <span className="text-blue-600"><QrCode className="w-5 h-5" /></span>
         <h3 className="font-semibold text-slate-800 dark:text-slate-100 flex-1">
-          {language === 'fr' ? 'Code QR — Accès lecture seule' : 'QR Code — Read-only access'}
+          {language === 'fr' ? 'Code QR — Vue publique & enregistrement' : 'QR Code — Public view & entry registration'}
         </h3>
       </div>
       <div className="p-5 flex flex-col sm:flex-row items-center gap-6">
@@ -880,8 +880,8 @@ function CSQRCard({ permitNumber, tenant, language }: {
         <div className="flex flex-col gap-2 min-w-0">
           <p className="text-sm text-slate-600 dark:text-slate-300">
             {language === 'fr'
-              ? "Scannez ce code avec n'importe quel téléphone pour consulter ce permis en lecture seule — aucune connexion requise."
-              : "Scan this code with any phone to view this permit in read-only mode — no login required."}
+              ? "Affichez ce code à l'entrée de l'espace. Les travailleurs peuvent scanner pour consulter le permis et enregistrer leur entrée ou sortie — aucune connexion requise."
+              : "Post this code at the space entrance. Workers can scan to view the permit and register their entry or exit — no login required."}
           </p>
           <code className="mt-1 block rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 break-all select-all">
             {url}
