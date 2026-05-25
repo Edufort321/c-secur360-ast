@@ -348,7 +348,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     qrSubmitFirst: lang === 'fr' ? 'Soumettez l\'inspection pour générer le code QR.' : 'Submit the inspection to generate the QR code.',
     qrInstruction: lang === 'fr' ? 'Imprimez ce QR et fixez-le sur l\'équipement.\nScannez pour accéder à la dernière inspection.' : 'Print this QR and attach it to the equipment.\nScan to access the latest inspection.',
     // History tab
-    prevInspections: lang === 'fr' ? 'Inspections précédentes' : 'Previous inspections',
+    prevInspections: lang === 'fr' ? 'Historique des inspections' : 'Inspection history',
     serie:           lang === 'fr' ? '— série'               : '— serial',
     noHistory:       lang === 'fr' ? 'Aucune inspection précédente trouvée.' : 'No previous inspections found.',
     // eqType options
@@ -441,7 +441,6 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
         q = q.eq('equipment_type', form.equipmentType);
         if (form.equipmentName) q = q.eq('equipment_name', form.equipmentName);
       }
-      if (internalId) q = q.neq('id', internalId);
       const { data } = await q;
       setHistoryRows((data as HistoryRow[]) ?? []);
       setHistoryLoaded(true);
@@ -1424,30 +1423,38 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-              {historyRows.map(row => (
-                <a
-                  key={row.id}
-                  href={`/${tenant}/inspections/${row.id}/edit`}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">{row.inspection_number}</span>
-                      {row.overall_result && <ResultBadge result={row.overall_result} />}
+              {historyRows.map(row => {
+                const isCurrent = row.id === internalId;
+                return (
+                  <a
+                    key={row.id}
+                    href={`/${tenant}/inspections/${row.id}/edit`}
+                    className={`flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors ${isCurrent ? 'bg-teal-50' : ''}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">{row.inspection_number}</span>
+                        {row.overall_result && <ResultBadge result={row.overall_result} />}
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-teal-600 text-white">
+                            {I.fr ? 'Actuelle' : 'Current'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                        {row.inspection_date && <span>{row.inspection_date}</span>}
+                        {row.inspector_name  && <span>· {row.inspector_name}</span>}
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                          row.status === 'submitted' ? 'bg-teal-50 text-teal-700' :
+                          row.status === 'closed'    ? 'bg-gray-100 text-gray-500' :
+                          'bg-yellow-50 text-yellow-700'
+                        }`}>{row.status}</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
-                      {row.inspection_date && <span>{row.inspection_date}</span>}
-                      {row.inspector_name  && <span>· {row.inspector_name}</span>}
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                        row.status === 'submitted' ? 'bg-teal-50 text-teal-700' :
-                        row.status === 'closed'    ? 'bg-gray-100 text-gray-500' :
-                        'bg-yellow-50 text-yellow-700'
-                      }`}>{row.status}</span>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-300 shrink-0" />
-                </a>
-              ))}
+                    <ChevronRight size={16} className="text-gray-300 shrink-0" />
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
