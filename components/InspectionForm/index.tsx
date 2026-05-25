@@ -30,6 +30,11 @@ interface CorrectiveAction {
   usable: boolean;
 }
 
+interface CustomItem {
+  id: string;
+  label: string;
+}
+
 interface InspectionRow {
   id: string;
   inspection_number: string;
@@ -38,6 +43,7 @@ interface InspectionRow {
   equipment_serial: string | null;
   equipment_location: string | null;
   equipment_photo: string | null;
+  equipment_photos: string[] | null;
   inspector_name: string | null;
   inspection_date: string | null;
   inspection_frequency: InspectionFrequency | null;
@@ -51,6 +57,7 @@ interface InspectionRow {
   notes: string | null;
   usable_with_conditions: boolean;
   usable_until_date: string | null;
+  custom_items: CustomItem[] | null;
 }
 
 interface FormState {
@@ -59,6 +66,7 @@ interface FormState {
   equipmentSerial: string;
   equipmentLocation: string;
   equipmentPhoto: string | null;
+  equipmentPhotos: string[];
   inspectorName: string;
   inspectionDate: string;
   inspectionFrequency: InspectionFrequency | null;
@@ -67,6 +75,7 @@ interface FormState {
   itemNotes: Record<string, string>;
   correctiveActions: Record<string, CorrectiveAction>;
   notes: string;
+  customItems: CustomItem[];
 }
 
 type TabId = 'form' | 'qr' | 'history';
@@ -86,6 +95,7 @@ const EMPTY_FORM: FormState = {
   equipmentSerial: '',
   equipmentLocation: '',
   equipmentPhoto: null,
+  equipmentPhotos: [],
   inspectorName: '',
   inspectionDate: new Date().toISOString().split('T')[0],
   inspectionFrequency: null,
@@ -94,6 +104,7 @@ const EMPTY_FORM: FormState = {
   itemNotes: {},
   correctiveActions: {},
   notes: '',
+  customItems: [],
 };
 
 // ─── Visual helpers ──────────────────────────────────────────────────────────
@@ -220,6 +231,39 @@ function PhotoInput({ value, onChange, disabled, label }: {
   );
 }
 
+// ─── AddCustomItemRow ────────────────────────────────────────────────────────
+
+function AddCustomItemRow({ onAdd }: { onAdd: (label: string) => void }) {
+  const [label, setLabel] = useState('');
+  function submit() {
+    const t = label.trim();
+    if (!t) return;
+    onAdd(t);
+    setLabel('');
+  }
+  return (
+    <div className="flex items-center gap-2 px-5 py-3 border-t border-gray-100">
+      <input
+        type="text"
+        value={label}
+        onChange={e => setLabel(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+        placeholder="Nouveau point d'inspection…"
+        className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+      />
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!label.trim()}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium disabled:opacity-40"
+      >
+        <Check size={13} />
+        Ajouter
+      </button>
+    </div>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -245,8 +289,17 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   const [historyRows, setHistoryRows]     = useState<HistoryRow[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [logoUrl, setLogoUrl]             = useState<string | null>(null);
+  const [deletingInspection, setDeletingInspection] = useState(false);
 
   const savingRef = useRef(false);
+
+  // ── Tenant logo ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!supabase || !tenant) return;
+    supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
+  }, [tenant]);
 
   // ── Load existing inspection ─────────────────────────────────────────────
   useEffect(() => {
@@ -267,6 +320,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           equipmentSerial:    row.equipment_serial ?? '',
           equipmentLocation:  row.equipment_location ?? '',
           equipmentPhoto:     row.equipment_photo,
+          equipmentPhotos:    row.equipment_photos ?? (row.equipment_photo ? [row.equipment_photo] : []),
           inspectorName:      row.inspector_name ?? '',
           inspectionDate:     row.inspection_date ?? new Date().toISOString().split('T')[0],
           inspectionFrequency: row.inspection_frequency ?? null,
@@ -275,6 +329,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           itemNotes:          row.item_notes ?? {},
           correctiveActions:  row.corrective_actions ?? {},
           notes:              row.notes ?? '',
+          customItems:        row.custom_items ?? [],
         });
       });
   }, [inspectionId]);
@@ -307,8 +362,11 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
   // ── Derived values ────────────────────────────────────────────────────────
   const isReadOnly      = readOnly ?? (existingRow?.status === 'closed');
   const checklist       = EQUIPMENT_CHECKLISTS[form.equipmentType];
-  const overallResult   = checklist ? calcOverallResult(form.equipmentType, form.results) : 'incomplete';
-  const nonConformities = checklist ? getNonConformities(form.equipmentType, form.results) : [];
+  const baseResult      = checklist ? calcOverallResult(form.equipmentType, form.results) : 'incomplete';
+  const customNCs       = form.customItems.filter(ci => form.results[ci.id] === 'fail').map(ci => ({ id: ci.id, label: ci.label, critical: false, withdrawal: false }));
+  const overallResult: OverallResult = customNCs.length > 0 && baseResult === 'conforme' ? 'conditionnel' : baseResult;
+  const stdNCs          = checklist ? getNonConformities(form.equipmentType, form.results) : [];
+  const nonConformities = [...stdNCs, ...customNCs];
   const hasWithdrawal   = nonConformities.some(nc => nc.withdrawal);
   const isSaved         = !!internalId;
 
@@ -376,8 +434,10 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
     savingRef.current = true;
     setSaving(true);
 
-    const result = calcOverallResult(form.equipmentType, form.results);
-    const ncs    = getNonConformities(form.equipmentType, form.results);
+    const baseCalcResult = calcOverallResult(form.equipmentType, form.results);
+    const customNcsSave  = form.customItems.filter(ci => form.results[ci.id] === 'fail').map(ci => ({ id: ci.id, label: ci.label, critical: false, withdrawal: false }));
+    const result: OverallResult = customNcsSave.length > 0 && baseCalcResult === 'conforme' ? 'conditionnel' : baseCalcResult;
+    const ncs    = [...getNonConformities(form.equipmentType, form.results), ...customNcsSave];
     const usableDeadlines = ncs
       .filter(nc => form.correctiveActions[nc.id]?.usable && form.correctiveActions[nc.id]?.deadline)
       .map(nc => form.correctiveActions[nc.id].deadline)
@@ -390,7 +450,8 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       equipment_name:       form.equipmentName || null,
       equipment_serial:     form.equipmentSerial || null,
       equipment_location:   form.equipmentLocation || null,
-      equipment_photo:      form.equipmentPhoto,
+      equipment_photo:      form.equipmentPhotos[0] ?? form.equipmentPhoto ?? null,
+      equipment_photos:     form.equipmentPhotos,
       inspector_name:       form.inspectorName || null,
       inspection_date:      form.inspectionDate || null,
       inspection_frequency: form.inspectionFrequency || null,
@@ -404,6 +465,7 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       notes:                form.notes || null,
       usable_with_conditions: hasUsable,
       usable_until_date:    usableDeadlines.length > 0 ? usableDeadlines[0] : null,
+      custom_items:         form.customItems,
       updated_at:           new Date().toISOString(),
       ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}),
     };
@@ -454,6 +516,16 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
       setActiveTab('qr');
       setHistoryLoaded(false);
     }
+  }
+
+  // ── Delete self ───────────────────────────────────────────────────────────
+
+  async function handleDeleteSelf() {
+    if (!internalId || !supabase) return;
+    if (!confirm('Supprimer cette inspection ? Cette action est irréversible.')) return;
+    setDeletingInspection(true);
+    await supabase.from('equipment_inspections').delete().eq('id', internalId);
+    onClose();
   }
 
   // ── Share ─────────────────────────────────────────────────────────────────
@@ -586,6 +658,17 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                 >
                   <Printer size={14} />
                   Imprimer QR
+                </button>
+              )}
+              {/* Delete button — visible when editing an existing record */}
+              {internalId && (
+                <button
+                  onClick={handleDeleteSelf}
+                  disabled={deletingInspection}
+                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="Supprimer cette inspection"
+                >
+                  <Trash2 size={16} />
                 </button>
               )}
             </div>
@@ -737,40 +820,45 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                 </div>
               </div>
 
-              {/* Photo équipement */}
+              {/* Photos équipement (multiple) */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">Photo de l&apos;équipement</label>
-                {form.equipmentPhoto ? (
-                  <div className="relative inline-block">
-                    <img src={form.equipmentPhoto} alt="Équipement"
-                      className="h-32 rounded-xl border border-gray-200 object-cover cursor-pointer"
-                      onClick={() => window.open(form.equipmentPhoto!, '_blank')} />
-                    {!isReadOnly && (
-                      <button onClick={() => setForm(f => ({ ...f, equipmentPhoto: null }))}
-                        className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow text-gray-500 hover:text-red-500">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ) : !isReadOnly ? (
-                  <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-teal-400 text-sm text-gray-500 w-fit">
-                    <Camera size={18} className="text-teal-500" />
-                    Prendre ou sélectionner une photo
-                    <input type="file" accept="image/*" capture="environment" className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        try {
-                          const b64 = await compressPhoto(file);
-                          setForm(f => ({ ...f, equipmentPhoto: b64 }));
-                        } catch { /* ignore */ }
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                ) : (
-                  <p className="text-xs text-gray-400">Aucune photo</p>
-                )}
+                <label className="block text-xs font-medium text-gray-600 mb-2">Photos de l&apos;équipement</label>
+                <div className="flex flex-wrap gap-2">
+                  {form.equipmentPhotos.map((src, idx) => (
+                    <div key={idx} className="relative">
+                      <img src={src} alt={`Équipement ${idx + 1}`}
+                        className="h-24 w-24 rounded-xl border border-gray-200 object-cover cursor-pointer"
+                        onClick={() => window.open(src, '_blank')} />
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => setForm(f => ({ ...f, equipmentPhotos: f.equipmentPhotos.filter((_, i) => i !== idx) }))}
+                          className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow text-gray-500 hover:text-red-500">
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {!isReadOnly && (
+                    <label className="flex flex-col items-center justify-center gap-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-3 hover:border-teal-400 text-xs text-gray-500 h-24 w-24">
+                      <Camera size={18} className="text-teal-500" />
+                      Ajouter
+                      <input type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const b64 = await compressPhoto(file);
+                            setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, b64] }));
+                          } catch { /* ignore */ }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  )}
+                  {isReadOnly && form.equipmentPhotos.length === 0 && (
+                    <p className="text-xs text-gray-400">Aucune photo</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -782,11 +870,11 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                 <ClipboardCheck size={16} className="text-teal-600" />
                 Liste de vérification
                 <span className="text-xs font-normal text-gray-400 ml-1">
-                  ({Object.keys(form.results).length} / {checklist.sections.flatMap(s => s.items).length} items répondus)
+                  ({Object.keys(form.results).length} / {(checklist?.sections.flatMap(s => s.items).length ?? 0) + form.customItems.length} items répondus)
                 </span>
               </h2>
 
-              {checklist.sections.map(section => {
+              {checklist?.sections.map(section => {
                 const sectionFails     = section.items.filter(i => form.results[i.id] === 'fail').length;
                 const sectionWithdraws = section.items.filter(i => form.results[i.id] === 'fail' && i.withdrawal).length;
                 const collapsed        = collapsedSections.has(section.id);
@@ -888,6 +976,49 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
                   </div>
                 );
               })}
+
+              {/* Points d'inspection personnalisés */}
+              {(!isReadOnly || form.customItems.length > 0) && (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-800">Points additionnels</span>
+                  <span className="text-xs text-gray-400">{form.customItems.length} point{form.customItems.length !== 1 ? 's' : ''}</span>
+                </div>
+                {form.customItems.length > 0 && (
+                  <div className="divide-y divide-gray-50">
+                    {form.customItems.map(ci => (
+                      <div key={ci.id} className="px-5 py-3 flex items-center gap-3">
+                        <div className="flex-1 text-sm text-gray-700">{ci.label}</div>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({
+                              ...f,
+                              customItems: f.customItems.filter(x => x.id !== ci.id),
+                              results: Object.fromEntries(Object.entries(f.results).filter(([k]) => k !== ci.id)),
+                            }))}
+                            className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                        <ResultToggle
+                          value={form.results[ci.id]}
+                          onChange={v => setResult(ci.id, v)}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!isReadOnly && (
+                  <AddCustomItemRow onAdd={label => {
+                    const id = `custom_${Date.now()}`;
+                    setForm(f => ({ ...f, customItems: [...f.customItems, { id, label }] }));
+                  }} />
+                )}
+              </div>
+              )}
             </div>
           )}
 
@@ -1091,6 +1222,9 @@ export default function InspectionForm({ tenant, inspectionId, onClose, onSaved:
           ) : (
             <>
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 flex flex-col items-center gap-4 w-full max-w-xs">
+                {logoUrl && (
+                  <img src={logoUrl} alt="Logo" className="h-14 w-auto object-contain" />
+                )}
                 <QRCodeSVG
                   value={`${window.location.origin}/${tenant}/inspections/${internalId}`}
                   size={220}

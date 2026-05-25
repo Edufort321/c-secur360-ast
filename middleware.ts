@@ -203,6 +203,9 @@ function isPublicRoute(pathname: string): boolean {
   // Dynamic tenant login pages: /{tenant}/login
   if (/^\/[^/]+\/login$/.test(pathname)) return true;
 
+  // Public inspection access via QR code — anyone can view/record
+  if (/^\/[^/]+\/inspections\/[^/]+$/.test(pathname)) return true;
+
   return publicRoutes.some(route => {
     if (route.endsWith('(.*)')) {
       const baseRoute = route.replace('(.*)', '');

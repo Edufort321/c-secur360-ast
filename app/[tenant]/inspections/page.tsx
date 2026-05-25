@@ -471,7 +471,7 @@ export default function InspectionsPage() {
                     <button
                       onClick={e => handleDelete(r.id, e)}
                       disabled={deletingId === r.id}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50 disabled:opacity-50"
+                      className="p-1.5 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50 disabled:opacity-50"
                       title="Supprimer"
                     >
                       {deletingId === r.id
