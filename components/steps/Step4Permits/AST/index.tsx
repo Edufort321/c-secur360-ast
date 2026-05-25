@@ -1112,14 +1112,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function TextInput({ value, onChange, placeholder = '', disabled = false, type = 'text' }: {
-  value: string | number; onChange: (v: string) => void; placeholder?: string; disabled?: boolean; type?: string;
+function TextInput({ value, onChange, placeholder = '', disabled = false, type = 'text', selectOnFocus = false }: {
+  value: string | number; onChange: (v: string) => void; placeholder?: string; disabled?: boolean; type?: string; selectOnFocus?: boolean;
 }) {
   return (
     <input
       type={type}
       value={value as string}
       onChange={e => onChange(e.target.value)}
+      onFocus={selectOnFocus ? (e => e.target.select()) : undefined}
       placeholder={placeholder}
       disabled={disabled}
       className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:text-slate-400"
@@ -1765,7 +1766,7 @@ function TaskSection({ ast, onChange, language, readOnly }: {
             <TextInput value={ti.estimatedDuration} onChange={v => set('estimatedDuration', v)} placeholder={language === 'fr' ? 'Ex: 4 heures' : 'E.g.: 4 hours'} disabled={readOnly} />
           </Field>
           <Field label={t.workerCount}>
-            <TextInput type="number" value={ti.workerCount} onChange={v => set('workerCount', parseInt(v) || 1)} disabled={readOnly} />
+            <TextInput type="number" value={ti.workerCount} onChange={v => set('workerCount', v === '' ? 0 : (parseInt(v) || 0))} disabled={readOnly} selectOnFocus />
           </Field>
           <Field label={t.taskType}>
             <SelectInput value={ti.taskType} onChange={v => set('taskType', v)} options={taskTypeOptions} disabled={readOnly} />
