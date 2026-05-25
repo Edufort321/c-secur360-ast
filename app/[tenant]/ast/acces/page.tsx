@@ -1,14 +1,33 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ClipboardList, Plus, Search, Loader2, ArrowRight } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+import { ClipboardList, Plus, Search, Loader2, ArrowRight, MapPin, User, Calendar } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+);
+
+type ASTRow = {
+  permit_number: string;
+  updated_at: string;
+  data: {
+    status?: string;
+    province?: string;
+    taskInfo?: {
+      workLocation?: string; supervisor?: string; taskDate?: string;
+      taskDescription?: string; projectNumber?: string; contractor?: string;
+    };
+  };
+};
+
 // Page d'accueil publique (cible du QR code). Un sous-traitant scanne, arrive ici,
-// puis choisit de créer un nouvel AST ou de rechercher un AST existant — ce qui
-// évite la création d'AST vides à chaque scan.
+// puis crée un nouvel AST OU recherche un AST existant (même recherche que l'app :
+// numéro, lieu, superviseur, #projet, entrepreneur, description).
 function AccesInner() {
   const params = useParams();
   const router = useRouter();
@@ -16,13 +35,45 @@ function AccesInner() {
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   const tenant = (params?.tenant as string) || 'demo';
 
-  const [num, setNum] = useState('');
+  const [rows, setRows] = useState<ASTRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
 
-  const openExisting = () => {
-    const n = num.trim();
-    if (!n) return;
-    router.push(`/${tenant}/ast/view/${encodeURIComponent(n)}`);
-  };
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('ast_permits')
+          .select('permit_number, data, updated_at')
+          .eq('tenant_id', tenant)
+          .order('updated_at', { ascending: false });
+        if (active) setRows((data ?? []) as ASTRow[]);
+      } catch {
+        if (active) setRows([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [tenant]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = q
+      ? rows.filter(r => [
+          r.permit_number,
+          r.data?.taskInfo?.workLocation,
+          r.data?.taskInfo?.supervisor,
+          r.data?.taskInfo?.projectNumber,
+          r.data?.taskInfo?.contractor,
+          r.data?.taskInfo?.taskDescription,
+        ].filter(Boolean).some(v => String(v).toLowerCase().includes(q)))
+      : rows;
+    return list.slice(0, 30);
+  }, [rows, query]);
+
+  const dateLocale = lang === 'fr' ? 'fr-CA' : 'en-CA';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -60,26 +111,53 @@ function AccesInner() {
             <Search size={18} className="text-slate-400" />
             {tr('Rechercher un AST existant', 'Find an existing JSA')}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+            <Search size={16} className="shrink-0 text-slate-400" />
             <input
-              value={num}
-              onChange={e => setNum(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); openExisting(); } }}
-              placeholder={tr('Numéro AST (ex. AST-…)', 'JSA number (e.g. AST-…)')}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={tr('Numéro, lieu, superviseur, projet…', 'Number, location, supervisor, project…')}
+              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
-            <button
-              type="button"
-              onClick={openExisting}
-              disabled={!num.trim()}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:opacity-40"
-            >
-              <Search size={15} /> {tr('Ouvrir', 'Open')}
-            </button>
           </div>
-          <p className="mt-2 text-xs text-slate-400">
-            {tr('Ouvre la version lecture seule de l’AST (et son PDF).', 'Opens the read-only version of the JSA (and its PDF).')}
-          </p>
+
+          <div className="mt-3 space-y-2">
+            {loading ? (
+              <div className="grid place-items-center py-8 text-slate-400"><Loader2 className="animate-spin" /></div>
+            ) : filtered.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">
+                {query ? tr('Aucun AST correspondant.', 'No matching JSA.') : tr('Aucun AST pour le moment.', 'No JSA yet.')}
+              </p>
+            ) : (
+              filtered.map(r => {
+                const ti = r.data?.taskInfo;
+                const date = new Date(ti?.taskDate || r.updated_at).toLocaleDateString(dateLocale);
+                return (
+                  <button
+                    key={r.permit_number}
+                    type="button"
+                    onClick={() => router.push(`/${tenant}/ast/view/${encodeURIComponent(r.permit_number)}`)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-teal-300 hover:bg-slate-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-mono text-xs font-semibold uppercase tracking-wide text-slate-500">{r.permit_number}</p>
+                      {(ti?.workLocation || ti?.taskDescription) && (
+                        <p className="mt-0.5 flex items-center gap-1 truncate text-sm font-medium text-slate-800">
+                          <MapPin size={12} className="shrink-0 text-slate-400" /> {ti?.workLocation || ti?.taskDescription}
+                        </p>
+                      )}
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                        {ti?.supervisor && <span className="flex items-center gap-1"><User size={11} /> {ti.supervisor}</span>}
+                        <span className="flex items-center gap-1"><Calendar size={11} /> {date}</span>
+                        {ti?.projectNumber && <span># {ti.projectNumber}</span>}
+                      </p>
+                    </div>
+                    <ArrowRight size={16} className="shrink-0 text-slate-300" />
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>
