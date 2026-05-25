@@ -6,12 +6,14 @@ import { useParams } from 'next/navigation';
 import {
   ClipboardList, Plus, Search, MapPin, User, Calendar,
   Clock, CheckCircle, XCircle, Loader2, BarChart3, QrCode, Printer,
-  LayoutGrid, List as ListIcon, Trash2, Gauge,
+  LayoutGrid, List as ListIcon, Trash2, Gauge, Download,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { generateAstsPdf } from '@/components/steps/Step4Permits/AST';
+import type { ASTPermit } from '@/components/steps/Step4Permits/AST';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
@@ -70,24 +72,34 @@ export default function ASTListPage() {
     completed: tr('Complété', 'Completed'), cancelled: tr('Annulé', 'Cancelled'),
   }[s]);
 
-  // Impression d'une affiche QR (ouvre une fenêtre dédiée pour ne pas imprimer tout le dashboard).
+  // Impression d'une affiche QR centrée : logo en haut, QR au centre, texte dessous.
   const printPoster = () => {
-    const node = qrPosterRef.current;
+    const svg = qrPosterRef.current?.querySelector('svg')?.outerHTML ?? '';
     const w = window.open('', '_blank', 'width=800,height=1000');
-    if (!node || !w) return;
+    if (!w) return;
+    const caption = tr('Pense à faire ton AST', 'Remember to do your JSA');
     w.document.write(
-      `<html><head><title>AST QR — ${tenant}</title>` +
-      `<style>body{font-family:system-ui,sans-serif;text-align:center;padding:48px;color:#0f172a}` +
-      `img{max-height:80px;width:auto;margin:0 auto 8px}` +
-      `svg{width:230px;height:230px}` +
-      `.qrbox{display:inline-block;padding:18px;border:2px solid #e2e8f0;border-radius:18px;margin:12px auto}` +
-      `.caption{font-size:20px;font-weight:700;margin-top:18px}` +
-      `.code{margin-top:14px;font-size:13px;color:#64748b;word-break:break-all}</style></head>` +
-      `<body>${node.innerHTML}</body></html>`,
+      `<!DOCTYPE html><html><head><meta charset="utf-8" /><title>AST QR — ${tenant}</title>` +
+      `<style>` +
+      `html,body{height:100%}` +
+      `body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:48px;color:#0f172a;` +
+      `display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}` +
+      `.logo{max-height:90px;width:auto;margin-bottom:32px}` +
+      `.qrbox{padding:20px;border:2px solid #e2e8f0;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}` +
+      `.qrbox svg{width:260px;height:260px;display:block}` +
+      `.caption{font-size:26px;font-weight:800;margin-top:32px}` +
+      `.url{margin-top:14px;font-size:13px;color:#64748b;word-break:break-all;max-width:340px}` +
+      `</style></head>` +
+      `<body>` +
+      `<img class="logo" src="${logoSrc}" alt="logo" />` +
+      `<div class="qrbox">${svg}</div>` +
+      `<div class="caption">${caption}</div>` +
+      `<div class="url">${qrUrl}</div>` +
+      `</body></html>`,
     );
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 400);
+    setTimeout(() => { w.print(); }, 500);
   };
 
   const [rows, setRows]     = useState<ASTRow[]>([]);
@@ -224,6 +236,38 @@ export default function ASTListPage() {
       alert(tr('Échec de la suppression.', 'Delete failed.'));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Logo (dataURL) pour l'export PDF en lot.
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!logoSrc) return;
+      try {
+        const resp = await fetch(logoSrc);
+        const blob = await resp.blob();
+        const dataUrl = await new Promise<string>((res, rej) => {
+          const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(blob);
+        });
+        if (!cancelled) setLogoDataUrl(dataUrl);
+      } catch { /* logo optionnel */ }
+    })();
+    return () => { cancelled = true; };
+  }, [logoSrc]);
+
+  const [exporting, setExporting] = useState(false);
+  const exportSelected = async () => {
+    if (selected.size === 0) return;
+    setExporting(true);
+    try {
+      const list = filtered.filter(r => selected.has(r.permit_number)).map(r => r.data as unknown as ASTPermit);
+      await generateAstsPdf(list, lang, logoDataUrl);
+    } catch {
+      alert(tr('Échec de la génération du PDF.', 'PDF generation failed.'));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -423,9 +467,18 @@ export default function ASTListPage() {
               </span>
               <button
                 type="button"
+                onClick={exportSelected}
+                disabled={selected.size === 0 || exporting}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-700 disabled:opacity-40"
+              >
+                {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                {tr('Export PDF', 'Export PDF')}
+              </button>
+              <button
+                type="button"
                 onClick={deleteSelected}
                 disabled={selected.size === 0 || deleting}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-40"
               >
                 {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 {tr('Supprimer', 'Delete')}
