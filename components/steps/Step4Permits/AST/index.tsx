@@ -3396,7 +3396,6 @@ export default function ASTPermit({
     { id: 'steps', icon: <List className="w-4 h-4" />, label: t.sections.steps },
     { id: 'ppe', icon: <Shield className="w-4 h-4" />, label: t.sections.ppe },
     { id: 'equipment', icon: <Wrench className="w-4 h-4" />, label: t.sections.equipment },
-    ...(isComplet ? [{ id: 'workers' as SectionId, icon: <UserCheck className="w-4 h-4" />, label: language === 'fr' ? 'Travailleurs' : 'Workers' }] : []),
     { id: 'participants', icon: <Users className="w-4 h-4" />, label: t.sections.participants },
     { id: 'finalization', icon: <CheckCircle className="w-4 h-4" />, label: t.sections.finalization },
   ];
@@ -3539,9 +3538,6 @@ export default function ASTPermit({
           )}
           {section === 'equipment' && (
             <EquipmentSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
-          )}
-          {section === 'workers' && (
-            <WorkersSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
           )}
           {section === 'participants' && (
             <ParticipantsSection ast={ast} onChange={updateAst} language={language} readOnly={readOnly} />
