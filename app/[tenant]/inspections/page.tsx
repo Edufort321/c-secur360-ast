@@ -1,7 +1,19 @@
 'use client';
 
-import { ModulePlaceholder } from '@/components/ModulePlaceholder';
+import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import InspectionForm from '@/components/InspectionForm';
 
 export default function InspectionsPage() {
-  return <ModulePlaceholder titleFr="Inspections d'équipement" titleEn="Equipment inspections" />;
+  const params = useParams();
+  const router = useRouter();
+  const tenant = params.tenant as string;
+
+  return (
+    <InspectionForm
+      tenant={tenant}
+      onClose={() => router.push(`/${tenant}/modules`)}
+      embedded
+    />
+  );
 }
