@@ -2,28 +2,31 @@
 
 import { useEffect } from 'react';
 
-// Enregistre le SW, capture beforeinstallprompt globalement, et recharge
-// automatiquement la page quand une nouvelle version du SW est activée.
 export function SwRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
-    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(reg => {
-      // Vérifie immédiatement si une mise à jour est disponible (bypasse le cache HTTP)
-      reg.update().catch(() => {});
-    }).catch(() => {});
+    let reg: ServiceWorkerRegistration | null = null;
 
-    // Message du SW → nouvelle version activée → rechargement transparent
-    const onMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'SW_UPDATED') {
-        // Petit délai pour laisser le SW finir son activation
-        setTimeout(() => window.location.reload(), 300);
-      }
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then(r => {
+        reg = r;
+        reg.update().catch(() => {});
+      })
+      .catch(() => {});
+
+    // Rechargement fiable quand le nouveau SW prend le contrôle
+    const onControllerChange = () => window.location.reload();
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    // Vérifie une mise à jour à chaque retour en avant-plan (app PWA minimisée)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reg?.update().catch(() => {});
     };
-    navigator.serviceWorker.addEventListener('message', onMessage);
+    document.addEventListener('visibilitychange', onVisible);
 
-    // Capture l'event d'installation PWA dès que le navigateur le déclenche
-    const onBIP = (e: any) => {
+    // Capture l'event d'installation PWA
+    const onBIP = (e: Event) => {
       e.preventDefault();
       (window as any).__pwaInstallEvent = e;
       window.dispatchEvent(new Event('pwa-installable'));
@@ -31,7 +34,8 @@ export function SwRegister() {
     window.addEventListener('beforeinstallprompt', onBIP);
 
     return () => {
-      navigator.serviceWorker.removeEventListener('message', onMessage);
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('beforeinstallprompt', onBIP);
     };
   }, []);
