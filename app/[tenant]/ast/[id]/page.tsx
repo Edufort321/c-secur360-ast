@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, FolderKanban } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createClient } from '@supabase/supabase-js';
@@ -28,6 +29,7 @@ export default function ASTDetailPage() {
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
+  const [linkedProject, setLinkedProject] = useState<{ id: string; title: string; project_number: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +43,11 @@ export default function ASTDetailPage() {
           .single();
         if (error || !row) { setMissing(true); return; }
         setData(row.data);
+        const pNum = row.data?.taskInfo?.projectNumber || row.data?.projectNumber;
+        if (pNum) {
+          const { data: proj } = await supabase.from('projects').select('id, title, project_number').eq('tenant_id', tenant).eq('project_number', pNum).maybeSingle();
+          if (proj) setLinkedProject(proj);
+        }
       } catch {
         setMissing(true);
       } finally {
@@ -88,6 +95,14 @@ export default function ASTDetailPage() {
   return (
     <>
       <PortalHeader tenant={tenant} />
+      {linkedProject && (
+        <div className="mx-auto max-w-5xl px-4 pt-3">
+          <Link href={`/${tenant}/projects/${linkedProject.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">
+            <FolderKanban size={14} /> {linkedProject.project_number} — {linkedProject.title || 'Projet'}
+          </Link>
+        </div>
+      )}
       <ASTPermit
         tenant={tenant}
         language={lang}

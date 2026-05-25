@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertTriangle, FolderKanban } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
@@ -21,6 +22,7 @@ export default function PermitDetailPage() {
   const [permitData, setPermitData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [linkedProject, setLinkedProject] = useState<{ id: string; title: string; project_number: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -33,13 +35,19 @@ export default function PermitDetailPage() {
           .single();
         if (error || !data) { setNotFound(true); return; }
         setPermitData(data.data);
+        // Try to find linked project
+        const pNum = data.data?.taskInfo?.projectNumber || data.data?.siteInfo?.projectNumber || data.data?.siteInformation?.projectNumber;
+        if (pNum) {
+          const { data: proj } = await supabase.from('projects').select('id, title, project_number').eq('tenant_id', tenant).eq('project_number', pNum).maybeSingle();
+          if (proj) setLinkedProject(proj);
+        }
       } catch {
         setNotFound(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, tenant]);
 
   const handleBack = () => router.push(`/${tenant}/permits`);
 
@@ -47,12 +55,20 @@ export default function PermitDetailPage() {
     <div className="min-h-screen bg-slate-50">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 pb-8 pt-5 lg:px-6">
-        <button
-          onClick={handleBack}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800"
-        >
-          <ArrowLeft size={16} /> Retour aux permis
-        </button>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleBack}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800"
+          >
+            <ArrowLeft size={16} /> Retour aux permis
+          </button>
+          {linkedProject && (
+            <Link href={`/${tenant}/projects/${linkedProject.id}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-100">
+              <FolderKanban size={14} /> {linkedProject.project_number} — {linkedProject.title || 'Projet'}
+            </Link>
+          )}
+        </div>
 
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-32 text-slate-400">
