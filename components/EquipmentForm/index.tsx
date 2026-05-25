@@ -318,14 +318,25 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
               <label className="flex flex-col items-center justify-center gap-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-3 hover:border-teal-400 text-xs text-gray-500 h-24 w-24">
                 <Camera size={18} className="text-teal-500" />
                 {fr ? 'Ajouter' : 'Add'}
-                <input type="file" accept="image/*" multiple className="hidden"
+                <input type="file" accept="image/*,image/heic,image/heif" multiple className="hidden"
                   onChange={async (e) => {
                     if (!supabase) return;
                     const files = Array.from(e.target.files ?? []);
+                    let errCount = 0;
                     const results = await Promise.all(files.map(async f => {
                       try { return await uploadPhoto(f, tenant, supabase); }
-                      catch { return null; }
+                      catch (err) {
+                        errCount++;
+                        console.warn('Photo upload failed:', f.name, err);
+                        return null;
+                      }
                     }));
+                    if (errCount > 0) {
+                      setMsg(fr
+                        ? `${errCount} photo(s) non ajoutée(s) — format non supporté ou photo trop volumineuse`
+                        : `${errCount} photo(s) not added — unsupported format or too large`);
+                      setTimeout(() => setMsg(''), 5000);
+                    }
                     const valid = results.filter(Boolean) as string[];
                     if (valid.length > 0) setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, ...valid] }));
                     e.target.value = '';
