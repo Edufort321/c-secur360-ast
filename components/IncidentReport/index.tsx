@@ -624,34 +624,38 @@ function BodyDiagram({ selected, onChange, readOnly }: {
               Bosses doigts (2 unités) → indication stylisée sans griffes              ── */}
           {view === 'anterior' && (
             <>
-              {/* Main gauche avant */}
-              <polygon
-                points="5,101 17,101 20,106 21,113 20,119 17,124 14,122 11,124 8,122 5,124 2,119 0,113 0,106"
+              {/* Main gauche avant — avant-bras finit x=0-7, y=101 */}
+              <path
+                d="M 0,101 L 7,101 Q 13,106 13,113 Q 12,119 10,121 L 9,123 L 7,121 L 5.5,123 L 4,121 L 2.5,123 Q 0,121 0,115 Q 0,106 0,101 Z"
+                strokeLinejoin="round"
                 {...op('left-hand')}>
                 <title>{BODY_REGION_LABELS['left-hand']}</title>
-              </polygon>
-              {/* Main droite avant */}
-              <polygon
-                points="83,101 95,101 100,106 100,113 98,119 95,124 92,122 89,124 86,122 83,124 80,119 79,113 80,106"
+              </path>
+              {/* Main droite avant — avant-bras finit x=93-100, y=101 */}
+              <path
+                d="M 100,101 L 93,101 Q 87,106 87,113 Q 88,119 90,121 L 91,123 L 93,121 L 94.5,123 L 96,121 L 97.5,123 Q 100,121 100,115 Q 100,106 100,101 Z"
+                strokeLinejoin="round"
                 {...op('right-hand')}>
                 <title>{BODY_REGION_LABELS['right-hand']}</title>
-              </polygon>
+              </path>
             </>
           )}
           {view === 'posterior' && (
             <>
-              {/* Main gauche arrière (avant-bras finit ≈ y=108) */}
-              <polygon
-                points="5,108 17,108 20,113 21,120 20,126 17,131 14,129 11,131 8,129 5,131 2,126 0,120 0,113"
+              {/* Main gauche arrière — avant-bras finit x=0-7, y=108 */}
+              <path
+                d="M 0,108 L 7,108 Q 13,113 13,120 Q 12,126 10,128 L 9,130 L 7,128 L 5.5,130 L 4,128 L 2.5,130 Q 0,128 0,122 Q 0,113 0,108 Z"
+                strokeLinejoin="round"
                 {...op('left-hand-back')}>
                 <title>{BODY_REGION_LABELS['left-hand-back']}</title>
-              </polygon>
-              {/* Main droite arrière */}
-              <polygon
-                points="83,108 95,108 100,113 100,120 98,126 95,131 92,129 89,131 86,129 83,131 80,126 79,120 80,113"
+              </path>
+              {/* Main droite arrière — avant-bras finit x=93-100, y=108 */}
+              <path
+                d="M 100,108 L 93,108 Q 87,113 87,120 Q 88,126 90,128 L 91,130 L 93,128 L 94.5,130 L 96,128 L 97.5,130 Q 100,128 100,122 Q 100,113 100,108 Z"
+                strokeLinejoin="round"
                 {...op('right-hand-back')}>
                 <title>{BODY_REGION_LABELS['right-hand-back']}</title>
-              </polygon>
+              </path>
             </>
           )}
 
@@ -661,32 +665,36 @@ function BodyDiagram({ selected, onChange, readOnly }: {
               PAS de griffes ni de profil latéral — vue de face anatomique              ── */}
           {view === 'anterior' && (
             <>
-              {/* Pied gauche */}
-              <polygon
-                points="21,196 35,196 38,200 38,208 34,213 26,214 18,213 13,208 12,200"
+              {/* Pied gauche — mollet finit x=21-35 (centre=28), expansion symétrique */}
+              <path
+                d="M 21,196 L 35,196 Q 40,200 40,208 Q 38,214 28,214 Q 18,214 16,208 Q 16,200 21,196 Z"
+                strokeLinejoin="round"
                 {...op('left-foot')}>
                 <title>{BODY_REGION_LABELS['left-foot']}</title>
-              </polygon>
-              {/* Pied droit */}
-              <polygon
-                points="63,196 77,196 88,200 88,208 82,213 74,214 66,213 61,208 62,200"
+              </path>
+              {/* Pied droit — mollet finit x=63-77 (centre=70), expansion symétrique */}
+              <path
+                d="M 63,196 L 77,196 Q 84,200 84,208 Q 82,214 70,214 Q 58,214 56,208 Q 56,200 63,196 Z"
+                strokeLinejoin="round"
                 {...op('right-foot')}>
                 <title>{BODY_REGION_LABELS['right-foot']}</title>
-              </polygon>
+              </path>
             </>
           )}
           {view === 'posterior' && (
             <>
-              <polygon
-                points="21,196 35,196 38,200 38,208 34,213 26,214 18,213 13,208 12,200"
+              <path
+                d="M 21,196 L 35,196 Q 40,200 40,208 Q 38,214 28,214 Q 18,214 16,208 Q 16,200 21,196 Z"
+                strokeLinejoin="round"
                 {...op('left-foot-back')}>
                 <title>{BODY_REGION_LABELS['left-foot-back']}</title>
-              </polygon>
-              <polygon
-                points="63,196 77,196 88,200 88,208 82,213 74,214 66,213 61,208 62,200"
+              </path>
+              <path
+                d="M 63,196 L 77,196 Q 84,200 84,208 Q 82,214 70,214 Q 58,214 56,208 Q 56,200 63,196 Z"
+                strokeLinejoin="round"
                 {...op('right-foot-back')}>
                 <title>{BODY_REGION_LABELS['right-foot-back']}</title>
-              </polygon>
+              </path>
             </>
           )}
         </svg>
