@@ -1269,29 +1269,27 @@ const Step1ProjectInfo = memo(({
   }, []);
 
   // Gestion des photos du projet
-  const handlePhotoUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     const currentPhotos = localData.photos || [];
-    const newPhotos: string[] = [];
-    let loadedCount = 0;
-    const totalFiles = files.length;
+    const { compressToBlob } = await import('@/lib/utils/photo');
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        newPhotos.push(result);
-        loadedCount++;
-        
-        if (loadedCount === totalFiles) {
-          updateField('photos', [...currentPhotos, ...newPhotos]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    const results = await Promise.all(Array.from(files).map(async (file) => {
+      try {
+        const blob = await compressToBlob(file);
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('FileReader error'));
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    }));
 
+    const valid = results.filter(Boolean) as string[];
+    if (valid.length > 0) updateField('photos', [...currentPhotos, ...valid]);
     event.target.value = '';
   }, [localData.photos, updateField]);
 
@@ -1301,29 +1299,27 @@ const Step1ProjectInfo = memo(({
   }, [localData.photos, updateField]);
 
   // Gestion des fichiers AST Client
-  const handleASTClientUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleASTClientUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     const currentFiles = localData.astClientFiles || [];
-    const newFiles: string[] = [];
-    let loadedCount = 0;
-    const totalFiles = files.length;
+    const { compressToBlob } = await import('@/lib/utils/photo');
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        newFiles.push(result);
-        loadedCount++;
-        
-        if (loadedCount === totalFiles) {
-          updateField('astClientFiles', [...currentFiles, ...newFiles]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    const results = await Promise.all(Array.from(files).map(async (file) => {
+      try {
+        const blob = await compressToBlob(file);
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('FileReader error'));
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    }));
 
+    const valid = results.filter(Boolean) as string[];
+    if (valid.length > 0) updateField('astClientFiles', [...currentFiles, ...valid]);
     event.target.value = '';
   }, [localData.astClientFiles, updateField]);
 
@@ -1333,29 +1329,27 @@ const Step1ProjectInfo = memo(({
   }, [localData.astClientFiles, updateField]);
 
   // Gestion des fichiers Fiche Verrouillage Client
-  const handleLockoutClientUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLockoutClientUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     const currentFiles = localData.lockoutClientFiles || [];
-    const newFiles: string[] = [];
-    let loadedCount = 0;
-    const totalFiles = files.length;
+    const { compressToBlob } = await import('@/lib/utils/photo');
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        newFiles.push(result);
-        loadedCount++;
-        
-        if (loadedCount === totalFiles) {
-          updateField('lockoutClientFiles', [...currentFiles, ...newFiles]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    const results = await Promise.all(Array.from(files).map(async (file) => {
+      try {
+        const blob = await compressToBlob(file);
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('FileReader error'));
+          reader.readAsDataURL(blob);
+        });
+      } catch { return null; }
+    }));
 
+    const valid = results.filter(Boolean) as string[];
+    if (valid.length > 0) updateField('lockoutClientFiles', [...currentFiles, ...valid]);
     event.target.value = '';
   }, [localData.lockoutClientFiles, updateField]);
 
@@ -1690,7 +1684,7 @@ const Step1ProjectInfo = memo(({
         }
       `}</style>
       {/* Input caché pour capture photo */}
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} />
+      <input ref={fileInputRef} type="file" accept="image/*,image/heic,image/heif" style={{ display: 'none' }} />
       
       {/* Header uniforme */}
       <Header 
@@ -3587,7 +3581,7 @@ const Step1ProjectInfo = memo(({
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,image/heic,image/heif"
                 multiple
                 onChange={handlePhotoUpload}
                 style={{ display: 'none' }}

@@ -495,16 +495,20 @@ const LOTOPhotoCarousel: React.FC<LOTOPhotoCarouselProps> = ({
       const file = files[0];
       
       // Validation
-      if (!file.type.startsWith('image/')) {
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif'
+        || /\.(heic|heif)$/i.test(file.name);
+      if (!file.type.startsWith('image/') && !isHeic) {
         throw new Error('File must be an image');
       }
-      
+
       if (file.size > 10 * 1024 * 1024) { // 10MB max
         throw new Error('File too large');
       }
-      
-      // Créer URL
-      const url = URL.createObjectURL(file);
+
+      // Convertir HEIC → JPEG si nécessaire, puis créer URL blob
+      const { compressToBlob } = await import('@/lib/utils/photo');
+      const blob = await compressToBlob(file);
+      const url = URL.createObjectURL(blob);
       
       // Obtenir géolocalisation
       const coordinates = await getCurrentLocation();
@@ -1493,7 +1497,7 @@ const LOTOPhotoCarousel: React.FC<LOTOPhotoCarouselProps> = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,image/heic,image/heif"
           style={{ display: 'none' }}
           onChange={(e) => {
             if (e.target.files) {

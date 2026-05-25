@@ -185,7 +185,7 @@ function PhotoInput({ value, onChange, onUpload, disabled, label, onOpenLightbox
   return (
     <div className="flex items-center gap-2">
       <input
-        ref={ref} type="file" accept="image/*" className="hidden"
+        ref={ref} type="file" accept="image/*,image/heic,image/heif" className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
@@ -1138,7 +1138,7 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
                       <label className="flex flex-col items-center justify-center gap-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-3 hover:border-teal-400 text-xs text-gray-500 h-24 w-24">
                         <Camera size={18} className="text-teal-500" />
                         {I.addPhoto}
-                        <input type="file" accept="image/*" multiple className="hidden"
+                        <input type="file" accept="image/*,image/heic,image/heif" multiple className="hidden"
                           onChange={async (e) => {
                             if (!supabase) return;
                             const files = Array.from(e.target.files ?? []);
