@@ -113,16 +113,17 @@ export default function EquipmentPublicPage() {
     <div className="min-h-screen bg-gray-50 pb-16">
 
       {/* Public header */}
-      <header className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-10 w-auto object-contain" />
-          <div className="leading-tight">
-            <div className="text-xs font-bold">C-Secur360</div>
-            <div className="text-xs text-gray-400">c-secur360.ca</div>
-          </div>
+      <header className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href={`/${tenant}/inspections`}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-white shrink-0">
+            <ChevronRight size={14} className="rotate-180" />
+            {fr ? 'Liste' : 'List'}
+          </Link>
+          <img src={logoUrl || '/c-secur360-logo.png'} alt="Logo" className="h-8 w-auto object-contain" />
         </div>
         <Link href={`/${tenant}/equipment/${id}/inspect`}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg">
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg shrink-0">
           <Plus size={14} />
           {fr ? 'Inspecter' : 'Inspect'}
         </Link>

@@ -9,8 +9,8 @@ export default function EquipmentInspectPage() {
     <InspectionForm
       tenant={tenant}
       equipmentId={id}
-      onClose={() => router.push(`/${tenant}/equipment/${id}`)}
-      onSaved={() => router.push(`/${tenant}/equipment/${id}`)}
+      onClose={() => router.push(`/${tenant}/inspections`)}
+      onSaved={() => router.push(`/${tenant}/inspections`)}
     />
   );
 }
