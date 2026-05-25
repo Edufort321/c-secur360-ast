@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, Wrench, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'inspections' | 'timesheets' | 'logbook' | 'todo';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -76,6 +76,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Gestion des stocks, emplacements, codes QR, valorisation.',
     descEn: 'Stock management, locations, QR codes, valuation.',
     icon: Package, basePath: 'inventory', color: 'text-amber-600', accent: 'bg-amber-600', status: 'available',
+  },
+  {
+    key: 'equipment',
+    labelFr: 'Fiches équipements', labelEn: 'Equipment sheets',
+    descFr: 'Fiches équipements avec code QR, photos, province et fréquence d\'inspection.',
+    descEn: 'Equipment sheets with QR code, photos, province and inspection frequency.',
+    icon: Wrench, basePath: 'equipment', color: 'text-teal-600', accent: 'bg-teal-600', status: 'available',
   },
   {
     key: 'inspections',
