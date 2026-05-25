@@ -893,201 +893,282 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
       {activeTab === 'form' && (
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
 
-          {/* Section 1 — Info équipement */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+          {/* Section 1 — Équipement lié (carte compacte) OU champs complets */}
+          {linkedEquipment ? (
+            <>
+              {/* Carte équipement — lecture seule */}
+              <div className="bg-white rounded-xl border border-teal-200 overflow-hidden">
+                <div className="px-5 py-3 bg-teal-50 border-b border-teal-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck size={15} className="text-teal-600" />
+                    <span className="text-sm font-semibold text-teal-800">
+                      {I.fr ? 'Fiche équipement' : 'Equipment sheet'}
+                    </span>
+                  </div>
+                  <a href={`/${tenant}/equipment/${equipmentId}/edit`}
+                    className="text-xs text-teal-600 hover:text-teal-800 underline">
+                    {I.fr ? 'Modifier la fiche →' : 'Edit sheet →'}
+                  </a>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  {/* Type + nom + série + lieu */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900">
+                        {INSPECTION_TYPE_OPTIONS.find(o => o.value === linkedEquipment.equipment_type)?.label}
+                        {linkedEquipment.equipment_name ? ` — ${linkedEquipment.equipment_name}` : ''}
+                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-xs text-gray-500">
+                        {linkedEquipment.equipment_serial && <span>#{linkedEquipment.equipment_serial}</span>}
+                        {linkedEquipment.equipment_location && <span>· {linkedEquipment.equipment_location}</span>}
+                        {linkedEquipment.inspection_frequency && (
+                          <span>· {I.fr
+                            ? FREQUENCY_OPTIONS.find(f => f.value === linkedEquipment.inspection_frequency)?.label
+                            : FREQUENCY_OPTIONS.find(f => f.value === linkedEquipment.inspection_frequency)?.labelEn
+                          }</span>
+                        )}
+                      </div>
+                    </div>
+                    {linkedEquipment.equipment_photos?.[0] && (
+                      <img src={linkedEquipment.equipment_photos[0]} alt=""
+                        className="h-14 w-14 rounded-lg object-cover border border-gray-200 shrink-0 cursor-pointer"
+                        onClick={() => window.open(linkedEquipment.equipment_photos[0], '_blank')} />
+                    )}
+                  </div>
+                  {/* Norme + réglementation */}
+                  {checklist && (
+                    <div className="p-3 bg-gray-50 rounded-lg space-y-0.5">
+                      <p className="text-xs text-gray-500">
+                        {I.standard} : <span className="font-medium text-gray-700">{checklist.standard}</span>
+                        {' · '}<span className="italic">{checklist.frequency}</span>
+                      </p>
+                      {PROVINCE_REGULATION[linkedEquipment.province] && (
+                        <p className="text-xs font-bold text-teal-700">
+                          {PROVINCE_REGULATION[linkedEquipment.province][I.fr ? 'fr' : 'en']}
+                          <span className="ml-1 font-normal text-gray-400">
+                            · {PROVINCE_REGULATION[linkedEquipment.province][I.fr ? 'refFr' : 'refEn']}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Champs inspection uniquement */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                  <FileText size={15} className="text-teal-600" />
+                  <span className="text-sm font-semibold text-gray-700">
+                    {I.fr ? 'Informations d\'inspection' : 'Inspection information'}
+                  </span>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
+                      <input type="text" value={form.inspectorName} disabled={isReadOnly}
+                        onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
+                        placeholder={I.inspectorPlaceholder}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspDate}</label>
+                      <input type="date" value={form.inspectionDate} disabled={isReadOnly}
+                        onChange={e => setForm(f => ({ ...f, inspectionDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* ── Mode standalone : tous les champs équipement + inspection ── */
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
                 <FileText size={16} className="text-teal-600" />
                 <span className="text-sm font-semibold text-gray-700">{I.equipInfo}</span>
               </div>
-              {linkedEquipment && (
-                <a href={`/${tenant}/equipment/${equipmentId}`}
-                  className="text-xs text-teal-600 hover:text-teal-800 font-medium">
-                  {I.fr ? '← Retour à la fiche' : '← Back to sheet'}
-                </a>
-              )}
-            </div>
-            <div className="p-5 space-y-4">
+              <div className="p-5 space-y-4">
 
-              {/* Type d'équipement */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqType} *</label>
-                <select
-                  value={form.equipmentType}
-                  disabled={!!internalId || isReadOnly || !!equipmentId}
-                  onChange={e => setForm(f => ({ ...f, equipmentType: e.target.value as InspectionType, results: {}, itemPhotos: {}, itemNotes: {}, correctiveActions: {} }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
-                >
-                  {INSPECTION_TYPE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-                {checklist && (
-                  <div className="mt-1 space-y-0.5">
-                    <p className="text-xs text-gray-400">
-                      {I.standard} : <span className="font-medium text-gray-600">{checklist.standard}</span>
-                      {' · '}{checklist.frequency}
-                    </p>
-                    {PROVINCE_REGULATION[form.province] && (
-                      <p className="text-xs font-semibold text-teal-700">
-                        {I.regulation} : {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
-                        <span className="ml-1 font-normal text-gray-400">
-                          ({PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']})
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Nom / Série */}
-              <div className="grid grid-cols-2 gap-4">
+                {/* Type d'équipement */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqName}</label>
-                  <input type="text" value={form.equipmentName} disabled={isReadOnly}
-                    onChange={e => setForm(f => ({ ...f, equipmentName: e.target.value }))}
-                    placeholder={I.eqTypePlaceholder}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqSerial}</label>
-                  <input type="text" value={form.equipmentSerial} disabled={isReadOnly}
-                    onChange={e => setForm(f => ({ ...f, equipmentSerial: e.target.value }))}
-                    placeholder={I.serialPlaceholder}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
-                </div>
-              </div>
-
-              {/* Emplacement / Date / Inspecteur / Fréquence */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqLocation}</label>
-                  <input type="text" value={form.equipmentLocation} disabled={isReadOnly || !!equipmentId}
-                    onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
-                    placeholder={I.locationPlaceholder}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspDate}</label>
-                  <input type="date" value={form.inspectionDate} disabled={isReadOnly}
-                    onChange={e => setForm(f => ({ ...f, inspectionDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
-                </div>
-              </div>
-
-              {/* Province */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{I.province}</label>
-                <select
-                  value={form.province}
-                  disabled={isReadOnly || !!equipmentId}
-                  onChange={e => setForm(f => ({ ...f, province: e.target.value as ProvinceCode }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
-                >
-                  {CANADIAN_PROVINCES.map(p => (
-                    <option key={p.code} value={p.code}>{p.code} — {I.fr ? p.fr : p.en}</option>
-                  ))}
-                </select>
-                {PROVINCE_REGULATION[form.province] && (
-                  <p className="mt-1 text-xs font-semibold text-teal-700">
-                    {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
-                    <span className="ml-1 font-normal text-gray-400">
-                      · {PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']}
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
-                  <input type="text" value={form.inspectorName} disabled={isReadOnly}
-                    onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
-                    placeholder={I.inspectorPlaceholder}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.frequency}</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqType} *</label>
                   <select
-                    value={form.inspectionFrequency ?? ''}
-                    disabled={isReadOnly}
-                    onChange={e => setForm(f => ({ ...f, inspectionFrequency: (e.target.value || null) as InspectionFrequency | null }))}
+                    value={form.equipmentType}
+                    disabled={!!internalId || isReadOnly}
+                    onChange={e => setForm(f => ({ ...f, equipmentType: e.target.value as InspectionType, results: {}, itemPhotos: {}, itemNotes: {}, correctiveActions: {} }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
                   >
-                    <option value="">{I.selectFreq}</option>
-                    {FREQUENCY_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{I.fr ? opt.label : opt.labelEn}</option>
+                    {INSPECTION_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                  {form.inspectionFrequency === 'par_quart' && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-xs font-medium text-blue-700 mb-2">{I.shiftsLabel}</p>
-                      <div className="flex flex-wrap gap-4">
-                        {([['jour', I.shiftDay], ['soir', I.shiftEvening], ['nuit', I.shiftNight]] as [string, string][]).map(([val, lbl]) => (
-                          <label key={val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              disabled={isReadOnly}
-                              checked={form.inspectionShifts.includes(val)}
-                              onChange={e => setForm(f => ({
-                                ...f,
-                                inspectionShifts: e.target.checked
-                                  ? [...f.inspectionShifts, val]
-                                  : f.inspectionShifts.filter(s => s !== val),
-                              }))}
-                              className="w-4 h-4 rounded accent-teal-600 disabled:opacity-50"
-                            />
-                            {lbl}
-                          </label>
-                        ))}
-                      </div>
+                  {checklist && (
+                    <div className="mt-1 space-y-0.5">
+                      <p className="text-xs text-gray-400">
+                        {I.standard} : <span className="font-medium text-gray-600">{checklist.standard}</span>
+                        {' · '}{checklist.frequency}
+                      </p>
+                      {PROVINCE_REGULATION[form.province] && (
+                        <p className="text-xs font-semibold text-teal-700">
+                          {I.regulation} : {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
+                          <span className="ml-1 font-normal text-gray-400">
+                            ({PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']})
+                          </span>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* Photos équipement (multiple) */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-2">{I.photos}</label>
-                <div className="flex flex-wrap gap-2">
-                  {form.equipmentPhotos.map((src, idx) => (
-                    <div key={idx} className="relative">
-                      <img src={src} alt={`Équipement ${idx + 1}`}
-                        className="h-24 w-24 rounded-xl border border-gray-200 object-cover cursor-pointer"
-                        onClick={() => window.open(src, '_blank')} />
-                      {!isReadOnly && (
-                        <button
-                          onClick={() => setForm(f => ({ ...f, equipmentPhotos: f.equipmentPhotos.filter((_, i) => i !== idx) }))}
-                          className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow text-gray-500 hover:text-red-500">
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {!isReadOnly && (
-                    <label className="flex flex-col items-center justify-center gap-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-3 hover:border-teal-400 text-xs text-gray-500 h-24 w-24">
-                      <Camera size={18} className="text-teal-500" />
-                      Ajouter
-                      <input type="file" accept="image/*" className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const b64 = await compressPhoto(file);
-                            setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, b64] }));
-                          } catch { /* ignore */ }
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
+                {/* Nom / Série */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqName}</label>
+                    <input type="text" value={form.equipmentName} disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, equipmentName: e.target.value }))}
+                      placeholder={I.eqTypePlaceholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqSerial}</label>
+                    <input type="text" value={form.equipmentSerial} disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, equipmentSerial: e.target.value }))}
+                      placeholder={I.serialPlaceholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                  </div>
+                </div>
+
+                {/* Emplacement + Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.eqLocation}</label>
+                    <input type="text" value={form.equipmentLocation} disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
+                      placeholder={I.locationPlaceholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspDate}</label>
+                    <input type="date" value={form.inspectionDate} disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, inspectionDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                  </div>
+                </div>
+
+                {/* Province */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{I.province}</label>
+                  <select
+                    value={form.province}
+                    disabled={isReadOnly}
+                    onChange={e => setForm(f => ({ ...f, province: e.target.value as ProvinceCode }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
+                  >
+                    {CANADIAN_PROVINCES.map(p => (
+                      <option key={p.code} value={p.code}>{p.code} — {I.fr ? p.fr : p.en}</option>
+                    ))}
+                  </select>
+                  {PROVINCE_REGULATION[form.province] && (
+                    <p className="mt-1 text-xs font-semibold text-teal-700">
+                      {PROVINCE_REGULATION[form.province][I.fr ? 'fr' : 'en']}
+                      <span className="ml-1 font-normal text-gray-400">
+                        · {PROVINCE_REGULATION[form.province][I.fr ? 'refFr' : 'refEn']}
+                      </span>
+                    </p>
                   )}
-                  {isReadOnly && form.equipmentPhotos.length === 0 && (
-                    <p className="text-xs text-gray-400">{I.noPhoto}</p>
-                  )}
+                </div>
+
+                {/* Inspecteur + Fréquence */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.inspector}</label>
+                    <input type="text" value={form.inspectorName} disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, inspectorName: e.target.value }))}
+                      placeholder={I.inspectorPlaceholder}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{I.frequency}</label>
+                    <select
+                      value={form.inspectionFrequency ?? ''}
+                      disabled={isReadOnly}
+                      onChange={e => setForm(f => ({ ...f, inspectionFrequency: (e.target.value || null) as InspectionFrequency | null }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:bg-gray-50"
+                    >
+                      <option value="">{I.selectFreq}</option>
+                      {FREQUENCY_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{I.fr ? opt.label : opt.labelEn}</option>
+                      ))}
+                    </select>
+                    {form.inspectionFrequency === 'par_quart' && (
+                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs font-medium text-blue-700 mb-2">{I.shiftsLabel}</p>
+                        <div className="flex flex-wrap gap-4">
+                          {([['jour', I.shiftDay], ['soir', I.shiftEvening], ['nuit', I.shiftNight]] as [string, string][]).map(([val, lbl]) => (
+                            <label key={val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                              <input type="checkbox" disabled={isReadOnly}
+                                checked={form.inspectionShifts.includes(val)}
+                                onChange={e => setForm(f => ({
+                                  ...f,
+                                  inspectionShifts: e.target.checked
+                                    ? [...f.inspectionShifts, val]
+                                    : f.inspectionShifts.filter(s => s !== val),
+                                }))}
+                                className="w-4 h-4 rounded accent-teal-600 disabled:opacity-50" />
+                              {lbl}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Photos équipement */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">{I.photos}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {form.equipmentPhotos.map((src, idx) => (
+                      <div key={idx} className="relative">
+                        <img src={src} alt={`Équipement ${idx + 1}`}
+                          className="h-24 w-24 rounded-xl border border-gray-200 object-cover cursor-pointer"
+                          onClick={() => window.open(src, '_blank')} />
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => setForm(f => ({ ...f, equipmentPhotos: f.equipmentPhotos.filter((_, i) => i !== idx) }))}
+                            className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow text-gray-500 hover:text-red-500">
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {!isReadOnly && (
+                      <label className="flex flex-col items-center justify-center gap-1 cursor-pointer border-2 border-dashed border-gray-300 rounded-xl p-3 hover:border-teal-400 text-xs text-gray-500 h-24 w-24">
+                        <Camera size={18} className="text-teal-500" />
+                        {I.addPhoto}
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files ?? []);
+                            for (const file of files) {
+                              try {
+                                const b64 = await compressPhoto(file);
+                                setForm(f => ({ ...f, equipmentPhotos: [...f.equipmentPhotos, b64] }));
+                              } catch { /* ignore */ }
+                            }
+                            e.target.value = '';
+                          }} />
+                      </label>
+                    )}
+                    {isReadOnly && form.equipmentPhotos.length === 0 && (
+                      <p className="text-xs text-gray-400">{I.noPhoto}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Section 2 — Checklist */}
           {checklist && (
