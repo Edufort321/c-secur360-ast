@@ -2393,11 +2393,22 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
     return () => { cancelled = true; };
   }, [tenant]);
 
+  // Nom d'entreprise du tenant : pré-remplit le champ "Entreprise" des participants.
+  const [tenantName, setTenantName] = useState('');
+  useEffect(() => {
+    if (!tenant || !supabase) return;
+    let cancelled = false;
+    supabase.from('tenants').select('name').eq('subdomain', tenant).maybeSingle()
+      .then(({ data }: { data: { name?: string } | null }) => { if (!cancelled && data?.name) setTenantName(data.name); }, () => {});
+    return () => { cancelled = true; };
+  }, [tenant]);
+  const defaultCompany = tenantName || tenant;
+
   const roleOptions = Object.entries(t.roles).map(([k, v]) => ({ value: k, label: v }));
 
   const addParticipant = () => onChange(p => ({
     ...p,
-    participants: [...p.participants, { id: generateId(), name: '', role: 'travailleur', company: '', acknowledged: false, acknowledgedAt: '' }],
+    participants: [...p.participants, { id: generateId(), name: '', role: 'travailleur', company: defaultCompany, acknowledged: false, acknowledgedAt: '' }],
   }));
 
   const removeParticipant = (id: string) => onChange(p => ({
