@@ -56,6 +56,15 @@ export interface Participant {
   acknowledgedAt: string;
 }
 
+// Document du client joint à l'AST (AST client, fiche LOTO, autre) — photo ou fichier.
+export interface ClientDoc {
+  id: string;
+  category: 'ast' | 'loto' | 'other';
+  name: string;
+  mime: string;
+  data: string; // dataURL base64 (image ou PDF)
+}
+
 export type LOTOPhotoState = 'before' | 'during' | 'after' | 'verification';
 
 export interface LOTOPhoto {
@@ -125,6 +134,7 @@ export interface ASTPermit {
   };
 
   participants: Participant[];
+  clientDocs: ClientDoc[];
   supervisorSigName: string;
   supervisorSigCert: string;
   supervisorSigDate: string;
@@ -538,6 +548,7 @@ function createDefaultPermit(province: ProvinceCode, tenant?: string): ASTPermit
       energySources: [], lotoRequired: false, lotoRef: '',
     },
     participants: [],
+    clientDocs: [],
     workers: [],
     workerNotes: '',
     supervisorSigName: '', supervisorSigCert: '', supervisorSigDate: '', supervisorSigNotes: '',
@@ -1783,7 +1794,102 @@ function TaskSection({ ast, onChange, language, readOnly }: {
           </div>
         </div>
       </Card>
+
+      <ClientDocsCard ast={ast} onChange={onChange} language={language} readOnly={readOnly} />
     </div>
+  );
+}
+
+// ── Documents du client (AST / fiche LOTO) — photo ou fichier ──────────────
+function ClientDocsCard({ ast, onChange, language, readOnly }: {
+  ast: ASTPermit; onChange: (updater: (p: ASTPermit) => ASTPermit) => void;
+  language: Language; readOnly: boolean;
+}) {
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const docs = ast.clientDocs ?? [];
+
+  const add = async (category: ClientDoc['category'], files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const added: ClientDoc[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const data = await readFileAsDataUrl(f);
+        added.push({ id: generateId(), category, name: f.name, mime: f.type, data });
+      } catch { /* fichier ignoré */ }
+    }
+    if (added.length) onChange(p => ({ ...p, clientDocs: [...(p.clientDocs ?? []), ...added] }));
+  };
+  const remove = (id: string) => onChange(p => ({ ...p, clientDocs: (p.clientDocs ?? []).filter(d => d.id !== id) }));
+
+  const groups: { cat: ClientDoc['category']; label: string }[] = [
+    { cat: 'ast', label: tr('AST du client', 'Client JSA') },
+    { cat: 'loto', label: tr('Fiche LOTO du client', 'Client LOTO sheet') },
+  ];
+
+  const inputCls = 'hidden';
+  const btnCls = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer transition-colors';
+
+  return (
+    <Card title={tr('Documents du client', 'Client documents')} icon={<FileText className="w-5 h-5" />}>
+      <div className="space-y-5">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {tr("Joignez l'AST ou la fiche de verrouillage (LOTO) du client — par photo ou téléversement de document (image ou PDF).",
+              'Attach the client JSA or lockout (LOTO) sheet — by photo or document upload (image or PDF).')}
+        </p>
+
+        {groups.map(g => {
+          const items = docs.filter(d => d.category === g.cat);
+          return (
+            <div key={g.cat} className="rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+              <div className="px-3 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                {g.label}
+              </div>
+              <div className="p-3 space-y-2">
+                {items.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {items.map(d => (
+                      <div key={d.id} className="relative w-24">
+                        <a href={d.data} target="_blank" rel="noreferrer" className="block">
+                          {d.mime.startsWith('image/') ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={d.data} alt={d.name} className="h-24 w-24 rounded-lg border border-slate-200 dark:border-slate-600 object-cover" />
+                          ) : (
+                            <div className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 p-1 text-center">
+                              <FileText className="h-6 w-6 text-slate-400" />
+                              <span className="line-clamp-2 text-[10px] text-slate-500 dark:text-slate-400">{d.name}</span>
+                            </div>
+                          )}
+                        </a>
+                        {!readOnly && (
+                          <button type="button" onClick={() => remove(d.id)}
+                            className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-red-500 text-white shadow hover:bg-red-600">
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!readOnly && (
+                  <div className="flex flex-wrap gap-2">
+                    <label className={btnCls}>
+                      <Camera className="w-3.5 h-3.5" /> {tr('Prendre une photo', 'Take a photo')}
+                      <input type="file" accept="image/*" capture="environment" className={inputCls}
+                        onChange={e => { add(g.cat, e.target.files); e.currentTarget.value = ''; }} />
+                    </label>
+                    <label className={btnCls}>
+                      <Plus className="w-3.5 h-3.5" /> {tr('Téléverser un document', 'Upload a document')}
+                      <input type="file" accept="image/*,application/pdf" multiple className={inputCls}
+                        onChange={e => { add(g.cat, e.target.files); e.currentTarget.value = ''; }} />
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 
