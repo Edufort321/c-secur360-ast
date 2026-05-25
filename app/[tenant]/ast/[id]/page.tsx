@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { createClient } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 
@@ -20,6 +21,7 @@ const supabase = createClient(
 export default function ASTDetailPage() {
   const params  = useParams();
   const router  = useRouter();
+  const { lang } = useLanguage();
   const tenant  = (params?.tenant as string) || 'demo';
   const id      = params?.id as string;
 
@@ -88,7 +90,7 @@ export default function ASTDetailPage() {
       <PortalHeader tenant={tenant} />
       <ASTPermit
         tenant={tenant}
-        language={data?.language ?? 'fr'}
+        language={lang}
         selectedProvince={data?.province ?? 'QC'}
         enableAutoSave
         initialData={data}

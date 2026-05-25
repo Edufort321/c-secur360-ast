@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
+import { useLanguage } from '@/contexts/LanguageContext';
 import dynamic from 'next/dynamic';
 
 const ASTPermit = dynamic(
@@ -37,6 +38,7 @@ function Spinner() {
 function NouvelASTInner() {
   const params = useParams();
   const router = useRouter();
+  const { lang } = useLanguage();
   const tenant = (params?.tenant as string) || 'demo';
   const [province, setProvince] = useState<ProvinceCode>('QC');
 
@@ -44,7 +46,7 @@ function NouvelASTInner() {
     <>
       <PortalHeader tenant={tenant} />
       <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-slate-200 lg:px-6">
-        <label className="text-sm font-medium text-slate-600">Province :</label>
+        <label className="text-sm font-medium text-slate-600">{lang === 'fr' ? 'Province :' : 'Province:'}</label>
         <select
           value={province}
           onChange={e => setProvince(e.target.value as ProvinceCode)}
@@ -57,7 +59,7 @@ function NouvelASTInner() {
       </div>
       <ASTPermit
         tenant={tenant}
-        language="fr"
+        language={lang}
         selectedProvince={province}
         enableAutoSave
         onSave={() => router.push(`/${tenant}/ast`)}

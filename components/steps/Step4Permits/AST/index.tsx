@@ -558,7 +558,7 @@ function createDefaultPermit(province: ProvinceCode, tenant?: string): ASTPermit
 const T = {
   fr: {
     title: 'Analyse Sécurité Travail',
-    back: 'Retour aux permis',
+    back: 'Retour à AST tableau de bord',
     permit: 'Permis',
     completion: 'Complétion',
     sections: {
@@ -826,7 +826,7 @@ const T = {
   },
   en: {
     title: 'Job Safety Analysis',
-    back: 'Back to permits',
+    back: 'Back to AST dashboard',
     permit: 'Permit',
     completion: 'Completion',
     sections: {
