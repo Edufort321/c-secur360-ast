@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import {
   Loader2, AlertTriangle, CheckCircle, FileText, Users, Wind,
-  MapPin, Shield, QrCode, BarChart3,
+  MapPin, Shield, QrCode, BarChart3, LogIn, LogOut, X,
 } from 'lucide-react';
 
 const supabase = createClient(
@@ -77,6 +77,12 @@ export default function ConfinedSpacePublicView() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
+  const [entryModal, setEntryModal] = useState(false);
+  const [entryName, setEntryName] = useState('');
+  const [entryCompany, setEntryCompany] = useState('');
+  const [entryAction, setEntryAction] = useState<'entry' | 'exit'>('entry');
+  const [entrySaving, setEntrySaving] = useState(false);
+  const [entryDone, setEntryDone] = useState(false);
 
   useEffect(() => {
     if (!permitNumber) return;
@@ -97,6 +103,40 @@ export default function ConfinedSpacePublicView() {
       }
     })();
   }, [permitNumber, tenant]);
+
+  async function saveEntry() {
+    if (!entryName.trim() || !data) return;
+    setEntrySaving(true);
+    try {
+      // Fetch latest permit data to avoid overwriting concurrent changes
+      const { data: latest } = await supabase.from('confined_space_permits').select('data').eq('permit_number', permitNumber).eq('tenant_id', tenant).single();
+      const permit = latest?.data ?? data;
+      const registry = permit.entryRegistry ?? { personnel: [], entryLog: [], activeEntrants: [] };
+      // Find or create personnel entry
+      let person = (registry.personnel ?? []).find((p: any) => p.name?.toLowerCase() === entryName.trim().toLowerCase());
+      const newPersonId = person?.id ?? `anon-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      if (!person) {
+        person = { id: newPersonId, name: entryName.trim(), company: entryCompany.trim(), role: 'entrant', addedAt: new Date().toISOString() };
+        registry.personnel = [...(registry.personnel ?? []), person];
+      }
+      // Add entry/exit log
+      const logEntry = { id: `log-${Date.now()}`, personnelId: newPersonId, action: entryAction, timestamp: new Date().toISOString(), authorizedBy: 'auto (QR)', notes: entryCompany.trim() || undefined };
+      registry.entryLog = [...(registry.entryLog ?? []), logEntry];
+      // Update activeEntrants
+      if (entryAction === 'entry') {
+        registry.activeEntrants = [...(registry.activeEntrants ?? []), newPersonId];
+      } else {
+        registry.activeEntrants = (registry.activeEntrants ?? []).filter((id: string) => id !== newPersonId);
+      }
+      const updated = { ...permit, entryRegistry: registry, updated_at: new Date().toISOString() };
+      await supabase.from('confined_space_permits').upsert({ permit_number: permitNumber, tenant_id: tenant, data: updated, updated_at: updated.updated_at });
+      setData(updated);
+      setEntryDone(true);
+      setEntryModal(false);
+      setEntryName(''); setEntryCompany('');
+      setTimeout(() => setEntryDone(false), 4000);
+    } catch { /* ignore — offline mode */ } finally { setEntrySaving(false); }
+  }
 
   if (loading) {
     return (
@@ -272,12 +312,80 @@ export default function ConfinedSpacePublicView() {
           </Section>
         )}
 
+        {/* Enregistrement entrée/sortie */}
+        {d.status === 'active' && (
+          <div className="mt-4">
+            {entryDone && (
+              <div className="mb-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                <CheckCircle size={16} /> Mouvement enregistré ✓
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setEntryAction('entry'); setEntryModal(true); }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-600 px-4 py-3 font-semibold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all">
+                <LogIn size={18} /> Enregistrer entrée
+              </button>
+              <button onClick={() => { setEntryAction('exit'); setEntryModal(true); }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all">
+                <LogOut size={18} /> Enregistrer sortie
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-6 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs text-slate-500">
           <QrCode size={14} className="shrink-0 text-slate-400" />
-          <span>Vue publique en lecture seule — {permitNumber}</span>
+          <span>Vue publique — {permitNumber}</span>
         </div>
       </div>
+
+      {/* Entry modal */}
+      {entryModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">
+                {entryAction === 'entry' ? '👷 Enregistrer entrée' : '🚪 Enregistrer sortie'}
+              </h2>
+              <button onClick={() => setEntryModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Nom complet *</label>
+                <input
+                  autoFocus
+                  value={entryName}
+                  onChange={e => setEntryName(e.target.value)}
+                  placeholder="Prénom et nom"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Entreprise</label>
+                <input
+                  value={entryCompany}
+                  onChange={e => setEntryCompany(e.target.value)}
+                  placeholder="Nom de l'entreprise (optionnel)"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+              <p className="text-xs text-slate-400">Heure : {new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })} · Permis : {permitNumber}</p>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button onClick={() => setEntryModal(false)}
+                className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                Annuler
+              </button>
+              <button onClick={saveEntry} disabled={!entryName.trim() || entrySaving}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${entryAction === 'entry' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-700 hover:bg-slate-800'}`}>
+                {entrySaving ? <Loader2 size={16} className="animate-spin" /> : entryAction === 'entry' ? <LogIn size={16} /> : <LogOut size={16} />}
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
