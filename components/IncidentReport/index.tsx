@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
@@ -19,19 +18,6 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 export type IncidentType = 'accident' | 'near_miss' | 'vehicle' | 'property' | 'medical';
 export type IncidentStatus = 'draft' | 'submitted' | 'closed';
 export type Province = 'QC' | 'ON' | 'BC' | 'AB' | 'SK' | 'MB' | 'NB' | 'NS' | 'PE' | 'NL' | 'YT' | 'NT' | 'NU';
-
-// Dynamic import du modèle corporel (MIT — react-body-highlighter)
-const BodyModel = dynamic<{
-  data: Array<{ name: string; muscles: string[]; frequency?: number }>;
-  onClick?: (p: { muscle: string }) => void;
-  type?: 'anterior' | 'posterior';
-  highlightedColors?: string[];
-  bodyColor?: string;
-  style?: React.CSSProperties;
-}>(
-  () => import('react-body-highlighter').then(m => ({ default: m.default || (m as any) })),
-  { ssr: false, loading: () => <div className="w-40 h-64 bg-gray-100 rounded-xl animate-pulse mx-auto" /> }
-);
 
 interface InjuredPerson {
   id: string;
@@ -144,29 +130,54 @@ export interface DayCounter {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-// Libellés FR pour chaque zone anatomique (slugs de react-body-highlighter)
-const MUSCLE_LABELS: Record<string, string> = {
-  'head':            'Tête',
-  'neck':            'Cou',
-  'trapezius':       'Trapèze / Épaules',
-  'front-deltoids':  'Épaule — avant',
-  'back-deltoids':   'Épaule — arrière',
-  'chest':           'Poitrine / Thorax',
-  'biceps':          'Biceps (bras avant)',
-  'triceps':         'Triceps (bras arrière)',
-  'forearm':         'Avant-bras',
-  'abs':             'Abdomen',
-  'obliques':        'Flancs / Obliques',
-  'upper-back':      'Haut du dos',
-  'lower-back':      'Bas du dos',
-  'gluteal':         'Fessier',
-  'adductor':        'Adducteurs (intérieur cuisse)',
-  'abductors':       'Abducteurs (hanche / extérieur)',
-  'quadriceps':      'Quadriceps (cuisse avant)',
-  'hamstring':       'Ischio-jambiers (cuisse arrière)',
-  'knees':           'Genoux',
-  'left-soleus':     'Mollet gauche',
-  'right-soleus':    'Mollet droit',
+// Libellés FR pour chaque zone du schéma corporel custom (gauche/droite distincts)
+const BODY_REGION_LABELS: Record<string, string> = {
+  // ── Vue avant ──
+  'head':             'Tête / Crâne',
+  'neck':             'Cou',
+  'left-shoulder':    'Épaule gauche',
+  'right-shoulder':   'Épaule droite',
+  'chest':            'Poitrine / Thorax',
+  'abdomen':          'Abdomen',
+  'left-hip':         'Hanche gauche',
+  'right-hip':        'Hanche droite',
+  'left-arm':         'Bras gauche',
+  'right-arm':        'Bras droit',
+  'left-forearm':     'Avant-bras gauche',
+  'right-forearm':    'Avant-bras droit',
+  'left-hand':        'Main gauche',
+  'right-hand':       'Main droite',
+  'left-thigh':       'Cuisse gauche',
+  'right-thigh':      'Cuisse droite',
+  'left-knee':        'Genou gauche',
+  'right-knee':       'Genou droit',
+  'left-lower-leg':   'Jambe gauche',
+  'right-lower-leg':  'Jambe droite',
+  'left-foot':        'Pied gauche',
+  'right-foot':       'Pied droit',
+  // ── Vue arrière ──
+  'head-back':          'Tête (arrière)',
+  'neck-back':          'Cou (arrière)',
+  'left-trapezius':     'Épaule / Trapèze gauche',
+  'right-trapezius':    'Épaule / Trapèze droit',
+  'upper-back':         'Haut du dos',
+  'lower-back':         'Bas du dos',
+  'left-buttock':       'Fessier gauche',
+  'right-buttock':      'Fessier droit',
+  'left-arm-back':      'Bras gauche (arrière)',
+  'right-arm-back':     'Bras droit (arrière)',
+  'left-forearm-back':  'Avant-bras gauche (arrière)',
+  'right-forearm-back': 'Avant-bras droit (arrière)',
+  'left-hand-back':     'Main gauche (arrière)',
+  'right-hand-back':    'Main droite (arrière)',
+  'left-hamstring':     'Cuisse gauche (arrière)',
+  'right-hamstring':    'Cuisse droite (arrière)',
+  'left-knee-back':     'Genou gauche (arrière)',
+  'right-knee-back':    'Genou droit (arrière)',
+  'left-calf':          'Mollet gauche',
+  'right-calf':         'Mollet droit',
+  'left-foot-back':     'Pied gauche (arrière)',
+  'right-foot-back':    'Pied droit (arrière)',
 };
 
 const PROVINCE_INFO: Record<Province, {
@@ -435,7 +446,7 @@ function Toggle({ checked, onChange, label, disabled }: {
   );
 }
 
-// ── Body Diagram (react-body-highlighter — MIT) ───────────────────────────────
+// ── Body Diagram (SVG custom — gauche/droite distincts, mains et pieds inclus) ──
 
 function BodyDiagram({ selected, onChange, readOnly }: {
   selected: string[];
@@ -444,19 +455,193 @@ function BodyDiagram({ selected, onChange, readOnly }: {
 }) {
   const [view, setView] = useState<'anterior' | 'posterior'>('anterior');
 
-  // Construire le dataset pour surligner les zones sélectionnées
-  const modelData = selected.length > 0
-    ? [{ name: 'Blessures', muscles: selected, frequency: 2 }]
-    : [];
-
-  function handleClick({ muscle }: { muscle: string }) {
+  const toggle = (id: string) => {
     if (readOnly) return;
-    onChange(
-      selected.includes(muscle)
-        ? selected.filter(m => m !== muscle)
-        : [...selected, muscle]
-    );
-  }
+    onChange(selected.includes(id) ? selected.filter(m => m !== id) : [...selected, id]);
+  };
+
+  // Retourne les attributs SVG pour une région donnée
+  const rp = (id: string) => ({
+    fill: selected.includes(id) ? '#ef4444' : '#c8d3db',
+    stroke: selected.includes(id) ? '#b91c1c' : '#8fa0ad',
+    strokeWidth: 0.7 as number,
+    style: { cursor: readOnly ? 'default' : 'pointer', transition: 'fill 0.1s' } as React.CSSProperties,
+    onClick: () => toggle(id),
+  });
+
+  // Contenu SVG vue avant (anterior)
+  // Note : gauche du PATIENT = côté droit de l'écran (convention anatomique)
+  // On garde la convention intuitive pour l'utilisateur : gauche à gauche, droite à droite
+  const anteriorSVG = (
+    <g>
+      {/* Tête */}
+      <ellipse cx="50" cy="11" rx="11" ry="11" {...rp('head')}>
+        <title>{BODY_REGION_LABELS['head']}</title>
+      </ellipse>
+      {/* Cou */}
+      <rect x="46" y="22" width="8" height="9" rx="2" {...rp('neck')}>
+        <title>{BODY_REGION_LABELS['neck']}</title>
+      </rect>
+      {/* Épaule gauche */}
+      <polygon points="35,30 46,30 44,52 16,54 14,43 26,34" {...rp('left-shoulder')}>
+        <title>{BODY_REGION_LABELS['left-shoulder']}</title>
+      </polygon>
+      {/* Épaule droite */}
+      <polygon points="54,30 65,30 74,34 86,43 84,54 56,52" {...rp('right-shoulder')}>
+        <title>{BODY_REGION_LABELS['right-shoulder']}</title>
+      </polygon>
+      {/* Poitrine */}
+      <polygon points="44,30 56,30 59,78 41,78" {...rp('chest')}>
+        <title>{BODY_REGION_LABELS['chest']}</title>
+      </polygon>
+      {/* Abdomen */}
+      <polygon points="41,78 59,78 57,115 43,115" {...rp('abdomen')}>
+        <title>{BODY_REGION_LABELS['abdomen']}</title>
+      </polygon>
+      {/* Hanche gauche */}
+      <polygon points="43,115 50,115 50,132 31,132 34,122" {...rp('left-hip')}>
+        <title>{BODY_REGION_LABELS['left-hip']}</title>
+      </polygon>
+      {/* Hanche droite */}
+      <polygon points="50,115 57,115 66,122 69,132 50,132" {...rp('right-hip')}>
+        <title>{BODY_REGION_LABELS['right-hip']}</title>
+      </polygon>
+      {/* Bras gauche */}
+      <rect x="13" y="54" width="13" height="46" rx="5" {...rp('left-arm')}>
+        <title>{BODY_REGION_LABELS['left-arm']}</title>
+      </rect>
+      {/* Bras droit */}
+      <rect x="74" y="54" width="13" height="46" rx="5" {...rp('right-arm')}>
+        <title>{BODY_REGION_LABELS['right-arm']}</title>
+      </rect>
+      {/* Avant-bras gauche */}
+      <rect x="11" y="103" width="11" height="42" rx="4" {...rp('left-forearm')}>
+        <title>{BODY_REGION_LABELS['left-forearm']}</title>
+      </rect>
+      {/* Avant-bras droit */}
+      <rect x="78" y="103" width="11" height="42" rx="4" {...rp('right-forearm')}>
+        <title>{BODY_REGION_LABELS['right-forearm']}</title>
+      </rect>
+      {/* Main gauche */}
+      <rect x="10" y="148" width="14" height="18" rx="5" {...rp('left-hand')}>
+        <title>{BODY_REGION_LABELS['left-hand']}</title>
+      </rect>
+      {/* Main droite */}
+      <rect x="76" y="148" width="14" height="18" rx="5" {...rp('right-hand')}>
+        <title>{BODY_REGION_LABELS['right-hand']}</title>
+      </rect>
+      {/* Cuisse gauche */}
+      <rect x="30" y="132" width="19" height="50" rx="5" {...rp('left-thigh')}>
+        <title>{BODY_REGION_LABELS['left-thigh']}</title>
+      </rect>
+      {/* Cuisse droite */}
+      <rect x="51" y="132" width="19" height="50" rx="5" {...rp('right-thigh')}>
+        <title>{BODY_REGION_LABELS['right-thigh']}</title>
+      </rect>
+      {/* Genou gauche */}
+      <rect x="30" y="182" width="18" height="13" rx="4" {...rp('left-knee')}>
+        <title>{BODY_REGION_LABELS['left-knee']}</title>
+      </rect>
+      {/* Genou droit */}
+      <rect x="52" y="182" width="18" height="13" rx="4" {...rp('right-knee')}>
+        <title>{BODY_REGION_LABELS['right-knee']}</title>
+      </rect>
+      {/* Jambe gauche */}
+      <rect x="31" y="195" width="16" height="34" rx="4" {...rp('left-lower-leg')}>
+        <title>{BODY_REGION_LABELS['left-lower-leg']}</title>
+      </rect>
+      {/* Jambe droite */}
+      <rect x="53" y="195" width="16" height="34" rx="4" {...rp('right-lower-leg')}>
+        <title>{BODY_REGION_LABELS['right-lower-leg']}</title>
+      </rect>
+      {/* Pied gauche */}
+      <rect x="23" y="229" width="25" height="10" rx="4" {...rp('left-foot')}>
+        <title>{BODY_REGION_LABELS['left-foot']}</title>
+      </rect>
+      {/* Pied droit */}
+      <rect x="52" y="229" width="25" height="10" rx="4" {...rp('right-foot')}>
+        <title>{BODY_REGION_LABELS['right-foot']}</title>
+      </rect>
+    </g>
+  );
+
+  // Contenu SVG vue arrière (posterior) — mêmes positions, IDs différents
+  const posteriorSVG = (
+    <g>
+      <ellipse cx="50" cy="11" rx="11" ry="11" {...rp('head-back')}>
+        <title>{BODY_REGION_LABELS['head-back']}</title>
+      </ellipse>
+      <rect x="46" y="22" width="8" height="9" rx="2" {...rp('neck-back')}>
+        <title>{BODY_REGION_LABELS['neck-back']}</title>
+      </rect>
+      {/* Trapèze / Épaule gauche (arrière) */}
+      <polygon points="35,30 46,30 44,52 16,54 14,43 26,34" {...rp('left-trapezius')}>
+        <title>{BODY_REGION_LABELS['left-trapezius']}</title>
+      </polygon>
+      <polygon points="54,30 65,30 74,34 86,43 84,54 56,52" {...rp('right-trapezius')}>
+        <title>{BODY_REGION_LABELS['right-trapezius']}</title>
+      </polygon>
+      {/* Haut du dos */}
+      <polygon points="44,30 56,30 59,78 41,78" {...rp('upper-back')}>
+        <title>{BODY_REGION_LABELS['upper-back']}</title>
+      </polygon>
+      {/* Bas du dos */}
+      <polygon points="41,78 59,78 57,115 43,115" {...rp('lower-back')}>
+        <title>{BODY_REGION_LABELS['lower-back']}</title>
+      </polygon>
+      {/* Fessier gauche */}
+      <polygon points="43,115 50,115 50,132 31,132 34,122" {...rp('left-buttock')}>
+        <title>{BODY_REGION_LABELS['left-buttock']}</title>
+      </polygon>
+      <polygon points="50,115 57,115 66,122 69,132 50,132" {...rp('right-buttock')}>
+        <title>{BODY_REGION_LABELS['right-buttock']}</title>
+      </polygon>
+      <rect x="13" y="54" width="13" height="46" rx="5" {...rp('left-arm-back')}>
+        <title>{BODY_REGION_LABELS['left-arm-back']}</title>
+      </rect>
+      <rect x="74" y="54" width="13" height="46" rx="5" {...rp('right-arm-back')}>
+        <title>{BODY_REGION_LABELS['right-arm-back']}</title>
+      </rect>
+      <rect x="11" y="103" width="11" height="42" rx="4" {...rp('left-forearm-back')}>
+        <title>{BODY_REGION_LABELS['left-forearm-back']}</title>
+      </rect>
+      <rect x="78" y="103" width="11" height="42" rx="4" {...rp('right-forearm-back')}>
+        <title>{BODY_REGION_LABELS['right-forearm-back']}</title>
+      </rect>
+      <rect x="10" y="148" width="14" height="18" rx="5" {...rp('left-hand-back')}>
+        <title>{BODY_REGION_LABELS['left-hand-back']}</title>
+      </rect>
+      <rect x="76" y="148" width="14" height="18" rx="5" {...rp('right-hand-back')}>
+        <title>{BODY_REGION_LABELS['right-hand-back']}</title>
+      </rect>
+      {/* Ischio-jambiers */}
+      <rect x="30" y="132" width="19" height="50" rx="5" {...rp('left-hamstring')}>
+        <title>{BODY_REGION_LABELS['left-hamstring']}</title>
+      </rect>
+      <rect x="51" y="132" width="19" height="50" rx="5" {...rp('right-hamstring')}>
+        <title>{BODY_REGION_LABELS['right-hamstring']}</title>
+      </rect>
+      <rect x="30" y="182" width="18" height="13" rx="4" {...rp('left-knee-back')}>
+        <title>{BODY_REGION_LABELS['left-knee-back']}</title>
+      </rect>
+      <rect x="52" y="182" width="18" height="13" rx="4" {...rp('right-knee-back')}>
+        <title>{BODY_REGION_LABELS['right-knee-back']}</title>
+      </rect>
+      {/* Mollets */}
+      <rect x="31" y="195" width="16" height="34" rx="4" {...rp('left-calf')}>
+        <title>{BODY_REGION_LABELS['left-calf']}</title>
+      </rect>
+      <rect x="53" y="195" width="16" height="34" rx="4" {...rp('right-calf')}>
+        <title>{BODY_REGION_LABELS['right-calf']}</title>
+      </rect>
+      <rect x="23" y="229" width="25" height="10" rx="4" {...rp('left-foot-back')}>
+        <title>{BODY_REGION_LABELS['left-foot-back']}</title>
+      </rect>
+      <rect x="52" y="229" width="25" height="10" rx="4" {...rp('right-foot-back')}>
+        <title>{BODY_REGION_LABELS['right-foot-back']}</title>
+      </rect>
+    </g>
+  );
 
   return (
     <div className="flex flex-col items-center">
@@ -477,44 +662,32 @@ function BodyDiagram({ selected, onChange, readOnly }: {
         ))}
       </div>
 
-      {/* Modèle corporel SVG */}
-      <div
-        className="w-44 select-none"
-        style={{ cursor: readOnly ? 'default' : 'pointer' }}
-      >
-        <BodyModel
-          data={modelData}
-          onClick={handleClick}
-          type={view}
-          highlightedColors={['#ef4444']}
-          bodyColor="#dde3ea"
-          style={{ width: '100%' }}
-        />
+      {/* Schéma SVG */}
+      <div className="w-40 select-none">
+        <svg viewBox="0 0 100 242" width="100%" style={{ display: 'block' }}>
+          {view === 'anterior' ? anteriorSVG : posteriorSVG}
+        </svg>
       </div>
 
-      {/* Indication */}
       {!readOnly && selected.length === 0 && (
         <p className="mt-3 text-xs text-gray-400 text-center">
           Cliquer sur les zones blessées du schéma
         </p>
       )}
 
-      {/* Badges zones sélectionnées */}
       {selected.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5 justify-center max-w-xs">
-          {selected.map(muscle => (
+          {selected.map(id => (
             <span
-              key={muscle}
+              key={id}
               className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs border border-red-200 font-medium"
             >
-              {MUSCLE_LABELS[muscle] || muscle}
+              {BODY_REGION_LABELS[id] || id}
               {!readOnly && (
                 <button
-                  onClick={() => onChange(selected.filter(m => m !== muscle))}
+                  onClick={() => onChange(selected.filter(m => m !== id))}
                   className="hover:text-red-900 font-bold text-sm leading-none ml-0.5"
-                >
-                  ×
-                </button>
+                >×</button>
               )}
             </span>
           ))}
