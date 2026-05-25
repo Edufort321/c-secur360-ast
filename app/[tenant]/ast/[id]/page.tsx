@@ -56,7 +56,7 @@ export default function ASTDetailPage() {
     })();
   }, [id, tenant]);
 
-  const handleBack = () => router.push(`/${tenant}/ast`);
+  const handleBack = () => { router.push(`/${tenant}/ast`); router.refresh(); };
 
   if (loading) {
     return (

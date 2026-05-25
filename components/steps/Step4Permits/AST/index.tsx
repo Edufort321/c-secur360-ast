@@ -4023,23 +4023,26 @@ export default function ASTPermit({
     setAst(p => ({ ...p, province: resolvedProvince }));
   }, [resolvedProvince]);
 
-  const persistAst = useCallback(async (data: ASTPermit) => {
+  const persistAst = useCallback(async (data: ASTPermit): Promise<boolean> => {
     setSaveStatus('saving');
     try {
       const payload = { ...data, updated_at: new Date().toISOString() };
       if (supabase) {
-        await supabase.from('ast_permits').upsert({
+        const { error } = await supabase.from('ast_permits').upsert({
           permit_number: payload.permit_number,
           tenant_id: tenant,
           data: payload,
           updated_at: payload.updated_at,
         });
+        if (error) { setSaveStatus('error'); return false; }
       }
       localStorage.setItem(`ast-permit-${payload.permit_number}`, JSON.stringify(payload));
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
+      return true;
     } catch {
       setSaveStatus('error');
+      return false;
     }
   }, [tenant]);
 
@@ -4091,17 +4094,18 @@ export default function ASTPermit({
 
   const handleSaveNow = async () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    await persistAst(ast);
-    if (onSave) onSave(ast);
+    const ok = await persistAst(ast);
+    if (ok && onSave) onSave(ast);
   };
 
-  // Change le statut ET persiste immédiatement la nouvelle valeur (évite que le
-  // statut reste "draft" parce que la sauvegarde débouncée n'avait pas encore eu lieu).
+  // Change le statut ET persiste immédiatement la nouvelle valeur.
+  // Ne navigue PAS si la sauvegarde a échoué (évite de perdre le changement).
   const applyStatus = async (status: PermitStatus, navigate = true) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     const next: ASTPermit = { ...ast, status, updated_at: new Date().toISOString() };
     setAst(next);
-    await persistAst(next);
+    const ok = await persistAst(next);
+    if (!ok) return; // save failed — stay on page, error shown in header
     if (navigate && onSave) onSave(next);
   };
 
