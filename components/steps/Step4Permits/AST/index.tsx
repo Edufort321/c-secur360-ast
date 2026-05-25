@@ -6,7 +6,7 @@ import {
   Menu, X, Save, Download, Printer, Plus, ChevronRight,
   AlertTriangle, Home, FileText, BarChart3, Trash2,
   ChevronUp, ChevronDown, AlertCircle, QrCode, Lock, Zap,
-  Camera, UserCheck, UserX, BookMarked, Star, Search, Pencil, Check,
+  Camera, UserCheck, UserX, BookMarked, Star, Search, Pencil, Check, Loader2,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@supabase/supabase-js';
@@ -2677,12 +2677,121 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
   );
 }
 
+// ── Génération PDF de l'AST (champs remplis seulement) ─────────────────────
+async function generateAstPdf(ast: ASTPermit, language: Language) {
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const { default: jsPDF } = await import('jspdf');
+  const autoTable = (await import('jspdf-autotable')).default;
+
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const margin = 14;
+  let y = 16;
+
+  doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+  doc.text(tr('Analyse Sécurité au Travail', 'Job Safety Analysis'), margin, y);
+  y += 7;
+  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+  doc.text(ast.permit_number, margin, y);
+  y += 6;
+
+  const ti = ast.taskInfo;
+  const infoRows = ([
+    [tr('Province', 'Province'), ast.province],
+    [tr('Lieu des travaux', 'Work location'), ti.workLocation],
+    [tr('Projet', 'Project'), ti.projectNumber],
+    [tr('Entrepreneur', 'Contractor'), ti.contractor],
+    [tr('Superviseur', 'Supervisor'), ti.supervisor],
+    [tr('Certification superviseur', 'Supervisor certification'), ti.supervisorCert],
+    [tr('Date', 'Date'), ti.taskDate],
+    [tr('Durée estimée', 'Estimated duration'), ti.estimatedDuration],
+    [tr('Description de la tâche', 'Task description'), ti.taskDescription],
+    [tr('Conditions spéciales', 'Special conditions'), ti.specialConditions],
+    [tr('Référence réglementaire', 'Regulatory reference'), ti.regulatoryRef],
+  ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim());
+
+  autoTable(doc, {
+    startY: y + 2,
+    head: [[tr('Informations générales', 'General information'), '']],
+    body: infoRows.map(([k, v]) => [k, String(v)]),
+    theme: 'striped',
+    headStyles: { fillColor: [13, 148, 136] },
+    styles: { fontSize: 9, cellPadding: 2 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
+    margin: { left: margin, right: margin },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+
+  // Étapes de travail
+  if (ast.jobSteps.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [[tr('Étape', 'Step'), tr('Dangers', 'Hazards'), tr('Moyens de contrôle', 'Controls'), tr('Risque', 'Risk')]],
+      body: ast.jobSteps.map(s => [
+        s.description || '—',
+        (s.hazards || []).join(', ') || '—',
+        (s.controls || []).join(', ') || '—',
+        `${s.riskBeforeProb * s.riskBeforeSev} → ${s.riskAfterProb * s.riskAfterSev}`,
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [13, 148, 136] },
+      styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
+      columnStyles: { 0: { cellWidth: 45 }, 3: { cellWidth: 22, halign: 'center' } },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+  }
+
+  // EPI requis
+  const ppe = ast.ppeRequirements.filter(p => p.required);
+  if (ppe.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [[tr('EPI requis', 'Required PPE'), tr('Spécification', 'Specification')]],
+      body: ppe.map(p => [p.item, p.specification || '—']),
+      theme: 'striped',
+      headStyles: { fillColor: [13, 148, 136] },
+      styles: { fontSize: 9, cellPadding: 2 },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+  }
+
+  // Participants
+  if (ast.participants.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [[tr('Participant', 'Participant'), tr('Rôle', 'Role'), tr('Entreprise', 'Company'), tr('Prise de connaissance', 'Acknowledged')]],
+      body: ast.participants.map(p => [
+        p.name || '—',
+        p.role || '—',
+        p.company || '—',
+        p.acknowledged ? (p.acknowledgedAt ? new Date(p.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : tr('Oui', 'Yes')) : tr('Non', 'No'),
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [13, 148, 136] },
+      styles: { fontSize: 8, cellPadding: 2 },
+      margin: { left: margin, right: margin },
+    });
+  }
+
+  doc.save(`${ast.permit_number}.pdf`);
+}
+
 // ── Section: Finalization ──────────────────────────────────────────────────
 function FinalizationSection({ ast, completion, language, readOnly, onChange, onSave, tenant }: {
   ast: ASTPermit; completion: number; language: Language; readOnly: boolean;
   onChange: (updater: (p: ASTPermit) => ASTPermit) => void; onSave: () => void; tenant: string;
 }) {
   const t = T[language].finalization;
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try { await generateAstPdf(ast, language); }
+    catch { alert(tr('Échec de la génération du PDF.', 'PDF generation failed.')); }
+    finally { setPdfBusy(false); }
+  };
 
   const field = (key: keyof ASTPermit, val: string) =>
     onChange(p => ({ ...p, [key]: val }));
@@ -2797,6 +2906,23 @@ function FinalizationSection({ ast, completion, language, readOnly, onChange, on
           </button>
         </div>
       )}
+
+      {/* Export PDF — pour transmettre l'AST complété (champs remplis seulement) */}
+      <div className="mb-6 flex flex-col items-start gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 sm:flex-row sm:items-center print:hidden">
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{tr('Exporter en PDF', 'Export to PDF')}</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">{tr('Téléchargez le PDF pour le transmettre (seuls les champs remplis apparaissent).', 'Download the PDF to share it (only filled fields appear).')}</div>
+        </div>
+        <button
+          type="button"
+          onClick={downloadPdf}
+          disabled={pdfBusy}
+          className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60"
+        >
+          {pdfBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {tr('Télécharger PDF', 'Download PDF')}
+        </button>
+      </div>
 
       <TeamShareLink permitNumber={ast.permit_number} tenant={tenant} language={language} />
       <QRCard permitNumber={ast.permit_number} tenant={tenant} type="ast" language={language} />
