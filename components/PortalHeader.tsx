@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home, Globe } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -140,6 +140,11 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
                         className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-200 hover:bg-white/10">
                         <LayoutGrid size={16} className="shrink-0 text-blue-400" />
                         <span className="font-semibold">{t('modules')}</span>
+                      </Link>
+                      <Link href="/" onClick={close}
+                        className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-gray-300 hover:bg-white/10">
+                        <Globe size={16} className="shrink-0 text-gray-400" />
+                        {lang === 'fr' ? 'Page publique' : 'Public page'}
                       </Link>
                       <div className="mt-1 max-h-64 overflow-y-auto">
                         {visibleModules.map(m => {

@@ -108,9 +108,9 @@ export const MODULES: ModuleDef[] = [
   {
     key: 'todo',
     labelFr: 'To-Do / Tâches', labelEn: 'To-Do / Tasks',
-    descFr: 'Liste de tâches du tenant : suivi, assignation, échéances. (à développer)',
-    descEn: 'Tenant task list: tracking, assignment, due dates. (to be developed)',
-    icon: ListChecks, basePath: 'todo', color: 'text-indigo-600', accent: 'bg-indigo-600', status: 'soon',
+    descFr: 'Tâches : suivi, assignation, liste de vérification, photos, échéances.',
+    descEn: 'Task list: tracking, assignment, checklist, photos, due dates.',
+    icon: ListChecks, basePath: 'todo', color: 'text-indigo-600', accent: 'bg-indigo-600', status: 'available',
   },
 ];
 
