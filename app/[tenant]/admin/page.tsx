@@ -893,7 +893,24 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
                 <td className="px-2"><input className={inp} value={r.employee_name} onChange={e => upd(i, 'employee_name', e.target.value)} placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Assigné à', 'Assigned to')} /></td>
                 <td className="px-2">
                   <div className="flex items-center gap-1">
-                    <input type="number" step="0.01" className={`${inp} w-20`} value={r.km_rate_override} onChange={e => upd(i, 'km_rate_override', e.target.value)} placeholder={tr('Global', 'Global')} />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      className={`${inp} w-20`}
+                      value={r.km_rate_override}
+                      placeholder={tr('Global', 'Global')}
+                      onChange={e => {
+                        // normalise virgule → point, retire tout sauf chiffres et un seul point
+                        const raw = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+                        const parts = raw.split('.');
+                        const clean = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : raw;
+                        upd(i, 'km_rate_override', clean);
+                      }}
+                      onBlur={e => {
+                        const v = parseFloat(e.target.value.replace(',', '.'));
+                        upd(i, 'km_rate_override', isNaN(v) ? '' : v.toFixed(2));
+                      }}
+                    />
                     <span className="text-xs text-gray-400">/km</span>
                   </div>
                 </td>
