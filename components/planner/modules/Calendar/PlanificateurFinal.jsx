@@ -34,7 +34,6 @@ export function PlanificateurFinal({
     onCreateEvent,
     onManageConges,
     onManageResources,
-    onLogout,
 }) {
     // Hook de traduction
     const { t, currentLanguage } = useLanguage();
@@ -756,24 +755,18 @@ export function PlanificateurFinal({
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header avec contrôles */}
-            <div className="bg-white shadow-sm border-b p-4">
+        <div className="bg-gray-50">
+            {/* Barre de contrôles */}
+            <div className="bg-white border-b border-gray-200 px-4 py-3">
                 <div className="flex flex-col lg:flex-row gap-4">
                     {/* Statistiques + Actions rapides */}
-                    <div className="flex-1 flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="flex-1">
-                            <p className="text-lg font-semibold text-gray-900">
-                                {jobs.length} événements • {personnel.length} techniciens • {equipements.length} équipements
+                            <p className="text-sm font-semibold text-gray-700">
+                                {jobs.length} événements · {personnel.length} techniciens · {equipements.length} équipements
                             </p>
-                            <p className="text-sm text-gray-600">
-                                Vue {modeVueIndividuel ? 'individuelle' : 'globale'} • {numberOfDays} jours
-                                {utilisateurConnecte && (
-                                    <span className="ml-2 text-gray-400">
-                                        · {utilisateurConnecte.nom}
-                                        {utilisateurConnecte.niveauAcces && ` (${utilisateurConnecte.niveauAcces})`}
-                                    </span>
-                                )}
+                            <p className="text-xs text-gray-500">
+                                Vue {modeVueIndividuel ? 'individuelle' : 'globale'} · {numberOfDays} jours
                             </p>
                         </div>
                         {/* Actions rapides */}
@@ -794,12 +787,6 @@ export function PlanificateurFinal({
                                 <button onClick={onManageResources}
                                     className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
                                     <Icon name="users" size={13} /> Ressources
-                                </button>
-                            )}
-                            {onLogout && (
-                                <button onClick={onLogout}
-                                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50">
-                                    <Icon name="arrow_back" size={13} /> Changer d'utilisateur
                                 </button>
                             )}
                         </div>
