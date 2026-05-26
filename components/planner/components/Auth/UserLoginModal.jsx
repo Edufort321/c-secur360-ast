@@ -86,7 +86,12 @@ export function UserLoginModal({
         setLoginForm({ ...loginForm, nom: user.nom });
         setUtilisateurIdentifie(user);
         setShowDropdown(false);
-        setEtapeLogin('password');
+        // Si aucun mot de passe défini, connexion directe (auth portail suffit)
+        if (user.motDePasse) {
+            setEtapeLogin('password');
+        } else {
+            onLogin(user, null);
+        }
     };
 
     // Étape 1: Sélection de l'utilisateur par nom
@@ -109,8 +114,12 @@ export function UserLoginModal({
         if (utilisateurTrouve) {
             console.log('✅ Utilisateur trouvé:', utilisateurTrouve.nom);
             setUtilisateurIdentifie(utilisateurTrouve);
-            setEtapeLogin('password');
             setShowDropdown(false);
+            if (utilisateurTrouve.motDePasse) {
+                setEtapeLogin('password');
+            } else {
+                onLogin(utilisateurTrouve, null);
+            }
         } else {
             console.warn('❌ Utilisateur non trouvé pour:', loginForm.nom);
             alert('Utilisateur non trouvé. Sélectionnez un nom dans la liste ou vérifiez l\'orthographe.');

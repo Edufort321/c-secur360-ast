@@ -8,7 +8,6 @@ import { NotificationContainer } from './components/UI/NotificationContainer.jsx
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { LanguageProvider } from './contexts/LanguageContext.jsx';
 import { useLanguage } from './contexts/LanguageContext.jsx';
-import { Header } from './components/Header/Header.jsx';
 import { useNotifications } from './hooks/useNotifications.js';
 import { useAppDataWithSync } from './hooks/useAppDataWithSync.js';
 import { useScreenSize } from './hooks/useScreenSize.js';
@@ -39,13 +38,21 @@ function AppContent({ tenant = 'cerdia' }) {
 
     // Vérifier et restaurer la session au chargement
     useEffect(() => {
-        // PONT HÔTE : l'accès est déjà sécurisé par l'app hôte (middleware + entitlements).
-        // On auto-connecte un administrateur pour ne pas bloquer sur le login interne du planner.
+        // PONT HÔTE : l'accès est sécurisé par l'app hôte (middleware + entitlements).
+        // On vérifie la session sauvegardée ; sinon on affiche le modal de sélection d'employé.
+        const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
         const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-        let user = { id: 'host', nom: 'Administrateur', niveauAcces: 'administration' };
-        if (savedUser) { try { user = JSON.parse(savedUser); } catch { /* défaut */ } }
-        setUtilisateurConnecte(user);
-        setShowUserLogin(false);
+        if (savedSession && savedUser) {
+            try {
+                const session = JSON.parse(savedSession);
+                if (session.expires > Date.now()) {
+                    setUtilisateurConnecte(JSON.parse(savedUser));
+                    setShowUserLogin(false);
+                    return;
+                }
+            } catch { /* session corrompue — afficher le login */ }
+        }
+        setShowUserLogin(true);
     }, []);
 
     // États pour les modals accessibles via le menu hamburger
@@ -68,9 +75,10 @@ function AppContent({ tenant = 'cerdia' }) {
             return;
         }
 
-        if (!motDePasse) {
-            console.error('❌ Mot de passe non fourni');
-            addNotification('Erreur: Mot de passe requis', 'error');
+        // Si l'employé n'a pas de mot de passe configuré, on accepte sans mot de passe
+        if (!motDePasse && utilisateurIdentifie.motDePasse) {
+            console.error('❌ Mot de passe requis pour cet utilisateur');
+            addNotification('Mot de passe requis', 'error');
             return;
         }
 
@@ -80,8 +88,9 @@ function AppContent({ tenant = 'cerdia' }) {
             typesIdentiques: typeof utilisateurIdentifie.motDePasse === typeof motDePasse
         });
 
-        // Vérification du mot de passe
-        if (utilisateurIdentifie.motDePasse === motDePasse) {
+        // Vérification du mot de passe (optionnel si non défini dans le profil)
+        const passwordOk = !utilisateurIdentifie.motDePasse || utilisateurIdentifie.motDePasse === motDePasse;
+        if (passwordOk) {
             console.log('✅ CONNEXION RÉUSSIE pour:', utilisateurIdentifie.nom);
 
             // Créer la session avec expiration 24h
@@ -202,13 +211,6 @@ function AppContent({ tenant = 'cerdia' }) {
                 {/* Application principale - visible seulement si connecté */}
                 {utilisateurConnecte && !showUserLogin && (
                     <>
-                        {/* Menu hamburger planner (EN/FR et Jour/Nuit sont dans le PortalHeader de l'app principale) */}
-                        <Header
-                            onCreateEvent={() => setShowCreateEvent(true)}
-                            onManageConges={() => setShowCongesManagement(true)}
-                            onManageResources={() => setShowResourcesManagement(true)}
-                        />
-
                         {/* Interface PlanificateurFinal complète */}
                         <PlanificateurFinal
                             // Données
@@ -236,6 +238,17 @@ function AppContent({ tenant = 'cerdia' }) {
                             utilisateurConnecte={utilisateurConnecte}
                             peutModifier={peutModifier}
                             estCoordonnateur={estCoordonnateur}
+
+                            // Actions rapides (ex-hamburger header)
+                            onCreateEvent={() => setShowCreateEvent(true)}
+                            onManageConges={() => setShowCongesManagement(true)}
+                            onManageResources={() => setShowResourcesManagement(true)}
+                            onLogout={() => {
+                                localStorage.removeItem(SESSION_STORAGE_KEY);
+                                localStorage.removeItem(USER_STORAGE_KEY);
+                                setUtilisateurConnecte(null);
+                                setShowUserLogin(true);
+                            }}
                         />
 
                         {/* Modals accessibles via le menu hamburger */}

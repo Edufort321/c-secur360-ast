@@ -2,7 +2,7 @@
 // Hook principal pour la gestion des données de l'application
 // Intégration Supabase offline-first avec sync temps réel
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DEFAULT_PERSONNEL, DEFAULT_EQUIPMENTS, DEFAULT_JOBS, STORAGE_CONFIG } from '@/components/planner/config/constants.js';
 import { useSupabaseSync } from './useSupabaseSync.js';
 
@@ -369,11 +369,35 @@ export function useAppData(tenant = null) {
         console.log('🔄 Données réinitialisées - recharger la page pour sync Supabase');
     }, []);
 
+    // Normalisation : les enregistrements créés par l'admin utilisent 'name/role/phone'
+    // mais le planificateur attend 'nom/poste/telephone'. On mappe les deux schémas.
+    const personnelNormalized = useMemo(() =>
+        personnel.map(p => ({
+            ...p,
+            nom: p.nom || p.name || '',
+            prenom: p.prenom || '',
+            poste: p.poste || p.role || '',
+            disponible: p.disponible !== undefined ? p.disponible : (p.is_active !== false),
+            telephone: p.telephone || p.phone || '',
+            visibleChantier: p.visibleChantier !== undefined ? p.visibleChantier : true,
+            niveauAcces: p.niveauAcces || 'consultation',
+        }))
+    , [personnel]);
+
+    const equipementsNormalized = useMemo(() =>
+        equipements.map(e => ({
+            ...e,
+            nom: e.nom || e.name || '',
+            type: e.type || '',
+            disponible: e.disponible !== undefined ? e.disponible : (e.is_active !== false),
+        }))
+    , [equipements]);
+
     return {
         // Données (Supabase sync)
         jobs,
-        personnel,
-        equipements,
+        personnel: personnelNormalized,
+        equipements: equipementsNormalized,
         sousTraitants,
         conges,
         postes,

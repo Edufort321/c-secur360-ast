@@ -1034,8 +1034,8 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 }
 
 function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean };
-  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true });
+  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string };
+  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation' });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1043,8 +1043,8 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_personnel').select('id, name, role, phone, email, is_active').eq('tenant_id', tenant).order('name');
-    setRows(data || []);
+    const { data } = await supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces').eq('tenant_id', tenant).order('name');
+    setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -1057,7 +1057,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
     try {
       for (const r of rows) {
         if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
+        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation' };
         if (r.id) await supabase.from('planner_personnel').update(payload).eq('id', r.id);
         else await supabase.from('planner_personnel').insert(payload);
       }
@@ -1093,6 +1093,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
             <th className="px-2">{tr('Rôle / Poste', 'Role / Position')}</th>
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
+            <th className="px-2">{tr("Niveau d'accès", 'Access level')}</th>
             <th className="px-2">{tr('Actif', 'Active')}</th>
             <th></th>
           </tr></thead>
@@ -1103,11 +1104,19 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
                 <td className="px-2"><input className={inp} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} /></td>
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
+                <td className="px-2">
+                  <select className={`${inp} w-36`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
+                    <option value="consultation">{tr('Consultation', 'View only')}</option>
+                    <option value="modification">{tr('Modification', 'Edit')}</option>
+                    <option value="coordination">{tr('Coordination', 'Coordinate')}</option>
+                    <option value="administration">{tr('Administration', 'Admin')}</option>
+                  </select>
+                </td>
                 <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
           </tbody>
         </table>
       </div>
