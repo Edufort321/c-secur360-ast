@@ -801,7 +801,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 
 function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   type VRow = {
-    id?: string; type: 'company' | 'personal'; name: string;
+    id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
     make: string; model: string; year: string; plate: string;
     employee_name: string; km_rate_override: string; active: boolean; notes: string;
   };
@@ -814,15 +814,15 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
-    setRows((data || []).map((v: any) => ({ ...v, year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
+    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
 
-  const addCompany  = () => setRows(p => [...p, { type: 'company',  name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
-  const addPersonal = () => setRows(p => [...p, { type: 'personal', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
 
   async function save() {
     setSaving(true); setNotice(null);
@@ -831,6 +831,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         if (!r.make?.trim() && !r.name?.trim()) continue;
         const payload: any = {
           tenant_id: tenant, type: r.type,
+          unit_number: r.unit_number || '',
           name: r.name || `${r.make} ${r.model} ${r.year}`.trim(),
           make: r.make, model: r.model,
           year: r.year ? Number(r.year) : null,
@@ -871,6 +872,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
       <div className="overflow-x-auto p-2">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+            <th className="px-2 py-1.5">{tr('N° unité', 'Unit #')}</th>
             <th className="px-2 py-1.5">{tr('Marque', 'Make')}</th>
             <th className="px-2">{tr('Modèle', 'Model')}</th>
             <th className="px-2">{tr('Année', 'Year')}</th>
@@ -883,6 +885,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           <tbody>
             {items.map(({ r, i }) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                <td className="px-2 py-1"><input className={`${inp} w-24`} value={r.unit_number} onChange={e => upd(i, 'unit_number', e.target.value)} placeholder="S26105" /></td>
                 <td className="px-2 py-1"><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
                 <td className="px-2"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
                 <td className="px-2"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2022" /></td>
@@ -898,7 +901,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={8} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
+            {items.length === 0 && <tr><td colSpan={9} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
           </tbody>
         </table>
       </div>
