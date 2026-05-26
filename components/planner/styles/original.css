@@ -1,7 +1,7 @@
 /* ============== STYLES VERSION ORIGINALE C-SECUR360 ============== */
 
-/* ===== VARIABLES CSS - THÈME JOUR ===== */
-:root.theme-jour {
+/* ===== VARIABLES CSS - THÈME JOUR (scoped au planificateur) ===== */
+.planner-app {
     /* Couleurs principales */
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
@@ -33,8 +33,8 @@
     --bureau-gatineau: #06b6d4;
 }
 
-/* ===== VARIABLES CSS - THÈME NUIT ===== */
-:root.theme-nuit {
+/* ===== VARIABLES CSS - THÈME NUIT (scoped au planificateur) ===== */
+.planner-app.theme-nuit {
     /* Couleurs principales */
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
@@ -125,75 +125,75 @@
     scrollbar-color: var(--border-accent) var(--bg-secondary);
 }
 
-/* ===== CLASSES THÈME NUIT SPÉCIFIQUES ===== */
+/* ===== CLASSES THÈME SPÉCIFIQUES (scoped au planificateur) ===== */
 
 /* Backgrounds adaptatifs */
-.bg-white { background-color: var(--bg-primary) !important; }
-.bg-gray-50 { background-color: var(--bg-secondary) !important; }
-.bg-gray-100 { background-color: var(--bg-tertiary) !important; }
-.bg-gray-200 { background-color: var(--bg-accent) !important; }
+.planner-app .bg-white { background-color: var(--bg-primary) !important; }
+.planner-app .bg-gray-50 { background-color: var(--bg-secondary) !important; }
+.planner-app .bg-gray-100 { background-color: var(--bg-tertiary) !important; }
+.planner-app .bg-gray-200 { background-color: var(--bg-accent) !important; }
 
 /* Texte adaptatif */
-.text-gray-900 { color: var(--text-primary) !important; }
-.text-gray-800 { color: var(--text-primary) !important; }
-.text-gray-700 { color: var(--text-secondary) !important; }
-.text-gray-600 { color: var(--text-tertiary) !important; }
-.text-gray-500 { color: var(--text-muted) !important; }
+.planner-app .text-gray-900 { color: var(--text-primary) !important; }
+.planner-app .text-gray-800 { color: var(--text-primary) !important; }
+.planner-app .text-gray-700 { color: var(--text-secondary) !important; }
+.planner-app .text-gray-600 { color: var(--text-tertiary) !important; }
+.planner-app .text-gray-500 { color: var(--text-muted) !important; }
 
 /* Bordures adaptatives */
-.border-gray-200 { border-color: var(--border-primary) !important; }
-.border-gray-300 { border-color: var(--border-secondary) !important; }
-.border-gray-400 { border-color: var(--border-accent) !important; }
+.planner-app .border-gray-200 { border-color: var(--border-primary) !important; }
+.planner-app .border-gray-300 { border-color: var(--border-secondary) !important; }
+.planner-app .border-gray-400 { border-color: var(--border-accent) !important; }
 
 /* Ombres adaptatives */
-.shadow-sm { box-shadow: var(--shadow-sm) !important; }
-.shadow-md { box-shadow: var(--shadow-md) !important; }
-.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+.planner-app .shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.planner-app .shadow-md { box-shadow: var(--shadow-md) !important; }
+.planner-app .shadow-lg { box-shadow: var(--shadow-lg) !important; }
 
 /* Hover states pour mode nuit */
-.theme-nuit .hover\\:bg-gray-50:hover { background-color: var(--bg-tertiary) !important; }
-.theme-nuit .hover\\:bg-gray-100:hover { background-color: var(--bg-accent) !important; }
-.theme-nuit .hover\\:text-gray-700:hover { color: var(--text-secondary) !important; }
-.theme-nuit .hover\\:border-gray-300:hover { border-color: var(--border-secondary) !important; }
+.planner-app.theme-nuit .hover\\:bg-gray-50:hover { background-color: var(--bg-tertiary) !important; }
+.planner-app.theme-nuit .hover\\:bg-gray-100:hover { background-color: var(--bg-accent) !important; }
+.planner-app.theme-nuit .hover\\:text-gray-700:hover { color: var(--text-secondary) !important; }
+.planner-app.theme-nuit .hover\\:border-gray-300:hover { border-color: var(--border-secondary) !important; }
 
 /* Focus states pour mode nuit */
-.theme-nuit .focus\\:ring-blue-500:focus { --tw-ring-color: #60a5fa !important; }
-.theme-nuit .focus\\:border-blue-500:focus { border-color: #60a5fa !important; }
+.planner-app.theme-nuit .focus\\:ring-blue-500:focus { --tw-ring-color: #60a5fa !important; }
+.planner-app.theme-nuit .focus\\:border-blue-500:focus { border-color: #60a5fa !important; }
 
 /* Inputs et formulaires en mode nuit */
-.theme-nuit input,
-.theme-nuit textarea,
-.theme-nuit select {
+.planner-app.theme-nuit input,
+.planner-app.theme-nuit textarea,
+.planner-app.theme-nuit select {
     background-color: var(--bg-secondary);
     border-color: var(--border-secondary);
     color: var(--text-primary);
 }
 
-.theme-nuit input:focus,
-.theme-nuit textarea:focus,
-.theme-nuit select:focus {
+.planner-app.theme-nuit input:focus,
+.planner-app.theme-nuit textarea:focus,
+.planner-app.theme-nuit select:focus {
     background-color: var(--bg-tertiary);
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
 }
 
 /* Boutons en mode nuit */
-.theme-nuit .btn-primary {
+.planner-app.theme-nuit .btn-primary {
     background-color: #3b82f6;
     border-color: #3b82f6;
 }
 
-.theme-nuit .btn-primary:hover {
+.planner-app.theme-nuit .btn-primary:hover {
     background-color: #60a5fa;
     border-color: #60a5fa;
 }
 
 /* Modals en mode nuit */
-.theme-nuit .modal-overlay {
+.planner-app.theme-nuit .modal-overlay {
     background-color: rgba(0, 0, 0, 0.8);
 }
 
-.theme-nuit .modal-content {
+.planner-app.theme-nuit .modal-content {
     background-color: var(--bg-primary);
     border-color: var(--border-primary);
 }

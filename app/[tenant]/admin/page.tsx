@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign } from 'lucide-react';
+import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -24,11 +24,12 @@ export default function AdminPage() {
         <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
         {(() => {
           const tabs = [
-            { k: 'sites',       label: tr('Sites', 'Sites'),              icon: MapPin },
-            { k: 'clients',     label: tr('Clients', 'Clients'),          icon: Building2 },
-            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),       icon: Car },
-            { k: 'profils',     label: tr('Employés', 'Employees'),       icon: Users },
-            { k: 'ressources',  label: tr('Ressources', 'Resources'),     icon: Wrench },
+            { k: 'sites',       label: tr('Sites', 'Sites'),                    icon: MapPin },
+            { k: 'clients',     label: tr('Clients', 'Clients'),              icon: Building2 },
+            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),           icon: Car },
+            { k: 'sitesdepts',  label: tr('Sites/Dépts', 'Sites/Depts'),      icon: Layers },
+            { k: 'profils',     label: tr('Employés', 'Employees'),           icon: Users },
+            { k: 'ressources',  label: tr('Ressources', 'Resources'),         icon: Wrench },
             { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'), icon: Clock },
             { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),  icon: CreditCard },
             { k: 'facturation', label: tr('Facturation', 'Billing'),      icon: Settings },
@@ -61,6 +62,7 @@ export default function AdminPage() {
         {tab === 'sites' && <Sites tenant={tenant} tr={tr} />}
         {tab === 'clients' && <Clients tenant={tenant} tr={tr} />}
         {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
+        {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
@@ -1004,7 +1006,7 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 // ============================================================
 
 function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [subTab, setSubTab] = useState<'personnel' | 'equipements' | 'postes' | 'succursales'>('personnel');
+  const [subTab, setSubTab] = useState<'personnel' | 'equipements' | 'postes'>('personnel');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   return (
@@ -1017,7 +1019,6 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           { k: 'personnel',   label: tr('Personnel', 'Staff') },
           { k: 'equipements', label: tr('Équipements', 'Equipment') },
           { k: 'postes',      label: tr('Postes', 'Positions') },
-          { k: 'succursales', label: tr('Succursales', 'Branches') },
         ].map(x => (
           <button key={x.k} onClick={() => setSubTab(x.k as any)}
             className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
@@ -1028,23 +1029,27 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
       {subTab === 'personnel'   && <PersonnelPlanner   tenant={tenant} tr={tr} inp={inp} />}
       {subTab === 'equipements' && <EquipementsPlanner tenant={tenant} tr={tr} inp={inp} />}
       {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} />}
-      {subTab === 'succursales' && <SuccursalesPlanner tenant={tenant} tr={tr} inp={inp} />}
     </div>
   );
 }
 
 function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string };
-  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation' });
+  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
+  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
+  const [siteDepts, setSiteDepts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces').eq('tenant_id', tenant).order('name');
-    setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation' })));
+    const [{ data: suc }, { data }] = await Promise.all([
+      supabase.from('planner_succursales').select('id, name').eq('tenant_id', tenant).order('name'),
+      supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
+    ]);
+    setSiteDepts(suc || []);
+    setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -1057,7 +1062,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
     try {
       for (const r of rows) {
         if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation' };
+        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || null };
         if (r.id) await supabase.from('planner_personnel').update(payload).eq('id', r.id);
         else await supabase.from('planner_personnel').insert(payload);
       }
@@ -1072,6 +1077,22 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  if (siteDepts.length === 0) {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-500/30 dark:bg-amber-500/10">
+        <div className="flex items-start gap-3">
+          <Layers size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <h3 className="font-semibold text-amber-800 dark:text-amber-200">{tr('Aucun site/département configuré', 'No site/department configured')}</h3>
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+              {tr('Vous devez créer au moins un site/département avant de pouvoir ajouter du personnel. Allez dans l\'onglet « Sites/Dépts ».', 'You must create at least one site/department before adding staff. Go to the "Sites/Depts" tab.')}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -1091,6 +1112,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Rôle / Poste', 'Role / Position')}</th>
+            <th className="px-2">{tr('Site/Dépt', 'Site/Dept')}</th>
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
             <th className="px-2">{tr("Niveau d'accès", 'Access level')}</th>
@@ -1102,6 +1124,12 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
                 <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
                 <td className="px-2"><input className={inp} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} /></td>
+                <td className="px-2">
+                  <select className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
+                    <option value="">{tr('— Sélectionner —', '— Select —')}</option>
+                    {siteDepts.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+                </td>
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
                 <td className="px-2">
@@ -1116,7 +1144,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -1287,7 +1315,8 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
   );
 }
 
-function SuccursalesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   type Row = { id?: string; name: string; code: string; address: string };
   const empty = (): Row => ({ name: '', code: '', address: '' });
   const [rows, setRows] = useState<Row[]>([]);
@@ -1315,7 +1344,7 @@ function SuccursalesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
         if (r.id) await supabase.from('planner_succursales').update(payload).eq('id', r.id);
         else await supabase.from('planner_succursales').insert(payload);
       }
-      setNotice(tr('Succursales enregistrées ✓', 'Branches saved ✓')); load();
+      setNotice(tr('Sites/départements enregistrés ✓', 'Sites/departments saved ✓')); load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }
 
@@ -1325,41 +1354,50 @@ function SuccursalesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
     setRows(p => p.filter((_, j) => j !== i));
   }
 
-  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-        <div>
-          <h2 className="font-bold">{tr('Succursales / Bureaux', 'Branches / Offices')}</h2>
-          <p className="text-xs text-gray-500">{tr('Bureaux régionaux utilisés pour regrouper le personnel.', 'Regional offices used to group staff.')}</p>
+    <div className="space-y-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {tr('Sites et départements de votre organisation. Requis avant de pouvoir créer du personnel dans le planificateur.', 'Sites and departments of your organization. Required before creating planner staff.')}
+      </p>
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <div>
+            <h2 className="font-bold">{tr('Sites / Départements', 'Sites / Departments')}</h2>
+            <p className="text-xs text-gray-500">{tr('Utilisés pour regrouper le personnel dans le planificateur.', 'Used to group staff in the planner.')}</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+        <div className="overflow-x-auto p-2">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
+              <th className="px-2">{tr('Code', 'Code')}</th>
+              <th className="px-2">{tr('Adresse', 'Address')}</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Bureau Sherbrooke', 'Sherbrooke Office')} /></td>
+                  <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="SHE" /></td>
+                  <td className="px-2"><input className={inp} value={r.address || ''} onChange={e => upd(i, 'address', e.target.value)} placeholder="123 rue Principale" /></td>
+                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td colSpan={4} className="px-2 py-8 text-center text-gray-400">
+                  {tr('Aucun site/département. Crée-en un pour pouvoir ensuite ajouter du personnel.', 'No site/department yet. Create one to be able to add staff.')}
+                </td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
-      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
-      <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
-          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
-            <th className="px-2">{tr('Code', 'Code')}</th>
-            <th className="px-2">{tr('Adresse', 'Address')}</th>
-            <th></th>
-          </tr></thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Bureau Sherbrooke', 'Sherbrooke Office')} /></td>
-                <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="SHE" /></td>
-                <td className="px-2"><input className={inp} value={r.address || ''} onChange={e => upd(i, 'address', e.target.value)} placeholder="123 rue Principale" /></td>
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={4} className="px-2 py-6 text-center text-gray-400">{tr('Aucune succursale. Ajoute-en une.', 'No branch yet. Add one.')}</td></tr>}
-          </tbody>
-        </table>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutGrid, Plus, FolderKanban, ShieldCheck, FileText, Home } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
@@ -81,6 +81,16 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
             <button onClick={() => setLang('fr')} className={lang === 'fr' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>FR</button>
             <button onClick={() => setLang('en')} className={lang === 'en' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>EN</button>
           </div>
+
+          {tenant && (
+            <Link
+              href={`/${tenant}/modules`}
+              title={lang === 'fr' ? 'Accueil' : 'Home'}
+              className="rounded-lg p-2 text-gray-300 transition hover:bg-white/10 hover:text-white"
+            >
+              <Home size={18} />
+            </Link>
+          )}
 
           <InstallPWA />
 

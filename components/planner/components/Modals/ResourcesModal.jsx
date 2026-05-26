@@ -65,8 +65,8 @@ export function ResourcesModal({
     const peutAccederRessources = () => {
         if (!utilisateurConnecte) return false;
 
-        // Accès basé sur niveau_acces ou permissions
-        const niveauAcces = utilisateurConnecte.niveau_acces;
+        // Accès basé sur niveauAcces ou permissions
+        const niveauAcces = utilisateurConnecte.niveauAcces || utilisateurConnecte.niveau_acces;
         const permissions = utilisateurConnecte.permissions || {};
 
         // Administrateurs et coordinateurs ont accès

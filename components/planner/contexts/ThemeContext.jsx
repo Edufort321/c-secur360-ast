@@ -105,9 +105,9 @@ export function ThemeProvider({ children }) {
         }
     }, [userPreferences.autoSwitch, userPreferences.switchTime, isDarkMode, isSystemTheme]);
 
-    // Application du thème au DOM
+    // Application du thème au conteneur .planner-app uniquement (pas au <html> global)
     useEffect(() => {
-        const root = document.documentElement;
+        const root = document.querySelector('.planner-app') || document.documentElement;
 
         if (isDarkMode) {
             root.classList.add('theme-nuit');

@@ -5,5 +5,5 @@ interface Props {
 }
 
 export default function TenantRootPage({ params }: Props) {
-  redirect(`/${params.tenant}/dashboard`);
+  redirect(`/${params.tenant}/modules`);
 }
