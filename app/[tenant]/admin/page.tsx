@@ -799,66 +799,20 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   );
 }
 
-function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  type VRow = {
-    id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
-    make: string; model: string; year: string; plate: string;
-    employee_name: string; km_rate_override: string; active: boolean; notes: string;
-  };
-  const [rows, setRows] = useState<VRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+type VRow = {
+  id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
+  make: string; model: string; year: string; plate: string;
+  employee_name: string; km_rate_override: string; active: boolean; notes: string;
+};
 
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
-    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
-    setLoading(false);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
-
-  const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
-
-  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
-  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
-
-  async function save() {
-    setSaving(true); setNotice(null);
-    try {
-      for (const r of rows) {
-        if (!r.make?.trim() && !r.name?.trim()) continue;
-        const payload: any = {
-          tenant_id: tenant, type: r.type,
-          unit_number: r.unit_number || '',
-          name: r.name || `${r.make} ${r.model} ${r.year}`.trim(),
-          make: r.make, model: r.model,
-          year: r.year ? Number(r.year) : null,
-          plate: r.plate, employee_name: r.employee_name,
-          km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
-          active: r.active, notes: r.notes,
-        };
-        if (r.id) await supabase.from('vehicles').update(payload).eq('id', r.id);
-        else await supabase.from('vehicles').insert(payload);
-      }
-      setNotice(tr('Véhicules enregistrés ✓', 'Vehicles saved ✓'));
-      load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
-  }
-
-  async function del(i: number) {
-    const r = rows[i];
-    if (r.id) await supabase.from('vehicles').delete().eq('id', r.id);
-    setRows(p => p.filter((_, j) => j !== i));
-  }
-
-  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
-
-  const companyRows  = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'company');
-  const personalRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'personal');
-
-  const VehicleTable = ({ label, badge, items, onAdd }: { label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void }) => (
+function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp }: {
+  label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void;
+  upd: (i: number, k: keyof VRow, v: any) => void;
+  del: (i: number) => void;
+  tr: (f: string, e: string) => string;
+  inp: string;
+}) {
+  return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -918,6 +872,61 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
       </div>
     </div>
   );
+}
+
+function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [rows, setRows] = useState<VRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
+    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+
+  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.make?.trim() && !r.name?.trim()) continue;
+        const payload: any = {
+          tenant_id: tenant, type: r.type,
+          unit_number: r.unit_number || '',
+          name: r.name || `${r.make} ${r.model} ${r.year}`.trim(),
+          make: r.make, model: r.model,
+          year: r.year ? Number(r.year) : null,
+          plate: r.plate, employee_name: r.employee_name,
+          km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
+          active: r.active, notes: r.notes,
+        };
+        if (r.id) await supabase.from('vehicles').update(payload).eq('id', r.id);
+        else await supabase.from('vehicles').insert(payload);
+      }
+      setNotice(tr('Véhicules enregistrés ✓', 'Vehicles saved ✓'));
+      load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('vehicles').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  const companyRows  = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'company');
+  const personalRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'personal');
 
   return (
     <div className="space-y-4">
@@ -939,14 +948,14 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
       <VehicleTable
         label={tr('Véhicules entreprise', 'Company vehicles')}
         badge={tr(`${companyRows.length} véhicule(s)`, `${companyRows.length} vehicle(s)`)}
-        items={companyRows}
-        onAdd={addCompany}
+        items={companyRows} onAdd={addCompany}
+        upd={upd} del={del} tr={tr} inp={inp}
       />
       <VehicleTable
         label={tr('Véhicules personnels autorisés', 'Authorized personal vehicles')}
         badge={tr(`${personalRows.length} véhicule(s)`, `${personalRows.length} vehicle(s)`)}
-        items={personalRows}
-        onAdd={addPersonal}
+        items={personalRows} onAdd={addPersonal}
+        upd={upd} del={del} tr={tr} inp={inp}
       />
     </div>
   );
