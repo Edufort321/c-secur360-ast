@@ -4,13 +4,14 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import {
   Plus, ChevronDown, List, LayoutGrid, Search, Download,
-  Trash2, Archive, RotateCcw, X, Camera, Image, Link2,
+  Trash2, Archive, RotateCcw, X, Image as ImageIcon, Link2,
   User, MapPin, CheckSquare, Square, CalendarDays, Paperclip, Loader2,
   ListChecks,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
+import { PortalHeader } from '@/components/PortalHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'archived';
@@ -68,11 +69,11 @@ const TEMPLATES = [
     labelFr: 'Mesure corrective',     labelEn: 'Corrective measure',
     priority: 'high' as TPriority,   status: 'todo' as TStatus,
     steps: [
-      { labelFr: 'Identifier la cause racine',             labelEn: 'Identify root cause' },
-      { labelFr: 'Documenter le problème',                 labelEn: 'Document the problem' },
+      { labelFr: 'Identifier la cause racine',              labelEn: 'Identify root cause' },
+      { labelFr: 'Documenter le problème',                  labelEn: 'Document the problem' },
       { labelFr: 'Mettre en place la correction immédiate', labelEn: 'Implement immediate correction' },
-      { labelFr: "Vérifier l'efficacité de la mesure",    labelEn: 'Verify measure effectiveness' },
-      { labelFr: 'Clôturer et archiver',                   labelEn: 'Close and archive' },
+      { labelFr: "Vérifier l'efficacité de la mesure",     labelEn: 'Verify measure effectiveness' },
+      { labelFr: 'Clôturer et archiver',                    labelEn: 'Close and archive' },
     ],
   },
   {
@@ -80,11 +81,11 @@ const TEMPLATES = [
     labelFr: 'Inspection sécurité',   labelEn: 'Safety inspection',
     priority: 'normal' as TPriority, status: 'todo' as TStatus,
     steps: [
-      { labelFr: 'Préparer la liste de vérification', labelEn: 'Prepare checklist' },
-      { labelFr: 'Inspecter les équipements EPI',     labelEn: 'Inspect PPE equipment' },
-      { labelFr: "Vérifier les dégagements d'urgence", labelEn: 'Check emergency exits' },
+      { labelFr: 'Préparer la liste de vérification',   labelEn: 'Prepare checklist' },
+      { labelFr: 'Inspecter les équipements EPI',        labelEn: 'Inspect PPE equipment' },
+      { labelFr: "Vérifier les dégagements d'urgence",  labelEn: 'Check emergency exits' },
       { labelFr: 'Contrôler les fiches de données (FDS)', labelEn: 'Review SDS sheets' },
-      { labelFr: "Rédiger le rapport d'inspection",   labelEn: 'Write inspection report' },
+      { labelFr: "Rédiger le rapport d'inspection",      labelEn: 'Write inspection report' },
     ],
   },
   {
@@ -92,10 +93,10 @@ const TEMPLATES = [
     labelFr: 'Action préventive',     labelEn: 'Preventive action',
     priority: 'normal' as TPriority, status: 'todo' as TStatus,
     steps: [
-      { labelFr: 'Évaluer le risque potentiel',        labelEn: 'Assess potential risk' },
-      { labelFr: 'Définir les mesures préventives',    labelEn: 'Define preventive measures' },
-      { labelFr: 'Assigner les responsabilités',       labelEn: 'Assign responsibilities' },
-      { labelFr: 'Suivre la mise en œuvre',            labelEn: 'Track implementation' },
+      { labelFr: 'Évaluer le risque potentiel',      labelEn: 'Assess potential risk' },
+      { labelFr: 'Définir les mesures préventives',  labelEn: 'Define preventive measures' },
+      { labelFr: 'Assigner les responsabilités',     labelEn: 'Assign responsibilities' },
+      { labelFr: 'Suivre la mise en œuvre',          labelEn: 'Track implementation' },
     ],
   },
   {
@@ -103,11 +104,11 @@ const TEMPLATES = [
     labelFr: 'Suivi équipement',      labelEn: 'Equipment follow-up',
     priority: 'normal' as TPriority, status: 'todo' as TStatus,
     steps: [
-      { labelFr: "Vérifier l'état de l'équipement",   labelEn: 'Check equipment condition' },
-      { labelFr: 'Effectuer la maintenance requise',   labelEn: 'Perform required maintenance' },
-      { labelFr: 'Documenter les travaux effectués',   labelEn: 'Document work done' },
-      { labelFr: 'Mettre à jour la fiche équipement',  labelEn: 'Update equipment sheet' },
-      { labelFr: 'Planifier la prochaine inspection',  labelEn: 'Schedule next inspection' },
+      { labelFr: "Vérifier l'état de l'équipement",  labelEn: 'Check equipment condition' },
+      { labelFr: 'Effectuer la maintenance requise',  labelEn: 'Perform required maintenance' },
+      { labelFr: 'Documenter les travaux effectués',  labelEn: 'Document work done' },
+      { labelFr: 'Mettre à jour la fiche équipement', labelEn: 'Update equipment sheet' },
+      { labelFr: 'Planifier la prochaine inspection', labelEn: 'Schedule next inspection' },
     ],
   },
   {
@@ -131,6 +132,50 @@ function fmtDate(d: string | null, lang: string) {
 
 function initials(name: string) {
   return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+}
+
+// ─── Autocomplete input ───────────────────────────────────────────────────────
+function AutocompleteInput({
+  value, onChange, suggestions, placeholder, icon: Icon, className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder?: string;
+  icon?: React.ElementType;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()) && s !== value);
+
+  return (
+    <div className={`relative ${className || ''}`}>
+      {Icon && <Icon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />}
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        className={`w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 ${Icon ? 'pl-8' : 'pl-3'} pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400`}
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute left-0 top-full z-30 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+          {filtered.map(s => (
+            <li key={s}>
+              <button
+                type="button"
+                onMouseDown={() => { onChange(s); setOpen(false); }}
+                className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+              >
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 // ─── TaskCard ─────────────────────────────────────────────────────────────────
@@ -191,8 +236,8 @@ function TaskCard({ task, selected, onClick, onStatusCycle, lang }: {
           {lang === 'fr' ? sc.labelFr : sc.labelEn}
         </span>
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          {task.photo_urls.length > 0 && (
-            <span className="flex items-center gap-0.5"><Image size={11} />{task.photo_urls.length}</span>
+          {task.photo_urls?.length > 0 && (
+            <span className="flex items-center gap-0.5"><ImageIcon size={11} />{task.photo_urls.length}</span>
           )}
           {task.due_date && (
             <span className={`flex items-center gap-0.5 ${overdue ? 'text-red-500 font-semibold' : ''}`}>
@@ -227,13 +272,31 @@ export default function TodoPage() {
   const [tmplOpen, setTmplOpen]         = useState(false);
   const [saving, setSaving]             = useState(false);
 
+  // Suggestions pour autocomplete
+  const [personnelSuggestions, setPersonnelSuggestions] = useState<string[]>([]);
+  const [siteSuggestions, setSiteSuggestions]           = useState<string[]>([]);
+
   const [panel, setPanel]               = useState<Task | null>(null);
   const [steps, setSteps]               = useState<Step[]>([]);
   const [newStep, setNewStep]           = useState('');
   const [uploading, setUploading]       = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [lightboxUrl, setLightboxUrl]   = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Charger les suggestions ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!tenant) return;
+    supabase.from('planner_personnel').select('prenom, nom').eq('tenant_id', tenant)
+      .then(({ data }) => {
+        if (data) setPersonnelSuggestions(data.map((p: any) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean));
+      });
+    supabase.from('planner_succursales').select('name').eq('tenant_id', tenant)
+      .then(({ data }) => {
+        if (data) setSiteSuggestions(data.map((s: any) => s.name).filter(Boolean));
+      });
+  }, [tenant]);
 
   // ── Load tasks ──────────────────────────────────────────────────────────────
   const loadTasks = useCallback(async () => {
@@ -395,7 +458,7 @@ export default function TodoPage() {
 
   const removePhoto = useCallback(async (url: string) => {
     if (!panel) return;
-    const newUrls = panel.photo_urls.filter(u => u !== url);
+    const newUrls = (panel.photo_urls || []).filter(u => u !== url);
     await supabase.from('todo_tasks').update({ photo_urls: newUrls, updated_at: new Date().toISOString() }).eq('id', panel.id);
     setPanel(prev => prev ? { ...prev, photo_urls: newUrls } : prev);
     setTasks(prev => prev.map(t => t.id === panel.id ? { ...t, photo_urls: newUrls } : t));
@@ -487,310 +550,337 @@ export default function TodoPage() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <PortalHeader tenant={tenant} />
 
-      {/* Main content */}
-      <div className={`flex flex-col flex-1 min-w-0 overflow-hidden ${panelOpen ? 'hidden lg:flex' : 'flex'}`}>
+      <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 4.5rem)' }}>
 
-        {/* Top bar */}
-        <div className="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 mr-2">
-              <ListChecks size={20} className="text-indigo-600" />
-              <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">{tr('Tâches', 'Tasks')}</h1>
-            </div>
+        {/* Main content */}
+        <div className={`flex flex-col flex-1 min-w-0 overflow-hidden ${panelOpen ? 'hidden lg:flex' : 'flex'}`}>
 
-            <div className="relative flex-1 min-w-[160px] max-w-xs">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder={tr('Rechercher…', 'Search…')}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400"
-              />
-            </div>
-
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TStatus | 'all')}
-              className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
-              <option value="all">{tr('Tous les statuts', 'All statuses')}</option>
-              {(Object.keys(S) as TStatus[]).map(s => (
-                <option key={s} value={s}>{lang === 'fr' ? S[s].labelFr : S[s].labelEn}</option>
-              ))}
-            </select>
-
-            <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TPriority | 'all')}
-              className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
-              <option value="all">{tr('Toutes les priorités', 'All priorities')}</option>
-              {(Object.keys(P) as TPriority[]).map(p => (
-                <option key={p} value={p}>{lang === 'fr' ? P[p].labelFr : P[p].labelEn}</option>
-              ))}
-            </select>
-
-            <button onClick={() => setShowArchived(v => !v)}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition
-                ${showArchived ? 'border-yellow-400 bg-yellow-50 text-yellow-700' : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-              <Archive size={14} />{tr('Archivées', 'Archived')}
-            </button>
-
-            <div className="flex-1" />
-
-            <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
-              <button onClick={() => setView('list')} className={`px-2.5 py-1.5 ${view === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><List size={15} /></button>
-              <button onClick={() => setView('kanban')} className={`px-2.5 py-1.5 ${view === 'kanban' ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><LayoutGrid size={15} /></button>
-            </div>
-
-            <button onClick={exportCSV}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
-              <Download size={14} /> CSV
-            </button>
-
-            {/* New task split button */}
-            <div className="relative flex overflow-hidden rounded-lg">
-              <button onClick={() => createTask()}
-                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm font-semibold">
-                <Plus size={15} />{tr('Nouvelle tâche', 'New task')}
-              </button>
-              <button onClick={() => setTmplOpen(v => !v)}
-                className="bg-indigo-700 hover:bg-indigo-800 text-white px-2 py-1.5 border-l border-indigo-500">
-                <ChevronDown size={14} />
-              </button>
-              {tmplOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setTmplOpen(false)} />
-                  <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
-                    <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                      {tr('Modèles', 'Templates')}
-                    </div>
-                    {TEMPLATES.map(t => (
-                      <button key={t.key} onClick={() => createTask(t)}
-                        className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <span className={`text-xs font-bold ${P[t.priority].color}`}>{P[t.priority].sym}</span>
-                        {lang === 'fr' ? t.labelFr : t.labelEn}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats bar */}
-        <div className="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 overflow-x-auto">
-          <div className="flex items-center gap-4 text-xs min-w-max">
-            {[
-              { label: tr('Total', 'Total'),          val: stats.total,       color: 'text-gray-700 dark:text-gray-300' },
-              { label: tr('À faire', 'To do'),         val: stats.todo,        color: 'text-gray-500' },
-              { label: tr('En cours', 'In progress'), val: stats.in_progress, color: 'text-blue-600' },
-              { label: tr('Bloqué', 'Blocked'),        val: stats.blocked,     color: 'text-red-500' },
-              { label: tr('Terminé', 'Done'),          val: stats.done,        color: 'text-green-600' },
-              { label: tr('En retard', 'Overdue'),     val: stats.overdue,     color: 'text-red-600 font-bold' },
-            ].map(s => (
-              <div key={s.label} className="flex items-center gap-1">
-                <span className="text-gray-400">{s.label}</span>
-                <span className={`font-semibold ${s.color}`}>{s.val}</span>
+          {/* Top bar */}
+          <div className="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 mr-2">
+                <ListChecks size={20} className="text-indigo-600" />
+                <h1 className="text-base font-bold text-gray-900 dark:text-gray-100">{tr('Tâches', 'Tasks')}</h1>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-40 text-gray-400">
-              <Loader2 size={24} className="animate-spin mr-2" />{tr('Chargement…', 'Loading…')}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400 gap-3">
-              <ListChecks size={36} className="opacity-30" />
-              <p className="text-sm">{tr('Aucune tâche', 'No tasks')}</p>
-              <button onClick={() => createTask()} className="text-indigo-600 text-sm font-semibold hover:underline">
-                {tr('+ Créer une tâche', '+ Create a task')}
-              </button>
-            </div>
-          ) : view === 'list' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filtered.map(t => (
-                <TaskCard key={t.id} task={t} selected={selectedId === t.id} lang={lang}
-                  onClick={() => openPanel(t)} onStatusCycle={e => cycleStatus(t, e)} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {KANBAN_COLS.map(col => {
-                const colTasks = filtered.filter(t => t.status === col.status);
-                return (
-                  <div key={col.status} className={`flex-none w-72 rounded-xl border-t-4 ${S[col.status].border} bg-gray-100 dark:bg-gray-800/50`}>
-                    <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{col.label}</span>
-                      <span className="text-xs font-bold text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-full px-2 py-0.5">{colTasks.length}</span>
-                    </div>
-                    <div className="p-2 space-y-2 max-h-[calc(100vh-18rem)] overflow-y-auto">
-                      {colTasks.map(t => (
-                        <TaskCard key={t.id} task={t} selected={selectedId === t.id} lang={lang}
-                          onClick={() => openPanel(t)} onStatusCycle={e => cycleStatus(t, e)} />
-                      ))}
-                      {colTasks.length === 0 && (
-                        <p className="text-center text-xs text-gray-400 py-6">{tr('Aucune tâche', 'No tasks')}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+              <div className="relative flex-1 min-w-[160px] max-w-xs">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder={tr('Rechercher…', 'Search…')}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
 
-      {/* Detail panel */}
-      {panelOpen && panel && (
-        <div className="flex flex-col w-full lg:w-[440px] flex-none border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-none">
-            <div className="flex items-center gap-2">
-              {saving && <Loader2 size={14} className="animate-spin text-indigo-400" />}
-              <button onClick={archiveTask}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition
-                  ${panel.status === 'archived'
-                    ? 'border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                {panel.status === 'archived' ? <RotateCcw size={13} /> : <Archive size={13} />}
-                {panel.status === 'archived' ? tr('Restaurer', 'Restore') : tr('Archiver', 'Archive')}
-              </button>
-              <button onClick={copyLink} title={tr('Copier le lien', 'Copy link')}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                <Link2 size={15} />
-              </button>
-            </div>
-            <div className="flex items-center gap-1">
-              {!deleteConfirm ? (
-                <button onClick={() => setDeleteConfirm(true)}
-                  className="rounded-lg p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                  <Trash2 size={15} />
-                </button>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-red-600 font-medium">{tr('Supprimer?', 'Delete?')}</span>
-                  <button onClick={deleteTask} className="rounded px-2 py-1 text-xs bg-red-600 text-white font-semibold hover:bg-red-700">{tr('Oui', 'Yes')}</button>
-                  <button onClick={() => setDeleteConfirm(false)} className="rounded px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold">{tr('Non', 'No')}</button>
-                </div>
-              )}
-              <button onClick={closePanel} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* Panel body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-
-            <input value={panel.title} onChange={e => updatePanel({ title: e.target.value })}
-              placeholder={tr('Titre de la tâche', 'Task title')}
-              className="w-full text-base font-bold bg-transparent text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-gray-600 pb-1 outline-none focus:border-indigo-400" />
-
-            <div className="flex flex-wrap gap-2">
-              <select value={panel.status} onChange={e => updatePanel({ status: e.target.value as TStatus })}
-                className="flex-1 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TStatus | 'all')}
+                className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+                <option value="all">{tr('Tous les statuts', 'All statuses')}</option>
                 {(Object.keys(S) as TStatus[]).map(s => (
                   <option key={s} value={s}>{lang === 'fr' ? S[s].labelFr : S[s].labelEn}</option>
                 ))}
               </select>
-              <select value={panel.priority} onChange={e => updatePanel({ priority: e.target.value as TPriority })}
-                className="flex-1 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+
+              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value as TPriority | 'all')}
+                className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+                <option value="all">{tr('Toutes les priorités', 'All priorities')}</option>
                 {(Object.keys(P) as TPriority[]).map(p => (
-                  <option key={p} value={p}>{P[p].sym} {lang === 'fr' ? P[p].labelFr : P[p].labelEn}</option>
+                  <option key={p} value={p}>{lang === 'fr' ? P[p].labelFr : P[p].labelEn}</option>
                 ))}
               </select>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <div className="flex-1 min-w-[140px] relative">
-                <User size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input value={panel.assignee} onChange={e => updatePanel({ assignee: e.target.value })}
-                  placeholder={tr('Responsable', 'Assignee')}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
+              <button onClick={() => setShowArchived(v => !v)}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition
+                  ${showArchived ? 'border-yellow-400 bg-yellow-50 text-yellow-700' : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Archive size={14} />{tr('Archivées', 'Archived')}
+              </button>
+
+              <div className="flex-1" />
+
+              <div className="flex overflow-hidden rounded-lg border border-gray-200 dark:border-gray-600">
+                <button onClick={() => setView('list')} className={`px-2.5 py-1.5 ${view === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><List size={15} /></button>
+                <button onClick={() => setView('kanban')} className={`px-2.5 py-1.5 ${view === 'kanban' ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}><LayoutGrid size={15} /></button>
               </div>
-              <div className="flex-1 min-w-[140px] relative">
-                <MapPin size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input value={panel.site} onChange={e => updatePanel({ site: e.target.value })}
-                  placeholder="Site"
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
+
+              <button onClick={exportCSV}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <Download size={14} /> CSV
+              </button>
+
+              {/* New task split button */}
+              <div className="relative flex overflow-hidden rounded-lg">
+                <button onClick={() => createTask()}
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm font-semibold">
+                  <Plus size={15} />{tr('Nouvelle tâche', 'New task')}
+                </button>
+                <button onClick={() => setTmplOpen(v => !v)}
+                  className="bg-indigo-700 hover:bg-indigo-800 text-white px-2 py-1.5 border-l border-indigo-500">
+                  <ChevronDown size={14} />
+                </button>
+                {tmplOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setTmplOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
+                      <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                        {tr('Modèles', 'Templates')}
+                      </div>
+                      {TEMPLATES.map(t => (
+                        <button key={t.key} onClick={() => createTask(t)}
+                          className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <span className={`text-xs font-bold ${P[t.priority].color}`}>{P[t.priority].sym}</span>
+                          {lang === 'fr' ? t.labelFr : t.labelEn}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+          </div>
 
-            <div className="relative">
-              <CalendarDays size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="date" value={panel.due_date || ''} onChange={e => updatePanel({ due_date: e.target.value || null })}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
+          {/* Stats bar */}
+          <div className="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 overflow-x-auto">
+            <div className="flex items-center gap-4 text-xs min-w-max">
+              {[
+                { label: tr('Total', 'Total'),          val: stats.total,       color: 'text-gray-700 dark:text-gray-300' },
+                { label: tr('À faire', 'To do'),         val: stats.todo,        color: 'text-gray-500' },
+                { label: tr('En cours', 'In progress'), val: stats.in_progress, color: 'text-blue-600' },
+                { label: tr('Bloqué', 'Blocked'),        val: stats.blocked,     color: 'text-red-500' },
+                { label: tr('Terminé', 'Done'),          val: stats.done,        color: 'text-green-600' },
+                { label: tr('En retard', 'Overdue'),     val: stats.overdue,     color: 'text-red-600 font-bold' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center gap-1">
+                  <span className="text-gray-400">{s.label}</span>
+                  <span className={`font-semibold ${s.color}`}>{s.val}</span>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <textarea value={panel.description} onChange={e => updatePanel({ description: e.target.value })}
-              placeholder={tr('Description…', 'Description…')} rows={3}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 resize-none outline-none focus:ring-1 focus:ring-indigo-400" />
-
-            {/* Steps */}
-            <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <CheckSquare size={14} className="text-indigo-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  {tr('Étapes', 'Steps')} {steps.length > 0 && `(${steps.filter(s => s.done).length}/${steps.length})`}
-                </h3>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {loading ? (
+              <div className="flex items-center justify-center h-40 text-gray-400">
+                <Loader2 size={24} className="animate-spin mr-2" />{tr('Chargement…', 'Loading…')}
               </div>
-              <div className="space-y-1.5 mb-2">
-                {steps.map(s => (
-                  <div key={s.id} className="flex items-center gap-2 group/step">
-                    <button onClick={() => toggleStep(s)} className="shrink-0 text-gray-400 hover:text-indigo-600">
-                      {s.done ? <CheckSquare size={16} className="text-indigo-600" /> : <Square size={16} />}
-                    </button>
-                    <span className={`flex-1 text-sm ${s.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'}`}>{s.label}</span>
-                    <button onClick={() => deleteStep(s.id)} className="opacity-0 group-hover/step:opacity-100 text-gray-400 hover:text-red-500"><X size={13} /></button>
-                  </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-400 gap-3">
+                <ListChecks size={36} className="opacity-30" />
+                <p className="text-sm">{tr('Aucune tâche', 'No tasks')}</p>
+                <button onClick={() => createTask()} className="text-indigo-600 text-sm font-semibold hover:underline">
+                  {tr('+ Créer une tâche', '+ Create a task')}
+                </button>
+              </div>
+            ) : view === 'list' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {filtered.map(t => (
+                  <TaskCard key={t.id} task={t} selected={selectedId === t.id} lang={lang}
+                    onClick={() => openPanel(t)} onStatusCycle={e => cycleStatus(t, e)} />
                 ))}
               </div>
-              <div className="flex gap-1.5">
-                <input value={newStep} onChange={e => setNewStep(e.target.value)} onKeyDown={e => e.key === 'Enter' && addStep()}
-                  placeholder={tr('Nouvelle étape…', 'New step…')}
-                  className="flex-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
-                <button onClick={addStep} className="rounded-lg bg-indigo-600 text-white px-3 py-1.5 text-sm font-semibold hover:bg-indigo-700"><Plus size={15} /></button>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {KANBAN_COLS.map(col => {
+                  const colTasks = filtered.filter(t => t.status === col.status);
+                  return (
+                    <div key={col.status} className={`flex-none w-72 rounded-xl border-t-4 ${S[col.status].border} bg-gray-100 dark:bg-gray-800/50`}>
+                      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{col.label}</span>
+                        <span className="text-xs font-bold text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-full px-2 py-0.5">{colTasks.length}</span>
+                      </div>
+                      <div className="p-2 space-y-2 max-h-[calc(100vh-18rem)] overflow-y-auto">
+                        {colTasks.map(t => (
+                          <TaskCard key={t.id} task={t} selected={selectedId === t.id} lang={lang}
+                            onClick={() => openPanel(t)} onStatusCycle={e => cycleStatus(t, e)} />
+                        ))}
+                        {colTasks.length === 0 && (
+                          <p className="text-center text-xs text-gray-400 py-6">{tr('Aucune tâche', 'No tasks')}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Detail panel */}
+        {panelOpen && panel && (
+          <div className="flex flex-col w-full lg:w-[440px] flex-none border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-none">
+              <div className="flex items-center gap-2">
+                {saving && <Loader2 size={14} className="animate-spin text-indigo-400" />}
+                <button onClick={archiveTask}
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition
+                    ${panel.status === 'archived'
+                      ? 'border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                  {panel.status === 'archived' ? <RotateCcw size={13} /> : <Archive size={13} />}
+                  {panel.status === 'archived' ? tr('Restaurer', 'Restore') : tr('Archiver', 'Archive')}
+                </button>
+                <button onClick={copyLink} title={tr('Copier le lien', 'Copy link')}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <Link2 size={15} />
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                {!deleteConfirm ? (
+                  <button onClick={() => setDeleteConfirm(true)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Trash2 size={15} />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-red-600 font-medium">{tr('Supprimer?', 'Delete?')}</span>
+                    <button onClick={deleteTask} className="rounded px-2 py-1 text-xs bg-red-600 text-white font-semibold hover:bg-red-700">{tr('Oui', 'Yes')}</button>
+                    <button onClick={() => setDeleteConfirm(false)} className="rounded px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold">{tr('Non', 'No')}</button>
+                  </div>
+                )}
+                <button onClick={closePanel} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <X size={16} />
+                </button>
               </div>
             </div>
 
-            {/* Photos */}
-            <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <Image size={14} className="text-indigo-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  {tr('Photos', 'Photos')} {panel.photo_urls.length > 0 && `(${panel.photo_urls.length})`}
-                </h3>
+            {/* Panel body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+              <input value={panel.title} onChange={e => updatePanel({ title: e.target.value })}
+                placeholder={tr('Titre de la tâche', 'Task title')}
+                className="w-full text-base font-bold bg-transparent text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-gray-600 pb-1 outline-none focus:border-indigo-400" />
+
+              <div className="flex flex-wrap gap-2">
+                <select value={panel.status} onChange={e => updatePanel({ status: e.target.value as TStatus })}
+                  className="flex-1 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+                  {(Object.keys(S) as TStatus[]).map(s => (
+                    <option key={s} value={s}>{lang === 'fr' ? S[s].labelFr : S[s].labelEn}</option>
+                  ))}
+                </select>
+                <select value={panel.priority} onChange={e => updatePanel({ priority: e.target.value as TPriority })}
+                  className="flex-1 min-w-[120px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-2.5 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none">
+                  {(Object.keys(P) as TPriority[]).map(p => (
+                    <option key={p} value={p}>{P[p].sym} {lang === 'fr' ? P[p].labelFr : P[p].labelEn}</option>
+                  ))}
+                </select>
               </div>
-              {panel.photo_urls.length > 0 && (
-                <div className="grid grid-cols-3 gap-1.5 mb-2">
-                  {panel.photo_urls.map(url => (
-                    <div key={url} className="relative group/photo aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                      <button onClick={() => removePhoto(url)}
-                        className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/photo:opacity-100 text-white">
-                        <X size={18} />
+
+              {/* Assignee avec autocomplete */}
+              <AutocompleteInput
+                value={panel.assignee}
+                onChange={v => updatePanel({ assignee: v })}
+                suggestions={personnelSuggestions}
+                placeholder={tr('Responsable', 'Assignee')}
+                icon={User}
+              />
+
+              {/* Site avec autocomplete */}
+              <AutocompleteInput
+                value={panel.site}
+                onChange={v => updatePanel({ site: v })}
+                suggestions={siteSuggestions}
+                placeholder="Site"
+                icon={MapPin}
+              />
+
+              <div className="relative">
+                <CalendarDays size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="date" value={panel.due_date || ''} onChange={e => updatePanel({ due_date: e.target.value || null })}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 pl-8 pr-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
+              </div>
+
+              <textarea value={panel.description} onChange={e => updatePanel({ description: e.target.value })}
+                placeholder={tr('Description…', 'Description…')} rows={3}
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 resize-none outline-none focus:ring-1 focus:ring-indigo-400" />
+
+              {/* Steps */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CheckSquare size={14} className="text-indigo-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {tr('Étapes', 'Steps')} {steps.length > 0 && `(${steps.filter(s => s.done).length}/${steps.length})`}
+                  </h3>
+                </div>
+                <div className="space-y-1.5 mb-2">
+                  {steps.map(s => (
+                    <div key={s.id} className="flex items-center gap-2 group/step">
+                      <button onClick={() => toggleStep(s)} className="shrink-0 text-gray-400 hover:text-indigo-600">
+                        {s.done ? <CheckSquare size={16} className="text-indigo-600" /> : <Square size={16} />}
                       </button>
+                      <span className={`flex-1 text-sm ${s.done ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'}`}>{s.label}</span>
+                      <button onClick={() => deleteStep(s.id)} className="opacity-0 group-hover/step:opacity-100 text-gray-400 hover:text-red-500"><X size={13} /></button>
                     </div>
                   ))}
                 </div>
-              )}
-              <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition">
-                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
-                {tr('Ajouter une photo', 'Add photo')}
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = ''; }} />
-            </div>
+                <div className="flex gap-1.5">
+                  <input value={newStep} onChange={e => setNewStep(e.target.value)} onKeyDown={e => e.key === 'Enter' && addStep()}
+                    placeholder={tr('Nouvelle étape…', 'New step…')}
+                    className="flex-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-1 focus:ring-indigo-400" />
+                  <button onClick={addStep} className="rounded-lg bg-indigo-600 text-white px-3 py-1.5 text-sm font-semibold hover:bg-indigo-700"><Plus size={15} /></button>
+                </div>
+              </div>
 
-            {/* Meta */}
-            <div className="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-0.5">
-              <p>{tr('Créé le', 'Created')} {fmtDate(panel.created_at, lang)}</p>
-              <p>{tr('Modifié le', 'Updated')} {fmtDate(panel.updated_at, lang)}</p>
+              {/* Photos */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <ImageIcon size={14} className="text-indigo-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {tr('Photos', 'Photos')} {(panel.photo_urls?.length ?? 0) > 0 && `(${panel.photo_urls.length})`}
+                  </h3>
+                </div>
+                {(panel.photo_urls?.length ?? 0) > 0 && (
+                  <div className="grid grid-cols-3 gap-1.5 mb-2">
+                    {panel.photo_urls.map((url, idx) => (
+                      <div key={idx} className="relative group/photo aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt={`photo ${idx + 1}`}
+                          className="w-full h-full object-cover cursor-pointer"
+                          onClick={() => setLightboxUrl(url)}
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <button
+                          onClick={e => { e.stopPropagation(); removePhoto(url); }}
+                          className="absolute top-1 right-1 bg-black/60 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover/photo:opacity-100 transition"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                  className="flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition">
+                  {uploading ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
+                  {tr('Ajouter une photo', 'Add photo')}
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = ''; }} />
+              </div>
+
+              {/* Meta */}
+              <div className="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-0.5">
+                <p>{tr('Créé le', 'Created')} {fmtDate(panel.created_at, lang)}</p>
+                <p>{tr('Modifié le', 'Updated')} {fmtDate(panel.updated_at, lang)}</p>
+              </div>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Lightbox photo */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setLightboxUrl(null)}>
+          <button className="absolute top-4 right-4 text-white hover:text-gray-300" onClick={() => setLightboxUrl(null)}>
+            <X size={28} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightboxUrl} alt="Photo" className="max-h-full max-w-full rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>
