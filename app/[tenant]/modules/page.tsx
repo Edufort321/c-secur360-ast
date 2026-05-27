@@ -14,7 +14,7 @@ import { useEntitlements } from '@/lib/entitlements';
 import { supabase } from '@/lib/supabase';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
-  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'equipment', 'inspections', 'timesheets', 'todo'],
+  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'equipment', 'inspections', 'timesheets', 'logbook', 'todo'],
 };
 
 const money = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} $`;
@@ -38,6 +38,7 @@ export default function ModulesPage() {
   const [invCount, setInvCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
+  const [logbookStats, setLogbookStats] = useState({ vehicles: 0, kmWeek: 0, kmYear: 0 });
 
   // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
@@ -91,7 +92,18 @@ export default function ModulesPage() {
           if (x.status !== 'archived') { td.total += 1; if (x.status === 'todo') td.todo += 1; else if (x.status === 'in_progress') td.in_progress += 1; else if (x.status === 'done') td.done += 1; }
         });
 
-        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); }
+        const weekStart = (() => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); return d.toISOString().slice(0, 10); })();
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const { data: lbWeek } = await supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).eq('week_start', weekStart);
+        const { data: lbYear } = await supabase.from('vehicle_logbook').select('km_total').eq('tenant_id', tenant).gte('week_start', yearStart);
+        const { count: vCount } = await supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant).eq('active', true);
+        const lb = {
+          vehicles: vCount || 0,
+          kmWeek: (lbWeek || []).reduce((s: number, r: any) => s + Number(r.km_total || 0), 0),
+          kmYear: (lbYear || []).reduce((s: number, r: any) => s + Number(r.km_total || 0), 0),
+        };
+
+        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); }
       } catch { /* dégradé */ } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -110,6 +122,7 @@ export default function ModulesPage() {
   if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: tr('articles', 'items'), available: true });
   if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: '—', sub: tr('à venir', 'soon'), available: true });
   if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: '—', sub: tr('paie · à venir', 'payroll · soon'), available: true });
+  if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
 
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
