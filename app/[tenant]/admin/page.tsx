@@ -10,6 +10,38 @@ import { useLanguage } from '@/contexts/LanguageContext';
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
+function AutocompleteInput({ value, onChange, suggestions, placeholder, className }: {
+  value: string; onChange: (v: string) => void;
+  suggestions: string[]; placeholder?: string; className?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const filtered = suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()) && s !== value);
+  return (
+    <div className={`relative ${className || ''}`}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600"
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute left-0 top-full z-30 mt-0.5 w-full min-w-[160px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+          {filtered.map(s => (
+            <li key={s}>
+              <button type="button" onMouseDown={() => { onChange(s); setOpen(false); }}
+                className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const params = useParams();
   const tenant = (params?.tenant as string) || 'cerdia';
@@ -805,12 +837,13 @@ type VRow = {
   employee_name: string; km_rate_override: string; active: boolean; notes: string;
 };
 
-function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp }: {
+function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnelSuggestions }: {
   label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void;
   upd: (i: number, k: keyof VRow, v: any) => void;
   del: (i: number) => void;
   tr: (f: string, e: string) => string;
   inp: string;
+  personnelSuggestions: string[];
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -844,7 +877,14 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp }: {
                 <td className="px-2"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
                 <td className="px-2"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2022" /></td>
                 <td className="px-2"><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
-                <td className="px-2"><input className={inp} value={r.employee_name} onChange={e => upd(i, 'employee_name', e.target.value)} placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Assigné à', 'Assigned to')} /></td>
+                <td className="px-2">
+                  <AutocompleteInput
+                    value={r.employee_name}
+                    onChange={v => upd(i, 'employee_name', v)}
+                    suggestions={personnelSuggestions}
+                    placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Assigné à', 'Assigned to')}
+                  />
+                </td>
                 <td className="px-2">
                   <div className="flex items-center gap-1">
                     <input
@@ -879,7 +919,16 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [personnelSuggestions, setPersonnelSuggestions] = useState<string[]>([]);
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  useEffect(() => {
+    supabase.from('planner_personnel').select('prenom, nom').eq('tenant_id', tenant)
+      .then(({ data }) => {
+        if (data) setPersonnelSuggestions(data.map((p: any) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean));
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant]);
 
   async function load() {
     setLoading(true);
@@ -950,12 +999,14 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         badge={tr(`${companyRows.length} véhicule(s)`, `${companyRows.length} vehicle(s)`)}
         items={companyRows} onAdd={addCompany}
         upd={upd} del={del} tr={tr} inp={inp}
+        personnelSuggestions={personnelSuggestions}
       />
       <VehicleTable
         label={tr('Véhicules personnels autorisés', 'Authorized personal vehicles')}
         badge={tr(`${personalRows.length} véhicule(s)`, `${personalRows.length} vehicle(s)`)}
         items={personalRows} onAdd={addPersonal}
         upd={upd} del={del} tr={tr} inp={inp}
+        personnelSuggestions={personnelSuggestions}
       />
     </div>
   );
