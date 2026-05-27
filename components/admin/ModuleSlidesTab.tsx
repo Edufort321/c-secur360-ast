@@ -35,9 +35,14 @@ export default function ModuleSlidesTab({
   const [slides, setSlides] = useState<ModuleSlide[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const notify = (msg: string, ok = true) => toast?.({ msg, type: ok ? 'success' : 'error' })
+  const notify = (text: string, ok = true) => {
+    toast?.({ msg: text, type: ok ? 'success' : 'error' })
+    setMsg({ text, ok })
+    setTimeout(() => setMsg(null), 4000)
+  }
 
   const load = async (key: string) => {
     setLoading(true)
@@ -109,6 +114,12 @@ export default function ModuleSlidesTab({
         <p className="text-xs text-slate-400 mb-4">
           Ces images s'affichent au survol de chaque carte module sur la page d'accueil.
         </p>
+
+        {msg && (
+          <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm font-medium ${msg.ok ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-700' : 'bg-red-900/50 text-red-300 border border-red-700'}`}>
+            {msg.text}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-5">
           {MODULE_KEYS.map(m => (

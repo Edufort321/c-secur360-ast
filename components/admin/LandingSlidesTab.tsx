@@ -42,9 +42,14 @@ export default function LandingSlidesTab({
   const [form, setForm] = useState<FormData>(EMPTY)
   const [editId, setEditId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const notify = (msg: string, ok = true) => toast?.({ msg, type: ok ? 'success' : 'error' })
+  const notify = (text: string, ok = true) => {
+    toast?.({ msg: text, type: ok ? 'success' : 'error' })
+    setMsg({ text, ok })
+    setTimeout(() => setMsg(null), 4000)
+  }
 
   const load = async () => {
     setLoading(true)
@@ -164,6 +169,12 @@ export default function LandingSlidesTab({
         <p className="text-xs text-slate-400 mb-5">
           Photos de fond du carrousel principal de la page d'accueil. Titre et sous-titre optionnels.
         </p>
+
+        {msg && (
+          <div className={`mb-4 px-4 py-2.5 rounded-lg text-sm font-medium ${msg.ok ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-700' : 'bg-red-900/50 text-red-300 border border-red-700'}`}>
+            {msg.text}
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
