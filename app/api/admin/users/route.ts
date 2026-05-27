@@ -36,3 +36,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
   }
 }
+
+// PATCH /api/admin/users  { id, name, email, role, is_active, password? } → modifie un profil
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, name, email, role, is_active, password } = await req.json();
+    if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+    const updates: any = {};
+    if (name !== undefined) updates.name = name || null;
+    if (email !== undefined) updates.email = String(email).toLowerCase().trim();
+    if (role !== undefined) updates.role = role;
+    if (is_active !== undefined) updates.is_active = is_active;
+    if (password) updates.password = await hashPassword(password);
+    const { error } = await supabaseAdmin.from('users').update(updates).eq('id', id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/users?id=... → supprime un profil
+export async function DELETE(req: NextRequest) {
+  try {
+    const id = new URL(req.url).searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
+    await supabaseAdmin.from('auth_sessions').delete().eq('user_id', id);
+    const { error } = await supabaseAdmin.from('users').delete().eq('id', id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
+  }
+}

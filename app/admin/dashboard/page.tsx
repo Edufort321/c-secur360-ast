@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PortalHeader } from '@/components/PortalHeader';
+import LandingSlidesTab from '@/components/admin/LandingSlidesTab';
+import ModuleSlidesTab from '@/components/admin/ModuleSlidesTab';
 import PriceManager from '../../../components/admin/PriceManager';
 import RevenueForecast from '../../../components/admin/RevenueForecast';
 import { computeSubState } from '@/lib/subscription';
@@ -922,6 +924,28 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Section : gestion slides page d'accueil */}
+      <div style={{ padding: '40px 32px 0' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '6px', color: '#111827' }}>
+          Page d'accueil — Carrousel hero
+        </h2>
+        <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>
+          Photos du carrousel principal en haut de la page d'accueil.
+        </p>
+        <LandingSlidesTab />
+      </div>
+
+      {/* Section : captures d'ecran par module */}
+      <div style={{ padding: '40px 32px 0' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '6px', color: '#111827' }}>
+          Page d'accueil — Captures modules
+        </h2>
+        <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>
+          Screenshots affichees au survol de chaque module sur la page d'accueil.
+        </p>
+        <ModuleSlidesTab />
       </div>
 
       {/* Footer avec mention CERDIA */}

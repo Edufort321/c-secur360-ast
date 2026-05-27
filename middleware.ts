@@ -50,6 +50,8 @@ const publicRoutes = [
   '/about',
   '/api/auth/login',
   '/api/auth/logout',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
   '/api/auth/totp-setup',
   '/api/sms/inbound', // Twilio webhooks
   '/api/voice/inbound',
@@ -148,7 +150,7 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
       .select(`
         expires_at,
         users!inner (
-          id, email, role, tenant_id, totp_enabled
+          id, email, role, tenant_id
         )
       `)
       .eq('token', token)
@@ -205,6 +207,10 @@ async function handleAuthentication(request: NextRequest, pathname: string, url:
 function isPublicRoute(pathname: string): boolean {
   // Dynamic tenant login pages: /{tenant}/login
   if (/^\/[^/]+\/login$/.test(pathname)) return true;
+
+  // Password reset flow — public (no auth)
+  if (/^\/[^/]+\/forgot-password$/.test(pathname)) return true;
+  if (/^\/[^/]+\/reset-password$/.test(pathname)) return true;
 
   // Marketing page — unauthenticated landing
   if (/^\/[^/]+\/bienvenue$/.test(pathname)) return true;

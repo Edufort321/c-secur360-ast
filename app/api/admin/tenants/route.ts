@@ -78,6 +78,40 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Calcul du revenu pour la sync CERDIA (inline — sans revenueOf du scope GET)
+    const enabledKeys: string[] = sel;
+    const [{ data: modPrices }, { data: billingCfg }] = await Promise.all([
+      supabaseAdmin.from('modules').select('key, monthly_price'),
+      supabaseAdmin.from('billing_config').select('discount_per_module, discount_cap').eq('id', 'default').maybeSingle(),
+    ]);
+    const priceMap: Record<string, number> = Object.fromEntries((modPrices || []).map((m: any) => [m.key, Number(m.monthly_price) || 0]));
+    const perDisc = Number(billingCfg?.discount_per_module ?? 5);
+    const capDisc = Number(billingCfg?.discount_cap ?? 30);
+    const subtotal = enabledKeys.reduce((s, k) => s + (priceMap[k] || 0), 0);
+    const disc = Math.min(Math.max(enabledKeys.length - 1, 0) * perDisc, capDisc);
+    const annualRevenue = Math.round(subtotal * (1 - disc / 100) * 100) / 100;
+
+    // Sync vers CERDIA Commerce (non-bloquant — echec silencieux)
+    const cerdiaUrl = process.env.CERDIA_COMMERCE_URL;
+    const syncSecret = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge';
+    if (cerdiaUrl) {
+      fetch(`${cerdiaUrl}/api/commerce/csecur360`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${syncSecret}` },
+        body: JSON.stringify({
+          id,
+          company_name: companyName,
+          admin_email: adminEmail || null,
+          plan: 'professional',
+          monthly_revenue: Math.round(annualRevenue / 12 * 100) / 100,
+          annual_revenue: annualRevenue,
+          modules_count: enabledKeys.length,
+          sites_count: 1,
+          status: 'active',
+        }),
+      }).catch(() => { /* sync non critique */ });
+    }
+
     return NextResponse.json({ ok: true, id });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });

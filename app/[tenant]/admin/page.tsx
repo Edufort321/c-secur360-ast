@@ -2,7 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Settings, CreditCard, Users, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers } from 'lucide-react';
+import Link from 'next/link';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, KeyRound, ExternalLink, Eye, EyeOff, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,7 +48,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'employes' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -56,15 +57,16 @@ export default function AdminPage() {
         <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
         {(() => {
           const tabs = [
-            { k: 'sites',       label: tr('Sites', 'Sites'),                    icon: MapPin },
-            { k: 'clients',     label: tr('Clients', 'Clients'),              icon: Building2 },
-            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),           icon: Car },
-            { k: 'sitesdepts',  label: tr('Sites/Dépts', 'Sites/Depts'),      icon: Layers },
-            { k: 'profils',     label: tr('Employés', 'Employees'),           icon: Users },
-            { k: 'ressources',  label: tr('Ressources', 'Resources'),         icon: Wrench },
-            { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'), icon: Clock },
-            { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),  icon: CreditCard },
-            { k: 'facturation', label: tr('Facturation', 'Billing'),      icon: Settings },
+            { k: 'sites',       label: tr('Sites', 'Sites'),                         icon: MapPin },
+            { k: 'clients',     label: tr('Clients', 'Clients'),                   icon: Building2 },
+            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                icon: Car },
+            { k: 'sitesdepts',  label: tr('Sites/Dépts', 'Sites/Depts'),           icon: Layers },
+            { k: 'employes',    label: tr('Employés', 'Employees'),                icon: HardHat },
+            { k: 'profils',     label: tr('Comptes / Accès', 'Accounts / Access'), icon: KeyRound },
+            { k: 'ressources',  label: tr('Ressources', 'Resources'),              icon: Wrench },
+            { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),      icon: Clock },
+            { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),       icon: CreditCard },
+            { k: 'facturation', label: tr('Facturation', 'Billing'),           icon: Settings },
           ];
           return (
             <>
@@ -95,6 +97,7 @@ export default function AdminPage() {
         {tab === 'clients' && <Clients tenant={tenant} tr={tr} />}
         {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
+        {tab === 'employes' && <Employes tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
@@ -923,9 +926,9 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   useEffect(() => {
-    supabase.from('planner_personnel').select('prenom, nom').eq('tenant_id', tenant)
+    supabase.from('planner_personnel').select('name').eq('tenant_id', tenant)
       .then(({ data }) => {
-        if (data) setPersonnelSuggestions(data.map((p: any) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean));
+        if (data) setPersonnelSuggestions(data.map((p: any) => p.name?.trim()).filter(Boolean));
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
@@ -1036,6 +1039,12 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   const [notice, setNotice] = useState<string | null>(null);
   const [showPwd, setShowPwd] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user', is_active: true, newPassword: '' });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editNotice, setEditNotice] = useState<string | null>(null);
+  const [showEditPwd, setShowEditPwd] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   function genPwd(name: string) {
     const pwd = generatePassword(name || form.name);
@@ -1068,81 +1077,178 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     } catch (e: any) { setNotice(e.message || tr('Erreur', 'Error')); } finally { setBusy(false); }
   }
 
+  function openEdit(u: any) {
+    setEditing(u);
+    setEditForm({ name: u.name || '', email: u.email || '', role: u.role || 'user', is_active: u.is_active !== false, newPassword: '' });
+    setEditNotice(null);
+    setShowEditPwd(false);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault(); setEditBusy(true); setEditNotice(null);
+    try {
+      const body: any = { id: editing.id, name: editForm.name, email: editForm.email, role: editForm.role, is_active: editForm.is_active };
+      if (editForm.newPassword) body.password = editForm.newPassword;
+      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setEditNotice(tr('Enregistré ✓', 'Saved ✓')); load();
+    } catch (e: any) { setEditNotice(e.message || tr('Erreur', 'Error')); } finally { setEditBusy(false); }
+  }
+
+  async function deleteUser(id: string) {
+    const r = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
+    if (r.ok) { setEditing(null); setConfirmDelete(null); load(); }
+  }
+
+  const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600';
+
   return (
     <div className="grid gap-4 lg:grid-cols-3">
+      {/* Liste */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-        <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Profils du tenant', 'Tenant profiles')}</div>
+        <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Comptes du tenant', 'Tenant accounts')}</div>
         {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {users.map(u => (
-              <div key={u.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-gray-900 text-xs font-bold text-white dark:bg-blue-600">{(u.email || '?')[0].toUpperCase()}</div>
-                <div className="flex-1"><div className="font-medium">{u.name || u.email}</div><div className="text-xs text-gray-500">{u.email}</div></div>
+              <div key={u.id} onClick={() => openEdit(u)}
+                className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/40 ${editing?.id === u.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${u.is_active !== false ? 'bg-gray-900 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  {(u.email || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{u.name || u.email}</div>
+                  <div className="truncate text-xs text-gray-500">{u.email}</div>
+                </div>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">{u.role}</span>
+                {u.is_active === false && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">{tr('Archivé', 'Archived')}</span>}
               </div>
             ))}
             {users.length === 0 && <div className="px-4 py-6 text-sm text-gray-400">{tr('Aucun profil.', 'No profile.')}</div>}
           </div>
         )}
       </div>
-      <form onSubmit={create} className="h-fit space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="font-bold">{tr('Nouveau profil', 'New profile')}</h2>
-        <input required type="email" placeholder={tr('Courriel', 'Email')} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="inp2" />
-        <input
-          placeholder={tr('Nom', 'Name')} value={form.name}
-          onChange={e => {
-            const name = e.target.value;
-            setForm(f => ({ ...f, name }));
-            if (name.trim().length >= 2) genPwd(name);
-          }}
-          className="inp2"
-        />
-        <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="inp2">
-          <option value="user">{tr('Utilisateur', 'User')}</option>
-          <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
-          <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
-        </select>
-        {/* Mot de passe avec générateur */}
-        <div className="space-y-1.5">
-          <div className="flex gap-1.5">
-            <div className="relative flex-1">
-              <input
-                required
-                type={showPwd ? 'text' : 'password'}
-                placeholder={tr('Mot de passe initial', 'Initial password')}
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                className="inp2 pr-8"
-              />
-              <button type="button" onClick={() => setShowPwd(v => !v)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-semibold select-none">
-                {showPwd ? tr('Cacher', 'Hide') : tr('Voir', 'Show')}
+
+      <div className="space-y-4">
+        {/* Edit panel */}
+        {editing && (
+          <form onSubmit={saveEdit} className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/60 p-5 dark:border-blue-500/30 dark:bg-blue-500/5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-sm">{tr('Modifier le compte', 'Edit account')}</h2>
+              <button type="button" onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            </div>
+            {editNotice && <p className={`text-xs font-medium ${editNotice.includes('✓') ? 'text-green-700 dark:text-green-400' : 'text-red-600'}`}>{editNotice}</p>}
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nom', 'Name')}</label>
+              <input className={inp2} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Jean Dupont" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel', 'Email')}</label>
+              <input type="email" className={inp2} value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Rôle', 'Role')}</label>
+              <select className={inp2} value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
+                <option value="user">{tr('Utilisateur', 'User')}</option>
+                <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
+                <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm(f => ({ ...f, is_active: e.target.checked }))} />
+              {tr('Compte actif', 'Active account')}
+            </label>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nouveau mot de passe (optionnel)', 'New password (optional)')}</label>
+              <div className="relative">
+                <input
+                  type={showEditPwd ? 'text' : 'password'}
+                  className={`${inp2} pr-14`}
+                  value={editForm.newPassword}
+                  onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))}
+                  placeholder={tr('Laisser vide = inchangé', 'Leave empty = unchanged')}
+                />
+                <button type="button" onClick={() => setShowEditPwd(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showEditPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="submit" disabled={editBusy}
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                {editBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
+              </button>
+              {confirmDelete === editing.id ? (
+                <button type="button" onClick={() => deleteUser(editing.id)}
+                  className="rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                  {tr('Confirmer', 'Confirm')}
+                </button>
+              ) : (
+                <button type="button" onClick={() => setConfirmDelete(editing.id)}
+                  className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+
+        {/* Create form */}
+        <form onSubmit={create} className="h-fit space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h2 className="font-bold">{tr('Nouveau compte', 'New account')}</h2>
+          <input required type="email" placeholder={tr('Courriel', 'Email')} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inp2} />
+          <input
+            placeholder={tr('Nom', 'Name')} value={form.name}
+            onChange={e => {
+              const name = e.target.value;
+              setForm(f => ({ ...f, name }));
+              if (name.trim().length >= 2) genPwd(name);
+            }}
+            className={inp2}
+          />
+          <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className={inp2}>
+            <option value="user">{tr('Utilisateur', 'User')}</option>
+            <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
+            <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
+          </select>
+          <div className="space-y-1.5">
+            <div className="flex gap-1.5">
+              <div className="relative flex-1">
+                <input
+                  required
+                  type={showPwd ? 'text' : 'password'}
+                  placeholder={tr('Mot de passe initial', 'Initial password')}
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  className={`${inp2} pr-14`}
+                />
+                <button type="button" onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <button type="button" onClick={() => genPwd(form.name)} title={tr('Générer', 'Generate')}
+                className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+                ↻
               </button>
             </div>
-            <button type="button" onClick={() => genPwd(form.name)}
-              title={tr('Générer', 'Generate')}
-              className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-              ↻
-            </button>
+            {form.password && (
+              <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-2">
+                <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
+                <button type="button" onClick={copyPwd}
+                  className={`ml-3 shrink-0 text-xs font-semibold px-2 py-0.5 rounded transition ${copied ? 'text-green-600' : 'text-blue-600 hover:underline'}`}>
+                  {copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}
+                </button>
+              </div>
+            )}
           </div>
-          {form.password && (
-            <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-2">
-              <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
-              <button type="button" onClick={copyPwd}
-                className={`ml-3 shrink-0 text-xs font-semibold px-2 py-0.5 rounded transition ${copied ? 'text-green-600' : 'text-blue-600 hover:underline'}`}>
-                {copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}
-              </button>
-            </div>
-          )}
-        </div>
-        <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {tr('Créer', 'Create')}</button>
-        {notice && <p className="text-sm text-gray-600 dark:text-gray-300">{notice}</p>}
-      </form>
-      <style jsx>{`
-        .inp2 { width: 100%; border-radius: 0.6rem; border: 1px solid rgb(209 213 219); background: transparent; padding: 0.5rem 0.7rem; font-size: 0.875rem; outline: none; }
-        .inp2:focus { border-color: rgb(37 99 235); box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
-        :global(.dark) .inp2 { border-color: rgb(75 85 99); }
-      `}</style>
+          <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+            {busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {tr('Créer', 'Create')}
+          </button>
+          {notice && <p className={`text-sm ${notice.includes('✓') ? 'text-green-700 dark:text-green-400' : 'text-red-600'}`}>{notice}</p>}
+        </form>
+      </div>
     </div>
   );
 }
@@ -1152,17 +1258,16 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 // ============================================================
 
 function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [subTab, setSubTab] = useState<'personnel' | 'equipements' | 'postes'>('personnel');
+  const [subTab, setSubTab] = useState<'equipements' | 'postes'>('equipements');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        {tr('Personnel et équipements utilisés par le planificateur. Ces données sont synchronisées en temps réel.', 'Staff and equipment used by the planner. This data is synced in real time.')}
+        {tr('Équipements et postes utilisés par le planificateur.', 'Equipment and positions used by the planner.')}
       </p>
       <div className="flex gap-1 overflow-x-auto">
         {[
-          { k: 'personnel',   label: tr('Personnel', 'Staff') },
           { k: 'equipements', label: tr('Équipements', 'Equipment') },
           { k: 'postes',      label: tr('Postes', 'Positions') },
         ].map(x => (
@@ -1172,9 +1277,34 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           </button>
         ))}
       </div>
-      {subTab === 'personnel'   && <PersonnelPlanner   tenant={tenant} tr={tr} inp={inp} />}
       {subTab === 'equipements' && <EquipementsPlanner tenant={tenant} tr={tr} inp={inp} />}
       {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} />}
+    </div>
+  );
+}
+
+// ============================================================
+// EMPLOYÉS — PersonnelPlanner avec liens vers modules
+// ============================================================
+
+function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  return (
+    <div className="space-y-4">
+      {/* Module cross-links */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: `/${tenant}/planificateur`, label: tr('Planificateur', 'Planner'), color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30' },
+          { href: `/${tenant}/timesheets`,    label: tr('Feuilles de temps', 'Timesheets'), color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' },
+          { href: `/${tenant}/todo`,          label: tr('Tâches', 'Tasks'), color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' },
+        ].map(m => (
+          <Link key={m.href} href={m.href}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:opacity-80 ${m.color}`}>
+            <ExternalLink size={12} /> {m.label}
+          </Link>
+        ))}
+      </div>
+      <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} />
     </div>
   );
 }

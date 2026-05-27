@@ -33,6 +33,20 @@ interface PricingPlan {
   popular?: boolean
 }
 
+interface DbModule {
+  key: string
+  name_fr: string
+  name_en: string
+  monthly_price: number
+  sort_order: number
+}
+
+interface ModuleSlide {
+  module_key: string
+  image_url: string
+  sort_order: number
+}
+
 // ─── Données statiques ────────────────────────────────────────────────────────
 
 const MODULES_FR = [
@@ -97,16 +111,23 @@ const TESTIMONIALS_EN = [
   { name: 'Jean-Francois Roy', title: 'General Superintendent', company: 'Groupe Construction Atlas', text: 'The timesheet module eliminated 8 hours of manual entry per week. The vehicle logbook saved us during our last CNESST inspection.', rating: 5 },
 ]
 
+// ─── Contact mailto ───────────────────────────────────────────────────────────
+
+const CONTACT_MAILTO_FR = "mailto:eric.dufort@cerdia.ai?subject=Demande%20d%27information%20%E2%80%94%20C-Secur360&body=Bonjour%20Eric%2C%0A%0ANom%20%3A%20%0ACourriel%20%3A%20%0ANom%20de%20l%27entreprise%20%3A%20%0A%0AJe%20souhaite%20en%20savoir%20plus%20sur%20C-Secur360%20et%20obtenir%20un%20acces%20d%27essai."
+const CONTACT_MAILTO_EN = "mailto:eric.dufort@cerdia.ai?subject=Information%20Request%20%E2%80%94%20C-Secur360&body=Hello%20Eric%2C%0A%0AName%3A%20%0AEmail%3A%20%0ACompany%20name%3A%20%0A%0AI%20would%20like%20to%20learn%20more%20about%20C-Secur360%20and%20get%20trial%20access."
+
 // ─── Composant principal ───────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr')
   const fr = lang === 'fr'
   const [menuOpen, setMenuOpen] = useState(false)
+  const [clientSubdomain, setClientSubdomain] = useState('')
   const [slideIdx, setSlideIdx] = useState(0)
   const [dbSlides, setDbSlides] = useState<Slide[] | null>(null)
-  const [plans, setPlans] = useState<PricingPlan[]>(STATIC_PLANS_FR)
-  const [pricingCycle, setPricingCycle] = useState<'monthly' | 'annual'>('monthly')
+  const [dbModules, setDbModules] = useState<DbModule[]>([])
+  const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
+  const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const modules = fr ? MODULES_FR : MODULES_EN
@@ -127,23 +148,46 @@ export default function LandingPage() {
       })
   }, [])
 
-  // Load pricing from DB billing_config or modules table
+  // Load module prices from DB
+  useEffect(() => {
+    supabase
+      .from('modules')
+      .select('key, name_fr, name_en, monthly_price, sort_order')
+      .eq('is_active', true)
+      .order('sort_order')
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setDbModules(data.map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price || 0) })))
+        }
+      })
+  }, [])
+
+  // Load per-site price from billing_config
   useEffect(() => {
     supabase
       .from('billing_config')
-      .select('*')
-      .limit(10)
+      .select('per_site_monthly')
+      .eq('id', 'default')
+      .maybeSingle()
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          const mapped: PricingPlan[] = data.map((row: any) => ({
-            name_fr: row.name_fr || row.name || 'Plan',
-            name_en: row.name_en || row.name || 'Plan',
-            monthly: row.price_monthly ?? row.monthly ?? 0,
-            annual: row.price_annual ?? row.annual ?? 0,
-            popular: row.popular ?? false,
-          }))
-          setPlans(mapped)
+        if (data?.per_site_monthly != null) setPerSitePrice(Number(data.per_site_monthly))
+      })
+  }, [])
+
+  // Load module screenshots
+  useEffect(() => {
+    supabase
+      .from('module_slides')
+      .select('module_key, image_url, sort_order')
+      .order('sort_order')
+      .then(({ data }) => {
+        if (!data) return
+        const grouped: Record<string, ModuleSlide[]> = {}
+        for (const row of data) {
+          if (!grouped[row.module_key]) grouped[row.module_key] = []
+          grouped[row.module_key].push(row)
         }
+        setModuleSlides(grouped)
       })
   }, [])
 
@@ -195,14 +239,28 @@ export default function LandingPage() {
         {menuOpen && (
           <div className="bg-[#111c30] border-t border-white/8">
             <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-2">
+              <form onSubmit={e => { e.preventDefault(); if (clientSubdomain.trim()) { setMenuOpen(false); window.location.href = `/${clientSubdomain.trim().toLowerCase()}/login` } }}
+                className="flex gap-2">
+                <input
+                  type="text"
+                  value={clientSubdomain}
+                  onChange={e => setClientSubdomain(e.target.value)}
+                  placeholder={fr ? 'Nom de votre organisation' : 'Your organization name'}
+                  className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+                />
+                <button type="submit"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition">
+                  <ArrowRight size={15} />
+                </button>
+              </form>
               <Link href="/auth/admin" onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-slate-300 transition border border-white/8">
                 <Lock size={14} /> {fr ? 'Acces Admin' : 'Admin Access'}
               </Link>
-              <Link href="/demo/dashboard" onClick={() => setMenuOpen(false)}
+              <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN} onClick={() => setMenuOpen(false)}
                 className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm text-white font-semibold transition">
-                {fr ? 'Demo Gratuite' : 'Free Demo'} <ArrowRight size={14} />
-              </Link>
+                {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={14} />
+              </a>
             </nav>
           </div>
         )}
@@ -261,14 +319,14 @@ export default function LandingPage() {
             )}
 
             <div className="flex flex-wrap gap-4">
-              <Link href="/demo/dashboard"
+              <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-orange-500/25">
-                {fr ? 'Essayer gratuitement' : 'Try for free'} <ArrowRight size={18} />
-              </Link>
-              <Link href="/demo/dashboard"
+                {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={18} />
+              </a>
+              <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/8 px-7 py-3.5 rounded-xl font-semibold text-base transition">
-                {fr ? 'Voir la demo' : 'Watch demo'}
-              </Link>
+                <Mail size={16} /> {fr ? 'Ecrire a l\'equipe' : 'Contact the team'}
+              </a>
             </div>
           </div>
         </div>
@@ -309,6 +367,37 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* ── Acces tenant ───────────────────────────────────────────────────── */}
+      <section className="py-12 px-4">
+        <div className="max-w-md mx-auto bg-[#0D1F3C] border border-white/10 rounded-2xl p-6">
+          <h3 className="font-bold text-white text-base mb-1 flex items-center gap-2">
+            <Globe size={16} className="text-orange-400" />
+            {fr ? 'Acces portail client' : 'Client portal access'}
+          </h3>
+          <p className="text-slate-400 text-xs mb-4">
+            {fr ? 'Entrez le nom de votre organisation pour acceder a votre portail.' : 'Enter your organization name to access your portal.'}
+          </p>
+          <form onSubmit={e => { e.preventDefault(); if (clientSubdomain.trim()) window.location.href = `/${clientSubdomain.trim().toLowerCase()}/login` }}
+            className="flex gap-2">
+            <input
+              type="text"
+              value={clientSubdomain}
+              onChange={e => setClientSubdomain(e.target.value)}
+              placeholder={fr ? 'ex: construction-abc' : 'ex: construction-abc'}
+              className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+            />
+            <button type="submit"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
+              <ArrowRight size={15} />
+              {fr ? 'Acceder' : 'Go'}
+            </button>
+          </form>
+          <p className="text-slate-500 text-xs mt-3">
+            {fr ? 'URL: csecur360.ca/votre-organisation' : 'URL: csecur360.ca/your-organization'}
+          </p>
+        </div>
+      </section>
+
       {/* ── Modules ────────────────────────────────────────────────────────── */}
       <section className="py-24 px-4 max-w-7xl mx-auto">
         <div className="text-center mb-14">
@@ -326,16 +415,40 @@ export default function LandingPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {modules.map((mod) => (
-            <div key={mod.key}
-              className="bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/40 hover:bg-[#142038] transition group">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center mb-3 group-hover:bg-orange-500/25 transition">
-                <mod.icon size={20} className="text-orange-400" />
+          {modules.map((mod) => {
+            const slides = moduleSlides[mod.key] || []
+            const dbMod = dbModules.find(d => d.key === mod.key)
+            return (
+              <div key={mod.key}
+                className="group bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-default">
+                {/* Header toujours visible */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/30 group-hover:scale-110 transition-all duration-300">
+                    <mod.icon size={20} className="text-orange-400" />
+                  </div>
+                  {dbMod && dbMod.monthly_price > 0 && (
+                    <span className="text-xs font-bold text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                      {dbMod.monthly_price}$/an
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-bold text-white text-sm mt-3 mb-0">{mod.name}</h3>
+
+                {/* Contenu etendu au survol */}
+                <div className="overflow-hidden max-h-0 group-hover:max-h-56 transition-all duration-500 ease-in-out">
+                  <p className="text-xs text-slate-400 leading-relaxed mt-2">{mod.desc}</p>
+                  {slides.length > 0 && (
+                    <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
+                      {slides.slice(0, 3).map((s, i) => (
+                        <img key={i} src={s.image_url} alt=""
+                          className="h-16 w-24 object-cover rounded-lg flex-shrink-0 border border-white/10" />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <h3 className="font-bold text-white text-sm mb-1.5">{mod.name}</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">{mod.desc}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -351,7 +464,9 @@ export default function LandingPage() {
             </h2>
             <div className="space-y-4">
               {[
-                { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr ? 'Chaque client a son portail prive avec URL dediee. Facturation additive par site.' : 'Each client has a private portal with dedicated URL. Additive billing per site.' },
+                { icon: Building2, title: fr ? 'Multi-sites & multi-clients' : 'Multi-site & multi-client', desc: fr
+                    ? `Chaque client a son portail prive avec URL dediee. Facturation additive par site${perSitePrice != null ? ` (+${perSitePrice}$/mois/site)` : ''}.`
+                    : `Each client has a private portal with dedicated URL. Additive billing per site${perSitePrice != null ? ` (+$${perSitePrice}/month/site)` : ''}.` },
                 { icon: Smartphone, title: fr ? 'Application mobile PWA' : 'PWA mobile app', desc: fr ? 'Installez sur iOS et Android. Fonctionne hors-ligne sur le chantier.' : 'Install on iOS and Android. Works offline on the jobsite.' },
                 { icon: BarChart3, title: fr ? 'Tableaux de bord en temps reel' : 'Real-time dashboards', desc: fr ? 'KPIs de securite, tendances d\'incidents et rapports de conformite automatiques.' : 'Safety KPIs, incident trends and automatic compliance reports.' },
                 { icon: Globe, title: fr ? 'Conforme partout au Canada' : 'Compliant across Canada', desc: fr ? 'Toutes les provinces: QC, ON, BC, AB et plus. CNESST, MOL, WorkSafeBC.' : 'All provinces: QC, ON, BC, AB and more. CNESST, MOL, WorkSafeBC.' },
@@ -392,77 +507,183 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing ─────────────────────────────────────────────────────────── */}
-      <section className="py-24 px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-10">
-          <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
-            {fr ? 'Tarification' : 'Pricing'}
-          </p>
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
-            {fr ? 'Prix transparents, sans surprise.' : 'Transparent pricing, no surprises.'}
-          </h2>
-          <div className="inline-flex bg-[#0D1F3C] rounded-xl p-1 gap-1 mt-2">
-            <button
-              onClick={() => setPricingCycle('monthly')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${pricingCycle === 'monthly' ? 'bg-orange-500 text-white' : 'text-slate-300 hover:text-white'}`}>
-              {fr ? 'Mensuel' : 'Monthly'}
-            </button>
-            <button
-              onClick={() => setPricingCycle('annual')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${pricingCycle === 'annual' ? 'bg-orange-500 text-white' : 'text-slate-300 hover:text-white'}`}>
-              {fr ? 'Annuel (-2 mois)' : 'Annual (-2 months)'}
-            </button>
-          </div>
-        </div>
+      {(() => {
+        // monthly_price dans la DB = prix ANNUEL par module (nom de colonne trompeur)
+        const FREE_KEYS = ['admin', 'todo']
+        const paidModules = dbModules.filter(m => !FREE_KEYS.includes(m.key) && m.monthly_price > 0)
+        const subtotal = paidModules.length > 0
+          ? paidModules.reduce((s, m) => s + m.monthly_price, 0)
+          : STATIC_PLANS_FR[1].annual
+        // Rabais: -5% par module additionnel, plafonné à -30%
+        const discountPct = paidModules.length > 0
+          ? Math.min(Math.max(paidModules.length - 1, 0) * 5, 30)
+          : 0
+        const totalAnnual = Math.round(subtotal * (1 - discountPct / 100))
+        // Starter ~ 5 modules payants, rabais ~20% (4 mod additionnels)
+        const starterSubtotal = paidModules.length > 0
+          ? paidModules.slice(0, 5).reduce((s, m) => s + m.monthly_price, 0)
+          : Math.round(STATIC_PLANS_FR[0].annual)
+        const starterAnnual = Math.round(starterSubtotal * (1 - Math.min(4 * 5, 30) / 100))
+        const hasPrices = paidModules.length > 0
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {plans.map((plan, i) => (
-            <div key={i} className={`relative rounded-2xl border p-6 flex flex-col ${plan.popular ? 'bg-[#1a2744] border-orange-500/50 shadow-xl shadow-orange-500/10' : 'bg-[#111c30] border-white/8'}`}>
-              {plan.popular && (
+        return (
+          <section className="py-24 px-4 max-w-7xl mx-auto">
+            <div className="text-center mb-10">
+              <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+                {fr ? 'Tarification' : 'Pricing'}
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
+                {fr ? 'Prix transparents, sans surprise.' : 'Transparent pricing, no surprises.'}
+              </h2>
+              <p className="text-slate-400 text-sm mb-6">{fr ? 'Tarification annuelle · prix definis par l\'administrateur' : 'Annual pricing · prices set by administrator'}</p>
+
+              {/* Badge rabais + modules gratuits */}
+              <div className="flex flex-wrap gap-3 justify-center">
+                <div className="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 rounded-full px-4 py-1.5">
+                  <span className="text-emerald-400 font-black text-sm">-5%</span>
+                  <span className="text-emerald-300 text-xs">{fr ? 'par module additionnel (max -30%)' : 'per additional module (max -30%)'}</span>
+                </div>
+                <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5">
+                  <span className="text-orange-300 text-xs font-semibold">{fr ? 'Administration + To-Do inclus GRATUITEMENT' : 'Administration + To-Do FREE with any module'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {/* Starter */}
+              <div className="bg-[#111c30] border border-white/8 rounded-2xl p-6 flex flex-col">
+                <h3 className="font-black text-white text-lg mb-1">Starter</h3>
+                <p className="text-slate-400 text-xs mb-4">{fr ? '1 site · 5 modules au choix' : '1 site · 5 modules of your choice'}</p>
+                <div className="my-2 mb-5">
+                  <p className="text-3xl font-black text-white">
+                    {starterAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
+                  </p>
+                  <p className="text-slate-400 text-xs mt-1">{fr ? '5 modules · rabais cumule inclus' : '5 modules · cumulative discount included'}</p>
+                </div>
+                <div className="space-y-2 flex-1 mb-6">
+                  {[
+                    fr ? '5 modules au choix' : '5 modules of your choice',
+                    fr ? 'Administration + To-Do GRATUITS' : 'Administration + To-Do FREE',
+                    fr ? '1 site' : '1 site',
+                    fr ? 'Application mobile PWA' : 'Mobile PWA app',
+                    fr ? 'Support courriel' : 'Email support',
+                  ].map((f, j) => (
+                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle size={13} className={j === 1 ? 'text-orange-400 flex-shrink-0' : 'text-emerald-400 flex-shrink-0'} />{f}
+                    </div>
+                  ))}
+                </div>
+                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition">
+                  {fr ? 'Demarrer gratuitement' : 'Start for free'}
+                </a>
+              </div>
+
+              {/* Professionnel — prix live depuis DB */}
+              <div className="relative bg-[#1a2744] border border-orange-500/50 rounded-2xl p-6 flex flex-col shadow-xl shadow-orange-500/10">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-xs font-bold px-4 py-1 rounded-full">
                   {fr ? 'Plus populaire' : 'Most popular'}
                 </div>
-              )}
-              <h3 className="font-black text-white text-lg mb-1">{fr ? plan.name_fr : plan.name_en}</h3>
-              {plan.monthly === 0 ? (
-                <div className="my-4">
+                <h3 className="font-black text-white text-lg mb-1">{fr ? 'Professionnel' : 'Professional'}</h3>
+                <p className="text-slate-400 text-xs mb-4">{fr ? 'Tous les modules · multi-sites' : 'All modules · multi-site'}</p>
+                <div className="my-2 mb-5">
+                  <p className="text-3xl font-black text-white">
+                    {totalAnnual}$<span className="text-base font-normal text-slate-400">/an</span>
+                  </p>
+                  {discountPct > 0 && (
+                    <p className="text-emerald-400 text-xs mt-1 font-semibold">
+                      {fr ? `Rabais -${discountPct}% applique` : `-${discountPct}% discount applied`}
+                    </p>
+                  )}
+                  {hasPrices && (
+                    <p className="text-slate-500 text-xs mt-1">{fr ? 'Prix en direct depuis l\'admin' : 'Live price from admin'}</p>
+                  )}
+                </div>
+                <div className="space-y-2 flex-1 mb-6">
+                  {[
+                    fr ? '13 modules (admin + to-do gratuits)' : '13 modules (admin + to-do free)',
+                    perSitePrice != null
+                      ? (fr ? `Multi-sites (+${perSitePrice}$/mois/site additionnel)` : `Multi-site (+$${perSitePrice}/month/additional site)`)
+                      : (fr ? 'Multi-sites (prix sur demande)' : 'Multi-site (price on request)'),
+                    fr ? 'Application mobile PWA' : 'Mobile PWA app',
+                    fr ? 'Support 24/7' : '24/7 support',
+                    fr ? 'Analytics avances' : 'Advanced analytics',
+                  ].map((f, j) => (
+                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle size={13} className={j === 0 ? 'text-orange-400 flex-shrink-0' : 'text-emerald-400 flex-shrink-0'} />{f}
+                    </div>
+                  ))}
+                </div>
+                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white transition">
+                  {fr ? 'Demarrer gratuitement' : 'Start for free'}
+                </a>
+              </div>
+
+              {/* Entreprise */}
+              <div className="bg-[#111c30] border border-white/8 rounded-2xl p-6 flex flex-col">
+                <h3 className="font-black text-white text-lg mb-1">{fr ? 'Entreprise' : 'Enterprise'}</h3>
+                <p className="text-slate-400 text-xs mb-4">{fr ? 'Volumes · ERP · SLA dedie' : 'Volume · ERP · Dedicated SLA'}</p>
+                <div className="my-2 mb-5">
                   <p className="text-3xl font-black text-white">{fr ? 'Sur mesure' : 'Custom'}</p>
                   <p className="text-slate-400 text-sm mt-1">{fr ? 'Contactez-nous' : 'Contact us'}</p>
                 </div>
-              ) : (
-                <div className="my-4">
-                  <p className="text-3xl font-black text-white">
-                    {pricingCycle === 'monthly'
-                      ? `${plan.monthly}$`
-                      : `${Math.round(plan.annual / 12)}$`}
-                    <span className="text-base font-normal text-slate-400">/mois</span>
-                  </p>
-                  {pricingCycle === 'annual' && (
-                    <p className="text-emerald-400 text-xs mt-1">{plan.annual}$/an — {fr ? '2 mois gratuits' : '2 months free'}</p>
-                  )}
+                <div className="space-y-2 flex-1 mb-6">
+                  {[
+                    fr ? 'Modules sur mesure' : 'Custom modules',
+                    fr ? 'Sites illimites' : 'Unlimited sites',
+                    fr ? 'Integrations ERP' : 'ERP integrations',
+                    fr ? 'SLA garanti' : 'Guaranteed SLA',
+                    fr ? 'Formation incluse' : 'Training included',
+                  ].map((f, j) => (
+                    <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
+                      <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />{f}
+                    </div>
+                  ))}
                 </div>
-              )}
-              <div className="space-y-2 flex-1 mb-6">
-                {[
-                  fr ? 'Tous les 13 modules' : 'All 13 modules',
-                  fr ? 'Multi-sites inclus' : 'Multi-site included',
-                  fr ? 'Application mobile PWA' : 'Mobile PWA app',
-                  fr ? 'Support 24/7' : '24/7 support',
-                  ...(plan.monthly === 0 ? [fr ? 'Integrations ERP' : 'ERP integrations', fr ? 'SLA garanti' : 'Guaranteed SLA'] : []),
-                ].map((f, j) => (
-                  <div key={j} className="flex items-center gap-2 text-sm text-slate-300">
-                    <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />
-                    {f}
-                  </div>
-                ))}
+                <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
+                  className="w-full text-center py-3 rounded-xl font-bold text-sm border border-white/20 text-white hover:bg-white/8 transition">
+                  {fr ? 'Nous contacter' : 'Contact us'}
+                </a>
               </div>
-              <Link href={plan.monthly === 0 ? 'mailto:info@c-secur360.ca' : '/demo/dashboard'}
-                className={`w-full text-center py-3 rounded-xl font-bold text-sm transition ${plan.popular ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'border border-white/20 text-white hover:bg-white/8'}`}>
-                {plan.monthly === 0 ? (fr ? 'Nous contacter' : 'Contact us') : (fr ? 'Essai gratuit 14 jours' : '14-day free trial')}
-              </Link>
             </div>
-          ))}
-        </div>
-      </section>
+
+            {/* Detail par module (prix annuels) */}
+            {hasPrices && (
+              <div className="mt-12 max-w-3xl mx-auto">
+                <p className="text-center text-slate-400 text-xs uppercase tracking-widest mb-4">
+                  {fr ? 'Detail par module · prix annuel brut (avant rabais)' : 'Per-module detail · annual list price (before discount)'}
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {['admin', 'todo'].map(key => {
+                    const m = dbModules.find(d => d.key === key)
+                    return (
+                      <div key={key} className="flex items-center justify-between bg-[#0D1F3C] border border-orange-500/20 rounded-lg px-3 py-2">
+                        <span className="text-xs text-slate-300">{fr ? (m?.name_fr || key) : (m?.name_en || key)}</span>
+                        <span className="text-xs font-bold text-orange-400 ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
+                      </div>
+                    )
+                  })}
+                  {paidModules.map(m => (
+                    <div key={m.key} className="flex items-center justify-between bg-[#0D1F3C] border border-white/5 rounded-lg px-3 py-2">
+                      <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
+                      <span className="text-xs font-bold text-orange-400 ml-2">{m.monthly_price}$/an</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 bg-[#0D1F3C] border border-emerald-500/20 rounded-xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  <p className="text-emerald-300 text-xs font-semibold">
+                    {fr ? `Sous-total brut : ${subtotal}$/an · Rabais -${discountPct}% · Total final : ${totalAnnual}$/an` : `Subtotal: $${subtotal}/yr · -${discountPct}% discount · Final: $${totalAnnual}/yr`}
+                  </p>
+                  <p className="text-slate-500 text-xs">
+                    {fr ? 'Administration et To-Do toujours GRATUITS' : 'Administration & To-Do always FREE'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+        )
+      })()}
 
       {/* ── Testimonials ───────────────────────────────────────────────────── */}
       <section className="bg-[#0D1F3C] py-24 px-4">
@@ -510,11 +731,11 @@ export default function LandingPage() {
               : 'Join the construction companies that are digitalizing their safety with C-Secur360.'}
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/demo/dashboard"
+            <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-orange-500/30">
               {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={20} />
-            </Link>
-            <a href="mailto:info@c-secur360.ca"
+            </a>
+            <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
               className="inline-flex items-center gap-2 border border-white/20 hover:bg-white/8 text-white px-8 py-4 rounded-xl font-bold text-lg transition">
               <Mail size={18} /> {fr ? 'Nous ecrire' : 'Contact us'}
             </a>

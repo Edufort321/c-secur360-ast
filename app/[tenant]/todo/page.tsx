@@ -288,9 +288,9 @@ export default function TodoPage() {
   // ── Charger les suggestions ──────────────────────────────────────────────────
   useEffect(() => {
     if (!tenant) return;
-    supabase.from('planner_personnel').select('prenom, nom').eq('tenant_id', tenant)
+    supabase.from('planner_personnel').select('name').eq('tenant_id', tenant)
       .then(({ data }) => {
-        if (data) setPersonnelSuggestions(data.map((p: any) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean));
+        if (data) setPersonnelSuggestions(data.map((p: any) => p.name?.trim()).filter(Boolean));
       });
     supabase.from('planner_succursales').select('name').eq('tenant_id', tenant)
       .then(({ data }) => {
