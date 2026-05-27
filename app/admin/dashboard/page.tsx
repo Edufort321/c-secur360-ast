@@ -113,7 +113,7 @@ export default function AdminDashboard() {
   };
 
   const generateQRCode = (clientSubdomain: string) => {
-    const url = `https://csecur360.com/${clientSubdomain}`;
+    const url = `https://csecur360.ca/${clientSubdomain}`;
     window.open(`/api/qr/generate?client=${clientSubdomain}`, '_blank');
   };
 
@@ -589,7 +589,7 @@ export default function AdminDashboard() {
                     <input
                       type="text"
                       value={newClient.name}
-                      onChange={(e) => setNewClient(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) => { const name = e.target.value; const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); setNewClient(prev => ({ ...prev, name, subdomain: prev.subdomain || slug ? (!prev.subdomain ? slug : prev.subdomain) : '' })); }}
                       placeholder="Ex: Hydro-Québec"
                       style={{
                         width: '100%',
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                       required
                     />
                     <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                      URL: csecur360.com/{newClient.subdomain || 'nomclient'}
+                      URL: csecur360.ca/{newClient.subdomain || 'votre-slug'}
                     </p>
                   </div>
                 </div>
