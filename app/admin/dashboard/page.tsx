@@ -563,7 +563,7 @@ export default function AdminDashboard() {
             }}>
               <h3 style={{
                 margin: '0 0 24px 0',
-                color: '#ffffff',
+                color: '#111827',
                 fontSize: '20px',
                 fontWeight: '600',
                 display: 'flex',
@@ -618,7 +618,7 @@ export default function AdminDashboard() {
                     <input
                       type="text"
                       value={newClient.subdomain}
-                      onChange={(e) => setNewClient(prev => ({ ...prev, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
+                      onChange={(e) => setNewClient(prev => ({ ...prev, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                       placeholder="entrepriseabc"
                       style={{
                         width: '100%',

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Plus, Trash2, ArrowUp, ArrowDown, Upload, Eye, EyeOff, Image as ImageIcon } from 'lucide-react'
 
 interface LandingSlide {
@@ -49,8 +48,9 @@ export default function LandingSlidesTab({
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('landing_slides').select('*').order('sort_order')
-    setSlides(data || [])
+    const res = await fetch('/api/admin/landing-slides')
+    const data = await res.json()
+    setSlides(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -59,17 +59,19 @@ export default function LandingSlidesTab({
   const handleImageUpload = async (file: File) => {
     setUploading(true)
     const ext = file.name.split('.').pop()
-    const path = `landing-slides/slide-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('csecur360').upload(path, file, { upsert: true })
-    if (error) {
-      notify('Erreur upload: ' + error.message, false)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('path', `landing-slides/slide-${Date.now()}.${ext}`)
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) {
+      notify('Erreur upload: ' + json.error, false)
       setUploading(false)
       return
     }
-    const { data: { publicUrl } } = supabase.storage.from('csecur360').getPublicUrl(path)
-    setForm(f => ({ ...f, image_url: publicUrl }))
+    setForm(f => ({ ...f, image_url: json.url }))
     setUploading(false)
-    notify('Image uploadée')
+    notify('Image uploadee')
   }
 
   const handleSave = async () => {
@@ -83,13 +85,23 @@ export default function LandingSlidesTab({
       active: form.active,
     }
     if (editId) {
-      const { error } = await supabase.from('landing_slides').update(payload).eq('id', editId)
-      if (error) { notify('Erreur: ' + error.message, false); return }
+      const res = await fetch('/api/admin/landing-slides', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editId, ...payload }),
+      })
+      const json = await res.json()
+      if (!res.ok) { notify('Erreur: ' + json.error, false); return }
       notify('Slide mis a jour')
     } else {
       const maxOrder = slides.length ? Math.max(...slides.map(s => s.sort_order)) + 1 : 0
-      const { error } = await supabase.from('landing_slides').insert({ ...payload, sort_order: maxOrder })
-      if (error) { notify('Erreur: ' + error.message, false); return }
+      const res = await fetch('/api/admin/landing-slides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, sort_order: maxOrder }),
+      })
+      const json = await res.json()
+      if (!res.ok) { notify('Erreur: ' + json.error, false); return }
       notify('Slide ajoute')
     }
     setForm(EMPTY)
@@ -111,13 +123,17 @@ export default function LandingSlidesTab({
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce slide ?')) return
-    await supabase.from('landing_slides').delete().eq('id', id)
+    await fetch(`/api/admin/landing-slides?id=${id}`, { method: 'DELETE' })
     notify('Slide supprime')
     load()
   }
 
   const toggleActive = async (s: LandingSlide) => {
-    await supabase.from('landing_slides').update({ active: !s.active }).eq('id', s.id)
+    await fetch('/api/admin/landing-slides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: s.id, active: !s.active }),
+    })
     load()
   }
 
@@ -125,8 +141,16 @@ export default function LandingSlidesTab({
     const target = idx + dir
     if (target < 0 || target >= slides.length) return
     const a = slides[idx]; const b = slides[target]
-    await supabase.from('landing_slides').update({ sort_order: b.sort_order }).eq('id', a.id)
-    await supabase.from('landing_slides').update({ sort_order: a.sort_order }).eq('id', b.id)
+    await fetch('/api/admin/landing-slides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: a.id, sort_order: b.sort_order }),
+    })
+    await fetch('/api/admin/landing-slides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: b.id, sort_order: a.sort_order }),
+    })
     load()
   }
 

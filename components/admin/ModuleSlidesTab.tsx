@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Plus, Trash2, ArrowUp, ArrowDown, Upload, Image as ImageIcon } from 'lucide-react'
+import { Trash2, ArrowUp, ArrowDown, Upload, Image as ImageIcon } from 'lucide-react'
 
 const MODULE_KEYS = [
   { key: 'ast',        label: 'AST / Securite' },
@@ -42,12 +41,9 @@ export default function ModuleSlidesTab({
 
   const load = async (key: string) => {
     setLoading(true)
-    const { data } = await supabase
-      .from('module_slides')
-      .select('*')
-      .eq('module_key', key)
-      .order('sort_order')
-    setSlides(data || [])
+    const res = await fetch(`/api/admin/module-slides?module_key=${key}`)
+    const data = await res.json()
+    setSlides(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -56,15 +52,21 @@ export default function ModuleSlidesTab({
   const handleUpload = async (file: File) => {
     setUploading(true)
     const ext = file.name.split('.').pop()
-    const path = `module-slides/${selectedKey}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('csecur360').upload(path, file, { upsert: true })
-    if (error) { notify('Erreur upload: ' + error.message, false); setUploading(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('csecur360').getPublicUrl(path)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('path', `module-slides/${selectedKey}-${Date.now()}.${ext}`)
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) { notify('Erreur upload: ' + json.error, false); setUploading(false); return }
+
     const maxOrder = slides.length ? Math.max(...slides.map(s => s.sort_order)) + 1 : 0
-    const { error: insErr } = await supabase.from('module_slides').insert({
-      module_key: selectedKey, image_url: publicUrl, sort_order: maxOrder
+    const insRes = await fetch('/api/admin/module-slides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ module_key: selectedKey, image_url: json.url, sort_order: maxOrder }),
     })
-    if (insErr) { notify('Erreur DB: ' + insErr.message, false) }
+    const insJson = await insRes.json()
+    if (!insRes.ok) { notify('Erreur DB: ' + insJson.error, false) }
     else { notify('Capture ajoutee') }
     setUploading(false)
     if (fileRef.current) fileRef.current.value = ''
@@ -73,7 +75,7 @@ export default function ModuleSlidesTab({
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette capture ?')) return
-    await supabase.from('module_slides').delete().eq('id', id)
+    await fetch(`/api/admin/module-slides?id=${id}`, { method: 'DELETE' })
     notify('Capture supprimee')
     load(selectedKey)
   }
@@ -82,8 +84,16 @@ export default function ModuleSlidesTab({
     const target = idx + dir
     if (target < 0 || target >= slides.length) return
     const a = slides[idx]; const b = slides[target]
-    await supabase.from('module_slides').update({ sort_order: b.sort_order }).eq('id', a.id)
-    await supabase.from('module_slides').update({ sort_order: a.sort_order }).eq('id', b.id)
+    await fetch('/api/admin/module-slides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: a.id, sort_order: b.sort_order }),
+    })
+    await fetch('/api/admin/module-slides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: b.id, sort_order: a.sort_order }),
+    })
     load(selectedKey)
   }
 
@@ -100,7 +110,6 @@ export default function ModuleSlidesTab({
           Ces images s'affichent au survol de chaque carte module sur la page d'accueil.
         </p>
 
-        {/* Module selector */}
         <div className="flex flex-wrap gap-2 mb-5">
           {MODULE_KEYS.map(m => (
             <button key={m.key} onClick={() => setSelectedKey(m.key)}
@@ -110,7 +119,6 @@ export default function ModuleSlidesTab({
           ))}
         </div>
 
-        {/* Upload zone */}
         <button onClick={() => fileRef.current?.click()} disabled={uploading}
           className="w-full h-28 border-2 border-dashed border-white/20 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-orange-400 transition text-slate-400 hover:text-orange-400">
           {uploading
