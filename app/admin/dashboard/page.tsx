@@ -598,7 +598,7 @@ export default function AdminDashboard() {
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#ffffff',
-                        color: '#ffffff',
+                        color: '#111827',
                         boxSizing: 'border-box'
                       }}
                       required
@@ -627,7 +627,7 @@ export default function AdminDashboard() {
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#ffffff',
-                        color: '#ffffff',
+                        color: '#111827',
                         boxSizing: 'border-box'
                       }}
                       required
@@ -658,7 +658,7 @@ export default function AdminDashboard() {
                       borderRadius: '8px',
                       fontSize: '16px',
                       background: '#ffffff',
-                      color: '#ffffff',
+                      color: '#111827',
                       boxSizing: 'border-box'
                     }}
                   >
@@ -782,7 +782,7 @@ export default function AdminDashboard() {
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#ffffff',
-                        color: '#ffffff',
+                        color: '#111827',
                         boxSizing: 'border-box'
                       }}
                       required
@@ -811,7 +811,7 @@ export default function AdminDashboard() {
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#ffffff',
-                        color: '#ffffff',
+                        color: '#111827',
                         boxSizing: 'border-box'
                       }}
                     />
@@ -841,7 +841,7 @@ export default function AdminDashboard() {
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#ffffff',
-                        color: '#ffffff',
+                        color: '#111827',
                         boxSizing: 'border-box'
                       }}
                     />

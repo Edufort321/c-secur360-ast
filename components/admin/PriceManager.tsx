@@ -79,6 +79,7 @@ export default function PriceManager() {
                 min={0}
                 value={perSite}
                 onChange={e => setPerSite(Number(e.target.value))}
+                onFocus={e => e.target.select()}
                 style={{ width: '110px', textAlign: 'right', border: '1px solid #93c5fd', borderRadius: '8px', padding: '6px 10px', fontSize: '15px', fontWeight: 600, color: '#1e40af' }}
               />
               <span style={{ fontSize: '14px', color: '#6b7280' }}>$/mois par site additionnel</span>
@@ -114,6 +115,7 @@ export default function PriceManager() {
                             min={0}
                             value={m.monthly_price}
                             onChange={e => setMods(p => p.map((x, j) => j === i ? { ...x, monthly_price: Number(e.target.value) } : x))}
+                            onFocus={e => e.target.select()}
                             style={{ width: '90px', textAlign: 'right', border: '1px solid #d1d5db', borderRadius: '6px', padding: '4px 6px', fontSize: '14px' }}
                           />
                           <span style={{ fontSize: '13px', color: '#6b7280' }}>$/an</span>
