@@ -837,7 +837,8 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 type VRow = {
   id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
   make: string; model: string; year: string; plate: string;
-  employee_name: string; km_rate_override: string; active: boolean; notes: string;
+  employee_name: string; km_rate_override: string; purchase_price: string; km_at_year_start: string;
+  active: boolean; notes: string;
 };
 
 function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnelSuggestions }: {
@@ -869,6 +870,8 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
             <th className="px-2">{tr('Plaque', 'Plate')}</th>
             <th className="px-2">{tr('Employé / Propriétaire', 'Employee / Owner')}</th>
             <th className="px-2">{tr('Taux km $', 'Km rate $')}</th>
+            <th className="px-2 whitespace-nowrap">{tr('Prix achat $', 'Purchase $')}</th>
+            <th className="px-2 whitespace-nowrap">{tr('Km début année', 'Km year start')}</th>
             <th className="px-2">{tr('Actif', 'Active')}</th>
             <th></th>
           </tr></thead>
@@ -905,11 +908,20 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
                     <span className="text-xs text-gray-400">/km</span>
                   </div>
                 </td>
+                <td className="px-2">
+                  <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.purchase_price}
+                    placeholder="35000" onChange={e => upd(i, 'purchase_price', e.target.value)}
+                    onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'purchase_price', isNaN(v) ? '' : v.toFixed(2)); }} />
+                </td>
+                <td className="px-2">
+                  <input type="number" min={0} step={1} className={`${inp} w-24`} value={r.km_at_year_start}
+                    placeholder="0" onChange={e => upd(i, 'km_at_year_start', e.target.value)} />
+                </td>
                 <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={9} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
+            {items.length === 0 && <tr><td colSpan={11} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -936,15 +948,15 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
-    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '' })));
+    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '', purchase_price: v.purchase_price != null ? String(v.purchase_price) : '', km_at_year_start: v.km_at_year_start != null ? String(v.km_at_year_start) : '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
 
-  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
-  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', active: true, notes: '' }]);
+  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
+  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
 
   async function save() {
     setSaving(true); setNotice(null);
@@ -959,6 +971,9 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           year: r.year ? Number(r.year) : null,
           plate: r.plate, employee_name: r.employee_name,
           km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
+          purchase_price: r.purchase_price !== '' ? parseFloat(r.purchase_price.replace(/,/g, '.')) : null,
+          km_at_year_start: r.km_at_year_start !== '' ? Number(r.km_at_year_start) : 0,
+          km_year_start_year: new Date().getFullYear(),
           active: r.active, notes: r.notes,
         };
         if (r.id) await supabase.from('vehicles').update(payload).eq('id', r.id);
