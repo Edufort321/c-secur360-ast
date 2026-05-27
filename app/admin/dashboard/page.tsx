@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PortalHeader } from '@/components/PortalHeader';
 import LandingSlidesTab from '@/components/admin/LandingSlidesTab';
@@ -147,6 +147,7 @@ export default function AdminDashboard() {
             status: t.archived ? 'archived' : (t.isActive === false ? 'suspended' : 'active'),
             archived: t.archived === true,
             billable: t.billable !== false,
+            vendor_id: t.vendor_id || null,
             payState: st.status, nextBilling: st.nextBilling, daysUntil: st.daysUntilBilling,
             lastActivity: (t.createdAt || '').split('T')[0] || '',
             domain: t.domain || `${t.subdomain || t.id}.csecur360.ca`, provinces: [], currentProvince: '',
@@ -226,6 +227,28 @@ export default function AdminDashboard() {
       }));
     }
   };
+
+  const totalBillableRevenue = useMemo(
+    () => clients.filter((c: any) => c.billable !== false && c.status !== 'archived').reduce((s, c) => s + (c.monthlyFee || 0), 0),
+    [clients]
+  );
+
+  const totalVendorCommission = useMemo(
+    () => clients
+      .filter((c: any) => c.billable !== false && c.status !== 'archived' && (c as any).vendor_id)
+      .reduce((s, c) => {
+        const v = vendors.find((x: any) => x.id === (c as any).vendor_id);
+        return s + (c.monthlyFee || 0) * Number(v?.commission_rate ?? 0);
+      }, 0),
+    [clients, vendors]
+  );
+
+  const cerdiaNettRevenue = totalBillableRevenue - totalVendorCommission;
+
+  const vendorClientsCount = useMemo(
+    () => clients.filter((c: any) => c.billable !== false && c.status !== 'archived' && (c as any).vendor_id).length,
+    [clients]
+  );
 
   if (!isAuthenticated) {
     return (
@@ -387,6 +410,27 @@ export default function AdminDashboard() {
           ))}
         </div>
 
+        {/* Répartition revenu CERDIA / Vendeurs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px' }}>
+            <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenu annuel total</p>
+            <p style={{ margin: '0 0 2px', fontSize: '24px', fontWeight: 800, color: '#111827' }}>{totalBillableRevenue.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $</p>
+            <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>Clients facturables actifs</p>
+          </div>
+          <div style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', borderRadius: '12px', border: '1px solid #a7f3d0', padding: '20px' }}>
+            <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenu Commerce CERDIA</p>
+            <p style={{ margin: '0 0 2px', fontSize: '24px', fontWeight: 800, color: '#065f46' }}>{cerdiaNettRevenue.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $</p>
+            <p style={{ margin: 0, fontSize: '12px', color: '#059669' }}>Après déduction des commissions vendeurs</p>
+          </div>
+          <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', borderRadius: '12px', border: '1px solid #bfdbfe', padding: '20px' }}>
+            <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenu Vendeurs</p>
+            <p style={{ margin: '0 0 2px', fontSize: '24px', fontWeight: 800, color: '#1d4ed8' }}>{totalVendorCommission.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $</p>
+            <p style={{ margin: 0, fontSize: '12px', color: '#2563eb' }}>
+              {vendorClientsCount} client{vendorClientsCount !== 1 ? 's' : ''} avec représentant assigné
+            </p>
+          </div>
+        </div>
+
         {/* Prévisions de revenu (vues quotidien/hebdo/mensuel/annuel) */}
         <RevenueForecast />
 
@@ -487,6 +531,20 @@ export default function AdminDashboard() {
                               Prochaine : {(client as any).nextBilling}{(client as any).daysUntil != null ? ` · ${(client as any).daysUntil} j` : ''}
                             </div>
                           )}
+                          {(client as any).vendor_id && (() => {
+                            const v = vendors.find((x: any) => x.id === (client as any).vendor_id);
+                            if (!v) return null;
+                            const commAmt = Math.round((client.monthlyFee || 0) * Number(v.commission_rate) * 100) / 100;
+                            return (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11px', color: '#2563eb' }}>
+                                <span style={{ background: 'rgba(37,99,235,0.1)', borderRadius: '3px', padding: '1px 5px', fontWeight: 600 }}>
+                                  {v.name}
+                                </span>
+                                <span style={{ color: '#6b7280' }}>comm.</span>
+                                <span style={{ fontWeight: 700 }}>{commAmt.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $</span>
+                              </div>
+                            );
+                          })()}
                         </>
                       )}
                     </td>
@@ -1070,39 +1128,60 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  {['Nom', 'Courriel', 'Téléphone', 'Commission', 'Statut', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                  {['Nom', 'Courriel', 'Téléphone', 'Taux', 'Clients', 'Revenu annuel', 'Commission estimée', 'Statut', ''].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {vendors.map(v => (
-                  <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#111827' }}>{v.name}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.email || '—'}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.phone || '—'}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: '#2563eb' }}>{Math.round(Number(v.commission_rate) * 100)}%</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700,
-                        background: v.is_active ? 'rgba(16,185,129,0.12)' : '#f1f5f9',
-                        color: v.is_active ? '#059669' : '#9ca3af' }}>
-                        {v.is_active ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Désactiver ${v.name} ?`)) return;
-                          await fetch(`/api/admin/vendors?id=${v.id}`, { method: 'DELETE' });
-                          loadVendors();
-                        }}
-                        style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}
-                      >
-                        Désactiver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {vendors.map(v => {
+                  const vClients = clients.filter((c: any) => (c as any).vendor_id === v.id && c.billable !== false && c.status !== 'archived');
+                  const vRevenue = vClients.reduce((s, c) => s + (c.monthlyFee || 0), 0);
+                  const vComm = Math.round(vRevenue * Number(v.commission_rate) * 100) / 100;
+                  return (
+                    <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#111827' }}>
+                        {v.name}
+                        {vClients.length > 0 && (
+                          <div style={{ marginTop: '3px', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                            {vClients.map((c: any) => (
+                              <span key={c.id} style={{ fontSize: '10px', background: 'rgba(37,99,235,0.08)', color: '#2563eb', borderRadius: '3px', padding: '1px 5px' }}>{c.name}</span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.email || '—'}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.phone || '—'}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 700, color: '#2563eb' }}>{Math.round(Number(v.commission_rate) * 100)}%</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#111827', textAlign: 'center' }}>{vClients.length}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap' }}>
+                        {vRevenue > 0 ? `${vRevenue.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $` : '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontWeight: 700, color: vComm > 0 ? '#1d4ed8' : '#9ca3af', whiteSpace: 'nowrap' }}>
+                        {vComm > 0 ? `${vComm.toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $` : '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700,
+                          background: v.is_active ? 'rgba(16,185,129,0.12)' : '#f1f5f9',
+                          color: v.is_active ? '#059669' : '#9ca3af' }}>
+                          {v.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Désactiver ${v.name} ?`)) return;
+                            await fetch(`/api/admin/vendors?id=${v.id}`, { method: 'DELETE' });
+                            loadVendors();
+                          }}
+                          style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          Désactiver
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
