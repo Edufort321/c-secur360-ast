@@ -270,8 +270,11 @@ export default function LandingPage() {
       <section className="relative h-screen min-h-[600px] overflow-hidden">
         {dbSlides ? (
           dbSlides.map((s, idx) => (
-            <div key={s.id} className={`absolute inset-0 transition-opacity duration-1000 ${idx === slideIdx ? 'opacity-100' : 'opacity-0'}`}>
-              <img src={s.image_url} alt="" className="w-full h-full object-cover" />
+            <div
+              key={s.id}
+              className={`absolute inset-0 transition-opacity duration-1000 bg-cover bg-center bg-no-repeat ${idx === slideIdx ? 'opacity-100' : 'opacity-0'}`}
+              style={{ backgroundImage: `url(${s.image_url})` }}
+            >
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B1728] via-[#0B1728]/50 to-[#0B1728]/20" />
             </div>
           ))
