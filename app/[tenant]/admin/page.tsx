@@ -1012,12 +1012,44 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   );
 }
 
+function generatePassword(name: string): string {
+  const specials = ['@', '#', '$', '!', '%', '&', '?', '*', '+', '='];
+  // 4 lettres tirées du nom (diacritiques retirés, maj sur la 1re)
+  const clean = (name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z]/g, '');
+  const letters = clean.length >= 4
+    ? clean[0].toUpperCase() + clean.slice(1, 4).toLowerCase()
+    : (clean[0]?.toUpperCase() || 'X') + clean.slice(1).toLowerCase().padEnd(3, 'x');
+  // 3 chiffres aléatoires
+  const digits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join('');
+  // 2 caractères spéciaux aléatoires distincts
+  const sp1 = specials[Math.floor(Math.random() * specials.length)];
+  let sp2 = specials[Math.floor(Math.random() * specials.length)];
+  while (sp2 === sp1) sp2 = specials[Math.floor(Math.random() * specials.length)];
+  return `${letters}${digits}${sp1}${sp2}`;
+}
+
 function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ email: '', name: '', role: 'user', password: '' });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showPwd, setShowPwd] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function genPwd(name: string) {
+    const pwd = generatePassword(name || form.name);
+    setForm(f => ({ ...f, password: pwd }));
+    setShowPwd(true);
+  }
+
+  function copyPwd() {
+    if (!form.password) return;
+    navigator.clipboard.writeText(form.password).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   async function load() {
     setLoading(true);
@@ -1056,13 +1088,53 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
       <form onSubmit={create} className="h-fit space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
         <h2 className="font-bold">{tr('Nouveau profil', 'New profile')}</h2>
         <input required type="email" placeholder={tr('Courriel', 'Email')} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="inp2" />
-        <input placeholder={tr('Nom', 'Name')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="inp2" />
+        <input
+          placeholder={tr('Nom', 'Name')} value={form.name}
+          onChange={e => {
+            const name = e.target.value;
+            setForm(f => ({ ...f, name }));
+            if (name.trim().length >= 2) genPwd(name);
+          }}
+          className="inp2"
+        />
         <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="inp2">
           <option value="user">{tr('Utilisateur', 'User')}</option>
           <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
           <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
         </select>
-        <input required type="text" placeholder={tr('Mot de passe initial', 'Initial password')} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="inp2" />
+        {/* Mot de passe avec générateur */}
+        <div className="space-y-1.5">
+          <div className="flex gap-1.5">
+            <div className="relative flex-1">
+              <input
+                required
+                type={showPwd ? 'text' : 'password'}
+                placeholder={tr('Mot de passe initial', 'Initial password')}
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                className="inp2 pr-8"
+              />
+              <button type="button" onClick={() => setShowPwd(v => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-semibold select-none">
+                {showPwd ? tr('Cacher', 'Hide') : tr('Voir', 'Show')}
+              </button>
+            </div>
+            <button type="button" onClick={() => genPwd(form.name)}
+              title={tr('Générer', 'Generate')}
+              className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+              ↻
+            </button>
+          </div>
+          {form.password && (
+            <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-2">
+              <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
+              <button type="button" onClick={copyPwd}
+                className={`ml-3 shrink-0 text-xs font-semibold px-2 py-0.5 rounded transition ${copied ? 'text-green-600' : 'text-blue-600 hover:underline'}`}>
+                {copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}
+              </button>
+            </div>
+          )}
+        </div>
         <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {tr('Créer', 'Create')}</button>
         {notice && <p className="text-sm text-gray-600 dark:text-gray-300">{notice}</p>}
       </form>
