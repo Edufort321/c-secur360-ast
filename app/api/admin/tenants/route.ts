@@ -8,7 +8,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin.from('tenants').select('*');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { data: subs } = await supabaseAdmin
-    .from('tenant_subscriptions').select('tenant_id, next_billing_date, grace_days, reminder_days, status, amount');
+    .from('tenant_subscriptions').select('tenant_id, next_billing_date, grace_days, reminder_days, status, amount, billable');
   const map: Record<string, any> = Object.fromEntries((subs || []).map((s: any) => [s.tenant_id, s]));
 
   // Revenu annuel projeté par tenant = Σ(modules activés × prix) − escompte cumulatif
@@ -30,7 +30,12 @@ export async function GET() {
   };
 
   return NextResponse.json({
-    tenants: (data || []).map((t: any) => ({ ...t, subscription: map[t.id] || null, annualRevenue: revenueOf(t.id) })),
+    tenants: (data || []).map((t: any) => ({
+      ...t,
+      subscription: map[t.id] || null,
+      annualRevenue: revenueOf(t.id),
+      billable: map[t.id]?.billable !== false,
+    })),
   });
 }
 
@@ -38,7 +43,7 @@ export async function GET() {
 // body: { subdomain, companyName, adminEmail?, adminPassword?, modules?: string[] }
 export async function POST(req: NextRequest) {
   try {
-    const { subdomain, companyName, adminEmail, adminPassword, modules } = await req.json();
+    const { subdomain, companyName, adminEmail, adminPassword, modules, billable, vendor_id } = await req.json();
     if (!subdomain || !companyName) {
       return NextResponse.json({ error: 'subdomain et companyName requis' }, { status: 400 });
     }
@@ -48,6 +53,7 @@ export async function POST(req: NextRequest) {
     // 1) Tenant
     const { error: te } = await supabaseAdmin.from('tenants').insert({
       id, subdomain: id, companyName, plan: 'basic', isActive: true,
+      ...(vendor_id ? { vendor_id } : {}),
     });
     if (te) throw te;
 
@@ -62,7 +68,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3) Admin du tenant (optionnel)
+    // 3) Abonnement initial avec flag billable
+    await supabaseAdmin.from('tenant_subscriptions').upsert(
+      { tenant_id: id, billable: billable !== false },
+      { onConflict: 'tenant_id' }
+    );
+
+    // 4) Admin du tenant (optionnel)
     if (adminEmail && adminPassword) {
       const hash = await hashPassword(adminPassword);
       await supabaseAdmin.from('users').insert({

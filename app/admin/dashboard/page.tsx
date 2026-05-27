@@ -76,6 +76,11 @@ export default function AdminDashboard() {
   const [filterPay, setFilterPay] = useState<'all' | 'upcoming' | 'late' | 'relance'>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [showVendorForm, setShowVendorForm] = useState(false);
+  const [newVendor, setNewVendor] = useState({ name: '', email: '', phone: '', commission_rate: 20, notes: '' });
+  const [savingVendor, setSavingVendor] = useState(false);
+
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [newClient, setNewClient] = useState({
     name: '',
@@ -85,7 +90,9 @@ export default function AdminDashboard() {
     phone: '',
     tempPassword: '',
     provinces: [] as string[],
-    currentProvince: ''
+    currentProvince: '',
+    billable: true,
+    vendor_id: '',
   });
 
   useEffect(() => {
@@ -139,6 +146,7 @@ export default function AdminDashboard() {
             monthlyFee: Number(t.annualRevenue || 0), annualRevenue: Number(t.annualRevenue || 0),
             status: t.archived ? 'archived' : (t.isActive === false ? 'suspended' : 'active'),
             archived: t.archived === true,
+            billable: t.billable !== false,
             payState: st.status, nextBilling: st.nextBilling, daysUntil: st.daysUntilBilling,
             lastActivity: (t.createdAt || '').split('T')[0] || '',
             domain: t.domain || `${t.subdomain || t.id}.csecur360.ca`, provinces: [], currentProvince: '',
@@ -148,7 +156,15 @@ export default function AdminDashboard() {
       }
     } catch { /* ignore */ }
   };
-  useEffect(() => { loadTenants(); }, []);
+  const loadVendors = async () => {
+    try {
+      const res = await fetch('/api/admin/vendors');
+      const data = await res.json();
+      if (Array.isArray(data.vendors)) setVendors(data.vendors);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { loadTenants(); loadVendors(); }, []);
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,12 +196,16 @@ export default function AdminDashboard() {
           companyName: newClient.name.trim(),
           adminEmail: newClient.email.trim(),
           adminPassword: tempPassword,
+          billable: newClient.billable,
+          vendor_id: newClient.vendor_id || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Création échouée');
-      alert(`Client créé !\n\nNom: ${newClient.name}\nPortail: /${data.id}/modules\nAdmin: ${newClient.email}\nMot de passe temporaire: ${tempPassword}`);
-      setNewClient({ name: '', subdomain: '', plan: 'Professional', email: '', phone: '', tempPassword: '', provinces: [], currentProvince: '' });
+      const billableNote = newClient.billable ? '' : '\nMode: DÉMO (non-facturable)';
+      const vendorNote = newClient.vendor_id ? `\nVendeur: ${vendors.find(v => v.id === newClient.vendor_id)?.name || ''}` : '';
+      alert(`Client créé !\n\nNom: ${newClient.name}\nPortail: /${data.id}/modules\nAdmin: ${newClient.email}\nMot de passe temporaire: ${tempPassword}${billableNote}${vendorNote}`);
+      setNewClient({ name: '', subdomain: '', plan: 'Professional', email: '', phone: '', tempPassword: '', provinces: [], currentProvince: '', billable: true, vendor_id: '' });
       setShowCreateClient(false);
       loadTenants();
     } catch (err: any) {
@@ -298,7 +318,7 @@ export default function AdminDashboard() {
             gap: '7px',
             background: 'rgba(255,255,255,0.08)',
             border: '1px solid rgba(255,255,255,0.15)',
-            color: '#e2e8f0',
+            color: '#111827',
             padding: '7px 14px',
             borderRadius: '7px',
             textDecoration: 'none',
@@ -457,11 +477,17 @@ export default function AdminDashboard() {
                     </td>
                     <td style={{ padding: '16px' }}>{client.sites}</td>
                     <td style={{ padding: '16px' }}>
-                      <div style={{ fontWeight: 600 }}>{(client.monthlyFee || 0).toLocaleString('fr-CA')} $/an</div>
-                      {(client as any).nextBilling && (
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
-                          Prochaine : {(client as any).nextBilling}{(client as any).daysUntil != null ? ` · ${(client as any).daysUntil} j` : ''}
-                        </div>
+                      {(client as any).billable === false ? (
+                        <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: 'rgba(100,116,139,0.15)', color: '#64748b', letterSpacing: '0.05em' }}>DÉMO</span>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight: 600 }}>{(client.monthlyFee || 0).toLocaleString('fr-CA')} $/an</div>
+                          {(client as any).nextBilling && (
+                            <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                              Prochaine : {(client as any).nextBilling}{(client as any).daysUntil != null ? ` · ${(client as any).daysUntil} j` : ''}
+                            </div>
+                          )}
+                        </>
                       )}
                     </td>
                     <td style={{ padding: '16px' }}>
@@ -582,7 +608,7 @@ export default function AdminDashboard() {
                       marginBottom: '6px',
                       fontSize: '14px',
                       fontWeight: '500',
-                      color: '#e2e8f0'
+                      color: '#111827'
                     }}>
                       Nom de l'entreprise *
                     </label>
@@ -611,7 +637,7 @@ export default function AdminDashboard() {
                       marginBottom: '6px',
                       fontSize: '14px',
                       fontWeight: '500',
-                      color: '#e2e8f0'
+                      color: '#111827'
                     }}>
                       Sous-domaine *
                     </label>
@@ -644,7 +670,7 @@ export default function AdminDashboard() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#e2e8f0'
+                    color: '#111827'
                   }}>
                     Plan tarifaire
                   </label>
@@ -674,7 +700,7 @@ export default function AdminDashboard() {
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#e2e8f0'
+                    color: '#111827'
                   }}>
                     Provinces d'opération *
                   </label>
@@ -725,7 +751,7 @@ export default function AdminDashboard() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
-                          color: '#e2e8f0',
+                          color: '#111827',
                           cursor: 'pointer',
                           padding: '4px'
                         }}>
@@ -766,7 +792,7 @@ export default function AdminDashboard() {
                       marginBottom: '6px',
                       fontSize: '14px',
                       fontWeight: '500',
-                      color: '#e2e8f0'
+                      color: '#111827'
                     }}>
                       Email contact *
                     </label>
@@ -795,7 +821,7 @@ export default function AdminDashboard() {
                       marginBottom: '6px',
                       fontSize: '14px',
                       fontWeight: '500',
-                      color: '#e2e8f0'
+                      color: '#111827'
                     }}>
                       Téléphone
                     </label>
@@ -818,13 +844,55 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Facturable + Vendeur */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'end' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                      Facturation
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '11px 14px', border: '2px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#111827' }}>
+                      <input
+                        type="checkbox"
+                        checked={newClient.billable}
+                        onChange={e => setNewClient(prev => ({ ...prev, billable: e.target.checked }))}
+                        style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: newClient.billable ? '#059669' : '#64748b' }}>
+                        {newClient.billable ? 'Facturable' : 'Démo (non-facturable)'}
+                      </span>
+                    </label>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#6b7280' }}>Décocher pour les tenants démo</p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                      Représentant commercial
+                    </label>
+                    <select
+                      value={newClient.vendor_id}
+                      onChange={e => setNewClient(prev => ({ ...prev, vendor_id: e.target.value }))}
+                      style={{ width: '100%', padding: '12px', border: '2px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', background: '#ffffff', color: '#111827', boxSizing: 'border-box' }}
+                    >
+                      <option value="">Aucun</option>
+                      {vendors.filter(v => v.is_active).map(v => (
+                        <option key={v.id} value={v.id}>{v.name} — {Math.round(Number(v.commission_rate) * 100)}%</option>
+                      ))}
+                    </select>
+                    {newClient.vendor_id && (
+                      <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#6b7280' }}>
+                        Commission payable au renouvellement annuel
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label style={{
                     display: 'block',
                     marginBottom: '6px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    color: '#e2e8f0'
+                    color: '#111827'
                   }}>
                     Mot de passe temporaire (optionnel)
                   </label>
@@ -881,7 +949,9 @@ export default function AdminDashboard() {
                         phone: '',
                         tempPassword: '',
                         provinces: [],
-                        currentProvince: ''
+                        currentProvince: '',
+                        billable: true,
+                        vendor_id: '',
                       });
                     }}
                     style={{
@@ -922,6 +992,119 @@ export default function AdminDashboard() {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Section : Gestion des vendeurs */}
+      <div style={{ padding: '40px 32px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '700', margin: '0 0 4px 0', color: '#111827' }}>Représentants commerciaux</h2>
+            <p style={{ color: '#6b7280', fontSize: '13px', margin: 0 }}>Commission 20% du total annuel, payable au renouvellement.</p>
+          </div>
+          <button
+            onClick={() => setShowVendorForm(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: showVendorForm ? '#f1f5f9' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: showVendorForm ? '#374151' : '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            <Plus size={15} /> {showVendorForm ? 'Annuler' : 'Ajouter un vendeur'}
+          </button>
+        </div>
+
+        {showVendorForm && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>Nom *</label>
+                <input value={newVendor.name} onChange={e => setNewVendor(v => ({ ...v, name: e.target.value }))}
+                  placeholder="Jean Tremblay" style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', color: '#111827', background: '#fff', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>Courriel</label>
+                <input type="email" value={newVendor.email} onChange={e => setNewVendor(v => ({ ...v, email: e.target.value }))}
+                  placeholder="jean@exemple.com" style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', color: '#111827', background: '#fff', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>Téléphone</label>
+                <input value={newVendor.phone} onChange={e => setNewVendor(v => ({ ...v, phone: e.target.value }))}
+                  placeholder="514-555-0123" style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', color: '#111827', background: '#fff', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#475569' }}>Commission (%)</label>
+                <input type="number" min={0} max={100} step={1} value={newVendor.commission_rate}
+                  onChange={e => setNewVendor(v => ({ ...v, commission_rate: Number(e.target.value) }))}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', color: '#111827', background: '#fff', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <button
+              disabled={savingVendor || !newVendor.name.trim()}
+              onClick={async () => {
+                setSavingVendor(true);
+                try {
+                  const res = await fetch('/api/admin/vendors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...newVendor, commission_rate: newVendor.commission_rate / 100 }),
+                  });
+                  const d = await res.json();
+                  if (!res.ok) throw new Error(d.error);
+                  setNewVendor({ name: '', email: '', phone: '', commission_rate: 20, notes: '' });
+                  setShowVendorForm(false);
+                  loadVendors();
+                } catch (e: any) { alert('Erreur : ' + e.message); }
+                setSavingVendor(false);
+              }}
+              style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '7px', padding: '9px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: savingVendor ? 0.6 : 1 }}
+            >
+              {savingVendor ? 'Enregistrement…' : 'Créer le vendeur'}
+            </button>
+          </div>
+        )}
+
+        {vendors.length === 0 ? (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '24px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+            Aucun vendeur enregistré. Exécutez d'abord la migration 057 dans Supabase.
+          </div>
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  {['Nom', 'Courriel', 'Téléphone', 'Commission', 'Statut', ''].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map(v => (
+                  <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#111827' }}>{v.name}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.email || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#4b5563' }}>{v.phone || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 700, color: '#2563eb' }}>{Math.round(Number(v.commission_rate) * 100)}%</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ padding: '3px 8px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700,
+                        background: v.is_active ? 'rgba(16,185,129,0.12)' : '#f1f5f9',
+                        color: v.is_active ? '#059669' : '#9ca3af' }}>
+                        {v.is_active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Désactiver ${v.name} ?`)) return;
+                          await fetch(`/api/admin/vendors?id=${v.id}`, { method: 'DELETE' });
+                          loadVendors();
+                        }}
+                        style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: '6px', color: '#ef4444', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        Désactiver
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

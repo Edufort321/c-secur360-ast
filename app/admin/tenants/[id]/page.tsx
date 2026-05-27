@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt, Download, Clock } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt, Download, Clock, UserCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { computeSubState } from '@/lib/subscription';
@@ -37,6 +37,10 @@ export default function TenantManagePage() {
   const [sub, setSub] = useState<any>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendorId, setVendorId] = useState('');
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [savingVendor, setSavingVendor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,6 +60,7 @@ export default function TenantManagePage() {
     try {
       const { data: t } = await supabase.from('tenants').select('*').eq('id', id).maybeSingle();
       setTenant(t); setSavedJson(profileKey(t));
+      setVendorId(t?.vendor_id || '');
       const { data: catalog } = await supabase.from('modules').select('key, name_fr, monthly_price, sort_order').order('sort_order');
       const { data: tm } = await supabase.from('tenant_modules').select('module_key, enabled').eq('tenant_id', id);
       const enabledSet = new Set((tm || []).filter((x: any) => x.enabled).map((x: any) => x.module_key));
@@ -66,6 +71,12 @@ export default function TenantManagePage() {
       setSub(s);
       const { data: txData } = await supabase.from('tenant_transactions').select('*').eq('tenant_id', id).order('created_at', { ascending: false });
       setTxs(txData || []);
+      const [{ data: allVendors }, { data: vc }] = await Promise.all([
+        supabase.from('vendors').select('id, name, commission_rate, is_active').order('name'),
+        supabase.from('vendor_commissions').select('*, vendors(name)').eq('tenant_id', id).order('created_at', { ascending: false }),
+      ]);
+      setVendors((allVendors || []).filter((v: any) => v.is_active));
+      setCommissions(vc || []);
     } catch { /* dégradé */ } finally { setLoading(false); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
@@ -96,13 +107,43 @@ export default function TenantManagePage() {
       tenant_id: id, status: 'active', last_payment_at: now.toISOString(),
       next_billing_date: next.toISOString().slice(0, 10),
     }, { onConflict: 'tenant_id' });
-    // Logger la transaction
     await supabase.from('tenant_transactions').insert({
       tenant_id: id, type: 'payment', amount: total, status: 'completed',
       description: 'Paiement annuel', period_start: now.toISOString().slice(0, 10),
       period_end: next.toISOString().slice(0, 10),
     });
+    // Créer commission vendeur si applicable
+    const activeVendorId = vendorId || tenant?.vendor_id;
+    if (activeVendorId && total > 0) {
+      const v = vendors.find((x: any) => x.id === activeVendorId);
+      const rate = Number(v?.commission_rate ?? 0.20);
+      const commAmt = Math.round(total * rate * 100) / 100;
+      if (commAmt > 0) {
+        await supabase.from('vendor_commissions').insert({
+          vendor_id: activeVendorId, tenant_id: id,
+          amount: commAmt, status: 'pending',
+          due_date: next.toISOString().slice(0, 10),
+          period_start: now.toISOString().slice(0, 10),
+          period_end: next.toISOString().slice(0, 10),
+        });
+      }
+    }
     setNotice('Paiement enregistré ✓ (prochaine facturation +1 an)'); load();
+  }
+
+  async function saveVendor() {
+    setSavingVendor(true); setNotice(null);
+    const { error } = await supabase.from('tenants').update({ vendor_id: vendorId || null }).eq('id', id);
+    if (error) setNotice('Erreur vendeur : ' + error.message + ' — migration 057 exécutée ?');
+    else { setTenant((t: any) => ({ ...t, vendor_id: vendorId || null })); setNotice('Vendeur assigné ✓'); }
+    setSavingVendor(false);
+  }
+
+  async function markCommissionPaid(commId: string) {
+    const { error } = await supabase.from('vendor_commissions')
+      .update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', commId);
+    if (error) setNotice('Erreur : ' + error.message);
+    else { setNotice('Commission marquée payée ✓'); load(); }
   }
 
   async function addTransaction() {
@@ -433,6 +474,94 @@ export default function TenantManagePage() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </div>
+
+            {/* Section Vendeur & Commissions */}
+            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <h2 className="flex items-center gap-2 font-bold"><UserCheck size={16} /> Vendeur & Commissions</h2>
+              </div>
+              <div className="p-4">
+                <div className="flex items-end gap-3">
+                  <label className="flex-1">
+                    <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Représentant commercial</span>
+                    <select className={inputCls} value={vendorId} onChange={e => setVendorId(e.target.value)}>
+                      <option value="">Aucun</option>
+                      {vendors.map((v: any) => (
+                        <option key={v.id} value={v.id}>{v.name} — {Math.round(Number(v.commission_rate) * 100)}%</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button onClick={saveVendor} disabled={savingVendor}
+                    className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                    {savingVendor ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Assigner
+                  </button>
+                </div>
+                {vendorId && (() => {
+                  const v = vendors.find((x: any) => x.id === vendorId);
+                  if (!v) return null;
+                  const rate = Number(v.commission_rate);
+                  const commAmt = Math.round(total * rate * 100) / 100;
+                  return (
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Commission au prochain renouvellement : <strong>{Math.round(rate * 100)}%</strong> × {money(total)} = <strong className="text-blue-600">{money(commAmt)}</strong> — payable au renouvellement annuel si le client poursuit.
+                    </p>
+                  );
+                })()}
+                {vendors.length === 0 && (
+                  <p className="mt-2 text-xs text-amber-600">Aucun vendeur disponible — exécutez la migration 057 dans Supabase.</p>
+                )}
+              </div>
+
+              {commissions.length > 0 && (
+                <div className="border-t border-gray-100 dark:border-gray-700">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700">
+                          <th className="px-4 py-2">Date</th>
+                          <th className="px-4 py-2">Vendeur</th>
+                          <th className="px-4 py-2">Période</th>
+                          <th className="px-4 py-2 text-right">Commission</th>
+                          <th className="px-4 py-2">Statut</th>
+                          <th className="px-4 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commissions.map((c: any) => (
+                          <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                            <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gray-400">{fmtDate(c.created_at)}</td>
+                            <td className="px-4 py-2.5 font-medium">{c.vendors?.name || '—'}</td>
+                            <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gray-400">
+                              {c.period_start ? `${fmtDate(c.period_start)} → ${c.period_end ? fmtDate(c.period_end) : ''}` : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-semibold">{money(Number(c.amount))}</td>
+                            <td className="px-4 py-2.5">
+                              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                c.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                                c.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                'bg-gray-100 text-gray-500'}`}>
+                                {c.status === 'paid' ? 'Payée' : c.status === 'pending' ? 'En attente' : 'Annulée'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {c.status === 'pending' && (
+                                <button onClick={() => markCommissionPaid(c.id)}
+                                  className="rounded-lg border border-emerald-300 px-2 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400">
+                                  Marquer payée
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {commissions.length === 0 && (
+                <div className="px-4 pb-4 text-center text-sm text-gray-400">Aucune commission enregistrée pour ce client.</div>
               )}
             </div>
 
