@@ -1736,7 +1736,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   async function save() {
     setSaving(true); setNotice(null);
     if (!sites.some(s => s.name?.trim())) {
-      setNotice(`⚠️ ${tr('Aucun site à sauvegarder. Clique + Site et tape un nom.', 'Nothing to save. Click + Site and type a name.')}`);
+      setNotice(`⚠️ ${tr(`Aucun site à sauvegarder (${sites.length} ligne(s) en mémoire, aucun nom). Clique + Site et tape un nom dans le champ.`, `Nothing to save (${sites.length} row(s) in memory, no name). Click + Site and type a name.`)}`);
       setSaving(false); return;
     }
     let savedSites = 0, savedDepts = 0;
@@ -1796,7 +1796,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
             <div key={site._key}>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
                 <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input autoComplete="off" className={`${inp} flex-1`} value={site.name} onChange={e => updSite(site._key, 'name', e.target.value)} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input autoFocus={!site.id} autoComplete="off" className={`${inp} flex-1`} value={site.name} onChange={e => updSite(site._key, 'name', e.target.value)} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
                 <input autoComplete="off" className={`${inp} w-20`} value={site.code} onChange={e => updSite(site._key, 'code', e.target.value)} placeholder="SHE" />
                 <input autoComplete="off" className={`${inp} flex-1`} value={site.address} onChange={e => updSite(site._key, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                 <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
