@@ -1,8 +1,8 @@
 // Planificateur C-Secur360 — accès sécurisé par le portail hôte (middleware + entitlements).
-// Aucune auth interne : si l'utilisateur a le module planificateur, il a accès.
-// Le niveau d'accès est défini dans admin/ressources/personnel (niveauAcces).
+// Niveaux : administration/coordination/admin_paie → modification ; autres → consultation.
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from './lib/supabaseClient';
 import { PlanificateurFinal } from './modules/Calendar/PlanificateurFinal.jsx';
 import { NotificationContainer } from './components/UI/NotificationContainer.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
@@ -13,16 +13,39 @@ import { ResourcesModal } from './components/Modals/ResourcesModal.jsx';
 import { CongesModal } from './components/Modals/CongesModal.jsx';
 import { JobModal } from './modules/NewJob/JobModal.jsx';
 
+// Niveaux qui donnent accès à la modification
+const ROLES_MODIF = ['administration', 'coordination', 'admin_paie'];
+
 function AppContent({ tenant = 'cerdia' }) {
     const appData = useAppDataWithSync(tenant);
     const { notifications, addNotification } = useNotifications();
 
-    const [showCreateEvent, setShowCreateEvent]         = useState(false);
+    const [showCreateEvent, setShowCreateEvent]             = useState(false);
     const [showCongesManagement, setShowCongesManagement]   = useState(false);
     const [showResourcesManagement, setShowResourcesManagement] = useState(false);
+    const [currentUser, setCurrentUser] = useState({ id: 'host', nom: 'Utilisateur', niveauAcces: 'administration' });
 
-    // L'accès est géré par le portail — niveau administration par défaut.
-    const adminUser = { id: 'host', nom: 'Administrateur', niveauAcces: 'administration' };
+    // Résoudre le niveau d'accès depuis planner_personnel via l'email Supabase Auth
+    useEffect(() => {
+        (async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user?.email) return;
+                const { data: personnel } = await supabase
+                    .from('planner_personnel')
+                    .select('id, name, niveauAcces, email')
+                    .eq('tenant_id', tenant)
+                    .ilike('email', user.email)
+                    .maybeSingle();
+                if (personnel) {
+                    setCurrentUser({ id: personnel.id, nom: personnel.name, niveauAcces: personnel.niveauAcces || 'consultation' });
+                }
+            } catch { /* Supabase non dispo → garde la valeur par défaut */ }
+        })();
+    }, [tenant]);
+
+    const canModify      = ROLES_MODIF.includes(currentUser.niveauAcces);
+    const isCoordinator  = ['coordination', 'administration'].includes(currentUser.niveauAcces);
 
     const addSousTraitant = useCallback((nom) => {
         if (!nom?.trim()) return null;
@@ -55,9 +78,9 @@ function AppContent({ tenant = 'cerdia' }) {
                 onDeleteConge={appData.deleteConge}
                 addSousTraitant={addSousTraitant}
                 addNotification={addNotification}
-                utilisateurConnecte={adminUser}
-                peutModifier={() => true}
-                estCoordonnateur={() => true}
+                utilisateurConnecte={currentUser}
+                peutModifier={canModify}
+                estCoordonnateur={isCoordinator}
                 onCreateEvent={() => setShowCreateEvent(true)}
                 onManageConges={() => setShowCongesManagement(true)}
                 onManageResources={() => setShowResourcesManagement(true)}
@@ -75,6 +98,8 @@ function AppContent({ tenant = 'cerdia' }) {
                     sousTraitants={appData.sousTraitants}
                     addSousTraitant={addSousTraitant}
                     addNotification={addNotification}
+                    peutModifier={canModify}
+                    tenant={tenant}
                 />
             )}
 
@@ -87,8 +112,8 @@ function AppContent({ tenant = 'cerdia' }) {
                     conge={null}
                     personnel={appData.personnel}
                     addNotification={addNotification}
-                    utilisateurConnecte={adminUser}
-                    peutModifier={() => true}
+                    utilisateurConnecte={currentUser}
+                    peutModifier={canModify}
                 />
             )}
 
@@ -110,10 +135,10 @@ function AppContent({ tenant = 'cerdia' }) {
                     onSaveSuccursale={appData.saveSuccursale}
                     onSaveConge={appData.saveConge}
                     onDeleteConge={appData.deleteConge}
-                    utilisateurConnecte={adminUser}
-                    estCoordonnateur={() => true}
-                    estAdministrateur={() => true}
-                    peutModifier={() => true}
+                    utilisateurConnecte={currentUser}
+                    estCoordonnateur={isCoordinator}
+                    estAdministrateur={currentUser.niveauAcces === 'administration'}
+                    peutModifier={canModify}
                     addNotification={addNotification}
                 />
             )}

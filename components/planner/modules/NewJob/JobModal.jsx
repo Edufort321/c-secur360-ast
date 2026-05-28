@@ -101,6 +101,11 @@ export function JobModal({
         preparation: false
     });
 
+    // Autocomplete client + projets
+    const [clientSuggestions, setClientSuggestions] = useState([]);
+    const [clientSearching, setClientSearching]     = useState(false);
+    const clientSearchTimer = useRef(null);
+
     // Sélecteur de source — Préparation et matériel
     const [prepSource, setPrepSource] = useState(null); // null | 'ressource' | 'inventaire'
     const [prepSearch, setPrepSearch] = useState('');
@@ -798,6 +803,48 @@ export function JobModal({
             ...prev,
             preparation: prev.preparation.filter((_, i) => i !== index)
         }));
+    };
+
+    // ── Recherche client + projets (debounce 300ms) ──
+    const searchClientsAndProjects = (text) => {
+        clearTimeout(clientSearchTimer.current);
+        if (!text || text.length < 2) { setClientSuggestions([]); return; }
+        clientSearchTimer.current = setTimeout(async () => {
+            setClientSearching(true);
+            try {
+                const t = window.location.pathname.split('/')[1] || 'cerdia';
+                const [cRes, pRes] = await Promise.all([
+                    supabase.from('clients').select('id, name, city, province, contact_name, address')
+                        .eq('tenant_id', t).ilike('name', `%${text}%`).eq('active', true).limit(6),
+                    supabase.from('projects').select('id, project_number, title, client_name, location, status')
+                        .eq('tenant_id', t).or(`client_name.ilike.%${text}%,title.ilike.%${text}%`).limit(8),
+                ]);
+                const clients  = (cRes.data  || []).map(c => ({ ...c, _type: 'client' }));
+                const projects = (pRes.data  || []).map(p => ({ ...p, _type: 'project' }));
+                setClientSuggestions([...clients, ...projects]);
+            } catch { /* silencieux */ }
+            setClientSearching(false);
+        }, 300);
+    };
+
+    // ── Appliquer une suggestion (client ou projet) ──
+    const applyClientSuggestion = (item) => {
+        if (item._type === 'client') {
+            setFormData(prev => ({
+                ...prev,
+                client: item.name,
+                lieu: [item.city, item.province].filter(Boolean).join(', ') || prev.lieu,
+            }));
+        } else if (item._type === 'project') {
+            setFormData(prev => ({
+                ...prev,
+                client:     item.client_name || prev.client,
+                nom:        prev.nom || item.title || '',
+                lieu:       item.location  || prev.lieu,
+                numeroJob:  prev.numeroJob  || item.project_number || '',
+            }));
+        }
+        setClientSuggestions([]);
     };
 
     // ── Fetch inventaire (lazy, une seule fois) ──
@@ -3408,17 +3455,67 @@ export function JobModal({
                                             />
                                         </div>
 
-                                        <div>
+                                        <div className="relative">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Client
+                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">Recherche…</span>}
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.client}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, client: e.target.value }))}
+                                                onChange={(e) => {
+                                                    setFormData(prev => ({ ...prev, client: e.target.value }));
+                                                    searchClientsAndProjects(e.target.value);
+                                                }}
+                                                onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du client"
+                                                placeholder="Nom du client ou projet…"
+                                                autoComplete="off"
                                             />
+                                            {clientSuggestions.length > 0 && (
+                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                                    {/* Clients */}
+                                                    {clientSuggestions.filter(s => s._type === 'client').length > 0 && (
+                                                        <>
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0">
+                                                                👥 Clients
+                                                            </div>
+                                                            {clientSuggestions.filter(s => s._type === 'client').map(c => (
+                                                                <button key={c.id} type="button" onMouseDown={() => applyClientSuggestion(c)}
+                                                                    className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex items-center gap-2">
+                                                                    <span className="font-medium text-gray-800">{c.name}</span>
+                                                                    {c.city && <span className="text-xs text-gray-400">{c.city}</span>}
+                                                                    {c.contact_name && <span className="text-xs text-gray-400 ml-auto">{c.contact_name}</span>}
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                    {/* Projets */}
+                                                    {clientSuggestions.filter(s => s._type === 'project').length > 0 && (
+                                                        <>
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0 border-t border-gray-100">
+                                                                📁 Projets — cliquer pour remplir le formulaire
+                                                            </div>
+                                                            {clientSuggestions.filter(s => s._type === 'project').map(p => (
+                                                                <button key={p.id} type="button" onMouseDown={() => applyClientSuggestion(p)}
+                                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex items-start gap-2 border-t border-gray-50">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="font-medium text-gray-800 truncate">{p.title}</div>
+                                                                        <div className="text-xs text-gray-400 flex gap-2 mt-0.5">
+                                                                            {p.client_name && <span>{p.client_name}</span>}
+                                                                            {p.project_number && <span className="font-mono">#{p.project_number}</span>}
+                                                                            {p.location && <span>📍 {p.location}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-semibold ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                                        {p.status || 'projet'}
+                                                                    </span>
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
