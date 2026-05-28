@@ -1392,18 +1392,23 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
   type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
   const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
-  const [siteDepts, setSiteDepts] = useState<{ id: string; name: string }[]>([]);
+  const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
+  const [postes, setPostes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const [{ data: suc }, { data }] = await Promise.all([
-      supabase.from('planner_succursales').select('id, name').eq('tenant_id', tenant).order('name'),
+    const [{ data: suc }, { data: pos }, { data }] = await Promise.all([
+      supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
+      supabase.from('planner_postes').select('id, name').eq('tenant_id', tenant).order('name'),
       supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
     ]);
-    setSiteDepts(suc || []);
+    const allSites = (suc || []).filter((r: any) => !r.parent_id);
+    const allDepts = (suc || []).filter((r: any) => r.parent_id);
+    setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
+    setPostes(pos || []);
     setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
     setLoading(false);
   }
@@ -1445,9 +1450,14 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
-      {siteDepts.length === 0 && (
-        <div className="mx-4 mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
-          {tr("💡 Créez des sites/départements dans l'onglet « Sites/Dépts » pour regrouper le personnel (optionnel).", '💡 Create sites/departments in the "Sites/Depts" tab to group staff (optional).')}
+      {postes.length === 0 && (
+        <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          {tr("💡 Créez des postes dans l'onglet « Ressources → Postes » pour les sélectionner ici.", '💡 Create positions in the "Resources → Positions" tab to select them here.')}
+        </div>
+      )}
+      {siteTree.length === 0 && (
+        <div className="mx-4 mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+          {tr("💡 Créez des sites/départements dans l'onglet « Sites/Dépts » pour assigner le personnel (optionnel).", '💡 Create sites/departments in the "Sites/Depts" tab to assign staff (optional).')}
         </div>
       )}
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
@@ -1455,8 +1465,8 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
         <table className="w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
-            <th className="px-2">{tr('Rôle / Poste', 'Role / Position')}</th>
-            <th className="px-2">{tr('Site/Dépt', 'Site/Dept')}</th>
+            <th className="px-2">{tr('Poste', 'Position')}</th>
+            <th className="px-2">{tr('Site / Dépt', 'Site / Dept')}</th>
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
             <th className="px-2">{tr("Niveau d'accès", 'Access level')}</th>
@@ -1467,15 +1477,33 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
             {rows.map((r, i) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
                 <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
-                <td className="px-2"><input className={inp} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} /></td>
                 <td className="px-2">
-                  {siteDepts.length > 0 ? (
-                    <select className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
-                      <option value="">{tr('— Aucun —', '— None —')}</option>
-                      {siteDepts.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {postes.length > 0 ? (
+                    <select className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)}>
+                      <option value="">— {tr('Poste', 'Position')} —</option>
+                      {postes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                     </select>
                   ) : (
-                    <input className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)} placeholder={tr('Site libre', 'Free text')} />
+                    <input className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} />
+                  )}
+                </td>
+                <td className="px-2">
+                  {siteTree.length > 0 ? (
+                    <select className={`${inp} min-w-[160px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
+                      <option value="">— {tr('Aucun', 'None')} —</option>
+                      {siteTree.map(site => (
+                        site.depts.length > 0 ? (
+                          <optgroup key={site.id} label={site.name}>
+                            <option value={site.name}>{site.name} ({tr('site entier', 'whole site')})</option>
+                            {site.depts.map(d => <option key={d.id} value={`${site.name} / ${d.name}`}>{d.name}</option>)}
+                          </optgroup>
+                        ) : (
+                          <option key={site.id} value={site.name}>{site.name}</option>
+                        )
+                      ))}
+                    </select>
+                  ) : (
+                    <input className={`${inp} min-w-[140px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)} placeholder={tr('Site libre', 'Free text')} />
                   )}
                 </td>
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
@@ -1665,41 +1693,69 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
 
 function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  type Row = { id?: string; name: string; code: string; address: string };
-  const empty = (): Row => ({ name: '', code: '', address: '' });
-  const [rows, setRows] = useState<Row[]>([]);
+  type DeptRow = { id?: string; name: string; code: string; address: string };
+  type SiteRow = { id?: string; name: string; code: string; address: string; depts: DeptRow[] };
+  const emptyDept = (): DeptRow => ({ name: '', code: '', address: '' });
+  const emptySite = (): SiteRow => ({ name: '', code: '', address: '', depts: [] });
+  const [sites, setSites] = useState<SiteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_succursales').select('id, name, code, address').eq('tenant_id', tenant).order('name');
-    setRows(data || []);
+    const { data } = await supabase.from('planner_succursales').select('id, name, code, address, parent_id').eq('tenant_id', tenant).order('name');
+    if (!data) { setSites([]); setLoading(false); return; }
+    const siteList = data.filter((r: any) => !r.parent_id);
+    const deptList = data.filter((r: any) => r.parent_id);
+    setSites(siteList.map((s: any) => ({
+      id: s.id, name: s.name, code: s.code || '', address: s.address || '',
+      depts: deptList.filter((d: any) => d.parent_id === s.id).map((d: any) => ({ id: d.id, name: d.name, code: d.code || '', address: d.address || '' })),
+    })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
-  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
-  const add = () => setRows(p => [...p, empty()]);
+  const updSite = (si: number, k: keyof Omit<SiteRow, 'depts'>, v: string) =>
+    setSites(p => p.map((s, j) => j === si ? { ...s, [k]: v } : s));
+  const updDept = (si: number, di: number, fld: keyof DeptRow, v: string) =>
+    setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, [fld]: v } : d) } : s));
+  const addSite = () => setSites(p => [...p, emptySite()]);
+  const addDept = (si: number) => setSites(p => p.map((s, j) => j === si ? { ...s, depts: [...s.depts, emptyDept()] } : s));
+
+  async function delSite(si: number) {
+    const site = sites[si];
+    if (site.id) await supabase.from('planner_succursales').delete().eq('id', site.id);
+    setSites(p => p.filter((_, j) => j !== si));
+  }
+  async function delDept(si: number, di: number) {
+    const dept = sites[si].depts[di];
+    if (dept.id) await supabase.from('planner_succursales').delete().eq('id', dept.id);
+    setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.filter((_, k2) => k2 !== di) } : s));
+  }
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
-      for (const r of rows) {
-        if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, code: r.code || null, address: r.address || null };
-        if (r.id) await supabase.from('planner_succursales').update(payload).eq('id', r.id);
-        else await supabase.from('planner_succursales').insert(payload);
+      for (const site of sites) {
+        if (!site.name?.trim()) continue;
+        const sPayload = { tenant_id: tenant, name: site.name, code: site.code || null, address: site.address || null, type: 'site', parent_id: null };
+        let siteId = site.id;
+        if (site.id) {
+          await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
+        } else {
+          const { data: ins } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
+          siteId = (ins as any)?.id;
+        }
+        for (const dept of site.depts) {
+          if (!dept.name?.trim()) continue;
+          const dPayload = { tenant_id: tenant, name: dept.name, code: dept.code || null, address: dept.address || null, type: 'departement', parent_id: siteId };
+          if (dept.id) await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
+          else await supabase.from('planner_succursales').insert(dPayload);
+        }
       }
       setNotice(tr('Sites/départements enregistrés ✓', 'Sites/departments saved ✓')); load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
-  }
-
-  async function del(i: number) {
-    const r = rows[i];
-    if (r.id) await supabase.from('planner_succursales').delete().eq('id', r.id);
-    setRows(p => p.filter((_, j) => j !== i));
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -1707,44 +1763,52 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        {tr('Sites et départements de votre organisation. Requis avant de pouvoir créer du personnel dans le planificateur.', 'Sites and departments of your organization. Required before creating planner staff.')}
+        {tr('Sites et départements de votre organisation. Les sites contiennent des départements. Les employés sont assignés à un site ou département spécifique.', 'Sites and departments for your organization. Sites contain departments. Employees are assigned to a site or specific department.')}
       </p>
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
           <div>
             <h2 className="font-bold">{tr('Sites / Départements', 'Sites / Departments')}</h2>
-            <p className="text-xs text-gray-500">{tr('Utilisés pour regrouper le personnel dans le planificateur.', 'Used to group staff in the planner.')}</p>
+            <p className="text-xs text-gray-500">{tr('Hiérarchie : Site → Département', 'Hierarchy: Site → Department')}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+            <button onClick={addSite} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Site', 'Site')}</button>
             <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
           </div>
         </div>
         {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
-        <div className="overflow-x-auto p-2">
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-              <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
-              <th className="px-2">{tr('Code', 'Code')}</th>
-              <th className="px-2">{tr('Adresse', 'Address')}</th>
-              <th></th>
-            </tr></thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Bureau Sherbrooke', 'Sherbrooke Office')} /></td>
-                  <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="SHE" /></td>
-                  <td className="px-2"><input className={inp} value={r.address || ''} onChange={e => upd(i, 'address', e.target.value)} placeholder="123 rue Principale" /></td>
-                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
-                </tr>
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {sites.map((site, si) => (
+            <div key={site.id || `ns-${si}`}>
+              {/* Site row */}
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
+                <Building2 size={14} className="shrink-0 text-blue-500" />
+                <input className={`${inp} flex-1`} value={site.name} onChange={e => updSite(si, 'name', e.target.value)} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input className={`${inp} w-20`} value={site.code} onChange={e => updSite(si, 'code', e.target.value)} placeholder="SHE" />
+                <input className={`${inp} flex-1`} value={site.address} onChange={e => updSite(si, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                <button onClick={() => addDept(si)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
+                  <Plus size={11} />{tr('Dépt', 'Dept')}
+                </button>
+                <button onClick={() => delSite(si)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
+              </div>
+              {/* Department rows */}
+              {site.depts.map((dept, di) => (
+                <div key={dept.id || `nd-${si}-${di}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
+                  <MapPin size={12} className="shrink-0 text-gray-400" />
+                  <input className={`${inp} flex-1`} value={dept.name} onChange={e => updDept(si, di, 'name', e.target.value)} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
+                  <input className={`${inp} w-20`} value={dept.code} onChange={e => updDept(si, di, 'code', e.target.value)} placeholder="SEC-N" />
+                  <input className={`${inp} flex-1`} value={dept.address} onChange={e => updDept(si, di, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                  <div className="w-[68px] shrink-0" />
+                  <button onClick={() => delDept(si, di)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                </div>
               ))}
-              {rows.length === 0 && (
-                <tr><td colSpan={4} className="px-2 py-8 text-center text-gray-400">
-                  {tr('Aucun site/département. Crée-en un pour pouvoir ensuite ajouter du personnel.', 'No site/department yet. Create one to be able to add staff.')}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
+            </div>
+          ))}
+          {sites.length === 0 && (
+            <div className="px-4 py-10 text-center text-sm text-gray-400">
+              {tr('Aucun site. Clique « + Site » pour commencer.', 'No site yet. Click "+ Site" to start.')}
+            </div>
+          )}
         </div>
       </div>
     </div>
