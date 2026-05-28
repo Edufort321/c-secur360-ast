@@ -1693,7 +1693,6 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
 
 function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  // Uncontrolled inputs — values read directly from DOM on save (bypasses onChange/autocomplete issues)
   type SiteRow = { _key: string; id?: string; initName: string; initCode: string; initAddr: string };
   type DeptRow = { _dKey: string; id?: string; initName: string; initCode: string; initAddr: string; siteKey: string };
 
@@ -1703,27 +1702,26 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const formRef = React.useRef<HTMLDivElement>(null);
 
-  const gv = (row: string, key: string, field: string) =>
-    (formRef.current?.querySelector<HTMLInputElement>(`[data-row="${row}"][data-rkey="${key}"][data-field="${field}"]`)?.value ?? '').trim();
+  // Direct callback refs — each input registers itself; val() reads DOM value at save time
+  const imap = React.useRef(new Map<string, HTMLInputElement>());
+  const reg = (k: string) => (el: HTMLInputElement | null) => { if (el) imap.current.set(k, el); else imap.current.delete(k); };
+  const val = (k: string) => (imap.current.get(k)?.value ?? '').trim();
 
   async function load() {
     setLoading(true);
     const { data, error } = await supabase.from('planner_succursales').select('*').eq('tenant_id', tenant).order('name');
     if (error) { setNotice('Erreur chargement : ' + error.message); setSites([]); setDepts([]); setLoading(false); return; }
-    if (!data) { setSites([]); setDepts([]); setLoading(false); return; }
-    const siteData = (data as any[]).filter(r => !r.parent_id);
-    const deptData = (data as any[]).filter(r => r.parent_id);
-    setSites(siteData.map(s => ({ _key: s.id, id: s.id, initName: s.name, initCode: s.code || '', initAddr: s.address || '' })));
-    setDepts(deptData.map(d => ({ _dKey: d.id, id: d.id, initName: d.name, initCode: d.code || '', initAddr: d.address || '', siteKey: d.parent_id })));
+    const rows = (data ?? []) as any[];
+    setSites(rows.filter(r => !r.parent_id).map(s => ({ _key: s.id, id: s.id, initName: s.name, initCode: s.code || '', initAddr: s.address || '' })));
+    setDepts(rows.filter(r =>  r.parent_id).map(d => ({ _dKey: d.id, id: d.id, initName: d.name, initCode: d.code || '', initAddr: d.address || '', siteKey: d.parent_id })));
     setLoadKey(k => k + 1);
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const addSite = () => { const k = Math.random().toString(36).slice(2); setSites(p => [...p, { _key: k, initName: '', initCode: '', initAddr: '' }]); };
-  const addDept = (siteKey: string) => { const k = Math.random().toString(36).slice(2); setDepts(p => [...p, { _dKey: k, initName: '', initCode: '', initAddr: '', siteKey }]); };
+  const addDept = (sk: string) => { const k = Math.random().toString(36).slice(2); setDepts(p => [...p, { _dKey: k, initName: '', initCode: '', initAddr: '', siteKey: sk }]); };
 
   async function delSite(siteKey: string) {
     const site = sites.find(s => s._key === siteKey);
@@ -1739,45 +1737,45 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function save() {
     setSaving(true); setNotice(null);
-    const hasValid = sites.some(s => gv('site', s._key, 'name'));
-    if (!hasValid) {
-      setNotice(`⚠️ ${tr(`Aucun site à sauvegarder (${sites.length} ligne(s)). Clique + Site et tape un nom.`, `Nothing to save (${sites.length} row(s)). Click + Site and type a name.`)}`);
+    // Read values straight from DOM via callback-ref Map — immune to onChange/autocomplete issues
+    const validSites = sites.filter(s => val(`s:${s._key}:n`));
+    if (!validSites.length) {
+      setNotice(`⚠️ ${tr(`Aucun site (${sites.length} ligne(s), aucun nom). Clique + Site et tape un nom.`, `Nothing to save (${sites.length} row(s), no name). Click + Site and type a name.`)}`);
       setSaving(false); return;
     }
     let savedSites = 0, savedDepts = 0;
     try {
-      for (const site of sites) {
-        const name = gv('site', site._key, 'name');
-        if (!name) continue;
-        const sPayload = { tenant_id: tenant, name, code: gv('site', site._key, 'code') || null, address: gv('site', site._key, 'addr') || null };
+      for (const site of validSites) {
+        const name = val(`s:${site._key}:n`);
+        const sPayload = { tenant_id: tenant, name, code: val(`s:${site._key}:c`) || null, address: val(`s:${site._key}:a`) || null };
         let siteId = site.id;
         if (site.id) {
-          const { error: ue } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
-          if (ue) throw new Error(ue.message);
+          const { error } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
+          if (error) throw new Error(error.message);
         } else {
-          const { data: ins, error: ie } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
-          if (ie) throw new Error(ie.message);
-          siteId = (ins as any)?.id;
+          const { data: ins, error } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
+          if (error) throw new Error(error.message);
+          siteId = (ins as any).id;
         }
         savedSites++;
-        for (const dept of depts) {
-          if (dept.siteKey !== site._key) continue;
-          const dName = gv('dept', dept._dKey, 'name');
+        for (const dept of depts.filter(d => d.siteKey === site._key)) {
+          const dName = val(`d:${dept._dKey}:n`);
           if (!dName) continue;
-          const dPayload = { tenant_id: tenant, name: dName, code: gv('dept', dept._dKey, 'code') || null, address: gv('dept', dept._dKey, 'addr') || null, parent_id: siteId };
+          const dPayload = { tenant_id: tenant, name: dName, code: val(`d:${dept._dKey}:c`) || null, address: val(`d:${dept._dKey}:a`) || null, parent_id: siteId };
           if (dept.id) {
-            const { error: de } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
-            if (de) throw new Error(de.message);
+            const { error } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
+            if (error) throw new Error(error.message);
           } else {
-            const { error: de } = await supabase.from('planner_succursales').insert(dPayload);
-            if (de) throw new Error(de.message);
+            const { error } = await supabase.from('planner_succursales').insert(dPayload);
+            if (error) throw new Error(error.message);
           }
           savedDepts++;
         }
       }
-      setNotice(`${savedSites} site(s) + ${savedDepts} département(s) enregistrés ✓`);
+      setNotice(`✓ ${savedSites} site(s) + ${savedDepts} département(s) enregistrés`);
       load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message ?? 'DB')); }
+    finally { setSaving(false); }
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -1799,14 +1797,14 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           </div>
         </div>
         {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
-        <div ref={formRef} className="divide-y divide-gray-100 dark:divide-gray-700">
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
           {sites.map(site => (
             <div key={`${site._key}-${loadKey}`}>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
                 <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input data-row="site" data-rkey={site._key} data-field="name" autoFocus={!site.id} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initName} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
-                <input data-row="site" data-rkey={site._key} data-field="code" autoComplete="off" className={`${inp} w-20`} defaultValue={site.initCode} placeholder="SHE" />
-                <input data-row="site" data-rkey={site._key} data-field="addr" autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                <input ref={reg(`s:${site._key}:n`)} autoFocus={!site.id} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initName} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input ref={reg(`s:${site._key}:c`)} autoComplete="off" className={`${inp} w-20`} defaultValue={site.initCode} placeholder="SHE" />
+                <input ref={reg(`s:${site._key}:a`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                 <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
                   <Plus size={11} />{tr('Dépt', 'Dept')}
                 </button>
@@ -1815,9 +1813,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
               {depts.filter(d => d.siteKey === site._key).map(dept => (
                 <div key={`${dept._dKey}-${loadKey}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
                   <MapPin size={12} className="shrink-0 text-gray-400" />
-                  <input data-row="dept" data-rkey={dept._dKey} data-field="name" autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initName} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
-                  <input data-row="dept" data-rkey={dept._dKey} data-field="code" autoComplete="off" className={`${inp} w-20`} defaultValue={dept.initCode} placeholder="SEC-N" />
-                  <input data-row="dept" data-rkey={dept._dKey} data-field="addr" autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                  <input ref={reg(`d:${dept._dKey}:n`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initName} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
+                  <input ref={reg(`d:${dept._dKey}:c`)} autoComplete="off" className={`${inp} w-20`} defaultValue={dept.initCode} placeholder="SEC-N" />
+                  <input ref={reg(`d:${dept._dKey}:a`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                   <div className="w-[68px] shrink-0" />
                   <button onClick={() => delDept(dept._dKey)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
                 </div>
