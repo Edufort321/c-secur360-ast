@@ -62,7 +62,7 @@ interface Props {
   tenant: string;
   equipmentId?: string;
   onClose: () => void;
-  onSaved?: (id: string) => void;
+  onSaved?: (id: string, type?: string) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
         setCurrentId(savedId);
         setMsg(fr ? 'Enregistré ✓' : 'Saved ✓');
         setTimeout(() => setMsg(''), 2500);
-        onSaved?.(savedId);
+        onSaved?.(savedId, form.equipmentType);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

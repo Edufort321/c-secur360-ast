@@ -10,7 +10,8 @@ export type InspectionType =
   | 'fire_extinguisher'
   | 'gas_detector'
   | 'respiratory'
-  | 'ppe_general';
+  | 'ppe_general'
+  | 'vehicle';
 
 export interface ChecklistItem {
   id: string;
@@ -582,6 +583,37 @@ const ppeGeneral: EquipmentChecklist = {
 };
 
 // ─────────────────────────────────────────────
+// 11. VÉHICULE — Pré-inspection
+// ─────────────────────────────────────────────
+const vehicle: EquipmentChecklist = {
+  type: 'vehicle',
+  labelFr: 'Véhicule (pré-inspection)',
+  icon: '🚗',
+  standard: 'RSST / Recommandations fabricant',
+  frequency: 'Avant chaque utilisation',
+  sections: [
+    {
+      id: 'vehicle_items',
+      title: 'Inspection pré-départ',
+      items: [
+        { id: 'v01', label: 'Niveaux des fluides (huile, liquide de refroidissement, frein)',    critical: true,  withdrawal: false },
+        { id: 'v02', label: 'Pneus — pression, usure, absence de dommages visibles',            critical: true,  withdrawal: true  },
+        { id: 'v03', label: 'Éclairage — phares, feux arrière, clignotants, feux de recul',     critical: true,  withdrawal: false },
+        { id: 'v04', label: 'Pare-brise — absence de fissures, essuie-glaces fonctionnels',     critical: false, withdrawal: false },
+        { id: 'v05', label: 'Freins — pédale, frein de stationnement',                          critical: true,  withdrawal: true  },
+        { id: 'v06', label: 'Rétroviseurs — intérieur et extérieurs (ajustés)',                  critical: false, withdrawal: false },
+        { id: 'v07', label: 'Ceintures de sécurité — toutes places fonctionnelles',              critical: true,  withdrawal: false },
+        { id: 'v08', label: 'Avertisseur sonore (klaxon)',                                       critical: false, withdrawal: false },
+        { id: 'v09', label: 'Équipements d\'urgence (triangle, extincteur si requis)',            critical: false, withdrawal: false },
+        { id: 'v10', label: 'Documents à bord — permis, preuve d\'assurance, enregistrement',    critical: false, withdrawal: false },
+        { id: 'v11', label: 'Carrosserie — absence de dommages compromettant la sécurité',       critical: false, withdrawal: false },
+        { id: 'v12', label: 'Tableau de bord — aucun voyant d\'alerte critique allumé',          critical: true,  withdrawal: false },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────
 // REGISTRE GLOBAL
 // ─────────────────────────────────────────────
 export const EQUIPMENT_CHECKLISTS: Record<InspectionType, EquipmentChecklist> = {
@@ -595,6 +627,7 @@ export const EQUIPMENT_CHECKLISTS: Record<InspectionType, EquipmentChecklist> = 
   gas_detector:     gasDetector,
   respiratory:      respiratory,
   ppe_general:      ppeGeneral,
+  vehicle:          vehicle,
 };
 
 export const INSPECTION_TYPE_OPTIONS: { value: InspectionType; label: string }[] = [
@@ -608,6 +641,7 @@ export const INSPECTION_TYPE_OPTIONS: { value: InspectionType; label: string }[]
   { value: 'gas_detector',      label: 'Détecteur multigaz'              },
   { value: 'respiratory',       label: 'Protection respiratoire'         },
   { value: 'ppe_general',       label: 'EPI général'                     },
+  { value: 'vehicle',           label: 'Véhicule (pré-inspection)'       },
 ];
 
 export type ItemResult = 'pass' | 'fail' | 'na';

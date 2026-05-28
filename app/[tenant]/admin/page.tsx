@@ -3,10 +3,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, KeyRound, ExternalLink, Eye, EyeOff, X, UserCog, Banknote, Gift, Timer } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { uploadPhoto } from '@/lib/utils/photo';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -28,7 +29,7 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
         className="w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600"
       />
       {open && filtered.length > 0 && (
-        <ul className="absolute left-0 top-full z-30 mt-0.5 w-full min-w-[160px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+        <ul className="absolute left-0 bottom-full z-30 mb-0.5 w-full min-w-[160px] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden max-h-40 overflow-y-auto">
           {filtered.map(s => (
             <li key={s}>
               <button type="button" onMouseDown={() => { onChange(s); setOpen(false); }}
@@ -51,6 +52,12 @@ export default function AdminPage() {
   type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [ressourcesInitialSubTab, setRessourcesInitialSubTab] = useState<'equipements' | 'postes'>('equipements');
+
+  function goToPostes() {
+    setRessourcesInitialSubTab('postes');
+    setTab('ressources');
+  }
 
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
@@ -114,9 +121,9 @@ export default function AdminPage() {
         </div>
 
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} goToPostes={goToPostes} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
-        {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
+        {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} initialSubTab={ressourcesInitialSubTab} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
@@ -859,29 +866,152 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   );
 }
 
+type VRegime = 'A_achat' | 'A_bail' | 'A_financement' | 'B_personnel';
+
+type VClass = 'tourisme' | 'utilitaire' | 'specialise';
+
 type VRow = {
-  id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
-  make: string; model: string; year: string; plate: string;
-  employee_name: string; assigned_to: string;
-  km_rate_override: string; purchase_price: string; km_at_year_start: string;
-  active: boolean; notes: string;
+  id?: string; regime: VRegime; vehicle_class: VClass; is_sales_employee: boolean;
+  unit_number: string; make: string; model: string; year: string; plate: string;
+  employee_name: string; assigned_to: string; engine_type: 'thermique' | 'electrique';
+  km_rate_override: string; purchase_price: string;
+  monthly_lease_cost: string; interest_monthly: string;
+  km_at_year_start: string; active: boolean; notes: string;
+  photos: string[];
 };
 
-function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnelSuggestions, tenantUsers }: {
-  label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void;
-  upd: (i: number, k: keyof VRow, v: any) => void;
-  del: (i: number) => void;
-  tr: (f: string, e: string) => string;
-  inp: string;
-  personnelSuggestions: string[];
-  tenantUsers: { id: string; name: string; email: string }[];
+// Taux ARC/Revenu Québec 2026 — à mettre à jour chaque année (sources : canada.ca + revenuquebec.ca)
+const ARC_2026 = {
+  standby_monthly:          0.02,         // 2 %/mois — droit d'usage (federal + QC)
+  standby_lease_frac:       2 / 3,        // 2/3 du coût bail — droit d'usage bail
+  operating_per_km:         0.34,         // avantage fonctionnement fédéral $/km
+  operating_per_km_qc:      0.33,         // avantage fonctionnement Revenu Québec $/km
+  operating_sales:          0.31,         // vendeur/loueur d'autos (fédéral)
+  operating_sales_qc:       0.30,         // vendeur/loueur d'autos (QC)
+  half_method_fraction:     0.50,         // méthode de la moitié
+  km_t1_rate:               0.73,         // remb. perso palier 1 (2026)
+  km_t2_rate:               0.67,         // remb. perso palier 2 (2026)
+  km_t1_threshold:          5000,
+  reduced_standby_km_30d:   1667,         // seuil km perso / 30 j (droit d'usage réduit)
+  reduced_standby_km_annual: 20004,       // seuil annuel équivalent
+  bail_cap:                 1100,         // plafond bail/mois 2026 (hors taxes)
+  interest_cap:             300,          // plafond intérêts financement/mois
+  cca10_rate:               0.30,         // Cat. 10/10.1 thermique — 30 %/an dégressif
+  cca10_cap:                39000,        // plafond coût Cat. 10.1 (2026, hors taxes)
+  cca54_rate:               1.00,         // Cat. 54 ZEV — 100 % an 1
+  cca54_cap:                61000,        // plafond coût Cat. 54
+  perso_km_utilitaire:      1000,         // km perso max/an pour exemption utilitaire
+  reimb_delay_days:         45,           // délai remboursement après fin d'année (jours)
+} as const;
+
+function calcDPA(prix: number, moteur: 'thermique' | 'electrique', vclass: VClass) {
+  if (vclass === 'specialise') return null; // véhicule spécialisé — pas d'avantage imposable
+  if (moteur === 'electrique') {
+    const base = Math.min(prix, ARC_2026.cca54_cap);
+    return { classe: '54', an1: Math.round(base), label: 'Cat. 54 ZEV — 100 % an 1' };
+  }
+  const base = Math.min(prix, ARC_2026.cca10_cap);
+  const cl = prix > ARC_2026.cca10_cap ? '10.1' : '10';
+  return { classe: cl, an1: Math.round(base * ARC_2026.cca10_rate * 0.5), label: `Cat. ${cl} — 15 % an 1 (½-année)` };
+}
+
+function calcAvantageTotal(prix: number, moisDispo: number, kmPerso: number, kmAffaires: number, isSales: boolean, useHalfMethod: boolean) {
+  const totalKm = kmPerso + kmAffaires;
+  const businessPct = totalKm > 0 ? kmAffaires / totalKm : 0;
+  const standbyNormal = prix * ARC_2026.standby_monthly * moisDispo;
+
+  // Droit d'usage réduit
+  const eligible = businessPct > 0.5 && kmPerso <= ARC_2026.reduced_standby_km_30d * moisDispo;
+  const reductionFactor = eligible ? Math.min(kmPerso / (ARC_2026.reduced_standby_km_annual * moisDispo / 12), 1) : 1;
+  const standbyCharge = Math.round(standbyNormal * reductionFactor);
+
+  // Avantage fonctionnement
+  const opRate = isSales ? ARC_2026.operating_sales : ARC_2026.operating_per_km;
+  const opStandard = Math.round(kmPerso * opRate);
+  const opHalf = Math.round(standbyCharge * ARC_2026.half_method_fraction);
+  const operatingBenefit = useHalfMethod && businessPct > 0.5 ? Math.min(opStandard, opHalf) : opStandard;
+
+  return { standbyNormal: Math.round(standbyNormal), standbyCharge, reductionFactor, eligible, operatingBenefit, total: standbyCharge + operatingBenefit, opStandard, opHalf };
+}
+
+function standbyNote(vclass: VClass, isSales: boolean) {
+  if (vclass === 'specialise') return { exempt: true, note: 'Véhicule spécialisé — probablement exempt (non "automobile" selon LIR)' };
+  if (vclass === 'utilitaire') return { exempt: false, note: `Utilitaire — exempt si ≥ 90 % affaires ET km perso ≤ ${ARC_2026.perso_km_utilitaire.toLocaleString('fr-CA')} /an (à vérifier)` };
+  const opRate = isSales ? ARC_2026.operating_sales : ARC_2026.operating_per_km;
+  return { exempt: false, note: `Tourisme — fonctionnement ${opRate.toFixed(2)} $/km${isSales ? ' (vendeur auto)' : ''}` };
+}
+
+function calcBail(monthly: number) {
+  const ded = Math.min(monthly, ARC_2026.bail_cap);
+  return { ded, annuel: ded * 12, plafonné: monthly > ARC_2026.bail_cap };
+}
+
+function calcInteret(monthly: number) {
+  const ded = Math.min(monthly, ARC_2026.interest_cap);
+  return { ded, annuel: ded * 12, plafonné: monthly > ARC_2026.interest_cap };
+}
+
+function SelectUp({ value, onChange, options, className }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  className?: string;
 }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const selected = options.find(o => o.value === value);
+
+  React.useEffect(() => {
+    function onDown(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, []);
+
+  return (
+    <div ref={ref} className={`relative ${className || ''}`}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center justify-between gap-1 rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-left text-sm outline-none hover:border-blue-400 focus:border-blue-500 dark:border-gray-600 dark:text-gray-200">
+        <span className="truncate text-sm">{selected?.label || '—'}</span>
+        <svg className={`h-3 w-3 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="absolute bottom-full left-0 z-50 mb-1 max-h-52 w-full min-w-[180px] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
+          {options.map(o => (
+            <li key={o.value}>
+              <button type="button"
+                onMouseDown={() => { onChange(o.value); setOpen(false); }}
+                className={`w-full px-3 py-2 text-left text-sm transition hover:bg-blue-50 dark:hover:bg-blue-900/30 ${o.value === value ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personnelSuggestions, tenantUsers, onPhotoUpload, tenant }: {
+  regime: VRegime; label: string; items: { r: VRow; i: number }[];
+  onAdd: () => void; upd: (i: number, k: keyof VRow, v: any) => void;
+  del: (i: number) => void; tr: (f: string, e: string) => string; inp: string;
+  personnelSuggestions: string[]; tenantUsers: { id: string; name: string; email: string }[];
+  onPhotoUpload: (i: number, url: string) => void;
+  tenant: string;
+}) {
+  const isB  = regime === 'B_personnel';
+  const isBail = regime === 'A_bail';
+  const isFin  = regime === 'A_financement';
+  const isAchat = regime === 'A_achat';
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <h2 className="font-bold">{label}</h2>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">{badge}</span>
+          <h2 className="font-bold text-sm">{label}</h2>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-400">{items.length}</span>
         </div>
         <button onClick={onAdd} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
           <Plus size={15} /> {tr('Ajouter', 'Add')}
@@ -889,82 +1019,765 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
       </div>
       <div className="overflow-x-auto p-2">
         <table className="w-full text-sm">
-          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-            <th className="px-2 py-1.5">{tr('N° unité', 'Unit #')}</th>
-            <th className="px-2 py-1.5">{tr('Marque', 'Make')}</th>
-            <th className="px-2">{tr('Modèle', 'Model')}</th>
-            <th className="px-2">{tr('Année', 'Year')}</th>
-            <th className="px-2">{tr('Plaque', 'Plate')}</th>
-            <th className="px-2">{tr('Employé / Propriétaire', 'Employee / Owner')}</th>
-            <th className="px-2 whitespace-nowrap">{tr('Compte attitré', 'Assigned account')}</th>
-            <th className="px-2">{tr('Taux km $', 'Km rate $')}</th>
-            <th className="px-2 whitespace-nowrap">{tr('Prix achat $', 'Purchase $')}</th>
-            <th className="px-2 whitespace-nowrap">{tr('Km début année', 'Km year start')}</th>
-            <th className="px-2">{tr('Actif', 'Active')}</th>
-            <th></th>
-          </tr></thead>
-          <tbody>
-            {items.map(({ r, i }) => (
-              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={`${inp} w-24`} value={r.unit_number} onChange={e => upd(i, 'unit_number', e.target.value)} placeholder="S26105" /></td>
-                <td className="px-2 py-1"><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
-                <td className="px-2"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
-                <td className="px-2"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2022" /></td>
-                <td className="px-2"><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
-                <td className="px-2">
-                  <AutocompleteInput
-                    value={r.employee_name}
-                    onChange={v => upd(i, 'employee_name', v)}
-                    suggestions={personnelSuggestions}
-                    placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Nom affiché', 'Display name')}
-                  />
-                </td>
-                <td className="px-2">
-                  <select
-                    value={r.assigned_to}
-                    onChange={e => upd(i, 'assigned_to', e.target.value)}
-                    className={`${inp} min-w-[140px]`}
-                  >
-                    <option value="">— {tr('Aucun', 'None')} —</option>
-                    {tenantUsers.map(u => (
-                      <option key={u.id} value={u.id}>{u.name || u.email}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-2">
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={`${inp} w-20`}
-                      value={r.km_rate_override}
-                      placeholder={tr('Global', 'Global')}
-                      onChange={e => upd(i, 'km_rate_override', e.target.value)}
-                      onBlur={e => {
-                        const v = parseFloat(e.target.value.replace(/,/g, '.'));
-                        upd(i, 'km_rate_override', isNaN(v) ? '' : v.toFixed(2));
-                      }}
-                    />
-                    <span className="text-xs text-gray-400">/km</span>
+          <thead>
+            <tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr('N° unité', 'Unit #')}</th>
+              <th className="px-2">{tr('Marque', 'Make')}</th>
+              <th className="px-2">{tr('Modèle', 'Model')}</th>
+              <th className="px-2">{tr('Année', 'Year')}</th>
+              <th className="px-2">{tr('Plaque', 'Plate')}</th>
+              <th className="px-2 whitespace-nowrap">{tr('Employé attitré', 'Assigned employee')}</th>
+              <th className="px-2 whitespace-nowrap">{tr('Régime', 'Regime')}</th>
+              {!isB && (
+                <th className="px-2 whitespace-nowrap">
+                  {tr('Classe véh.', 'Veh. class')}
+                  <div className="font-normal text-[10px] text-gray-400 space-y-0.5 mt-0.5">
+                    <div>🚗 {tr('Tourisme', 'Passenger')} — {tr('Camry, RAV4, VUS, EV', 'Camry, RAV4, SUV, EV')}</div>
+                    <div>🚛 {tr('Utilitaire ≥ 1T', 'Commercial ≥ 1T')} — {tr('F-250, Sprinter', 'F-250, Sprinter')}</div>
+                    <div>🏗️ {tr('Spécialisé', 'Specialized')} — {tr('nacelle, grue', 'boom lift, crane')}</div>
                   </div>
-                </td>
-                <td className="px-2">
-                  <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.purchase_price}
-                    placeholder="35000" onChange={e => upd(i, 'purchase_price', e.target.value)}
-                    onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'purchase_price', isNaN(v) ? '' : v.toFixed(2)); }} />
-                </td>
-                <td className="px-2">
-                  <input type="number" min={0} step={1} className={`${inp} w-24`} value={r.km_at_year_start}
-                    placeholder="0" onChange={e => upd(i, 'km_at_year_start', e.target.value)} />
-                </td>
-                <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
-              </tr>
-            ))}
-            {items.length === 0 && <tr><td colSpan={12} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
+                </th>
+              )}
+              {(isAchat || isFin) && <th className="px-2 whitespace-nowrap">{tr('Moteur', 'Engine')}</th>}
+              {(isAchat || isFin) && (
+                <th className="px-2 whitespace-nowrap">{tr('Prix achat $', 'Purchase $')}
+                  <div className="font-normal text-[10px] text-gray-400">{tr('DPA + DU/an', 'CCA + SB/yr')}</div>
+                </th>
+              )}
+              {isBail && (
+                <th className="px-2 whitespace-nowrap">{tr('Bail $/mois', 'Lease $/mo')}
+                  <div className="font-normal text-[10px] text-gray-400">{tr('plaf. 1 050 $', 'cap $1,050')}</div>
+                </th>
+              )}
+              {isFin && (
+                <th className="px-2 whitespace-nowrap">{tr('Intérêts $/mois', 'Interest $/mo')}
+                  <div className="font-normal text-[10px] text-gray-400">{tr('plaf. 300 $', 'cap $300')}</div>
+                </th>
+              )}
+              {isB && (
+                <th className="px-2 whitespace-nowrap">{tr('Taux km $/km', 'Km rate $/km')}
+                  <div className="font-normal text-[10px] text-gray-400">{tr('ARC 2026', 'CRA 2026')}</div>
+                </th>
+              )}
+              {!isB && <th className="px-2 whitespace-nowrap">{tr('Km début an', 'Km year start')}</th>}
+              <th className="px-2">{tr('Actif', 'Active')}</th>
+              <th className="px-2 whitespace-nowrap">{tr('Photos', 'Photos')}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(({ r, i }) => {
+              const prix = parseFloat(r.purchase_price);
+              const prixOk = !isNaN(prix) && prix > 0;
+              const vclass = r.vehicle_class || 'tourisme';
+              const dpa = prixOk ? calcDPA(prix, r.engine_type, vclass as VClass) : null;
+              const duAn = prixOk && vclass !== 'specialise' ? Math.round(prix * ARC_2026.standby_monthly * 12) : null;
+              const sbNote = standbyNote(vclass as VClass, r.is_sales_employee);
+              const bail = r.monthly_lease_cost !== '' && !isNaN(parseFloat(r.monthly_lease_cost))
+                ? calcBail(parseFloat(r.monthly_lease_cost)) : null;
+              const fin = r.interest_monthly !== '' && !isNaN(parseFloat(r.interest_monthly))
+                ? calcInteret(parseFloat(r.interest_monthly)) : null;
+              return (
+                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700 align-top">
+                  <td className="px-2 py-1.5"><input className={`${inp} w-24`} value={r.unit_number} onChange={e => upd(i, 'unit_number', e.target.value)} placeholder="S26105" /></td>
+                  <td className="px-2 py-1.5"><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
+                  <td className="px-2 py-1.5"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
+                  <td className="px-2 py-1.5"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2024" /></td>
+                  <td className="px-2 py-1.5"><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
+                  <td className="px-2 py-1.5">
+                    <SelectUp
+                      value={r.assigned_to}
+                      onChange={v => {
+                        const emp = tenantUsers.find(u => u.id === v);
+                        upd(i, 'assigned_to', v);
+                        upd(i, 'employee_name', emp?.name || emp?.email || '');
+                      }}
+                      className="min-w-[160px]"
+                      options={[
+                        { value: '', label: `— ${tr(isB ? 'Propriétaire' : 'Aucun', isB ? 'Owner' : 'None')} —` },
+                        ...tenantUsers.map(u => ({ value: u.id, label: u.name || u.email })),
+                      ]}
+                    />
+                  </td>
+
+                  {/* Régime — toujours visible, permet de changer sans recréer */}
+                  <td className="px-2 py-1.5">
+                    <select className={`${inp} w-40`} value={r.regime} onChange={e => upd(i, 'regime', e.target.value as VRegime)}>
+                      <option value="A_achat">{tr('A — Acheté', 'A — Purchased')}</option>
+                      <option value="A_bail">{tr('A — Bail', 'A — Lease')}</option>
+                      <option value="A_financement">{tr('A — Financement', 'A — Financed')}</option>
+                      <option value="B_personnel">{tr('B — Personnel', 'B — Personal')}</option>
+                    </select>
+                  </td>
+
+                  {/* Classe du véhicule — Régime A seulement */}
+                  {!isB && (
+                    <td className="px-2 py-1.5">
+                      <div className="space-y-0.5">
+                        <select className={`${inp} w-36`} value={r.vehicle_class || 'tourisme'} onChange={e => upd(i, 'vehicle_class', e.target.value)}>
+                          <option value="tourisme">{tr('Tourisme', 'Passenger')}</option>
+                          <option value="utilitaire">{tr('Utilitaire ≥ 1T', 'Commercial ≥ 1T')}</option>
+                          <option value="specialise">{tr('Spécialisé', 'Specialized')}</option>
+                        </select>
+                        {/* Lexique inline */}
+                        <div className="text-[10px] text-gray-400 leading-tight">
+                          {vclass === 'tourisme' && tr('Ex: Camry, RAV4, Model 3, Civic', 'Ex: Camry, RAV4, Model 3, Civic')}
+                          {vclass === 'utilitaire' && tr('Ex: F-250, Ram 2500, Transit, Sprinter', 'Ex: F-250, Ram 2500, Transit, Sprinter')}
+                          {vclass === 'specialise' && tr('Ex: nacelle, grue, excavateur, dumper', 'Ex: boom lift, crane, excavator, dumper')}
+                        </div>
+                        <div className={`text-[10px] leading-tight whitespace-nowrap ${sbNote.exempt ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : vclass === 'utilitaire' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                          {sbNote.note}
+                        </div>
+                        {vclass === 'tourisme' && (
+                          <label className="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" checked={r.is_sales_employee || false} onChange={e => upd(i, 'is_sales_employee', e.target.checked)} />
+                            {tr('Vendeur autos', 'Auto dealer')}
+                          </label>
+                        )}
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Type moteur — A_achat / A_financement */}
+                  {(isAchat || isFin) && (
+                    <td className="px-2 py-1.5">
+                      <select className={`${inp} w-40`} value={r.engine_type} onChange={e => upd(i, 'engine_type', e.target.value as any)}>
+                        <option value="thermique">{tr('Thermique (Cat. 10/10.1)', 'ICE (Cl. 10/10.1)')}</option>
+                        <option value="electrique">{tr('Électrique/hybride (Cat. 54)', 'EV/PHEV (Cl. 54)')}</option>
+                      </select>
+                    </td>
+                  )}
+
+                  {/* Prix achat — A_achat / A_financement */}
+                  {(isAchat || isFin) && (
+                    <td className="px-2 py-1.5">
+                      <div className="space-y-0.5">
+                        <input type="text" inputMode="decimal" className={`${inp} w-28`} value={r.purchase_price}
+                          placeholder="45000" onChange={e => upd(i, 'purchase_price', e.target.value)}
+                          onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'purchase_price', isNaN(v) ? '' : v.toFixed(2)); }} />
+                        {prixOk && vclass === 'specialise' && (
+                          <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            {tr('Spécialisé — avantage DU non applicable', 'Specialized — SB N/A')}
+                          </div>
+                        )}
+                        {dpa && (
+                          <div className="leading-tight space-y-0.5">
+                            <div className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
+                              DPA an 1 ≈ {dpa.an1.toLocaleString('fr-CA')} $ — {dpa.label}
+                            </div>
+                            {duAn != null && (
+                              <div className={`text-[10px] font-semibold whitespace-nowrap ${vclass === 'utilitaire' ? 'text-amber-500 dark:text-amber-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                {vclass === 'utilitaire'
+                                  ? `DU max ≈ ${duAn.toLocaleString('fr-CA')} $ ${tr('(exempt si ≥ 90 % affaires)', '(exempt if ≥ 90% biz)')}`
+                                  : `DU/an ≈ ${duAn.toLocaleString('fr-CA')} $ ${tr('(2 %/mois × 12)', '(2%/mo × 12)')}`}
+                              </div>
+                            )}
+                            {/* Simulation réductions employé */}
+                            {duAn != null && vclass === 'tourisme' && (
+                              <details className="mt-0.5">
+                                <summary className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer font-semibold">
+                                  {tr('▸ Réductions employé disponibles', '▸ Employee reductions available')}
+                                </summary>
+                                <div className="mt-1 rounded border border-blue-200 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 p-1.5 space-y-0.5 text-[10px] text-blue-800 dark:text-blue-200">
+                                  <div className="font-semibold">{tr('Si usage affaires > 50 % :', 'If business use > 50%:')}</div>
+                                  <div>① {tr('Droit usage réduit — proportionnel aux km perso (si < 1 667 /mois)', 'Reduced standby — proportional to personal km (if < 1,667/mo)')}</div>
+                                  <div>② {tr('Méthode ½ — fonctionnement = min(0,34 $/km perso, DU × 50 %) — élection écrite avant 31 déc.', 'Half-method — operating = min($0.34/km, SB × 50%) — written election before Dec 31')}</div>
+                                  <div>③ {tr('Remboursement employé — km perso × taux → déduit de l\'avantage (délai 45 j après fin d\'an)', 'Employee reimb. — personal km × rate → deducted from benefit (45 days after yr-end)')}</div>
+                                  <div className="text-[9px] opacity-70">{tr('Combinées : réduction possible 50–70 % de l\'avantage brut', 'Combined: possible 50–70% reduction of gross benefit')}</div>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        )}
+                        {!prixOk && <div className="text-[10px] text-gray-400">{tr('→ DPA + DU calculés auto', '→ CCA + SB auto-computed')}</div>}
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Bail mensuel — A_bail */}
+                  {isBail && (
+                    <td className="px-2 py-1.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.monthly_lease_cost}
+                            placeholder="950" onChange={e => upd(i, 'monthly_lease_cost', e.target.value)}
+                            onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'monthly_lease_cost', isNaN(v) ? '' : v.toFixed(2)); }} />
+                          <span className="text-xs text-gray-400">/mo</span>
+                        </div>
+                        {bail && (
+                          <div className="leading-tight space-y-0.5">
+                            <div className={`text-[10px] font-semibold whitespace-nowrap ${bail.plafonné ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              {tr('Déd.', 'Ded.')}: {bail.ded.toLocaleString('fr-CA')} $/mo
+                              {bail.plafonné && <span className="ml-1 opacity-80">{tr('(plaf. 1 050 $)', '(cap $1,050)')}</span>}
+                            </div>
+                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                              ≈ {bail.annuel.toLocaleString('fr-CA')} $/an
+                            </div>
+                          </div>
+                        )}
+                        {!bail && <div className="text-[10px] text-gray-400">{tr('Plafond ARC: 1 050 $/mois', 'CRA cap: $1,050/mo')}</div>}
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Intérêts — A_financement */}
+                  {isFin && (
+                    <td className="px-2 py-1.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.interest_monthly}
+                            placeholder="280" onChange={e => upd(i, 'interest_monthly', e.target.value)}
+                            onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'interest_monthly', isNaN(v) ? '' : v.toFixed(2)); }} />
+                          <span className="text-xs text-gray-400">/mo</span>
+                        </div>
+                        {fin && (
+                          <div className="leading-tight space-y-0.5">
+                            <div className={`text-[10px] font-semibold whitespace-nowrap ${fin.plafonné ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              {tr('Déd.', 'Ded.')}: {fin.ded.toLocaleString('fr-CA')} $/mo
+                              {fin.plafonné && <span className="ml-1 opacity-80">{tr('(plaf. 300 $)', '(cap $300)')}</span>}
+                            </div>
+                            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                              ≈ {fin.annuel.toLocaleString('fr-CA')} $/an
+                            </div>
+                          </div>
+                        )}
+                        {!fin && <div className="text-[10px] text-gray-400">{tr('Plafond ARC: 300 $/mois', 'CRA cap: $300/mo')}</div>}
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Taux km — B_personnel */}
+                  {isB && (
+                    <td className="px-2 py-1.5">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.km_rate_override}
+                            placeholder="0.73" onChange={e => upd(i, 'km_rate_override', e.target.value)}
+                            onBlur={e => { const v = parseFloat(e.target.value.replace(/,/g, '.')); upd(i, 'km_rate_override', isNaN(v) ? '' : v.toFixed(2)); }} />
+                          <span className="text-xs text-gray-400">/km</span>
+                          <button type="button" onClick={() => upd(i, 'km_rate_override', '0.73')}
+                            className="text-[10px] font-bold text-blue-500 hover:text-blue-700 dark:text-blue-400 transition" title="ARC 2026: 0,73 $/km">
+                            ARC↺
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-gray-400 whitespace-nowrap leading-tight">
+                          {tr('≤5 000 km: 0,73 $ | +: 0,67 $', '≤5,000 km: $0.73 | +: $0.67')}
+                        </div>
+                      </div>
+                    </td>
+                  )}
+
+                  {/* Km début année — tous sauf B */}
+                  {!isB && (
+                    <td className="px-2 py-1.5">
+                      <input type="number" min={0} step={1} className={`${inp} w-24`} value={r.km_at_year_start}
+                        placeholder="0" onChange={e => upd(i, 'km_at_year_start', e.target.value)} />
+                    </td>
+                  )}
+
+                  <td className="px-2 py-1.5"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2 py-1.5">
+                    <div className="flex items-center gap-1">
+                      <label className="cursor-pointer rounded-lg border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+                        title={tr('Ajouter une photo', 'Add photo')}>
+                        📷 {r.photos?.length > 0 ? r.photos.length : '+'}
+                        <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const url = await uploadPhoto(file, tenant, supabase);
+                            onPhotoUpload(i, url);
+                          } catch { /* ignore */ }
+                          e.target.value = '';
+                        }} />
+                      </label>
+                      {r.photos?.[0] && (
+                        <img src={r.photos[0]} alt="" className="h-7 w-7 rounded object-cover border border-gray-200" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-1.5"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                </tr>
+              );
+            })}
+            {items.length === 0 && (
+              <tr><td colSpan={14} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun véhicule dans ce régime.', 'No vehicle in this regime.')}</td></tr>
+            )}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [open, setOpen] = useState(false);
+  const [simRegime, setSimRegime] = useState<'bail' | 'achat'>('bail');
+  const [bailMensuel, setBailMensuel] = useState('800');
+  const [prixAchat, setPrixAchat] = useState('35000');
+  const [mois, setMois] = useState('12');
+  const [kmPerso, setKmPerso] = useState('10000');
+  const [kmAffaires, setKmAffaires] = useState('15000');
+  const [isSales, setIsSales] = useState(false);
+  const [useHalf, setUseHalf] = useState(true);
+  const [txMarginale, setTxMarginale] = useState('43');
+
+  const fmt = (n: number) => n.toLocaleString('fr-CA', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' $';
+
+  // Calcul d'un scénario unique (pour tableau de référence)
+  function oneScenario(kp: number, ka: number, m: number, isSalesEmp: boolean, half: boolean) {
+    const bizPct = (kp + ka) > 0 ? ka / (kp + ka) : 0;
+    let sNormal: number;
+    if (simRegime === 'bail') {
+      const bail = Math.min(parseFloat(bailMensuel) || 0, ARC_2026.bail_cap);
+      sNormal = Math.round(ARC_2026.standby_lease_frac * bail * m);
+    } else {
+      sNormal = Math.round(ARC_2026.standby_monthly * (parseFloat(prixAchat) || 0) * m);
+    }
+    const kmMax = ARC_2026.reduced_standby_km_30d * m;
+    const eligible = bizPct > 0.5 && kp <= kmMax;
+    const factor = eligible ? Math.min(kp / (ARC_2026.reduced_standby_km_annual * m / 12), 1) : 1;
+    const sCharge = Math.round(sNormal * factor);
+    const opRate = isSalesEmp ? ARC_2026.operating_sales : ARC_2026.operating_per_km;
+    const opStd = Math.round(kp * opRate);
+    const opHalf = Math.round(sCharge * ARC_2026.half_method_fraction);
+    const opFinal = (half && bizPct > 0.5) ? Math.min(opStd, opHalf) : opStd;
+    const total = sCharge + opFinal;
+    const tx = (parseFloat(txMarginale) || 43) / 100;
+    return { bizPct, sNormal, sCharge, opFinal, total, impot: Math.round(total * tx), parPaie: Math.round(total * tx / 26), eligible };
+  }
+
+  const refScenarios = React.useMemo(() => {
+    const m = Math.max(1, Math.min(12, parseInt(mois) || 12));
+    return [
+      { label: '0 % affaires',          kp: 25000, ka: 0 },
+      { label: '30 % affaires',          kp: 17500, ka: 7500 },
+      { label: '51 % affaires ★',        kp: 12250, ka: 12750 },
+      { label: '60 % affaires',          kp: 10000, ka: 15000 },
+      { label: '80 % affaires',          kp: 5000,  ka: 20000 },
+      { label: '95 % affaires',          kp: 1250,  ka: 23750 },
+      { label: '100 % affaires',         kp: 0,     ka: 25000 },
+    ].map(s => ({ ...s, ...oneScenario(s.kp, s.ka, m, isSales, useHalf) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simRegime, bailMensuel, prixAchat, mois, isSales, useHalf, txMarginale]);
+
+  const calc = React.useMemo(() => {
+    const m = Math.max(1, Math.min(12, parseInt(mois) || 12));
+    const kp = Math.max(0, parseInt(kmPerso) || 0);
+    const ka = Math.max(0, parseInt(kmAffaires) || 0);
+    const totalKm = kp + ka;
+    const bizPct = totalKm > 0 ? ka / totalKm : 0;
+
+    // --- Standby ---
+    let standbyNormal: number;
+    let standbyLabel: string;
+    if (simRegime === 'bail') {
+      const bail = parseFloat(bailMensuel) || 0;
+      const bailDed = Math.min(bail, ARC_2026.bail_cap);
+      standbyNormal = Math.round(ARC_2026.standby_lease_frac * bailDed * m);
+      standbyLabel = `2/3 × min(${bail.toLocaleString('fr-CA')} $, ${ARC_2026.bail_cap.toLocaleString('fr-CA')} $) × ${m} mois`;
+    } else {
+      const prix = parseFloat(prixAchat) || 0;
+      standbyNormal = Math.round(ARC_2026.standby_monthly * prix * m);
+      standbyLabel = `2 % × ${prix.toLocaleString('fr-CA')} $ × ${m} mois`;
+    }
+
+    // --- Droit d'usage réduit ---
+    const kmPersoMax = ARC_2026.reduced_standby_km_30d * m;
+    const eligibleReduit = bizPct > 0.5 && kp <= kmPersoMax;
+    const facteurReduction = eligibleReduit ? Math.min(kp / (ARC_2026.reduced_standby_km_annual * m / 12), 1) : 1;
+    const standbyReduit = Math.round(standbyNormal * facteurReduction);
+
+    // --- Fonctionnement ---
+    const opRate = isSales ? ARC_2026.operating_sales : ARC_2026.operating_per_km;
+    const opStandard = Math.round(kp * opRate);
+    const opDemiMethode = Math.round(standbyReduit * ARC_2026.half_method_fraction);
+    const eligibleDemi = bizPct > 0.5;
+    const opFinal = (useHalf && eligibleDemi) ? Math.min(opStandard, opDemiMethode) : opStandard;
+
+    // --- Totaux ---
+    const totalBrut = standbyNormal + opStandard;
+    const totalReduit = standbyReduit + opFinal;
+    const economie = totalBrut - totalReduit;
+    const tx = (parseFloat(txMarginale) || 43) / 100;
+    const coutImpot = Math.round(totalReduit * tx);
+    const coutImpotBrut = Math.round(totalBrut * tx);
+
+    return {
+      m, kp, ka, bizPct, standbyNormal, standbyLabel, standbyReduit, facteurReduction,
+      eligibleReduit, kmPersoMax, opStandard, opDemiMethode, eligibleDemi, opFinal,
+      totalBrut, totalReduit, economie, coutImpot, coutImpotBrut, opRate,
+    };
+  }, [simRegime, bailMensuel, prixAchat, mois, kmPerso, kmAffaires, isSales, useHalf, txMarginale]);
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <DollarSign size={16} className="text-violet-500" />
+          <span className="font-bold text-sm">{tr('Simulateur d\'avantage imposable véhicule', 'Vehicle taxable benefit simulator')}</span>
+          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+            {tr('ARC 2026', 'CRA 2026')}
+          </span>
+        </div>
+        <span className="text-xs text-gray-400">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100 p-4 dark:border-gray-700 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* ── Entrées ── */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">{tr('Paramètres', 'Parameters')}</h3>
+
+              {/* Régime */}
+              <div className="flex gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-600 dark:bg-gray-700/50">
+                {[{ k: 'bail', l: tr('Véhicule loué', 'Leased') }, { k: 'achat', l: tr('Véhicule acheté', 'Purchased') }].map(x => (
+                  <button key={x.k} onClick={() => setSimRegime(x.k as any)}
+                    className={`flex-1 rounded-lg py-1.5 text-xs font-semibold ${simRegime === x.k ? 'bg-violet-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>
+                    {x.l}
+                  </button>
+                ))}
+              </div>
+
+              {simRegime === 'bail' ? (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Coût bail mensuel $', 'Monthly lease cost $')}</label>
+                  <input type="text" inputMode="decimal" className={inp} value={bailMensuel} onChange={e => setBailMensuel(e.target.value)} placeholder="800" />
+                  <p className="mt-0.5 text-[10px] text-gray-400">{tr(`Plafond ARC 2026 : ${ARC_2026.bail_cap.toLocaleString('fr-CA')} $/mois`, `CRA 2026 cap: $${ARC_2026.bail_cap.toLocaleString('en-CA')}/mo`)}</p>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Prix d\'achat $', 'Purchase price $')}</label>
+                  <input type="text" inputMode="decimal" className={inp} value={prixAchat} onChange={e => setPrixAchat(e.target.value)} placeholder="35000" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Mois dispos', 'Months avail.')}</label>
+                  <input type="number" min={1} max={12} className={inp} value={mois} onChange={e => setMois(e.target.value)} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Km perso/an', 'Personal km/yr')}</label>
+                  <input type="text" inputMode="decimal" className={inp} value={kmPerso} onChange={e => setKmPerso(e.target.value)} placeholder="10000" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Km affaires/an', 'Business km/yr')}</label>
+                  <input type="text" inputMode="decimal" className={inp} value={kmAffaires} onChange={e => setKmAffaires(e.target.value)} placeholder="15000" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input type="checkbox" checked={isSales} onChange={e => setIsSales(e.target.checked)} />
+                  {tr('Vendeur d\'autos (0,31 $/km)', 'Auto dealer (0.31/km)')}
+                </label>
+                <label className={`flex items-center gap-2 text-xs cursor-pointer ${!calc.eligibleDemi ? 'opacity-40' : ''}`}>
+                  <input type="checkbox" checked={useHalf} onChange={e => setUseHalf(e.target.checked)} disabled={!calc.eligibleDemi} />
+                  {tr('Méthode ½ (si éligible)', 'Half-method (if eligible)')}
+                </label>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Taux marginal imposition %', 'Marginal tax rate %')}</label>
+                <input type="number" min={0} max={70} className={inp} value={txMarginale} onChange={e => setTxMarginale(e.target.value)} placeholder="43" />
+                <p className="mt-0.5 text-[10px] text-gray-400">{tr('Taux combiné fédéral + provincial estimé', 'Estimated combined federal + provincial rate')}</p>
+              </div>
+            </div>
+
+            {/* ── Résultats ── */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">{tr('Calcul ARC 2026', 'CRA 2026 Calculation')}</h3>
+
+              {/* Usage affaires */}
+              <div className={`rounded-xl border px-3 py-2 text-xs ${calc.bizPct > 0.5 ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200' : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'}`}>
+                {tr('Usage affaires', 'Business use')}: <strong>{(calc.bizPct * 100).toFixed(0)} %</strong>
+                {calc.bizPct > 0.5
+                  ? tr(' ✓ > 50 % — réductions applicables', ' ✓ > 50% — reductions available')
+                  : tr(' ✗ ≤ 50 % — aucune réduction', ' ✗ ≤ 50% — no reduction')}
+              </div>
+
+              {/* Droit d'usage */}
+              <div className="rounded-xl border border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/30 px-3 py-2 space-y-1 text-xs">
+                <div className="font-semibold text-gray-700 dark:text-gray-200">{tr('Droit d\'usage (standby charge)', 'Standby charge')}</div>
+                <div className="text-gray-500 font-mono text-[10px]">{calc.standbyLabel} = {fmt(calc.standbyNormal)}</div>
+                {calc.eligibleReduit ? (
+                  <div className="text-emerald-700 dark:text-emerald-300 font-semibold">
+                    {tr('Réduit', 'Reduced')}: {fmt(calc.standbyNormal)} × ({calc.kp.toLocaleString('fr-CA')} / {calc.kmPersoMax.toLocaleString('fr-CA')}) = <span className="text-base">{fmt(calc.standbyReduit)}</span>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-[10px]">
+                    {calc.bizPct <= 0.5
+                      ? tr('Réduction N/A — affaires ≤ 50 %', 'Reduction N/A — business ≤ 50%')
+                      : tr(`Réduction N/A — km perso (${calc.kp.toLocaleString('fr-CA')}) > seuil (${calc.kmPersoMax.toLocaleString('fr-CA')})`, `Reduction N/A — personal km (${calc.kp.toLocaleString('fr-CA')}) > threshold (${calc.kmPersoMax.toLocaleString('fr-CA')})`)}
+                  </div>
+                )}
+              </div>
+
+              {/* Avantage fonctionnement */}
+              <div className="rounded-xl border border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/30 px-3 py-2 space-y-1 text-xs">
+                <div className="font-semibold text-gray-700 dark:text-gray-200">{tr('Avantage fonctionnement', 'Operating benefit')}</div>
+                <div className="text-gray-500 font-mono text-[10px]">{tr('Standard', 'Standard')}: {calc.kp.toLocaleString('fr-CA')} km × {calc.opRate.toFixed(2)} $ = {fmt(calc.opStandard)}</div>
+                {calc.eligibleDemi && (
+                  <div className="text-blue-600 dark:text-blue-400 font-mono text-[10px]">
+                    {tr('Méthode ½', 'Half-method')}: {fmt(calc.standbyReduit)} × 50 % = {fmt(calc.opDemiMethode)}
+                  </div>
+                )}
+                <div className={`font-semibold ${useHalf && calc.eligibleDemi && calc.opDemiMethode < calc.opStandard ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-200'}`}>
+                  {tr('Retenu', 'Used')}: <span className="text-base">{fmt(calc.opFinal)}</span>
+                  {useHalf && calc.eligibleDemi && calc.opDemiMethode < calc.opStandard && tr(' (méthode ½ plus avantageuse)', ' (half-method more favorable)')}
+                </div>
+              </div>
+
+              {/* Totaux */}
+              <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800 px-3 py-3 space-y-2">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{tr('Avantage brut (sans réduction)', 'Gross benefit (no reduction)')}</span>
+                  <span className="line-through">{fmt(calc.totalBrut)}</span>
+                </div>
+                {calc.economie > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>{tr('Économie par réductions', 'Savings from reductions')}</span>
+                    <span>− {fmt(calc.economie)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-sm border-t border-gray-100 dark:border-gray-700 pt-2">
+                  <span>{tr('Avantage imposable net', 'Net taxable benefit')}</span>
+                  <span className="text-violet-700 dark:text-violet-300">{fmt(calc.totalReduit)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-red-600 dark:text-red-400 font-semibold">
+                  <span>{tr('Coût réel en impôt', 'Actual tax cost')} ({txMarginale} %)</span>
+                  <span>≈ {fmt(calc.coutImpot)} / an</span>
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  <span>{tr('Soit par paie (26×)', 'Per pay (26×)')}</span>
+                  <span>≈ {fmt(Math.round(calc.coutImpot / 26))} / paie</span>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-400">{tr('⚠️ Estimation uniquement — à valider par votre comptable. Taux ARC 2026.', '⚠️ Estimate only — validate with your accountant. CRA 2026 rates.')}</p>
+            </div>
+          </div>
+
+          {/* ── Tableaux de référence par type ── */}
+          <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-3">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+              {tr('Tableaux de référence ARC 2026 — 25 000 km/an total', 'CRA 2026 Reference Tables — 25,000 km/yr total')}
+            </h3>
+            <div className="grid gap-4 md:grid-cols-2">
+
+              {/* Table 1 — Bail 800$/mois */}
+              {(() => {
+                const bail = 800; const m = 12; const tx = 0.43;
+                const sNorm = Math.round(ARC_2026.standby_lease_frac * Math.min(bail, ARC_2026.bail_cap) * m);
+                const kmMax = ARC_2026.reduced_standby_km_30d * m;
+                const rows = [
+                  { pct:'0 %',   kp:25000, ka:0 },
+                  { pct:'30 %',  kp:17500, ka:7500 },
+                  { pct:'51 % ★', kp:12250, ka:12750 },
+                  { pct:'60 %',  kp:10000, ka:15000 },
+                  { pct:'80 %',  kp:5000,  ka:20000 },
+                  { pct:'95 %',  kp:1250,  ka:23750 },
+                  { pct:'100 %', kp:0,     ka:25000 },
+                ].map(r => {
+                  const biz = r.ka / (r.kp + r.ka);
+                  const elig = biz > 0.5 && r.kp <= kmMax;
+                  const sc = elig ? Math.round(sNorm * r.kp / (ARC_2026.reduced_standby_km_annual * m / 12)) : sNorm;
+                  const op = elig ? Math.min(Math.round(r.kp * ARC_2026.operating_per_km), Math.round(sc * 0.5)) : Math.round(r.kp * ARC_2026.operating_per_km);
+                  const total = sc + op; const impot = Math.round(total * tx);
+                  return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
+                });
+                return (
+                  <div className="overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30">
+                    <div className="bg-blue-600 px-3 py-2 text-xs font-bold text-white">
+                      {tr('Régime A — Bail', 'Regime A — Lease')} · {tr('800 $/mois · 12 mois · taux 43 %', '$800/mo · 12 mo · 43% tax')}
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                        <th className="px-2 py-1.5 text-left">{tr('% affaires', '% business')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Km perso', 'Personal km')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Avantage', 'Benefit')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Impôt/an', 'Tax/yr')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('/paie', '/pay')}</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.pct} className={`border-t border-blue-100 dark:border-blue-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
+                            <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.parPaie > 0 ? r.parPaie.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="bg-blue-50 dark:bg-blue-500/10 px-3 py-1.5 text-[10px] text-blue-700 dark:text-blue-300">
+                      ★ = {tr('seuil 50 % — réductions activées | ✓ = droit d\'usage réduit + méthode ½', '50% threshold — reductions activated | ✓ = reduced standby + half-method')}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Table 2 — Acheté 35 000$ */}
+              {(() => {
+                const prix = 35000; const m = 12; const tx = 0.43;
+                const sNorm = Math.round(ARC_2026.standby_monthly * prix * m);
+                const kmMax = ARC_2026.reduced_standby_km_30d * m;
+                const dpa = Math.round(Math.min(prix, ARC_2026.cca10_cap) * ARC_2026.cca10_rate * 0.5);
+                const rows = [
+                  { pct:'0 %',   kp:25000, ka:0 },
+                  { pct:'30 %',  kp:17500, ka:7500 },
+                  { pct:'51 % ★', kp:12250, ka:12750 },
+                  { pct:'60 %',  kp:10000, ka:15000 },
+                  { pct:'80 %',  kp:5000,  ka:20000 },
+                  { pct:'95 %',  kp:1250,  ka:23750 },
+                  { pct:'100 %', kp:0,     ka:25000 },
+                ].map(r => {
+                  const biz = r.ka / (r.kp + r.ka);
+                  const elig = biz > 0.5 && r.kp <= kmMax;
+                  const sc = elig ? Math.round(sNorm * r.kp / (ARC_2026.reduced_standby_km_annual * m / 12)) : sNorm;
+                  const op = elig ? Math.min(Math.round(r.kp * ARC_2026.operating_per_km), Math.round(sc * 0.5)) : Math.round(r.kp * ARC_2026.operating_per_km);
+                  const total = sc + op; const impot = Math.round(total * tx);
+                  return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
+                });
+                return (
+                  <div className="overflow-hidden rounded-xl border border-violet-200 dark:border-violet-500/30">
+                    <div className="bg-violet-600 px-3 py-2 text-xs font-bold text-white">
+                      {tr('Régime A — Acheté', 'Regime A — Purchased')} · {tr('35 000 $ · 12 mois · DPA Cat. 10', '$35,000 · 12 mo · CCA Cl. 10')}
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300">
+                        <th className="px-2 py-1.5 text-left">{tr('% affaires', '% business')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Km perso', 'Personal km')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Avantage', 'Benefit')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Impôt/an', 'Tax/yr')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('/paie', '/pay')}</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.pct} className={`border-t border-violet-100 dark:border-violet-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
+                            <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.parPaie > 0 ? r.parPaie.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="bg-violet-50 dark:bg-violet-500/10 px-3 py-1.5 text-[10px] text-violet-700 dark:text-violet-300">
+                      {tr(`DPA an 1 : ${dpa.toLocaleString('fr-CA')} $ (Cat. 10 — 15 % règle ½-année)`, `CCA yr 1: $${dpa.toLocaleString('en-CA')} (Cl. 10 — 15% half-yr rule)`)}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Table 3 — Financement 35 000$, 280$/mois intérêts */}
+              {(() => {
+                const prix = 35000; const m = 12; const tx = 0.43; const intMo = 280;
+                const sNorm = Math.round(ARC_2026.standby_monthly * prix * m);
+                const kmMax = ARC_2026.reduced_standby_km_30d * m;
+                const intDed = Math.min(intMo, ARC_2026.interest_cap);
+                const intAn = intDed * m;
+                const rows = [
+                  { pct:'0 %',   kp:25000, ka:0 },
+                  { pct:'51 % ★', kp:12250, ka:12750 },
+                  { pct:'60 %',  kp:10000, ka:15000 },
+                  { pct:'80 %',  kp:5000,  ka:20000 },
+                  { pct:'100 %', kp:0,     ka:25000 },
+                ].map(r => {
+                  const biz = r.ka / (r.kp + r.ka);
+                  const elig = biz > 0.5 && r.kp <= kmMax;
+                  const sc = elig ? Math.round(sNorm * r.kp / (ARC_2026.reduced_standby_km_annual * m / 12)) : sNorm;
+                  const op = elig ? Math.min(Math.round(r.kp * ARC_2026.operating_per_km), Math.round(sc * 0.5)) : Math.round(r.kp * ARC_2026.operating_per_km);
+                  const total = sc + op; const impot = Math.round(total * tx);
+                  return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
+                });
+                return (
+                  <div className="overflow-hidden rounded-xl border border-sky-200 dark:border-sky-500/30">
+                    <div className="bg-sky-600 px-3 py-2 text-xs font-bold text-white">
+                      {tr('Régime A — Financement', 'Regime A — Financed')} · {tr('35 000 $ · intérêts 280 $/mois', '$35,000 · interest $280/mo')}
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                        <th className="px-2 py-1.5 text-left">{tr('% affaires', '% business')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Km perso', 'Personal km')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Avantage', 'Benefit')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Impôt/an', 'Tax/yr')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('/paie', '/pay')}</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.pct} className={`border-t border-sky-100 dark:border-sky-500/20 ${r.pct.includes('★') ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''} ${r.kp === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
+                            <td className="px-2 py-1 whitespace-nowrap">{r.pct} {r.elig ? '✓' : r.ka === 0 ? '' : '✗'}</td>
+                            <td className="px-2 py-1 text-right text-gray-600 dark:text-gray-300">{r.kp.toLocaleString('fr-CA')}</td>
+                            <td className="px-2 py-1 text-right">{r.total > 0 ? r.total.toLocaleString('fr-CA') + ' $' : <span className="text-emerald-600 font-bold">0 $</span>}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.impot > 0 ? r.impot.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                            <td className="px-2 py-1 text-right text-red-600 dark:text-red-400">{r.parPaie > 0 ? r.parPaie.toLocaleString('fr-CA') + ' $' : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="bg-sky-50 dark:bg-sky-500/10 px-3 py-1.5 text-[10px] text-sky-700 dark:text-sky-300">
+                      {tr(`Intérêts déductibles : ${intDed} $/mois → ${intAn.toLocaleString('fr-CA')} $/an (plafond ARC: ${ARC_2026.interest_cap} $/mois)`, `Deductible interest: $${intDed}/mo → $${intAn.toLocaleString('en-CA')}/yr (CRA cap: $${ARC_2026.interest_cap}/mo)`)}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Table 4 — Régime B Personnel */}
+              {(() => {
+                const tx = 0.43;
+                const rows = [2000, 5000, 8000, 12000, 15000, 20000, 25000].map(ka => {
+                  const t1 = Math.min(ka, ARC_2026.km_t1_threshold) * ARC_2026.km_t1_rate;
+                  const t2 = Math.max(0, ka - ARC_2026.km_t1_threshold) * ARC_2026.km_t2_rate;
+                  const remb = Math.round(t1 + t2);
+                  return { ka, remb, parMois: Math.round(remb / 12) };
+                });
+                return (
+                  <div className="overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-500/30">
+                    <div className="bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
+                      {tr('Régime B — Véhicule personnel', 'Regime B — Personal vehicle')} · {tr('Taux ARC 2026 : 0,73 $ / 0,67 $', 'CRA 2026: $0.73 / $0.67')}
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                        <th className="px-2 py-1.5 text-left">{tr('Km affaires/an', 'Business km/yr')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Remboursement', 'Reimbursement')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('/mois', '/month')}</th>
+                        <th className="px-2 py-1.5 text-right">{tr('Imposable ?', 'Taxable?')}</th>
+                      </tr></thead>
+                      <tbody>
+                        {rows.map(r => (
+                          <tr key={r.ka} className={`border-t border-emerald-100 dark:border-emerald-500/20 ${r.ka === 5000 ? 'bg-amber-50 dark:bg-amber-500/10 font-semibold' : ''}`}>
+                            <td className="px-2 py-1">{r.ka.toLocaleString('fr-CA')} km{r.ka === 5000 ? ' ★' : ''}</td>
+                            <td className="px-2 py-1 text-right font-semibold text-emerald-700 dark:text-emerald-300">{r.remb.toLocaleString('fr-CA')} $</td>
+                            <td className="px-2 py-1 text-right text-gray-500">{r.parMois.toLocaleString('fr-CA')} $</td>
+                            <td className="px-2 py-1 text-right text-emerald-600 dark:text-emerald-400 font-semibold">{tr('Non ✓', 'No ✓')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-[10px] text-emerald-700 dark:text-emerald-300">
+                      ★ {tr('Seuil palier 2 : au-delà de 5 000 km, taux passe à 0,67 $/km. Non imposable si ≤ taux ARC et basé sur km seulement.', 'Tier 2 threshold: beyond 5,000 km, rate drops to $0.67/km. Non-taxable if ≤ CRA rate and km-based only.')}
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+            <p className="text-[10px] text-gray-400">
+              ⚠️ {tr('Hypothèses tableaux : taux marginal 43 %, méthode ½ activée si éligible, 25 000 km/an total (Régimes A). Taux ARC 2026 officiels. À valider par votre comptable.', 'Table assumptions: 43% marginal rate, half-method if eligible, 25,000 km/yr total (Regime A). Official CRA 2026 rates. Validate with your accountant.')}
+            </p>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
@@ -976,57 +1789,127 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   const [notice, setNotice] = useState<string | null>(null);
   const [personnelSuggestions, setPersonnelSuggestions] = useState<string[]>([]);
   const [tenantUsers, setTenantUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [activeRegime, setActiveRegime] = useState<VRegime>('A_achat');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
+  const REGIMES: { k: VRegime; label: string; desc: string; color: string; bg: string }[] = [
+    { k: 'A_achat',       label: tr('Régime A — Acheté',      'Regime A — Purchased'), desc: tr('Véhicule acheté par l\'employeur. DPA Cat. 10/10.1 (thermique, 30 %/an) ou Cat. 54 (ZEV, 100 % an 1). Avantage imposable : droit d\'usage 2 %/mois + fonctionnement 0,34 $/km perso.', 'Employer-purchased vehicle. CCA Class 10/10.1 (ICE, 30%/yr) or Class 54 (EV, 100% yr 1). Taxable benefit: standby 2%/mo + operating 0.34/km personal.'), color: 'bg-violet-600', bg: 'border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200' },
+    { k: 'A_bail',        label: tr('Régime A — Bail',         'Regime A — Lease'),     desc: tr('Véhicule loué par l\'employeur. Bail déductible plafonné à 1 050 $/mois (ARC 2026). Avantage : 2/3 du coût mensuel × mois disponibles.', 'Employer-leased vehicle. Deductible lease capped at $1,050/mo (CRA 2026). Benefit: 2/3 of monthly cost × available months.'), color: 'bg-blue-600', bg: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200' },
+    { k: 'A_financement', label: tr('Régime A — Financement',  'Regime A — Financed'),  desc: tr('Véhicule financé par l\'employeur. Intérêts déductibles plafonnés à 300 $/mois (ARC 2026). Avantage droit d\'usage calculé sur le prix d\'achat.', 'Employer-financed vehicle. Deductible interest capped at $300/mo (CRA 2026). Standby benefit calculated on purchase price.'), color: 'bg-sky-600', bg: 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200' },
+    { k: 'B_personnel',   label: tr('Régime B — Personnel',    'Regime B — Personal'),  desc: tr('Employé utilise son propre véhicule. Remboursement non imposable si ≤ taux ARC (0,73 $/km ≤ 5 000 km; 0,67 $/km au-delà). Aucun avantage imposable si conforme.', 'Employee uses own vehicle. Non-taxable reimbursement if ≤ CRA rate ($0.73/km ≤ 5,000 km; $0.67/km beyond). No taxable benefit if compliant.'), color: 'bg-emerald-600', bg: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200' },
+  ];
+
   useEffect(() => {
-    Promise.all([
-      supabase.from('planner_personnel').select('name').eq('tenant_id', tenant),
-      fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()),
-    ]).then(([{ data: personnel }, usersRes]) => {
-      if (personnel) setPersonnelSuggestions(personnel.map((p: any) => p.name?.trim()).filter(Boolean));
-      if (usersRes?.users) setTenantUsers(usersRes.users.map((u: any) => ({ id: u.id, name: u.name || '', email: u.email || '' })));
-    });
+    supabase.from('planner_personnel').select('id, name, email').eq('tenant_id', tenant).eq('is_active', true).order('name')
+      .then(({ data: personnel }) => {
+        const list = (personnel || []).map((p: any) => ({ id: p.id, name: p.name?.trim() || '', email: p.email || '' })).filter(p => p.name);
+        setPersonnelSuggestions(list.map(p => p.name));
+        setTenantUsers(list);
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
 
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
-    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), assigned_to: v.assigned_to || '', km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '', purchase_price: v.purchase_price != null ? String(v.purchase_price) : '', km_at_year_start: v.km_at_year_start != null ? String(v.km_at_year_start) : '' })));
-    setLoading(false);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
+    const { data, error } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('unit_number', { nullsFirst: false });
+    if (error) {
+      setNotice(tr('Erreur chargement : ', 'Load error: ') + error.message);
+      if (!silent) setLoading(false);
+      return;
+    }
+    setRows((data || []).map((v: any) => {
+      return {
+        ...v,
+        regime: (v.regime || 'A_achat') as VRegime,
+        vehicle_class: (v.vehicle_class || 'tourisme') as VClass,
+        is_sales_employee: v.is_sales_employee || false,
+        engine_type: v.engine_type || 'thermique',
+        unit_number: v.unit_number || '', year: String(v.year || ''), assigned_to: v.assigned_to || '',
+        km_rate_override:   v.km_rate_override    != null ? String(v.km_rate_override)    : '',
+        purchase_price:     v.purchase_price      != null ? String(v.purchase_price)      : '',
+        monthly_lease_cost: v.monthly_lease_cost  != null ? String(v.monthly_lease_cost)  : '',
+        interest_monthly:   v.interest_monthly    != null ? String(v.interest_monthly)    : '',
+        km_at_year_start:   v.km_at_year_start    != null ? String(v.km_at_year_start)    : '',
+        photos: Array.isArray(v.photos) ? v.photos : [],
+      };
+    }));
+    if (!silent) setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
 
-  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', assigned_to: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
-  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', assigned_to: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
+  function addVehicle(regime: VRegime) {
+    setRows(p => [...p, {
+      regime, vehicle_class: 'tourisme', is_sales_employee: false,
+      unit_number: '', make: '', model: '', year: '', plate: '',
+      employee_name: '', assigned_to: '', engine_type: 'thermique',
+      km_rate_override: regime === 'B_personnel' ? '0.73' : '',
+      purchase_price: '', monthly_lease_cost: '', interest_monthly: '',
+      km_at_year_start: '', active: true, notes: '', photos: [],
+    }]);
+  }
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
       for (const r of rows) {
-        if (!r.make?.trim() && !r.name?.trim()) continue;
+        if (!r.unit_number?.trim() && !r.make?.trim() && !r.plate?.trim()) continue;
         const payload: any = {
-          tenant_id: tenant, type: r.type,
+          tenant_id: tenant, regime: r.regime,
+          vehicle_class: r.vehicle_class || 'tourisme',
+          is_sales_employee: r.is_sales_employee || false,
           unit_number: r.unit_number || '',
-          name: r.name || `${r.make} ${r.model} ${r.year}`.trim(),
-          make: r.make, model: r.model,
+          make: r.make || '', model: r.model || '',
           year: r.year ? Number(r.year) : null,
-          plate: r.plate, employee_name: r.employee_name,
-          assigned_to: r.assigned_to || null,
-          km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
-          purchase_price: r.purchase_price !== '' ? parseFloat(r.purchase_price.replace(/,/g, '.')) : null,
+          plate: r.plate || '', employee_name: r.employee_name || '',
+          assigned_to: r.assigned_to || null, engine_type: r.engine_type || 'thermique',
+          km_rate_override:   r.km_rate_override   !== '' ? Number(r.km_rate_override)                              : null,
+          purchase_price:     r.purchase_price     !== '' ? parseFloat(r.purchase_price.replace(/,/g, '.'))         : null,
+          monthly_lease_cost: r.monthly_lease_cost !== '' ? parseFloat(r.monthly_lease_cost.replace(/,/g, '.'))    : null,
+          interest_monthly:   r.interest_monthly   !== '' ? parseFloat(r.interest_monthly.replace(/,/g, '.'))      : null,
           km_at_year_start: r.km_at_year_start !== '' ? Number(r.km_at_year_start) : 0,
           km_year_start_year: new Date().getFullYear(),
-          active: r.active, notes: r.notes,
+          active: r.active, notes: r.notes || '',
+          photos: r.photos || [],
         };
-        if (r.id) await supabase.from('vehicles').update(payload).eq('id', r.id);
-        else await supabase.from('vehicles').insert(payload);
+        let vehicleId = r.id;
+        if (r.id) {
+          const { error } = await supabase.from('vehicles').update(payload).eq('id', r.id);
+          if (error) throw error;
+        } else {
+          const { data: ins, error } = await supabase.from('vehicles').insert(payload).select('id').single();
+          if (error) throw error;
+          vehicleId = ins.id;
+        }
+        // Sync vers module inspection (equipment)
+        const vName = [r.unit_number, r.make, r.model, r.year].filter(Boolean).join(' ').trim() || 'Véhicule';
+        const equipSync: any = {
+          tenant_id: tenant, vehicle_id: vehicleId,
+          equipment_type: 'vehicle', equipment_name: vName,
+          equipment_serial: r.plate || r.unit_number || '',
+          equipment_location: r.employee_name || '',
+          notes: `Régime: ${r.regime}`,
+          equipment_photos: r.photos || [],
+        };
+        const { data: exEq } = await supabase.from('equipment').select('id').eq('vehicle_id', vehicleId).maybeSingle();
+        if (exEq?.id) await supabase.from('equipment').update(equipSync).eq('id', exEq.id);
+        else await supabase.from('equipment').insert(equipSync);
+
+        // Sync vers planificateur (planner_equipements)
+        const plannerSync: any = {
+          tenant_id: tenant, vehicle_id: vehicleId,
+          name: vName, type: 'Véhicule',
+          serial_number: r.plate || r.unit_number || '',
+          is_active: r.active,
+        };
+        const { data: exPl } = await supabase.from('planner_equipements').select('id').eq('vehicle_id', vehicleId).maybeSingle();
+        if (exPl?.id) await supabase.from('planner_equipements').update(plannerSync).eq('id', exPl.id);
+        else await supabase.from('planner_equipements').insert(plannerSync);
       }
       setNotice(tr('Véhicules enregistrés ✓', 'Vehicles saved ✓'));
-      load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+      load(true);
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || e?.details || 'Erreur BD')); } finally { setSaving(false); }
   }
 
   async function del(i: number) {
@@ -1037,280 +1920,55 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
-  const companyRows  = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'company');
-  const personalRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.type === 'personal');
+  const activeInfo  = REGIMES.find(r => r.k === activeRegime)!;
+  const regimeRows  = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.regime === activeRegime);
 
   return (
     <div className="space-y-4">
+      {/* Sélecteur de régime */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          {REGIMES.map(reg => (
+            <button key={reg.k} onClick={() => setActiveRegime(reg.k)}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                activeRegime === reg.k ? `${reg.color} text-white shadow-sm` : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}>
+              {reg.label}
+              <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${activeRegime === reg.k ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'}`}>
+                {rows.filter(r => r.regime === reg.k).length}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${activeInfo.bg}`}>
+          {activeInfo.desc}
+          <span className="ml-2 text-xs font-semibold opacity-60">⚠️ {tr('Estimation — à valider par votre comptable', 'Estimate — validate with your accountant')}</span>
+        </div>
+      </div>
+
+      {/* Barre save + notice */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {tr('Véhicules d\'entreprise fournis + personnels autorisés. Utilisés dans les feuilles de temps pour calculer les remboursements km.', 'Company vehicles provided + authorized personal vehicles. Used in timesheets to calculate km reimbursements.')}
-        </p>
+        {notice
+          ? <span className={`text-sm font-semibold ${notice.includes('✓') ? 'text-emerald-600' : 'text-red-600'}`}>{notice}</span>
+          : <span />}
         <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
         </button>
       </div>
-      {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
 
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
-        <strong>{tr('Véhicule entreprise', 'Company vehicle')} :</strong> {tr('fourni par l\'employeur — 0 $ de remboursement à l\'employé dans la feuille de temps.', 'provided by employer — $0 reimbursement to employee in timesheet.')}<br />
-        <strong>{tr('Véhicule personnel autorisé', 'Authorized personal vehicle')} :</strong> {tr('employé utilise son véhicule — remboursé au taux km configuré.', 'employee uses own vehicle — reimbursed at configured km rate.')}
-      </div>
+      {/* Simulateur d'avantage imposable */}
+      <VehiculeSimulateur tr={tr} />
 
+      {/* Tableau du régime actif */}
       <VehicleTable
-        label={tr('Véhicules entreprise', 'Company vehicles')}
-        badge={tr(`${companyRows.length} véhicule(s)`, `${companyRows.length} vehicle(s)`)}
-        items={companyRows} onAdd={addCompany}
+        regime={activeRegime} label={activeInfo.label}
+        items={regimeRows} onAdd={() => addVehicle(activeRegime)}
         upd={upd} del={del} tr={tr} inp={inp}
         personnelSuggestions={personnelSuggestions}
         tenantUsers={tenantUsers}
+        tenant={tenant}
+        onPhotoUpload={(i, url) => upd(i, 'photos', [...(rows[i]?.photos || []), url])}
       />
-      <VehicleTable
-        label={tr('Véhicules personnels autorisés', 'Authorized personal vehicles')}
-        badge={tr(`${personalRows.length} véhicule(s)`, `${personalRows.length} vehicle(s)`)}
-        items={personalRows} onAdd={addPersonal}
-        upd={upd} del={del} tr={tr} inp={inp}
-        personnelSuggestions={personnelSuggestions}
-        tenantUsers={tenantUsers}
-      />
-    </div>
-  );
-}
-
-function generatePassword(name: string): string {
-  const specials = ['@', '#', '$', '!', '%', '&', '?', '*', '+', '='];
-  // 4 lettres tirées du nom (diacritiques retirés, maj sur la 1re)
-  const clean = (name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z]/g, '');
-  const letters = clean.length >= 4
-    ? clean[0].toUpperCase() + clean.slice(1, 4).toLowerCase()
-    : (clean[0]?.toUpperCase() || 'X') + clean.slice(1).toLowerCase().padEnd(3, 'x');
-  // 3 chiffres aléatoires
-  const digits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join('');
-  // 2 caractères spéciaux aléatoires distincts
-  const sp1 = specials[Math.floor(Math.random() * specials.length)];
-  let sp2 = specials[Math.floor(Math.random() * specials.length)];
-  while (sp2 === sp1) sp2 = specials[Math.floor(Math.random() * specials.length)];
-  return `${letters}${digits}${sp1}${sp2}`;
-}
-
-function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ email: '', name: '', role: 'user', password: '' });
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [showPwd, setShowPwd] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user', is_active: true, newPassword: '' });
-  const [editBusy, setEditBusy] = useState(false);
-  const [editNotice, setEditNotice] = useState<string | null>(null);
-  const [showEditPwd, setShowEditPwd] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  function genPwd(name: string) {
-    const pwd = generatePassword(name || form.name);
-    setForm(f => ({ ...f, password: pwd }));
-    setShowPwd(true);
-  }
-
-  function copyPwd() {
-    if (!form.password) return;
-    navigator.clipboard.writeText(form.password).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  async function load() {
-    setLoading(true);
-    try { const r = await fetch(`/api/admin/users?tenant=${tenant}`); const d = await r.json(); setUsers(d.users || []); }
-    catch { setUsers([]); } finally { setLoading(false); }
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
-
-  async function create(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setNotice(null);
-    try {
-      const r = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, ...form }) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setNotice(tr('Profil créé ✓', 'Profile created ✓')); setForm({ email: '', name: '', role: 'user', password: '' }); load();
-    } catch (e: any) { setNotice(e.message || tr('Erreur', 'Error')); } finally { setBusy(false); }
-  }
-
-  function openEdit(u: any) {
-    setEditing(u);
-    setEditForm({ name: u.name || '', email: u.email || '', role: u.role || 'user', is_active: u.is_active !== false, newPassword: '' });
-    setEditNotice(null);
-    setShowEditPwd(false);
-  }
-
-  async function saveEdit(e: React.FormEvent) {
-    e.preventDefault(); setEditBusy(true); setEditNotice(null);
-    try {
-      const body: any = { id: editing.id, name: editForm.name, email: editForm.email, role: editForm.role, is_active: editForm.is_active };
-      if (editForm.newPassword) body.password = editForm.newPassword;
-      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setEditNotice(tr('Enregistré ✓', 'Saved ✓')); load();
-    } catch (e: any) { setEditNotice(e.message || tr('Erreur', 'Error')); } finally { setEditBusy(false); }
-  }
-
-  async function deleteUser(id: string) {
-    const r = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
-    if (r.ok) { setEditing(null); setConfirmDelete(null); load(); }
-  }
-
-  const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-600';
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      {/* Liste */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-        <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Comptes du tenant', 'Tenant accounts')}</div>
-        {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {users.map(u => (
-              <div key={u.id} onClick={() => openEdit(u)}
-                className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/40 ${editing?.id === u.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${u.is_active !== false ? 'bg-gray-900 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                  {(u.email || '?')[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-medium">{u.name || u.email}</div>
-                  <div className="truncate text-xs text-gray-500">{u.email}</div>
-                </div>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">{u.role}</span>
-                {u.is_active === false && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">{tr('Archivé', 'Archived')}</span>}
-              </div>
-            ))}
-            {users.length === 0 && <div className="px-4 py-6 text-sm text-gray-400">{tr('Aucun profil.', 'No profile.')}</div>}
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        {/* Edit panel */}
-        {editing && (
-          <form onSubmit={saveEdit} className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/60 p-5 dark:border-blue-500/30 dark:bg-blue-500/5">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-sm">{tr('Modifier le compte', 'Edit account')}</h2>
-              <button type="button" onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
-            </div>
-            {editNotice && <p className={`text-xs font-medium ${editNotice.includes('✓') ? 'text-green-700 dark:text-green-400' : 'text-red-600'}`}>{editNotice}</p>}
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nom', 'Name')}</label>
-              <input className={inp2} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Jean Dupont" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel', 'Email')}</label>
-              <input type="email" className={inp2} value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Rôle', 'Role')}</label>
-              <select className={inp2} value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
-                <option value="user">{tr('Utilisateur', 'User')}</option>
-                <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
-                <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm(f => ({ ...f, is_active: e.target.checked }))} />
-              {tr('Compte actif', 'Active account')}
-            </label>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nouveau mot de passe (optionnel)', 'New password (optional)')}</label>
-              <div className="relative">
-                <input
-                  type={showEditPwd ? 'text' : 'password'}
-                  className={`${inp2} pr-14`}
-                  value={editForm.newPassword}
-                  onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))}
-                  placeholder={tr('Laisser vide = inchangé', 'Leave empty = unchanged')}
-                />
-                <button type="button" onClick={() => setShowEditPwd(v => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showEditPwd ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button type="submit" disabled={editBusy}
-                className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-                {editBusy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
-              </button>
-              {confirmDelete === editing.id ? (
-                <button type="button" onClick={() => deleteUser(editing.id)}
-                  className="rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
-                  {tr('Confirmer', 'Confirm')}
-                </button>
-              ) : (
-                <button type="button" onClick={() => setConfirmDelete(editing.id)}
-                  className="rounded-xl border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          </form>
-        )}
-
-        {/* Create form */}
-        <form onSubmit={create} className="h-fit space-y-3 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="font-bold">{tr('Nouveau compte', 'New account')}</h2>
-          <input required type="email" placeholder={tr('Courriel', 'Email')} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inp2} />
-          <input
-            placeholder={tr('Nom', 'Name')} value={form.name}
-            onChange={e => {
-              const name = e.target.value;
-              setForm(f => ({ ...f, name }));
-              if (name.trim().length >= 2) genPwd(name);
-            }}
-            className={inp2}
-          />
-          <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className={inp2}>
-            <option value="user">{tr('Utilisateur', 'User')}</option>
-            <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
-            <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
-          </select>
-          <div className="space-y-1.5">
-            <div className="flex gap-1.5">
-              <div className="relative flex-1">
-                <input
-                  required
-                  type={showPwd ? 'text' : 'password'}
-                  placeholder={tr('Mot de passe initial', 'Initial password')}
-                  value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  className={`${inp2} pr-14`}
-                />
-                <button type="button" onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <button type="button" onClick={() => genPwd(form.name)} title={tr('Générer', 'Generate')}
-                className="shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-                ↻
-              </button>
-            </div>
-            {form.password && (
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-2">
-                <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
-                <button type="button" onClick={copyPwd}
-                  className={`ml-3 shrink-0 text-xs font-semibold px-2 py-0.5 rounded transition ${copied ? 'text-green-600' : 'text-blue-600 hover:underline'}`}>
-                  {copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}
-                </button>
-              </div>
-            )}
-          </div>
-          <button type="submit" disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} {tr('Créer', 'Create')}
-          </button>
-          {notice && <p className={`text-sm ${notice.includes('✓') ? 'text-green-700 dark:text-green-400' : 'text-red-600'}`}>{notice}</p>}
-        </form>
-      </div>
     </div>
   );
 }
@@ -1319,8 +1977,8 @@ function Profils({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 // RESSOURCES PLANNER
 // ============================================================
 
-function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  const [subTab, setSubTab] = useState<'equipements' | 'postes'>('equipements');
+function Ressources({ tenant, tr, initialSubTab = 'equipements' }: { tenant: string; tr: (f: string, e: string) => string; initialSubTab?: 'equipements' | 'postes' }) {
+  const [subTab, setSubTab] = useState<'equipements' | 'postes'>(initialSubTab as 'equipements' | 'postes');
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   return (
@@ -1349,9 +2007,8 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 // EMPLOYÉS — PersonnelPlanner avec liens vers modules
 // ============================================================
 
-function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+function Employes({ tenant, tr, goToPostes }: { tenant: string; tr: (f: string, e: string) => string; goToPostes: () => void }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  const [subTab, setSubTab] = useState<'personnel' | 'comptes'>('personnel');
   return (
     <div className="space-y-4">
       {/* Module cross-links */}
@@ -1367,28 +2024,12 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
           </Link>
         ))}
       </div>
-      {/* Sub-tabs: Personnel planificateur + Comptes d'accès */}
-      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-        {[
-          { k: 'personnel', label: tr('Personnel & planification', 'Staff & planning'), icon: HardHat },
-          { k: 'comptes',   label: tr('Comptes & accès',           'Accounts & access'), icon: KeyRound },
-        ].map(x => {
-          const Icon = x.icon as any;
-          return (
-            <button key={x.k} onClick={() => setSubTab(x.k as any)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-              <Icon size={15} /> {x.label}
-            </button>
-          );
-        })}
-      </div>
-      {subTab === 'personnel' && <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} />}
-      {subTab === 'comptes'   && <Profils tenant={tenant} tr={tr} />}
+      <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} goToPostes={goToPostes} />
     </div>
   );
 }
 
-function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
+function PersonnelPlanner({ tenant, tr, inp, goToPostes }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void }) {
   type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
   const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
@@ -1443,7 +2084,7 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div>
           <h2 className="font-bold">{tr('Personnel du planificateur', 'Planner staff')}</h2>
-          <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')}</p>
+          <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')} <span className="text-emerald-600 font-semibold">✓ {tr('Synchronisé avec le planificateur', 'Synced with planner')}</span></p>
         </div>
         <div className="flex gap-2">
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
@@ -1451,9 +2092,10 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
         </div>
       </div>
       {postes.length === 0 && (
-        <div className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-          {tr("💡 Créez des postes dans l'onglet « Ressources → Postes » pour les sélectionner ici.", '💡 Create positions in the "Resources → Positions" tab to select them here.')}
-        </div>
+        <button type="button" onClick={goToPostes}
+          className="mx-4 mt-3 w-[calc(100%-2rem)] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs text-amber-700 transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20">
+          {tr("💡 Créez des postes dans l'onglet « Ressources → Postes » pour les sélectionner ici. Cliquez ici pour y accéder →", '💡 Create positions in the "Resources → Positions" tab to select them here. Click here to go there →')}
+        </button>
       )}
       {siteTree.length === 0 && (
         <div className="mx-4 mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
@@ -1509,11 +2151,12 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
                 <td className="px-2">
-                  <select className={`${inp} w-36`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
+                  <select className={`${inp} w-44`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
                     <option value="consultation">{tr('Consultation', 'View only')}</option>
                     <option value="modification">{tr('Modification', 'Edit')}</option>
                     <option value="coordination">{tr('Coordination', 'Coordinate')}</option>
                     <option value="administration">{tr('Administration', 'Admin')}</option>
+                    <option value="admin_paie">{tr('Admin paie & avantages', 'Payroll admin')}</option>
                   </select>
                 </td>
                 <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
@@ -1883,11 +2526,11 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
 
   useEffect(() => {
     (async () => {
-      const [usersRes, { data: profiles }] = await Promise.all([
-        fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()),
+      const [{ data: personnel }, { data: profiles }] = await Promise.all([
+        supabase.from('planner_personnel').select('id, name, email').eq('tenant_id', tenant).eq('is_active', true).order('name'),
         supabase.from('employee_profiles').select('*').eq('tenant_id', tenant),
       ]);
-      const us: { id: string; name: string; email: string }[] = (usersRes?.users || []).map((u: any) => ({ id: u.id, name: u.name || '', email: u.email || '' }));
+      const us: { id: string; name: string; email: string }[] = (personnel || []).map((p: any) => ({ id: p.id, name: p.name || '', email: p.email || '' }));
       const profileMap: Record<string, any> = {};
       (profiles || []).forEach((p: any) => { profileMap[p.employee_id] = p; });
       setRows(us.map(u => {
@@ -1975,7 +2618,7 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                   <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun utilisateur trouvé.', 'No user found.')}</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun employé actif. Créez-en dans Employés → Personnel & planification.', 'No active employee. Create one in Employees → Staff & planning.')}</td></tr>}
             </tbody>
           </table>
         </div>
