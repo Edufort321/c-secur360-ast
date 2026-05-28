@@ -1737,6 +1737,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function save() {
     setSaving(true); setNotice(null);
+    // Debug: log imap state to console
+    const dbg = [...imap.current.entries()].map(([k, v]) => `${k}="${v.value}"`);
+    console.log('[SitesDepts.save] sites:', sites.length, '| imap:', imap.current.size, '| entries:', dbg);
     // Read values straight from DOM via callback-ref Map — immune to onChange/autocomplete issues
     const validSites = sites.filter(s => val(`s:${s._key}:n`));
     if (!validSites.length) {
