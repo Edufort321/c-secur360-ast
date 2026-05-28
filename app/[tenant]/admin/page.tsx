@@ -48,62 +48,79 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'employes' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles' | 'paie'>('sites');
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
+  const [tab, setTab] = useState<TabKey>('sitesdepts');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const tabs: { k: TabKey; label: string; icon: any }[] = [
+    { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
+    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
+    { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
+    { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
+    { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
+    { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
+    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote },
+    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
+    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
+  ];
+
+  const activeTab = tabs.find(t => t.k === tab);
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-6 lg:px-6">
         <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
-        {(() => {
-          const tabs = [
-            { k: 'sites',       label: tr('Sites', 'Sites'),                         icon: MapPin },
-            { k: 'clients',     label: tr('Clients', 'Clients'),                   icon: Building2 },
-            { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                icon: Car },
-            { k: 'sitesdepts',  label: tr('Sites/Dépts', 'Sites/Depts'),           icon: Layers },
-            { k: 'employes',    label: tr('Employés', 'Employees'),                icon: HardHat },
-            { k: 'profils',     label: tr('Comptes / Accès', 'Accounts / Access'), icon: KeyRound },
-            { k: 'ressources',  label: tr('Ressources', 'Resources'),              icon: Wrench },
-            { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),      icon: Clock },
-            { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'), icon: Banknote },
-            { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),       icon: CreditCard },
-            { k: 'facturation', label: tr('Facturation', 'Billing'),           icon: Settings },
-          ];
-          return (
-            <>
-              {/* Mobile : sélecteur */}
-              <div className="mb-4 sm:hidden">
-                <select value={tab} onChange={e => setTab(e.target.value as any)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                  {tabs.map(x => <option key={x.k} value={x.k}>{x.label}</option>)}
-                </select>
+
+        {/* Mobile: hamburger */}
+        <div className="mb-4 sm:hidden">
+          <div className="relative">
+            <button
+              onClick={() => setMobileMenuOpen(o => !o)}
+              className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+              <div className="flex items-center gap-2">
+                {activeTab && React.createElement(activeTab.icon as any, { size: 16 })}
+                {activeTab?.label}
               </div>
-              {/* Desktop : onglets */}
-              <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800 sm:flex">
+              <svg className={`h-5 w-5 text-gray-400 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            {mobileMenuOpen && (
+              <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
                 {tabs.map(x => {
                   const Icon = x.icon as any;
                   return (
-                    <button key={x.k} onClick={() => setTab(x.k as any)}
-                      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
-                      <Icon size={16} /> {x.label}
+                    <button key={x.k} onClick={() => { setTab(x.k); setMobileMenuOpen(false); }}
+                      className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                      <Icon size={15} /> {x.label}
                     </button>
                   );
                 })}
               </div>
-            </>
-          );
-        })()}
+            )}
+          </div>
+        </div>
 
-        {tab === 'sites' && <Sites tenant={tenant} tr={tr} />}
-        {tab === 'clients' && <Clients tenant={tenant} tr={tr} />}
-        {tab === 'vehicules' && <Vehicules tenant={tenant} tr={tr} />}
+        {/* Desktop: onglets */}
+        <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:flex">
+          {tabs.map(x => {
+            const Icon = x.icon as any;
+            return (
+              <button key={x.k} onClick={() => setTab(x.k)}
+                className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${tab === x.k ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                <Icon size={15} /> {x.label}
+              </button>
+            );
+          })}
+        </div>
+
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes' && <Employes tenant={tenant} tr={tr} />}
-        {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
-        {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} />}
+        {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
-        {tab === 'feuilles' && <FeuillesDeTemps tenant={tenant} tr={tr} />}
-        {tab === 'paie' && <PayeConfig tenant={tenant} tr={tr} />}
+        {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
+        {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
+        {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
+        {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
     </div>
@@ -1334,14 +1351,15 @@ function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
 function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [subTab, setSubTab] = useState<'personnel' | 'comptes'>('personnel');
   return (
     <div className="space-y-4">
       {/* Module cross-links */}
       <div className="flex flex-wrap gap-2">
         {[
-          { href: `/${tenant}/planificateur`, label: tr('Planificateur', 'Planner'), color: 'bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30' },
-          { href: `/${tenant}/timesheets`,    label: tr('Feuilles de temps', 'Timesheets'), color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' },
-          { href: `/${tenant}/todo`,          label: tr('Tâches', 'Tasks'), color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' },
+          { href: `/${tenant}/planificateur`, label: tr('Planificateur', 'Planner'), color: 'bg-violet-100 text-violet-700 border-violet-200' },
+          { href: `/${tenant}/timesheets`,    label: tr('Feuilles de temps', 'Timesheets'), color: 'bg-blue-100 text-blue-700 border-blue-200' },
+          { href: `/${tenant}/todo`,          label: tr('Tâches', 'Tasks'), color: 'bg-amber-100 text-amber-700 border-amber-200' },
         ].map(m => (
           <Link key={m.href} href={m.href}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:opacity-80 ${m.color}`}>
@@ -1349,7 +1367,23 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
           </Link>
         ))}
       </div>
-      <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} />
+      {/* Sub-tabs: Personnel planificateur + Comptes d'accès */}
+      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        {[
+          { k: 'personnel', label: tr('Personnel & planification', 'Staff & planning'), icon: HardHat },
+          { k: 'comptes',   label: tr('Comptes & accès',           'Accounts & access'), icon: KeyRound },
+        ].map(x => {
+          const Icon = x.icon as any;
+          return (
+            <button key={x.k} onClick={() => setSubTab(x.k as any)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+              <Icon size={15} /> {x.label}
+            </button>
+          );
+        })}
+      </div>
+      {subTab === 'personnel' && <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} />}
+      {subTab === 'comptes'   && <Profils tenant={tenant} tr={tr} />}
     </div>
   );
 }
@@ -1399,22 +1433,6 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
-  if (siteDepts.length === 0) {
-    return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-500/30 dark:bg-amber-500/10">
-        <div className="flex items-start gap-3">
-          <Layers size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div>
-            <h3 className="font-semibold text-amber-800 dark:text-amber-200">{tr('Aucun site/département configuré', 'No site/department configured')}</h3>
-            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-              {tr('Vous devez créer au moins un site/département avant de pouvoir ajouter du personnel. Allez dans l\'onglet « Sites/Dépts ».', 'You must create at least one site/department before adding staff. Go to the "Sites/Depts" tab.')}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -1427,6 +1445,11 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
+      {siteDepts.length === 0 && (
+        <div className="mx-4 mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+          {tr("💡 Créez des sites/départements dans l'onglet « Sites/Dépts » pour regrouper le personnel (optionnel).", '💡 Create sites/departments in the "Sites/Depts" tab to group staff (optional).')}
+        </div>
+      )}
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
       <div className="overflow-x-auto p-2">
         <table className="w-full text-sm">
@@ -1446,10 +1469,14 @@ function PersonnelPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string,
                 <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
                 <td className="px-2"><input className={inp} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} /></td>
                 <td className="px-2">
-                  <select className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
-                    <option value="">{tr('— Sélectionner —', '— Select —')}</option>
-                    {siteDepts.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                  </select>
+                  {siteDepts.length > 0 ? (
+                    <select className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
+                      <option value="">{tr('— Aucun —', '— None —')}</option>
+                      {siteDepts.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                    </select>
+                  ) : (
+                    <input className={`${inp} w-36`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)} placeholder={tr('Site libre', 'Free text')} />
+                  )}
                 </td>
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
