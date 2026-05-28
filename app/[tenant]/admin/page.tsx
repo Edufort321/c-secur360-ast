@@ -1747,7 +1747,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
     try {
       for (const site of validSites) {
         const name = val(`s:${site._key}:n`);
-        const sPayload = { tenant_id: tenant, name, code: val(`s:${site._key}:c`) || null, address: val(`s:${site._key}:a`) || null };
+        const sPayload = { tenant_id: tenant, name };
         let siteId = site.id;
         if (site.id) {
           const { error } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
@@ -1761,7 +1761,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         for (const dept of depts.filter(d => d.siteKey === site._key)) {
           const dName = val(`d:${dept._dKey}:n`);
           if (!dName) continue;
-          const dPayload = { tenant_id: tenant, name: dName, code: val(`d:${dept._dKey}:c`) || null, address: val(`d:${dept._dKey}:a`) || null, parent_id: siteId };
+          const dPayload = { tenant_id: tenant, name: dName, parent_id: siteId };
           if (dept.id) {
             const { error } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
             if (error) throw new Error(error.message);
@@ -1798,37 +1798,35 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         </div>
         {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {sites.length > 0 && (
-            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-100/60 px-3 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:bg-gray-700/30 dark:text-gray-400">
-              <div className="w-3.5 shrink-0" />
-              <div className="flex-1">{tr('Nom du site / département *', 'Site / department name *')}</div>
-              <div className="w-20">{tr('Code', 'Code')}</div>
-              <div className="flex-1">{tr('Adresse', 'Address')}</div>
-              <div className="w-[82px] shrink-0" />
-            </div>
-          )}
           {sites.map(site => (
             <div key={`${site._key}-${loadKey}`}>
-              <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
-                <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input ref={reg(`s:${site._key}:n`)} autoFocus={!site.id} autoComplete="off"
-                  className={`${inp} flex-1 ${!site.initName ? 'border-blue-400 ring-1 ring-blue-400' : ''}`}
+              <div className="flex items-center gap-2 bg-blue-50 px-4 py-2.5 dark:bg-blue-900/20">
+                <Building2 size={15} className="shrink-0 text-blue-500" />
+                <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400 w-10">{tr('SITE', 'SITE')}</span>
+                <input
+                  ref={reg(`s:${site._key}:n`)}
+                  autoFocus={!site.id}
+                  autoComplete="off"
+                  className="flex-1 rounded-lg border-2 border-blue-400 bg-white px-3 py-1.5 text-sm font-medium outline-none focus:border-blue-600 dark:bg-gray-800 dark:text-white"
                   defaultValue={site.initName}
-                  placeholder={tr('👈 Tape le nom du site ici', '👈 Type site name here')} />
-                <input ref={reg(`s:${site._key}:c`)} autoComplete="off" className={`${inp} w-20`} defaultValue={site.initCode} placeholder="SHE" />
-                <input ref={reg(`s:${site._key}:a`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
-                <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
+                  placeholder={tr('Nom du site (obligatoire)', 'Site name (required)')}
+                />
+                <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
                   <Plus size={11} />{tr('Dépt', 'Dept')}
                 </button>
                 <button onClick={() => delSite(site._key)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
               </div>
               {depts.filter(d => d.siteKey === site._key).map(dept => (
-                <div key={`${dept._dKey}-${loadKey}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
+                <div key={`${dept._dKey}-${loadKey}`} className="flex items-center gap-2 border-t border-dashed border-gray-200 bg-white px-4 py-2 pl-12 dark:border-gray-700 dark:bg-gray-800/50">
                   <MapPin size={12} className="shrink-0 text-gray-400" />
-                  <input ref={reg(`d:${dept._dKey}:n`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initName} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
-                  <input ref={reg(`d:${dept._dKey}:c`)} autoComplete="off" className={`${inp} w-20`} defaultValue={dept.initCode} placeholder="SEC-N" />
-                  <input ref={reg(`d:${dept._dKey}:a`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={dept.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
-                  <div className="w-[68px] shrink-0" />
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-gray-400 w-10">{tr('DÉPT', 'DEPT')}</span>
+                  <input
+                    ref={reg(`d:${dept._dKey}:n`)}
+                    autoComplete="off"
+                    className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    defaultValue={dept.initName}
+                    placeholder={tr('Nom du département', 'Department name')}
+                  />
                   <button onClick={() => delDept(dept._dKey)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
                 </div>
               ))}
