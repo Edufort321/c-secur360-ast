@@ -1742,10 +1742,10 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
       setNotice(`⚠️ ${tr('Aucun site à sauvegarder (', 'Nothing to save (')}${sites.length} ${tr('ligne(s) sans nom). Clique + Site et tape un nom.', 'row(s) with no name). Click + Site and type a name.')}`);
       setSaving(false); return;
     }
+    let savedSites = 0, savedDepts = 0;
     try {
       for (const site of sites) {
         if (!site.name?.trim()) continue;
-        // Omit 'type' and 'parent_id' for sites — DB defaults handle them (type='site', parent_id=null)
         const sPayload = { tenant_id: tenant, name: site.name, code: site.code || null, address: site.address || null };
         let siteId = site.id;
         if (site.id) {
@@ -1756,9 +1756,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           if (ie) throw new Error(ie.message);
           siteId = (ins as any)?.id;
         }
+        savedSites++;
         for (const dept of site.depts) {
           if (!dept.name?.trim()) continue;
-          // Only parent_id needed — type defaults to 'site' but parent_id identifies it as a dept
           const dPayload = { tenant_id: tenant, name: dept.name, code: dept.code || null, address: dept.address || null, parent_id: siteId };
           if (dept.id) {
             const { error: de } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
@@ -1767,9 +1767,10 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
             const { error: de } = await supabase.from('planner_succursales').insert(dPayload);
             if (de) throw new Error(de.message);
           }
+          savedDepts++;
         }
       }
-      setNotice(tr('Sites/départements enregistrés ✓', 'Sites/departments saved ✓')); load();
+      setNotice(`${savedSites} site(s) + ${savedDepts} département(s) enregistrés ✓`); load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }
 
