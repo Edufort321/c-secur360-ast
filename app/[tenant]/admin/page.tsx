@@ -1704,7 +1704,8 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_succursales').select('id, name, code, address, parent_id').eq('tenant_id', tenant).order('name');
+    const { data, error } = await supabase.from('planner_succursales').select('*').eq('tenant_id', tenant).order('name');
+    if (error) { setNotice('Erreur chargement : ' + error.message); setSites([]); setLoading(false); return; }
     if (!data) { setSites([]); setLoading(false); return; }
     const siteList = data.filter((r: any) => !r.parent_id);
     const deptList = data.filter((r: any) => r.parent_id);
@@ -1739,19 +1740,28 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
     try {
       for (const site of sites) {
         if (!site.name?.trim()) continue;
-        const sPayload = { tenant_id: tenant, name: site.name, code: site.code || null, address: site.address || null, type: 'site', parent_id: null };
+        // Omit 'type' and 'parent_id' for sites — DB defaults handle them (type='site', parent_id=null)
+        const sPayload = { tenant_id: tenant, name: site.name, code: site.code || null, address: site.address || null };
         let siteId = site.id;
         if (site.id) {
-          await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
+          const { error: ue } = await supabase.from('planner_succursales').update(sPayload).eq('id', site.id);
+          if (ue) throw new Error(ue.message);
         } else {
-          const { data: ins } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
+          const { data: ins, error: ie } = await supabase.from('planner_succursales').insert(sPayload).select('id').single();
+          if (ie) throw new Error(ie.message);
           siteId = (ins as any)?.id;
         }
         for (const dept of site.depts) {
           if (!dept.name?.trim()) continue;
-          const dPayload = { tenant_id: tenant, name: dept.name, code: dept.code || null, address: dept.address || null, type: 'departement', parent_id: siteId };
-          if (dept.id) await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
-          else await supabase.from('planner_succursales').insert(dPayload);
+          // Only parent_id needed — type defaults to 'site' but parent_id identifies it as a dept
+          const dPayload = { tenant_id: tenant, name: dept.name, code: dept.code || null, address: dept.address || null, parent_id: siteId };
+          if (dept.id) {
+            const { error: de } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
+            if (de) throw new Error(de.message);
+          } else {
+            const { error: de } = await supabase.from('planner_succursales').insert(dPayload);
+            if (de) throw new Error(de.message);
+          }
         }
       }
       setNotice(tr('Sites/départements enregistrés ✓', 'Sites/departments saved ✓')); load();
@@ -1783,9 +1793,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
               {/* Site row */}
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
                 <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input className={`${inp} flex-1`} value={site.name} onChange={e => updSite(si, 'name', e.target.value)} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
-                <input className={`${inp} w-20`} value={site.code} onChange={e => updSite(si, 'code', e.target.value)} placeholder="SHE" />
-                <input className={`${inp} flex-1`} value={site.address} onChange={e => updSite(si, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                <input autoComplete="off" className={`${inp} flex-1`} value={site.name} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, name: v } : s)); }} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input autoComplete="off" className={`${inp} w-20`} value={site.code} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, code: v } : s)); }} placeholder="SHE" />
+                <input autoComplete="off" className={`${inp} flex-1`} value={site.address} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, address: v } : s)); }} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                 <button onClick={() => addDept(si)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
                   <Plus size={11} />{tr('Dépt', 'Dept')}
                 </button>
@@ -1795,9 +1805,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
               {site.depts.map((dept, di) => (
                 <div key={dept.id || `nd-${si}-${di}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
                   <MapPin size={12} className="shrink-0 text-gray-400" />
-                  <input className={`${inp} flex-1`} value={dept.name} onChange={e => updDept(si, di, 'name', e.target.value)} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
-                  <input className={`${inp} w-20`} value={dept.code} onChange={e => updDept(si, di, 'code', e.target.value)} placeholder="SEC-N" />
-                  <input className={`${inp} flex-1`} value={dept.address} onChange={e => updDept(si, di, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.name} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, name: v } : d) } : s)); }} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
+                  <input autoComplete="off" className={`${inp} w-20`} value={dept.code} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, code: v } : d) } : s)); }} placeholder="SEC-N" />
+                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.address} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, address: v } : d) } : s)); }} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                   <div className="w-[68px] shrink-0" />
                   <button onClick={() => delDept(si, di)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
                 </div>
