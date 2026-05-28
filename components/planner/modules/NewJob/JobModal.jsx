@@ -1,5 +1,6 @@
 // ============== JOB MODAL - Gestion avancée des tâches ==============
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import { Icon } from '../../components/UI/Icon';
 import { Logo } from '../../components/UI/Logo';
 import { DropZone } from '../../components/UI/DropZone';
@@ -99,6 +100,13 @@ export function JobModal({
         etapes: false,
         preparation: false
     });
+
+    // Sélecteur de source — Préparation et matériel
+    const [prepSource, setPrepSource] = useState(null); // null | 'ressource' | 'inventaire'
+    const [prepSearch, setPrepSearch] = useState('');
+    const [inventaireItems, setInventaireItems] = useState([]);
+    const [inventaireLoading, setInventaireLoading] = useState(false);
+    const inventaireFetched = useRef(false);
 
     const [modificationMode, setModificationMode] = useState('groupe');
     const [ressourceIndividuelle, setRessourceIndividuelle] = useState(null);
@@ -790,6 +798,59 @@ export function JobModal({
             ...prev,
             preparation: prev.preparation.filter((_, i) => i !== index)
         }));
+    };
+
+    // ── Fetch inventaire (lazy, une seule fois) ──
+    const fetchInventaire = async () => {
+        if (inventaireFetched.current) return;
+        inventaireFetched.current = true;
+        setInventaireLoading(true);
+        try {
+            const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+            const { data } = await supabase
+                .from('items')
+                .select('id, code, name, category, unit, cost_price')
+                .eq('tenant_id', tenant)
+                .order('name');
+            setInventaireItems(data || []);
+        } catch { /* silencieux */ }
+        setInventaireLoading(false);
+    };
+
+    // ── Ajouter depuis une ressource (planner_equipements) ──
+    const addFromRessource = (equip) => {
+        setFormData(prev => ({
+            ...prev,
+            preparation: [...prev.preparation, {
+                id: Date.now(),
+                text: equip.name || equip.nom || '',
+                statut: 'a-faire',
+                type: 'ressource',
+                sourceId: equip.id,
+                quantite: '1',
+                unite: equip.type || '',
+            }]
+        }));
+        setPrepSource(null);
+        setPrepSearch('');
+    };
+
+    // ── Ajouter depuis l'inventaire ──
+    const addFromInventaire = (item) => {
+        setFormData(prev => ({
+            ...prev,
+            preparation: [...prev.preparation, {
+                id: Date.now(),
+                text: `${item.name}${item.code ? ` (${item.code})` : ''}`,
+                statut: 'a-faire',
+                type: 'inventaire',
+                sourceId: item.id,
+                quantite: '1',
+                unite: item.unit || '',
+            }]
+        }));
+        setPrepSource(null);
+        setPrepSearch('');
     };
 
     // ============== SYSTÈME DE DÉTECTION DE CONFLITS COMPLET ==============
@@ -3921,111 +3982,208 @@ export function JobModal({
                                         )}
                                     </div>
 
-                                    {/* Section Préparation avec scroll */}
-                                    <div
-                                        className={`p-4 bg-orange-50 rounded-lg border border-orange-200 transition-all duration-300 ${
-                                            expandedSections.preparation ? 'fixed inset-4 z-50 bg-white shadow-2xl' : ''
-                                        }`}
-                                    >
-                                        <h4 className={`font-medium text-orange-800 flex items-center gap-2 mb-3 ${expandedSections.preparation ? 'text-lg' : ''}`}>
-                                            <span>🛠️</span>
-                                            Préparation et matériel
-                                            {expandedSections.preparation && (
+                                    {/* Section Préparation et matériel */}
+                                    <div className={`p-4 bg-orange-50 rounded-lg border border-orange-200 transition-all duration-300 ${expandedSections.preparation ? 'fixed inset-4 z-50 bg-white shadow-2xl overflow-auto' : ''}`}>
+                                        {/* En-tête */}
+                                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                            <h4 className={`font-medium text-orange-800 flex items-center gap-2 ${expandedSections.preparation ? 'text-lg' : ''}`}>
+                                                <span>🛠️</span>
+                                                Préparation et matériel
+                                                <span className="text-xs font-normal bg-orange-200 text-orange-700 rounded-full px-2 py-0.5">
+                                                    {formData.preparation.length}
+                                                </span>
+                                            </h4>
+                                            <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                                                {/* Bouton Ressources */}
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setExpandedSections(prev => ({
-                                                            ...prev,
-                                                            preparation: false
-                                                        }));
+                                                        setPrepSearch('');
+                                                        setPrepSource(prepSource === 'ressource' ? null : 'ressource');
                                                     }}
-                                                    className="ml-auto text-gray-500 hover:text-gray-700 text-2xl"
+                                                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${prepSource === 'ressource' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
                                                 >
-                                                    ×
+                                                    🔧 Ressources ({(equipements || []).length})
                                                 </button>
-                                            )}
-                                            {!expandedSections.preparation && (
-                                                <div className="jsx-fragment-wrapper">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            addPreparation();
-                                                        }}
-                                                        className="ml-auto px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 transition-colors"
-                                                    >
-                                                        <Icon name="plus" size={14} className="mr-1" />
-                                                        Ajouter
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setExpandedSections(prev => ({
-                                                                ...prev,
-                                                                preparation: !prev.preparation
-                                                            }));
-                                                        }}
-                                                        className="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 transition-colors"
-                                                        title="Agrandir la section"
-                                                    >
-                                                        <Icon name="chevronDown" size={14} />
-                                                    </button>
-</div>
-                                            )}
-                                        </h4>
-
-                                        <div
-                                            className={`space-y-2 mb-3 ${
-                                                expandedSections.preparation
-                                                    ? 'overflow-y-auto max-h-[70vh]'
-                                                    : 'max-h-40 overflow-y-auto'
-                                            }`}
-                                            style={expandedSections.preparation ? { maxHeight: 'calc(100vh - 200px)' } : {}}
-                                        >
-                                            {formData.preparation.map((item, index) => (
-                                                <div
-                                                    key={index}
-                                                    className={`group flex items-center gap-2 p-2 bg-white rounded border hover:shadow-md transition-all ${
-                                                        expandedSections.preparation ? 'p-3 mb-2' : 'mb-1'
-                                                    }`}
+                                                {/* Bouton Inventaire */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPrepSearch('');
+                                                        setPrepSource(prepSource === 'inventaire' ? null : 'inventaire');
+                                                        if (!inventaireFetched.current) fetchInventaire();
+                                                    }}
+                                                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${prepSource === 'inventaire' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
                                                 >
+                                                    📦 Inventaire ({inventaireItems.length})
+                                                </button>
+                                                {/* Ajouter texte libre */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); addPreparation(); }}
+                                                    className="px-2.5 py-1 bg-orange-600 text-white rounded text-xs font-semibold hover:bg-orange-700 transition-colors"
+                                                >
+                                                    + Texte libre
+                                                </button>
+                                                {/* Agrandir */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); setExpandedSections(prev => ({ ...prev, preparation: !prev.preparation })); }}
+                                                    className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors"
+                                                    title={expandedSections.preparation ? 'Réduire' : 'Agrandir'}
+                                                >
+                                                    {expandedSections.preparation ? '×' : <Icon name="chevronDown" size={12} />}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Panneau sélecteur de source */}
+                                        {prepSource && (
+                                            <div className={`mb-3 rounded-lg border p-3 ${prepSource === 'ressource' ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                                <div className="mb-2">
+                                                    <input
+                                                        type="text"
+                                                        value={prepSearch}
+                                                        onChange={e => setPrepSearch(e.target.value)}
+                                                        placeholder={prepSource === 'ressource' ? 'Rechercher une ressource…' : 'Rechercher dans l\'inventaire…'}
+                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                {prepSource === 'ressource' && (
+                                                    <div className="max-h-40 overflow-y-auto space-y-1">
+                                                        {(equipements || [])
+                                                            .filter(e => {
+                                                                const n = (e.name || e.nom || '').toLowerCase();
+                                                                const t = (e.type || '').toLowerCase();
+                                                                const s = prepSearch.toLowerCase();
+                                                                return !s || n.includes(s) || t.includes(s);
+                                                            })
+                                                            .map(equip => (
+                                                                <button
+                                                                    key={equip.id}
+                                                                    type="button"
+                                                                    onClick={() => addFromRessource(equip)}
+                                                                    className="w-full text-left px-3 py-1.5 bg-white rounded border border-blue-100 hover:bg-blue-100 text-sm flex items-center gap-2 transition-colors"
+                                                                >
+                                                                    <span className="text-blue-500">🔧</span>
+                                                                    <span className="flex-1 font-medium">{equip.name || equip.nom}</span>
+                                                                    {equip.type && <span className="text-xs text-gray-400">{equip.type}</span>}
+                                                                    {equip.serial_number && <span className="text-xs text-gray-400">#{equip.serial_number}</span>}
+                                                                </button>
+                                                            ))
+                                                        }
+                                                        {(equipements || []).length === 0 && (
+                                                            <p className="text-xs text-gray-400 text-center py-2">Aucune ressource disponible</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {prepSource === 'inventaire' && (
+                                                    <div className="max-h-40 overflow-y-auto space-y-1">
+                                                        {inventaireLoading && <p className="text-xs text-gray-400 text-center py-2">Chargement…</p>}
+                                                        {!inventaireLoading && inventaireItems
+                                                            .filter(it => {
+                                                                const s = prepSearch.toLowerCase();
+                                                                return !s || (it.name || '').toLowerCase().includes(s) || (it.code || '').toLowerCase().includes(s) || (it.category || '').toLowerCase().includes(s);
+                                                            })
+                                                            .map(item => (
+                                                                <button
+                                                                    key={item.id}
+                                                                    type="button"
+                                                                    onClick={() => addFromInventaire(item)}
+                                                                    className="w-full text-left px-3 py-1.5 bg-white rounded border border-emerald-100 hover:bg-emerald-100 text-sm flex items-center gap-2 transition-colors"
+                                                                >
+                                                                    <span className="text-emerald-500">📦</span>
+                                                                    <span className="flex-1 font-medium">{item.name}</span>
+                                                                    {item.code && <span className="text-xs text-gray-400">{item.code}</span>}
+                                                                    {item.unit && <span className="text-xs text-gray-400">{item.unit}</span>}
+                                                                </button>
+                                                            ))
+                                                        }
+                                                        {!inventaireLoading && inventaireItems.length === 0 && (
+                                                            <p className="text-xs text-gray-400 text-center py-2">Aucun article dans l'inventaire</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Liste des items de préparation */}
+                                        <div className={`space-y-1.5 ${expandedSections.preparation ? 'overflow-y-auto' : 'max-h-48 overflow-y-auto'}`}
+                                            style={expandedSections.preparation ? { maxHeight: 'calc(100vh - 280px)' } : {}}>
+                                            {formData.preparation.map((item, index) => (
+                                                <div key={item.id || index}
+                                                    className="group flex items-center gap-2 p-2 bg-white rounded border hover:shadow-sm transition-all"
+                                                >
+                                                    {/* Badge type */}
+                                                    <span className="shrink-0 text-base" title={item.type === 'ressource' ? 'Ressource' : item.type === 'inventaire' ? 'Inventaire' : 'Texte libre'}>
+                                                        {item.type === 'ressource' ? '🔧' : item.type === 'inventaire' ? '📦' : '📝'}
+                                                    </span>
+                                                    {/* Statut */}
                                                     <select
                                                         value={item.statut || 'a-faire'}
                                                         onChange={(e) => updatePreparation(index, 'statut', e.target.value)}
-                                                        className="w-24 p-1 border rounded text-xs font-medium"
+                                                        className="w-24 p-1 border rounded text-xs font-medium shrink-0"
                                                     >
                                                         <option value="a-faire">À faire</option>
                                                         <option value="en-cours">En cours</option>
                                                         <option value="termine">Terminé</option>
                                                     </select>
+                                                    {/* Texte */}
                                                     <input
                                                         type="text"
                                                         value={item.text || ''}
                                                         onChange={(e) => updatePreparation(index, 'text', e.target.value)}
-                                                        className="flex-1 p-2 border rounded focus:ring-2 focus:ring-orange-500 text-sm"
-                                                        placeholder={`Préparation ${index + 1}`}
+                                                        className="flex-1 p-1.5 border rounded text-sm focus:ring-1 focus:ring-orange-400 min-w-0"
+                                                        placeholder={`Item ${index + 1}`}
                                                     />
+                                                    {/* Quantité */}
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.5"
+                                                            value={item.quantite || '1'}
+                                                            onChange={(e) => updatePreparation(index, 'quantite', e.target.value)}
+                                                            className="w-14 p-1 border rounded text-xs text-center"
+                                                            placeholder="Qté"
+                                                        />
+                                                        <span className="text-xs text-gray-400 w-10 truncate" title={item.unite}>{item.unite || 'u.'}</span>
+                                                    </div>
+                                                    {/* Supprimer */}
                                                     <button
                                                         type="button"
                                                         onClick={() => removePreparation(index)}
-                                                        className="p-1 text-red-600 hover:bg-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        className="p-1 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                                                     >
-                                                        <Icon name="trash" size={14} />
+                                                        <Icon name="trash" size={13} />
                                                     </button>
                                                 </div>
                                             ))}
+                                            {formData.preparation.length === 0 && (
+                                                <p className="text-xs text-center text-gray-400 py-3">
+                                                    Aucun item — utilisez les boutons ci-dessus pour ajouter des ressources, articles d'inventaire ou texte libre.
+                                                </p>
+                                            )}
                                         </div>
 
                                         {expandedSections.preparation && (
-                                            <button
-                                                type="button"
-                                                onClick={addPreparation}
-                                                className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                                            >
-                                                <Icon name="plus" size={16} className="mr-2" />
-                                                Ajouter une préparation
-                                            </button>
+                                            <div className="flex gap-2 mt-3">
+                                                <button type="button" onClick={() => { setPrepSource(prepSource === 'ressource' ? null : 'ressource'); setPrepSearch(''); }}
+                                                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${prepSource === 'ressource' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
+                                                    🔧 Depuis les ressources
+                                                </button>
+                                                <button type="button" onClick={() => { setPrepSource(prepSource === 'inventaire' ? null : 'inventaire'); setPrepSearch(''); if (!inventaireFetched.current) fetchInventaire(); }}
+                                                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${prepSource === 'inventaire' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}>
+                                                    📦 Depuis l'inventaire
+                                                </button>
+                                                <button type="button" onClick={addPreparation}
+                                                    className="flex-1 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+                                                    + Texte libre
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
