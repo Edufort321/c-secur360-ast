@@ -1808,16 +1808,26 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
                 <button onClick={() => delSite(si)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
               </div>
               {/* Department rows */}
-              {site.depts.map((dept, di) => (
-                <div key={dept.id || `nd-${si}-${di}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
-                  <MapPin size={12} className="shrink-0 text-gray-400" />
-                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.name} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, name: v } : d) } : s)); }} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
-                  <input autoComplete="off" className={`${inp} w-20`} value={dept.code} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, code: v } : d) } : s)); }} placeholder="SEC-N" />
-                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.address} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, address: v } : d) } : s)); }} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
-                  <div className="w-[68px] shrink-0" />
-                  <button onClick={() => delDept(si, di)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
-                </div>
-              ))}
+              {site.depts.map((dept, di) => {
+                const setDeptField = (field: keyof DeptRow, val: string) => {
+                  setSites(prev => {
+                    const next = prev.map(s => ({ ...s, depts: [...s.depts] }));
+                    next[si].depts[di] = { ...next[si].depts[di], [field]: val };
+                    return next;
+                  });
+                };
+                return (
+                  <div key={dept.id || `nd-${si}-${di}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
+                    <MapPin size={12} className="shrink-0 text-gray-400" />
+                    <input autoComplete="off" className={`${inp} flex-1`} value={dept.name} onChange={e => setDeptField('name', e.target.value)} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
+                    <span className="shrink-0 font-mono text-xs text-orange-400">«{dept.name}»</span>
+                    <input autoComplete="off" className={`${inp} w-20`} value={dept.code} onChange={e => setDeptField('code', e.target.value)} placeholder="SEC-N" />
+                    <input autoComplete="off" className={`${inp} flex-1`} value={dept.address} onChange={e => setDeptField('address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                    <div className="w-[68px] shrink-0" />
+                    <button onClick={() => delDept(si, di)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                  </div>
+                );
+              })}
             </div>
           ))}
           {sites.length === 0 && (
