@@ -1693,11 +1693,12 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
 
 function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  type DeptRow = { id?: string; name: string; code: string; address: string };
-  type SiteRow = { id?: string; name: string; code: string; address: string; depts: DeptRow[] };
-  const emptyDept = (): DeptRow => ({ name: '', code: '', address: '' });
-  const emptySite = (): SiteRow => ({ name: '', code: '', address: '', depts: [] });
+  // Two flat independent states — avoids nested-state update bugs
+  type SiteRow = { _key: string; id?: string; name: string; code: string; address: string };
+  type DeptRow = { id?: string; name: string; code: string; address: string; siteKey: string };
+
   const [sites, setSites] = useState<SiteRow[]>([]);
+  const [depts, setDepts] = useState<DeptRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1705,41 +1706,37 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   async function load() {
     setLoading(true);
     const { data, error } = await supabase.from('planner_succursales').select('*').eq('tenant_id', tenant).order('name');
-    if (error) { setNotice('Erreur chargement : ' + error.message); setSites([]); setLoading(false); return; }
-    if (!data) { setSites([]); setLoading(false); return; }
-    const siteList = data.filter((r: any) => !r.parent_id);
-    const deptList = data.filter((r: any) => r.parent_id);
-    setSites(siteList.map((s: any) => ({
-      id: s.id, name: s.name, code: s.code || '', address: s.address || '',
-      depts: deptList.filter((d: any) => d.parent_id === s.id).map((d: any) => ({ id: d.id, name: d.name, code: d.code || '', address: d.address || '' })),
-    })));
+    if (error) { setNotice('Erreur chargement : ' + error.message); setSites([]); setDepts([]); setLoading(false); return; }
+    if (!data) { setSites([]); setDepts([]); setLoading(false); return; }
+    const siteData = (data as any[]).filter(r => !r.parent_id);
+    const deptData = (data as any[]).filter(r => r.parent_id);
+    setSites(siteData.map(s => ({ _key: s.id, id: s.id, name: s.name, code: s.code || '', address: s.address || '' })));
+    setDepts(deptData.map(d => ({ id: d.id, name: d.name, code: d.code || '', address: d.address || '', siteKey: d.parent_id })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
-  const updSite = (si: number, k: keyof Omit<SiteRow, 'depts'>, v: string) =>
-    setSites(p => p.map((s, j) => j === si ? { ...s, [k]: v } : s));
-  const updDept = (si: number, di: number, fld: keyof DeptRow, v: string) =>
-    setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.map((d, k2) => k2 === di ? { ...d, [fld]: v } : d) } : s));
-  const addSite = () => setSites(p => [...p, emptySite()]);
-  const addDept = (si: number) => setSites(p => p.map((s, j) => j === si ? { ...s, depts: [...s.depts, emptyDept()] } : s));
+  const addSite = () => { const k = Math.random().toString(36).slice(2); setSites(p => [...p, { _key: k, name: '', code: '', address: '' }]); };
+  const addDept = (siteKey: string) => setDepts(p => [...p, { name: '', code: '', address: '', siteKey }]);
+  const updSite = (siteKey: string, f: keyof SiteRow, v: string) => setSites(p => p.map(s => s._key === siteKey ? { ...s, [f]: v } : s));
+  const updDept = (dIdx: number, f: keyof Omit<DeptRow, 'siteKey'>, v: string) => setDepts(p => p.map((d, i) => i === dIdx ? { ...d, [f]: v } : d));
 
-  async function delSite(si: number) {
-    const site = sites[si];
-    if (site.id) await supabase.from('planner_succursales').delete().eq('id', site.id);
-    setSites(p => p.filter((_, j) => j !== si));
+  async function delSite(siteKey: string) {
+    const site = sites.find(s => s._key === siteKey);
+    if (site?.id) await supabase.from('planner_succursales').delete().eq('id', site.id);
+    setSites(p => p.filter(s => s._key !== siteKey));
+    setDepts(p => p.filter(d => d.siteKey !== siteKey));
   }
-  async function delDept(si: number, di: number) {
-    const dept = sites[si].depts[di];
-    if (dept.id) await supabase.from('planner_succursales').delete().eq('id', dept.id);
-    setSites(p => p.map((s, j) => j === si ? { ...s, depts: s.depts.filter((_, k2) => k2 !== di) } : s));
+  async function delDept(dIdx: number) {
+    const dept = depts[dIdx];
+    if (dept?.id) await supabase.from('planner_succursales').delete().eq('id', dept.id);
+    setDepts(p => p.filter((_, i) => i !== dIdx));
   }
 
   async function save() {
     setSaving(true); setNotice(null);
-    const named = sites.filter(s => s.name?.trim());
-    if (named.length === 0) {
-      setNotice(`⚠️ ${tr('Aucun site à sauvegarder (', 'Nothing to save (')}${sites.length} ${tr('ligne(s) sans nom). Clique + Site et tape un nom.', 'row(s) with no name). Click + Site and type a name.')}`);
+    if (!sites.some(s => s.name?.trim())) {
+      setNotice(`⚠️ ${tr('Aucun site à sauvegarder. Clique + Site et tape un nom.', 'Nothing to save. Click + Site and type a name.')}`);
       setSaving(false); return;
     }
     let savedSites = 0, savedDepts = 0;
@@ -1757,8 +1754,9 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
           siteId = (ins as any)?.id;
         }
         savedSites++;
-        for (const dept of site.depts) {
-          if (!dept.name?.trim()) continue;
+        for (let dIdx = 0; dIdx < depts.length; dIdx++) {
+          const dept = depts[dIdx];
+          if (dept.siteKey !== site._key || !dept.name?.trim()) continue;
           const dPayload = { tenant_id: tenant, name: dept.name, code: dept.code || null, address: dept.address || null, parent_id: siteId };
           if (dept.id) {
             const { error: de } = await supabase.from('planner_succursales').update(dPayload).eq('id', dept.id);
@@ -1779,7 +1777,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        {tr('Sites et départements de votre organisation. Les sites contiennent des départements. Les employés sont assignés à un site ou département spécifique.', 'Sites and departments for your organization. Sites contain departments. Employees are assigned to a site or specific department.')}
+        {tr('Sites et départements de votre organisation. Les sites contiennent des départements.', 'Sites and departments for your organization. Sites contain departments.')}
       </p>
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -1794,40 +1792,28 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         </div>
         {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {sites.map((site, si) => (
-            <div key={site.id || `ns-${si}`}>
-              {/* Site row */}
+          {sites.map(site => (
+            <div key={site._key}>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
                 <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input autoComplete="off" className={`${inp} flex-1`} value={site.name} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, name: v } : s)); }} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
-                <input autoComplete="off" className={`${inp} w-20`} value={site.code} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, code: v } : s)); }} placeholder="SHE" />
-                <input autoComplete="off" className={`${inp} flex-1`} value={site.address} onChange={e => { const v = e.target.value; setSites(p => p.map((s, j) => j === si ? { ...s, address: v } : s)); }} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
-                <button onClick={() => addDept(si)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
+                <input autoComplete="off" className={`${inp} flex-1`} value={site.name} onChange={e => updSite(site._key, 'name', e.target.value)} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input autoComplete="off" className={`${inp} w-20`} value={site.code} onChange={e => updSite(site._key, 'code', e.target.value)} placeholder="SHE" />
+                <input autoComplete="off" className={`${inp} flex-1`} value={site.address} onChange={e => updSite(site._key, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
                   <Plus size={11} />{tr('Dépt', 'Dept')}
                 </button>
-                <button onClick={() => delSite(si)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
+                <button onClick={() => delSite(site._key)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
               </div>
-              {/* Department rows */}
-              {site.depts.map((dept, di) => {
-                const setDeptField = (field: keyof DeptRow, val: string) => {
-                  setSites(prev => {
-                    const next = prev.map(s => ({ ...s, depts: [...s.depts] }));
-                    next[si].depts[di] = { ...next[si].depts[di], [field]: val };
-                    return next;
-                  });
-                };
-                return (
-                  <div key={dept.id || `nd-${si}-${di}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
-                    <MapPin size={12} className="shrink-0 text-gray-400" />
-                    <input autoComplete="off" className={`${inp} flex-1`} value={dept.name} onChange={e => setDeptField('name', e.target.value)} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
-                    <span className="shrink-0 font-mono text-xs text-orange-400">«{dept.name}»</span>
-                    <input autoComplete="off" className={`${inp} w-20`} value={dept.code} onChange={e => setDeptField('code', e.target.value)} placeholder="SEC-N" />
-                    <input autoComplete="off" className={`${inp} flex-1`} value={dept.address} onChange={e => setDeptField('address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
-                    <div className="w-[68px] shrink-0" />
-                    <button onClick={() => delDept(si, di)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
-                  </div>
-                );
-              })}
+              {depts.map((dept, dIdx) => dept.siteKey !== site._key ? null : (
+                <div key={dept.id || `d-${dIdx}`} className="flex items-center gap-2 px-3 py-1.5 pl-9">
+                  <MapPin size={12} className="shrink-0 text-gray-400" />
+                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.name} onChange={e => updDept(dIdx, 'name', e.target.value)} placeholder={tr('Ex: Secteur Nord', 'Ex: North Sector')} />
+                  <input autoComplete="off" className={`${inp} w-20`} value={dept.code} onChange={e => updDept(dIdx, 'code', e.target.value)} placeholder="SEC-N" />
+                  <input autoComplete="off" className={`${inp} flex-1`} value={dept.address} onChange={e => updDept(dIdx, 'address', e.target.value)} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
+                  <div className="w-[68px] shrink-0" />
+                  <button onClick={() => delDept(dIdx)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                </div>
+              ))}
             </div>
           ))}
           {sites.length === 0 && (
