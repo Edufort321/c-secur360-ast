@@ -1811,7 +1811,10 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
             <div key={`${site._key}-${loadKey}`}>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
                 <Building2 size={14} className="shrink-0 text-blue-500" />
-                <input ref={reg(`s:${site._key}:n`)} autoFocus={!site.id} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initName} placeholder={tr('Ex: Bureau Sherbrooke', 'Ex: Sherbrooke Office')} />
+                <input ref={reg(`s:${site._key}:n`)} autoFocus={!site.id} autoComplete="off"
+                  className={`${inp} flex-1 ${!site.initName ? 'border-blue-400 ring-1 ring-blue-400' : ''}`}
+                  defaultValue={site.initName}
+                  placeholder={tr('👈 Tape le nom du site ici', '👈 Type site name here')} />
                 <input ref={reg(`s:${site._key}:c`)} autoComplete="off" className={`${inp} w-20`} defaultValue={site.initCode} placeholder="SHE" />
                 <input ref={reg(`s:${site._key}:a`)} autoComplete="off" className={`${inp} flex-1`} defaultValue={site.initAddr} placeholder={tr('Adresse (optionnel)', 'Address (optional)')} />
                 <button onClick={() => addDept(site._key)} className="inline-flex shrink-0 items-center gap-1 rounded border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-600">
