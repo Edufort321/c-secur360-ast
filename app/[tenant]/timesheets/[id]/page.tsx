@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Send, Loader2, Plus, Trash2,
   Search, Briefcase, Settings2, Wrench, MoreHorizontal, Car, Building2,
+  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -16,11 +17,17 @@ type Entry = {
   project_id: string; project_number: string; project_title: string; client_name: string;
   description: string; hrs_regular: number; hrs_overtime: number; hrs_premium: number;
   km: number; vehicle_id: string; vehicle_type: string; vehicle_name: string; materiel: number;
+  allowances: { id: string; name: string; amount: number }[];
 };
-type Project = { id: string; project_number: string; title: string | null; client_name: string | null };
-type Rate    = { code: string; rate_regular: number; rate_overtime: number; rate_premium: number };
-type Vehicle = { id: string; name: string; make: string; model: string; type: string };
-type Sheet   = { id: string; tenant_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string };
+type Project  = { id: string; project_number: string; title: string | null; client_name: string | null };
+type Rate     = { code: string; rate_regular: number; rate_overtime: number; rate_premium: number };
+type Vehicle  = { id: string; name: string; make: string; model: string; type: string };
+type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string };
+type Allowance = { id: string; name: string; amount: number; is_taxable: boolean };
+type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
+type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
+type AssignedVehicle = { id: string; name: string; make: string; model: string };
+type LogEntry = { id?: string; odometer_start: number; odometer_end: number; km_personal: number };
 
 const CATS = [
   { k: 'project', label: 'Projet',          icon: Briefcase },
@@ -29,10 +36,12 @@ const CATS = [
   { k: 'autre',   label: 'Autre',            icon: MoreHorizontal },
 ] as const;
 
+const OPERATING_RATE = 0.35; // ARC 2025 $/km
+
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
-function newEntry(date: string, rateCode: string): Entry {
-  return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0 };
+function newEntry(date: string): Entry {
+  return { id: `e_${Date.now()}_${Math.random()}`, date, category: 'project', project_id: '', project_number: '', project_title: '', client_name: '', description: '', hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km: 0, vehicle_id: '', vehicle_type: '', vehicle_name: '', materiel: 0, allowances: [] };
 }
 
 export default function TimesheetDetailPage() {
@@ -41,15 +50,28 @@ export default function TimesheetDetailPage() {
   const tenant  = (params?.tenant as string) || 'demo';
   const sheetId = params?.id as string;
 
-  const [sheet, setSheet]     = useState<Sheet | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [rates, setRates]     = useState<Rate[]>([]);
+  const [sheet, setSheet]       = useState<Sheet | null>(null);
+  const [entries, setEntries]   = useState<Entry[]>([]);
+  const [rates, setRates]       = useState<Rate[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [kmRate, setKmRate]   = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving]   = useState(false);
-  const [notice, setNotice]   = useState<string | null>(null);
+  const [kmRate, setKmRate]     = useState(0);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [notice, setNotice]     = useState<string | null>(null);
+
+  // Payroll profile + allowances + bonuses
+  const [profile, setProfile]         = useState<EmployeeProfile | null>(null);
+  const [allowances, setAllowances]   = useState<Allowance[]>([]);
+  const [hourBonuses, setHourBonuses] = useState<HourBonus[]>([]);
+
+  // Vehicle gate
+  const [assignedVehicle, setAssignedVehicle] = useState<AssignedVehicle | null>(null);
+  const [logEntry, setLogEntry]               = useState<LogEntry | null>(null);
+  const [odoInput, setOdoInput]               = useState('');
+  const [savingOdo, setSavingOdo]             = useState(false);
+  const [showOdoEnd, setShowOdoEnd]           = useState(false);
+  const [odoEndInput, setOdoEndInput]         = useState('');
 
   // Project search state per row
   const [projSearch, setProjSearch] = useState<Record<string, string>>({});
@@ -69,23 +91,56 @@ export default function TimesheetDetailPage() {
       ]);
       if (!active) return;
       setSheet(sh);
-      setEntries(ents?.length ? ents : []);
+      setEntries((ents || []).map((e: any) => ({ ...e, allowances: Array.isArray(e.allowances) ? e.allowances : [] })));
       setRates(r || []);
       setProjects(p || []);
       setVehicles(v || []);
       const kmRow = (s || []).find((x: any) => x.category === 'km');
       setKmRate(kmRow ? Number(kmRow.value) : 0);
 
-      // Initialise project search labels
       const init: Record<string, string> = {};
-      (ents || []).forEach((e: Entry) => { if (e.project_number) init[e.id] = `${e.project_number}${e.project_title ? ' — ' + e.project_title : ''}`; });
+      (ents || []).forEach((e: any) => { if (e.project_number) init[e.id] = `${e.project_number}${e.project_title ? ' — ' + e.project_title : ''}`; });
       setProjSearch(init);
+
+      // Load profile + allowances + bonuses
+      if (sh) {
+        const [{ data: prof }, { data: allws }, { data: bonuses }] = await Promise.all([
+          supabase.from('employee_profiles').select('hourly_rate,ot_multiplier,dt_multiplier').eq('tenant_id', tenant).eq('employee_id', sh.employee_id).maybeSingle(),
+          supabase.from('timesheet_allowances').select('id,name,amount,is_taxable').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
+          supabase.from('timesheet_hour_bonuses').select('id,name,trigger_hours,bonus_amount').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
+        ]);
+        if (prof) setProfile(prof as EmployeeProfile);
+        setAllowances(allws || []);
+        setHourBonuses(bonuses || []);
+
+        // Load assigned company vehicle + logbook entry
+        const { data: av } = await supabase.from('vehicles')
+          .select('id,name,make,model')
+          .eq('tenant_id', tenant)
+          .eq('assigned_to', sh.employee_id)
+          .eq('type', 'company')
+          .eq('active', true)
+          .maybeSingle();
+        if (av) {
+          setAssignedVehicle(av as AssignedVehicle);
+          const { data: le } = await supabase.from('vehicle_logbook')
+            .select('id,odometer_start,odometer_end,km_personal')
+            .eq('vehicle_id', av.id)
+            .eq('employee_id', sh.employee_id)
+            .eq('week_start', sh.period_start)
+            .maybeSingle();
+          if (le) {
+            setLogEntry(le as LogEntry);
+            setOdoInput(String(le.odometer_start || ''));
+            setOdoEndInput(String(le.odometer_end || ''));
+          }
+        }
+      }
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [sheetId, tenant]);
+  }, [sheetId, tenant]); // eslint-disable-line
 
-  // Close dropdowns on outside click
   useEffect(() => {
     function close(e: MouseEvent) {
       Object.entries(projRefs.current).forEach(([id, el]) => {
@@ -96,27 +151,17 @@ export default function TimesheetDetailPage() {
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  const rateMap = useMemo(() => Object.fromEntries(rates.map(r => [r.code, r])), [rates]);
+  const rateMap    = useMemo(() => Object.fromEntries(rates.map(r => [r.code, r])), [rates]);
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(v => [v.id, v])), [vehicles]);
 
   function filteredProjects(search: string) {
     const q = (search || '').trim().toLowerCase();
     if (!q) return projects.slice(0, 8);
-    return projects.filter(p =>
-      [p.project_number, p.title, p.client_name]
-        .some(v => v?.toLowerCase().includes(q))
-    ).slice(0, 10);
+    return projects.filter(p => [p.project_number, p.title, p.client_name].some(v => v?.toLowerCase().includes(q))).slice(0, 10);
   }
 
   function pickProject(entryId: string, p: Project) {
-    setEntries(prev => prev.map(e => e.id !== entryId ? e : {
-      ...e,
-      project_id: p.id,
-      project_number: p.project_number,
-      project_title: p.title || '',
-      client_name: p.client_name || '',
-      description: e.description || p.title || '',
-    }));
+    setEntries(prev => prev.map(e => e.id !== entryId ? e : { ...e, project_id: p.id, project_number: p.project_number, project_title: p.title || '', client_name: p.client_name || '', description: e.description || p.title || '' }));
     setProjSearch(s => ({ ...s, [entryId]: `${p.project_number}${p.title ? ' — ' + p.title : ''}` }));
     setProjOpen(o => ({ ...o, [entryId]: false }));
   }
@@ -127,16 +172,22 @@ export default function TimesheetDetailPage() {
 
   function updVehicle(id: string, vehicleId: string) {
     const v = vehicleMap[vehicleId];
-    setEntries(prev => prev.map(e => e.id !== id ? e : {
-      ...e, vehicle_id: vehicleId,
-      vehicle_type: v?.type || '',
-      vehicle_name: v ? (`${v.make} ${v.model}`.trim() || v.name) : '',
+    setEntries(prev => prev.map(e => e.id !== id ? e : { ...e, vehicle_id: vehicleId, vehicle_type: v?.type || '', vehicle_name: v ? (`${v.make} ${v.model}`.trim() || v.name) : '' }));
+  }
+
+  function toggleAllowance(entryId: string, a: Allowance, checked: boolean) {
+    setEntries(prev => prev.map(e => {
+      if (e.id !== entryId) return e;
+      const next = checked
+        ? [...e.allowances, { id: a.id, name: a.name, amount: a.amount }]
+        : e.allowances.filter(x => x.id !== a.id);
+      return { ...e, allowances: next };
     }));
   }
 
   function addEntry() {
     const date = sheet ? sheet.period_start : new Date().toISOString().slice(0, 10);
-    setEntries(p => [...p, newEntry(date, rates[0]?.code || '')]);
+    setEntries(p => [...p, newEntry(date)]);
   }
 
   function entryKmRate(e: Entry) {
@@ -144,14 +195,49 @@ export default function TimesheetDetailPage() {
     return kmRate;
   }
 
-  function entryCost(e: Entry, rCode?: string) {
-    const r = rateMap[rCode || ''] || rates[0];
-    if (!r) return 0;
-    const labor = Number(e.hrs_regular) * Number(r.rate_regular)
-      + Number(e.hrs_overtime) * Number(r.rate_overtime)
-      + Number(e.hrs_premium)  * Number(r.rate_premium);
-    return labor + Number(e.km) * entryKmRate(e) + Number(e.materiel);
+  function entryCost(e: Entry) {
+    let labor = 0;
+    if (profile && Number(profile.hourly_rate) > 0) {
+      const hr = Number(profile.hourly_rate);
+      labor = Number(e.hrs_regular) * hr
+        + Number(e.hrs_overtime) * hr * Number(profile.ot_multiplier)
+        + Number(e.hrs_premium)  * hr * Number(profile.dt_multiplier);
+    } else {
+      const r = rates[0];
+      if (r) {
+        labor = Number(e.hrs_regular) * Number(r.rate_regular)
+          + Number(e.hrs_overtime) * Number(r.rate_overtime)
+          + Number(e.hrs_premium)  * Number(r.rate_premium);
+      }
+    }
+    const kmCost = Number(e.km) * entryKmRate(e);
+    const allowCost = (e.allowances || []).reduce((s, a) => s + Number(a.amount), 0);
+    return labor + kmCost + Number(e.materiel) + allowCost;
   }
+
+  // Daily totals for hour bonus triggers
+  const dailyHours = useMemo(() => {
+    const byDate: Record<string, number> = {};
+    entries.forEach(e => {
+      byDate[e.date] = (byDate[e.date] || 0) + Number(e.hrs_regular) + Number(e.hrs_overtime) + Number(e.hrs_premium);
+    });
+    return byDate;
+  }, [entries]);
+
+  // Bonuses triggered per day
+  const triggeredBonuses = useMemo(() => {
+    const result: { date: string; bonuses: HourBonus[] }[] = [];
+    Object.entries(dailyHours).forEach(([date, hrs]) => {
+      const triggered = hourBonuses.filter(b => hrs >= b.trigger_hours);
+      if (triggered.length > 0) result.push({ date, bonuses: triggered });
+    });
+    return result.sort((a, b) => a.date.localeCompare(b.date));
+  }, [dailyHours, hourBonuses]);
+
+  const totalBonuses = useMemo(() =>
+    triggeredBonuses.reduce((s, { bonuses }) => s + bonuses.reduce((bs, b) => bs + b.bonus_amount, 0), 0),
+    [triggeredBonuses]
+  );
 
   const totals = useMemo(() => entries.reduce((acc, e) => ({
     hrs_regular:  acc.hrs_regular  + Number(e.hrs_regular),
@@ -160,13 +246,69 @@ export default function TimesheetDetailPage() {
     km_personal:  acc.km_personal  + (e.vehicle_type !== 'company' ? Number(e.km) : 0),
     km_company:   acc.km_company   + (e.vehicle_type === 'company' ? Number(e.km) : 0),
     amount:       acc.amount       + entryCost(e),
-  }), { hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km_personal: 0, km_company: 0, amount: 0 }), [entries, rateMap, kmRate]);
+    allowances:   acc.allowances   + (e.allowances || []).reduce((s, a) => s + Number(a.amount), 0),
+  }), { hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km_personal: 0, km_company: 0, amount: 0, allowances: 0 }),
+  [entries, profile, rates, kmRate]); // eslint-disable-line
+
+  const vehicleDeduction = useMemo(() => {
+    if (!assignedVehicle || !logEntry) return 0;
+    return Math.max(0, Number(logEntry.km_personal)) * OPERATING_RATE;
+  }, [assignedVehicle, logEntry]);
+
+  const netTotal = totals.amount + totalBonuses - vehicleDeduction;
+
+  // Gate: employee has assigned vehicle but no logbook entry with odo_start
+  const needsOdometer = assignedVehicle !== null && (!logEntry || Number(logEntry.odometer_start) === 0);
+  const needsOdoEnd   = assignedVehicle !== null && logEntry !== null && Number(logEntry.odometer_end) === 0;
+
+  async function saveOdometer() {
+    if (!sheet || !assignedVehicle || !odoInput) return;
+    const odoStart = parseFloat(odoInput);
+    if (isNaN(odoStart) || odoStart <= 0) return;
+    setSavingOdo(true);
+    try {
+      const payload = {
+        tenant_id: tenant, employee_id: sheet.employee_id, employee_name: sheet.employee_name,
+        vehicle_id: assignedVehicle.id, vehicle_name: `${assignedVehicle.make} ${assignedVehicle.model}`.trim() || assignedVehicle.name,
+        vehicle_type: 'company', week_start: sheet.period_start,
+        odometer_start: odoStart, odometer_end: logEntry?.odometer_end || 0,
+        km_personal: logEntry?.km_personal || 0,
+      };
+      if (logEntry?.id) {
+        await supabase.from('vehicle_logbook').update({ odometer_start: odoStart }).eq('id', logEntry.id);
+        setLogEntry(prev => prev ? { ...prev, odometer_start: odoStart } : null);
+      } else {
+        const { data } = await supabase.from('vehicle_logbook').insert(payload).select('id,odometer_start,odometer_end,km_personal').single();
+        if (data) setLogEntry(data as LogEntry);
+      }
+    } finally { setSavingOdo(false); }
+  }
+
+  async function saveOdoEnd() {
+    if (!logEntry?.id || !odoEndInput) return;
+    const odoEnd = parseFloat(odoEndInput);
+    if (isNaN(odoEnd) || odoEnd <= 0) return;
+    setSavingOdo(true);
+    try {
+      // km_personal = max(0, (odo_end - odo_start) - km_from_timesheets)
+      const kmTotal = Math.max(0, odoEnd - Number(logEntry.odometer_start));
+      const kmJob = entries.filter(e => e.vehicle_id === assignedVehicle?.id).reduce((s, e) => s + Number(e.km), 0);
+      const kmPersonal = Math.max(0, kmTotal - kmJob);
+      await supabase.from('vehicle_logbook').update({ odometer_end: odoEnd, km_personal: kmPersonal }).eq('id', logEntry.id);
+      setLogEntry(prev => prev ? { ...prev, odometer_end: odoEnd, km_personal: kmPersonal } : null);
+      setShowOdoEnd(false);
+    } finally { setSavingOdo(false); }
+  }
 
   async function save(submit = false) {
     if (!sheet) return;
+    // Warn if odo_end missing at submission
+    if (submit && assignedVehicle && (!logEntry || Number(logEntry.odometer_end) === 0)) {
+      const ok = confirm('⚠️ Vous n\'avez pas entré votre odomètre de fin de semaine. La déduction véhicule ne peut pas être calculée. Voulez-vous quand même soumettre ?');
+      if (!ok) return;
+    }
     setSaving(true); setNotice(null);
     try {
-      // Upsert entries
       await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
       if (entries.length) {
         await supabase.from('timesheet_entries').insert(
@@ -176,7 +318,10 @@ export default function TimesheetDetailPage() {
       const update: any = {
         total_regular: totals.hrs_regular, total_overtime: totals.hrs_overtime,
         total_premium: totals.hrs_premium, total_km: totals.km_personal + totals.km_company,
-        total_km_personal: totals.km_personal, total_amount: totals.amount,
+        total_km_personal: totals.km_personal,
+        total_allowances: totals.allowances, total_bonuses: totalBonuses,
+        vehicle_deduction: vehicleDeduction,
+        total_amount: netTotal,
         updated_at: new Date().toISOString(),
       };
       if (submit) { update.status = 'submitted'; update.submitted_at = new Date().toISOString(); }
@@ -215,12 +360,15 @@ export default function TimesheetDetailPage() {
         </div>
 
         {/* En-tête feuille */}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-slate-900">{sheet?.employee_name}</h1>
             <p className="text-sm text-slate-500">
               {sheet?.period_start && `${new Date(sheet.period_start + 'T00:00').toLocaleDateString('fr-CA', { weekday:'long', month:'long', day:'numeric' })} → ${new Date(sheet!.period_end + 'T00:00').toLocaleDateString('fr-CA', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`}
             </p>
+            {profile && Number(profile.hourly_rate) > 0 && (
+              <p className="mt-0.5 text-xs text-violet-600">{money(Number(profile.hourly_rate))}/h · OT ×{profile.ot_multiplier} · DT ×{profile.dt_multiplier}</p>
+            )}
           </div>
           {!isReadOnly && (
             <div className="flex gap-2">
@@ -229,7 +377,7 @@ export default function TimesheetDetailPage() {
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
               </button>
               {canSubmit && (
-                <button onClick={() => save(true)} disabled={saving}
+                <button onClick={() => save(true)} disabled={saving || needsOdometer}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60">
                   <Send size={15} /> Soumettre au superviseur
                 </button>
@@ -238,8 +386,87 @@ export default function TimesheetDetailPage() {
           )}
         </div>
 
+        {/* ── GATE ODOMÈTRE ────────────────────────────────────────────── */}
+        {assignedVehicle && (
+          <div className={`mb-4 overflow-hidden rounded-2xl border ${needsOdometer ? 'border-amber-300 bg-amber-50' : 'border-teal-200 bg-teal-50'}`}>
+            <div className="flex items-start gap-3 px-4 py-3">
+              <Gauge size={20} className={`mt-0.5 shrink-0 ${needsOdometer ? 'text-amber-600' : 'text-teal-600'}`} />
+              <div className="flex-1">
+                <div className="font-semibold text-sm text-slate-800">
+                  Véhicule entreprise attitré — {assignedVehicle.make} {assignedVehicle.model}
+                </div>
+                {needsOdometer ? (
+                  <>
+                    <p className="text-xs text-amber-700 mb-2">Entrez votre odomètre de début de semaine pour démarrer votre feuille de temps.</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number" min={0} step={1} value={odoInput} onChange={e => setOdoInput(e.target.value)}
+                        placeholder="Ex: 42850" className="inp w-32 text-center text-sm"
+                      />
+                      <span className="text-xs text-slate-500">km</span>
+                      <button onClick={saveOdometer} disabled={savingOdo || !odoInput}
+                        className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60">
+                        {savingOdo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Confirmer odomètre
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-teal-700">
+                    <span>Odo début : <strong>{Number(logEntry?.odometer_start).toLocaleString('fr-CA')} km</strong></span>
+                    {logEntry && Number(logEntry.odometer_end) > 0 ? (
+                      <>
+                        <span>Odo fin : <strong>{Number(logEntry.odometer_end).toLocaleString('fr-CA')} km</strong></span>
+                        <span>Km pers. : <strong className="text-red-600">{Number(logEntry.km_personal).toFixed(0)} km</strong></span>
+                        <span>Déduction : <strong className="text-red-600">-{money(vehicleDeduction)}</strong></span>
+                      </>
+                    ) : (
+                      <button onClick={() => setShowOdoEnd(!showOdoEnd)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-teal-300 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-100">
+                        <Gauge size={11} /> Entrer odomètre fin {showOdoEnd ? '▲' : '▼'}
+                      </button>
+                    )}
+                    <button onClick={() => { setOdoInput(String(logEntry?.odometer_start || '')); setShowOdoEnd(false); }}
+                      className="text-xs text-slate-400 hover:text-slate-600 underline">modifier début</button>
+                  </div>
+                )}
+                {showOdoEnd && !needsOdometer && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number" min={0} step={1} value={odoEndInput} onChange={e => setOdoEndInput(e.target.value)}
+                      placeholder="Ex: 43120" className="inp w-32 text-center text-sm"
+                    />
+                    <span className="text-xs text-slate-500">km fin</span>
+                    <button onClick={saveOdoEnd} disabled={savingOdo || !odoEndInput}
+                      className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-60">
+                      {savingOdo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />} Confirmer
+                    </button>
+                  </div>
+                )}
+                {/* Edit odo_start when already confirmed */}
+                {!needsOdometer && odoInput !== String(logEntry?.odometer_start || '') && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number" min={0} step={1} value={odoInput} onChange={e => setOdoInput(e.target.value)}
+                      className="inp w-32 text-center text-sm"
+                    />
+                    <button onClick={saveOdometer} disabled={savingOdo}
+                      className="inline-flex items-center gap-1 rounded-lg bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-60">
+                      {savingOdo ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Mettre à jour
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm text-blue-800">{notice}</div>}
         {isReadOnly && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 font-medium">Feuille approuvée — lecture seule.</div>}
+        {needsOdometer && !isReadOnly && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 font-medium flex items-center gap-2">
+            <AlertTriangle size={15} /> Entrez votre odomètre de début ci-dessus avant de remplir la feuille.
+          </div>
+        )}
 
         {/* Totaux rapides */}
         <div className="mb-5 grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -248,7 +475,7 @@ export default function TimesheetDetailPage() {
             { k: 'Supp',  v: `${totals.hrs_overtime.toFixed(1)} h`,c: 'text-amber-600' },
             { k: 'Maj',   v: `${totals.hrs_premium.toFixed(1)} h`, c: 'text-orange-600' },
             { k: 'Km pers.', v: `${totals.km_personal.toFixed(0)}`,c: 'text-emerald-600' },
-            { k: 'Total', v: money(totals.amount),                  c: 'text-violet-700' },
+            { k: 'Brut',  v: money(totals.amount),                  c: 'text-violet-700' },
           ].map(s => (
             <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm text-center">
               <div className={`text-lg font-bold ${s.c}`}>{s.v}</div>
@@ -257,20 +484,19 @@ export default function TimesheetDetailPage() {
           ))}
         </div>
 
-        {/* Entrées */}
-        <div className="space-y-3">
+        {/* Entrées — bloquées si gate odomètre non passé */}
+        <div className={`space-y-3 ${needsOdometer && !isReadOnly ? 'pointer-events-none opacity-40' : ''}`}>
           {entries.map((e) => {
             const CatIcon = CATS.find(c => c.k === e.category)?.icon || Briefcase;
             const fps = filteredProjects(projSearch[e.id] || '');
+            const dayHrs = dailyHours[e.date] || 0;
             return (
               <div key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                {/* Ligne 1: date + catégorie + projet/description */}
+                {/* Ligne 1: date + catégorie + projet */}
                 <div className="mb-3 flex flex-wrap items-start gap-3">
                   <input type="date" value={e.date} disabled={isReadOnly}
                     onChange={ev => updEntry(e.id, 'date', ev.target.value)}
                     className="inp w-36 shrink-0" />
-
-                  {/* Catégorie */}
                   <div className="flex gap-1">
                     {CATS.map(c => {
                       const Icon = c.icon;
@@ -283,20 +509,14 @@ export default function TimesheetDetailPage() {
                       );
                     })}
                   </div>
-
-                  {/* Recherche projet (si catégorie = project) */}
                   {e.category === 'project' && (
                     <div ref={el => { projRefs.current[e.id] = el; }} className="relative min-w-[200px] flex-1">
                       <div className="relative">
                         <Search size={13} className="pointer-events-none absolute left-2.5 top-2.5 text-slate-400" />
-                        <input
-                          value={projSearch[e.id] || ''}
-                          disabled={isReadOnly}
+                        <input value={projSearch[e.id] || ''} disabled={isReadOnly}
                           onChange={ev => { setProjSearch(s => ({ ...s, [e.id]: ev.target.value })); setProjOpen(o => ({ ...o, [e.id]: true })); }}
                           onFocus={() => setProjOpen(o => ({ ...o, [e.id]: true }))}
-                          className="inp w-full pl-7"
-                          placeholder="Rechercher projet, client…"
-                        />
+                          className="inp w-full pl-7" placeholder="Rechercher projet, client…" />
                       </div>
                       {projOpen[e.id] && fps.length > 0 && (
                         <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -323,40 +543,30 @@ export default function TimesheetDetailPage() {
                     className="inp w-full" placeholder="Description du travail effectué…" />
                 </div>
 
-                {/* Ligne 2: heures + km + véhicule + matériel + coût */}
+                {/* Ligne 2: heures + km + véhicule + matériel */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="flex flex-col items-center">
-                    <span className="mb-1 text-xs text-slate-400">Rég</span>
-                    <input type="number" step="0.5" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                      value={e.hrs_regular} onChange={ev => updEntry(e.id, 'hrs_regular', +ev.target.value)}
-                      className="inp w-16 text-center" />
-                  </label>
-                  <label className="flex flex-col items-center">
-                    <span className="mb-1 text-xs text-slate-400">Supp</span>
-                    <input type="number" step="0.5" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                      value={e.hrs_overtime} onChange={ev => updEntry(e.id, 'hrs_overtime', +ev.target.value)}
-                      className="inp w-16 text-center" />
-                  </label>
-                  <label className="flex flex-col items-center">
-                    <span className="mb-1 text-xs text-slate-400">Maj</span>
-                    <input type="number" step="0.5" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                      value={e.hrs_premium} onChange={ev => updEntry(e.id, 'hrs_premium', +ev.target.value)}
-                      className="inp w-16 text-center" />
-                  </label>
+                  {[
+                    { label: 'Rég', k: 'hrs_regular' as keyof Entry },
+                    { label: 'Supp', k: 'hrs_overtime' as keyof Entry },
+                    { label: 'Maj', k: 'hrs_premium' as keyof Entry },
+                  ].map(({ label, k }) => (
+                    <label key={k} className="flex flex-col items-center">
+                      <span className="mb-1 text-xs text-slate-400">{label}</span>
+                      <input type="number" step="0.5" disabled={isReadOnly} onFocus={ev => ev.target.select()}
+                        value={e[k] as number} onChange={ev => updEntry(e.id, k, +ev.target.value)}
+                        className="inp w-16 text-center" />
+                    </label>
+                  ))}
                   <label className="flex flex-col items-center">
                     <span className="mb-1 text-xs text-slate-400">Km</span>
                     <input type="number" disabled={isReadOnly} onFocus={ev => ev.target.select()}
                       value={e.km} onChange={ev => updEntry(e.id, 'km', +ev.target.value)}
                       className="inp w-16 text-center" />
                   </label>
-
-                  {/* Véhicule */}
                   <label className="flex flex-col">
                     <span className="mb-1 text-xs text-slate-400">Véhicule</span>
                     <div className="flex items-center gap-1">
-                      <select value={e.vehicle_id} disabled={isReadOnly}
-                        onChange={ev => updVehicle(e.id, ev.target.value)}
-                        className="inp w-36">
+                      <select value={e.vehicle_id} disabled={isReadOnly} onChange={ev => updVehicle(e.id, ev.target.value)} className="inp w-36">
                         <option value="">— Aucun —</option>
                         {vehicles.filter(v => v.type === 'company').length > 0 && (
                           <optgroup label="Entreprise">
@@ -373,14 +583,12 @@ export default function TimesheetDetailPage() {
                       {e.vehicle_type === 'personal' && <Car        size={13} className="text-emerald-600" />}
                     </div>
                   </label>
-
                   <label className="flex flex-col items-center">
                     <span className="mb-1 text-xs text-slate-400">Matériel $</span>
                     <input type="number" step="0.01" disabled={isReadOnly} onFocus={ev => ev.target.select()}
                       value={e.materiel} onChange={ev => updEntry(e.id, 'materiel', +ev.target.value)}
                       className="inp w-24 text-right" />
                   </label>
-
                   <div className="ml-auto flex items-end gap-2">
                     <span className="text-base font-bold text-slate-700">{money(entryCost(e))}</span>
                     {!isReadOnly && (
@@ -389,11 +597,46 @@ export default function TimesheetDetailPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Avantages (si configurés) */}
+                {allowances.length > 0 && (
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                      <Gift size={12} /> Avantages
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {allowances.map(a => {
+                        const checked = e.allowances.some(x => x.id === a.id);
+                        return (
+                          <label key={a.id} className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition select-none ${checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-500 hover:border-slate-300'} ${isReadOnly ? 'pointer-events-none' : ''}`}>
+                            <input type="checkbox" checked={checked} disabled={isReadOnly}
+                              onChange={ev => toggleAllowance(e.id, a, ev.target.checked)}
+                              className="accent-emerald-600" />
+                            {a.name}
+                            <span className="font-bold">{money(a.amount)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Indication primes du jour */}
+                {hourBonuses.length > 0 && dayHrs > 0 && (
+                  <div className="mt-2 text-xs text-slate-400">
+                    {dayHrs.toFixed(1)}h ce jour
+                    {hourBonuses.filter(b => dayHrs >= b.trigger_hours).map(b => (
+                      <span key={b.id} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 font-semibold">
+                        <Timer size={10} className="inline mr-0.5" />{b.name} +{money(b.bonus_amount)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
 
-          {!isReadOnly && (
+          {!isReadOnly && !needsOdometer && (
             <button onClick={addEntry}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 py-4 text-sm font-semibold text-slate-400 transition hover:border-violet-400 hover:text-violet-600">
               <Plus size={18} /> Ajouter une ligne
@@ -401,14 +644,61 @@ export default function TimesheetDetailPage() {
           )}
         </div>
 
-        {/* Footer total */}
-        {entries.length > 0 && (
-          <div className="mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-            <div className="text-sm text-slate-500">
-              {totals.km_company > 0 && <span className="mr-4"><Building2 size={13} className="mr-1 inline text-blue-500" />{totals.km_company} km ent.</span>}
-              {totals.km_personal > 0 && <span><Car size={13} className="mr-1 inline text-emerald-600" />{totals.km_personal} km pers. → {money(totals.km_personal * kmRate)}</span>}
+        {/* Primes journalières déclenchées */}
+        {triggeredBonuses.length > 0 && (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50">
+            <div className="border-b border-amber-200 px-4 py-2.5 flex items-center gap-2">
+              <Timer size={15} className="text-amber-600" />
+              <span className="text-sm font-bold text-amber-800">Primes horaires déclenchées</span>
             </div>
-            <div className="text-xl font-bold text-violet-700">{money(totals.amount)}</div>
+            {triggeredBonuses.map(({ date, bonuses }) => (
+              <div key={date} className="flex flex-wrap items-center gap-3 border-t border-amber-100 px-4 py-2.5 first:border-t-0">
+                <span className="text-xs font-medium text-amber-700">{new Date(date + 'T00:00').toLocaleDateString('fr-CA', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                <span className="text-xs text-amber-600">{(dailyHours[date] || 0).toFixed(1)}h travaillées</span>
+                {bonuses.map(b => (
+                  <span key={b.id} className="rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800">{b.name} +{money(b.bonus_amount)}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer total */}
+        {(entries.length > 0 || vehicleDeduction > 0 || totalBonuses > 0) && (
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
+              <div className="flex flex-wrap gap-4 text-sm text-slate-500">
+                {totals.km_company > 0 && <span><Building2 size={13} className="mr-1 inline text-blue-500" />{totals.km_company} km ent.</span>}
+                {totals.km_personal > 0 && <span><Car size={13} className="mr-1 inline text-emerald-600" />{totals.km_personal} km pers. → {money(totals.km_personal * kmRate)}</span>}
+              </div>
+              <div className="text-sm font-semibold text-slate-700">Brut main-d'œuvre : {money(totals.amount)}</div>
+            </div>
+            {(totals.allowances > 0 || totalBonuses > 0 || vehicleDeduction > 0) && (
+              <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-3 text-sm">
+                {totals.allowances > 0 && (
+                  <div className="flex items-center justify-between text-emerald-700">
+                    <span className="flex items-center gap-1.5"><Gift size={13} /> Avantages</span>
+                    <span className="font-semibold">+{money(totals.allowances)}</span>
+                  </div>
+                )}
+                {totalBonuses > 0 && (
+                  <div className="flex items-center justify-between text-amber-700">
+                    <span className="flex items-center gap-1.5"><Timer size={13} /> Primes horaires</span>
+                    <span className="font-semibold">+{money(totalBonuses)}</span>
+                  </div>
+                )}
+                {vehicleDeduction > 0 && (
+                  <div className="flex items-center justify-between text-red-600">
+                    <span className="flex items-center gap-1.5"><Car size={13} /> Déduction véhicule ({Number(logEntry?.km_personal || 0).toFixed(0)} km pers. × {OPERATING_RATE}$/km ARC 2025)</span>
+                    <span className="font-semibold">-{money(vehicleDeduction)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-between px-5 py-4">
+              <span className="text-sm font-semibold text-slate-700">Net à payer</span>
+              <div className="text-xl font-bold text-violet-700">{money(netTotal)}</div>
+            </div>
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, KeyRound, ExternalLink, Eye, EyeOff, X } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, KeyRound, ExternalLink, Eye, EyeOff, X, UserCog, Banknote, Gift, Timer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -48,7 +48,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'employes' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles'>('sites');
+  const [tab, setTab] = useState<'sites' | 'clients' | 'vehicules' | 'sitesdepts' | 'employes' | 'profils' | 'ressources' | 'abonnement' | 'facturation' | 'feuilles' | 'paie'>('sites');
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -65,6 +65,7 @@ export default function AdminPage() {
             { k: 'profils',     label: tr('Comptes / Accès', 'Accounts / Access'), icon: KeyRound },
             { k: 'ressources',  label: tr('Ressources', 'Resources'),              icon: Wrench },
             { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),      icon: Clock },
+            { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'), icon: Banknote },
             { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),       icon: CreditCard },
             { k: 'facturation', label: tr('Facturation', 'Billing'),           icon: Settings },
           ];
@@ -102,6 +103,7 @@ export default function AdminPage() {
         {tab === 'profils' && <Profils tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'feuilles' && <FeuillesDeTemps tenant={tenant} tr={tr} />}
+        {tab === 'paie' && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
     </div>
@@ -144,7 +146,8 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     hrs: acc.hrs + Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium),
     km: acc.km + Number(s.total_km_personal),
     amt: acc.amt + Number(s.total_amount),
-  }), { hrs: 0, km: 0, amt: 0 }), [filtered]);
+    ded: acc.ded + Number(s.vehicle_deduction || 0),
+  }), { hrs: 0, km: 0, amt: 0, ded: 0 }), [filtered]);
 
   function weekNum(dateStr: string) {
     const d = new Date(dateStr + 'T00:00:00');
@@ -182,10 +185,11 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
   return (
     <div className="space-y-4">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: tr('Heures totales', 'Total hours'),      value: `${totals.hrs.toFixed(1)} h`, tone: 'text-slate-900 dark:text-white' },
+          { label: tr('Heures totales', 'Total hours'),       value: `${totals.hrs.toFixed(1)} h`, tone: 'text-slate-900 dark:text-white' },
           { label: tr('Km remboursables', 'Reimbursable km'), value: `${totals.km.toFixed(0)} km`, tone: 'text-emerald-600' },
+          { label: tr('Déductions véhicule', 'Vehicle ded.'), value: totals.ded > 0 ? `-${mny(totals.ded)}` : '0,00 $', tone: 'text-red-600' },
           { label: tr('Montant total', 'Total amount'),       value: mny(totals.amt),              tone: 'text-violet-600' },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -239,6 +243,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                 <th className="px-4 py-3">{tr('Période', 'Period')}</th>
                 <th className="px-4 py-3">{tr('Heures', 'Hours')}</th>
                 <th className="px-4 py-3">{tr('Km pers.', 'Pers. km')}</th>
+                <th className="px-4 py-3 text-red-600">{tr('Déd. véhicule', 'Vehicle ded.')}</th>
                 <th className="px-4 py-3">{tr('Montant', 'Amount')}</th>
                 <th className="px-4 py-3">{tr('Statut', 'Status')}</th>
               </tr>
@@ -263,6 +268,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                     </td>
                     <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{Number(s.total_km_personal).toFixed(0)} km</td>
+                    <td className="px-4 py-3 font-semibold text-red-600">
+                      {Number(s.vehicle_deduction || 0) > 0 ? `-${mny(Number(s.vehicle_deduction))}` : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-violet-700">{mny(Number(s.total_amount))}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLS[s.status] || STATUS_CLS.draft}`}>
@@ -273,7 +281,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">{tr('Aucune feuille de temps pour cette sélection.', 'No timesheet for this selection.')}</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">{tr('Aucune feuille de temps pour cette sélection.', 'No timesheet for this selection.')}</td></tr>
               )}
             </tbody>
           </table>
@@ -837,17 +845,19 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 type VRow = {
   id?: string; type: 'company' | 'personal'; unit_number: string; name: string;
   make: string; model: string; year: string; plate: string;
-  employee_name: string; km_rate_override: string; purchase_price: string; km_at_year_start: string;
+  employee_name: string; assigned_to: string;
+  km_rate_override: string; purchase_price: string; km_at_year_start: string;
   active: boolean; notes: string;
 };
 
-function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnelSuggestions }: {
+function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnelSuggestions, tenantUsers }: {
   label: string; badge: string; items: { r: VRow; i: number }[]; onAdd: () => void;
   upd: (i: number, k: keyof VRow, v: any) => void;
   del: (i: number) => void;
   tr: (f: string, e: string) => string;
   inp: string;
   personnelSuggestions: string[];
+  tenantUsers: { id: string; name: string; email: string }[];
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -869,6 +879,7 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
             <th className="px-2">{tr('Année', 'Year')}</th>
             <th className="px-2">{tr('Plaque', 'Plate')}</th>
             <th className="px-2">{tr('Employé / Propriétaire', 'Employee / Owner')}</th>
+            <th className="px-2 whitespace-nowrap">{tr('Compte attitré', 'Assigned account')}</th>
             <th className="px-2">{tr('Taux km $', 'Km rate $')}</th>
             <th className="px-2 whitespace-nowrap">{tr('Prix achat $', 'Purchase $')}</th>
             <th className="px-2 whitespace-nowrap">{tr('Km début année', 'Km year start')}</th>
@@ -888,8 +899,20 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
                     value={r.employee_name}
                     onChange={v => upd(i, 'employee_name', v)}
                     suggestions={personnelSuggestions}
-                    placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Assigné à', 'Assigned to')}
+                    placeholder={r.type === 'personal' ? tr('Nom employé', 'Employee name') : tr('Nom affiché', 'Display name')}
                   />
+                </td>
+                <td className="px-2">
+                  <select
+                    value={r.assigned_to}
+                    onChange={e => upd(i, 'assigned_to', e.target.value)}
+                    className={`${inp} min-w-[140px]`}
+                  >
+                    <option value="">— {tr('Aucun', 'None')} —</option>
+                    {tenantUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="px-2">
                   <div className="flex items-center gap-1">
@@ -921,7 +944,7 @@ function VehicleTable({ label, badge, items, onAdd, upd, del, tr, inp, personnel
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {items.length === 0 && <tr><td colSpan={11} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
+            {items.length === 0 && <tr><td colSpan={12} className="px-2 py-5 text-center text-gray-400 text-sm">{tr('Aucun véhicule.', 'No vehicle.')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -935,28 +958,32 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [personnelSuggestions, setPersonnelSuggestions] = useState<string[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<{ id: string; name: string; email: string }[]>([]);
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   useEffect(() => {
-    supabase.from('planner_personnel').select('name').eq('tenant_id', tenant)
-      .then(({ data }) => {
-        if (data) setPersonnelSuggestions(data.map((p: any) => p.name?.trim()).filter(Boolean));
-      });
+    Promise.all([
+      supabase.from('planner_personnel').select('name').eq('tenant_id', tenant),
+      fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()),
+    ]).then(([{ data: personnel }, usersRes]) => {
+      if (personnel) setPersonnelSuggestions(personnel.map((p: any) => p.name?.trim()).filter(Boolean));
+      if (usersRes?.users) setTenantUsers(usersRes.users.map((u: any) => ({ id: u.id, name: u.name || '', email: u.email || '' })));
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
 
   async function load() {
     setLoading(true);
     const { data } = await supabase.from('vehicles').select('*').eq('tenant_id', tenant).order('type').order('name');
-    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '', purchase_price: v.purchase_price != null ? String(v.purchase_price) : '', km_at_year_start: v.km_at_year_start != null ? String(v.km_at_year_start) : '' })));
+    setRows((data || []).map((v: any) => ({ ...v, unit_number: v.unit_number || '', year: String(v.year || ''), assigned_to: v.assigned_to || '', km_rate_override: v.km_rate_override != null ? String(v.km_rate_override) : '', purchase_price: v.purchase_price != null ? String(v.purchase_price) : '', km_at_year_start: v.km_at_year_start != null ? String(v.km_at_year_start) : '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof VRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
 
-  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
-  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
+  const addCompany  = () => setRows(p => [...p, { type: 'company',  unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', assigned_to: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
+  const addPersonal = () => setRows(p => [...p, { type: 'personal', unit_number: '', name: '', make: '', model: '', year: '', plate: '', employee_name: '', assigned_to: '', km_rate_override: '', purchase_price: '', km_at_year_start: '', active: true, notes: '' }]);
 
   async function save() {
     setSaving(true); setNotice(null);
@@ -970,6 +997,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
           make: r.make, model: r.model,
           year: r.year ? Number(r.year) : null,
           plate: r.plate, employee_name: r.employee_name,
+          assigned_to: r.assigned_to || null,
           km_rate_override: r.km_rate_override !== '' ? Number(r.km_rate_override) : null,
           purchase_price: r.purchase_price !== '' ? parseFloat(r.purchase_price.replace(/,/g, '.')) : null,
           km_at_year_start: r.km_at_year_start !== '' ? Number(r.km_at_year_start) : 0,
@@ -1018,6 +1046,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         items={companyRows} onAdd={addCompany}
         upd={upd} del={del} tr={tr} inp={inp}
         personnelSuggestions={personnelSuggestions}
+        tenantUsers={tenantUsers}
       />
       <VehicleTable
         label={tr('Véhicules personnels autorisés', 'Authorized personal vehicles')}
@@ -1025,6 +1054,7 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
         items={personalRows} onAdd={addPersonal}
         upd={upd} del={del} tr={tr} inp={inp}
         personnelSuggestions={personnelSuggestions}
+        tenantUsers={tenantUsers}
       />
     </div>
   );
@@ -1686,6 +1716,340 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
                   {tr('Aucun site/département. Crée-en un pour pouvoir ensuite ajouter du personnel.', 'No site/department yet. Create one to be able to add staff.')}
                 </td></tr>
               )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PAIE & AVANTAGES — profils employés, avantages, primes horaires
+// ============================================================
+
+function PayeConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [subTab, setSubTab] = useState<'profils' | 'avantages' | 'primes'>('profils');
+  return (
+    <div className="space-y-4">
+      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        {[
+          { k: 'profils',   label: tr('Profils employés', 'Employee profiles'), icon: UserCog },
+          { k: 'avantages', label: tr('Avantages',         'Allowances'),        icon: Gift },
+          { k: 'primes',    label: tr('Primes horaires',   'Hour bonuses'),      icon: Timer },
+        ].map(x => {
+          const Icon = x.icon as any;
+          return (
+            <button key={x.k} onClick={() => setSubTab(x.k as any)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+              <Icon size={15} /> {x.label}
+            </button>
+          );
+        })}
+      </div>
+      {subTab === 'profils'   && <EmployeeProfiles tenant={tenant} tr={tr} />}
+      {subTab === 'avantages' && <AllowancesConfig tenant={tenant} tr={tr} />}
+      {subTab === 'primes'    && <HourBonusesConfig tenant={tenant} tr={tr} />}
+    </div>
+  );
+}
+
+function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type EP = { id?: string; employee_id: string; employee_name: string; employee_email: string; hourly_rate: string; ot_multiplier: string; dt_multiplier: string; ot_daily_hrs: string; dt_daily_hrs: string; ot_weekly_hrs: string; active: boolean };
+  const [rows, setRows] = useState<EP[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  useEffect(() => {
+    (async () => {
+      const [usersRes, { data: profiles }] = await Promise.all([
+        fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()),
+        supabase.from('employee_profiles').select('*').eq('tenant_id', tenant),
+      ]);
+      const us: { id: string; name: string; email: string }[] = (usersRes?.users || []).map((u: any) => ({ id: u.id, name: u.name || '', email: u.email || '' }));
+      const profileMap: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => { profileMap[p.employee_id] = p; });
+      setRows(us.map(u => {
+        const p = profileMap[u.id];
+        if (p) return { id: p.id, employee_id: u.id, employee_name: p.employee_name || u.name, employee_email: p.employee_email || u.email, hourly_rate: String(p.hourly_rate || ''), ot_multiplier: String(p.ot_multiplier || '1.50'), dt_multiplier: String(p.dt_multiplier || '2.00'), ot_daily_hrs: String(p.ot_daily_hrs || '8'), dt_daily_hrs: p.dt_daily_hrs != null ? String(p.dt_daily_hrs) : '', ot_weekly_hrs: String(p.ot_weekly_hrs || '40'), active: p.active !== false };
+        return { employee_id: u.id, employee_name: u.name, employee_email: u.email, hourly_rate: '', ot_multiplier: '1.50', dt_multiplier: '2.00', ot_daily_hrs: '8', dt_daily_hrs: '', ot_weekly_hrs: '40', active: true };
+      }));
+      setLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant]);
+
+  const upd = (i: number, k: keyof EP, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.employee_id) continue;
+        const payload = {
+          tenant_id: tenant, employee_id: r.employee_id,
+          employee_name: r.employee_name, employee_email: r.employee_email,
+          hourly_rate: r.hourly_rate !== '' ? parseFloat(r.hourly_rate) : 0,
+          ot_multiplier: parseFloat(r.ot_multiplier) || 1.5,
+          dt_multiplier: parseFloat(r.dt_multiplier) || 2.0,
+          ot_daily_hrs: r.ot_daily_hrs !== '' ? parseFloat(r.ot_daily_hrs) : 8,
+          dt_daily_hrs: r.dt_daily_hrs !== '' ? parseFloat(r.dt_daily_hrs) : null,
+          ot_weekly_hrs: r.ot_weekly_hrs !== '' ? parseFloat(r.ot_weekly_hrs) : 40,
+          active: r.active, updated_at: new Date().toISOString(),
+        };
+        if (r.id) await supabase.from('employee_profiles').update(payload).eq('id', r.id);
+        else { const { error } = await supabase.from('employee_profiles').insert(payload); if (error) throw error; }
+      }
+      setNotice(tr('Profils enregistrés ✓', 'Profiles saved ✓'));
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12"><Loader2 className="animate-spin text-gray-400" /></div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+        {tr('Le taux horaire et les multiplicateurs servent au calcul automatique des feuilles de temps. OT = temps supplémentaire (×1,5), DT = double temps (×2).', 'Hourly rate and multipliers are used for automatic timesheet cost calculations. OT = overtime (×1.5), DT = double time (×2).')}
+      </div>
+      {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{notice}</div>}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <h2 className="font-bold">{tr('Profils de paie', 'Payroll profiles')}</h2>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+          </button>
+        </div>
+        <div className="overflow-x-auto p-2">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr('Employé', 'Employee')}</th>
+              <th className="px-2">{tr('Taux horaire $', 'Hourly rate $')}</th>
+              <th className="px-2">{tr('×OT', '×OT')}</th>
+              <th className="px-2">{tr('×DT', '×DT')}</th>
+              <th className="px-2">{tr('Seuil OT/jour h', 'OT/day h')}</th>
+              <th className="px-2">{tr('Seuil DT/jour h', 'DT/day h')}</th>
+              <th className="px-2">{tr('Seuil OT/sem h', 'OT/wk h')}</th>
+              <th className="px-2">{tr('Actif', 'Active')}</th>
+            </tr></thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.employee_id} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-2 py-1.5">
+                    <div className="font-medium text-gray-800 dark:text-gray-200">{r.employee_name || r.employee_email}</div>
+                    <div className="text-xs text-gray-400">{r.employee_email}</div>
+                  </td>
+                  <td className="px-2">
+                    <div className="flex items-center gap-1">
+                      <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.hourly_rate} placeholder="25.00"
+                        onChange={e => upd(i, 'hourly_rate', e.target.value)}
+                        onBlur={e => { const v = parseFloat(e.target.value); upd(i, 'hourly_rate', isNaN(v) ? '' : v.toFixed(2)); }} />
+                      <span className="text-xs text-gray-400">/h</span>
+                    </div>
+                  </td>
+                  <td className="px-2"><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.ot_multiplier} placeholder="1.50" onChange={e => upd(i, 'ot_multiplier', e.target.value)} /></td>
+                  <td className="px-2"><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.dt_multiplier} placeholder="2.00" onChange={e => upd(i, 'dt_multiplier', e.target.value)} /></td>
+                  <td className="px-2"><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.ot_daily_hrs} placeholder="8" onChange={e => upd(i, 'ot_daily_hrs', e.target.value)} /></td>
+                  <td className="px-2"><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.dt_daily_hrs} placeholder={tr('—', '—')} onChange={e => upd(i, 'dt_daily_hrs', e.target.value)} /></td>
+                  <td className="px-2"><input type="number" min={0} step={1} className={`${inp} w-14`} value={r.ot_weekly_hrs} placeholder="40" onChange={e => upd(i, 'ot_weekly_hrs', e.target.value)} /></td>
+                  <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun utilisateur trouvé.', 'No user found.')}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type Row = { id?: string; name: string; amount: string; is_taxable: boolean; active: boolean; sort_order: number };
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('timesheet_allowances').select('*').eq('tenant_id', tenant).order('sort_order').order('name');
+    setRows((data || []).map((r: any) => ({ ...r, amount: String(r.amount || '') })));
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, { name: '', amount: '', is_taxable: false, active: true, sort_order: p.length }]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim()) continue;
+        const payload = { tenant_id: tenant, name: r.name.trim(), amount: parseFloat(r.amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order };
+        if (r.id) await supabase.from('timesheet_allowances').update(payload).eq('id', r.id);
+        else await supabase.from('timesheet_allowances').insert(payload);
+      }
+      setNotice(tr('Avantages enregistrés ✓', 'Allowances saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('timesheet_allowances').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12"><Loader2 className="animate-spin text-gray-400" /></div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+        {tr("Créez des avantages payés à l'employé (ex: Dîner 35$, Coucher 100$). Ils apparaissent comme cases à cocher sur chaque ligne de feuille de temps.", "Create employee allowances (e.g., Lunch $35, Overnight $100). They appear as checkboxes on each timesheet line.")}
+      </div>
+      {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{notice}</div>}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <h2 className="font-bold">{tr('Avantages & Allocations', 'Allowances & Benefits')}</h2>
+          <div className="flex gap-2">
+            <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto p-2">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr("Nom (affiché à l'employé)", 'Name (shown to employee)')}</th>
+              <th className="px-2">{tr('Montant $', 'Amount $')}</th>
+              <th className="px-2">{tr('Imposable', 'Taxable')}</th>
+              <th className="px-2">{tr('Ordre', 'Order')}</th>
+              <th className="px-2">{tr('Actif', 'Active')}</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-2 py-1"><input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} /></td>
+                  <td className="px-2">
+                    <div className="flex items-center gap-1">
+                      <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.amount} placeholder="35.00"
+                        onChange={e => upd(i, 'amount', e.target.value)}
+                        onBlur={e => { const v = parseFloat(e.target.value); upd(i, 'amount', isNaN(v) ? '' : v.toFixed(2)); }} />
+                      <span className="text-xs text-gray-400">$</span>
+                    </div>
+                  </td>
+                  <td className="px-2 text-center"><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
+                  <td className="px-2"><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
+                  <td className="px-2 text-center"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun avantage configuré.', 'No allowance configured.')}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type Row = { id?: string; name: string; trigger_hours: string; bonus_amount: string; is_taxable: boolean; active: boolean; sort_order: number };
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  async function load() {
+    setLoading(true);
+    const { data } = await supabase.from('timesheet_hour_bonuses').select('*').eq('tenant_id', tenant).order('sort_order').order('trigger_hours');
+    setRows((data || []).map((r: any) => ({ ...r, trigger_hours: String(r.trigger_hours || ''), bonus_amount: String(r.bonus_amount || '') })));
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, { name: '', trigger_hours: '', bonus_amount: '', is_taxable: true, active: true, sort_order: p.length }]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.name?.trim() || !r.trigger_hours) continue;
+        const payload = { tenant_id: tenant, name: r.name.trim(), trigger_hours: parseFloat(r.trigger_hours) || 0, bonus_amount: parseFloat(r.bonus_amount) || 0, is_taxable: r.is_taxable, active: r.active, sort_order: r.sort_order };
+        if (r.id) await supabase.from('timesheet_hour_bonuses').update(payload).eq('id', r.id);
+        else await supabase.from('timesheet_hour_bonuses').insert(payload);
+      }
+      setNotice(tr('Primes enregistrées ✓', 'Bonuses saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) await supabase.from('timesheet_hour_bonuses').delete().eq('id', r.id);
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12"><Loader2 className="animate-spin text-gray-400" /></div>;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        {tr("Primes déclenchées quand les heures totales d'une journée atteignent le seuil. Ex: « Prime 5h = 25$ » → versé si ≥ 5h dans la journée.", "Bonuses triggered when daily total hours reach the threshold. E.g., \"5h bonus = $25\" → paid if ≥ 5h in the day.")}
+      </div>
+      {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{notice}</div>}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <h2 className="font-bold">{tr("Primes par plage d'heures", 'Hour-based bonuses')}</h2>
+          <div className="flex gap-2">
+            <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto p-2">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr('Nom prime', 'Bonus name')}</th>
+              <th className="px-2">{tr('Seuil h/jour', 'Daily h threshold')}</th>
+              <th className="px-2">{tr('Montant $', 'Amount $')}</th>
+              <th className="px-2">{tr('Imposable', 'Taxable')}</th>
+              <th className="px-2">{tr('Ordre', 'Order')}</th>
+              <th className="px-2">{tr('Actif', 'Active')}</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-2 py-1"><input className={`${inp} w-36`} value={r.name} placeholder={tr('Ex: Prime 5h', 'Ex: 5h bonus')} onChange={e => upd(i, 'name', e.target.value)} /></td>
+                  <td className="px-2">
+                    <div className="flex items-center gap-1">
+                      <input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.trigger_hours} placeholder="5" onChange={e => upd(i, 'trigger_hours', e.target.value)} />
+                      <span className="text-xs text-gray-400">h</span>
+                    </div>
+                  </td>
+                  <td className="px-2">
+                    <div className="flex items-center gap-1">
+                      <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.bonus_amount} placeholder="25.00"
+                        onChange={e => upd(i, 'bonus_amount', e.target.value)}
+                        onBlur={e => { const v = parseFloat(e.target.value); upd(i, 'bonus_amount', isNaN(v) ? '' : v.toFixed(2)); }} />
+                      <span className="text-xs text-gray-400">$</span>
+                    </div>
+                  </td>
+                  <td className="px-2 text-center"><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
+                  <td className="px-2"><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
+                  <td className="px-2 text-center"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucune prime configurée.', 'No bonus configured.')}</td></tr>}
             </tbody>
           </table>
         </div>
