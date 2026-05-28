@@ -3,8 +3,14 @@ import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashPassword } from '@/lib/auth';
 
+const SYNC_SECRET = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge'
+
 // GET → liste des tenants + leur abonnement (pour le panneau super-admin)
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const { data, error } = await supabaseAdmin.from('tenants').select('*');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { data: subs } = await supabaseAdmin

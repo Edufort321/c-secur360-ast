@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function GET() {
+const SYNC_SECRET = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge'
+
+export async function GET(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const { data, error } = await supabaseAdmin
     .from('vendors')
     .select('*')
