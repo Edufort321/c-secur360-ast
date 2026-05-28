@@ -1737,6 +1737,11 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function save() {
     setSaving(true); setNotice(null);
+    const named = sites.filter(s => s.name?.trim());
+    if (named.length === 0) {
+      setNotice(`⚠️ ${tr('Aucun site à sauvegarder (', 'Nothing to save (')}${sites.length} ${tr('ligne(s) sans nom). Clique + Site et tape un nom.', 'row(s) with no name). Click + Site and type a name.')}`);
+      setSaving(false); return;
+    }
     try {
       for (const site of sites) {
         if (!site.name?.trim()) continue;
