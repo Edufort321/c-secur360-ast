@@ -1737,9 +1737,6 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 
   async function save() {
     setSaving(true); setNotice(null);
-    // Debug: log imap state to console
-    const dbg = [...imap.current.entries()].map(([k, v]) => `${k}="${v.value}"`);
-    console.log('[SitesDepts.save] sites:', sites.length, '| imap:', imap.current.size, '| entries:', dbg);
     // Read values straight from DOM via callback-ref Map — immune to onChange/autocomplete issues
     const validSites = sites.filter(s => val(`s:${s._key}:n`));
     if (!validSites.length) {
@@ -1801,6 +1798,15 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         </div>
         {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {sites.length > 0 && (
+            <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-100/60 px-3 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:bg-gray-700/30 dark:text-gray-400">
+              <div className="w-3.5 shrink-0" />
+              <div className="flex-1">{tr('Nom du site / département *', 'Site / department name *')}</div>
+              <div className="w-20">{tr('Code', 'Code')}</div>
+              <div className="flex-1">{tr('Adresse', 'Address')}</div>
+              <div className="w-[82px] shrink-0" />
+            </div>
+          )}
           {sites.map(site => (
             <div key={`${site._key}-${loadKey}`}>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 dark:bg-gray-700/40">
