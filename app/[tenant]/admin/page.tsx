@@ -2246,14 +2246,16 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
       administration: 'client_admin', coordination: 'client_admin',
       modification: 'user', consultation: 'user',
     };
+    const existing = users.find(u => (u.email || '').toLowerCase() === (p.email || '').toLowerCase());
     setForm({
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
       role:     niveauToRole[p.niveauAcces || ''] || 'user',
-      // Conserve le mot de passe déjà enregistré ; n'en génère un que s'il n'y en a pas
-      password: p.access_password || generatePassword(p.name),
+      // Compte EXISTANT : ne jamais régénérer (garde le mot de passe stocké, sinon vide
+      // pour ne pas écraser l'accès). Nouveau compte seulement : génère une proposition.
+      password: p.access_password || (existing ? '' : generatePassword(p.name)),
     });
-    setShowPwd(true);
+    setShowPwd(false); // masqué par défaut
   }
 
   function regenerate() {
