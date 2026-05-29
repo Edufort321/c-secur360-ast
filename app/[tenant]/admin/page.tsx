@@ -2933,25 +2933,57 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
               {cat} <span className="text-gray-400 font-normal">({items.length})</span>
             </div>
             <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
-              {items.map(({ r, i }) => (
-                <div key={r.id || i} className="flex items-center gap-2 px-3 py-1.5">
-                  <input type="color" value={r.color} onChange={e => upd(i, 'color', e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600 shrink-0" />
-                  <input className={`${inp} flex-1 ${!r.name?.trim() ? 'ring-2 ring-red-400 dark:ring-red-500/60' : ''}`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('⚠️ Tapez le nom ici', '⚠️ Type name here')} autoFocus={!r.id && !r.name} />
-                  <input className={`${inp} w-20`} value={r.code} onChange={e => upd(i, 'code', e.target.value)} placeholder="CODE" />
-                  <select className={`${inp} w-32`} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
-                    <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
-                  </select>
-                  {r.id && usageCounts[r.id] > 0 && (
-                    <span className="text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-semibold shrink-0">
-                      {usageCounts[r.id]} {tr('poste(s)', 'post(s)')}
-                    </span>
-                  )}
-                  <label className="flex items-center gap-1 text-xs cursor-pointer shrink-0">
-                    <input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /> {tr('Actif', 'Active')}
-                  </label>
-                  <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1 shrink-0"><Trash2 size={14} /></button>
-                </div>
-              ))}
+              {items.map(({ r, i }) => {
+                const nameEmpty = !r.name?.trim();
+                return (
+                  <div key={r.id || i} className={`px-3 py-2 ${nameEmpty ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
+                    <div className="grid grid-cols-12 gap-2 items-end">
+                      {/* Couleur */}
+                      <div className="col-span-1">
+                        <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Coul.', 'Color')}</label>
+                        <input type="color" value={r.color} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-full cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
+                      </div>
+                      {/* Nom (PROMINENT) */}
+                      <div className="col-span-5">
+                        <label className={`block text-[9px] uppercase font-bold mb-0.5 ${nameEmpty ? 'text-red-600' : 'text-gray-500'}`}>
+                          {tr('Nom *', 'Name *')} {nameEmpty && `⚠️ ${tr('Obligatoire', 'Required')}`}
+                        </label>
+                        <input
+                          className={`${inp} ${nameEmpty ? 'ring-2 ring-red-400 dark:ring-red-500/60 border-red-300' : ''}`}
+                          value={r.name}
+                          onChange={e => upd(i, 'name', e.target.value)}
+                          placeholder={tr('ex: Technique, Électrique, Soudure TIG…', 'e.g. Technical, Electric, TIG welding…')}
+                          autoFocus={!r.id && !r.name}
+                        />
+                      </div>
+                      {/* Code */}
+                      <div className="col-span-2">
+                        <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Code (court)', 'Code (short)')}</label>
+                        <input className={inp} value={r.code} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH" />
+                      </div>
+                      {/* Catégorie */}
+                      <div className="col-span-2">
+                        <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Catégorie', 'Category')}</label>
+                        <select className={inp} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
+                          <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                        </select>
+                      </div>
+                      {/* Actions */}
+                      <div className="col-span-2 flex items-center gap-2 justify-end pb-1">
+                        {r.id && usageCounts[r.id] > 0 && (
+                          <span className="text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-semibold">
+                            {usageCounts[r.id]} {tr('poste(s)', 'post(s)')}
+                          </span>
+                        )}
+                        <label className="flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /> {tr('Actif', 'Active')}
+                        </label>
+                        <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
