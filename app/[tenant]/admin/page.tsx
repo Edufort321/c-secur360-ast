@@ -2280,6 +2280,32 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
   }
 
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  // Changer mot de passe d'un compte existant
+  const [pwdEditFor, setPwdEditFor] = useState<UserAccount | null>(null);
+  const [pwdEditValue, setPwdEditValue] = useState('');
+  const [pwdEditShow, setPwdEditShow] = useState(true);
+  const [pwdEditCopied, setPwdEditCopied] = useState(false);
+  function startPwdEdit(u: UserAccount) {
+    setPwdEditFor(u);
+    setPwdEditValue(generatePassword(u.name || u.email.split('@')[0]));
+    setPwdEditShow(true);
+    setPwdEditCopied(false);
+  }
+  async function savePwdEdit() {
+    if (!pwdEditFor || !pwdEditValue.trim()) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pwdEditFor.id, password: pwdEditValue }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Erreur');
+      setNotice(tr(`Mot de passe mis à jour pour ${pwdEditFor.email} ✓`, `Password updated for ${pwdEditFor.email} ✓`));
+      // Copie auto dans le presse-papier
+      navigator.clipboard.writeText(pwdEditValue).catch(() => {});
+      setPwdEditCopied(true);
+      setTimeout(() => { setPwdEditFor(null); setPwdEditValue(''); setPwdEditCopied(false); }, 3000);
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
+  }
+
   async function deleteUser(u: UserAccount) {
     setBusy(true);
     try {
@@ -2397,29 +2423,63 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
 
         {/* Liste des comptes existants */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="font-bold text-sm mb-2">{tr('Comptes existants', 'Existing accounts')} ({users.length})</h3>
-          <div className="space-y-1 max-h-72 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-sm">{tr('Comptes existants', 'Existing accounts')} ({users.length})</h3>
+            <button onClick={load} className="text-[10px] text-blue-600 hover:underline">↻ {tr('Actualiser', 'Refresh')}</button>
+          </div>
+          <div className="space-y-1 max-h-[28rem] overflow-y-auto">
             {users.map(u => (
-              <div key={u.id} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700/40 group">
-                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${u.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="truncate font-medium">{u.email}</div>
-                  {u.name && <div className="truncate text-[10px] text-gray-400">{u.name}</div>}
-                </div>
-                <span className="text-[10px] text-gray-400 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5">{u.role}</span>
-                <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600 shrink-0">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
-                {confirmDel === u.id ? (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => deleteUser(u)} disabled={busy} className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">
-                      {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Confirmer', 'Confirm')}
-                    </button>
-                    <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">{tr('×', '×')}</button>
+              <div key={u.id} className="rounded border border-gray-100 dark:border-gray-700 hover:border-gray-300 transition">
+                <div className="flex items-center gap-2 text-xs px-2 py-1.5 group">
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${u.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate font-medium">{u.email}</div>
+                    {u.name && <div className="truncate text-[10px] text-gray-400">{u.name}</div>}
                   </div>
-                ) : (
-                  <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer', 'Delete')}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 shrink-0 p-0.5">
-                    <Trash2 size={12} />
+                  <span className="text-[10px] text-gray-400 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5">{u.role}</span>
+                  <button onClick={() => startPwdEdit(u)} title={tr('Changer mot de passe', 'Change password')}
+                    className="text-[11px] rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 px-2 py-0.5 font-semibold shrink-0">
+                    🔑
                   </button>
+                  <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600 shrink-0">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
+                  {confirmDel === u.id ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => deleteUser(u)} disabled={busy} className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">
+                        {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Confirmer', 'Confirm')}
+                      </button>
+                      <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">×</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer', 'Delete')}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 shrink-0 p-0.5">
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Panneau changement mot de passe inline */}
+                {pwdEditFor?.id === u.id && (
+                  <div className="border-t border-gray-100 dark:border-gray-700 p-2 bg-blue-50/40 dark:bg-blue-500/5 space-y-2">
+                    <p className="text-[10px] text-gray-500">{tr('Nouveau mot de passe (5 lettres + 3 chiffres + 2 spéciaux)', 'New password (5 letters + 3 digits + 2 specials)')}</p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type={pwdEditShow ? 'text' : 'password'}
+                        value={pwdEditValue}
+                        onChange={e => setPwdEditValue(e.target.value)}
+                        className="flex-1 rounded border border-gray-300 bg-white dark:bg-gray-800 dark:border-gray-600 px-2 py-1 text-xs font-mono tracking-wider"
+                      />
+                      <button onClick={() => setPwdEditShow(v => !v)} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">{pwdEditShow ? '🙈' : '👁'}</button>
+                      <button onClick={() => setPwdEditValue(generatePassword(u.name || u.email.split('@')[0]))} title={tr('Régénérer', 'Regenerate')} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">↻</button>
+                      <button onClick={() => { navigator.clipboard.writeText(pwdEditValue); setPwdEditCopied(true); setTimeout(() => setPwdEditCopied(false), 1500); }} className="rounded border border-gray-300 dark:border-gray-600 px-2 text-xs">📋</button>
+                    </div>
+                    {pwdEditCopied && <p className="text-[10px] text-emerald-600">✓ {tr('Copié dans le presse-papier', 'Copied to clipboard')}</p>}
+                    <div className="flex gap-1.5 justify-end">
+                      <button onClick={() => { setPwdEditFor(null); setPwdEditValue(''); }} className="text-[10px] text-gray-400 hover:text-gray-600 px-2">{tr('Annuler', 'Cancel')}</button>
+                      <button onClick={savePwdEdit} disabled={busy || !pwdEditValue.trim()} className="rounded bg-blue-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+                        {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Mettre à jour', 'Update')}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -2983,15 +3043,44 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 
   async function save() {
     setSaving(true); setNotice(null);
-    try {
-      for (const r of rows) {
-        if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, subclass: r.subclass || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || null };
-        if (r.id) await supabase.from('planner_personnel').update(payload).eq('id', r.id);
-        else await supabase.from('planner_personnel').insert(payload);
+    let ok = 0, err = 0; const errs: string[] = [];
+    for (const r of rows) {
+      if (!r.name?.trim()) continue;
+      // Payload de base avec colonnes garanties par les migrations 020/047/048
+      const base: any = { tenant_id: tenant, name: r.name.trim(), role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
+      // Colonnes optionnelles (migrations 047, 048, 070) — ajoutées si valeur
+      if (r.niveauAcces) base.niveauAcces = r.niveauAcces;
+      if (r.succursale != null) base.succursale = r.succursale || null;
+      if (r.subclass != null) base.subclass = r.subclass || null;
+
+      const attemptSave = async (payload: any) => {
+        if (r.id) {
+          const { error } = await supabase.from('planner_personnel').update(payload).eq('id', r.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('planner_personnel').insert(payload);
+          if (error) throw error;
+        }
+      };
+
+      try {
+        await attemptSave(base);
+        ok++;
+      } catch (e: any) {
+        const msg = String(e?.message || '');
+        // Si erreur "column does not exist" → réessayer sans la colonne fautive
+        const colMatch = msg.match(/column "?(\w+)"?/i);
+        if (colMatch) {
+          const minimal = { tenant_id: tenant, name: r.name.trim(), role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
+          try { await attemptSave(minimal); ok++; errs.push(`${r.name}: ${tr('colonne manquante', 'missing column')} "${colMatch[1]}" — sauvegardé sans (exécutez les migrations 047/048/070/071)`); }
+          catch (e2: any) { err++; errs.push(`${r.name}: ${e2?.message || msg}`); }
+        } else {
+          err++; errs.push(`${r.name}: ${msg || 'erreur'}`);
+        }
       }
-      setNotice(tr('Personnel enregistré ✓', 'Staff saved ✓')); load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+    }
+    setNotice(`${ok} ${tr('enregistré(s)', 'saved')}${err ? `, ${err} ${tr('erreur(s)', 'errors')}` : ' ✓'}${errs.length ? `\n${errs.slice(0, 4).join(' · ')}` : ''}`);
+    await load(); setSaving(false);
   }
 
   async function del(i: number) {
