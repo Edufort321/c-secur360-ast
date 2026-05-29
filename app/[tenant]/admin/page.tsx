@@ -2929,9 +2929,9 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                   </table>
                   {canEdit && (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <button onClick={() => { const s = String(Math.round(reco.newSalary)); setCurrentSalary(s); if (!hireSalary) setHireSalary(s); }}
+                      <button onClick={() => { const s = String(Math.round(reco.targetSalary)); setHireSalary(s); setCurrentSalary(s); }}
                         className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-                        📊 {tr('Placer selon la note (embauche)', 'Place by score (hire)')} — {fmt(reco.newSalary)}
+                        📊 {tr('Placer selon la note (palier)', 'Place by score (tier)')} — {fmt(reco.targetSalary)}
                       </button>
                       <span className="self-center text-[10px] text-gray-400">{tr('ou saisir un taux manuel selon l\'expérience pertinente ci-dessus', 'or enter a manual rate based on relevant experience above')}</span>
                     </div>
@@ -3313,10 +3313,16 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 
   async function load() {
     setLoading(true);
-    const [{ data: suc }, { data }] = await Promise.all([
+    const [{ data: suc }, persRes] = await Promise.all([
       supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
       supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale, next_evaluation_date').eq('tenant_id', tenant).order('name'),
     ]);
+    // Repli si la colonne next_evaluation_date n'existe pas encore
+    let data: any[] | null = persRes.data;
+    if (persRes.error && /next_evaluation_date/i.test(persRes.error.message || '')) {
+      const r2 = await supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name');
+      data = r2.data;
+    }
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
@@ -3365,11 +3371,14 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       console.log('[Personnel save] payload pour', r.name, ':', base, 'id existant ?', r.id);
 
       try {
-        let result;
-        if (r.id) {
-          result = await supabase.from('planner_personnel').update(base).eq('id', r.id).select();
-        } else {
-          result = await supabase.from('planner_personnel').insert(base).select();
+        const exec = (payload: any) => r.id
+          ? supabase.from('planner_personnel').update(payload).eq('id', r.id).select()
+          : supabase.from('planner_personnel').insert(payload).select();
+        let result = await exec(base);
+        // Repli si la colonne next_evaluation_date n'existe pas (migration 071/082 non exécutée)
+        if (result.error && /next_evaluation_date/i.test(result.error.message || '')) {
+          const { next_evaluation_date, ...b2 } = base;
+          result = await exec(b2);
         }
         console.log('[Personnel save] résultat pour', r.name, ':', result);
         if (result.error) throw result.error;
