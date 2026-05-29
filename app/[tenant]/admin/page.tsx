@@ -12,6 +12,26 @@ import { uploadPhoto } from '@/lib/utils/photo';
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
+// ─── Hook : détecte le niveau d'accès de l'utilisateur connecté ─────────────
+function useCurrentAccess(tenant: string) {
+  const [niveauAcces, setNiveauAcces] = useState<AccessLevel>('super_user'); // fallback admin pour développement
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          const { data: p } = await supabase.from('planner_personnel').select('niveauAcces').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+          if (p?.niveauAcces) setNiveauAcces(p.niveauAcces as AccessLevel);
+        }
+      } catch { /* Supabase indispo → garde super_user */ }
+      setLoading(false);
+    })();
+  }, [tenant]);
+  const perms = PERMS[niveauAcces] || PERMS.consultation;
+  return { niveauAcces, perms, loading };
+}
+
 // ─── Niveaux d'accès & matrice de permissions ───────────────────────────────
 type AccessLevel = 'consultation' | 'modification' | 'coordination' | 'administration' | 'admin_paie' | 'rh' | 'direction' | 'super_user';
 
@@ -180,6 +200,7 @@ export default function AdminPage() {
   type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { perms } = useCurrentAccess(tenant);
 
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
@@ -243,7 +264,7 @@ export default function AdminPage() {
         </div>
 
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} perms={perms} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
         {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
@@ -2221,6 +2242,21 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
     load();
   }
 
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  async function deleteUser(u: UserAccount) {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/users?id=${u.id}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || 'Erreur');
+      }
+      setNotice(tr(`Compte supprimé : ${u.email}`, `Account deleted: ${u.email}`));
+      setConfirmDel(null);
+      load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
+  }
+
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   const userByEmail: Record<string, UserAccount> = {};
@@ -2325,18 +2361,343 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
         {/* Liste des comptes existants */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <h3 className="font-bold text-sm mb-2">{tr('Comptes existants', 'Existing accounts')} ({users.length})</h3>
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <div className="space-y-1 max-h-72 overflow-y-auto">
             {users.map(u => (
-              <div key={u.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <div key={u.id} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700/40 group">
                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${u.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                <span className="flex-1 truncate">{u.email}</span>
-                <span className="text-[10px] text-gray-400">{u.role}</span>
-                <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{u.email}</div>
+                  {u.name && <div className="truncate text-[10px] text-gray-400">{u.name}</div>}
+                </div>
+                <span className="text-[10px] text-gray-400 shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5">{u.role}</span>
+                <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600 shrink-0">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
+                {confirmDel === u.id ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => deleteUser(u)} disabled={busy} className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">
+                      {busy ? <Loader2 size={10} className="animate-spin" /> : tr('Confirmer', 'Confirm')}
+                    </button>
+                    <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">{tr('×', '×')}</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer', 'Delete')}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 shrink-0 p-0.5">
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </div>
             ))}
             {users.length === 0 && <p className="text-xs text-gray-400 py-2 text-center">{tr('Aucun compte créé.', 'No accounts.')}</p>}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEdit }: { tenant: string; tr: (f: string, e: string) => string; employee: { id: string; name: string; role?: string; subclass?: string; hire_date?: string; hire_salary?: number; current_salary?: number; current_grid_id?: string; acquired_skills?: any[]; last_evaluation_date?: string }; onClose: () => void; onSaved: () => void; canEdit: boolean }) {
+  const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [grid, setGrid] = useState<any>(null);
+  const [tiers, setTiers] = useState<any[]>([]);
+  const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
+  // États édition
+  const [hireDate, setHireDate] = useState(employee.hire_date || '');
+  const [hireSalary, setHireSalary] = useState(employee.hire_salary?.toString() || '');
+  const [currentSalary, setCurrentSalary] = useState(employee.current_salary?.toString() || '');
+  const [colaPct, setColaPct] = useState('2.5');
+  const [acquired, setAcquired] = useState<Record<string, number>>({}); // {skill_name: level}
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      // Trouver le poste de l'employé
+      const { data: posteRow } = await supabase.from('planner_postes').select('id').eq('tenant_id', tenant).eq('name', employee.role || '').maybeSingle();
+      if (posteRow?.id) {
+        const [{ data: g }, { data: skCat }] = await Promise.all([
+          supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', posteRow.id).maybeSingle(),
+          supabase.from('poste_skills_catalog').select('id, name, category, weight, max_level').eq('tenant_id', tenant).eq('active', true),
+        ]);
+        if (g) {
+          setGrid(g);
+          const { data: ts } = await supabase.from('poste_salary_tiers').select('*').eq('grid_id', g.id).order('tier_level');
+          setTiers(ts || []);
+        }
+        setSkillsCatalog(skCat || []);
+        // Charger compétences acquises de l'employé
+        if (Array.isArray(employee.acquired_skills)) {
+          const acc: Record<string, number> = {};
+          employee.acquired_skills.forEach((s: any) => { acc[s.name || s] = s.level ?? 0; });
+          setAcquired(acc);
+        }
+        // Préremplir COLA depuis la grille
+        if (g.cola_pct) setColaPct(String(g.cola_pct));
+      }
+      setLoading(false);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id, tenant]);
+
+  // ─── Calcul du score de compétences pondéré ───
+  const allRequiredSkills = useMemo(() => {
+    const map: Record<string, { name: string; weight: number; max_level: number; tiers: number[] }> = {};
+    tiers.forEach(t => {
+      (t.required_skills || []).forEach((rs: any) => {
+        const cat = skillsCatalog.find(s => s.name === rs.name);
+        if (!map[rs.name]) {
+          map[rs.name] = { name: rs.name, weight: cat?.weight || 1, max_level: cat?.max_level || 5, tiers: [] };
+        }
+        map[rs.name].tiers.push(t.tier_level);
+      });
+    });
+    return Object.values(map);
+  }, [tiers, skillsCatalog]);
+
+  const skillScore = useMemo(() => {
+    if (allRequiredSkills.length === 0) return 0;
+    let weightedSum = 0, totalWeight = 0;
+    allRequiredSkills.forEach(s => {
+      const lvl = acquired[s.name] || 0;
+      weightedSum += (lvl / s.max_level) * s.weight;
+      totalWeight += s.weight;
+    });
+    return totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0; // 0-100
+  }, [allRequiredSkills, acquired]);
+
+  // ─── Trouver le palier actuel et suivant ───
+  const currentTierIdx = useMemo(() => {
+    if (!tiers.length || !currentSalary) return 0;
+    const cs = parseFloat(currentSalary) || 0;
+    // Le palier actuel = celui dont le salaire est le plus proche en dessous (ou égal)
+    let idx = 0;
+    for (let i = 0; i < tiers.length; i++) {
+      if (cs >= (tiers[i].annual_salary || 0) * 0.95) idx = i;
+    }
+    return idx;
+  }, [tiers, currentSalary]);
+
+  const nextTier = tiers[currentTierIdx + 1];
+
+  // ─── Calcul de l'augmentation projetée ───
+  const projection = useMemo(() => {
+    const cs = parseFloat(currentSalary) || 0;
+    const cola = parseFloat(colaPct) || 0;
+    const colaAmt = cs * cola / 100;
+    let skillIncreaseAmt = 0, skillPct = 0, qualified = false;
+    if (nextTier && tiers[currentTierIdx]) {
+      const gap = (nextTier.annual_salary || 0) - (tiers[currentTierIdx].annual_salary || 0);
+      const factor = skillScore / 100; // 0..1
+      skillIncreaseAmt = gap * factor;
+      skillPct = cs > 0 ? (skillIncreaseAmt / cs) * 100 : 0;
+      qualified = skillScore >= 80;
+    }
+    const totalAmt = colaAmt + skillIncreaseAmt;
+    const totalPct = cs > 0 ? (totalAmt / cs) * 100 : 0;
+    return { cs, cola, colaAmt, skillIncreaseAmt, skillPct, totalAmt, totalPct, newSalary: cs + totalAmt, qualified };
+  }, [currentSalary, colaPct, skillScore, nextTier, currentTierIdx, tiers]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      // Met à jour l'employé
+      const acquiredArr = Object.entries(acquired).map(([name, level]) => ({ name, level }));
+      await supabase.from('planner_personnel').update({
+        hire_date: hireDate || null,
+        hire_salary: hireSalary ? Number(hireSalary) : null,
+        current_salary: currentSalary ? Number(currentSalary) : null,
+        current_grid_id: grid?.id || null,
+        acquired_skills: acquiredArr,
+        last_evaluation_date: new Date().toISOString().slice(0, 10),
+      }).eq('id', employee.id);
+
+      // Crée une entrée d'historique d'évaluation
+      await supabase.from('employee_evaluations').insert({
+        tenant_id: tenant,
+        personnel_id: employee.id,
+        grid_id: grid?.id || null,
+        tier_id: tiers[currentTierIdx]?.id || null,
+        evaluation_date: new Date().toISOString().slice(0, 10),
+        salary_before: projection.cs,
+        salary_after: projection.newSalary,
+        cola_pct: projection.cola,
+        cola_amount: projection.colaAmt,
+        skill_score: skillScore,
+        skill_increase_pct: projection.skillPct,
+        skill_increase_amount: projection.skillIncreaseAmt,
+        total_increase_pct: projection.totalPct,
+        total_increase_amount: projection.totalAmt,
+        status: 'pending',
+      });
+
+      setNotice(tr('Évaluation enregistrée ✓', 'Evaluation saved ✓'));
+      onSaved();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  const fmt = (n: number) => Math.round(n).toLocaleString('fr-CA') + ' $';
+
+  if (loading) return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60" onClick={onClose}>
+      <Loader2 className="animate-spin text-white" />
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-5xl rounded-2xl bg-white dark:bg-gray-800 shadow-2xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between z-10">
+          <div>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              📊 {tr('Évaluation & salaire', 'Evaluation & salary')}
+              <span className="text-blue-600 dark:text-blue-400">{employee.name}</span>
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {employee.role || tr('Aucun poste', 'No position')}
+              {employee.subclass && <span className="ml-1 text-cyan-600 dark:text-cyan-400">· {employee.subclass}</span>}
+              {employee.last_evaluation_date && <span className="ml-2">· {tr('dernière éval :', 'last eval:')} {employee.last_evaluation_date}</span>}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+        </div>
+
+        {!grid ? (
+          <div className="p-8 text-center text-sm text-gray-500">
+            {tr('Aucune grille salariale configurée pour ce poste.', 'No salary grid configured for this position.')}
+            <p className="mt-2 text-xs text-gray-400">{tr('Configurez la grille dans Postes → Grille salariale.', 'Configure the grid in Positions → Salary grid.')}</p>
+          </div>
+        ) : (
+          <div className="p-4 space-y-4">
+            {/* Section 1 : Embauche & salaires */}
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                <h4 className="font-bold text-xs text-gray-500 uppercase mb-2">{tr('Embauche', 'Hire')}</h4>
+                <label className="text-xs">{tr('Date d\'embauche', 'Hire date')}</label>
+                <input type="date" disabled={!canEdit} className={inp2} value={hireDate} onChange={e => setHireDate(e.target.value)} />
+                <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
+                <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
+              </div>
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/10 p-3">
+                <h4 className="font-bold text-xs text-emerald-700 dark:text-emerald-300 uppercase mb-2">{tr('Salaire actuel', 'Current salary')}</h4>
+                <label className="text-xs">{tr('Salaire $/an', 'Salary $/yr')}</label>
+                <input type="number" disabled={!canEdit} className={inp2} value={currentSalary} onChange={e => setCurrentSalary(e.target.value)} placeholder="52000" />
+                <p className="mt-2 text-[10px] text-emerald-700 dark:text-emerald-400">
+                  {tr('Palier actuel : ', 'Current tier: ')}<strong>{tiers[currentTierIdx]?.tier_name || '—'}</strong>
+                </p>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  Taux $/h ≈ {(parseFloat(currentSalary) / (grid.hours_per_year || 2080) || 0).toFixed(2)} $
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/10 p-3">
+                <h4 className="font-bold text-xs text-amber-700 dark:text-amber-300 uppercase mb-2">{tr('Ajustement coût de la vie', 'Cost of living')}</h4>
+                <label className="text-xs">{tr('% COLA', '% COLA')}</label>
+                <input type="number" step={0.1} disabled={!canEdit} className={inp2} value={colaPct} onChange={e => setColaPct(e.target.value)} />
+                <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-400">
+                  = +{fmt(projection.colaAmt)} {tr('automatique', 'automatic')}
+                </p>
+              </div>
+            </div>
+
+            {/* Section 2 : Score de compétences */}
+            <div className="rounded-xl border border-purple-200 bg-purple-50/40 dark:border-purple-500/30 dark:bg-purple-500/5 p-4">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h4 className="font-bold text-sm flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
+                  <Award size={16} /> {tr('Score de compétences pondéré', 'Weighted skill score')}
+                </h4>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-500">{tr('Score global', 'Overall score')}</div>
+                    <div className={`text-2xl font-bold ${skillScore >= 80 ? 'text-emerald-600' : skillScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {skillScore.toFixed(0)} %
+                    </div>
+                  </div>
+                  {projection.qualified
+                    ? <span className="rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-xs font-bold">✓ {tr('Palier débloqué', 'Tier unlocked')}</span>
+                    : nextTier && <span className="rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-1 text-xs font-bold">📍 {tr(`${(80 - skillScore).toFixed(0)} % pour palier suivant`, `${(80 - skillScore).toFixed(0)}% to next tier`)}</span>}
+                </div>
+              </div>
+              {/* Barre de progression */}
+              <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
+                <div className={`h-full transition-all ${skillScore >= 80 ? 'bg-emerald-500' : skillScore >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${skillScore}%` }} />
+              </div>
+              {/* Compétences requises avec sliders */}
+              {allRequiredSkills.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-3">{tr('Aucune compétence requise définie dans la grille. Ajoutez-en dans Postes → Grille salariale.', 'No required skill defined in the grid. Add some in Positions → Salary grid.')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {allRequiredSkills.map(s => {
+                    const lvl = acquired[s.name] || 0;
+                    return (
+                      <div key={s.name} className="grid grid-cols-12 gap-2 items-center text-xs">
+                        <div className="col-span-4 truncate">
+                          <span className="font-semibold">{s.name}</span>
+                          <span className="text-[9px] text-gray-400 ml-1">×{s.weight}</span>
+                          <div className="text-[9px] text-gray-400">{tr('paliers', 'tiers')}: {s.tiers.join(', ')}</div>
+                        </div>
+                        <div className="col-span-6">
+                          <input type="range" min={0} max={s.max_level} value={lvl} disabled={!canEdit}
+                            onChange={e => setAcquired(p => ({ ...p, [s.name]: Number(e.target.value) }))}
+                            className="w-full" />
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className={`font-bold ${lvl >= s.max_level ? 'text-emerald-600' : lvl >= s.max_level / 2 ? 'text-amber-600' : 'text-gray-500'}`}>
+                            {lvl}/{s.max_level}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Section 3 : Projection augmentation */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50/40 dark:border-blue-500/30 dark:bg-blue-500/10 p-4">
+              <h4 className="font-bold text-sm flex items-center gap-1.5 text-blue-700 dark:text-blue-300 mb-3">
+                <TrendingUp size={16} /> {tr('Projection d\'augmentation', 'Increase projection')}
+              </h4>
+              <table className="w-full text-xs">
+                <tbody>
+                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                    <td className="py-1.5">{tr('Salaire actuel', 'Current salary')}</td>
+                    <td className="text-right font-mono">{fmt(projection.cs)}</td>
+                    <td className="text-right text-gray-400">—</td>
+                  </tr>
+                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                    <td className="py-1.5 text-amber-700 dark:text-amber-300">+ {tr('Coût de la vie', 'COLA')} ({projection.cola.toFixed(1)} %)</td>
+                    <td className="text-right font-mono text-amber-700 dark:text-amber-300">+{fmt(projection.colaAmt)}</td>
+                    <td className="text-right text-amber-600 dark:text-amber-400">+{projection.cola.toFixed(1)} %</td>
+                  </tr>
+                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                    <td className="py-1.5 text-purple-700 dark:text-purple-300">
+                      + {tr('Compétences', 'Skills')} ({skillScore.toFixed(0)} % {tr('du gap au palier suivant', 'of gap to next tier')})
+                      {nextTier && <div className="text-[10px] text-gray-400">{tr('Palier suivant :', 'Next tier:')} {nextTier.tier_name} — {fmt(nextTier.annual_salary)}</div>}
+                    </td>
+                    <td className="text-right font-mono text-purple-700 dark:text-purple-300">+{fmt(projection.skillIncreaseAmt)}</td>
+                    <td className="text-right text-purple-600 dark:text-purple-400">+{projection.skillPct.toFixed(1)} %</td>
+                  </tr>
+                  <tr className="border-t-2 border-blue-300 dark:border-blue-500/40 font-bold">
+                    <td className="py-2 text-lg">= {tr('Nouveau salaire', 'New salary')}</td>
+                    <td className="text-right text-lg text-blue-700 dark:text-blue-300 font-mono">{fmt(projection.newSalary)}</td>
+                    <td className="text-right text-lg text-blue-700 dark:text-blue-300">+{projection.totalPct.toFixed(1)} %</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {notice && <div className={`rounded-lg px-3 py-2 text-sm ${notice.includes('✓') ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{notice}</div>}
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">{tr('Fermer', 'Close')}</button>
+              {canEdit && (
+                <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                  {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer évaluation', 'Save evaluation')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2493,7 +2854,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
   );
 }
 
-function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: string) => string; perms: typeof PERMS[AccessLevel] }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes'>('personnel');
   const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclass_ids?: string[] }[]>([]);
@@ -2544,15 +2905,15 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
           );
         })}
       </div>
-      {subTab === 'personnel'   && <PersonnelPlanner    tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} sharedSubclasses={sharedSubclasses} postesTick={postesTick} />}
-      {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} />}
+      {subTab === 'personnel'   && <PersonnelPlanner    tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} sharedSubclasses={sharedSubclasses} postesTick={postesTick} perms={perms} />}
+      {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} perms={perms} />}
       {subTab === 'sousclasses' && <SousClassesPlanner tenant={tenant} tr={tr} inp={inp} onSubclassesChanged={reloadSubclasses} />}
       {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} />}
     </div>
   );
 }
 
-function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSubclasses, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclass_ids?: string[] }[]; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; postesTick: number }) {
+function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSubclasses, postesTick, perms }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclass_ids?: string[] }[]; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; postesTick: number; perms: typeof PERMS[AccessLevel] }) {
   type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
   const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
@@ -2562,6 +2923,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [evalEmployee, setEvalEmployee] = useState<any | null>(null);
 
   async function load() {
     setLoading(true);
@@ -2635,10 +2997,12 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Poste / Sous-classe', 'Position / Sub-class')}</th>
             <th className="px-2">{tr('Site / Dépt', 'Site / Dept')}</th>
+            {/* Évaluer sera ajouté avant Trash si perms.viewSalary */}
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
             <th className="px-2">{tr("Niveau d'accès", 'Access level')}</th>
             <th className="px-2">{tr('Actif', 'Active')}</th>
+            {perms.viewSalary && <th className="px-2">{tr('Salaire', 'Salary')}</th>}
             <th></th>
           </tr></thead>
           <tbody>
@@ -2699,13 +3063,29 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                   </select>
                 </td>
                 <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                {perms.viewSalary && (
+                  <td className="px-2">
+                    {r.id && r.role
+                      ? <button onClick={() => setEvalEmployee(r)} className="inline-flex items-center gap-1 rounded-lg bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-300" title={tr('Évaluation + salaire + compétences', 'Evaluation + salary + skills')}>📊 {tr('Évaluer', 'Evaluate')}</button>
+                      : <span className="text-[10px] text-gray-400">—</span>}
+                  </td>
+                )}
                 <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={perms.viewSalary ? 9 : 8} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
           </tbody>
         </table>
       </div>
+      {evalEmployee && (
+        <EmployeeEvaluationModal
+          tenant={tenant} tr={tr}
+          employee={evalEmployee}
+          canEdit={perms.editSalary}
+          onClose={() => setEvalEmployee(null)}
+          onSaved={() => { setEvalEmployee(null); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -2820,7 +3200,7 @@ function computeTiers(grid: GridRow): TierRow[] {
   return tiers;
 }
 
-function PosteSalaryGridPanel({ tenant, poste, tr, onClose }: { tenant: string; poste: PosteRow; tr: (f: string, e: string) => string; onClose: () => void }) {
+function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { tenant: string; poste: PosteRow; tr: (f: string, e: string) => string; onClose: () => void; canEdit?: boolean }) {
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [grid, setGrid] = useState<GridRow | null>(null);
   const [tiers, setTiers] = useState<TierRow[]>([]);
@@ -3146,8 +3526,9 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose }: { tenant: string; 
   );
 }
 
-function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goToSubclasses }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; goToSubclasses: () => void }) {
+function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goToSubclasses, perms }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; goToSubclasses: () => void; perms: typeof PERMS[AccessLevel] }) {
   const empty = (): PosteRow => ({ name: '', code: '', color: '#6b7280', subclass_ids: [] });
+  const [subPickerFor, setSubPickerFor] = useState<number | null>(null);
   const [rows, setRows] = useState<PosteRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -3290,12 +3671,19 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                 <div className="flex items-center gap-1.5">
                   <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
                 </div>
-                {/* Bouton Grille salariale très visible */}
-                <button onClick={() => toggle(r.id)} disabled={!r.id}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
-                  title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
-                  💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </button>
+                {/* Bouton Grille salariale — verrouillé si pas le bon niveau d'accès */}
+                {perms.viewSalary ? (
+                  <button onClick={() => toggle(r.id)} disabled={!r.id}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
+                    title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
+                    💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </button>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                    title={tr('Réservé aux niveaux 5+ (Admin paie, RH, Direction, Super-utilisateur)', 'Reserved for levels 5+ (Payroll admin, HR, Management, Super-user)')}>
+                    🔒 {tr('Grille verrouillée', 'Grid locked')}
+                  </button>
+                )}
                 <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={15} /></button>
               </div>
 
@@ -3311,20 +3699,40 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                     </span>
                   ))}
                   {sharedSubclasses.length > 0 ? (
-                    <details className="inline relative">
-                      <summary className="cursor-pointer rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">+ {tr('Ajouter du catalogue', 'Add from catalog')}</summary>
-                      <div className="absolute z-20 mt-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-0.5">
-                        {sharedSubclasses.filter(s => !ids.includes(s.id)).map(s => (
-                          <button key={s.id} onClick={() => upd(i, 'subclass_ids', [...ids, s.id])}
-                            className="w-full text-left px-2 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                            <span className="flex-1">{s.name}</span>
-                            <span className="text-[9px] text-gray-400">{s.category}</span>
-                          </button>
-                        ))}
-                        {sharedSubclasses.filter(s => !ids.includes(s.id)).length === 0 && <p className="text-[10px] text-gray-400 px-1 py-2">{tr('Toutes appliquées.', 'All applied.')}</p>}
-                      </div>
-                    </details>
+                    <div className="relative">
+                      <button type="button" onClick={() => setSubPickerFor(subPickerFor === i ? null : i)}
+                        className="rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">
+                        + {tr('Ajouter du catalogue', 'Add from catalog')} ({sharedSubclasses.length})
+                      </button>
+                      {subPickerFor === i && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setSubPickerFor(null)} />
+                          <div className="absolute z-40 mt-1 max-h-64 w-72 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-0.5">
+                            <div className="px-1 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100 dark:border-gray-700 mb-1">
+                              {tr('Cliquez pour ajouter', 'Click to add')}
+                            </div>
+                            {sharedSubclasses.filter(s => !ids.includes(s.id)).map(s => (
+                              <button key={s.id} type="button"
+                                onClick={() => { upd(i, 'subclass_ids', [...ids, s.id]); }}
+                                className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-cyan-50 dark:hover:bg-cyan-900/30 flex items-center gap-2">
+                                <span className="h-3 w-3 rounded-full shrink-0 border border-gray-300" style={{ background: s.color }} />
+                                <span className="flex-1 font-medium">{s.name}</span>
+                                {s.category && <span className="text-[9px] text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">{s.category}</span>}
+                              </button>
+                            ))}
+                            {sharedSubclasses.filter(s => !ids.includes(s.id)).length === 0 && (
+                              <p className="text-[10px] text-gray-400 px-2 py-3 text-center">{tr('Toutes les sous-classes sont déjà appliquées.', 'All sub-classes already applied.')}</p>
+                            )}
+                            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+                              <button type="button" onClick={() => { setSubPickerFor(null); goToSubclasses(); }}
+                                className="w-full text-center text-[10px] text-purple-600 hover:underline py-1">
+                                ⚙️ {tr('Gérer le catalogue', 'Manage catalog')}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <button onClick={goToSubclasses} className="rounded-full border border-dashed border-amber-300 dark:border-amber-500/40 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-50">
                       💡 {tr('Catalogue vide → créez des sous-classes', 'Empty catalog → create sub-classes')}
@@ -3333,8 +3741,8 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                 </div>
               </div>
 
-              {isOpen && r.id && (
-                <PosteSalaryGridPanel tenant={tenant} poste={r} tr={tr} onClose={() => toggle(r.id)} />
+              {isOpen && r.id && perms.viewSalary && (
+                <PosteSalaryGridPanel tenant={tenant} poste={r} tr={tr} onClose={() => toggle(r.id)} canEdit={perms.editSalary} />
               )}
             </div>
           );
