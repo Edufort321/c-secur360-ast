@@ -3519,7 +3519,8 @@ function computeSkillScore(form: SkillForm | undefined, scores: Record<string, n
     }
     const typeScore = swTot > 0 ? (acc / swTot) * 100 : 0; // 0..100
     byType[t.id] = typeScore;
-    const w = Number(t.weight) || 0;
+    // Fallback : si aucun poids de type n'est défini, moyenne simple entre types.
+    const w = Number(t.weight) > 0 ? Number(t.weight) : 1;
     wSum += typeScore * w; wTot += w;
   }
   return { global: wTot > 0 ? wSum / wTot : 0, byType };

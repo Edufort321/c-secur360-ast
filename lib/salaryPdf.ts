@@ -215,8 +215,30 @@ export async function exportEvaluationPdf(opts: {
     doc.setFontSize(11); doc.setTextColor(30);
     doc.text(tr("Objectifs pour la prochaine année", 'Objectives for next year'), M, y); y += 14;
     doc.setFontSize(9); doc.setTextColor(60);
-    doc.text(doc.splitTextToSize(objectives, 515), M, y);
+    const lines = doc.splitTextToSize(objectives, 515);
+    doc.text(lines, M, y);
+    y += lines.length * 12 + 6;
   }
+
+  // ─── Consentement + signatures ───
+  const pageH = doc.internal.pageSize.getHeight();
+  y += 16;
+  if (y > pageH - 120) { doc.addPage(); y = 48; }
+  doc.setDrawColor(120); doc.setFontSize(9); doc.setTextColor(30);
+  doc.rect(M, y, 11, 11); // case à cocher
+  doc.text(doc.splitTextToSize(tr("Je consens avoir pris connaissance de mon évaluation et de l'ajustement salarial proposé.", 'I acknowledge having reviewed my evaluation and the proposed salary adjustment.'), 500), M + 17, y + 9);
+  y += 46;
+  doc.setDrawColor(60);
+  doc.line(M, y, M + 230, y);            // signature employé
+  doc.line(M + 270, y, M + 430, y);      // date
+  doc.setFontSize(8); doc.setTextColor(90);
+  doc.text(tr("Signature de l'employé", 'Employee signature'), M, y + 11);
+  doc.text(tr('Date', 'Date'), M + 270, y + 11);
+  y += 42;
+  doc.line(M, y, M + 230, y);            // signature évaluateur
+  doc.line(M + 270, y, M + 430, y);
+  doc.text(tr("Signature de l'évaluateur", 'Evaluator signature') + (evaluatedBy ? ` — ${evaluatedBy}` : ''), M, y + 11);
+  doc.text(tr('Date', 'Date'), M + 270, y + 11);
 
   doc.save(`${tr('evaluation', 'evaluation')}-${(employeeName || 'employe').replace(/\s+/g, '_')}-${dateStr}.pdf`);
 }
