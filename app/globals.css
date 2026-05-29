@@ -16,3 +16,91 @@
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Tableaux responsives — « cartes empilées » sur cellulaire (< 640px)
+   Ajoutez la classe `mobile-cards` à un <table> et un attribut
+   `data-label="…"` à chaque <td>. Sous 640px : l'en-tête se masque, chaque
+   ligne devient une carte verticale et chaque cellule affiche son label.
+   Au-delà de 640px : tableau classique inchangé.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 639px) {
+  table.mobile-cards,
+  table.mobile-cards tbody {
+    display: block;
+    width: 100%;
+  }
+  table.mobile-cards thead {
+    display: none;
+  }
+  table.mobile-cards tbody tr {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgb(229 231 235);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255);
+  }
+  .dark table.mobile-cards tbody tr {
+    border-color: rgb(55 65 81);
+    background: rgb(31 41 55);
+  }
+  table.mobile-cards tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.3rem 0;
+    border: none;
+    text-align: right;
+    white-space: normal;
+  }
+  table.mobile-cards tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    margin-right: 0.5rem;
+    font-size: 0.7rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    text-align: left;
+    color: rgb(107 114 128);
+  }
+  .dark table.mobile-cards tbody td::before {
+    color: rgb(156 163 175);
+  }
+  /* Cellule sans label (rangée d'actions, colSpan d'édition, etc.) :
+     bloc pleine largeur, le contenu coule naturellement et respecte
+     les classes d'alignement (text-center / text-right) déjà posées. */
+  table.mobile-cards tbody td:not([data-label]) {
+    display: block;
+    width: 100%;
+    padding: 0.4rem 0;
+  }
+  table.mobile-cards tbody td:not([data-label])::before {
+    display: none;
+  }
+  /* Cellule à contenu riche (calculs, plusieurs lignes) : le label se place
+     AU-DESSUS et le contenu s'empile dessous sur toute la largeur. */
+  table.mobile-cards tbody td.mc-stack {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+  table.mobile-cards tbody td.mc-stack::before {
+    margin-bottom: 0.25rem;
+  }
+
+  /* Les champs de saisie occupent l'espace disponible dans la carte
+     (sauf cases à cocher / boutons radio qui gardent leur taille). */
+  table.mobile-cards tbody td input:not([type='checkbox']):not([type='radio']),
+  table.mobile-cards tbody td select,
+  table.mobile-cards tbody td textarea {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+}

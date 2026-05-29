@@ -440,7 +440,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="mobile-cards w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
                 <th className="px-4 py-3">{tr('Employé', 'Employee')}</th>
@@ -457,7 +457,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                 const hrs = Number(s.total_regular) + Number(s.total_overtime) + Number(s.total_premium);
                 return (
                   <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label={tr('Employé', 'Employee')}>
                       <div className="flex items-center gap-2">
                         <div className="grid h-7 w-7 place-items-center rounded-full bg-gray-200 text-xs font-bold dark:bg-gray-600">{(s.employee_name || '?')[0].toUpperCase()}</div>
                         <div>
@@ -466,17 +466,19 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="text-xs font-semibold text-violet-500">P.{weekNum(s.period_start)}</div>
-                      <div className="text-gray-600 dark:text-gray-300">{fmt(s.period_start)} – {fmt(s.period_end)}</div>
+                    <td className="px-4 py-3" data-label={tr('Période', 'Period')}>
+                      <div className="text-right sm:text-left">
+                        <div className="text-xs font-semibold text-violet-500">P.{weekNum(s.period_start)}</div>
+                        <div className="text-gray-600 dark:text-gray-300">{fmt(s.period_start)} – {fmt(s.period_end)}</div>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 font-medium">{hrs.toFixed(1)} h</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{Number(s.total_km_personal).toFixed(0)} km</td>
-                    <td className="px-4 py-3 font-semibold text-red-600">
+                    <td className="px-4 py-3 font-medium" data-label={tr('Heures', 'Hours')}>{hrs.toFixed(1)} h</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300" data-label={tr('Km pers.', 'Pers. km')}>{Number(s.total_km_personal).toFixed(0)} km</td>
+                    <td className="px-4 py-3 font-semibold text-red-600" data-label={tr('Déd. véhicule', 'Vehicle ded.')}>
                       {Number(s.vehicle_deduction || 0) > 0 ? `-${mny(Number(s.vehicle_deduction))}` : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-violet-700">{mny(Number(s.total_amount))}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 font-semibold text-violet-700" data-label={tr('Montant', 'Amount')}>{mny(Number(s.total_amount))}</td>
+                    <td className="px-4 py-3" data-label={tr('Statut', 'Status')}>
                       <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLS[s.status] || STATUS_CLS.draft}`}>
                         {STATUS_LBL[s.status] || s.status}
                       </span>
@@ -597,7 +599,7 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div className="border-b border-gray-100 px-4 py-3 font-bold dark:border-gray-700">{tr('Projets', 'Projects')}</div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="mobile-cards w-full text-sm">
                 <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
                   <th className="px-3 py-2">{tr('Projet', 'Project')}</th><th className="px-3">{tr('Client', 'Client')}</th>
                   <th className="px-3">{tr('Statut projet', 'Project status')}</th><th className="px-3 text-right">{tr('Estimé', 'Est.')}</th>
@@ -608,13 +610,13 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
                     const est = Number(r.estimate?.total || 0); const reel = reelOf(r); const fac = Number(r.po_amount || 0); const marge = fac - reel;
                     return (
                       <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700">
-                        <td className="px-3 py-2"><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
-                        <td className="px-3 text-gray-600 dark:text-gray-300">{r.client_name || '—'}</td>
-                        <td className="px-3"><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{r.status || 'soumission'}</span></td>
-                        <td className="px-3 text-right">{money(est)}</td>
-                        <td className="px-3 text-right">{money(reel)}</td>
-                        <td className="px-3 text-right font-medium">{money(fac)}</td>
-                        <td className={`px-3 text-right font-medium ${marge >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{r.status === 'facture' ? money(marge) : '—'}</td>
+                        <td className="px-3 py-2" data-label={tr('Projet', 'Project')}><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
+                        <td className="px-3 text-gray-600 dark:text-gray-300" data-label={tr('Client', 'Client')}>{r.client_name || '—'}</td>
+                        <td className="px-3" data-label={tr('Statut projet', 'Project status')}><span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{r.status || 'soumission'}</span></td>
+                        <td className="px-3 text-right" data-label={tr('Estimé', 'Est.')}>{money(est)}</td>
+                        <td className="px-3 text-right" data-label={tr('Réel', 'Actual')}>{money(reel)}</td>
+                        <td className="px-3 text-right font-medium" data-label={tr('Facturé', 'Invoiced')}>{money(fac)}</td>
+                        <td className={`px-3 text-right font-medium ${marge >= 0 ? 'text-emerald-600' : 'text-red-600'}`} data-label={tr('Marge', 'Margin')}>{r.status === 'facture' ? money(marge) : '—'}</td>
                       </tr>
                     );
                   })}
@@ -634,7 +636,7 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
             <div className="text-xs text-gray-500 dark:text-gray-400">{tr('Une facture par projet — stockée directement sur le projet.', 'One invoice per project — stored directly on the project.')}</div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="mobile-cards w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
                   <th className="px-4 py-3">{tr('Projet', 'Project')}</th>
@@ -654,13 +656,13 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
                   return (
                     <React.Fragment key={r.id}>
                       <tr className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
-                        <td className="px-4 py-3"><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{r.client_name || '—'}</td>
-                        <td className="px-4 py-3 font-mono">{inv?.invoice_number || <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{fmtDate(inv?.invoice_date)}</td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{fmtDate(inv?.due_date)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">{Number(r.po_amount) > 0 ? money(Number(r.po_amount)) : '—'}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label={tr('Projet', 'Project')}><div className="font-medium">{r.title || r.project_number}</div><div className="text-xs text-gray-400">#{r.project_number}</div></td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300" data-label={tr('Client', 'Client')}>{r.client_name || '—'}</td>
+                        <td className="px-4 py-3 font-mono" data-label={tr('N° facture', 'Invoice #')}>{inv?.invoice_number || <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs" data-label={tr('Date', 'Date')}>{fmtDate(inv?.invoice_date)}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs" data-label={tr('Échéance', 'Due')}>{fmtDate(inv?.due_date)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700" data-label={tr('Montant', 'Amount')}>{Number(r.po_amount) > 0 ? money(Number(r.po_amount)) : '—'}</td>
+                        <td className="px-4 py-3" data-label={tr('Statut', 'Status')}>
                           {st ? <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>{st.label}</span>
                               : <span className="text-xs text-gray-400 dark:text-gray-500">{tr('Non facturé', 'Not invoiced')}</span>}
                         </td>
@@ -769,7 +771,7 @@ function Sites({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div><h2 className="font-bold">{tr('Sites du client', 'Client sites')}</h2><p className="text-xs text-gray-500">{tr('Alimentent le sélecteur « Tous les sites / un site ».', 'Feed the “All sites / one site” selector.')}</p></div>
         <div className="flex gap-2">
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
@@ -778,21 +780,21 @@ function Sites({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
       </div>
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
       <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
+        <table className="mobile-cards w-full text-sm">
           <thead><tr className="text-left text-gray-500 dark:text-gray-400"><th className="px-2 py-2">{tr('Nom', 'Name')}</th><th className="px-2">{tr('Code', 'Code')}</th><th className="px-2">{tr('Type', 'Type')}</th><th className="px-2">{tr('Adresse', 'Address')}</th><th className="px-2">{tr('Actif', 'Active')}</th><th></th></tr></thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} /></td>
-                <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} /></td>
-                <td className="px-2">
+                <td className="px-2 py-1" data-label={tr('Nom', 'Name')}><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} /></td>
+                <td className="px-2" data-label={tr('Code', 'Code')}><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} /></td>
+                <td className="px-2" data-label={tr('Type', 'Type')}>
                   <select className={`${inp} w-28`} value={r.type || 'site'} onChange={e => upd(i, 'type', e.target.value)}>
                     <option value="siege">{tr('Siège', 'HQ')}</option><option value="chantier">{tr('Chantier', 'Job site')}</option><option value="bureau">{tr('Bureau', 'Office')}</option><option value="site">Site</option>
                   </select>
                 </td>
-                <td className="px-2"><input className={inp} value={r.addressText || ''} onChange={e => upd(i, 'addressText', e.target.value)} /></td>
-                <td className="px-2"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                <td className="px-2" data-label={tr('Adresse', 'Address')}><input className={inp} value={r.addressText || ''} onChange={e => upd(i, 'addressText', e.target.value)} /></td>
+                <td className="px-2" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-gray-400">{tr('Aucun site. Ajoute le siège et les chantiers.', 'No site. Add HQ and job sites.')}</td></tr>}
@@ -976,7 +978,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
             <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Entreprise *', 'Company *')}</label>
             <input className={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Hydro-Québec" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Contact', 'Contact')}</label>
               <input className={inp} value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="Jean Dupont" />
@@ -986,7 +988,7 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
               <input className={inp} value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="514-555-0001" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel contact', 'Contact email')}</label>
               <input type="email" className={inp} value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} placeholder="jean@exemple.com" />
@@ -1198,7 +1200,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
         </button>
       </div>
       <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
+        <table className="mobile-cards w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-2 py-1.5">{tr('N° unité', 'Unit #')}</th>
@@ -1259,12 +1261,12 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
                 ? calcInteret(parseFloat(r.interest_monthly)) : null;
               return (
                 <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700 align-top">
-                  <td className="px-2 py-1.5"><input className={`${inp} w-24`} value={r.unit_number} onChange={e => upd(i, 'unit_number', e.target.value)} placeholder="S26105" /></td>
-                  <td className="px-2 py-1.5"><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
-                  <td className="px-2 py-1.5"><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
-                  <td className="px-2 py-1.5"><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2024" /></td>
-                  <td className="px-2 py-1.5"><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1.5" data-label={tr('N° unité', 'Unit #')}><input className={`${inp} w-24`} value={r.unit_number} onChange={e => upd(i, 'unit_number', e.target.value)} placeholder="S26105" /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Marque', 'Make')}><input className={inp} value={r.make} onChange={e => upd(i, 'make', e.target.value)} placeholder="Toyota" /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Modèle', 'Model')}><input className={inp} value={r.model} onChange={e => upd(i, 'model', e.target.value)} placeholder="Corolla" /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Année', 'Year')}><input className={`${inp} w-16`} value={r.year} onChange={e => upd(i, 'year', e.target.value)} placeholder="2024" /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Plaque', 'Plate')}><input className={`${inp} w-24`} value={r.plate} onChange={e => upd(i, 'plate', e.target.value)} placeholder="ABC-123" /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Employé attitré', 'Assigned employee')}>
                     <SelectUp
                       value={r.assigned_to}
                       onChange={v => {
@@ -1281,7 +1283,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
                   </td>
 
                   {/* Régime — toujours visible, permet de changer sans recréer */}
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1.5" data-label={tr('Régime', 'Regime')}>
                     <select className={`${inp} w-40`} value={r.regime} onChange={e => upd(i, 'regime', e.target.value as VRegime)}>
                       <option value="A_achat">{tr('A — Acheté', 'A — Purchased')}</option>
                       <option value="A_bail">{tr('A — Bail', 'A — Lease')}</option>
@@ -1292,7 +1294,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Classe du véhicule — Régime A seulement */}
                   {!isB && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Classe véh.', 'Veh. class')}>
                       <div className="space-y-0.5">
                         <select className={`${inp} w-36`} value={r.vehicle_class || 'tourisme'} onChange={e => upd(i, 'vehicle_class', e.target.value)}>
                           <option value="tourisme">{tr('Tourisme', 'Passenger')}</option>
@@ -1320,7 +1322,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Type moteur — A_achat / A_financement */}
                   {(isAchat || isFin) && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5" data-label={tr('Moteur', 'Engine')}>
                       <select className={`${inp} w-40`} value={r.engine_type} onChange={e => upd(i, 'engine_type', e.target.value as any)}>
                         <option value="thermique">{tr('Thermique (Cat. 10/10.1)', 'ICE (Cl. 10/10.1)')}</option>
                         <option value="electrique">{tr('Électrique/hybride (Cat. 54)', 'EV/PHEV (Cl. 54)')}</option>
@@ -1330,7 +1332,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Prix achat — A_achat / A_financement */}
                   {(isAchat || isFin) && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Prix achat $', 'Purchase $')}>
                       <div className="space-y-0.5">
                         <input type="text" inputMode="decimal" className={`${inp} w-28`} value={r.purchase_price}
                           placeholder="45000" onChange={e => upd(i, 'purchase_price', e.target.value)}
@@ -1376,7 +1378,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Bail mensuel — A_bail */}
                   {isBail && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Bail $/mois', 'Lease $/mo')}>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1">
                           <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.monthly_lease_cost}
@@ -1402,7 +1404,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Intérêts — A_financement */}
                   {isFin && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Intérêts $/mois', 'Interest $/mo')}>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1">
                           <input type="text" inputMode="decimal" className={`${inp} w-24`} value={r.interest_monthly}
@@ -1428,7 +1430,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Taux km — B_personnel */}
                   {isB && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Taux km $/km', 'Km rate $/km')}>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1">
                           <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.km_rate_override}
@@ -1449,14 +1451,14 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
 
                   {/* Km début année — tous sauf B */}
                   {!isB && (
-                    <td className="px-2 py-1.5">
+                    <td className="px-2 py-1.5" data-label={tr('Km début an', 'Km year start')}>
                       <input type="number" min={0} step={1} className={`${inp} w-24`} value={r.km_at_year_start}
                         placeholder="0" onChange={e => upd(i, 'km_at_year_start', e.target.value)} />
                     </td>
                   )}
 
-                  <td className="px-2 py-1.5"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1.5" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2 py-1.5" data-label={tr('Photos', 'Photos')}>
                     <div className="flex items-center gap-1">
                       <label className="cursor-pointer rounded-lg border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
                         title={tr('Ajouter une photo', 'Add photo')}>
@@ -1476,7 +1478,7 @@ function VehicleTable({ regime, label, items, onAdd, upd, del, tr, inp, personne
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-1.5"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                  <td className="px-2 py-1.5 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
                 </tr>
               );
             })}
@@ -1637,7 +1639,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Mois dispos', 'Months avail.')}</label>
                   <input type="number" min={1} max={12} className={inp} value={mois} onChange={e => setMois(e.target.value)} />
@@ -1652,7 +1654,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <input type="checkbox" checked={isSales} onChange={e => setIsSales(e.target.checked)} />
                   {tr('Vendeur d\'autos (0,31 $/km)', 'Auto dealer (0.31/km)')}
@@ -2726,18 +2728,18 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                   {allRequiredSkills.map(s => {
                     const lvl = acquired[s.name] || 0;
                     return (
-                      <div key={s.name} className="grid grid-cols-12 gap-2 items-center text-xs">
-                        <div className="col-span-4 truncate">
+                      <div key={s.name} className="flex flex-col gap-1 text-xs sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center">
+                        <div className="sm:col-span-4 sm:truncate">
                           <span className="font-semibold">{s.name}</span>
                           <span className="text-[9px] text-gray-400 ml-1">×{s.weight}</span>
                           <div className="text-[9px] text-gray-400">{tr('paliers', 'tiers')}: {s.tiers.join(', ')}</div>
                         </div>
-                        <div className="col-span-6">
+                        <div className="sm:col-span-6">
                           <input type="range" min={0} max={s.max_level} value={lvl} disabled={!canEdit}
                             onChange={e => setAcquired(p => ({ ...p, [s.name]: Number(e.target.value) }))}
                             className="w-full" />
                         </div>
-                        <div className="col-span-2 text-right">
+                        <div className="text-right sm:col-span-2">
                           <span className={`font-bold ${lvl >= s.max_level ? 'text-emerald-600' : lvl >= s.max_level / 2 ? 'text-amber-600' : 'text-gray-500'}`}>
                             {lvl}/{s.max_level}
                           </span>
@@ -2939,12 +2941,12 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
                   <div key={r.id || i} className={`px-3 py-2 ${nameEmpty ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
                     <div className="grid grid-cols-12 gap-2 items-end">
                       {/* Couleur */}
-                      <div className="col-span-1">
+                      <div className="col-span-2 sm:col-span-1">
                         <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Coul.', 'Color')}</label>
                         <input type="color" value={r.color} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-full cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
                       </div>
                       {/* Nom (PROMINENT) */}
-                      <div className="col-span-5">
+                      <div className="col-span-10 sm:col-span-5">
                         <label className={`block text-[9px] uppercase font-bold mb-0.5 ${nameEmpty ? 'text-red-600' : 'text-gray-500'}`}>
                           {tr('Nom *', 'Name *')} {nameEmpty && `⚠️ ${tr('Obligatoire', 'Required')}`}
                         </label>
@@ -2957,19 +2959,19 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
                         />
                       </div>
                       {/* Code */}
-                      <div className="col-span-2">
+                      <div className="col-span-6 sm:col-span-2">
                         <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Code (court)', 'Code (short)')}</label>
                         <input className={inp} value={r.code} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH" />
                       </div>
                       {/* Catégorie */}
-                      <div className="col-span-2">
+                      <div className="col-span-6 sm:col-span-2">
                         <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Catégorie', 'Category')}</label>
                         <select className={inp} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
                           <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
                         </select>
                       </div>
                       {/* Actions */}
-                      <div className="col-span-2 flex items-center gap-2 justify-end pb-1">
+                      <div className="col-span-12 flex items-center gap-2 justify-end pb-1 sm:col-span-2">
                         {r.id && usageCounts[r.id] > 0 && (
                           <span className="text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-semibold">
                             {usageCounts[r.id]} {tr('poste(s)', 'post(s)')}
@@ -3155,7 +3157,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div>
           <h2 className="font-bold">{tr('Personnel du planificateur', 'Planner staff')}</h2>
           <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')} <span className="text-emerald-600 font-semibold">✓ {tr('Synchronisé avec le planificateur', 'Synced with planner')}</span></p>
@@ -3193,7 +3195,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       )}
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
       <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
+        <table className="mobile-cards w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Poste / Sous-classe', 'Position / Sub-class')}</th>
@@ -3209,8 +3211,8 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
-                <td className="px-2">
+                <td className="px-2 py-1" data-label={tr('Nom *', 'Name *')}><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
+                <td className="px-2 mc-stack" data-label={tr('Poste / Sous-classe', 'Position / Sub-class')}>
                   {postes.length > 0 ? (
                     <div className="flex flex-col gap-1">
                       <select className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => { upd(i, 'role', e.target.value); upd(i, 'subclass', ''); }}>
@@ -3241,7 +3243,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                     <input className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} />
                   )}
                 </td>
-                <td className="px-2">
+                <td className="px-2 mc-stack" data-label={tr('Site / Dépt', 'Site / Dept')}>
                   {siteTree.length > 0 ? (
                     <select className={`${inp} min-w-[160px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
                       <option value="">— {tr('Aucun', 'None')} —</option>
@@ -3260,24 +3262,24 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                     <input className={`${inp} min-w-[140px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)} placeholder={tr('Site libre', 'Free text')} />
                   )}
                 </td>
-                <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
-                <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
-                <td className="px-2">
+                <td className="px-2" data-label={tr('Téléphone', 'Phone')}><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
+                <td className="px-2" data-label={tr('Courriel', 'Email')}><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
+                <td className="px-2" data-label={tr("Niveau d'accès", 'Access level')}>
                   <select className={`${inp} w-48`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
                     {ACCESS_LEVELS.map(lvl => (
                       <option key={lvl.value} value={lvl.value}>{tr(lvl.label_fr, lvl.label_en)}</option>
                     ))}
                   </select>
                 </td>
-                <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                <td className="px-2 text-center sm:text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
                 {perms.viewSalary && (
-                  <td className="px-2">
+                  <td className="px-2" data-label={tr('Salaire', 'Salary')}>
                     {r.id && r.role
                       ? <button onClick={() => setEvalEmployee(r)} className="inline-flex items-center gap-1 rounded-lg bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-300" title={tr('Évaluation + salaire + compétences', 'Evaluation + salary + skills')}>📊 {tr('Évaluer', 'Evaluate')}</button>
                       : <span className="text-[10px] text-gray-400">—</span>}
                   </td>
                 )}
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={perms.viewSalary ? 9 : 8} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
@@ -3351,7 +3353,7 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
       </div>
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
       <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
+        <table className="mobile-cards w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Type', 'Type')}</th>
@@ -3362,11 +3364,11 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Mégohmmètre', 'Megohmmeter')} /></td>
-                <td className="px-2"><input className={inp} value={r.type || ''} onChange={e => upd(i, 'type', e.target.value)} placeholder={tr('Analyseur', 'Analyzer')} /></td>
-                <td className="px-2"><input className={`${inp} w-32`} value={r.serial_number || ''} onChange={e => upd(i, 'serial_number', e.target.value)} placeholder="SN-001" /></td>
-                <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                <td className="px-2 py-1" data-label={tr('Nom *', 'Name *')}><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Mégohmmètre', 'Megohmmeter')} /></td>
+                <td className="px-2" data-label={tr('Type', 'Type')}><input className={inp} value={r.type || ''} onChange={e => upd(i, 'type', e.target.value)} placeholder={tr('Analyseur', 'Analyzer')} /></td>
+                <td className="px-2" data-label={tr('N° série', 'Serial #')}><input className={`${inp} w-32`} value={r.serial_number || ''} onChange={e => upd(i, 'serial_number', e.target.value)} placeholder="SN-001" /></td>
+                <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
+                <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={5} className="px-2 py-6 text-center text-gray-400">{tr('Aucun équipement. Ajoute-en un.', 'No equipment yet. Add one.')}</td></tr>}
@@ -3380,8 +3382,11 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
 // ─── Types pour grilles salariales ──────────────────────────────────────────
 type GridMode = 'percentage' | 'fixed' | 'custom';
 type SkillReq = { name: string; level?: string };
+// Prime / bonification discrétionnaire — octroyée à la discrétion de la direction
+// EN PLUS du palier (unit 'fixed' = $/an, 'pct' = % du salaire annuel du palier).
+type DiscretionaryBonus = { label: string; amount: number; unit: 'fixed' | 'pct' };
 type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_months_experience: number; commission_pct?: number | null; notes?: string };
-type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; notes?: string };
+type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; discretionary_bonuses?: DiscretionaryBonus[]; notes?: string };
 type Subclass = { id: string; name: string; code?: string; color?: string; category?: string };
 type PosteRow = { id?: string; name: string; code: string; color: string; subclass_ids?: string[] };
 
@@ -3417,6 +3422,16 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Unité de saisie du salaire de base : annuel ($/an) ou horaire ($/h).
+  // La valeur persistée reste toujours base_salary en $/an ; en mode horaire
+  // on convertit via hours_per_year. Sélection de tout le contenu au focus.
+  const [baseUnit, setBaseUnit] = useState<'annual' | 'hourly'>('annual');
+  // Palier dont le sélecteur de compétences est ouvert (null = aucun).
+  const [skillPickerTier, setSkillPickerTier] = useState<number | null>(null);
+  const selectOnFocus = (e: React.FocusEvent) => {
+    const t = e.target as HTMLElement;
+    if (t instanceof HTMLInputElement && (t.type === 'number' || t.type === 'text')) t.select();
+  };
 
   useEffect(() => {
     (async () => {
@@ -3426,9 +3441,9 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
         supabase.from('poste_salary_tiers').select('*').eq('tenant_id', tenant).order('tier_level'),
         supabase.from('poste_skills_catalog').select('*').eq('tenant_id', tenant).eq('active', true).order('category').order('name'),
       ]);
-      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null };
+      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [] };
       if (g) {
-        setGrid({ ...defaultGrid, ...g });
+        setGrid({ ...defaultGrid, ...g, discretionary_bonuses: (g as any).discretionary_bonuses || [] });
         const ts = (t || []).filter((x: any) => x.grid_id === g.id).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
         setTiers(ts.length ? ts : computeTiers({ ...defaultGrid, ...g }));
       } else {
@@ -3468,6 +3483,14 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   }
   function delTier(i: number) { setTiers(p => p.filter((_, j) => j !== i).map((t, j) => ({ ...t, tier_level: j }))); }
 
+  // Primes discrétionnaires — mutation directe (pas de recalcul des paliers,
+  // pour ne pas écraser les compétences assignées en mode percentage/fixed).
+  const mutateBonuses = (fn: (b: DiscretionaryBonus[]) => DiscretionaryBonus[]) =>
+    setGrid(g => g ? { ...g, discretionary_bonuses: fn(g.discretionary_bonuses || []) } : g);
+  const addBonus = () => mutateBonuses(b => [...b, { label: `${tr('Prime', 'Bonus')} ${b.length + 1}`, amount: 0, unit: 'fixed' }]);
+  const updBonus = (idx: number, k: keyof DiscretionaryBonus, v: any) => mutateBonuses(b => b.map((x, j) => j === idx ? { ...x, [k]: v } : x));
+  const delBonus = (idx: number) => mutateBonuses(b => b.filter((_, j) => j !== idx));
+
   function toggleSkillOnTier(i: number, skillName: string) {
     setTiers(p => p.map((t, j) => {
       if (j !== i) return t;
@@ -3486,14 +3509,26 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
     if (!grid) return;
     setSaving(true); setNotice(null);
     try {
-      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, notes: grid.notes || null, updated_at: new Date().toISOString() };
+      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, discretionary_bonuses: grid.discretionary_bonuses || [], notes: grid.notes || null, updated_at: new Date().toISOString() };
       let gridId = grid.id;
+      // Sauvegarde tolérante : si la colonne discretionary_bonuses n'existe pas
+      // encore (migration 074 non exécutée), on réessaie sans ce champ.
+      const isMissingBonusCol = (e: any) => /discretionary_bonuses/i.test(e?.message || '') || e?.code === 'PGRST204';
       if (grid.id) {
-        const { error } = await supabase.from('poste_salary_grids').update(gridPayload).eq('id', grid.id);
+        let { error } = await supabase.from('poste_salary_grids').update(gridPayload).eq('id', grid.id);
+        if (error && isMissingBonusCol(error)) {
+          const { discretionary_bonuses, ...fallback } = gridPayload;
+          ({ error } = await supabase.from('poste_salary_grids').update(fallback).eq('id', grid.id));
+        }
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('poste_salary_grids').insert(gridPayload).select('id').single();
+        let { data, error } = await supabase.from('poste_salary_grids').insert(gridPayload).select('id').single();
+        if (error && isMissingBonusCol(error)) {
+          const { discretionary_bonuses, ...fallback } = gridPayload;
+          ({ data, error } = await supabase.from('poste_salary_grids').insert(fallback).select('id').single());
+        }
         if (error) throw error;
+        if (!data) throw new Error('Insertion de la grille échouée');
         gridId = data.id;
         setGrid(g => g ? { ...g, id: gridId } : g);
       }
@@ -3511,7 +3546,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   const skillsByCategory = skills.reduce((acc, s) => { (acc[s.category] = acc[s.category] || []).push(s); return acc; }, {} as Record<string, typeof skills>);
 
   return (
-    <div className="bg-blue-50/40 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-700">
+    <div className="bg-blue-50/40 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-700" onFocus={selectOnFocus}>
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -3543,8 +3578,27 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Salaire de base $ /an', 'Base salary $/yr')}</label>
-            <input type="number" className={inp2} value={grid.base_salary} onChange={e => updGrid('base_salary', Number(e.target.value))} />
+            <label className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
+              <span>{baseUnit === 'annual' ? tr('Salaire de base $ /an', 'Base salary $/yr') : tr('Salaire de base $ /h', 'Base salary $/hr')}</span>
+              <span className="inline-flex overflow-hidden rounded-md border border-gray-300 dark:border-gray-600">
+                {([['annual', tr('$/an', '$/yr')], ['hourly', tr('$/h', '$/hr')]] as const).map(([u, lbl]) => (
+                  <button key={u} type="button" onClick={() => setBaseUnit(u)}
+                    className={`px-2 py-0.5 text-[10px] font-bold transition ${baseUnit === u ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}`}>
+                    {lbl}
+                  </button>
+                ))}
+              </span>
+            </label>
+            {baseUnit === 'annual' ? (
+              <input type="number" className={inp2} value={grid.base_salary} onChange={e => updGrid('base_salary', Number(e.target.value))} />
+            ) : (
+              <>
+                <input type="number" step={0.01} className={inp2}
+                  value={Math.round((grid.base_salary / (grid.hours_per_year || 2080)) * 100) / 100}
+                  onChange={e => updGrid('base_salary', Math.round(Number(e.target.value) * (grid.hours_per_year || 2080)))} />
+                <p className="mt-0.5 text-[10px] text-gray-400">≈ {money(grid.base_salary)} /{tr('an', 'yr')} ({grid.hours_per_year || 2080} {tr('h/an', 'h/yr')})</p>
+              </>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Plan sur (années)', 'Plan over (years)')}</label>
@@ -3622,6 +3676,56 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
           )}
         </div>
 
+        {/* Section Primes discrétionnaires */}
+        <div className="rounded-xl border border-violet-200 bg-violet-50/40 dark:border-violet-500/30 dark:bg-violet-500/5 p-3">
+          <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h4 className="font-bold text-sm flex items-center gap-1.5 text-violet-700 dark:text-violet-300">
+                🎁 {tr('Primes discrétionnaires', 'Discretionary bonuses')}
+              </h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-xl">
+                {tr("Bonifications optionnelles, octroyées à la discrétion de la direction EN PLUS du palier. Ex. : un employé « Niveau 2 » peut recevoir « Prime 1 ».", "Optional bonuses, granted at management's discretion ON TOP of the tier. E.g. a “Level 2” employee can receive “Bonus 1”.")}
+              </p>
+            </div>
+            {canEdit && (
+              <button onClick={addBonus} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-violet-300 px-2.5 py-1 text-xs font-semibold text-violet-600 hover:bg-violet-100 dark:border-violet-500/40 dark:text-violet-300 dark:hover:bg-violet-500/10">
+                <Plus size={13} /> {tr('Prime', 'Bonus')}
+              </button>
+            )}
+          </div>
+          {(grid.discretionary_bonuses || []).length === 0 ? (
+            <p className="text-[11px] italic text-gray-400">{tr('Aucune prime définie. Cliquez « + Prime » pour en ajouter une.', 'No bonus defined. Click "+ Bonus" to add one.')}</p>
+          ) : (
+            <div className="space-y-2">
+              {(grid.discretionary_bonuses || []).map((b, idx) => (
+                <div key={idx} className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-[8rem] flex-1">
+                    <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Nom de la prime', 'Bonus name')}</label>
+                    <input className={inp2} value={b.label} disabled={!canEdit} placeholder={tr('Ex : Prime 1, Prime rendement', 'E.g. Bonus 1, Performance')} onChange={e => updBonus(idx, 'label', e.target.value)} />
+                  </div>
+                  <div className="w-28">
+                    <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Montant', 'Amount')}</label>
+                    <input type="number" step={b.unit === 'pct' ? 0.1 : 100} min={0} disabled={!canEdit} className={inp2} value={b.amount} onChange={e => updBonus(idx, 'amount', Number(e.target.value))} />
+                  </div>
+                  <div className="w-28">
+                    <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Unité', 'Unit')}</label>
+                    <select className={inp2} value={b.unit} disabled={!canEdit} onChange={e => updBonus(idx, 'unit', e.target.value as 'fixed' | 'pct')}>
+                      <option value="fixed">{tr('$ /an', '$/yr')}</option>
+                      <option value="pct">% {tr('salaire', 'salary')}</option>
+                    </select>
+                  </div>
+                  <div className="pb-1.5 text-[11px] font-semibold text-violet-600 dark:text-violet-300 whitespace-nowrap">
+                    {b.unit === 'pct' ? `≈ ${money((grid.base_salary || 0) * (b.amount || 0) / 100)}` : money(b.amount || 0)}
+                  </div>
+                  {canEdit && (
+                    <button onClick={() => delBonus(idx)} className="pb-1.5 text-gray-400 hover:text-red-600"><Trash2 size={14} /></button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Tableau des paliers */}
         <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
           <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
@@ -3637,7 +3741,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="mobile-cards w-full text-xs">
               <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
                 <th className="px-2 py-1.5 w-8">#</th>
                 <th className="px-2">{tr('Palier', 'Tier name')}</th>
@@ -3651,51 +3755,61 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
               <tbody>
                 {tiers.map((t, i) => (
                   <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50 align-top">
-                    <td className="px-2 py-1.5 font-mono text-gray-400">{t.tier_level}</td>
-                    <td className="px-2">
+                    <td className="px-2 py-1.5 font-mono text-gray-400" data-label="#">{t.tier_level}</td>
+                    <td className="px-2" data-label={tr('Palier', 'Tier name')}>
                       <input className={`${inp2} text-xs`} value={t.tier_name} onChange={e => updTier(i, 'tier_name', e.target.value)} />
                     </td>
-                    <td className="px-2">
+                    <td className="px-2" data-label={tr('Salaire annuel $', 'Annual salary $')}>
                       <input type="number" disabled={grid.mode !== 'custom'} className={`${inp2} text-xs text-right ${grid.mode !== 'custom' ? 'opacity-60' : ''}`} value={t.annual_salary} onChange={e => updTier(i, 'annual_salary', Number(e.target.value))} />
                     </td>
-                    <td className="px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold">{t.hourly_rate.toFixed(2)} $</td>
-                    <td className="px-2">
+                    <td className="px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold" data-label={tr('Taux $/h', 'Hourly $')}>{t.hourly_rate.toFixed(2)} $</td>
+                    <td className="px-2" data-label={tr('Min. mois exp.', 'Min. months exp.')}>
                       <input type="number" min={0} className={`${inp2} w-16 text-xs text-center`} value={t.min_months_experience} onChange={e => updTier(i, 'min_months_experience', Number(e.target.value))} />
                     </td>
                     {grid.commission_enabled && (
-                      <td className="px-2">
+                      <td className="px-2" data-label={tr('Comm. %', 'Comm. %')}>
                         <input type="number" step={0.1} min={0} max={100} className={`${inp2} w-16 text-xs text-right`} value={t.commission_pct ?? ''} placeholder={String(grid.commission_pct || 0)} onChange={e => updTier(i, 'commission_pct', e.target.value === '' ? null : Number(e.target.value))} />
                       </td>
                     )}
-                    <td className="px-2 py-1.5">
-                      <div className="flex flex-wrap gap-1">
+                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Compétences requises', 'Required skills')}>
+                      <div className="flex flex-wrap gap-1 items-center">
                         {t.required_skills.map(s => (
                           <span key={s.name} className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 text-[10px] font-semibold">
                             <Award size={10} /> {s.name}
                             <button onClick={() => toggleSkillOnTier(i, s.name)} className="text-purple-400 hover:text-red-500">×</button>
                           </span>
                         ))}
-                        <details className="inline">
-                          <summary className="cursor-pointer rounded-full border border-dashed border-gray-300 dark:border-gray-600 px-2 py-0.5 text-[10px] text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">+ {tr('Ajouter', 'Add')}</summary>
-                          <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-1">
-                            {Object.entries(skillsByCategory).map(([cat, list]) => (
-                              <div key={cat}>
-                                <div className="px-1 py-0.5 text-[9px] font-bold text-gray-400 uppercase">{cat}</div>
-                                {list.map(s => (
-                                  <button key={s.id} onClick={() => toggleSkillOnTier(i, s.name)}
-                                    className={`block w-full text-left px-2 py-1 rounded text-xs ${t.required_skills.some(x => x.name === s.name) ? 'bg-purple-100 text-purple-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                    {t.required_skills.some(x => x.name === s.name) ? '✓ ' : ''}{s.name}
-                                  </button>
-                                ))}
-                              </div>
-                            ))}
-                            {skills.length === 0 && <p className="text-[10px] text-gray-400 px-1 py-2">{tr('Catalogue vide — ajoutez des compétences ci-dessous.', 'Empty catalog — add skills below.')}</p>}
-                          </div>
-                        </details>
+                        <button type="button" onClick={() => setSkillPickerTier(skillPickerTier === i ? null : i)}
+                          className={`rounded-full border border-dashed px-2 py-0.5 text-[10px] transition ${skillPickerTier === i ? 'border-purple-400 bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-300' : 'border-gray-300 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                          {skillPickerTier === i ? `✕ ${tr('Fermer', 'Close')}` : `+ ${tr('Ajouter', 'Add')}`}
+                        </button>
                       </div>
+                      {/* Sélecteur inline (jamais clippé par le conteneur scrollable) */}
+                      {skillPickerTier === i && (
+                        <div className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-600 dark:bg-gray-800 max-h-56 overflow-y-auto space-y-1.5">
+                          {skills.length === 0 ? (
+                            <p className="text-[10px] text-gray-400 px-1 py-1">{tr('Catalogue vide — ajoutez des compétences dans la section « Catalogue de compétences » ci-dessous ↓', 'Empty catalog — add skills in the "Skills catalog" section below ↓')}</p>
+                          ) : Object.entries(skillsByCategory).map(([cat, list]) => (
+                            <div key={cat}>
+                              <div className="px-0.5 py-0.5 text-[9px] font-bold text-gray-400 uppercase tracking-wide">{cat}</div>
+                              <div className="flex flex-wrap gap-1">
+                                {list.map(s => {
+                                  const on = t.required_skills.some(x => x.name === s.name);
+                                  return (
+                                    <button key={s.id} type="button" onClick={() => toggleSkillOnTier(i, s.name)}
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition ${on ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
+                                      {on ? '✓ ' : ''}{s.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     {grid.mode === 'custom' && (
-                      <td className="px-2"><button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button></td>
+                      <td className="px-2 text-right sm:text-left"><button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button></td>
                     )}
                   </tr>
                 ))}
@@ -3710,8 +3824,8 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
             <Award size={14} /> {tr('Catalogue de compétences', 'Skills catalog')}
             <span className="text-xs text-gray-400 font-normal">({skills.length})</span>
           </h4>
-          <div className="flex gap-2 mb-2">
-            <input className={`${inp2} flex-1`} placeholder={tr('Nom de compétence (ex: Soudure TIG)', 'Skill name (e.g. TIG welding)')} value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSkillToCatalog()} />
+          <div className="flex flex-wrap gap-2 mb-2">
+            <input className={`${inp2} min-w-[12rem] flex-1`} placeholder={tr('Nom de compétence (ex: Soudure TIG)', 'Skill name (e.g. TIG welding)')} value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSkillToCatalog()} />
             <select className={`${inp2} w-32`} value={newSkillCat} onChange={e => setNewSkillCat(e.target.value)}>
               <option>Technique</option>
               <option>Sécurité</option>
@@ -3875,21 +3989,21 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
             <div key={r.id || i} className={`px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 ${!r.name?.trim() ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
               {/* ▌ LIGNE 1 — INFORMATIONS DU POSTE (avec labels) ▐ */}
               <div className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-1">
+                <div className="col-span-2 sm:col-span-1">
                   <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Coul.', 'Color')}</label>
                   <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-full cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
                 </div>
-                <div className="col-span-5">
+                <div className="col-span-10 sm:col-span-5">
                   <label className={`block text-[9px] uppercase font-bold mb-0.5 ${!r.name?.trim() ? 'text-red-600' : 'text-gray-500'}`}>
                     {tr('Nom du poste *', 'Position name *')} {!r.name?.trim() && `⚠️ ${tr('Obligatoire', 'Required')}`}
                   </label>
                   <input className={`${inp} ${!r.name?.trim() ? 'ring-2 ring-red-400 dark:ring-red-500/60 border-red-300' : ''}`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('ex: Technicien senior, Soudeur, Contremaître…', 'e.g. Senior technician, Welder, Foreman…')} autoFocus={!r.id && !r.name} />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-12 sm:col-span-2">
                   <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Code (court)', 'Code (short)')}</label>
                   <input className={inp} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
                 </div>
-                <div className="col-span-4 flex items-end justify-end gap-2 pb-0.5">
+                <div className="col-span-12 flex items-end justify-end gap-2 pb-0.5 sm:col-span-4">
                   {perms.viewSalary ? (
                     <button onClick={() => toggle(r.id)} disabled={!r.id}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
@@ -4244,7 +4358,7 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
           </button>
         </div>
         <div className="overflow-x-auto p-2">
-          <table className="w-full text-sm">
+          <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-2 py-1.5">{tr('Employé', 'Employee')}</th>
               <th className="px-2">{tr('Taux horaire $', 'Hourly rate $')}</th>
@@ -4258,11 +4372,11 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.employee_id} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-2 py-1.5">
+                  <td className="px-2 py-1.5" data-label={tr('Employé', 'Employee')}>
                     <div className="font-medium text-gray-800 dark:text-gray-200">{r.employee_name || r.employee_email}</div>
                     <div className="text-xs text-gray-400">{r.employee_email}</div>
                   </td>
-                  <td className="px-2">
+                  <td className="px-2" data-label={tr('Taux horaire $', 'Hourly rate $')}>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.hourly_rate} placeholder="25.00"
                         onChange={e => upd(i, 'hourly_rate', e.target.value)}
@@ -4270,12 +4384,12 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                       <span className="text-xs text-gray-400">/h</span>
                     </div>
                   </td>
-                  <td className="px-2"><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.ot_multiplier} placeholder="1.50" onChange={e => upd(i, 'ot_multiplier', e.target.value)} /></td>
-                  <td className="px-2"><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.dt_multiplier} placeholder="2.00" onChange={e => upd(i, 'dt_multiplier', e.target.value)} /></td>
-                  <td className="px-2"><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.ot_daily_hrs} placeholder="8" onChange={e => upd(i, 'ot_daily_hrs', e.target.value)} /></td>
-                  <td className="px-2"><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.dt_daily_hrs} placeholder={tr('—', '—')} onChange={e => upd(i, 'dt_daily_hrs', e.target.value)} /></td>
-                  <td className="px-2"><input type="number" min={0} step={1} className={`${inp} w-14`} value={r.ot_weekly_hrs} placeholder="40" onChange={e => upd(i, 'ot_weekly_hrs', e.target.value)} /></td>
-                  <td className="px-2"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2" data-label={tr('×OT', '×OT')}><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.ot_multiplier} placeholder="1.50" onChange={e => upd(i, 'ot_multiplier', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('×DT', '×DT')}><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.dt_multiplier} placeholder="2.00" onChange={e => upd(i, 'dt_multiplier', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Seuil OT/jour h', 'OT/day h')}><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.ot_daily_hrs} placeholder="8" onChange={e => upd(i, 'ot_daily_hrs', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Seuil DT/jour h', 'DT/day h')}><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.dt_daily_hrs} placeholder={tr('—', '—')} onChange={e => upd(i, 'dt_daily_hrs', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Seuil OT/sem h', 'OT/wk h')}><input type="number" min={0} step={1} className={`${inp} w-14`} value={r.ot_weekly_hrs} placeholder="40" onChange={e => upd(i, 'ot_weekly_hrs', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={8} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun employé actif. Créez-en dans Employés → Personnel & planification.', 'No active employee. Create one in Employees → Staff & planning.')}</td></tr>}
@@ -4344,7 +4458,7 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
           </div>
         </div>
         <div className="overflow-x-auto p-2">
-          <table className="w-full text-sm">
+          <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-2 py-1.5">{tr("Nom (affiché à l'employé)", 'Name (shown to employee)')}</th>
               <th className="px-2">{tr('Montant $', 'Amount $')}</th>
@@ -4356,8 +4470,8 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-2 py-1"><input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} /></td>
-                  <td className="px-2">
+                  <td className="px-2 py-1" data-label={tr("Nom (affiché à l'employé)", 'Name (shown to employee)')}><input className={`${inp} w-40`} value={r.name} placeholder={tr('Ex: Dîner', 'Ex: Lunch')} onChange={e => upd(i, 'name', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Montant $', 'Amount $')}>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.amount} placeholder="35.00"
                         onChange={e => upd(i, 'amount', e.target.value)}
@@ -4365,10 +4479,10 @@ function AllowancesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                       <span className="text-xs text-gray-400">$</span>
                     </div>
                   </td>
-                  <td className="px-2 text-center"><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
-                  <td className="px-2"><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
-                  <td className="px-2 text-center"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
-                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                  <td className="px-2 text-center" data-label={tr('Imposable', 'Taxable')}><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
+                  <td className="px-2" data-label={tr('Ordre', 'Order')}><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
+                  <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={6} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucun avantage configuré.', 'No allowance configured.')}</td></tr>}
@@ -4437,7 +4551,7 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
           </div>
         </div>
         <div className="overflow-x-auto p-2">
-          <table className="w-full text-sm">
+          <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
               <th className="px-2 py-1.5">{tr('Nom prime', 'Bonus name')}</th>
               <th className="px-2">{tr('Seuil h/jour', 'Daily h threshold')}</th>
@@ -4450,14 +4564,14 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-2 py-1"><input className={`${inp} w-36`} value={r.name} placeholder={tr('Ex: Prime 5h', 'Ex: 5h bonus')} onChange={e => upd(i, 'name', e.target.value)} /></td>
-                  <td className="px-2">
+                  <td className="px-2 py-1" data-label={tr('Nom prime', 'Bonus name')}><input className={`${inp} w-36`} value={r.name} placeholder={tr('Ex: Prime 5h', 'Ex: 5h bonus')} onChange={e => upd(i, 'name', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('Seuil h/jour', 'Daily h threshold')}>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.trigger_hours} placeholder="5" onChange={e => upd(i, 'trigger_hours', e.target.value)} />
                       <span className="text-xs text-gray-400">h</span>
                     </div>
                   </td>
-                  <td className="px-2">
+                  <td className="px-2" data-label={tr('Montant $', 'Amount $')}>
                     <div className="flex items-center gap-1">
                       <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.bonus_amount} placeholder="25.00"
                         onChange={e => upd(i, 'bonus_amount', e.target.value)}
@@ -4465,10 +4579,10 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
                       <span className="text-xs text-gray-400">$</span>
                     </div>
                   </td>
-                  <td className="px-2 text-center"><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
-                  <td className="px-2"><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
-                  <td className="px-2 text-center"><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
-                  <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                  <td className="px-2 text-center" data-label={tr('Imposable', 'Taxable')}><input type="checkbox" checked={r.is_taxable} onChange={e => upd(i, 'is_taxable', e.target.checked)} /></td>
+                  <td className="px-2" data-label={tr('Ordre', 'Order')}><input type="number" min={0} className={`${inp} w-14`} value={r.sort_order} onChange={e => upd(i, 'sort_order', Number(e.target.value))} /></td>
+                  <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /></td>
+                  <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-sm text-gray-400">{tr('Aucune prime configurée.', 'No bonus configured.')}</td></tr>}
