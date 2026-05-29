@@ -2834,9 +2834,14 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
 
   async function save() {
     setSaving(true); setNotice(null);
+    console.log('[Sous-classes save] rows complets:', JSON.parse(JSON.stringify(rows)));
     let ok = 0, err = 0; const errs: string[] = [];
     const rowsToSave = rows.filter(r => r.name?.trim());
-    if (rowsToSave.length === 0) { setNotice('⚠️ Aucune sous-classe à enregistrer (nom vide)'); setSaving(false); return; }
+    if (rowsToSave.length === 0) {
+      const reasons = rows.map((r, i) => `[${i}] name="${r.name}" (${typeof r.name})`).join(' · ');
+      setNotice(`⚠️ Aucune sous-classe à enregistrer.\nLignes en mémoire : ${rows.length}\n${reasons}`);
+      setSaving(false); return;
+    }
     for (const r of rowsToSave) {
       const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#06b6d4', category: r.category || 'Métier', description: r.description || null, active: r.active !== false, sort_order: r.sort_order || 0 };
       console.log('[Sous-classes save] payload:', payload, 'id:', r.id);
