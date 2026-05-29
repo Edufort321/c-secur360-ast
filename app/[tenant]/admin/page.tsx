@@ -2936,7 +2936,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
               {items.map(({ r, i }) => (
                 <div key={r.id || i} className="flex items-center gap-2 px-3 py-1.5">
                   <input type="color" value={r.color} onChange={e => upd(i, 'color', e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600 shrink-0" />
-                  <input className={`${inp} flex-1`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Nom de sous-classe', 'Sub-class name')} />
+                  <input className={`${inp} flex-1 ${!r.name?.trim() ? 'ring-2 ring-red-400 dark:ring-red-500/60' : ''}`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('⚠️ Tapez le nom ici', '⚠️ Type name here')} autoFocus={!r.id && !r.name} />
                   <input className={`${inp} w-20`} value={r.code} onChange={e => upd(i, 'code', e.target.value)} placeholder="CODE" />
                   <select className={`${inp} w-32`} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
                     <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
