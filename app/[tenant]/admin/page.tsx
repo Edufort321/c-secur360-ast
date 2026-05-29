@@ -2212,11 +2212,11 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
 function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'comptes'>('personnel');
-  const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string }[]>([]);
-  const [postesTick, setPostesTick] = useState(0); // incrément quand postes changent — force re-fetch
+  const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclasses?: Subclass[] }[]>([]);
+  const [postesTick, setPostesTick] = useState(0);
   const reloadPostes = useCallback(async () => {
-    const { data } = await supabase.from('planner_postes').select('id, name, color').eq('tenant_id', tenant).order('name');
-    setSharedPostes(data || []);
+    const { data } = await supabase.from('planner_postes').select('id, name, color, subclasses').eq('tenant_id', tenant).order('name').range(0, 999);
+    setSharedPostes((data || []).map((p: any) => ({ ...p, subclasses: Array.isArray(p.subclasses) ? p.subclasses : [] })));
     setPostesTick(t => t + 1);
   }, [tenant]);
   useEffect(() => { reloadPostes(); }, [reloadPostes]);
@@ -2258,9 +2258,9 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
   );
 }
 
-function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string }[]; postesTick: number }) {
-  type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
-  const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
+function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclasses?: Subclass[] }[]; postesTick: number }) {
+  type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
+  const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
   const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
   const postes = sharedPostes; // ← utilise les postes partagés par le parent (toujours frais)
@@ -2272,12 +2272,12 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
     setLoading(true);
     const [{ data: suc }, { data }] = await Promise.all([
       supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
-      supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
+      supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
     ]);
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
-    setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
+    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -2292,7 +2292,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
     try {
       for (const r of rows) {
         if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || null };
+        const payload = { tenant_id: tenant, name: r.name, role: r.role || null, subclass: r.subclass || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || null };
         if (r.id) await supabase.from('planner_personnel').update(payload).eq('id', r.id);
         else await supabase.from('planner_personnel').insert(payload);
       }
@@ -2336,7 +2336,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
         <table className="w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
-            <th className="px-2">{tr('Poste', 'Position')}</th>
+            <th className="px-2">{tr('Poste / Sous-classe', 'Position / Sub-class')}</th>
             <th className="px-2">{tr('Site / Dépt', 'Site / Dept')}</th>
             <th className="px-2">{tr('Téléphone', 'Phone')}</th>
             <th className="px-2">{tr('Courriel', 'Email')}</th>
@@ -2350,10 +2350,23 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
                 <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
                 <td className="px-2">
                   {postes.length > 0 ? (
-                    <select className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)}>
-                      <option value="">— {tr('Poste', 'Position')} —</option>
-                      {postes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    </select>
+                    <div className="flex flex-col gap-1">
+                      <select className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => { upd(i, 'role', e.target.value); upd(i, 'subclass', ''); }}>
+                        <option value="">— {tr('Poste', 'Position')} —</option>
+                        {postes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                      </select>
+                      {(() => {
+                        const currentPoste = postes.find(p => p.name === r.role);
+                        const subs = currentPoste?.subclasses || [];
+                        if (!r.role || subs.length === 0) return null;
+                        return (
+                          <select className={`${inp} min-w-[130px] text-[11px]`} value={r.subclass || ''} onChange={e => upd(i, 'subclass', e.target.value)} style={{ borderColor: subs.find(s => s.name === r.subclass)?.color || undefined }}>
+                            <option value="">— {tr('Sous-classe', 'Sub-class')} —</option>
+                            {subs.map((sc, idx) => <option key={idx} value={sc.name}>{sc.name}</option>)}
+                          </select>
+                        );
+                      })()}
+                    </div>
                   ) : (
                     <input className={`${inp} min-w-[130px]`} value={r.role || ''} onChange={e => upd(i, 'role', e.target.value)} placeholder={tr('Technicien', 'Technician')} />
                   )}
@@ -2485,7 +2498,8 @@ type GridMode = 'percentage' | 'fixed' | 'custom';
 type SkillReq = { name: string; level?: string };
 type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_months_experience: number; commission_pct?: number | null; notes?: string };
 type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; notes?: string };
-type PosteRow = { id?: string; name: string; code: string; color: string };
+type Subclass = { name: string; code?: string; color?: string };
+type PosteRow = { id?: string; name: string; code: string; color: string; subclasses?: Subclass[] };
 
 function computeTiers(grid: GridRow): TierRow[] {
   const tiers: TierRow[] = [];
@@ -2842,31 +2856,72 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+
+  // Palette de couleurs cyclique pour bulk-create
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_postes').select('id, name, code, color').eq('tenant_id', tenant).order('name');
-    setRows(data || []);
+    const { data, error } = await supabase.from('planner_postes').select('id, name, code, color, subclasses').eq('tenant_id', tenant).order('name').range(0, 999);
+    if (error) setNotice('Erreur chargement : ' + error.message);
+    setRows((data || []).map((r: any) => ({ ...r, subclasses: Array.isArray(r.subclasses) ? r.subclasses : [] })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof PosteRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = () => setRows(p => [...p, empty()]);
+  const addBatch = (n: number) => setRows(p => {
+    const start = p.length;
+    return [...p, ...Array.from({ length: n }, (_, i) => ({ ...empty(), color: COLORS[(start + i) % COLORS.length] }))];
+  });
 
   async function save() {
     setSaving(true); setNotice(null);
-    try {
-      for (const r of rows) {
-        if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, code: r.code || null, color: r.color || '#6b7280' };
-        if (r.id) { const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id); if (error) throw error; }
-        else      { const { error } = await supabase.from('planner_postes').insert(payload);                if (error) throw error; }
+    let okCount = 0, skipCount = 0, errCount = 0;
+    const errors: string[] = [];
+    const inserted: { tempIdx: number; data: any }[] = [];
+    // Traitement séquentiel mais tolérant : un échec n'arrête pas la boucle
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.name?.trim()) { skipCount++; continue; }
+      const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#6b7280', subclasses: r.subclasses || [] };
+      try {
+        if (r.id) {
+          const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id);
+          if (error) throw error;
+          okCount++;
+        } else {
+          const { data, error } = await supabase.from('planner_postes').insert(payload).select('id').single();
+          if (error) throw error;
+          okCount++;
+          if (data?.id) inserted.push({ tempIdx: i, data });
+        }
+      } catch (e: any) {
+        errCount++;
+        errors.push(`${r.name}: ${e?.message || 'erreur'}`);
       }
-      setNotice(tr('Postes enregistrés ✓', 'Positions saved ✓'));
-      await load();
-      onPostesChanged?.();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+    }
+    const msg = `${okCount} ${tr('enregistré(s)', 'saved')}${skipCount ? `, ${skipCount} ${tr('vide(s) ignoré(s)', 'empty skipped')}` : ''}${errCount ? `, ${errCount} ${tr('erreur(s)', 'errors')}` : ''} ${errCount === 0 ? '✓' : ''}`;
+    setNotice(errCount === 0 ? msg : `${msg}\n${errors.slice(0, 3).join(' · ')}${errors.length > 3 ? '…' : ''}`);
+    await load();
+    onPostesChanged?.();
+    setSaving(false);
+  }
+
+  async function bulkImport() {
+    const lines = bulkText.split(/\r?\n|;/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    const newRows: PosteRow[] = lines.map((line, idx) => {
+      // Support format "Nom" ou "Nom | CODE" ou "Nom, CODE"
+      const parts = line.split(/\s*[|,]\s*/);
+      return { name: parts[0], code: parts[1] || '', color: COLORS[(rows.length + idx) % COLORS.length] };
+    });
+    setRows(p => [...p, ...newRows]);
+    setBulkText(''); setShowBulk(false);
+    setNotice(tr(`${newRows.length} poste(s) ajouté(s) — cliquez Enregistrer pour sauvegarder.`, `${newRows.length} position(s) added — click Save to persist.`));
   }
 
   async function del(i: number) {
@@ -2890,32 +2945,91 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div>
-          <h2 className="font-bold">{tr('Postes / Rôles', 'Positions / Roles')}</h2>
-          <p className="text-xs text-gray-500">{tr('Cliquez sur un poste pour configurer sa grille salariale, paliers de progression et compétences requises.', 'Click a position to configure its salary grid, progression tiers and required skills.')}</p>
+          <h2 className="font-bold">{tr('Postes / Rôles', 'Positions / Roles')} <span className="text-xs font-normal text-gray-400">({rows.length})</span></h2>
+          <p className="text-xs text-gray-500">{tr('Cliquez sur un poste pour configurer sa grille salariale, sous-classes, paliers et compétences.', 'Click a position to configure salary grid, sub-classes, tiers and skills.')}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
-          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('1 poste', '1 position')}</button>
+          <button onClick={() => addBatch(10)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> 10</button>
+          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:hover:bg-purple-500/10">📋 {tr('Coller liste', 'Paste list')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer tout', 'Save all')}</button>
         </div>
       </div>
-      {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+      {notice && <div className="px-4 pt-3 text-xs text-blue-700 dark:text-blue-300 whitespace-pre-line">{notice}</div>}
+
+      {/* Modal Import en lot */}
+      {showBulk && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setShowBulk(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-2">📋 {tr('Importer des postes en lot', 'Bulk import positions')}</h3>
+            <p className="text-xs text-gray-500 mb-3">
+              {tr('Un poste par ligne. Optionnel : « Nom | CODE » ou « Nom, CODE ».', 'One position per line. Optional: "Name | CODE" or "Name, CODE".')}
+            </p>
+            <textarea
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              rows={12}
+              autoFocus
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
+              placeholder={`Technicien junior\nTechnicien intermédiaire | TECH-INT\nTechnicien senior, TECH-SR\nContremaître\nChef de projet\nIngénieur électrique\n…`}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s) détectée(s)', 'line(s) detected')}</p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <button onClick={() => { setShowBulk(false); setBulkText(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={bulkImport} disabled={!bulkText.trim()} className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"><Plus size={14} /> {tr('Ajouter tous', 'Add all')}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="divide-y divide-gray-100 dark:divide-gray-700">
         {rows.map((r, i) => {
           const isOpen = !!r.id && expanded.has(r.id);
+          const subs = r.subclasses || [];
           return (
             <div key={r.id || i}>
               <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <button onClick={() => toggle(r.id)} disabled={!r.id} className={`p-1 rounded ${r.id ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : 'opacity-30 cursor-not-allowed'}`} title={r.id ? tr('Configurer grille', 'Configure grid') : tr('Enregistrez d\'abord', 'Save first')}>
+                <button onClick={() => toggle(r.id)} disabled={!r.id} className={`p-1 rounded ${r.id ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : 'opacity-30 cursor-not-allowed'}`} title={r.id ? tr('Configurer grille / sous-classes', 'Configure grid / sub-classes') : tr('Enregistrez d\'abord', 'Save first')}>
                   {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
                 <input className={`${inp} flex-1`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} />
                 <input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
+                {subs.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300" title={subs.map(s => s.name).join(', ')}>
+                    {subs.length} {tr('sous-classes', 'sub-classes')}
+                  </span>
+                )}
                 <div className="flex items-center gap-1.5">
                   <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
                   <span className="text-[10px] text-gray-400 font-mono w-14">{r.color || '#6b7280'}</span>
                 </div>
                 <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={15} /></button>
               </div>
+
+              {/* Mini-éditeur de sous-classes — toujours visible sous chaque poste */}
+              <div className="px-3 pb-2 pl-9">
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] text-gray-400 mr-1">{tr('Sous-classes :', 'Sub-classes:')}</span>
+                  {subs.map((sc, sci) => (
+                    <span key={sci} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border" style={{ background: (sc.color || '#06b6d4') + '20', color: sc.color || '#0891b2', borderColor: (sc.color || '#06b6d4') + '50' }}>
+                      <input type="color" value={sc.color || '#06b6d4'} onChange={e => {
+                        const next = [...subs]; next[sci] = { ...sc, color: e.target.value }; upd(i, 'subclasses', next);
+                      }} className="h-3 w-3 cursor-pointer rounded border-0 p-0" />
+                      <input
+                        className="bg-transparent border-0 outline-none text-[11px] font-semibold w-28"
+                        value={sc.name}
+                        onChange={e => { const next = [...subs]; next[sci] = { ...sc, name: e.target.value }; upd(i, 'subclasses', next); }}
+                        placeholder={tr('Nom', 'Name')}
+                      />
+                      <button onClick={() => { upd(i, 'subclasses', subs.filter((_, x) => x !== sci)); }} className="opacity-60 hover:opacity-100 hover:text-red-500">×</button>
+                    </span>
+                  ))}
+                  <button onClick={() => upd(i, 'subclasses', [...subs, { name: '', color: COLORS[(subs.length) % COLORS.length] }])}
+                    className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">
+                    <Plus size={10} /> {tr('Ajouter sous-classe', 'Add sub-class')}
+                  </button>
+                </div>
+              </div>
+
               {isOpen && r.id && (
                 <PosteSalaryGridPanel tenant={tenant} poste={r} tr={tr} onClose={() => toggle(r.id)} />
               )}
