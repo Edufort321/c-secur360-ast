@@ -512,8 +512,10 @@ export default function LandingPage() {
       {/* ── Pricing ─────────────────────────────────────────────────────────── */}
       {(() => {
         // monthly_price dans la DB = prix ANNUEL par module (nom de colonne trompeur)
-        const FREE_KEYS = ['admin', 'todo']
-        const paidModules = dbModules.filter(m => !FREE_KEYS.includes(m.key) && m.monthly_price > 0)
+        // Gratuit = prix 0 (configurable par l'admin) ; payant = prix > 0
+        const paidModules = dbModules.filter(m => m.monthly_price > 0)
+        const freeModules = dbModules.filter(m => (m.monthly_price || 0) === 0)
+        const freeLabel = freeModules.length > 0 ? freeModules.map(m => fr ? m.name_fr : m.name_en).join(' + ') : ''
         const subtotal = paidModules.length > 0
           ? paidModules.reduce((s, m) => s + m.monthly_price, 0)
           : STATIC_PLANS_FR[1].annual
@@ -546,9 +548,11 @@ export default function LandingPage() {
                   <span className="text-emerald-400 font-black text-sm">-5%</span>
                   <span className="text-emerald-300 text-xs">{fr ? 'par module additionnel (max -30%)' : 'per additional module (max -30%)'}</span>
                 </div>
-                <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5">
-                  <span className="text-orange-300 text-xs font-semibold">{fr ? 'Administration + To-Do inclus GRATUITEMENT' : 'Administration + To-Do FREE with any module'}</span>
-                </div>
+                {freeLabel && (
+                  <div className="inline-flex items-center gap-2 bg-orange-500/15 border border-orange-500/30 rounded-full px-4 py-1.5">
+                    <span className="text-orange-300 text-xs font-semibold">{fr ? `${freeLabel} inclus GRATUITEMENT` : `${freeLabel} FREE with any module`}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -566,7 +570,7 @@ export default function LandingPage() {
                 <div className="space-y-2 flex-1 mb-6">
                   {[
                     fr ? '5 modules au choix' : '5 modules of your choice',
-                    fr ? 'Administration + To-Do GRATUITS' : 'Administration + To-Do FREE',
+                    fr ? `${freeLabel || 'Administration + To-Do'} GRATUITS` : `${freeLabel || 'Administration + To-Do'} FREE`,
                     fr ? '1 site' : '1 site',
                     fr ? 'Application mobile PWA' : 'Mobile PWA app',
                     fr ? 'Support courriel' : 'Email support',
@@ -604,7 +608,7 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-2 flex-1 mb-6">
                   {[
-                    fr ? '13 modules (admin + to-do gratuits)' : '13 modules (admin + to-do free)',
+                    fr ? `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} gratuits)` : ''}` : `${dbModules.length || 13} modules${freeLabel ? ` (${freeLabel} free)` : ''}`,
                     perSitePrice != null
                       ? (fr ? `Multi-sites (+${perSitePrice}$/mois/site additionnel)` : `Multi-site (+$${perSitePrice}/month/additional site)`)
                       : (fr ? 'Multi-sites (prix sur demande)' : 'Multi-site (price on request)'),
@@ -658,15 +662,12 @@ export default function LandingPage() {
                   {fr ? 'Detail par module · prix annuel brut (avant rabais)' : 'Per-module detail · annual list price (before discount)'}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {['admin', 'todo'].map(key => {
-                    const m = dbModules.find(d => d.key === key)
-                    return (
-                      <div key={key} className="flex items-center justify-between bg-[#0D1F3C] border border-orange-500/20 rounded-lg px-3 py-2">
-                        <span className="text-xs text-slate-300">{fr ? (m?.name_fr || key) : (m?.name_en || key)}</span>
-                        <span className="text-xs font-bold text-orange-400 ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
-                      </div>
-                    )
-                  })}
+                  {freeModules.map(m => (
+                    <div key={m.key} className="flex items-center justify-between bg-[#0D1F3C] border border-orange-500/20 rounded-lg px-3 py-2">
+                      <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
+                      <span className="text-xs font-bold text-orange-400 ml-2">{fr ? 'GRATUIT' : 'FREE'}</span>
+                    </div>
+                  ))}
                   {paidModules.map(m => (
                     <div key={m.key} className="flex items-center justify-between bg-[#0D1F3C] border border-white/5 rounded-lg px-3 py-2">
                       <span className="text-xs text-slate-300">{fr ? m.name_fr : m.name_en}</span>
@@ -678,9 +679,11 @@ export default function LandingPage() {
                   <p className="text-emerald-300 text-xs font-semibold">
                     {fr ? `Sous-total brut : ${subtotal}$/an · Rabais -${discountPct}% · Total final : ${totalAnnual}$/an` : `Subtotal: $${subtotal}/yr · -${discountPct}% discount · Final: $${totalAnnual}/yr`}
                   </p>
-                  <p className="text-slate-500 text-xs">
-                    {fr ? 'Administration et To-Do toujours GRATUITS' : 'Administration & To-Do always FREE'}
-                  </p>
+                  {freeLabel && (
+                    <p className="text-slate-500 text-xs">
+                      {fr ? `${freeLabel} GRATUITS` : `${freeLabel} FREE`}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
