@@ -3507,32 +3507,66 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 }
 
 function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Row = { id?: string; name: string; type: string; serial_number: string; is_active: boolean };
-  const empty = (): Row => ({ name: '', type: '', serial_number: '', is_active: true });
+  type Row = { id?: string; name: string; type: string; serial_number: string; is_active: boolean; succursale: string; photo_url: string };
+  const empty = (): Row => ({ name: '', type: '', serial_number: '', is_active: true, succursale: '', photo_url: '' });
   const [rows, setRows] = useState<Row[]>([]);
+  const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [siteFilter, setSiteFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('planner_equipements').select('id, name, type, serial_number, is_active').eq('tenant_id', tenant).order('name');
-    setRows(data || []);
+    const { data: suc } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name');
+    const allSites = (suc || []).filter((r: any) => !r.parent_id);
+    const allDepts = (suc || []).filter((r: any) => r.parent_id);
+    setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
+    // Tente avec succursale/photo_url (migration 080) ; repli sans
+    let data: any[] | null = null;
+    const r1 = await supabase.from('planner_equipements').select('id, name, type, serial_number, is_active, succursale, photo_url').eq('tenant_id', tenant).order('name');
+    if (r1.error) { const r2 = await supabase.from('planner_equipements').select('id, name, type, serial_number, is_active').eq('tenant_id', tenant).order('name'); data = r2.data; }
+    else data = r1.data;
+    setRows((data || []).map((r: any) => ({ ...r, succursale: r.succursale || '', photo_url: r.photo_url || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = () => setRows(p => [...p, empty()]);
+  const filtered = useMemo(() => rows.map((r, i) => ({ r, i })).filter(({ r }) => {
+    const suc = r.succursale || '';
+    if (siteFilter) {
+      if (suc !== siteFilter && !suc.startsWith(siteFilter + ' /')) return false;
+      if (deptFilter && suc !== `${siteFilter} / ${deptFilter}`) return false;
+    }
+    if (search.trim() && ![r.name, r.type, r.serial_number].some(v => (v || '').toLowerCase().includes(search.trim().toLowerCase()))) return false;
+    return true;
+  }), [rows, search, siteFilter, deptFilter]);
+  const filterSiteDepts = siteTree.find(s => s.name === siteFilter)?.depts || [];
+  async function onPhoto(i: number, file: File) {
+    try { const url = await uploadPhoto(file, tenant, supabase); upd(i, 'photo_url', url); } catch { /* ignore */ }
+  }
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
+      const strip = (p: any) => { const { succursale, photo_url, ...rest } = p; return rest; };
+      const isMissing = (e: any) => /succursale|photo_url/i.test(e?.message || '');
       for (const r of rows) {
         if (!r.name?.trim()) continue;
-        const payload = { tenant_id: tenant, name: r.name, type: r.type || null, serial_number: r.serial_number || null, is_active: r.is_active !== false };
-        if (r.id) await supabase.from('planner_equipements').update(payload).eq('id', r.id);
-        else await supabase.from('planner_equipements').insert(payload);
+        const payload: any = { tenant_id: tenant, name: r.name, type: r.type || null, serial_number: r.serial_number || null, is_active: r.is_active !== false, succursale: r.succursale || null, photo_url: r.photo_url || null };
+        if (r.id) {
+          let { error } = await supabase.from('planner_equipements').update(payload).eq('id', r.id);
+          if (error && isMissing(error)) ({ error } = await supabase.from('planner_equipements').update(strip(payload)).eq('id', r.id));
+          if (error) throw error;
+        } else {
+          let { error } = await supabase.from('planner_equipements').insert(payload);
+          if (error && isMissing(error)) ({ error } = await supabase.from('planner_equipements').insert(strip(payload)));
+          if (error) throw error;
+        }
       }
       setNotice(tr('Équipements enregistrés ✓', 'Equipment saved ✓')); load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
@@ -3558,27 +3592,64 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
+      {/* Filtres — gestion au volume */}
+      <div className="flex flex-wrap items-end gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+        <div className="min-w-[10rem] flex-1"><input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('🔍 Rechercher (nom, type, n° série)…', '🔍 Search (name, type, serial)…')} className={inp} /></div>
+        <select value={siteFilter} onChange={e => { setSiteFilter(e.target.value); setDeptFilter(''); }} className={`${inp} w-40`}>
+          <option value="">{tr('Tous les sites', 'All sites')}</option>
+          {siteTree.map(site => <option key={site.id} value={site.name}>{site.name}</option>)}
+        </select>
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} disabled={!siteFilter || filterSiteDepts.length === 0} className={`${inp} w-40 disabled:opacity-50`}>
+          <option value="">{tr('Tous les dépts', 'All depts')}</option>
+          {filterSiteDepts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+        </select>
+        <span className="self-center text-[11px] text-gray-400">{filtered.length}/{rows.length}</span>
+      </div>
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
       <div className="overflow-x-auto p-2">
         <table className="mobile-cards w-full text-sm">
           <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
             <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
             <th className="px-2">{tr('Type', 'Type')}</th>
-            <th className="px-2">{tr('N° série', 'Serial #')}</th>
+            <th className="px-2">{tr('N° série / ID', 'Serial / ID')}</th>
+            <th className="px-2">{tr('Site / Dépt', 'Site / Dept')}</th>
+            <th className="px-2">{tr('Photo', 'Photo')}</th>
             <th className="px-2">{tr('Actif', 'Active')}</th>
             <th></th>
           </tr></thead>
           <tbody>
-            {rows.map((r, i) => (
+            {filtered.map(({ r, i }) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
                 <td className="px-2 py-1" data-label={tr('Nom *', 'Name *')}><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Mégohmmètre', 'Megohmmeter')} /></td>
                 <td className="px-2" data-label={tr('Type', 'Type')}><input className={inp} value={r.type || ''} onChange={e => upd(i, 'type', e.target.value)} placeholder={tr('Analyseur', 'Analyzer')} /></td>
-                <td className="px-2" data-label={tr('N° série', 'Serial #')}><input className={`${inp} w-32`} value={r.serial_number || ''} onChange={e => upd(i, 'serial_number', e.target.value)} placeholder="SN-001" /></td>
+                <td className="px-2" data-label={tr('N° série / ID', 'Serial / ID')}><input className={`${inp} w-32`} value={r.serial_number || ''} onChange={e => upd(i, 'serial_number', e.target.value)} placeholder="SN-001" /></td>
+                <td className="px-2" data-label={tr('Site / Dépt', 'Site / Dept')}>
+                  <select className={`${inp} min-w-[150px]`} value={r.succursale || ''} onChange={e => upd(i, 'succursale', e.target.value)}>
+                    <option value="">— {tr('Aucun', 'None')} —</option>
+                    {siteTree.map(site => (
+                      site.depts.length > 0 ? (
+                        <optgroup key={site.id} label={site.name}>
+                          <option value={site.name}>{site.name} ({tr('site entier', 'whole site')})</option>
+                          {site.depts.map(d => <option key={d.id} value={`${site.name} / ${d.name}`}>{d.name}</option>)}
+                        </optgroup>
+                      ) : <option key={site.id} value={site.name}>{site.name}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-2" data-label={tr('Photo', 'Photo')}>
+                  <div className="flex items-center gap-1">
+                    <label className="cursor-pointer rounded-lg border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700" title={tr('Ajouter une photo', 'Add photo')}>
+                      📷
+                      <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onPhoto(i, f); e.target.value = ''; }} />
+                    </label>
+                    {r.photo_url && <img src={r.photo_url} alt="" className="h-7 w-7 rounded border border-gray-200 object-cover" />}
+                  </div>
+                </td>
                 <td className="px-2 text-center" data-label={tr('Actif', 'Active')}><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
                 <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={5} className="px-2 py-6 text-center text-gray-400">{tr('Aucun équipement. Ajoute-en un.', 'No equipment yet. Add one.')}</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} className="px-2 py-6 text-center text-gray-400">{rows.length === 0 ? tr('Aucun équipement. Ajoute-en un.', 'No equipment yet. Add one.') : tr('Aucun résultat pour ce filtre.', 'No result for this filter.')}</td></tr>}
           </tbody>
         </table>
       </div>
