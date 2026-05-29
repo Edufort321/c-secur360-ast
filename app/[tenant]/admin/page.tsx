@@ -3890,10 +3890,16 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   // La valeur persistée reste toujours base_salary en $/an ; en mode horaire
   // on convertit via hours_per_year. Sélection de tout le contenu au focus.
   const [baseUnit, setBaseUnit] = useState<'annual' | 'hourly'>('annual');
+  const [allPostes, setAllPostes] = useState<{ id: string; name: string }[]>([]); // autres postes (pour copier une grille)
   const selectOnFocus = (e: React.FocusEvent) => {
     const t = e.target as HTMLElement;
     if (t instanceof HTMLInputElement && (t.type === 'number' || t.type === 'text')) t.select();
   };
+
+  useEffect(() => {
+    supabase.from('planner_postes').select('id, name').eq('tenant_id', tenant).neq('id', poste.id!).order('name')
+      .then(({ data }) => setAllPostes((data || []).filter((p: any) => p.name)));
+  }, [tenant, poste.id]);
 
   useEffect(() => {
     (async () => {
@@ -3919,6 +3925,25 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poste.id, tenant]);
+
+  // Copie la grille + compétences d'un autre poste (applique au poste courant, sans enregistrer).
+  async function copyFromPoste(srcId: string) {
+    if (!srcId) return;
+    const { data: g } = await supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', srcId).maybeSingle();
+    if (!g) { setNotice(tr('Ce poste n\'a pas encore de grille.', 'This position has no grid yet.')); return; }
+    const { data: ts } = await supabase.from('poste_salary_tiers').select('*').eq('grid_id', (g as any).id).order('tier_level');
+    const sf = (g as any).skill_form;
+    setGrid(cur => cur ? {
+      ...cur, // conserve id / poste_id / name du poste COURANT
+      mode: g.mode, base_salary: g.base_salary, annual_increase_pct: g.annual_increase_pct, annual_increase_fixed: g.annual_increase_fixed,
+      years_plan: g.years_plan, cola_pct: g.cola_pct, hours_per_year: g.hours_per_year, use_skill_grid: (g as any).use_skill_grid !== false,
+      commission_enabled: g.commission_enabled, commission_pct: g.commission_pct, commission_basis: g.commission_basis, commission_threshold: g.commission_threshold, commission_cap: g.commission_cap,
+      discretionary_bonuses: (g as any).discretionary_bonuses || [],
+      skill_form: sf && Array.isArray(sf.types) ? sf : { types: [] },
+    } : cur);
+    setTiers((ts || []).map((t: any) => ({ ...t, id: undefined, grid_id: undefined, required_skills: t.required_skills || [] })));
+    setNotice(tr('Grille + compétences copiées — ajustez puis Enregistrer.', 'Grid + skills copied — adjust then Save.'));
+  }
 
   function updGrid<K extends keyof GridRow>(k: K, v: GridRow[K]) {
     setGrid(g => {
@@ -4034,6 +4059,12 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
             <h3 className="font-bold text-sm">{tr('Grille salariale — ', 'Salary grid — ')}<span className="text-blue-600 dark:text-blue-400">{poste.name}</span></h3>
           </div>
           <div className="flex flex-wrap gap-2">
+            {canEdit && allPostes.length > 0 && (
+              <select onChange={e => { copyFromPoste(e.target.value); e.target.value = ''; }} defaultValue="" className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" title={tr("Copier la grille + compétences d'un autre poste", 'Copy grid + skills from another position')}>
+                <option value="">⧉ {tr('Copier de…', 'Copy from…')}</option>
+                {allPostes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
             <button onClick={exportPdf} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" title={tr('Exporter la fiche de poste en PDF', 'Export position sheet to PDF')}>
               <ExternalLink size={14} /> {tr('Export PDF', 'Export PDF')}
             </button>
