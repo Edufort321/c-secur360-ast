@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
+import { ARC_2026 } from '@/lib/constants/arc';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -366,9 +367,9 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'paid');
     if (!toExport.length) { alert(tr('Aucune feuille approuvée dans la sélection.', 'No approved sheet in selection.')); return; }
     const rows = [
-      ['Employé', 'Email', 'Période #', 'Période début', 'Période fin', 'Hrs rég', 'Hrs supp', 'Hrs maj', 'Km pers.', 'Montant total', 'Statut'].join(','),
+      ['Employé', 'Email', 'Période #', 'Période début', 'Période fin', 'Hrs rég', 'Hrs supp', 'Hrs maj', 'Km pers.', 'Déduction véhicule', 'Montant total', 'Statut'].join(','),
       ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
-        s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, s.total_amount, s.status].join(',')),
+        s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, Number(s.vehicle_deduction || 0), s.total_amount, s.status].join(',')),
     ].join('\n');
     const a = Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob(['﻿' + rows], { type: 'text/csv;charset=utf-8;' })),
@@ -1064,29 +1065,7 @@ type VRow = {
   photos: string[];
 };
 
-// Taux ARC/Revenu Québec 2026 — à mettre à jour chaque année (sources : canada.ca + revenuquebec.ca)
-const ARC_2026 = {
-  standby_monthly:          0.02,         // 2 %/mois — droit d'usage (federal + QC)
-  standby_lease_frac:       2 / 3,        // 2/3 du coût bail — droit d'usage bail
-  operating_per_km:         0.34,         // avantage fonctionnement fédéral $/km
-  operating_per_km_qc:      0.33,         // avantage fonctionnement Revenu Québec $/km
-  operating_sales:          0.31,         // vendeur/loueur d'autos (fédéral)
-  operating_sales_qc:       0.30,         // vendeur/loueur d'autos (QC)
-  half_method_fraction:     0.50,         // méthode de la moitié
-  km_t1_rate:               0.73,         // remb. perso palier 1 (2026)
-  km_t2_rate:               0.67,         // remb. perso palier 2 (2026)
-  km_t1_threshold:          5000,
-  reduced_standby_km_30d:   1667,         // seuil km perso / 30 j (droit d'usage réduit)
-  reduced_standby_km_annual: 20004,       // seuil annuel équivalent
-  bail_cap:                 1100,         // plafond bail/mois 2026 (hors taxes)
-  interest_cap:             300,          // plafond intérêts financement/mois
-  cca10_rate:               0.30,         // Cat. 10/10.1 thermique — 30 %/an dégressif
-  cca10_cap:                39000,        // plafond coût Cat. 10.1 (2026, hors taxes)
-  cca54_rate:               1.00,         // Cat. 54 ZEV — 100 % an 1
-  cca54_cap:                61000,        // plafond coût Cat. 54
-  perso_km_utilitaire:      1000,         // km perso max/an pour exemption utilitaire
-  reimb_delay_days:         45,           // délai remboursement après fin d'année (jours)
-} as const;
+// Taux ARC/Revenu Québec 2026 — centralisés dans lib/constants/arc.ts (cohérence avec les feuilles de temps)
 
 function calcDPA(prix: number, moteur: 'thermique' | 'electrique', vclass: VClass) {
   if (vclass === 'specialise') return null; // véhicule spécialisé — pas d'avantage imposable

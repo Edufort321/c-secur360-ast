@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
+import { ARC_2026 } from '@/lib/constants/arc';
 
 type Entry = {
   id: string; date: string;
@@ -26,7 +27,7 @@ type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_n
 type Allowance = { id: string; name: string; amount: number; is_taxable: boolean };
 type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
-type AssignedVehicle = { id: string; name: string; make: string; model: string };
+type AssignedVehicle = { id: string; name: string; make: string; model: string; regime?: string; km_rate_override?: number | null; is_sales_employee?: boolean };
 type LogEntry = { id?: string; odometer_start: number; odometer_end: number; km_personal: number };
 
 const CATS = [
@@ -36,7 +37,7 @@ const CATS = [
   { k: 'autre',   label: 'Autre',            icon: MoreHorizontal },
 ] as const;
 
-const OPERATING_RATE = 0.35; // ARC 2025 $/km
+// Taux centralisés ARC 2026 (cohérence avec l'admin véhicules) — voir lib/constants/arc.ts
 
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
@@ -115,10 +116,9 @@ export default function TimesheetDetailPage() {
 
         // Load assigned company vehicle + logbook entry
         const { data: av } = await supabase.from('vehicles')
-          .select('id,name,make,model')
+          .select('id,name,make,model,regime,km_rate_override,is_sales_employee')
           .eq('tenant_id', tenant)
           .eq('assigned_to', sh.employee_id)
-          .eq('type', 'company')
           .eq('active', true)
           .maybeSingle();
         if (av) {
@@ -250,10 +250,19 @@ export default function TimesheetDetailPage() {
   }), { hrs_regular: 0, hrs_overtime: 0, hrs_premium: 0, km_personal: 0, km_company: 0, amount: 0, allowances: 0 }),
   [entries, profile, rates, kmRate]); // eslint-disable-line
 
+  // Taux $/km appliqué selon le régime du véhicule assigné (normes ARC 2026 de l'admin)
+  const vehicleRate = useMemo(() => {
+    const regime = assignedVehicle?.regime || '';
+    // Régime A (véhicule de l'employeur, ou ancien véhicule sans régime) : avantage fonctionnement
+    if (!regime || regime.startsWith('A_')) {
+      return assignedVehicle?.is_sales_employee ? ARC_2026.operating_sales : ARC_2026.operating_per_km;
+    }
+    return 0; // Régime B (véhicule personnel) : pas de déduction d'usage perso (remboursement km affaires géré séparément)
+  }, [assignedVehicle]);
   const vehicleDeduction = useMemo(() => {
     if (!assignedVehicle || !logEntry) return 0;
-    return Math.max(0, Number(logEntry.km_personal)) * OPERATING_RATE;
-  }, [assignedVehicle, logEntry]);
+    return Math.max(0, Number(logEntry.km_personal) || 0) * vehicleRate;
+  }, [assignedVehicle, logEntry, vehicleRate]);
 
   // Commission de vente reportée sur cette feuille (posée par le module Projets)
   const commissions = Number(sheet?.total_commissions) || 0;
@@ -706,7 +715,7 @@ export default function TimesheetDetailPage() {
                 )}
                 {vehicleDeduction > 0 && (
                   <div className="flex items-center justify-between text-red-600">
-                    <span className="flex items-center gap-1.5"><Car size={13} /> Déduction véhicule ({Number(logEntry?.km_personal || 0).toFixed(0)} km pers. × {OPERATING_RATE}$/km ARC 2025)</span>
+                    <span className="flex items-center gap-1.5"><Car size={13} /> Déduction véhicule ({Number(logEntry?.km_personal || 0).toFixed(0)} km pers. × {vehicleRate.toFixed(2)} $/km · {assignedVehicle?.is_sales_employee ? 'vendeur ' : ''}ARC 2026)</span>
                     <span className="font-semibold">-{money(vehicleDeduction)}</span>
                   </div>
                 )}
