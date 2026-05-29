@@ -12,6 +12,134 @@ import { uploadPhoto } from '@/lib/utils/photo';
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
+// ─── Niveaux d'accès & matrice de permissions ───────────────────────────────
+type AccessLevel = 'consultation' | 'modification' | 'coordination' | 'administration' | 'admin_paie' | 'rh' | 'direction' | 'super_user';
+
+// Cascade numérotée du plus bas (1) au plus haut (8) niveau d'accès
+const ACCESS_LEVELS: { value: AccessLevel; tier: number; label_fr: string; label_en: string; emoji: string; desc_fr: string; desc_en: string }[] = [
+  { value: 'consultation',   tier: 1, label_fr: 'Consultation',           label_en: 'View only',         emoji: '👁️',  desc_fr: 'Lecture seule des données qui le concernent.',                    desc_en: 'Read-only access to own data.' },
+  { value: 'modification',   tier: 2, label_fr: 'Modification',           label_en: 'Edit',              emoji: '✏️',  desc_fr: 'Modifie ses propres informations.',                              desc_en: 'Edit own information.' },
+  { value: 'coordination',   tier: 3, label_fr: 'Coordination',           label_en: 'Coordinate',        emoji: '🗓️',  desc_fr: 'Voit la liste des employés et coordonne le planning.',          desc_en: 'View staff list and coordinate planning.' },
+  { value: 'administration', tier: 4, label_fr: 'Administration',         label_en: 'Admin',             emoji: '⚙️',  desc_fr: 'Gère les employés, postes et accès. Pas d\'accès aux salaires.', desc_en: 'Manage staff, positions, access. No salary access.' },
+  { value: 'admin_paie',     tier: 5, label_fr: 'Admin paie & avantages', label_en: 'Payroll admin',     emoji: '💵',  desc_fr: 'Voit et modifie les salaires/avantages. Mène les évaluations.',  desc_en: 'View/edit salaries/benefits. Run evaluations.' },
+  { value: 'rh',             tier: 6, label_fr: 'Ressources humaines',    label_en: 'HR',                emoji: '🤝',  desc_fr: 'Toutes fonctions Admin + Paie. Embauche/évaluation/sanctions.',   desc_en: 'All Admin + Payroll. Hiring/evaluation/discipline.' },
+  { value: 'direction',      tier: 7, label_fr: 'Direction',              label_en: 'Management',        emoji: '🏢',  desc_fr: 'Vue exécutive. Accès complet aux KPI, salaires et stratégie.',   desc_en: 'Executive view. Full KPI, salary and strategic access.' },
+  { value: 'super_user',     tier: 8, label_fr: 'Super-utilisateur',      label_en: 'Super-user',        emoji: '👑',  desc_fr: 'Accès TOTAL au tenant. Configuration système, migrations, dette.', desc_en: 'TOTAL tenant access. System config, migrations, debt.' },
+];
+
+// Matrice des permissions — clé = niveau, valeur = ce qui est accessible
+const PERMS: Record<AccessLevel, { viewEmployees: boolean; modifyEmployees: boolean; viewSalary: boolean; editSalary: boolean; evaluate: boolean; coordinate: boolean; viewAuth: boolean; managePostes: boolean; manageAll: boolean }> = {
+  consultation:   { viewEmployees: false, modifyEmployees: false, viewSalary: false, editSalary: false, evaluate: false, coordinate: false, viewAuth: false, managePostes: false, manageAll: false },
+  modification:   { viewEmployees: false, modifyEmployees: false, viewSalary: false, editSalary: false, evaluate: false, coordinate: false, viewAuth: false, managePostes: false, manageAll: false },
+  coordination:   { viewEmployees: true,  modifyEmployees: true,  viewSalary: false, editSalary: false, evaluate: false, coordinate: true,  viewAuth: false, managePostes: true,  manageAll: false },
+  administration: { viewEmployees: true,  modifyEmployees: true,  viewSalary: false, editSalary: false, evaluate: false, coordinate: true,  viewAuth: true,  managePostes: true,  manageAll: false },
+  admin_paie:     { viewEmployees: true,  modifyEmployees: false, viewSalary: true,  editSalary: true,  evaluate: true,  coordinate: false, viewAuth: false, managePostes: false, manageAll: false },
+  rh:             { viewEmployees: true,  modifyEmployees: true,  viewSalary: true,  editSalary: true,  evaluate: true,  coordinate: false, viewAuth: true,  managePostes: true,  manageAll: false },
+  direction:      { viewEmployees: true,  modifyEmployees: true,  viewSalary: true,  editSalary: true,  evaluate: true,  coordinate: true,  viewAuth: true,  managePostes: true,  manageAll: true  },
+  super_user:     { viewEmployees: true,  modifyEmployees: true,  viewSalary: true,  editSalary: true,  evaluate: true,  coordinate: true,  viewAuth: true,  managePostes: true,  manageAll: true  },
+};
+
+function AccessGuideModal({ tr, onClose }: { tr: (f: string, e: string) => string; onClose: () => void }) {
+  const sortedLevels = [...ACCESS_LEVELS].sort((a, b) => a.tier - b.tier);
+  const cell = (yes: boolean) => yes ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-gray-300">—</span>;
+  // Couleurs en classes Tailwind statiques (pas de string interpolation pour purge)
+  const tierStyles: Record<number, string> = {
+    1: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600',
+    2: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/40',
+    3: 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/40',
+    4: 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/40',
+    5: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40',
+    6: 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-500/20 dark:text-pink-300 dark:border-pink-500/40',
+    7: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40',
+    8: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40',
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-4xl rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3 sticky top-0 bg-white dark:bg-gray-800 pb-2 z-10">
+          <div>
+            <h3 className="font-bold text-lg">🔐 {tr('Guide des niveaux d\'accès', 'Access levels guide')}</h3>
+            <p className="text-xs text-gray-500">{tr('Cascade du plus bas (1) au plus haut (8) — chaque niveau hérite du précédent + ajoute des droits.', 'Cascade from lowest (1) to highest (8) — each level inherits from the previous + adds more rights.')}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+        </div>
+
+        {/* Cascade visuelle */}
+        <div className="relative pl-8 mb-6">
+          {/* Ligne verticale de cascade */}
+          <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gradient-to-b from-gray-300 via-blue-300 via-indigo-400 via-amber-400 via-pink-400 via-emerald-400 to-red-500" />
+          {sortedLevels.map((lvl, idx) => {
+            const p = PERMS[lvl.value];
+            return (
+              <div key={lvl.value} className="relative mb-3 last:mb-0">
+                {/* Pastille numéro */}
+                <div className={`absolute -left-7 top-2 grid h-7 w-7 place-items-center rounded-full text-xs font-bold border-2 ${tierStyles[lvl.tier]}`}>
+                  {lvl.tier}
+                </div>
+                {/* Carte du niveau */}
+                <div className={`rounded-xl border-2 p-3 ${tierStyles[lvl.tier]}`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{lvl.emoji}</span>
+                      <div>
+                        <div className="font-bold text-sm">{tr(lvl.label_fr, lvl.label_en)}</div>
+                        <div className="text-[11px] opacity-80">{tr(lvl.desc_fr, lvl.desc_en)}</div>
+                      </div>
+                    </div>
+                    {/* Mini-grille de droits */}
+                    <div className="flex gap-2 text-[10px] font-semibold">
+                      <span title={tr('Voir employés', 'View staff')}    className="flex items-center gap-0.5">{cell(p.viewEmployees)}👥</span>
+                      <span title={tr('Modifier employés', 'Edit staff')} className="flex items-center gap-0.5">{cell(p.modifyEmployees)}✏️</span>
+                      <span title={tr('Voir salaire', 'View salary')}     className="flex items-center gap-0.5">{cell(p.viewSalary)}💵</span>
+                      <span title={tr('Modifier salaire', 'Edit salary')} className="flex items-center gap-0.5">{cell(p.editSalary)}💰</span>
+                      <span title={tr('Évaluer', 'Evaluate')}             className="flex items-center gap-0.5">{cell(p.evaluate)}📊</span>
+                      <span title={tr('Coordonner', 'Coordinate')}        className="flex items-center gap-0.5">{cell(p.coordinate)}🗓️</span>
+                      <span title={tr('Comptes auth', 'Auth')}            className="flex items-center gap-0.5">{cell(p.viewAuth)}🔑</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Flèche vers le bas */}
+                {idx < sortedLevels.length - 1 && <div className="absolute -left-5 -bottom-2 text-gray-400 text-xs">▼</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Légende */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-3">
+          <div className="text-xs font-bold mb-1.5">{tr('Légende des icônes', 'Icon legend')} :</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
+            <div>👥 {tr('Voir employés', 'View staff')}</div>
+            <div>✏️ {tr('Modifier employés', 'Edit staff')}</div>
+            <div>💵 {tr('Voir salaire', 'View salary')}</div>
+            <div>💰 {tr('Modifier salaire', 'Edit salary')}</div>
+            <div>📊 {tr('Évaluer', 'Evaluate')}</div>
+            <div>🗓️ {tr('Coordonner', 'Coordinate')}</div>
+            <div>🔑 {tr('Comptes auth', 'Auth accounts')}</div>
+          </div>
+        </div>
+
+        {/* Notes importantes */}
+        <div className="space-y-2 text-xs">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10 p-3">
+            🔒 <strong className="text-emerald-700 dark:text-emerald-300">{tr('Salaires bloqués', 'Salary blocked')} :</strong>{' '}
+            {tr('niveaux 1 à 4 ne voient PAS les salaires. Seuls Admin paie (5), RH (6), Direction (7), Super-utilisateur (8) y ont accès.', 'levels 1–4 do NOT see salaries. Only Payroll admin (5), HR (6), Management (7), Super-user (8) can access them.')}
+          </div>
+          <div className="rounded-lg border border-blue-200 bg-blue-50/60 dark:border-blue-500/30 dark:bg-blue-500/10 p-3">
+            👥 <strong className="text-blue-700 dark:text-blue-300">{tr('Liste des employés', 'Staff list')} :</strong>{' '}
+            {tr('accessible à partir du niveau 3 (Coordination). Les niveaux 1 et 2 ne voient que leurs propres données.', 'accessible from level 3 (Coordination). Levels 1 and 2 see only their own data.')}
+          </div>
+          <div className="rounded-lg border border-red-200 bg-red-50/60 dark:border-red-500/30 dark:bg-red-500/10 p-3">
+            👑 <strong className="text-red-700 dark:text-red-300">{tr('Direction (7) & Super-utilisateur (8)', 'Management (7) & Super-user (8)')} :</strong>{' '}
+            {tr('accès TOTAL incluant configuration système. À attribuer avec parcimonie.', 'TOTAL access including system config. Assign sparingly.')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AutocompleteInput({ value, onChange, suggestions, placeholder, className }: {
   value: string; onChange: (v: string) => void;
   suggestions: string[]; placeholder?: string; className?: string;
@@ -2046,7 +2174,12 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
 
   function pickPersonnel(p: Personnel) {
     setSelected(p); setNotice(null); setCopied(false);
-    const niveauToRole: Record<string, string> = { administration: 'client_admin', coordination: 'client_admin', admin_paie: 'client_admin', modification: 'user', consultation: 'user' };
+    const niveauToRole: Record<string, string> = {
+      super_user: 'super_admin', direction: 'client_admin',
+      rh: 'client_admin', admin_paie: 'client_admin',
+      administration: 'client_admin', coordination: 'client_admin',
+      modification: 'user', consultation: 'user',
+    };
     setForm({
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
@@ -2209,17 +2342,176 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
   );
 }
 
+function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onSubclassesChanged?: () => void }) {
+  type Row = { id?: string; name: string; code: string; color: string; category: string; description: string; active: boolean; sort_order: number };
+  const empty = (): Row => ({ name: '', code: '', color: '#06b6d4', category: 'Métier', description: '', active: true, sort_order: 0 });
+  const COLORS = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#84cc16', '#f97316', '#6366f1'];
+  const [rows, setRows] = useState<Row[]>([]);
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('Métier');
+
+  async function load() {
+    setLoading(true);
+    const [{ data, error }, { data: postes }] = await Promise.all([
+      supabase.from('poste_subclasses_catalog').select('*').eq('tenant_id', tenant).order('category').order('name').range(0, 999),
+      supabase.from('planner_postes').select('subclass_ids').eq('tenant_id', tenant).range(0, 999),
+    ]);
+    if (error) setNotice('Erreur chargement : ' + error.message);
+    setRows(data || []);
+    // Compter combien de postes utilisent chaque sous-classe
+    const counts: Record<string, number> = {};
+    (postes || []).forEach((p: any) => { (p.subclass_ids || []).forEach((sid: string) => { counts[sid] = (counts[sid] || 0) + 1; }); });
+    setUsageCounts(counts);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = () => setRows(p => [...p, { ...empty(), color: COLORS[p.length % COLORS.length], sort_order: p.length }]);
+
+  async function save() {
+    setSaving(true); setNotice(null);
+    let ok = 0, err = 0; const errs: string[] = [];
+    for (const r of rows) {
+      if (!r.name?.trim()) continue;
+      const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#06b6d4', category: r.category || 'Métier', description: r.description || null, active: r.active !== false, sort_order: r.sort_order || 0 };
+      try {
+        if (r.id) { const { error } = await supabase.from('poste_subclasses_catalog').update(payload).eq('id', r.id); if (error) throw error; }
+        else      { const { error } = await supabase.from('poste_subclasses_catalog').insert(payload);                if (error) throw error; }
+        ok++;
+      } catch (e: any) { err++; errs.push(`${r.name}: ${e?.message || 'erreur'}`); }
+    }
+    setNotice(`${ok} ${tr('enregistré(s)', 'saved')}${err ? `, ${err} ${tr('erreur(s)', 'errors')}` : ' ✓'}${err ? `\n${errs.slice(0, 3).join(' · ')}` : ''}`);
+    await load(); onSubclassesChanged?.(); setSaving(false);
+  }
+
+  async function del(i: number) {
+    const r = rows[i];
+    if (r.id) {
+      if (usageCounts[r.id] > 0 && !confirm(tr(`Cette sous-classe est utilisée par ${usageCounts[r.id]} poste(s). Supprimer quand même ?`, `This sub-class is used by ${usageCounts[r.id]} position(s). Delete anyway?`))) return;
+      await supabase.from('poste_subclasses_catalog').delete().eq('id', r.id);
+      onSubclassesChanged?.();
+    }
+    setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  function bulkImport() {
+    const lines = bulkText.split(/\r?\n|;/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    const newRows: Row[] = lines.map((line, idx) => {
+      const parts = line.split(/\s*[|,]\s*/);
+      return { ...empty(), name: parts[0], code: parts[1] || '', category: bulkCategory, color: COLORS[(rows.length + idx) % COLORS.length], sort_order: rows.length + idx };
+    });
+    setRows(p => [...p, ...newRows]);
+    setBulkText(''); setShowBulk(false);
+    setNotice(tr(`${newRows.length} sous-classe(s) ajoutée(s) — cliquez Enregistrer.`, `${newRows.length} sub-class(es) added — click Save.`));
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  const byCategory = rows.reduce((acc, r, i) => { (acc[r.category || 'Autre'] = acc[r.category || 'Autre'] || []).push({ r, i }); return acc; }, {} as Record<string, { r: Row; i: number }[]>);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700 flex-wrap gap-2">
+        <div>
+          <h2 className="font-bold">{tr('Catalogue de sous-classes', 'Sub-classes catalog')} <span className="text-xs font-normal text-gray-400">({rows.length})</span></h2>
+          <p className="text-xs text-gray-500">{tr('Créez une sous-classe une fois (ex: « Technique ») et appliquez-la à plusieurs postes.', 'Create a sub-class once (e.g. "Technical") and apply it to multiple positions.')}</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
+          <button onClick={() => setShowBulk(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40">📋 {tr('Coller liste', 'Paste list')}</button>
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+        </div>
+      </div>
+      {notice && <div className="px-4 pt-3 text-xs text-blue-700 dark:text-blue-300 whitespace-pre-line">{notice}</div>}
+
+      {showBulk && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setShowBulk(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold mb-2">📋 {tr('Importer des sous-classes', 'Import sub-classes')}</h3>
+            <div className="mb-2">
+              <label className="text-xs text-gray-500">{tr('Catégorie pour toutes les lignes', 'Category for all lines')}</label>
+              <select className={inp} value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}>
+                <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+              </select>
+            </div>
+            <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={10} autoFocus
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
+              placeholder={`Technique\nÉlectrique | EL\nMécanique\nSoudure TIG\nGestion\n…`} />
+            <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s)', 'lines')}</p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <button onClick={() => { setShowBulk(false); setBulkText(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
+              <button onClick={bulkImport} disabled={!bulkText.trim()} className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">{tr('Ajouter', 'Add')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="p-3 space-y-4">
+        {Object.entries(byCategory).map(([cat, items]) => (
+          <div key={cat} className="rounded-xl border border-gray-100 dark:border-gray-700">
+            <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+              {cat} <span className="text-gray-400 font-normal">({items.length})</span>
+            </div>
+            <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
+              {items.map(({ r, i }) => (
+                <div key={r.id || i} className="flex items-center gap-2 px-3 py-1.5">
+                  <input type="color" value={r.color} onChange={e => upd(i, 'color', e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600 shrink-0" />
+                  <input className={`${inp} flex-1`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Nom de sous-classe', 'Sub-class name')} />
+                  <input className={`${inp} w-20`} value={r.code} onChange={e => upd(i, 'code', e.target.value)} placeholder="CODE" />
+                  <select className={`${inp} w-32`} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
+                    <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                  </select>
+                  {r.id && usageCounts[r.id] > 0 && (
+                    <span className="text-[10px] rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-semibold shrink-0">
+                      {usageCounts[r.id]} {tr('poste(s)', 'post(s)')}
+                    </span>
+                  )}
+                  <label className="flex items-center gap-1 text-xs cursor-pointer shrink-0">
+                    <input type="checkbox" checked={r.active} onChange={e => upd(i, 'active', e.target.checked)} /> {tr('Actif', 'Active')}
+                  </label>
+                  <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1 shrink-0"><Trash2 size={14} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <div className="text-center text-sm text-gray-400 py-12">
+            <p>{tr('Aucune sous-classe. Créez-en pour pouvoir les appliquer aux postes.', 'No sub-class. Create some to apply them to positions.')}</p>
+            <p className="mt-1 text-xs">{tr('Ex: Technique, Électrique, Mécanique, Soudure TIG, Gestion…', 'E.g. Technical, Electrical, Mechanical, TIG welding, Management…')}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-  const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'comptes'>('personnel');
-  const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclasses?: Subclass[] }[]>([]);
+  const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'sousclasses' | 'comptes'>('personnel');
+  const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string; subclass_ids?: string[] }[]>([]);
+  const [sharedSubclasses, setSharedSubclasses] = useState<{ id: string; name: string; code?: string; color?: string; category?: string }[]>([]);
   const [postesTick, setPostesTick] = useState(0);
+
   const reloadPostes = useCallback(async () => {
-    const { data } = await supabase.from('planner_postes').select('id, name, color, subclasses').eq('tenant_id', tenant).order('name').range(0, 999);
-    setSharedPostes((data || []).map((p: any) => ({ ...p, subclasses: Array.isArray(p.subclasses) ? p.subclasses : [] })));
+    const { data } = await supabase.from('planner_postes').select('id, name, color, subclass_ids').eq('tenant_id', tenant).order('name').range(0, 999);
+    setSharedPostes((data || []).map((p: any) => ({ ...p, subclass_ids: Array.isArray(p.subclass_ids) ? p.subclass_ids : [] })));
     setPostesTick(t => t + 1);
   }, [tenant]);
-  useEffect(() => { reloadPostes(); }, [reloadPostes]);
+
+  const reloadSubclasses = useCallback(async () => {
+    const { data } = await supabase.from('poste_subclasses_catalog').select('id, name, code, color, category').eq('tenant_id', tenant).eq('active', true).order('category').order('name').range(0, 999);
+    setSharedSubclasses(data || []);
+  }, [tenant]);
+
+  useEffect(() => { reloadPostes(); reloadSubclasses(); }, [reloadPostes, reloadSubclasses]);
   return (
     <div className="space-y-4">
       {/* Module cross-links */}
@@ -2236,11 +2528,12 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
         ))}
       </div>
       {/* Sous-onglets */}
-      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800 flex-wrap">
         {[
-          { k: 'personnel', label: tr('Personnel & planification', 'Staff & planning'), icon: HardHat },
-          { k: 'postes',    label: tr('Postes',                    'Positions'),         icon: Layers },
-          { k: 'comptes',   label: tr('Comptes d\'accès',          'Access accounts'),    icon: UserCog },
+          { k: 'personnel',   label: tr('Personnel & planification', 'Staff & planning'), icon: HardHat },
+          { k: 'postes',      label: tr('Postes',                    'Positions'),         icon: Layers },
+          { k: 'sousclasses', label: tr('Sous-classes',              'Sub-classes'),       icon: Wrench },
+          { k: 'comptes',     label: tr('Comptes d\'accès',          'Access accounts'),    icon: UserCog },
         ].map(x => {
           const Icon = x.icon as any;
           return (
@@ -2251,14 +2544,15 @@ function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
           );
         })}
       </div>
-      {subTab === 'personnel' && <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} postesTick={postesTick} />}
-      {subTab === 'postes'    && <PostesPlanner    tenant={tenant} tr={tr} inp={inp} onPostesChanged={reloadPostes} />}
-      {subTab === 'comptes'   && <ComptesAcces     tenant={tenant} tr={tr} />}
+      {subTab === 'personnel'   && <PersonnelPlanner    tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} sharedSubclasses={sharedSubclasses} postesTick={postesTick} />}
+      {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} />}
+      {subTab === 'sousclasses' && <SousClassesPlanner tenant={tenant} tr={tr} inp={inp} onSubclassesChanged={reloadSubclasses} />}
+      {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} />}
     </div>
   );
 }
 
-function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclasses?: Subclass[] }[]; postesTick: number }) {
+function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSubclasses, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclass_ids?: string[] }[]; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; postesTick: number }) {
   type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
   const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
@@ -2267,6 +2561,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -2315,11 +2610,13 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
           <h2 className="font-bold">{tr('Personnel du planificateur', 'Planner staff')}</h2>
           <p className="text-xs text-gray-500">{tr('Employés assignables aux chantiers.', 'Employees assignable to job sites.')} <span className="text-emerald-600 font-semibold">✓ {tr('Synchronisé avec le planificateur', 'Synced with planner')}</span></p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setShowGuide(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">🔐 {tr('Guide des accès', 'Access guide')}</button>
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
+      {showGuide && <AccessGuideModal tr={tr} onClose={() => setShowGuide(false)} />}
       {postes.length === 0 && (
         <button type="button" onClick={goToPostes}
           className="mx-4 mt-3 w-[calc(100%-2rem)] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs text-amber-700 transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20">
@@ -2357,12 +2654,14 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
                       </select>
                       {(() => {
                         const currentPoste = postes.find(p => p.name === r.role);
-                        const subs = currentPoste?.subclasses || [];
-                        if (!r.role || subs.length === 0) return null;
+                        const ids = currentPoste?.subclass_ids || [];
+                        const availableSubs = ids.map(id => sharedSubclasses.find(s => s.id === id)).filter(Boolean) as { id: string; name: string; color?: string }[];
+                        if (!r.role || availableSubs.length === 0) return null;
+                        const chosen = availableSubs.find(s => s.name === r.subclass);
                         return (
-                          <select className={`${inp} min-w-[130px] text-[11px]`} value={r.subclass || ''} onChange={e => upd(i, 'subclass', e.target.value)} style={{ borderColor: subs.find(s => s.name === r.subclass)?.color || undefined }}>
+                          <select className={`${inp} min-w-[130px] text-[11px]`} value={r.subclass || ''} onChange={e => upd(i, 'subclass', e.target.value)} style={{ borderColor: chosen?.color || undefined }}>
                             <option value="">— {tr('Sous-classe', 'Sub-class')} —</option>
-                            {subs.map((sc, idx) => <option key={idx} value={sc.name}>{sc.name}</option>)}
+                            {availableSubs.map(sc => <option key={sc.id} value={sc.name}>{sc.name}</option>)}
                           </select>
                         );
                       })()}
@@ -2393,12 +2692,10 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTic
                 <td className="px-2"><input className={`${inp} w-32`} value={r.phone || ''} onChange={e => upd(i, 'phone', e.target.value)} placeholder="514-555-0000" /></td>
                 <td className="px-2"><input type="email" className={inp} value={r.email || ''} onChange={e => upd(i, 'email', e.target.value)} placeholder="nom@exemple.com" /></td>
                 <td className="px-2">
-                  <select className={`${inp} w-44`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
-                    <option value="consultation">{tr('Consultation', 'View only')}</option>
-                    <option value="modification">{tr('Modification', 'Edit')}</option>
-                    <option value="coordination">{tr('Coordination', 'Coordinate')}</option>
-                    <option value="administration">{tr('Administration', 'Admin')}</option>
-                    <option value="admin_paie">{tr('Admin paie & avantages', 'Payroll admin')}</option>
+                  <select className={`${inp} w-48`} value={r.niveauAcces || 'consultation'} onChange={e => upd(i, 'niveauAcces', e.target.value)}>
+                    {ACCESS_LEVELS.map(lvl => (
+                      <option key={lvl.value} value={lvl.value}>{tr(lvl.label_fr, lvl.label_en)}</option>
+                    ))}
                   </select>
                 </td>
                 <td className="px-2 text-center"><input type="checkbox" checked={r.is_active !== false} onChange={e => upd(i, 'is_active', e.target.checked)} /></td>
@@ -2498,8 +2795,8 @@ type GridMode = 'percentage' | 'fixed' | 'custom';
 type SkillReq = { name: string; level?: string };
 type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_months_experience: number; commission_pct?: number | null; notes?: string };
 type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; notes?: string };
-type Subclass = { name: string; code?: string; color?: string };
-type PosteRow = { id?: string; name: string; code: string; color: string; subclasses?: Subclass[] };
+type Subclass = { id: string; name: string; code?: string; color?: string; category?: string };
+type PosteRow = { id?: string; name: string; code: string; color: string; subclass_ids?: string[] };
 
 function computeTiers(grid: GridRow): TierRow[] {
   const tiers: TierRow[] = [];
@@ -2849,8 +3146,8 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose }: { tenant: string; 
   );
 }
 
-function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void }) {
-  const empty = (): PosteRow => ({ name: '', code: '', color: '#6b7280' });
+function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goToSubclasses }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; goToSubclasses: () => void }) {
+  const empty = (): PosteRow => ({ name: '', code: '', color: '#6b7280', subclass_ids: [] });
   const [rows, setRows] = useState<PosteRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -2864,9 +3161,9 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase.from('planner_postes').select('id, name, code, color, subclasses').eq('tenant_id', tenant).order('name').range(0, 999);
+    const { data, error } = await supabase.from('planner_postes').select('id, name, code, color, subclass_ids').eq('tenant_id', tenant).order('name').range(0, 999);
     if (error) setNotice('Erreur chargement : ' + error.message);
-    setRows((data || []).map((r: any) => ({ ...r, subclasses: Array.isArray(r.subclasses) ? r.subclasses : [] })));
+    setRows((data || []).map((r: any) => ({ ...r, subclass_ids: Array.isArray(r.subclass_ids) ? r.subclass_ids : [] })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -2875,7 +3172,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
   const add = () => setRows(p => [...p, empty()]);
   const addBatch = (n: number) => setRows(p => {
     const start = p.length;
-    return [...p, ...Array.from({ length: n }, (_, i) => ({ ...empty(), color: COLORS[(start + i) % COLORS.length] }))];
+    return [...p, ...Array.from({ length: n }, (_, i) => ({ ...empty(), color: COLORS[(start + i) % COLORS.length], subclass_ids: [] }))];
   });
 
   async function save() {
@@ -2887,7 +3184,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (!r.name?.trim()) { skipCount++; continue; }
-      const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#6b7280', subclasses: r.subclasses || [] };
+      const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#6b7280', subclass_ids: r.subclass_ids || [] };
       try {
         if (r.id) {
           const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id);
@@ -2915,9 +3212,8 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
     const lines = bulkText.split(/\r?\n|;/).map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) return;
     const newRows: PosteRow[] = lines.map((line, idx) => {
-      // Support format "Nom" ou "Nom | CODE" ou "Nom, CODE"
       const parts = line.split(/\s*[|,]\s*/);
-      return { name: parts[0], code: parts[1] || '', color: COLORS[(rows.length + idx) % COLORS.length] };
+      return { name: parts[0], code: parts[1] || '', color: COLORS[(rows.length + idx) % COLORS.length], subclass_ids: [] };
     });
     setRows(p => [...p, ...newRows]);
     setBulkText(''); setShowBulk(false);
@@ -2984,49 +3280,56 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; t
       <div className="divide-y divide-gray-100 dark:divide-gray-700">
         {rows.map((r, i) => {
           const isOpen = !!r.id && expanded.has(r.id);
-          const subs = r.subclasses || [];
+          const ids = r.subclass_ids || [];
+          const subsApplied = ids.map(id => sharedSubclasses.find(s => s.id === id)).filter(Boolean) as Subclass[];
           return (
             <div key={r.id || i}>
-              <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <button onClick={() => toggle(r.id)} disabled={!r.id} className={`p-1 rounded ${r.id ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : 'opacity-30 cursor-not-allowed'}`} title={r.id ? tr('Configurer grille / sous-classes', 'Configure grid / sub-classes') : tr('Enregistrez d\'abord', 'Save first')}>
-                  {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                </button>
-                <input className={`${inp} flex-1`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} />
+              <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 flex-wrap">
+                <input className={`${inp} flex-1 min-w-[140px]`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} />
                 <input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
-                {subs.length > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300" title={subs.map(s => s.name).join(', ')}>
-                    {subs.length} {tr('sous-classes', 'sub-classes')}
-                  </span>
-                )}
                 <div className="flex items-center gap-1.5">
                   <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
-                  <span className="text-[10px] text-gray-400 font-mono w-14">{r.color || '#6b7280'}</span>
                 </div>
+                {/* Bouton Grille salariale très visible */}
+                <button onClick={() => toggle(r.id)} disabled={!r.id}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
+                  title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
+                  💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
                 <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={15} /></button>
               </div>
 
-              {/* Mini-éditeur de sous-classes — toujours visible sous chaque poste */}
-              <div className="px-3 pb-2 pl-9">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-[10px] text-gray-400 mr-1">{tr('Sous-classes :', 'Sub-classes:')}</span>
-                  {subs.map((sc, sci) => (
-                    <span key={sci} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border" style={{ background: (sc.color || '#06b6d4') + '20', color: sc.color || '#0891b2', borderColor: (sc.color || '#06b6d4') + '50' }}>
-                      <input type="color" value={sc.color || '#06b6d4'} onChange={e => {
-                        const next = [...subs]; next[sci] = { ...sc, color: e.target.value }; upd(i, 'subclasses', next);
-                      }} className="h-3 w-3 cursor-pointer rounded border-0 p-0" />
-                      <input
-                        className="bg-transparent border-0 outline-none text-[11px] font-semibold w-28"
-                        value={sc.name}
-                        onChange={e => { const next = [...subs]; next[sci] = { ...sc, name: e.target.value }; upd(i, 'subclasses', next); }}
-                        placeholder={tr('Nom', 'Name')}
-                      />
-                      <button onClick={() => { upd(i, 'subclasses', subs.filter((_, x) => x !== sci)); }} className="opacity-60 hover:opacity-100 hover:text-red-500">×</button>
+              {/* Multi-select sous-classes depuis le catalogue partagé */}
+              <div className="px-3 pb-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400 mr-1">{tr('Sous-classes appliquées :', 'Applied sub-classes:')}</span>
+                  {subsApplied.length === 0 && <span className="text-[10px] text-gray-400 italic">{tr('aucune', 'none')}</span>}
+                  {subsApplied.map(sc => (
+                    <span key={sc.id} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border" style={{ background: (sc.color || '#06b6d4') + '20', color: sc.color || '#0891b2', borderColor: (sc.color || '#06b6d4') + '60' }}>
+                      {sc.name}
+                      <button onClick={() => upd(i, 'subclass_ids', ids.filter(x => x !== sc.id))} className="opacity-60 hover:opacity-100 hover:text-red-500">×</button>
                     </span>
                   ))}
-                  <button onClick={() => upd(i, 'subclasses', [...subs, { name: '', color: COLORS[(subs.length) % COLORS.length] }])}
-                    className="inline-flex items-center gap-0.5 rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">
-                    <Plus size={10} /> {tr('Ajouter sous-classe', 'Add sub-class')}
-                  </button>
+                  {sharedSubclasses.length > 0 ? (
+                    <details className="inline relative">
+                      <summary className="cursor-pointer rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">+ {tr('Ajouter du catalogue', 'Add from catalog')}</summary>
+                      <div className="absolute z-20 mt-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-0.5">
+                        {sharedSubclasses.filter(s => !ids.includes(s.id)).map(s => (
+                          <button key={s.id} onClick={() => upd(i, 'subclass_ids', [...ids, s.id])}
+                            className="w-full text-left px-2 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className="flex-1">{s.name}</span>
+                            <span className="text-[9px] text-gray-400">{s.category}</span>
+                          </button>
+                        ))}
+                        {sharedSubclasses.filter(s => !ids.includes(s.id)).length === 0 && <p className="text-[10px] text-gray-400 px-1 py-2">{tr('Toutes appliquées.', 'All applied.')}</p>}
+                      </div>
+                    </details>
+                  ) : (
+                    <button onClick={goToSubclasses} className="rounded-full border border-dashed border-amber-300 dark:border-amber-500/40 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-50">
+                      💡 {tr('Catalogue vide → créez des sous-classes', 'Empty catalog → create sub-classes')}
+                    </button>
+                  )}
                 </div>
               </div>
 

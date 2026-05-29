@@ -13,8 +13,10 @@ import { ResourcesModal } from './components/Modals/ResourcesModal.jsx';
 import { CongesModal } from './components/Modals/CongesModal.jsx';
 import { JobModal } from './modules/NewJob/JobModal.jsx';
 
-// Niveaux qui donnent accès à la modification
-const ROLES_MODIF = ['administration', 'coordination', 'admin_paie'];
+// Niveaux qui donnent accès à la modification (tier ≥ 3)
+const ROLES_MODIF = ['coordination', 'administration', 'admin_paie', 'rh', 'direction', 'super_user'];
+// Niveaux qui voient les salaires (tier ≥ 5)
+const ROLES_SALAIRE = ['admin_paie', 'rh', 'direction', 'super_user'];
 
 function AppContent({ tenant = 'cerdia' }) {
     const appData = useAppDataWithSync(tenant);
@@ -45,7 +47,8 @@ function AppContent({ tenant = 'cerdia' }) {
     }, [tenant]);
 
     const canModify      = ROLES_MODIF.includes(currentUser.niveauAcces);
-    const isCoordinator  = ['coordination', 'administration'].includes(currentUser.niveauAcces);
+    const canViewSalary  = ROLES_SALAIRE.includes(currentUser.niveauAcces);
+    const isCoordinator  = ['coordination', 'administration', 'rh', 'direction', 'super_user'].includes(currentUser.niveauAcces);
 
     const addSousTraitant = useCallback((nom) => {
         if (!nom?.trim()) return null;
