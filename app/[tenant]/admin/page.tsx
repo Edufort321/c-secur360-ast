@@ -4428,6 +4428,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [maxSites, setMaxSites] = useState<number>(Infinity); // limite d'abonnement (Infinity = avant migration 078)
 
   // Direct callback refs — each input registers itself; val() reads DOM value at save time
   const imap = React.useRef(new Map<string, HTMLInputElement>());
@@ -4442,11 +4443,20 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
     setSites(rows.filter(r => !r.parent_id).map(s => ({ _key: s.id, id: s.id, initName: s.name, initCode: s.code || '', initAddr: s.address || '' })));
     setDepts(rows.filter(r =>  r.parent_id).map(d => ({ _dKey: d.id, id: d.id, initName: d.name, initCode: d.code || '', initAddr: d.address || '', siteKey: d.parent_id })));
     setLoadKey(k => k + 1);
+    // Limite de sites de l'abonnement (Infinity si la colonne n'existe pas encore)
+    const { data: t, error: tErr } = await supabase.from('tenants').select('max_sites').eq('subdomain', tenant).maybeSingle();
+    setMaxSites(tErr ? Infinity : (t?.max_sites != null ? Number(t.max_sites) : 1));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
-  const addSite = () => { const k = Math.random().toString(36).slice(2); setSites(p => [...p, { _key: k, initName: '', initCode: '', initAddr: '' }]); };
+  const addSite = () => {
+    if (sites.length >= maxSites) {
+      setNotice(tr(`⚠️ Limite de ${maxSites} site(s) atteinte — veuillez réviser votre abonnement pour ajouter des sites supplémentaires.`, `⚠️ Limit of ${maxSites} site(s) reached — please review your subscription to add more sites.`));
+      return;
+    }
+    const k = Math.random().toString(36).slice(2); setSites(p => [...p, { _key: k, initName: '', initCode: '', initAddr: '' }]);
+  };
   const addDept = (sk: string) => { const k = Math.random().toString(36).slice(2); setDepts(p => [...p, { _dKey: k, initName: '', initCode: '', initAddr: '', siteKey: sk }]); };
 
   async function delSite(siteKey: string) {
@@ -4515,10 +4525,12 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
           <div>
             <h2 className="font-bold">{tr('Sites / Départements', 'Sites / Departments')}</h2>
-            <p className="text-xs text-gray-500">{tr('Hiérarchie : Site → Département', 'Hierarchy: Site → Department')}</p>
+            <p className="text-xs text-gray-500">{tr('Hiérarchie : Site → Département', 'Hierarchy: Site → Department')}
+              {Number.isFinite(maxSites) && <span className={`ml-2 font-semibold ${sites.length >= maxSites ? 'text-red-600' : 'text-gray-400'}`}>· {sites.length}/{maxSites} {tr('sites', 'sites')}</span>}
+            </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={addSite} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Site', 'Site')}</button>
+            <button onClick={addSite} disabled={sites.length >= maxSites} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-700" title={sites.length >= maxSites ? tr('Limite d\'abonnement atteinte', 'Subscription limit reached') : ''}><Plus size={15} /> {tr('Site', 'Site')}</button>
             <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
           </div>
         </div>
