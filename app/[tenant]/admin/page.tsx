@@ -2938,10 +2938,8 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
             {/* Historique des évaluations */}
             <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">📜 {tr('Historique des évaluations', 'Evaluation history')} <span className="text-xs text-gray-400 font-normal">({history.length})</span></h4>
-              {history.length === 0 ? (
-                <p className="text-[11px] italic text-gray-400">{tr('Aucune évaluation enregistrée.', 'No evaluation recorded.')}</p>
-              ) : (
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">📜 {tr('Historique & évolution', 'History & evolution')} <span className="text-xs text-gray-400 font-normal">({history.length})</span></h4>
+              {(
                 <div className="overflow-x-auto">
                   <table className="mobile-cards w-full text-xs">
                     <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
@@ -2949,20 +2947,34 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                       <th className="px-2">{tr('Note', 'Score')}</th>
                       <th className="px-2 text-right">{tr('Salaire avant', 'Salary before')}</th>
                       <th className="px-2 text-right">{tr('Salaire après', 'Salary after')}</th>
+                      <th className="px-2 text-right">{tr('Évolution', 'Change')}</th>
                       <th className="px-2">{tr('Évalué par', 'Evaluated by')}</th>
                       <th className="px-2">{tr('Statut', 'Status')}</th>
                     </tr></thead>
                     <tbody>
-                      {history.map((h: any) => (
+                      {/* Projection en cours (non enregistrée) — évolue en direct */}
+                      <tr className="border-t border-blue-100 bg-blue-50/50 dark:border-blue-500/20 dark:bg-blue-500/5">
+                        <td className="px-2 py-1.5 font-semibold text-blue-700 dark:text-blue-300" data-label={tr('Date', 'Date')}>{tr('Projection (live)', 'Projection (live)')}</td>
+                        <td className="px-2" data-label={tr('Note', 'Score')}>{skillScore.toFixed(0)} %</td>
+                        <td className="px-2 text-right" data-label={tr('Salaire avant', 'Salary before')}>{fmt(reco.cs)}</td>
+                        <td className="px-2 text-right font-semibold text-blue-700 dark:text-blue-300" data-label={tr('Salaire après', 'Salary after')}>{fmt(reco.newSalary)}</td>
+                        <td className="px-2 text-right font-semibold text-emerald-600" data-label={tr('Évolution', 'Change')}>{reco.totalAmt >= 0 ? '+' : ''}{fmt(reco.totalAmt)} ({reco.totalPct >= 0 ? '+' : ''}{reco.totalPct.toFixed(1)} %)</td>
+                        <td className="px-2" data-label={tr('Évalué par', 'Evaluated by')}>{evaluatedBy || '—'}</td>
+                        <td className="px-2" data-label={tr('Statut', 'Status')}><span className="italic text-gray-400">{tr('non enregistré', 'unsaved')}</span></td>
+                      </tr>
+                      {history.map((h: any) => {
+                        const chg = (Number(h.salary_after) || 0) - (Number(h.salary_before) || 0);
+                        return (
                         <tr key={h.id} className="border-t border-gray-50 dark:border-gray-700/50">
                           <td className="px-2 py-1.5" data-label={tr('Date', 'Date')}>{h.evaluation_date}</td>
                           <td className="px-2" data-label={tr('Note', 'Score')}>{h.skill_score != null ? `${Number(h.skill_score).toFixed(0)} %` : '—'}</td>
                           <td className="px-2 text-right" data-label={tr('Salaire avant', 'Salary before')}>{fmt(Number(h.salary_before) || 0)}</td>
                           <td className="px-2 text-right" data-label={tr('Salaire après', 'Salary after')}>{fmt(Number(h.salary_after) || 0)}</td>
+                          <td className={`px-2 text-right ${chg >= 0 ? 'text-emerald-600' : 'text-red-600'}`} data-label={tr('Évolution', 'Change')}>{chg >= 0 ? '+' : ''}{fmt(chg)}</td>
                           <td className="px-2" data-label={tr('Évalué par', 'Evaluated by')}>{h.evaluated_by || '—'}</td>
                           <td className="px-2" data-label={tr('Statut', 'Status')}>{h.status}</td>
                         </tr>
-                      ))}
+                      ); })}
                     </tbody>
                   </table>
                 </div>
