@@ -2287,6 +2287,22 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
 
+  // Met à jour le mot de passe d'un compte EXISTANT (au lieu d'en créer un)
+  async function updateAccount() {
+    const acc = users.find(u => (u.email || '').toLowerCase() === (form.email || '').toLowerCase());
+    if (!acc) return createAccount();
+    if (!form.password.trim()) { setNotice(tr('Saisissez un mot de passe pour mettre à jour.', 'Enter a password to update.')); return; }
+    setBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Erreur');
+      if (selected?.id) await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
+      setNotice(tr('Mot de passe mis à jour ✓', 'Password updated ✓'));
+      load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
+  }
+
   async function toggleActive(u: UserAccount) {
     await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: u.id, is_active: !u.is_active }) });
     load();
@@ -2430,9 +2446,11 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
             </div>
 
             <div className="flex gap-2 pt-1">
-              <button onClick={createAccount} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {tr('Créer le compte', 'Create account')}
+              {(() => { const acc = userByEmail[(form.email || '').toLowerCase()]; return (
+              <button onClick={acc ? updateAccount : createAccount} disabled={busy} className={`flex-1 inline-flex items-center justify-center gap-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60 ${acc ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {acc ? tr('Mettre à jour le mot de passe', 'Update password') : tr('Créer le compte', 'Create account')}
               </button>
+              ); })()}
               <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📋 {tr('Tout', 'All')}</button>
             </div>
             {notice && <p className={`text-xs font-medium ${notice.includes('✓') ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>{notice}</p>}
