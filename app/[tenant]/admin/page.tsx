@@ -210,7 +210,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -223,6 +223,7 @@ export default function AdminPage() {
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
     { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
     { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote },
+    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog },
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
   ];
@@ -307,6 +308,7 @@ export default function AdminPage() {
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
+        {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
@@ -5159,6 +5161,105 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// RESSOURCES HUMAINES — communications corpo / documents / liens
+// ============================================================
+function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type Item = { id?: string; type: 'message' | 'document' | 'link'; title: string; content: string; url: string; active: boolean; sort_order: number };
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [rows, setRows] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from('hr_items').select('*').eq('tenant_id', tenant).order('sort_order').order('created_at');
+    if (error) setNotice(tr('Table RH absente — exécutez la migration 084.', 'HR table missing — run migration 084.'));
+    setRows((data || []).map((r: any) => ({ ...r, content: r.content || '', url: r.url || '' })));
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const upd = (i: number, k: keyof Item, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const add = (type: Item['type']) => setRows(p => [...p, { type, title: '', content: '', url: '', active: true, sort_order: p.length }]);
+  async function del(i: number) { const r = rows[i]; if (r.id) await supabase.from('hr_items').delete().eq('id', r.id); setRows(p => p.filter((_, j) => j !== i)); }
+  async function onUpload(i: number, file: File) { try { const url = await uploadPhoto(file, tenant, supabase); upd(i, 'url', url); } catch { setNotice(tr('Échec du téléversement', 'Upload failed')); } }
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      for (const r of rows) {
+        if (!r.title.trim()) continue;
+        const payload = { tenant_id: tenant, type: r.type, title: r.title.trim(), content: r.content || null, url: r.url || null, active: r.active !== false, sort_order: r.sort_order, updated_at: new Date().toISOString() };
+        if (r.id) await supabase.from('hr_items').update(payload).eq('id', r.id);
+        else await supabase.from('hr_items').insert(payload);
+      }
+      setNotice(tr('Éléments RH enregistrés ✓', 'HR items saved ✓')); load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  const TYPES = [
+    { k: 'message' as const, label: tr('Message corpo', 'Corp message'), icon: '📣' },
+    { k: 'document' as const, label: tr('Document', 'Document'), icon: '📄' },
+    { k: 'link' as const, label: tr('Hyperlien', 'Hyperlink'), icon: '🔗' },
+  ];
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-bold">{tr('Ressources humaines — communications', 'Human resources — communications')}</h2>
+            <p className="text-xs text-gray-500">{tr('Messages corporatifs, documents et liens partagés au personnel.', 'Corporate messages, documents and links shared with staff.')}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {TYPES.map(t => <button key={t.k} onClick={() => add(t.k)} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={13} /> {t.icon} {t.label}</button>)}
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
+          </div>
+        </div>
+        {notice && <div className="mb-2 whitespace-pre-line rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">{notice}</div>}
+        {rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">{tr('Aucun élément. Ajoutez un message, un document ou un lien.', 'No item. Add a message, document or link.')}</p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((r, i) => {
+              const t = TYPES.find(x => x.k === r.type) || TYPES[0];
+              return (
+                <div key={r.id || i} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-lg">{t.icon}</span>
+                    <select className={`${inp} w-40`} value={r.type} onChange={e => upd(i, 'type', e.target.value)}>
+                      {TYPES.map(x => <option key={x.k} value={x.k}>{x.label}</option>)}
+                    </select>
+                    <input className={`${inp} min-w-[10rem] flex-1`} value={r.title} placeholder={tr('Titre', 'Title')} onChange={e => upd(i, 'title', e.target.value)} />
+                    <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={r.active !== false} onChange={e => upd(i, 'active', e.target.checked)} /> {tr('Actif', 'Active')}</label>
+                    <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button>
+                  </div>
+                  {r.type === 'message' && (
+                    <textarea rows={3} className={`${inp} resize-y`} value={r.content} placeholder={tr('Message à communiquer au personnel…', 'Message to communicate to staff…')} onChange={e => upd(i, 'content', e.target.value)} />
+                  )}
+                  {r.type === 'link' && (
+                    <input className={inp} value={r.url} placeholder="https://…" onChange={e => upd(i, 'url', e.target.value)} />
+                  )}
+                  {r.type === 'document' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input className={`${inp} min-w-[12rem] flex-1`} value={r.url} placeholder={tr('URL du document ou téléverser →', 'Document URL or upload →')} onChange={e => upd(i, 'url', e.target.value)} />
+                      <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📤 {tr('Téléverser', 'Upload')}<input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(i, f); e.target.value = ''; }} /></label>
+                      {r.url && <a href={r.url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir', 'View')}</a>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
