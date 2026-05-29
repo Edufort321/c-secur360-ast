@@ -2709,6 +2709,21 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <input type="date" disabled={!canEdit} className={inp2} value={hireDate} onChange={e => setHireDate(e.target.value)} />
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
+                {useGrid && tiers.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-[9px] uppercase font-bold text-gray-400 mb-1">{tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</div>
+                    <div className="flex flex-wrap gap-1">
+                      {tiers.map((t: any) => (
+                        <button key={t.id || t.tier_level} type="button" disabled={!canEdit}
+                          onClick={() => { setHireSalary(String(t.annual_salary)); if (!currentSalary) setCurrentSalary(String(t.annual_salary)); }}
+                          className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-blue-500/10"
+                          title={tr('Appliquer au salaire de départ', 'Apply to starting salary')}>
+                          {t.tier_name}: {fmt(Number(t.annual_salary) || 0)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/10 p-3">
                 <h4 className="font-bold text-xs text-emerald-700 dark:text-emerald-300 uppercase mb-2">{tr('Salaire actuel', 'Current salary')}</h4>
