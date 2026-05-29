@@ -2651,6 +2651,17 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
   const setScore = (id: string, v: number) => setScores(p => ({ ...p, [id]: v }));
 
+  // Rouvre une évaluation passée : recharge ses notes + salaire de référence pour
+  // refaire la progression / l'ajustement à partir de cet état.
+  const reopenEval = (h: any) => {
+    if (h.scores && typeof h.scores === 'object' && !Array.isArray(h.scores)) setScores(h.scores);
+    if (h.salary_before != null) setCurrentSalary(String(h.salary_before));
+    if (h.cola_pct != null) setColaPct(String(h.cola_pct));
+    if (h.objectives) setObjectives(h.objectives);
+    setApprovedAt(''); setVerifiedAt(''); setHrAt('');
+    setNotice(tr(`Évaluation du ${h.evaluation_date} rechargée — ajustez puis enregistrez la nouvelle évaluation.`, `Evaluation from ${h.evaluation_date} reloaded — adjust then save the new one.`));
+  };
+
   async function exportEval() {
     const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
     const { exportEvaluationPdf } = await import('@/lib/salaryPdf');
@@ -2710,11 +2721,12 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
           employee: approvedAt ? { at: approvedAt } : null,
           hr: hrAt ? { by: hrBy, at: hrAt } : null,
         },
+        scores,  // snapshot des notes par compétence (pour rouvrir l'éval)
         status: approvedAt ? 'approved' : 'pending',
       };
       let { error: evErr } = await supabase.from('employee_evaluations').insert(evalPayload);
-      if (evErr && /evaluated_by|objectives|approvals/i.test(evErr.message || '')) {
-        const { evaluated_by, objectives: _o2, approvals: _ap, ...evFallback } = evalPayload;
+      if (evErr && /evaluated_by|objectives|approvals|scores/i.test(evErr.message || '')) {
+        const { evaluated_by, objectives: _o2, approvals: _ap, scores: _sc, ...evFallback } = evalPayload;
         ({ error: evErr } = await supabase.from('employee_evaluations').insert(evFallback));
       }
       if (evErr) throw evErr;
@@ -2960,6 +2972,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                       <th className="px-2 text-right">{tr('Évolution', 'Change')}</th>
                       <th className="px-2">{tr('Évalué par', 'Evaluated by')}</th>
                       <th className="px-2">{tr('Statut', 'Status')}</th>
+                      <th className="px-2"></th>
                     </tr></thead>
                     <tbody>
                       {/* Projection en cours (non enregistrée) — évolue en direct */}
@@ -2971,6 +2984,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                         <td className="px-2 text-right font-semibold text-emerald-600" data-label={tr('Évolution', 'Change')}>{reco.totalAmt >= 0 ? '+' : ''}{fmt(reco.totalAmt)} ({reco.totalPct >= 0 ? '+' : ''}{reco.totalPct.toFixed(1)} %)</td>
                         <td className="px-2" data-label={tr('Évalué par', 'Evaluated by')}>{evaluatedBy || '—'}</td>
                         <td className="px-2" data-label={tr('Statut', 'Status')}><span className="italic text-gray-400">{tr('non enregistré', 'unsaved')}</span></td>
+                        <td className="px-2"></td>
                       </tr>
                       {history.map((h: any) => {
                         const chg = (Number(h.salary_after) || 0) - (Number(h.salary_before) || 0);
@@ -2983,6 +2997,9 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                           <td className={`px-2 text-right ${chg >= 0 ? 'text-emerald-600' : 'text-red-600'}`} data-label={tr('Évolution', 'Change')}>{chg >= 0 ? '+' : ''}{fmt(chg)}</td>
                           <td className="px-2" data-label={tr('Évalué par', 'Evaluated by')}>{h.evaluated_by || '—'}</td>
                           <td className="px-2" data-label={tr('Statut', 'Status')}>{h.status}</td>
+                          <td className="px-2 text-right sm:text-left">
+                            <button onClick={() => reopenEval(h)} className="rounded-lg border border-gray-300 px-2 py-1 text-[10px] font-semibold text-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-blue-500/10" title={tr('Rouvrir cette évaluation (recharge les notes)', 'Reopen this evaluation (reloads scores)')}>↻ {tr('Rouvrir', 'Reopen')}</button>
+                          </td>
                         </tr>
                       ); })}
                     </tbody>
