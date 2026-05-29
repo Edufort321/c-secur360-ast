@@ -3199,6 +3199,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   // Gestion au volume : recherche par nom, filtre par site, date de réévaluation
   const [search, setSearch] = useState('');
   const [siteFilter, setSiteFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
   const [genDate, setGenDate] = useState('');
 
   async function load() {
@@ -3221,10 +3222,15 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   const add = () => setRows(p => [...p, empty()]);
   // Lignes filtrées (index original conservé pour upd/del)
   const filtered = useMemo(() => rows.map((r, i) => ({ r, i })).filter(({ r }) => {
-    if (siteFilter && (r.succursale || '') !== siteFilter && !(r.succursale || '').startsWith(siteFilter + ' /')) return false;
+    const suc = r.succursale || '';
+    if (siteFilter) {
+      if (suc !== siteFilter && !suc.startsWith(siteFilter + ' /')) return false;
+      if (deptFilter && suc !== `${siteFilter} / ${deptFilter}`) return false;
+    }
     if (search.trim() && !(r.name || '').toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
-  }), [rows, search, siteFilter]);
+  }), [rows, search, siteFilter, deptFilter]);
+  const filterSiteDepts = siteTree.find(s => s.name === siteFilter)?.depts || [];
   // Réévaluation générale : applique la date à toutes les lignes affichées
   const applyGenDate = () => { if (!genDate) return; const ids = new Set(filtered.map(f => f.i)); setRows(p => p.map((r, j) => ids.has(j) ? { ...r, next_evaluation_date: genDate } : r)); };
 
@@ -3313,9 +3319,13 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
         <div className="min-w-[10rem] flex-1">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('🔍 Rechercher un nom…', '🔍 Search a name…')} className={inp} />
         </div>
-        <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className={`${inp} w-44`}>
+        <select value={siteFilter} onChange={e => { setSiteFilter(e.target.value); setDeptFilter(''); }} className={`${inp} w-40`}>
           <option value="">{tr('Tous les sites', 'All sites')}</option>
-          {siteTree.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          {siteTree.map(site => <option key={site.id} value={site.name}>{site.name}</option>)}
+        </select>
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} disabled={!siteFilter || filterSiteDepts.length === 0} className={`${inp} w-40 disabled:opacity-50`}>
+          <option value="">{tr('Tous les dépts', 'All depts')}</option>
+          {filterSiteDepts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
         </select>
         <div className="flex items-end gap-1">
           <div>
