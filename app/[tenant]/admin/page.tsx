@@ -3872,34 +3872,47 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
           const ids = r.subclass_ids || [];
           const subsApplied = ids.map(id => sharedSubclasses.find(s => s.id === id)).filter(Boolean) as Subclass[];
           return (
-            <div key={r.id || i}>
-              <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 flex-wrap">
-                <input className={`${inp} flex-1 min-w-[140px]`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} />
-                <input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
-                <div className="flex items-center gap-1.5">
-                  <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
+            <div key={r.id || i} className={`px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 ${!r.name?.trim() ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
+              {/* ▌ LIGNE 1 — INFORMATIONS DU POSTE (avec labels) ▐ */}
+              <div className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-1">
+                  <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Coul.', 'Color')}</label>
+                  <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-full cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
                 </div>
-                {/* Bouton Grille salariale — verrouillé si pas le bon niveau d'accès */}
-                {perms.viewSalary ? (
-                  <button onClick={() => toggle(r.id)} disabled={!r.id}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
-                    title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
-                    💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </button>
-                ) : (
-                  <button disabled className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
-                    title={tr('Réservé aux niveaux 5+ (Admin paie, RH, Direction, Super-utilisateur)', 'Reserved for levels 5+ (Payroll admin, HR, Management, Super-user)')}>
-                    🔒 {tr('Grille verrouillée', 'Grid locked')}
-                  </button>
-                )}
-                <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={15} /></button>
+                <div className="col-span-5">
+                  <label className={`block text-[9px] uppercase font-bold mb-0.5 ${!r.name?.trim() ? 'text-red-600' : 'text-gray-500'}`}>
+                    {tr('Nom du poste *', 'Position name *')} {!r.name?.trim() && `⚠️ ${tr('Obligatoire', 'Required')}`}
+                  </label>
+                  <input className={`${inp} ${!r.name?.trim() ? 'ring-2 ring-red-400 dark:ring-red-500/60 border-red-300' : ''}`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('ex: Technicien senior, Soudeur, Contremaître…', 'e.g. Senior technician, Welder, Foreman…')} autoFocus={!r.id && !r.name} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Code (court)', 'Code (short)')}</label>
+                  <input className={inp} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
+                </div>
+                <div className="col-span-4 flex items-end justify-end gap-2 pb-0.5">
+                  {perms.viewSalary ? (
+                    <button onClick={() => toggle(r.id)} disabled={!r.id}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${r.id ? (isOpen ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30') : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700'}`}
+                      title={r.id ? tr('Configurer grille salariale + commission + paliers', 'Configure salary grid + commission + tiers') : tr('Enregistrez d\'abord', 'Save first')}>
+                      💰 {tr('Grille salariale', 'Salary grid')} {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+                  ) : (
+                    <button disabled className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed">
+                      🔒 {tr('Grille verrouillée', 'Grid locked')}
+                    </button>
+                  )}
+                  <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1.5"><Trash2 size={15} /></button>
+                </div>
               </div>
 
-              {/* Multi-select sous-classes depuis le catalogue partagé */}
-              <div className="px-3 pb-2">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400 mr-1">{tr('Sous-classes appliquées :', 'Applied sub-classes:')}</span>
-                  {subsApplied.length === 0 && <span className="text-[10px] text-gray-400 italic">{tr('aucune', 'none')}</span>}
+              {/* ▌ LIGNE 2 — SOUS-CATÉGORIES applicables au poste ▐ */}
+              <div className="mt-2 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700">
+                <div className="flex items-start gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 text-[10px] font-bold uppercase shrink-0">
+                    📂 {tr('Sous-catégories', 'Sub-categories')}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                  {subsApplied.length === 0 && <span className="text-[11px] text-gray-400 italic">{tr('aucune appliquée', 'none applied')} —</span>}
                   {subsApplied.map(sc => (
                     <span key={sc.id} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border" style={{ background: (sc.color || '#06b6d4') + '20', color: sc.color || '#0891b2', borderColor: (sc.color || '#06b6d4') + '60' }}>
                       {sc.name}
@@ -3965,6 +3978,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                       💡 {tr('Catalogue vide → créez des sous-classes', 'Empty catalog → create sub-classes')}
                     </button>
                   )}
+                  </div>
                 </div>
               </div>
 
