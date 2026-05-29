@@ -2593,6 +2593,16 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
   const useGrid = grid?.use_skill_grid !== false;
   const hpy = Number(grid?.hours_per_year) || 2080; // heures/an pour le taux horaire
+  // Ancienneté calculée depuis la date d'embauche (conservée même si l'employé change de poste)
+  const seniorityLabel = (() => {
+    if (!hireDate) return '';
+    const start = new Date(hireDate); const now = new Date();
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    if (now.getDate() < start.getDate()) months--;
+    if (months < 0 || isNaN(months)) return '';
+    const yy = Math.floor(months / 12), mm = months % 12;
+    return `${yy} ${tr('an', 'yr')}${yy > 1 ? 's' : ''} ${mm} ${tr('mois', 'mo')}`;
+  })();
   const skillForm: SkillForm | undefined = useGrid && grid?.skill_form && Array.isArray(grid.skill_form.types) ? grid.skill_form : undefined;
 
   // ─── Note globale pondérée + note par type (formulaire de la grille) ───
@@ -2782,6 +2792,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <h4 className="font-bold text-xs text-gray-500 uppercase mb-2">{tr('Embauche', 'Hire')}</h4>
                 <label className="text-xs">{tr('Date d\'embauche', 'Hire date')}</label>
                 <input type="date" disabled={!canEdit} className={inp2} value={hireDate} onChange={e => setHireDate(e.target.value)} />
+                {seniorityLabel && <p className="mt-0.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400">⏳ {tr('Ancienneté', 'Seniority')} : {seniorityLabel}</p>}
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">Taux $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
