@@ -9,6 +9,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
+import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -211,7 +212,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'comptabilite';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -228,6 +229,7 @@ export default function AdminPage() {
     { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog },
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
+    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
   ];
 
   const activeTab = tabs.find(t => t.k === tab);
@@ -311,6 +313,7 @@ export default function AdminPage() {
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
+        {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
@@ -5328,6 +5331,209 @@ function LogbookModule({ tenant, tr }: { tenant: string; tr: (f: string, e: stri
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COMPTABILITÉ — grand livre en partie double (plan comptable, écritures, taxes)
+// ============================================================
+function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+  const [accounts, setAccounts] = useState<GLAccount[]>([]);
+  const [taxCodes, setTaxCodes] = useState<GLTaxCode[]>([]);
+  const [ledger, setLedger] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [migMissing, setMigMissing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [sub, setSub] = useState<'plan' | 'ledger' | 'new'>('plan');
+
+  // Saisie d'écriture
+  const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
+  const [neDesc, setNeDesc] = useState('');
+  const [neRef, setNeRef] = useState('');
+  const [neJournal, setNeJournal] = useState('OD');
+  const [neLines, setNeLines] = useState<{ account_id: string; debit: string; credit: string }[]>([{ account_id: '', debit: '', credit: '' }, { account_id: '', debit: '', credit: '' }]);
+  const [saving, setSaving] = useState(false);
+
+  const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+
+  async function load() {
+    setLoading(true); setMigMissing(false);
+    try {
+      const [acc, tc, led] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant)]);
+      setAccounts(acc); setTaxCodes(tc); setLedger(led);
+    } catch { setMigMissing(true); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  async function init() {
+    setNotice(null);
+    try { await seedAccountingDefaults(tenant); setNotice(tr('Plan comptable initialisé.', 'Chart of accounts initialized.')); await load(); }
+    catch { setNotice(tr('Échec — exécutez d\'abord la migration 085 dans Supabase.', 'Failed — run migration 085 in Supabase first.')); }
+  }
+
+  const neDebit = neLines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+  const neCredit = neLines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+  const balanced = Math.abs(neDebit - neCredit) < 0.005 && neDebit > 0;
+
+  async function saveEntry() {
+    setSaving(true); setNotice(null);
+    try {
+      await createEntry(tenant, {
+        entry_date: neDate, description: neDesc, reference: neRef, journal_code: neJournal,
+        lines: neLines.map(l => ({ account_id: l.account_id, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })).filter(l => l.account_id && (l.debit > 0 || l.credit > 0)),
+      });
+      setNotice(tr('Écriture enregistrée.', 'Entry saved.'));
+      setNeLines([{ account_id: '', debit: '', credit: '' }, { account_id: '', debit: '', credit: '' }]);
+      setNeDesc(''); setNeRef('');
+      await load(); setSub('ledger');
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSaving(false);
+  }
+
+  async function doReverse(id: string) {
+    setNotice(null);
+    try { await reverseEntry(tenant, id); setNotice(tr('Contre-passation enregistrée.', 'Reversal posted.')); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  if (migMissing) return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+      <p className="font-semibold">{tr('Module comptable non initialisé', 'Accounting module not initialized')}</p>
+      <p className="mt-1 text-sm">{tr('Exécutez la migration 085 (085_accounting_core.sql) dans le SQL Editor de Supabase, puis rechargez.', 'Run migration 085 (085_accounting_core.sql) in Supabase SQL Editor, then reload.')}</p>
+    </div>
+  );
+
+  const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+            (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
+          ))}
+        </div>
+        {accounts.length === 0 && canEdit && (
+          <button onClick={init} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Initialiser le plan comptable', 'Initialize chart of accounts')}</button>
+        )}
+      </div>
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+      {accounts.length === 0 ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800">
+          {tr('Aucun compte. Initialisez le plan comptable pour démarrer la comptabilité.', 'No account. Initialize the chart of accounts to start.')}
+        </div>
+      ) : sub === 'plan' ? (
+        <div className="space-y-4">
+          {(['asset', 'liability', 'equity', 'revenue', 'expense'] as const).map(type => {
+            const accs = accounts.filter(a => a.type === type);
+            if (!accs.length) return null;
+            return (
+              <div key={type} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr(...ACCOUNT_TYPE_LABELS[type])}</div>
+                <table className="mobile-cards w-full text-sm">
+                  <tbody>
+                    {accs.map(a => (
+                      <tr key={a.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                        <td className="px-4 py-1.5 font-mono text-gray-500" data-label="Code" style={{ width: 90 }}>{a.code}</td>
+                        <td className="px-4 py-1.5" data-label={tr('Compte', 'Account')}>{a.name}</td>
+                        <td className="px-4 py-1.5 text-right text-xs text-gray-400" data-label={tr('Sens', 'Side')}>{a.normal_balance === 'debit' ? tr('Débit', 'Debit') : tr('Crédit', 'Credit')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+          {taxCodes.length > 0 && (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('Codes de taxe', 'Tax codes')}</div>
+              <table className="mobile-cards w-full text-sm"><tbody>
+                {taxCodes.map(t => (
+                  <tr key={t.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-1.5 font-mono text-gray-500" data-label="Code">{t.code}</td>
+                    <td className="px-4 py-1.5" data-label={tr('Taxe', 'Tax')}>{t.name}</td>
+                    <td className="px-4 py-1.5 text-right" data-label={tr('Taux', 'Rate')}>{(Number(t.rate) * 100).toFixed(3)} %</td>
+                  </tr>
+                ))}
+              </tbody></table>
+            </div>
+          )}
+        </div>
+      ) : sub === 'ledger' ? (
+        <div className="space-y-3">
+          {ledger.length === 0 && <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune écriture. Les écritures seront générées par les ventes, la paie et les saisies manuelles.', 'No entry yet. Entries will come from sales, payroll and manual postings.')}</div>}
+          {ledger.map((e: any) => {
+            const tot = (e.gl_lines || []).reduce((s: number, l: any) => s + (Number(l.debit) || 0), 0);
+            return (
+              <div key={e.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+                  <div className="text-sm">
+                    <span className="font-mono text-gray-500">{e.entry_date}</span>
+                    <span className="ml-2 font-semibold">{e.description || tr('(sans description)', '(no description)')}</span>
+                    {e.reference && <span className="ml-2 text-xs text-gray-400">réf. {e.reference}</span>}
+                    {e.reversed_by_id && <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-700">{tr('contre-passée', 'reversed')}</span>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">{mny(tot)}</span>
+                    {canEdit && e.posted && !e.reversed_by_id && e.source_type !== 'reversal' && (
+                      <button onClick={() => doReverse(e.id)} className="text-xs text-red-500 hover:underline">{tr('Contre-passer', 'Reverse')}</button>
+                    )}
+                  </div>
+                </div>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {(e.gl_lines || []).map((l: any) => (
+                      <tr key={l.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                        <td className="px-4 py-1 font-mono text-xs text-gray-400" style={{ width: 80 }}>{l.gl_accounts?.code}</td>
+                        <td className="px-4 py-1">{l.gl_accounts?.name}</td>
+                        <td className="px-4 py-1 text-right text-gray-700 dark:text-gray-300" style={{ width: 120 }}>{Number(l.debit) > 0 ? mny(l.debit) : ''}</td>
+                        <td className="px-4 py-1 text-right text-gray-700 dark:text-gray-300" style={{ width: 120 }}>{Number(l.credit) > 0 ? mny(l.credit) : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        // Nouvelle écriture
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={neDate} onChange={e => setNeDate(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Description', 'Description')}<input value={neDesc} onChange={e => setNeDesc(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Référence', 'Reference')}<input value={neRef} onChange={e => setNeRef(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+          </div>
+          <div className="mt-3 space-y-2">
+            {neLines.map((l, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2">
+                <select value={l.account_id} onChange={e => setNeLines(p => p.map((x, j) => j === i ? { ...x, account_id: e.target.value } : x))} className={`col-span-6 ${inputCls}`}>
+                  <option value="">{tr('— compte —', '— account —')}</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
+                </select>
+                <input type="number" placeholder={tr('Débit', 'Debit')} value={l.debit} onFocus={e => e.target.select()} onChange={e => setNeLines(p => p.map((x, j) => j === i ? { ...x, debit: e.target.value, credit: '' } : x))} className={`col-span-3 text-right ${inputCls}`} />
+                <input type="number" placeholder={tr('Crédit', 'Credit')} value={l.credit} onFocus={e => e.target.select()} onChange={e => setNeLines(p => p.map((x, j) => j === i ? { ...x, credit: e.target.value, debit: '' } : x))} className={`col-span-3 text-right ${inputCls}`} />
+              </div>
+            ))}
+            <button onClick={() => setNeLines(p => [...p, { account_id: '', debit: '', credit: '' }])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+            <div className="text-sm">
+              <span className="text-gray-500">{tr('Débits', 'Debits')} : <b>{mny(neDebit)}</b></span>
+              <span className="ml-4 text-gray-500">{tr('Crédits', 'Credits')} : <b>{mny(neCredit)}</b></span>
+              <span className={`ml-4 font-semibold ${balanced ? 'text-emerald-600' : 'text-red-500'}`}>{balanced ? tr('Équilibré', 'Balanced') : tr('Déséquilibré', 'Unbalanced')}</span>
+            </div>
+            <button onClick={saveEntry} disabled={!balanced || saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">
+              {saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer l\'écriture', 'Post entry')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
