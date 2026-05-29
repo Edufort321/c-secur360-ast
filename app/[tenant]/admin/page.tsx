@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
+import { syncPayrollEntries } from '@/lib/accountingAuto';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -5354,6 +5355,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [neJournal, setNeJournal] = useState('OD');
   const [neLines, setNeLines] = useState<{ account_id: string; debit: string; credit: string }[]>([{ account_id: '', debit: '', credit: '' }, { account_id: '', debit: '', credit: '' }]);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
@@ -5398,6 +5400,16 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
 
+  async function syncPay() {
+    setSyncing(true); setNotice(null);
+    try {
+      const r = await syncPayrollEntries(tenant);
+      setNotice(tr(`Paie synchronisée : ${r.created} écriture(s) créée(s), ${r.skipped} déjà présente(s).`, `Payroll synced: ${r.created} created, ${r.skipped} already posted.`));
+      await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSyncing(false);
+  }
+
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   if (migMissing) return (
@@ -5417,9 +5429,16 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
-        {accounts.length === 0 && canEdit && (
-          <button onClick={init} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Initialiser le plan comptable', 'Initialize chart of accounts')}</button>
-        )}
+        <div className="flex gap-2">
+          {accounts.length > 0 && canEdit && (
+            <button onClick={syncPay} disabled={syncing} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40">
+              {syncing ? <Loader2 size={15} className="inline animate-spin" /> : tr('Synchroniser la paie', 'Sync payroll')}
+            </button>
+          )}
+          {accounts.length === 0 && canEdit && (
+            <button onClick={init} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">{tr('Initialiser le plan comptable', 'Initialize chart of accounts')}</button>
+          )}
+        </div>
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
