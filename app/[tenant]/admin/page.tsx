@@ -3186,8 +3186,8 @@ function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: st
 }
 
 function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSubclasses, postesTick, perms }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string; subclass_ids?: string[] }[]; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; postesTick: number; perms: typeof PERMS[AccessLevel] }) {
-  type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
-  const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
+  type Row = { id?: string; name: string; role: string; subclass: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string; next_evaluation_date: string };
+  const empty = (): Row => ({ name: '', role: '', subclass: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '', next_evaluation_date: '' });
   const [rows, setRows] = useState<Row[]>([]);
   const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
   const postes = sharedPostes; // ← utilise les postes partagés par le parent (toujours frais)
@@ -3196,17 +3196,21 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
   const [notice, setNotice] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [evalEmployee, setEvalEmployee] = useState<any | null>(null);
+  // Gestion au volume : recherche par nom, filtre par site, date de réévaluation
+  const [search, setSearch] = useState('');
+  const [siteFilter, setSiteFilter] = useState('');
+  const [genDate, setGenDate] = useState('');
 
   async function load() {
     setLoading(true);
     const [{ data: suc }, { data }] = await Promise.all([
       supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
-      supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
+      supabase.from('planner_personnel').select('id, name, role, subclass, phone, email, is_active, niveauAcces, succursale, next_evaluation_date').eq('tenant_id', tenant).order('name'),
     ]);
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
-    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
+    setRows((data || []).map((r: any) => ({ ...r, subclass: r.subclass || '', niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '', next_evaluation_date: r.next_evaluation_date || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
@@ -3215,6 +3219,14 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = () => setRows(p => [...p, empty()]);
+  // Lignes filtrées (index original conservé pour upd/del)
+  const filtered = useMemo(() => rows.map((r, i) => ({ r, i })).filter(({ r }) => {
+    if (siteFilter && (r.succursale || '') !== siteFilter && !(r.succursale || '').startsWith(siteFilter + ' /')) return false;
+    if (search.trim() && !(r.name || '').toLowerCase().includes(search.trim().toLowerCase())) return false;
+    return true;
+  }), [rows, search, siteFilter]);
+  // Réévaluation générale : applique la date à toutes les lignes affichées
+  const applyGenDate = () => { if (!genDate) return; const ids = new Set(filtered.map(f => f.i)); setRows(p => p.map((r, j) => ids.has(j) ? { ...r, next_evaluation_date: genDate } : r)); };
 
   async function save() {
     setSaving(true); setNotice(null);
@@ -3233,6 +3245,7 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
       if (r.niveauAcces) base.niveauAcces = r.niveauAcces;
       if (r.succursale != null) base.succursale = r.succursale || null;
       if (r.subclass != null) base.subclass = r.subclass || null;
+      base.next_evaluation_date = r.next_evaluation_date || null;
 
       console.log('[Personnel save] payload pour', r.name, ':', base, 'id existant ?', r.id);
 
@@ -3295,6 +3308,24 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
+      {/* Barre de filtres — gestion au volume */}
+      <div className="flex flex-wrap items-end gap-2 border-t border-gray-100 px-4 py-2 dark:border-gray-700">
+        <div className="min-w-[10rem] flex-1">
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('🔍 Rechercher un nom…', '🔍 Search a name…')} className={inp} />
+        </div>
+        <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className={`${inp} w-44`}>
+          <option value="">{tr('Tous les sites', 'All sites')}</option>
+          {siteTree.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+        </select>
+        <div className="flex items-end gap-1">
+          <div>
+            <label className="block text-[9px] uppercase font-bold text-gray-400">{tr('Réévaluation', 'Re-eval')}</label>
+            <input type="date" value={genDate} onChange={e => setGenDate(e.target.value)} className={`${inp} w-36`} />
+          </div>
+          <button type="button" onClick={applyGenDate} disabled={!genDate} className="rounded-lg border border-blue-300 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-500/40 dark:text-blue-300" title={tr('Applique la date à tous les employés affichés', 'Apply the date to all shown employees')}>{tr('Appliquer aux affichés', 'Apply to shown')}</button>
+        </div>
+        <span className="self-center text-[11px] text-gray-400">{filtered.length}/{rows.length}</span>
+      </div>
       {/* Notice persistante en bandeau si erreur */}
       {notice && (
         <div className={`mx-4 mt-3 rounded-lg border-2 px-3 py-2 text-sm whitespace-pre-line font-medium ${
@@ -3332,10 +3363,11 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
             <th className="px-2">{tr("Niveau d'accès", 'Access level')}</th>
             <th className="px-2">{tr('Actif', 'Active')}</th>
             {perms.viewSalary && <th className="px-2">{tr('Salaire', 'Salary')}</th>}
+            <th className="px-2">{tr('Prochaine éval', 'Next eval')}</th>
             <th></th>
           </tr></thead>
           <tbody>
-            {rows.map((r, i) => (
+            {filtered.map(({ r, i }) => (
               <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
                 <td className="px-2 py-1" data-label={tr('Nom *', 'Name *')}><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Prénom Nom', 'First Last')} /></td>
                 <td className="px-2 mc-stack" data-label={tr('Poste / Sous-classe', 'Position / Sub-class')}>
@@ -3405,10 +3437,11 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                       : <span className="text-[10px] text-gray-400">—</span>}
                   </td>
                 )}
+                <td className="px-2" data-label={tr('Prochaine éval', 'Next eval')}><input type="date" className={`${inp} w-36`} value={r.next_evaluation_date || ''} onChange={e => upd(i, 'next_evaluation_date', e.target.value)} /></td>
                 <td className="px-2 text-right sm:text-left"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={perms.viewSalary ? 9 : 8} className="px-2 py-6 text-center text-gray-400">{tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.')}</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={perms.viewSalary ? 10 : 9} className="px-2 py-6 text-center text-gray-400">{rows.length === 0 ? tr('Aucun membre du personnel. Ajoute-en un.', 'No staff yet. Add one.') : tr('Aucun résultat pour ce filtre.', 'No result for this filter.')}</td></tr>}
           </tbody>
         </table>
       </div>
