@@ -2205,7 +2205,7 @@ function suggestEmail(fullName: string, tenant: string): string {
   return `${local}@${tenant}.ca`;
 }
 
-function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: string, e: string) => string; canReveal: boolean }) {
   type Personnel = { id: string; name: string; email: string; niveauAcces?: string; access_password?: string };
   type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean };
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
@@ -2378,7 +2378,7 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
                   <div className="truncate font-medium">{p.name}</div>
                   <div className="truncate text-xs text-gray-500">{p.email || tr('Aucun courriel', 'No email')}</div>
                 </div>
-                {p.access_password && (
+                {canReveal && p.access_password && (
                   <span className="flex items-center gap-1 text-[11px]" onClick={e => e.stopPropagation()}>
                     <span className="font-mono text-gray-600 dark:text-gray-300 select-all">{revealed ? p.access_password : '••••••'}</span>
                     <button type="button" onClick={() => setShowPwdFor(revealed ? null : p.id)} className="text-gray-400 hover:text-gray-600" title={tr('Afficher / masquer', 'Show / hide')}>{revealed ? '🙈' : '👁'}</button>
@@ -3218,7 +3218,7 @@ function Employes({ tenant, tr, perms }: { tenant: string; tr: (f: string, e: st
       {subTab === 'personnel'   && <PersonnelPlanner    tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} sharedSubclasses={sharedSubclasses} postesTick={postesTick} perms={perms} />}
       {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} sharedSubclasses={sharedSubclasses} onPostesChanged={reloadPostes} goToSubclasses={() => setSubTab('sousclasses')} perms={perms} />}
       {subTab === 'sousclasses' && <SousClassesPlanner tenant={tenant} tr={tr} inp={inp} onSubclassesChanged={reloadSubclasses} />}
-      {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} />}
+      {subTab === 'comptes'     && <ComptesAcces       tenant={tenant} tr={tr} canReveal={perms.viewSalary} />}
     </div>
   );
 }
