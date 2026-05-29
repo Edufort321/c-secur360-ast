@@ -2774,9 +2774,9 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">Taux $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
                 {useGrid && tiers.length > 0 && (
-                  <div className="mt-2">
-                    <div className="text-[9px] uppercase font-bold text-gray-400 mb-1">{tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</div>
-                    <div className="flex flex-wrap gap-1">
+                  <details className="mt-2">
+                    <summary className="cursor-pointer select-none text-[9px] uppercase font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">☰ {tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</summary>
+                    <div className="mt-1 flex flex-wrap gap-1">
                       {tiers.map((t: any) => (
                         <button key={t.id || t.tier_level} type="button" disabled={!canEdit}
                           onClick={() => { setHireSalary(String(t.annual_salary)); if (!currentSalary) setCurrentSalary(String(t.annual_salary)); }}
@@ -2786,7 +2786,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </details>
                 )}
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/10 p-3">
