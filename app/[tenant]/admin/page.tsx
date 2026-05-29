@@ -2206,7 +2206,7 @@ function suggestEmail(fullName: string, tenant: string): string {
 }
 
 function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  type Personnel = { id: string; name: string; email: string; niveauAcces?: string };
+  type Personnel = { id: string; name: string; email: string; niveauAcces?: string; access_password?: string };
   type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean };
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
@@ -2219,13 +2219,18 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
   const [notice, setNotice]       = useState<string | null>(null);
   const [showPwd, setShowPwd]     = useState(false);
   const [copied, setCopied]       = useState(false);
+  const [showPwdFor, setShowPwdFor] = useState<string | null>(null); // ligne dont le mot de passe est révélé
 
   async function load() {
     setLoading(true);
-    const [{ data: pers }, usersRes] = await Promise.all([
-      supabase.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name'),
-      fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()).catch(() => ({ users: [] })),
-    ]);
+    // Tente avec access_password (migration 079) ; repli sans si la colonne n'existe pas
+    let pers: any[] | null = null;
+    const r1 = await supabase.from('planner_personnel').select('id, name, email, niveauAcces, access_password').eq('tenant_id', tenant).order('name');
+    if (r1.error) {
+      const r2 = await supabase.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name');
+      pers = r2.data;
+    } else pers = r1.data;
+    const usersRes = await fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()).catch(() => ({ users: [] }));
     setPersonnel((pers || []).filter((p: any) => p.name));
     setUsers(usersRes?.users || []);
     setLoading(false);
@@ -2233,6 +2238,7 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   function pickPersonnel(p: Personnel) {
+    if (selected?.id === p.id) return; // déjà sélectionné : ne PAS régénérer le mot de passe
     setSelected(p); setNotice(null); setCopied(false);
     const niveauToRole: Record<string, string> = {
       super_user: 'super_admin', direction: 'client_admin',
@@ -2244,7 +2250,8 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
       role:     niveauToRole[p.niveauAcces || ''] || 'user',
-      password: generatePassword(p.name),
+      // Conserve le mot de passe déjà enregistré ; n'en génère un que s'il n'y en a pas
+      password: p.access_password || generatePassword(p.name),
     });
     setShowPwd(true);
   }
@@ -2271,6 +2278,8 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
       const r = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, ...form }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
+      // Conserve le mot de passe pour la gestion admin (best-effort, ignoré si colonne 079 absente)
+      if (selected?.id) await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
       setNotice(tr('Compte créé ✓ — copiez les identifiants ci-dessus', 'Account created ✓ — copy credentials above'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
@@ -2300,6 +2309,8 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
       const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pwdEditFor.id, password: pwdEditValue }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
+      // Conserve le nouveau mot de passe pour la gestion admin (best-effort)
+      await supabase.from('planner_personnel').update({ access_password: pwdEditValue }).eq('tenant_id', tenant).ilike('email', pwdEditFor.email);
       setNotice(tr(`Mot de passe mis à jour pour ${pwdEditFor.email} ✓`, `Password updated for ${pwdEditFor.email} ✓`));
       // Copie auto dans le presse-papier
       navigator.clipboard.writeText(pwdEditValue).catch(() => {});
@@ -2338,9 +2349,10 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
         <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
           {personnel.map(p => {
             const existing = userByEmail[(p.email || '').toLowerCase()];
+            const revealed = showPwdFor === p.id;
             return (
-              <button key={p.id} onClick={() => pickPersonnel(p)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 ${selected?.id === p.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+              <div key={p.id} role="button" tabIndex={0} onClick={() => pickPersonnel(p)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 ${selected?.id === p.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                 <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${existing ? 'bg-emerald-600' : 'bg-gray-400'}`}>
                   {(p.name || '?')[0]?.toUpperCase()}
                 </div>
@@ -2348,11 +2360,17 @@ function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: strin
                   <div className="truncate font-medium">{p.name}</div>
                   <div className="truncate text-xs text-gray-500">{p.email || tr('Aucun courriel', 'No email')}</div>
                 </div>
+                {p.access_password && (
+                  <span className="flex items-center gap-1 text-[11px]" onClick={e => e.stopPropagation()}>
+                    <span className="font-mono text-gray-600 dark:text-gray-300 select-all">{revealed ? p.access_password : '••••••'}</span>
+                    <button type="button" onClick={() => setShowPwdFor(revealed ? null : p.id)} className="text-gray-400 hover:text-gray-600" title={tr('Afficher / masquer', 'Show / hide')}>{revealed ? '🙈' : '👁'}</button>
+                  </span>
+                )}
                 {p.niveauAcces && <span className="text-[10px] rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-gray-600 dark:text-gray-300">{p.niveauAcces}</span>}
                 {existing
                   ? <span className="text-[10px] font-semibold rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">✓ {tr('compte', 'account')}</span>
                   : <span className="text-[10px] rounded-full border border-gray-300 dark:border-gray-600 px-2 py-0.5 text-gray-400">{tr('aucun', 'none')}</span>}
-              </button>
+              </div>
             );
           })}
           {personnel.length === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">{tr('Aucun employé. Créez-en dans « Personnel & planification ».', 'No employee. Create one in "Staff & planning".')}</div>}
