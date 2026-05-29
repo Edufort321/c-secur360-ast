@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCir
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { computeSubState } from '@/lib/subscription';
+import { uploadPhoto } from '@/lib/utils/photo';
 
 type Mod = { key: string; name_fr: string; monthly_price: number; sort_order: number; enabled: boolean };
 type Tx  = { id: string; type: string; amount: number; status: string; description: string | null; reference: string | null; period_start: string | null; period_end: string | null; created_by: string | null; created_at: string };
@@ -321,7 +322,13 @@ export default function TenantManagePage() {
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">URL du logo (remplace le logo C-Secur360 dans l'en-tête)</span>
-                  <input className={inputCls} placeholder="https://exemple.com/logo.png" value={tenant.logo_url || ''} onChange={e => setTenant((t: any) => ({ ...t, logo_url: e.target.value }))} />
+                  <div className="flex gap-2">
+                    <input className={inputCls} placeholder="https://exemple.com/logo.png ou téléverser →" value={tenant.logo_url || ''} onChange={e => setTenant((t: any) => ({ ...t, logo_url: e.target.value }))} />
+                    <label className="shrink-0 cursor-pointer inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700" title="Téléverser une image (PNG, JPG)">
+                      📤 Téléverser
+                      <input type="file" accept="image/*" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (!f) return; try { const url = await uploadPhoto(f, (tenant.subdomain || id) as string, supabase); setTenant((t: any) => ({ ...t, logo_url: url })); setNotice('Logo téléversé ✓ — pensez à Enregistrer'); } catch { setNotice('Erreur téléversement logo'); } e.target.value = ''; }} />
+                    </label>
+                  </div>
                 </label>
                 {tenant.logo_url && (
                   <div className="flex items-center gap-3">
