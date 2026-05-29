@@ -2499,76 +2499,70 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
   const [saving, setSaving] = useState(false);
   const [grid, setGrid] = useState<any>(null);
   const [tiers, setTiers] = useState<any[]>([]);
-  const [skillsCatalog, setSkillsCatalog] = useState<any[]>([]);
   // États édition
   const [hireDate, setHireDate] = useState(employee.hire_date || '');
   const [hireSalary, setHireSalary] = useState(employee.hire_salary?.toString() || '');
   const [currentSalary, setCurrentSalary] = useState(employee.current_salary?.toString() || '');
   const [colaPct, setColaPct] = useState('2.5');
-  const [acquired, setAcquired] = useState<Record<string, number>>({}); // {skill_name: level}
+  const [scores, setScores] = useState<Record<string, number>>({}); // { skillId: note }
+  const [objectives, setObjectives] = useState((employee as any).objectives || '');
+  const [evaluatedBy, setEvaluatedBy] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  // Clic simple = tout sélectionner (la frappe écrase) ; recliquer = éditer.
+  const selectOnFocus = (e: React.FocusEvent) => {
+    const t = e.target as HTMLElement;
+    if (t instanceof HTMLInputElement && (t.type === 'number' || t.type === 'text')) t.select();
+  };
 
   useEffect(() => {
     (async () => {
       setLoading(true);
+      // Évaluateur courant + historique des évaluations
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setEvaluatedBy(user?.email || '');
+      } catch { /* indispo */ }
+      const { data: hist } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });
+      setHistory(hist || []);
       // Trouver le poste de l'employé
       const { data: posteRow } = await supabase.from('planner_postes').select('id').eq('tenant_id', tenant).eq('name', employee.role || '').maybeSingle();
       if (posteRow?.id) {
-        const [{ data: g }, { data: skCat }] = await Promise.all([
-          supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', posteRow.id).maybeSingle(),
-          supabase.from('poste_skills_catalog').select('id, name, category, weight, max_level').eq('tenant_id', tenant).eq('active', true),
-        ]);
+        const { data: g } = await supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', posteRow.id).maybeSingle();
         if (g) {
           setGrid(g);
           const { data: ts } = await supabase.from('poste_salary_tiers').select('*').eq('grid_id', g.id).order('tier_level');
           setTiers(ts || []);
+          if (g.cola_pct) setColaPct(String(g.cola_pct));
         }
-        setSkillsCatalog(skCat || []);
-        // Charger compétences acquises de l'employé
-        if (Array.isArray(employee.acquired_skills)) {
+        // Charger les notes de l'employé (nouveau format skill_scores, ou ancien acquired_skills)
+        const raw = (employee as any).skill_scores;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          setScores(raw as Record<string, number>);
+        } else if (Array.isArray(employee.acquired_skills)) {
           const acc: Record<string, number> = {};
-          employee.acquired_skills.forEach((s: any) => { acc[s.name || s] = s.level ?? 0; });
-          setAcquired(acc);
+          employee.acquired_skills.forEach((s: any) => { if (s?.id) acc[s.id] = s.level ?? s.score ?? 0; });
+          setScores(acc);
         }
-        // Préremplir COLA depuis la grille
-        if (g.cola_pct) setColaPct(String(g.cola_pct));
       }
       setLoading(false);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee.id, tenant]);
 
-  // ─── Calcul du score de compétences pondéré ───
-  const allRequiredSkills = useMemo(() => {
-    const map: Record<string, { name: string; weight: number; max_level: number; tiers: number[] }> = {};
-    tiers.forEach(t => {
-      (t.required_skills || []).forEach((rs: any) => {
-        const cat = skillsCatalog.find(s => s.name === rs.name);
-        if (!map[rs.name]) {
-          map[rs.name] = { name: rs.name, weight: cat?.weight || 1, max_level: cat?.max_level || 5, tiers: [] };
-        }
-        map[rs.name].tiers.push(t.tier_level);
-      });
-    });
-    return Object.values(map);
-  }, [tiers, skillsCatalog]);
+  const useGrid = grid?.use_skill_grid !== false;
+  const skillForm: SkillForm | undefined = useGrid && grid?.skill_form && Array.isArray(grid.skill_form.types) ? grid.skill_form : undefined;
 
-  const skillScore = useMemo(() => {
-    if (allRequiredSkills.length === 0) return 0;
-    let weightedSum = 0, totalWeight = 0;
-    allRequiredSkills.forEach(s => {
-      const lvl = acquired[s.name] || 0;
-      weightedSum += (lvl / s.max_level) * s.weight;
-      totalWeight += s.weight;
-    });
-    return totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0; // 0-100
-  }, [allRequiredSkills, acquired]);
+  // ─── Note globale pondérée + note par type (formulaire de la grille) ───
+  const { global: skillScore, byType } = useMemo(() => computeSkillScore(skillForm, scores), [skillForm, scores]);
 
-  // ─── Trouver le palier actuel et suivant ───
+  // ─── Palier justifié par la note (seuils min_score) ───
+  const tierByScoreIdx = useMemo(() => tierForScore(tiers, skillScore), [tiers, skillScore]);
+
+  // ─── Palier où le salaire actuel situe l'employé ───
   const currentTierIdx = useMemo(() => {
     if (!tiers.length || !currentSalary) return 0;
     const cs = parseFloat(currentSalary) || 0;
-    // Le palier actuel = celui dont le salaire est le plus proche en dessous (ou égal)
     let idx = 0;
     for (let i = 0; i < tiers.length; i++) {
       if (cs >= (tiers[i].annual_salary || 0) * 0.95) idx = i;
@@ -2576,58 +2570,91 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
     return idx;
   }, [tiers, currentSalary]);
 
-  const nextTier = tiers[currentTierIdx + 1];
-
-  // ─── Calcul de l'augmentation projetée ───
-  const projection = useMemo(() => {
+  // ─── Système intelligent : recommandation de positionnement ───
+  const reco = useMemo(() => {
     const cs = parseFloat(currentSalary) || 0;
     const cola = parseFloat(colaPct) || 0;
     const colaAmt = cs * cola / 100;
-    let skillIncreaseAmt = 0, skillPct = 0, qualified = false;
-    if (nextTier && tiers[currentTierIdx]) {
-      const gap = (nextTier.annual_salary || 0) - (tiers[currentTierIdx].annual_salary || 0);
-      const factor = skillScore / 100; // 0..1
-      skillIncreaseAmt = gap * factor;
-      skillPct = cs > 0 ? (skillIncreaseAmt / cs) * 100 : 0;
-      qualified = skillScore >= 80;
+    if (!useGrid) {
+      // Salaire fixe : pas de palier, seulement le coût de la vie.
+      const newSalary = cs + colaAmt;
+      return { cs, cola, colaAmt, target: null as any, targetSalary: cs, gapVsSalary: 0, verdict: 'aligned' as const, newSalary, totalAmt: colaAmt, totalPct: cs > 0 ? (colaAmt / cs) * 100 : 0 };
     }
-    const totalAmt = colaAmt + skillIncreaseAmt;
+    const target = tiers[tierByScoreIdx];           // palier justifié par la note
+    const targetSalary = target?.annual_salary || 0;
+    const gapVsSalary = targetSalary - cs;           // écart salaire-cible vs actuel
+    // verdict : la note place plus haut / plus bas / aligné avec le salaire actuel
+    let verdict: 'under' | 'over' | 'aligned' = 'aligned';
+    if (tierByScoreIdx > currentTierIdx) verdict = 'under';      // sous-payé
+    else if (tierByScoreIdx < currentTierIdx) verdict = 'over';  // au-dessus du palier mérité
+    const newSalary = targetSalary > 0 ? targetSalary + colaAmt : cs + colaAmt;
+    const totalAmt = newSalary - cs;
     const totalPct = cs > 0 ? (totalAmt / cs) * 100 : 0;
-    return { cs, cola, colaAmt, skillIncreaseAmt, skillPct, totalAmt, totalPct, newSalary: cs + totalAmt, qualified };
-  }, [currentSalary, colaPct, skillScore, nextTier, currentTierIdx, tiers]);
+    return { cs, cola, colaAmt, target, targetSalary, gapVsSalary, verdict, newSalary, totalAmt, totalPct };
+  }, [currentSalary, colaPct, tiers, tierByScoreIdx, currentTierIdx, useGrid]);
+
+  const setScore = (id: string, v: number) => setScores(p => ({ ...p, [id]: v }));
+
+  async function exportEval() {
+    const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
+    const { exportEvaluationPdf } = await import('@/lib/salaryPdf');
+    await exportEvaluationPdf({
+      tr, dateStr: new Date().toLocaleDateString('fr-CA'), logoUrl: t?.logo_url || undefined,
+      employeeName: employee.name, posteName: employee.role || '', evaluatedBy,
+      useGrid, globalScore: skillScore, tierName: reco.target?.tier_name || '—', tierMinScore: reco.target?.min_score ?? 0,
+      skillForm: skillForm || null, scores, byType,
+      salaryBefore: reco.cs, salaryAfter: reco.newSalary, targetSalary: reco.targetSalary, colaPct: reco.cola, colaAmt: reco.colaAmt,
+      objectives,
+    });
+  }
 
   async function save() {
     setSaving(true); setNotice(null);
     try {
-      // Met à jour l'employé
-      const acquiredArr = Object.entries(acquired).map(([name, level]) => ({ name, level }));
-      await supabase.from('planner_personnel').update({
+      // Met à jour l'employé (notes par compétence + salaire + palier justifié)
+      const empPayload: any = {
         hire_date: hireDate || null,
         hire_salary: hireSalary ? Number(hireSalary) : null,
         current_salary: currentSalary ? Number(currentSalary) : null,
         current_grid_id: grid?.id || null,
-        acquired_skills: acquiredArr,
+        current_tier_id: tiers[tierByScoreIdx]?.id || null,
+        skill_scores: scores,
+        objectives: objectives || null,
         last_evaluation_date: new Date().toISOString().slice(0, 10),
-      }).eq('id', employee.id);
+      };
+      let { error: empErr } = await supabase.from('planner_personnel').update(empPayload).eq('id', employee.id);
+      if (empErr && /skill_scores|objectives/i.test(empErr.message || '')) {
+        const { skill_scores, objectives: _o, ...fallback } = empPayload; // migrations 075-076 non exécutées
+        ({ error: empErr } = await supabase.from('planner_personnel').update(fallback).eq('id', employee.id));
+      }
+      if (empErr) throw empErr;
 
-      // Crée une entrée d'historique d'évaluation
-      await supabase.from('employee_evaluations').insert({
+      // Crée une entrée d'historique d'évaluation (avec fallback si colonnes 076 absentes)
+      const evalPayload: any = {
         tenant_id: tenant,
         personnel_id: employee.id,
         grid_id: grid?.id || null,
-        tier_id: tiers[currentTierIdx]?.id || null,
+        tier_id: tiers[tierByScoreIdx]?.id || null,
         evaluation_date: new Date().toISOString().slice(0, 10),
-        salary_before: projection.cs,
-        salary_after: projection.newSalary,
-        cola_pct: projection.cola,
-        cola_amount: projection.colaAmt,
+        salary_before: reco.cs,
+        salary_after: reco.newSalary,
+        cola_pct: reco.cola,
+        cola_amount: reco.colaAmt,
         skill_score: skillScore,
-        skill_increase_pct: projection.skillPct,
-        skill_increase_amount: projection.skillIncreaseAmt,
-        total_increase_pct: projection.totalPct,
-        total_increase_amount: projection.totalAmt,
+        skill_increase_pct: 0,
+        skill_increase_amount: reco.gapVsSalary,
+        total_increase_pct: reco.totalPct,
+        total_increase_amount: reco.totalAmt,
+        evaluated_by: evaluatedBy || null,
+        objectives: objectives || null,
         status: 'pending',
-      });
+      };
+      let { error: evErr } = await supabase.from('employee_evaluations').insert(evalPayload);
+      if (evErr && /evaluated_by|objectives/i.test(evErr.message || '')) {
+        const { evaluated_by, objectives: _o2, ...evFallback } = evalPayload;
+        ({ error: evErr } = await supabase.from('employee_evaluations').insert(evFallback));
+      }
+      if (evErr) throw evErr;
 
       setNotice(tr('Évaluation enregistrée ✓', 'Evaluation saved ✓'));
       onSaved();
@@ -2644,7 +2671,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-5xl rounded-2xl bg-white dark:bg-gray-800 shadow-2xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-5xl rounded-2xl bg-white dark:bg-gray-800 shadow-2xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()} onFocus={selectOnFocus}>
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between z-10">
           <div>
@@ -2655,10 +2682,16 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
             <p className="text-xs text-gray-500 mt-0.5">
               {employee.role || tr('Aucun poste', 'No position')}
               {employee.subclass && <span className="ml-1 text-cyan-600 dark:text-cyan-400">· {employee.subclass}</span>}
+              {evaluatedBy && <span className="ml-2">· {tr('évalué par', 'evaluated by')} {evaluatedBy}</span>}
               {employee.last_evaluation_date && <span className="ml-2">· {tr('dernière éval :', 'last eval:')} {employee.last_evaluation_date}</span>}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+          <div className="flex items-center gap-2">
+            <button onClick={exportEval} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" title={tr('Exporter la fiche d\'évaluation en PDF', 'Export evaluation sheet to PDF')}>
+              <ExternalLink size={13} /> {tr('Export PDF', 'Export PDF')}
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          </div>
         </div>
 
         {!grid ? (
@@ -2693,96 +2726,165 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <label className="text-xs">{tr('% COLA', '% COLA')}</label>
                 <input type="number" step={0.1} disabled={!canEdit} className={inp2} value={colaPct} onChange={e => setColaPct(e.target.value)} />
                 <p className="mt-2 text-[10px] text-amber-700 dark:text-amber-400">
-                  = +{fmt(projection.colaAmt)} {tr('automatique', 'automatic')}
+                  = +{fmt(reco.colaAmt)} {tr('automatique', 'automatic')}
                 </p>
               </div>
             </div>
 
-            {/* Section 2 : Score de compétences */}
+            {/* Section 2 : Évaluation des compétences (note globale en haut) — mode grille seulement */}
+            {useGrid && (
             <div className="rounded-xl border border-purple-200 bg-purple-50/40 dark:border-purple-500/30 dark:bg-purple-500/5 p-4">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <h4 className="font-bold text-sm flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
-                  <Award size={16} /> {tr('Score de compétences pondéré', 'Weighted skill score')}
+                  <Award size={16} /> {tr('Évaluation des compétences', 'Skill evaluation')}
                 </h4>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-[10px] text-gray-500">{tr('Score global', 'Overall score')}</div>
-                    <div className={`text-2xl font-bold ${skillScore >= 80 ? 'text-emerald-600' : skillScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                      {skillScore.toFixed(0)} %
-                    </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-gray-500">{tr('Note globale', 'Global score')}</div>
+                  <div className={`text-3xl font-bold leading-none ${skillScore >= 80 ? 'text-emerald-600' : skillScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {skillScore.toFixed(0)} %
                   </div>
-                  {projection.qualified
-                    ? <span className="rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-xs font-bold">✓ {tr('Palier débloqué', 'Tier unlocked')}</span>
-                    : nextTier && <span className="rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-1 text-xs font-bold">📍 {tr(`${(80 - skillScore).toFixed(0)} % pour palier suivant`, `${(80 - skillScore).toFixed(0)}% to next tier`)}</span>}
                 </div>
               </div>
-              {/* Barre de progression */}
               <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
                 <div className={`h-full transition-all ${skillScore >= 80 ? 'bg-emerald-500' : skillScore >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${skillScore}%` }} />
               </div>
-              {/* Compétences requises avec sliders */}
-              {allRequiredSkills.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-3">{tr('Aucune compétence requise définie dans la grille. Ajoutez-en dans Postes → Grille salariale.', 'No required skill defined in the grid. Add some in Positions → Salary grid.')}</p>
+              {!skillForm || skillForm.types.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-3">{tr('Aucun formulaire de compétences défini. Configurez-le dans Postes → Grille salariale.', 'No skill form defined. Configure it in Positions → Salary grid.')}</p>
               ) : (
-                <div className="space-y-2">
-                  {allRequiredSkills.map(s => {
-                    const lvl = acquired[s.name] || 0;
+                <div className="space-y-3">
+                  {skillForm.types.map(type => {
+                    const max = type.mode === 'pct' ? 100 : (type.max || 5);
                     return (
-                      <div key={s.name} className="flex flex-col gap-1 text-xs sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center">
-                        <div className="sm:col-span-4 sm:truncate">
-                          <span className="font-semibold">{s.name}</span>
-                          <span className="text-[9px] text-gray-400 ml-1">×{s.weight}</span>
-                          <div className="text-[9px] text-gray-400">{tr('paliers', 'tiers')}: {s.tiers.join(', ')}</div>
-                        </div>
-                        <div className="sm:col-span-6">
-                          <input type="range" min={0} max={s.max_level} value={lvl} disabled={!canEdit}
-                            onChange={e => setAcquired(p => ({ ...p, [s.name]: Number(e.target.value) }))}
-                            className="w-full" />
-                        </div>
-                        <div className="text-right sm:col-span-2">
-                          <span className={`font-bold ${lvl >= s.max_level ? 'text-emerald-600' : lvl >= s.max_level / 2 ? 'text-amber-600' : 'text-gray-500'}`}>
-                            {lvl}/{s.max_level}
+                      <div key={type.id} className="rounded-lg border border-purple-200 bg-white p-2.5 dark:border-purple-500/20 dark:bg-gray-800">
+                        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-semibold">{type.name}
+                            <span className="ml-1.5 text-[10px] font-normal text-gray-400">{tr('pond.', 'weight')} {type.weight}% · {type.mode === 'pct' ? '%' : `/${type.max}`}</span>
+                          </span>
+                          <span className={`text-sm font-bold ${(byType[type.id] || 0) >= 80 ? 'text-emerald-600' : (byType[type.id] || 0) >= 50 ? 'text-amber-600' : 'text-gray-500'}`}>
+                            {(byType[type.id] || 0).toFixed(0)} %
                           </span>
                         </div>
+                        {type.skills.length === 0 ? (
+                          <p className="text-[10px] italic text-gray-400">{tr('Aucune compétence dans ce type.', 'No skill in this type.')}</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {type.skills.map(s => {
+                              const v = scores[s.id] || 0;
+                              return (
+                                <div key={s.id} className="flex flex-col gap-1 text-xs sm:grid sm:grid-cols-12 sm:items-center sm:gap-2">
+                                  <div className="font-medium sm:col-span-4 sm:truncate">{s.name || tr('(sans nom)', '(unnamed)')}</div>
+                                  <div className="sm:col-span-6">
+                                    <input type="range" min={0} max={max} step={type.mode === 'pct' ? 5 : 1} value={Math.min(v, max)} disabled={!canEdit}
+                                      onChange={e => setScore(s.id, Number(e.target.value))} className="w-full" />
+                                  </div>
+                                  <div className="text-right sm:col-span-2">
+                                    <span className={`font-bold ${v >= max ? 'text-emerald-600' : v >= max / 2 ? 'text-amber-600' : 'text-gray-500'}`}>
+                                      {v}{type.mode === 'pct' ? ' %' : `/${max}`}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
+            )}
 
-            {/* Section 3 : Projection augmentation */}
+            {/* Section 3 : Positionnement intelligent dans la grille */}
             <div className="rounded-xl border border-blue-200 bg-blue-50/40 dark:border-blue-500/30 dark:bg-blue-500/10 p-4">
               <h4 className="font-bold text-sm flex items-center gap-1.5 text-blue-700 dark:text-blue-300 mb-3">
-                <TrendingUp size={16} /> {tr('Projection d\'augmentation', 'Increase projection')}
+                <TrendingUp size={16} /> {tr('Positionnement dans la grille', 'Grid positioning')}
               </h4>
-              <table className="w-full text-xs">
-                <tbody>
-                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                    <td className="py-1.5">{tr('Salaire actuel', 'Current salary')}</td>
-                    <td className="text-right font-mono">{fmt(projection.cs)}</td>
-                    <td className="text-right text-gray-400">—</td>
-                  </tr>
-                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                    <td className="py-1.5 text-amber-700 dark:text-amber-300">+ {tr('Coût de la vie', 'COLA')} ({projection.cola.toFixed(1)} %)</td>
-                    <td className="text-right font-mono text-amber-700 dark:text-amber-300">+{fmt(projection.colaAmt)}</td>
-                    <td className="text-right text-amber-600 dark:text-amber-400">+{projection.cola.toFixed(1)} %</td>
-                  </tr>
-                  <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                    <td className="py-1.5 text-purple-700 dark:text-purple-300">
-                      + {tr('Compétences', 'Skills')} ({skillScore.toFixed(0)} % {tr('du gap au palier suivant', 'of gap to next tier')})
-                      {nextTier && <div className="text-[10px] text-gray-400">{tr('Palier suivant :', 'Next tier:')} {nextTier.tier_name} — {fmt(nextTier.annual_salary)}</div>}
-                    </td>
-                    <td className="text-right font-mono text-purple-700 dark:text-purple-300">+{fmt(projection.skillIncreaseAmt)}</td>
-                    <td className="text-right text-purple-600 dark:text-purple-400">+{projection.skillPct.toFixed(1)} %</td>
-                  </tr>
-                  <tr className="border-t-2 border-blue-300 dark:border-blue-500/40 font-bold">
-                    <td className="py-2 text-lg">= {tr('Nouveau salaire', 'New salary')}</td>
-                    <td className="text-right text-lg text-blue-700 dark:text-blue-300 font-mono">{fmt(projection.newSalary)}</td>
-                    <td className="text-right text-lg text-blue-700 dark:text-blue-300">+{projection.totalPct.toFixed(1)} %</td>
-                  </tr>
-                </tbody>
-              </table>
+              {tiers.length === 0 ? (
+                <p className="text-xs text-gray-400">{tr('Aucun palier défini dans la grille.', 'No tier defined in the grid.')}</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                    reco.verdict === 'under' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200'
+                      : reco.verdict === 'over' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200'}`}>
+                    {reco.verdict === 'under' && `⬆️ ${tr('Sous-positionné — sa note justifie un palier supérieur', 'Under-positioned — the score justifies a higher tier')}`}
+                    {reco.verdict === 'over' && `⬇️ ${tr('Au-dessus du palier que sa note justifie', 'Above the tier justified by the score')}`}
+                    {reco.verdict === 'aligned' && `✓ ${tr('Aligné — le salaire est cohérent avec la note', 'Aligned — salary is consistent with the score')}`}
+                  </div>
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {useGrid && (<>
+                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                        <td className="py-1.5">{tr('Note globale', 'Global score')}</td>
+                        <td className="text-right font-bold">{skillScore.toFixed(0)} %</td>
+                      </tr>
+                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                        <td className="py-1.5">{tr('Palier justifié par la note', 'Tier justified by the score')}</td>
+                        <td className="text-right font-semibold text-blue-700 dark:text-blue-300">{reco.target?.tier_name || '—'} <span className="font-normal text-gray-400">(≥{reco.target?.min_score ?? 0} %)</span></td>
+                      </tr>
+                      </>)}
+                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                        <td className="py-1.5">{tr('Salaire actuel', 'Current salary')}</td>
+                        <td className="text-right font-mono">{fmt(reco.cs)}{useGrid && <span className="text-gray-400"> · {tiers[currentTierIdx]?.tier_name || '—'}</span>}</td>
+                      </tr>
+                      {useGrid && (
+                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                        <td className="py-1.5">{tr('Salaire cible du palier', 'Tier target salary')}</td>
+                        <td className="text-right font-mono">{fmt(reco.targetSalary)} <span className={reco.gapVsSalary >= 0 ? 'text-emerald-600' : 'text-red-600'}>({reco.gapVsSalary >= 0 ? '+' : ''}{fmt(reco.gapVsSalary)})</span></td>
+                      </tr>
+                      )}
+                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
+                        <td className="py-1.5 text-amber-700 dark:text-amber-300">+ {tr('Coût de la vie', 'COLA')} ({reco.cola.toFixed(1)} %)</td>
+                        <td className="text-right font-mono text-amber-700 dark:text-amber-300">+{fmt(reco.colaAmt)}</td>
+                      </tr>
+                      <tr className="border-t-2 border-blue-300 dark:border-blue-500/40 font-bold">
+                        <td className="py-2 text-base">= {tr('Salaire recommandé', 'Recommended salary')}</td>
+                        <td className="text-right font-mono text-base text-blue-700 dark:text-blue-300">{fmt(reco.newSalary)} <span className="text-xs">({reco.totalPct >= 0 ? '+' : ''}{reco.totalPct.toFixed(1)} %)</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Objectifs pour la prochaine année */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">🎯 {tr('Objectifs pour la prochaine année', 'Objectives for next year')}</h4>
+              <textarea rows={3} disabled={!canEdit} className={`${inp2} resize-y`} value={objectives} onChange={e => setObjectives(e.target.value)} placeholder={tr('Objectifs de développement, compétences à acquérir, projets visés…', 'Development goals, skills to acquire, target projects…')} />
+            </div>
+
+            {/* Historique des évaluations */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5">📜 {tr('Historique des évaluations', 'Evaluation history')} <span className="text-xs text-gray-400 font-normal">({history.length})</span></h4>
+              {history.length === 0 ? (
+                <p className="text-[11px] italic text-gray-400">{tr('Aucune évaluation enregistrée.', 'No evaluation recorded.')}</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="mobile-cards w-full text-xs">
+                    <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                      <th className="px-2 py-1.5">{tr('Date', 'Date')}</th>
+                      <th className="px-2">{tr('Note', 'Score')}</th>
+                      <th className="px-2 text-right">{tr('Salaire avant', 'Salary before')}</th>
+                      <th className="px-2 text-right">{tr('Salaire après', 'Salary after')}</th>
+                      <th className="px-2">{tr('Évalué par', 'Evaluated by')}</th>
+                      <th className="px-2">{tr('Statut', 'Status')}</th>
+                    </tr></thead>
+                    <tbody>
+                      {history.map((h: any) => (
+                        <tr key={h.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                          <td className="px-2 py-1.5" data-label={tr('Date', 'Date')}>{h.evaluation_date}</td>
+                          <td className="px-2" data-label={tr('Note', 'Score')}>{h.skill_score != null ? `${Number(h.skill_score).toFixed(0)} %` : '—'}</td>
+                          <td className="px-2 text-right" data-label={tr('Salaire avant', 'Salary before')}>{fmt(Number(h.salary_before) || 0)}</td>
+                          <td className="px-2 text-right" data-label={tr('Salaire après', 'Salary after')}>{fmt(Number(h.salary_after) || 0)}</td>
+                          <td className="px-2" data-label={tr('Évalué par', 'Evaluated by')}>{h.evaluated_by || '—'}</td>
+                          <td className="px-2" data-label={tr('Statut', 'Status')}>{h.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {notice && <div className={`rounded-lg px-3 py-2 text-sm ${notice.includes('✓') ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{notice}</div>}
@@ -3385,28 +3487,107 @@ type SkillReq = { name: string; level?: string };
 // Prime / bonification discrétionnaire — octroyée à la discrétion de la direction
 // EN PLUS du palier (unit 'fixed' = $/an, 'pct' = % du salaire annuel du palier).
 type DiscretionaryBonus = { label: string; amount: number; unit: 'fixed' | 'pct' };
-type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_months_experience: number; commission_pct?: number | null; notes?: string };
-type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; discretionary_bonuses?: DiscretionaryBonus[]; notes?: string };
+// ─── Formulaire d'évaluation des compétences (défini sur la grille du poste) ──
+// Un type regroupe des compétences, porte une pondération globale (%) et un mode
+// de notation : 'note' (échelle 0..max) ou 'pct' (saisie directe en %).
+// Chaque compétence porte un poids (% d'impact dans la note de son type).
+type SkillItem = { id: string; name: string; weight: number };
+type SkillTypeDef = { id: string; name: string; weight: number; mode: 'note' | 'pct'; max: number; skills: SkillItem[] };
+type SkillForm = { types: SkillTypeDef[] };
+type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_score?: number; min_months_experience: number; commission_pct?: number | null; notes?: string };
+type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; use_skill_grid?: boolean; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; discretionary_bonuses?: DiscretionaryBonus[]; skill_form?: SkillForm; notes?: string };
+
+// Génère un identifiant court côté client pour les types/compétences du formulaire.
+const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10));
+
+// Note globale pondérée (0..100) à partir du formulaire et des notes par compétence.
+function computeSkillScore(form: SkillForm | undefined, scores: Record<string, number>): { global: number; byType: Record<string, number> } {
+  const byType: Record<string, number> = {};
+  const types = form?.types || [];
+  let wSum = 0, wTot = 0;
+  for (const t of types) {
+    const sk = t.skills || [];
+    if (sk.length === 0) { byType[t.id] = 0; continue; }
+    // Note du type = moyenne PONDÉRÉE des compétences par leur poids.
+    // Si aucun poids n'est défini, on retombe sur une moyenne simple.
+    let acc = 0, swTot = 0;
+    for (const s of sk) {
+      const v = Number(scores[s.id] || 0);
+      const ratio = t.mode === 'pct' ? Math.min(v, 100) / 100 : Math.min(v, t.max || 5) / (t.max || 5);
+      const sw = Number(s.weight) > 0 ? Number(s.weight) : 1;
+      acc += ratio * sw; swTot += sw;
+    }
+    const typeScore = swTot > 0 ? (acc / swTot) * 100 : 0; // 0..100
+    byType[t.id] = typeScore;
+    const w = Number(t.weight) || 0;
+    wSum += typeScore * w; wTot += w;
+  }
+  return { global: wTot > 0 ? wSum / wTot : 0, byType };
+}
+
+// Palier atteint = le plus élevé dont le seuil min_score est ≤ note globale.
+function tierForScore<T extends { min_score?: number; tier_level: number }>(tiers: T[], score: number): number {
+  const sorted = [...tiers].sort((a, b) => a.tier_level - b.tier_level);
+  let idx = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    if (score >= (Number(sorted[i].min_score) || 0)) idx = i;
+  }
+  return idx;
+}
 type Subclass = { id: string; name: string; code?: string; color?: string; category?: string };
 type PosteRow = { id?: string; name: string; code: string; color: string; subclass_ids?: string[] };
 
-function computeTiers(grid: GridRow): TierRow[] {
+// Répartit 100 % équitablement entre les éléments (dernier absorbe l'arrondi).
+function evenWeights<T extends { weight: number }>(items: T[]): T[] {
+  const n = items.length;
+  if (n === 0) return items;
+  const base = Math.floor(100 / n);
+  return items.map((x, i) => ({ ...x, weight: i === n - 1 ? 100 - base * (n - 1) : base }));
+}
+// Fixe un élément à `newVal` et redistribue le reste proportionnellement sur les
+// autres pour que la somme reste TOUJOURS 100 %.
+function rebalanceWeights<T extends { id: string; weight: number }>(items: T[], changedId: string, newVal: number): T[] {
+  const v = Math.max(0, Math.min(100, Math.round(newVal)));
+  const others = items.filter(x => x.id !== changedId);
+  const remaining = 100 - v;
+  const sumOthers = others.reduce((s, x) => s + (Number(x.weight) || 0), 0);
+  let acc = 0;
+  const out = items.map(x => {
+    if (x.id === changedId) return { ...x, weight: v };
+    const w = sumOthers > 0 ? (Number(x.weight) || 0) / sumOthers * remaining : remaining / others.length;
+    return { ...x, weight: Math.round(w) };
+  });
+  // Corrige l'arrondi sur le premier "autre" pour garantir un total de 100.
+  const total = out.reduce((s, x) => s + x.weight, 0);
+  if (total !== 100 && others.length) {
+    const firstOther = out.find(x => x.id !== changedId);
+    if (firstOther) firstOther.weight += 100 - total;
+  }
+  return out;
+}
+
+function computeTiers(grid: GridRow, prev?: TierRow[]): TierRow[] {
   const tiers: TierRow[] = [];
   const colaMult = 1 + (grid.cola_pct || 0) / 100;
   const hpy = grid.hours_per_year || 2080;
+  const n = grid.years_plan || 5;
   const defaultNames = ['Entrée / Junior', 'Intermédiaire', 'Senior', 'Expert', 'Principal', 'Lead', 'Architecte'];
-  for (let i = 0; i < (grid.years_plan || 5); i++) {
+  for (let i = 0; i < n; i++) {
     let annual = grid.base_salary || 0;
     if (grid.mode === 'percentage') annual = annual * Math.pow(1 + (grid.annual_increase_pct || 0) / 100, i);
     else if (grid.mode === 'fixed')  annual = annual + i * (grid.annual_increase_fixed || 0);
     annual = annual * colaMult;
+    const p = prev?.[i]; // préserve les valeurs déjà éditées si on régénère
     tiers.push({
       tier_level: i,
-      tier_name: defaultNames[i] || `Palier ${i + 1}`,
+      tier_name: p?.tier_name ?? (defaultNames[i] || `Palier ${i + 1}`),
       annual_salary: Math.round(annual * 100) / 100,
       hourly_rate: Math.round((annual / hpy) * 10000) / 10000,
-      required_skills: [],
-      min_months_experience: i === 0 ? 0 : 12,
+      required_skills: p?.required_skills ?? [],
+      // Seuil de note réparti uniformément par défaut (palier 0 = 0 %, dernier = 100 %)
+      min_score: p?.min_score ?? Math.round((i / Math.max(n - 1, 1)) * 100),
+      min_months_experience: p?.min_months_experience ?? (i === 0 ? 0 : 12),
+      commission_pct: p?.commission_pct,
     });
   }
   return tiers;
@@ -3416,9 +3597,6 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [grid, setGrid] = useState<GridRow | null>(null);
   const [tiers, setTiers] = useState<TierRow[]>([]);
-  const [skills, setSkills] = useState<{ id?: string; name: string; category: string }[]>([]);
-  const [newSkill, setNewSkill] = useState('');
-  const [newSkillCat, setNewSkillCat] = useState('Technique');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -3426,8 +3604,6 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   // La valeur persistée reste toujours base_salary en $/an ; en mode horaire
   // on convertit via hours_per_year. Sélection de tout le contenu au focus.
   const [baseUnit, setBaseUnit] = useState<'annual' | 'hourly'>('annual');
-  // Palier dont le sélecteur de compétences est ouvert (null = aucun).
-  const [skillPickerTier, setSkillPickerTier] = useState<number | null>(null);
   const selectOnFocus = (e: React.FocusEvent) => {
     const t = e.target as HTMLElement;
     if (t instanceof HTMLInputElement && (t.type === 'number' || t.type === 'text')) t.select();
@@ -3436,21 +3612,23 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [{ data: g }, { data: t }, { data: sk }] = await Promise.all([
+      const [{ data: g }, { data: t }] = await Promise.all([
         supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', poste.id!).maybeSingle(),
         supabase.from('poste_salary_tiers').select('*').eq('tenant_id', tenant).order('tier_level'),
-        supabase.from('poste_skills_catalog').select('*').eq('tenant_id', tenant).eq('active', true).order('category').order('name'),
       ]);
-      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [] };
+      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, use_skill_grid: true, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null, discretionary_bonuses: [], skill_form: { types: [] } };
+      // Normalise le formulaire (poids de compétence par défaut pour les anciennes données)
+      const normForm = (sf: any): SkillForm => (sf && Array.isArray(sf.types))
+        ? { types: sf.types.map((t: any) => ({ ...t, skills: (t.skills || []).map((s: any) => ({ weight: 1, ...s })) })) }
+        : { types: [] };
       if (g) {
-        setGrid({ ...defaultGrid, ...g, discretionary_bonuses: (g as any).discretionary_bonuses || [] });
+        setGrid({ ...defaultGrid, ...g, use_skill_grid: (g as any).use_skill_grid !== false, discretionary_bonuses: (g as any).discretionary_bonuses || [], skill_form: normForm((g as any).skill_form) });
         const ts = (t || []).filter((x: any) => x.grid_id === g.id).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
         setTiers(ts.length ? ts : computeTiers({ ...defaultGrid, ...g }));
       } else {
         setGrid(defaultGrid);
         setTiers(computeTiers(defaultGrid));
       }
-      setSkills(sk || []);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3460,8 +3638,8 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
     setGrid(g => {
       if (!g) return g;
       const ng = { ...g, [k]: v };
-      // Recalcul auto si pas en mode custom
-      if (ng.mode !== 'custom') setTiers(computeTiers(ng));
+      // Recalcul auto si pas en mode custom (en préservant les valeurs éditées)
+      if (ng.mode !== 'custom') setTiers(prev => computeTiers(ng, prev));
       return ng;
     });
   }
@@ -3478,64 +3656,78 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
   function addTier() {
     setTiers(p => {
       const last = p[p.length - 1];
-      return [...p, { tier_level: p.length, tier_name: `Palier ${p.length + 1}`, annual_salary: last?.annual_salary || 50000, hourly_rate: last?.hourly_rate || 24, required_skills: [], min_months_experience: 12 }];
+      return [...p, { tier_level: p.length, tier_name: `Palier ${p.length + 1}`, annual_salary: last?.annual_salary || 50000, hourly_rate: last?.hourly_rate || 24, required_skills: [], min_score: 100, min_months_experience: 12 }];
     });
   }
   function delTier(i: number) { setTiers(p => p.filter((_, j) => j !== i).map((t, j) => ({ ...t, tier_level: j }))); }
 
-  // Primes discrétionnaires — mutation directe (pas de recalcul des paliers,
-  // pour ne pas écraser les compétences assignées en mode percentage/fixed).
+  // Primes discrétionnaires — mutation directe (pas de recalcul des paliers).
   const mutateBonuses = (fn: (b: DiscretionaryBonus[]) => DiscretionaryBonus[]) =>
     setGrid(g => g ? { ...g, discretionary_bonuses: fn(g.discretionary_bonuses || []) } : g);
   const addBonus = () => mutateBonuses(b => [...b, { label: `${tr('Prime', 'Bonus')} ${b.length + 1}`, amount: 0, unit: 'fixed' }]);
   const updBonus = (idx: number, k: keyof DiscretionaryBonus, v: any) => mutateBonuses(b => b.map((x, j) => j === idx ? { ...x, [k]: v } : x));
   const delBonus = (idx: number) => mutateBonuses(b => b.filter((_, j) => j !== idx));
 
-  function toggleSkillOnTier(i: number, skillName: string) {
-    setTiers(p => p.map((t, j) => {
-      if (j !== i) return t;
-      const has = t.required_skills.some(s => s.name === skillName);
-      return { ...t, required_skills: has ? t.required_skills.filter(s => s.name !== skillName) : [...t.required_skills, { name: skillName }] };
-    }));
-  }
+  // Formulaire de compétences (types pondérés) — mutation directe sur la grille.
+  const mutateForm = (fn: (f: SkillForm) => SkillForm) =>
+    setGrid(g => g ? { ...g, skill_form: fn(g.skill_form || { types: [] }) } : g);
+  // Types : poids auto-équilibrés à 100 % (ajout/suppression = réparti équitable ; édition manuelle = redistribution proportionnelle).
+  const addSkillType = () => mutateForm(f => ({ types: evenWeights([...f.types, { id: uid(), name: `${tr('Type', 'Type')} ${f.types.length + 1}`, weight: 0, mode: 'note', max: 5, skills: [] }]) }));
+  const updSkillType = (id: string, k: keyof SkillTypeDef, v: any) => mutateForm(f =>
+    k === 'weight' ? ({ types: rebalanceWeights(f.types, id, Number(v)) }) : ({ types: f.types.map(t => t.id === id ? { ...t, [k]: v } : t) }));
+  const delSkillType = (id: string) => mutateForm(f => ({ types: evenWeights(f.types.filter(t => t.id !== id)) }));
+  // Compétences : même logique d'auto-équilibrage à l'intérieur de leur type.
+  const addSkillItem = (typeId: string) => mutateForm(f => ({ types: f.types.map(t => t.id === typeId ? { ...t, skills: evenWeights([...t.skills, { id: uid(), name: '', weight: 0 }]) } : t) }));
+  const updSkillItem = (typeId: string, sid: string, k: keyof SkillItem, v: any) => mutateForm(f => ({ types: f.types.map(t => {
+    if (t.id !== typeId) return t;
+    return k === 'weight' ? { ...t, skills: rebalanceWeights(t.skills, sid, Number(v)) } : { ...t, skills: t.skills.map(s => s.id === sid ? { ...s, [k]: v } : s) };
+  }) }));
+  const delSkillItem = (typeId: string, sid: string) => mutateForm(f => ({ types: f.types.map(t => t.id === typeId ? { ...t, skills: evenWeights(t.skills.filter(s => s.id !== sid)) } : t) }));
 
-  async function addSkillToCatalog() {
-    if (!newSkill.trim()) return;
-    const { data, error } = await supabase.from('poste_skills_catalog').insert({ tenant_id: tenant, name: newSkill.trim(), category: newSkillCat, active: true }).select().single();
-    if (!error && data) { setSkills(s => [...s, data]); setNewSkill(''); }
+  // Export PDF de la fiche de poste complète.
+  async function exportPdf() {
+    if (!grid) return;
+    const { data: t } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
+    const { exportPostePdf } = await import('@/lib/salaryPdf');
+    await exportPostePdf({
+      tr, dateStr: new Date().toLocaleDateString('fr-CA'), posteName: poste.name, logoUrl: t?.logo_url || undefined,
+      grid, tiers: grid.use_skill_grid === false ? [] : tiers,
+      skillForm: grid.use_skill_grid === false ? null : (grid.skill_form || { types: [] }),
+      bonuses: grid.discretionary_bonuses || [],
+    });
   }
 
   async function save() {
     if (!grid) return;
     setSaving(true); setNotice(null);
     try {
-      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, discretionary_bonuses: grid.discretionary_bonuses || [], notes: grid.notes || null, updated_at: new Date().toISOString() };
+      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, use_skill_grid: grid.use_skill_grid !== false, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, discretionary_bonuses: grid.discretionary_bonuses || [], skill_form: grid.skill_form || { types: [] }, notes: grid.notes || null, updated_at: new Date().toISOString() };
       let gridId = grid.id;
-      // Sauvegarde tolérante : si la colonne discretionary_bonuses n'existe pas
-      // encore (migration 074 non exécutée), on réessaie sans ce champ.
-      const isMissingBonusCol = (e: any) => /discretionary_bonuses/i.test(e?.message || '') || e?.code === 'PGRST204';
+      // Sauvegarde tolérante : si une colonne récente (discretionary_bonuses /
+      // skill_form / use_skill_grid, migrations 074-076) n'existe pas encore, on réessaie sans.
+      const isMissingCol = (e: any) => /discretionary_bonuses|skill_form|use_skill_grid/i.test(e?.message || '') || e?.code === 'PGRST204';
+      const stripNew = (p: any) => { const { discretionary_bonuses, skill_form, use_skill_grid, ...rest } = p; return rest; };
       if (grid.id) {
         let { error } = await supabase.from('poste_salary_grids').update(gridPayload).eq('id', grid.id);
-        if (error && isMissingBonusCol(error)) {
-          const { discretionary_bonuses, ...fallback } = gridPayload;
-          ({ error } = await supabase.from('poste_salary_grids').update(fallback).eq('id', grid.id));
-        }
+        if (error && isMissingCol(error)) ({ error } = await supabase.from('poste_salary_grids').update(stripNew(gridPayload)).eq('id', grid.id));
         if (error) throw error;
       } else {
         let { data, error } = await supabase.from('poste_salary_grids').insert(gridPayload).select('id').single();
-        if (error && isMissingBonusCol(error)) {
-          const { discretionary_bonuses, ...fallback } = gridPayload;
-          ({ data, error } = await supabase.from('poste_salary_grids').insert(fallback).select('id').single());
-        }
+        if (error && isMissingCol(error)) ({ data, error } = await supabase.from('poste_salary_grids').insert(stripNew(gridPayload)).select('id').single());
         if (error) throw error;
         if (!data) throw new Error('Insertion de la grille échouée');
         gridId = data.id;
         setGrid(g => g ? { ...g, id: gridId } : g);
       }
-      // Tiers : delete all then re-insert (simple)
+      // Tiers : delete all then re-insert (avec fallback si min_score absent)
       await supabase.from('poste_salary_tiers').delete().eq('grid_id', gridId);
+      let skipMinScore = false;
       for (const t of tiers) {
-        await supabase.from('poste_salary_tiers').insert({ tenant_id: tenant, grid_id: gridId, tier_level: t.tier_level, tier_name: t.tier_name, annual_salary: t.annual_salary, hourly_rate: t.hourly_rate, required_skills: t.required_skills, min_months_experience: t.min_months_experience, commission_pct: t.commission_pct ?? null, sort_order: t.tier_level, notes: t.notes || null });
+        const base: any = { tenant_id: tenant, grid_id: gridId, tier_level: t.tier_level, tier_name: t.tier_name, annual_salary: t.annual_salary, hourly_rate: t.hourly_rate, required_skills: t.required_skills, min_months_experience: t.min_months_experience, commission_pct: t.commission_pct ?? null, sort_order: t.tier_level, notes: t.notes || null };
+        const payload = skipMinScore ? base : { ...base, min_score: t.min_score ?? 0 };
+        let { error } = await supabase.from('poste_salary_tiers').insert(payload);
+        if (error && /min_score/i.test(error.message || '')) { skipMinScore = true; ({ error } = await supabase.from('poste_salary_tiers').insert(base)); }
+        if (error) throw error;
       }
       setNotice(tr('Grille enregistrée ✓', 'Grid saved ✓'));
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
@@ -3543,7 +3735,8 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
 
   if (loading || !grid) return <div className="bg-gray-50 dark:bg-gray-900/40 p-4 text-center"><Loader2 className="inline animate-spin text-gray-400" /></div>;
 
-  const skillsByCategory = skills.reduce((acc, s) => { (acc[s.category] = acc[s.category] || []).push(s); return acc; }, {} as Record<string, typeof skills>);
+  const skillTypes = grid.skill_form?.types || [];
+  const weightTotal = skillTypes.reduce((s, t) => s + (Number(t.weight) || 0), 0);
 
   return (
     <div className="bg-blue-50/40 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-700" onFocus={selectOnFocus}>
@@ -3554,7 +3747,10 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
             <span className="h-4 w-4 rounded shrink-0" style={{ background: poste.color }} />
             <h3 className="font-bold text-sm">{tr('Grille salariale — ', 'Salary grid — ')}<span className="text-blue-600 dark:text-blue-400">{poste.name}</span></h3>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button onClick={exportPdf} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" title={tr('Exporter la fiche de poste en PDF', 'Export position sheet to PDF')}>
+              <ExternalLink size={14} /> {tr('Export PDF', 'Export PDF')}
+            </button>
             <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
             </button>
@@ -3632,49 +3828,74 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
           </div>
         </div>
 
-        {/* Section Commission vente */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-bold text-sm flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
-              💰 {tr('Commission sur ventes', 'Sales commission')}
-            </h4>
-            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
-              <input type="checkbox" checked={!!grid.commission_enabled} onChange={e => updGrid('commission_enabled', e.target.checked)} />
-              {tr('Applicable à ce poste', 'Applicable to this position')}
-            </label>
+        {/* Mode : grille par compétences ou salaire fixe */}
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+          <div>
+            <span className="text-sm font-semibold">{tr('Grille par compétences', 'Skill-based grid')}</span>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">{tr('Activé : paliers de progression + évaluation des compétences. Désactivé : salaire fixe (base + coût de la vie + primes seulement).', 'On: progression tiers + skill evaluation. Off: fixed salary (base + COLA + bonuses only).')}</p>
           </div>
-          {grid.commission_enabled && (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mt-2">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('% par défaut', 'Default %')}</label>
-                <div className="flex items-center gap-1">
-                  <input type="number" step={0.1} min={0} max={100} className={inp2} value={grid.commission_pct || 0} onChange={e => updGrid('commission_pct', Number(e.target.value))} />
-                  <span className="text-xs text-gray-500">%</span>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Base de calcul', 'Calculation basis')}</label>
-                <select className={inp2} value={grid.commission_basis || 'gross'} onChange={e => updGrid('commission_basis', e.target.value as any)}>
-                  <option value="gross">{tr('Chiffre d\'affaires (CA brut)', 'Gross revenue')}</option>
-                  <option value="net">{tr('Net (après dépenses)', 'Net (after expenses)')}</option>
-                  <option value="margin">{tr('Marge bénéficiaire', 'Profit margin')}</option>
-                  <option value="custom">{tr('Personnalisée', 'Custom')}</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Seuil min. $ (optionnel)', 'Min threshold $ (optional)')}</label>
-                <input type="number" min={0} className={inp2} value={grid.commission_threshold || 0} onChange={e => updGrid('commission_threshold', Number(e.target.value))} placeholder="0" />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Plafond annuel $ (optionnel)', 'Annual cap $ (optional)')}</label>
-                <input type="number" min={0} className={inp2} value={grid.commission_cap || ''} onChange={e => updGrid('commission_cap', e.target.value ? Number(e.target.value) : null)} placeholder={tr('Aucun', 'None')} />
-              </div>
-              <div className="md:col-span-2 lg:col-span-4 text-[10px] text-amber-700 dark:text-amber-400 italic">
-                💡 {tr('Chaque palier peut avoir son propre % (colonne "Comm. %" du tableau). Si vide, le % par défaut s\'applique.', 'Each tier can have its own % (column "Comm. %" in the table). If empty, the default % applies.')}
-              </div>
-            </div>
-          )}
+          <input type="checkbox" disabled={!canEdit} checked={grid.use_skill_grid !== false} onChange={e => updGrid('use_skill_grid', e.target.checked)} className="h-5 w-5 shrink-0" />
+        </label>
+
+        {grid.use_skill_grid !== false && (
+        /* Tableau des paliers */
+        <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+            <h4 className="font-bold text-sm flex items-center gap-1.5">
+              <TrendingUp size={14} className="text-emerald-500" />
+              {tr('Paliers de progression', 'Progression tiers')}
+              <span className="text-xs text-gray-400 font-normal">({tiers.length})</span>
+            </h4>
+            {grid.mode === 'custom' && (
+              <button onClick={addTier} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                <Plus size={12} /> {tr('Palier', 'Tier')}
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="mobile-cards w-full text-xs">
+              <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                <th className="px-2 py-1.5 w-8">#</th>
+                <th className="px-2">{tr('Palier', 'Tier name')}</th>
+                <th className="px-2 text-right">{tr('Salaire annuel $', 'Annual salary $')}</th>
+                <th className="px-2 text-right">{tr('Taux $/h', 'Hourly $')}</th>
+                <th className="px-2">{tr('Min. mois exp.', 'Min. months exp.')}</th>
+                {grid.commission_enabled && <th className="px-2 text-right">{tr('Comm. %', 'Comm. %')}</th>}
+                <th className="px-2 text-right">{tr('Note min (%)', 'Min score (%)')}</th>
+                {grid.mode === 'custom' && <th></th>}
+              </tr></thead>
+              <tbody>
+                {tiers.map((t, i) => (
+                  <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50 align-top">
+                    <td className="px-2 py-1.5 font-mono text-gray-400" data-label="#">{t.tier_level}</td>
+                    <td className="px-2" data-label={tr('Palier', 'Tier name')}>
+                      <input className={`${inp2} text-xs`} value={t.tier_name} onChange={e => updTier(i, 'tier_name', e.target.value)} />
+                    </td>
+                    <td className="px-2" data-label={tr('Salaire annuel $', 'Annual salary $')}>
+                      <input type="number" disabled={grid.mode !== 'custom'} className={`${inp2} text-xs text-right ${grid.mode !== 'custom' ? 'opacity-60' : ''}`} value={t.annual_salary} onChange={e => updTier(i, 'annual_salary', Number(e.target.value))} />
+                    </td>
+                    <td className="px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold" data-label={tr('Taux $/h', 'Hourly $')}>{t.hourly_rate.toFixed(2)} $</td>
+                    <td className="px-2" data-label={tr('Min. mois exp.', 'Min. months exp.')}>
+                      <input type="number" min={0} className={`${inp2} w-16 text-xs text-center`} value={t.min_months_experience} onChange={e => updTier(i, 'min_months_experience', Number(e.target.value))} />
+                    </td>
+                    {grid.commission_enabled && (
+                      <td className="px-2" data-label={tr('Comm. %', 'Comm. %')}>
+                        <input type="number" step={0.1} min={0} max={100} className={`${inp2} w-16 text-xs text-right`} value={t.commission_pct ?? ''} placeholder={String(grid.commission_pct || 0)} onChange={e => updTier(i, 'commission_pct', e.target.value === '' ? null : Number(e.target.value))} />
+                      </td>
+                    )}
+                    <td className="px-2 text-right" data-label={tr('Note min (%)', 'Min score (%)')}>
+                      <input type="number" min={0} max={100} disabled={!canEdit} className={`${inp2} w-16 text-xs text-right`} value={t.min_score ?? 0} onChange={e => updTier(i, 'min_score', Number(e.target.value))} />
+                    </td>
+                    {grid.mode === 'custom' && (
+                      <td className="px-2 text-right sm:text-left"><button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button></td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+        )}
 
         {/* Section Primes discrétionnaires */}
         <div className="rounded-xl border border-violet-200 bg-violet-50/40 dark:border-violet-500/30 dark:bg-violet-500/5 p-3">
@@ -3726,122 +3947,142 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
           )}
         </div>
 
-        {/* Tableau des paliers */}
-        <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
-            <h4 className="font-bold text-sm flex items-center gap-1.5">
-              <TrendingUp size={14} className="text-emerald-500" />
-              {tr('Paliers de progression', 'Progression tiers')}
-              <span className="text-xs text-gray-400 font-normal">({tiers.length})</span>
+        {/* Section Commission sur ventes */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-bold text-sm flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+              💰 {tr('Commission sur ventes', 'Sales commission')}
             </h4>
-            {grid.mode === 'custom' && (
-              <button onClick={addTier} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
-                <Plus size={12} /> {tr('Palier', 'Tier')}
+            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+              <input type="checkbox" checked={!!grid.commission_enabled} onChange={e => updGrid('commission_enabled', e.target.checked)} />
+              {tr('Applicable à ce poste', 'Applicable to this position')}
+            </label>
+          </div>
+          {grid.commission_enabled && (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mt-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('% par défaut', 'Default %')}</label>
+                <div className="flex items-center gap-1">
+                  <input type="number" step={0.1} min={0} max={100} className={inp2} value={grid.commission_pct || 0} onChange={e => updGrid('commission_pct', Number(e.target.value))} />
+                  <span className="text-xs text-gray-500">%</span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Base de calcul', 'Calculation basis')}</label>
+                <select className={inp2} value={grid.commission_basis || 'gross'} onChange={e => updGrid('commission_basis', e.target.value as any)}>
+                  <option value="gross">{tr('Chiffre d\'affaires (CA brut)', 'Gross revenue')}</option>
+                  <option value="net">{tr('Net (après dépenses)', 'Net (after expenses)')}</option>
+                  <option value="margin">{tr('Marge bénéficiaire', 'Profit margin')}</option>
+                  <option value="custom">{tr('Personnalisée', 'Custom')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Seuil min. $ (optionnel)', 'Min threshold $ (optional)')}</label>
+                <input type="number" min={0} className={inp2} value={grid.commission_threshold || 0} onChange={e => updGrid('commission_threshold', Number(e.target.value))} placeholder="0" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Plafond annuel $ (optionnel)', 'Annual cap $ (optional)')}</label>
+                <input type="number" min={0} className={inp2} value={grid.commission_cap || ''} onChange={e => updGrid('commission_cap', e.target.value ? Number(e.target.value) : null)} placeholder={tr('Aucun', 'None')} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4 text-[10px] text-amber-700 dark:text-amber-400 italic">
+                💡 {tr('Chaque palier peut avoir son propre % (colonne "Comm. %" du tableau). Si vide, le % par défaut s\'applique.', 'Each tier can have its own % (column "Comm. %" in the table). If empty, the default % applies.')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section Formulaire d'évaluation des compétences (en bas) */}
+        {grid.use_skill_grid !== false && (
+        <div className="rounded-xl border border-purple-200 bg-purple-50/40 dark:border-purple-500/30 dark:bg-purple-500/5 p-3">
+          <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h4 className="font-bold text-sm flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
+                <Award size={14} /> {tr("Formulaire d'évaluation des compétences", 'Skill evaluation form')}
+              </h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-2xl">
+                {tr("Chaque type a un % d'impact sur la note globale ; chaque compétence a un % d'impact dans son type. La note globale détermine automatiquement le palier (seuil « Note min »).", "Each type has a % impact on the global score; each skill has a % impact within its type. The global score automatically determines the tier (“Min score” threshold).")}
+              </p>
+            </div>
+            {canEdit && (
+              <button onClick={addSkillType} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-purple-300 px-2.5 py-1 text-xs font-semibold text-purple-600 hover:bg-purple-100 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">
+                <Plus size={13} /> {tr('Type', 'Type')}
               </button>
             )}
           </div>
-          <div className="overflow-x-auto">
-            <table className="mobile-cards w-full text-xs">
-              <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                <th className="px-2 py-1.5 w-8">#</th>
-                <th className="px-2">{tr('Palier', 'Tier name')}</th>
-                <th className="px-2 text-right">{tr('Salaire annuel $', 'Annual salary $')}</th>
-                <th className="px-2 text-right">{tr('Taux $/h', 'Hourly $')}</th>
-                <th className="px-2">{tr('Min. mois exp.', 'Min. months exp.')}</th>
-                {grid.commission_enabled && <th className="px-2 text-right">{tr('Comm. %', 'Comm. %')}</th>}
-                <th className="px-2">{tr('Compétences requises', 'Required skills')}</th>
-                {grid.mode === 'custom' && <th></th>}
-              </tr></thead>
-              <tbody>
-                {tiers.map((t, i) => (
-                  <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50 align-top">
-                    <td className="px-2 py-1.5 font-mono text-gray-400" data-label="#">{t.tier_level}</td>
-                    <td className="px-2" data-label={tr('Palier', 'Tier name')}>
-                      <input className={`${inp2} text-xs`} value={t.tier_name} onChange={e => updTier(i, 'tier_name', e.target.value)} />
-                    </td>
-                    <td className="px-2" data-label={tr('Salaire annuel $', 'Annual salary $')}>
-                      <input type="number" disabled={grid.mode !== 'custom'} className={`${inp2} text-xs text-right ${grid.mode !== 'custom' ? 'opacity-60' : ''}`} value={t.annual_salary} onChange={e => updTier(i, 'annual_salary', Number(e.target.value))} />
-                    </td>
-                    <td className="px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold" data-label={tr('Taux $/h', 'Hourly $')}>{t.hourly_rate.toFixed(2)} $</td>
-                    <td className="px-2" data-label={tr('Min. mois exp.', 'Min. months exp.')}>
-                      <input type="number" min={0} className={`${inp2} w-16 text-xs text-center`} value={t.min_months_experience} onChange={e => updTier(i, 'min_months_experience', Number(e.target.value))} />
-                    </td>
-                    {grid.commission_enabled && (
-                      <td className="px-2" data-label={tr('Comm. %', 'Comm. %')}>
-                        <input type="number" step={0.1} min={0} max={100} className={`${inp2} w-16 text-xs text-right`} value={t.commission_pct ?? ''} placeholder={String(grid.commission_pct || 0)} onChange={e => updTier(i, 'commission_pct', e.target.value === '' ? null : Number(e.target.value))} />
-                      </td>
-                    )}
-                    <td className="px-2 py-1.5 mc-stack" data-label={tr('Compétences requises', 'Required skills')}>
-                      <div className="flex flex-wrap gap-1 items-center">
-                        {t.required_skills.map(s => (
-                          <span key={s.name} className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 text-[10px] font-semibold">
-                            <Award size={10} /> {s.name}
-                            <button onClick={() => toggleSkillOnTier(i, s.name)} className="text-purple-400 hover:text-red-500">×</button>
-                          </span>
-                        ))}
-                        <button type="button" onClick={() => setSkillPickerTier(skillPickerTier === i ? null : i)}
-                          className={`rounded-full border border-dashed px-2 py-0.5 text-[10px] transition ${skillPickerTier === i ? 'border-purple-400 bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-300' : 'border-gray-300 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                          {skillPickerTier === i ? `✕ ${tr('Fermer', 'Close')}` : `+ ${tr('Ajouter', 'Add')}`}
-                        </button>
-                      </div>
-                      {/* Sélecteur inline (jamais clippé par le conteneur scrollable) */}
-                      {skillPickerTier === i && (
-                        <div className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-600 dark:bg-gray-800 max-h-56 overflow-y-auto space-y-1.5">
-                          {skills.length === 0 ? (
-                            <p className="text-[10px] text-gray-400 px-1 py-1">{tr('Catalogue vide — ajoutez des compétences dans la section « Catalogue de compétences » ci-dessous ↓', 'Empty catalog — add skills in the "Skills catalog" section below ↓')}</p>
-                          ) : Object.entries(skillsByCategory).map(([cat, list]) => (
-                            <div key={cat}>
-                              <div className="px-0.5 py-0.5 text-[9px] font-bold text-gray-400 uppercase tracking-wide">{cat}</div>
-                              <div className="flex flex-wrap gap-1">
-                                {list.map(s => {
-                                  const on = t.required_skills.some(x => x.name === s.name);
-                                  return (
-                                    <button key={s.id} type="button" onClick={() => toggleSkillOnTier(i, s.name)}
-                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition ${on ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
-                                      {on ? '✓ ' : ''}{s.name}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    {grid.mode === 'custom' && (
-                      <td className="px-2 text-right sm:text-left"><button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button></td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        {/* Catalogue de compétences */}
-        <div className="rounded-xl border border-purple-200 bg-purple-50/40 dark:border-purple-500/30 dark:bg-purple-500/5 p-3">
-          <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
-            <Award size={14} /> {tr('Catalogue de compétences', 'Skills catalog')}
-            <span className="text-xs text-gray-400 font-normal">({skills.length})</span>
-          </h4>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <input className={`${inp2} min-w-[12rem] flex-1`} placeholder={tr('Nom de compétence (ex: Soudure TIG)', 'Skill name (e.g. TIG welding)')} value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSkillToCatalog()} />
-            <select className={`${inp2} w-32`} value={newSkillCat} onChange={e => setNewSkillCat(e.target.value)}>
-              <option>Technique</option>
-              <option>Sécurité</option>
-              <option>Gestion</option>
-              <option>Soft skills</option>
-              <option>Certification</option>
-            </select>
-            <button onClick={addSkillToCatalog} className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700"><Plus size={14} /></button>
-          </div>
-          {Object.entries(skillsByCategory).map(([cat, list]) => (
-            <div key={cat} className="mb-1.5">
-              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase mr-2">{cat}:</span>
-              {list.map(s => (<span key={s.id} className="inline-block bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-500/30 rounded px-2 py-0.5 text-[11px] mr-1 mb-1">{s.name}</span>))}
+          {skillTypes.length > 0 && (
+            <div className={`mb-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold ${weightTotal === 100 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'}`}>
+              {tr('Somme des pondérations de type', 'Total type weighting')} : {weightTotal}%
+              {weightTotal !== 100 && <span className="font-normal">— {tr('devrait totaliser 100 %', 'should total 100%')}</span>}
             </div>
-          ))}
+          )}
+
+          {skillTypes.length === 0 ? (
+            <p className="text-[11px] italic text-gray-400">{tr('Aucun type. Cliquez « + Type » pour créer le formulaire (ex. Technique, Sécurité, Gestion).', 'No type. Click "+ Type" to build the form (e.g. Technical, Safety, Management).')}</p>
+          ) : (
+            <div className="space-y-2">
+              {skillTypes.map(type => {
+                const skillWTotal = (type.skills || []).reduce((acc, x) => acc + (Number(x.weight) || 0), 0);
+                return (
+                <div key={type.id} className="space-y-2 rounded-lg border border-purple-200 bg-white p-2.5 dark:border-purple-500/20 dark:bg-gray-800">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-[9rem] flex-1">
+                      <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Type de compétence', 'Skill type')}</label>
+                      <input className={inp2} value={type.name} disabled={!canEdit} placeholder={tr('Ex : Technique', 'E.g. Technical')} onChange={e => updSkillType(type.id, 'name', e.target.value)} />
+                    </div>
+                    <div className="w-28">
+                      <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Notation', 'Scoring')}</label>
+                      <select className={inp2} value={type.mode} disabled={!canEdit} onChange={e => updSkillType(type.id, 'mode', e.target.value as 'note' | 'pct')}>
+                        <option value="note">{tr('Note /N', 'Score /N')}</option>
+                        <option value="pct">%</option>
+                      </select>
+                    </div>
+                    {type.mode === 'note' && (
+                      <div className="w-20">
+                        <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Sur', 'Out of')}</label>
+                        <input type="number" min={1} max={100} className={inp2} value={type.max} disabled={!canEdit} onChange={e => updSkillType(type.id, 'max', Number(e.target.value) || 5)} />
+                      </div>
+                    )}
+                    <div className="w-24">
+                      <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Poids du type', 'Type weight')}</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" min={0} max={100} className={inp2} value={type.weight} disabled={!canEdit} onChange={e => updSkillType(type.id, 'weight', Number(e.target.value))} />
+                        <span className="text-xs text-gray-400">%</span>
+                      </div>
+                    </div>
+                    {canEdit && (
+                      <button onClick={() => delSkillType(type.id)} className="pb-1.5 text-gray-400 hover:text-red-600" title={tr('Supprimer le type', 'Delete type')}><Trash2 size={14} /></button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 border-l-2 border-purple-200 pl-2.5 dark:border-purple-500/30">
+                    <div className="flex items-center justify-between text-[9px] font-bold uppercase text-gray-400">
+                      <span>{tr('Compétences (poids = % dans le type)', 'Skills (weight = % within type)')}</span>
+                      {type.skills.length > 0 && <span className={skillWTotal === 100 ? 'text-emerald-600' : 'text-amber-600'}>Σ {skillWTotal}%</span>}
+                    </div>
+                    {type.skills.length === 0 && <p className="text-[10px] italic text-gray-400">{tr('Aucune compétence dans ce type.', 'No skill in this type.')}</p>}
+                    {type.skills.map(s => (
+                      <div key={s.id} className="flex items-center gap-2">
+                        <Award size={11} className="shrink-0 text-purple-400" />
+                        <input className={`${inp2} text-xs`} value={s.name} disabled={!canEdit} placeholder={tr('Nom de la compétence', 'Skill name')} onChange={e => updSkillItem(type.id, s.id, 'name', e.target.value)} />
+                        <div className="flex w-20 shrink-0 items-center gap-0.5">
+                          <input type="number" min={0} max={100} className={`${inp2} text-xs text-right`} value={s.weight ?? 0} disabled={!canEdit} title={tr('% d\'impact dans le type', '% impact within type')} onChange={e => updSkillItem(type.id, s.id, 'weight', Number(e.target.value))} />
+                          <span className="text-[10px] text-gray-400">%</span>
+                        </div>
+                        {canEdit && <button onClick={() => delSkillItem(type.id, s.id)} className="shrink-0 text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>}
+                      </div>
+                    ))}
+                    {canEdit && (
+                      <button onClick={() => addSkillItem(type.id)} className="inline-flex items-center gap-1 rounded-md border border-dashed border-purple-300 px-2 py-0.5 text-[10px] font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">
+                        <Plus size={11} /> {tr('Compétence', 'Skill')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
         </div>
+        )}
       </div>
     </div>
   );
