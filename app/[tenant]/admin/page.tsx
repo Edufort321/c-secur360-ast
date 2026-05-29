@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -52,12 +52,6 @@ export default function AdminPage() {
   type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [ressourcesInitialSubTab, setRessourcesInitialSubTab] = useState<'equipements' | 'postes'>('equipements');
-
-  function goToPostes() {
-    setRessourcesInitialSubTab('postes');
-    setTab('ressources');
-  }
 
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
@@ -121,9 +115,9 @@ export default function AdminPage() {
         </div>
 
         {tab === 'sitesdepts' && <SitesDepts tenant={tenant} tr={tr} />}
-        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} goToPostes={goToPostes} />}
+        {tab === 'employes'   && <Employes tenant={tenant} tr={tr} />}
         {tab === 'vehicules'  && <Vehicules tenant={tenant} tr={tr} />}
-        {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} initialSubTab={ressourcesInitialSubTab} />}
+        {tab === 'ressources' && <Ressources tenant={tenant} tr={tr} />}
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
@@ -1977,28 +1971,14 @@ function Vehicules({ tenant, tr }: { tenant: string; tr: (f: string, e: string) 
 // RESSOURCES PLANNER
 // ============================================================
 
-function Ressources({ tenant, tr, initialSubTab = 'equipements' }: { tenant: string; tr: (f: string, e: string) => string; initialSubTab?: 'equipements' | 'postes' }) {
-  const [subTab, setSubTab] = useState<'equipements' | 'postes'>(initialSubTab as 'equipements' | 'postes');
+function Ressources({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string; initialSubTab?: 'equipements' | 'postes' }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        {tr('Équipements et postes utilisés par le planificateur.', 'Equipment and positions used by the planner.')}
+        {tr('Équipements utilisés par le planificateur. Les postes/rôles se gèrent dans l\'onglet Employés.', 'Equipment used by the planner. Positions/roles are managed in the Employees tab.')}
       </p>
-      <div className="flex gap-1 overflow-x-auto">
-        {[
-          { k: 'equipements', label: tr('Équipements', 'Equipment') },
-          { k: 'postes',      label: tr('Postes', 'Positions') },
-        ].map(x => (
-          <button key={x.k} onClick={() => setSubTab(x.k as any)}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>
-            {x.label}
-          </button>
-        ))}
-      </div>
-      {subTab === 'equipements' && <EquipementsPlanner tenant={tenant} tr={tr} inp={inp} />}
-      {subTab === 'postes'      && <PostesPlanner      tenant={tenant} tr={tr} inp={inp} />}
+      <EquipementsPlanner tenant={tenant} tr={tr} inp={inp} />
     </div>
   );
 }
@@ -2007,8 +1987,239 @@ function Ressources({ tenant, tr, initialSubTab = 'equipements' }: { tenant: str
 // EMPLOYÉS — PersonnelPlanner avec liens vers modules
 // ============================================================
 
-function Employes({ tenant, tr, goToPostes }: { tenant: string; tr: (f: string, e: string) => string; goToPostes: () => void }) {
+// ─── Générateur mot de passe : 5 lettres (prénom/nom) + 3 chiffres + 2 spéciaux ───
+function generatePassword(fullName: string): string {
+  const specials = ['@', '#', '$', '!', '%', '&', '?', '*', '+', '='];
+  const clean = (fullName || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-zA-Z\s]/g, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  let letters = '';
+  if (parts.length >= 2) {
+    const first = parts[0];
+    const last  = parts[parts.length - 1];
+    letters = (first[0]?.toUpperCase() || 'X') + (first.slice(1, 3).toLowerCase() || 'xx').padEnd(2, 'x') + (last[0]?.toUpperCase() || 'X') + (last[1]?.toLowerCase() || 'x');
+  } else {
+    const w = parts[0] || 'User';
+    letters = (w[0]?.toUpperCase() || 'X') + (w.slice(1, 5).toLowerCase() || 'xxxx').padEnd(4, 'x');
+  }
+  letters = letters.slice(0, 5);
+  const digits = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10)).join('');
+  const sp1 = specials[Math.floor(Math.random() * specials.length)];
+  let sp2 = specials[Math.floor(Math.random() * specials.length)];
+  while (sp2 === sp1) sp2 = specials[Math.floor(Math.random() * specials.length)];
+  return `${letters}${digits}${sp1}${sp2}`;
+}
+
+function suggestEmail(fullName: string, tenant: string): string {
+  const clean = (fullName || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-zA-Z\s]/g, '').trim().toLowerCase();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  const local = parts.length >= 2 ? `${parts[0]}.${parts[parts.length - 1]}` : parts[0];
+  return `${local}@${tenant}.ca`;
+}
+
+function ComptesAcces({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  type Personnel = { id: string; name: string; email: string; niveauAcces?: string };
+  type UserAccount = { id: string; email: string; name: string; role: string; is_active: boolean };
+  const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [users, setUsers]         = useState<UserAccount[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [selected, setSelected]   = useState<Personnel | null>(null);
+  const [form, setForm]           = useState({ email: '', name: '', role: 'user', password: '' });
+  const [busy, setBusy]           = useState(false);
+  const [notice, setNotice]       = useState<string | null>(null);
+  const [showPwd, setShowPwd]     = useState(false);
+  const [copied, setCopied]       = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const [{ data: pers }, usersRes] = await Promise.all([
+      supabase.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name'),
+      fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()).catch(() => ({ users: [] })),
+    ]);
+    setPersonnel((pers || []).filter((p: any) => p.name));
+    setUsers(usersRes?.users || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  function pickPersonnel(p: Personnel) {
+    setSelected(p); setNotice(null); setCopied(false);
+    const niveauToRole: Record<string, string> = { administration: 'client_admin', coordination: 'client_admin', admin_paie: 'client_admin', modification: 'user', consultation: 'user' };
+    setForm({
+      email:    p.email || suggestEmail(p.name, tenant),
+      name:     p.name,
+      role:     niveauToRole[p.niveauAcces || ''] || 'user',
+      password: generatePassword(p.name),
+    });
+    setShowPwd(true);
+  }
+
+  function regenerate() {
+    setForm(f => ({ ...f, password: generatePassword(form.name || 'User') }));
+    setShowPwd(true); setCopied(false);
+  }
+  function regenEmail() { setForm(f => ({ ...f, email: suggestEmail(f.name, tenant) })); }
+
+  function copyPwd() {
+    if (!form.password) return;
+    navigator.clipboard.writeText(form.password).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  function copyAll() {
+    if (!form.email || !form.password) return;
+    navigator.clipboard.writeText(`Courriel : ${form.email}\nMot de passe : ${form.password}\nLien : https://${tenant}.c-secur360.ca`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+
+  async function createAccount() {
+    if (!form.email.trim() || !form.password.trim()) { setNotice(tr('Courriel et mot de passe requis', 'Email and password required')); return; }
+    setBusy(true); setNotice(null);
+    try {
+      const r = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, ...form }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Erreur');
+      setNotice(tr('Compte créé ✓ — copiez les identifiants ci-dessus', 'Account created ✓ — copy credentials above'));
+      load();
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
+  }
+
+  async function toggleActive(u: UserAccount) {
+    await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: u.id, is_active: !u.is_active }) });
+    load();
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  const userByEmail: Record<string, UserAccount> = {};
+  users.forEach(u => { userByEmail[u.email.toLowerCase()] = u; });
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {/* Liste personnel à gauche */}
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
+        <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <h2 className="font-bold">{tr('Personnel — création de compte d\'accès', 'Staff — access account creation')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{tr('Sélectionnez un employé pour générer automatiquement courriel + mot de passe.', 'Select an employee to auto-generate email + password.')}</p>
+        </div>
+        <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
+          {personnel.map(p => {
+            const existing = userByEmail[(p.email || '').toLowerCase()];
+            return (
+              <button key={p.id} onClick={() => pickPersonnel(p)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 ${selected?.id === p.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${existing ? 'bg-emerald-600' : 'bg-gray-400'}`}>
+                  {(p.name || '?')[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{p.name}</div>
+                  <div className="truncate text-xs text-gray-500">{p.email || tr('Aucun courriel', 'No email')}</div>
+                </div>
+                {p.niveauAcces && <span className="text-[10px] rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-gray-600 dark:text-gray-300">{p.niveauAcces}</span>}
+                {existing
+                  ? <span className="text-[10px] font-semibold rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">✓ {tr('compte', 'account')}</span>
+                  : <span className="text-[10px] rounded-full border border-gray-300 dark:border-gray-600 px-2 py-0.5 text-gray-400">{tr('aucun', 'none')}</span>}
+              </button>
+            );
+          })}
+          {personnel.length === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">{tr('Aucun employé. Créez-en dans « Personnel & planification ».', 'No employee. Create one in "Staff & planning".')}</div>}
+        </div>
+      </div>
+
+      {/* Panneau création */}
+      <div className="space-y-4">
+        {selected ? (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-5 dark:border-blue-500/30 dark:bg-blue-500/10 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-sm flex items-center gap-1.5">🔑 {tr('Identifiants', 'Credentials')}</h2>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">
+              <strong>{selected.name}</strong>
+              {selected.niveauAcces && <span className="ml-2 text-[10px] rounded-full bg-gray-200 dark:bg-gray-700 px-2 py-0.5">{selected.niveauAcces}</span>}
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
+                {tr('Courriel', 'Email')}
+                <button type="button" onClick={regenEmail} className="text-[10px] text-blue-600 hover:underline">↻ {tr('Auto', 'Auto')}</button>
+              </label>
+              <input type="email" className={inp2} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="prenom.nom@..." />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Rôle', 'Role')}</label>
+              <select className={inp2} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                <option value="user">{tr('Utilisateur', 'User')}</option>
+                <option value="client_admin">{tr('Admin client', 'Client admin')}</option>
+                <option value="super_admin">{tr('Super admin', 'Super admin')}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
+                {tr('Mot de passe', 'Password')}
+                <span className="text-[10px] text-gray-400 font-normal">{tr('5 lettres + 3 chiffres + 2 spéciaux', '5 letters + 3 digits + 2 specials')}</span>
+              </label>
+              <div className="flex gap-1.5">
+                <div className="relative flex-1">
+                  <input type={showPwd ? 'text' : 'password'} className={`${inp2} pr-9 font-mono tracking-wider`} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+                  <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">{showPwd ? '🙈' : '👁'}</button>
+                </div>
+                <button type="button" onClick={regenerate} title={tr('Régénérer', 'Regenerate')} className="shrink-0 rounded-lg border border-gray-300 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300">↻</button>
+              </div>
+              {form.password && (
+                <div className="mt-1.5 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-800">
+                  <span className="font-mono text-sm font-bold tracking-widest text-gray-800 dark:text-gray-100 select-all">{form.password}</span>
+                  <button type="button" onClick={copyPwd} className={`text-xs font-semibold transition ${copied ? 'text-emerald-600' : 'text-blue-600 hover:underline'}`}>{copied ? tr('Copié ✓', 'Copied ✓') : tr('Copier', 'Copy')}</button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={createAccount} disabled={busy} className="flex-1 inline-flex items-center justify-center gap-1 rounded-xl bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {tr('Créer le compte', 'Create account')}
+              </button>
+              <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📋 {tr('Tout', 'All')}</button>
+            </div>
+            {notice && <p className={`text-xs font-medium ${notice.includes('✓') ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>{notice}</p>}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-8 text-center text-sm text-gray-400">
+            👈 {tr('Choisissez un employé à gauche pour générer ses identifiants.', 'Pick an employee on the left to generate credentials.')}
+          </div>
+        )}
+
+        {/* Liste des comptes existants */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="font-bold text-sm mb-2">{tr('Comptes existants', 'Existing accounts')} ({users.length})</h3>
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {users.map(u => (
+              <div key={u.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${u.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                <span className="flex-1 truncate">{u.email}</span>
+                <span className="text-[10px] text-gray-400">{u.role}</span>
+                <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
+              </div>
+            ))}
+            {users.length === 0 && <p className="text-xs text-gray-400 py-2 text-center">{tr('Aucun compte créé.', 'No accounts.')}</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Employes({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [subTab, setSubTab] = useState<'personnel' | 'postes' | 'comptes'>('personnel');
+  const [sharedPostes, setSharedPostes] = useState<{ id: string; name: string; color?: string }[]>([]);
+  const [postesTick, setPostesTick] = useState(0); // incrément quand postes changent — force re-fetch
+  const reloadPostes = useCallback(async () => {
+    const { data } = await supabase.from('planner_postes').select('id, name, color').eq('tenant_id', tenant).order('name');
+    setSharedPostes(data || []);
+    setPostesTick(t => t + 1);
+  }, [tenant]);
+  useEffect(() => { reloadPostes(); }, [reloadPostes]);
   return (
     <div className="space-y-4">
       {/* Module cross-links */}
@@ -2024,36 +2235,54 @@ function Employes({ tenant, tr, goToPostes }: { tenant: string; tr: (f: string, 
           </Link>
         ))}
       </div>
-      <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} goToPostes={goToPostes} />
+      {/* Sous-onglets */}
+      <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        {[
+          { k: 'personnel', label: tr('Personnel & planification', 'Staff & planning'), icon: HardHat },
+          { k: 'postes',    label: tr('Postes',                    'Positions'),         icon: Layers },
+          { k: 'comptes',   label: tr('Comptes d\'accès',          'Access accounts'),    icon: UserCog },
+        ].map(x => {
+          const Icon = x.icon as any;
+          return (
+            <button key={x.k} onClick={() => setSubTab(x.k as any)}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${subTab === x.k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+              <Icon size={15} /> {x.label}
+            </button>
+          );
+        })}
+      </div>
+      {subTab === 'personnel' && <PersonnelPlanner tenant={tenant} tr={tr} inp={inp} goToPostes={() => setSubTab('postes')} sharedPostes={sharedPostes} postesTick={postesTick} />}
+      {subTab === 'postes'    && <PostesPlanner    tenant={tenant} tr={tr} inp={inp} onPostesChanged={reloadPostes} />}
+      {subTab === 'comptes'   && <ComptesAcces     tenant={tenant} tr={tr} />}
     </div>
   );
 }
 
-function PersonnelPlanner({ tenant, tr, inp, goToPostes }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void }) {
+function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, postesTick }: { tenant: string; tr: (f: string, e: string) => string; inp: string; goToPostes: () => void; sharedPostes: { id: string; name: string; color?: string }[]; postesTick: number }) {
   type Row = { id?: string; name: string; role: string; phone: string; email: string; is_active: boolean; niveauAcces: string; succursale: string };
   const empty = (): Row => ({ name: '', role: '', phone: '', email: '', is_active: true, niveauAcces: 'consultation', succursale: '' });
   const [rows, setRows] = useState<Row[]>([]);
   const [siteTree, setSiteTree] = useState<{ id: string; name: string; depts: { id: string; name: string }[] }[]>([]);
-  const [postes, setPostes] = useState<{ id: string; name: string }[]>([]);
+  const postes = sharedPostes; // ← utilise les postes partagés par le parent (toujours frais)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const [{ data: suc }, { data: pos }, { data }] = await Promise.all([
+    const [{ data: suc }, { data }] = await Promise.all([
       supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name'),
-      supabase.from('planner_postes').select('id, name').eq('tenant_id', tenant).order('name'),
       supabase.from('planner_personnel').select('id, name, role, phone, email, is_active, niveauAcces, succursale').eq('tenant_id', tenant).order('name'),
     ]);
     const allSites = (suc || []).filter((r: any) => !r.parent_id);
     const allDepts = (suc || []).filter((r: any) => r.parent_id);
     setSiteTree(allSites.map((s: any) => ({ id: s.id, name: s.name, depts: allDepts.filter((d: any) => d.parent_id === s.id) })));
-    setPostes(pos || []);
     setRows((data || []).map((r: any) => ({ ...r, niveauAcces: r.niveauAcces || 'consultation', succursale: r.succursale || '' })));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+  // Re-render auto quand les postes changent (postesTick incrémente)
+  useEffect(() => { /* trigger re-render via closure */ }, [postesTick]);
 
   const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = () => setRows(p => [...p, empty()]);
@@ -2251,10 +2480,365 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
   );
 }
 
-function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Row = { id?: string; name: string; code: string; color: string };
-  const empty = (): Row => ({ name: '', code: '', color: '#6b7280' });
-  const [rows, setRows] = useState<Row[]>([]);
+// ─── Types pour grilles salariales ──────────────────────────────────────────
+type GridMode = 'percentage' | 'fixed' | 'custom';
+type SkillReq = { name: string; level?: string };
+type TierRow = { id?: string; tier_level: number; tier_name: string; annual_salary: number; hourly_rate: number; required_skills: SkillReq[]; min_months_experience: number; commission_pct?: number | null; notes?: string };
+type GridRow = { id?: string; poste_id: string; name: string; mode: GridMode; base_salary: number; annual_increase_pct: number; annual_increase_fixed: number; years_plan: number; cola_pct: number; hours_per_year: number; commission_enabled?: boolean; commission_pct?: number; commission_basis?: 'gross' | 'net' | 'margin' | 'custom'; commission_threshold?: number; commission_cap?: number | null; notes?: string };
+type PosteRow = { id?: string; name: string; code: string; color: string };
+
+function computeTiers(grid: GridRow): TierRow[] {
+  const tiers: TierRow[] = [];
+  const colaMult = 1 + (grid.cola_pct || 0) / 100;
+  const hpy = grid.hours_per_year || 2080;
+  const defaultNames = ['Entrée / Junior', 'Intermédiaire', 'Senior', 'Expert', 'Principal', 'Lead', 'Architecte'];
+  for (let i = 0; i < (grid.years_plan || 5); i++) {
+    let annual = grid.base_salary || 0;
+    if (grid.mode === 'percentage') annual = annual * Math.pow(1 + (grid.annual_increase_pct || 0) / 100, i);
+    else if (grid.mode === 'fixed')  annual = annual + i * (grid.annual_increase_fixed || 0);
+    annual = annual * colaMult;
+    tiers.push({
+      tier_level: i,
+      tier_name: defaultNames[i] || `Palier ${i + 1}`,
+      annual_salary: Math.round(annual * 100) / 100,
+      hourly_rate: Math.round((annual / hpy) * 10000) / 10000,
+      required_skills: [],
+      min_months_experience: i === 0 ? 0 : 12,
+    });
+  }
+  return tiers;
+}
+
+function PosteSalaryGridPanel({ tenant, poste, tr, onClose }: { tenant: string; poste: PosteRow; tr: (f: string, e: string) => string; onClose: () => void }) {
+  const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
+  const [grid, setGrid] = useState<GridRow | null>(null);
+  const [tiers, setTiers] = useState<TierRow[]>([]);
+  const [skills, setSkills] = useState<{ id?: string; name: string; category: string }[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  const [newSkillCat, setNewSkillCat] = useState('Technique');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const [{ data: g }, { data: t }, { data: sk }] = await Promise.all([
+        supabase.from('poste_salary_grids').select('*').eq('tenant_id', tenant).eq('poste_id', poste.id!).maybeSingle(),
+        supabase.from('poste_salary_tiers').select('*').eq('tenant_id', tenant).order('tier_level'),
+        supabase.from('poste_skills_catalog').select('*').eq('tenant_id', tenant).eq('active', true).order('category').order('name'),
+      ]);
+      const defaultGrid: GridRow = { poste_id: poste.id!, name: 'Grille standard', mode: 'percentage', base_salary: 50000, annual_increase_pct: 3, annual_increase_fixed: 1500, years_plan: 5, cola_pct: 0, hours_per_year: 2080, commission_enabled: false, commission_pct: 0, commission_basis: 'gross', commission_threshold: 0, commission_cap: null };
+      if (g) {
+        setGrid({ ...defaultGrid, ...g });
+        const ts = (t || []).filter((x: any) => x.grid_id === g.id).map((x: any) => ({ ...x, required_skills: x.required_skills || [] }));
+        setTiers(ts.length ? ts : computeTiers({ ...defaultGrid, ...g }));
+      } else {
+        setGrid(defaultGrid);
+        setTiers(computeTiers(defaultGrid));
+      }
+      setSkills(sk || []);
+      setLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poste.id, tenant]);
+
+  function updGrid<K extends keyof GridRow>(k: K, v: GridRow[K]) {
+    setGrid(g => {
+      if (!g) return g;
+      const ng = { ...g, [k]: v };
+      // Recalcul auto si pas en mode custom
+      if (ng.mode !== 'custom') setTiers(computeTiers(ng));
+      return ng;
+    });
+  }
+
+  function updTier(i: number, k: keyof TierRow, v: any) {
+    setTiers(p => p.map((t, j) => {
+      if (j !== i) return t;
+      const nt = { ...t, [k]: v };
+      if (k === 'annual_salary' && grid) nt.hourly_rate = Math.round((Number(v) / (grid.hours_per_year || 2080)) * 10000) / 10000;
+      return nt;
+    }));
+  }
+
+  function addTier() {
+    setTiers(p => {
+      const last = p[p.length - 1];
+      return [...p, { tier_level: p.length, tier_name: `Palier ${p.length + 1}`, annual_salary: last?.annual_salary || 50000, hourly_rate: last?.hourly_rate || 24, required_skills: [], min_months_experience: 12 }];
+    });
+  }
+  function delTier(i: number) { setTiers(p => p.filter((_, j) => j !== i).map((t, j) => ({ ...t, tier_level: j }))); }
+
+  function toggleSkillOnTier(i: number, skillName: string) {
+    setTiers(p => p.map((t, j) => {
+      if (j !== i) return t;
+      const has = t.required_skills.some(s => s.name === skillName);
+      return { ...t, required_skills: has ? t.required_skills.filter(s => s.name !== skillName) : [...t.required_skills, { name: skillName }] };
+    }));
+  }
+
+  async function addSkillToCatalog() {
+    if (!newSkill.trim()) return;
+    const { data, error } = await supabase.from('poste_skills_catalog').insert({ tenant_id: tenant, name: newSkill.trim(), category: newSkillCat, active: true }).select().single();
+    if (!error && data) { setSkills(s => [...s, data]); setNewSkill(''); }
+  }
+
+  async function save() {
+    if (!grid) return;
+    setSaving(true); setNotice(null);
+    try {
+      const gridPayload: any = { tenant_id: tenant, poste_id: poste.id, name: grid.name, mode: grid.mode, base_salary: grid.base_salary, annual_increase_pct: grid.annual_increase_pct, annual_increase_fixed: grid.annual_increase_fixed, years_plan: grid.years_plan, cola_pct: grid.cola_pct, hours_per_year: grid.hours_per_year, commission_enabled: !!grid.commission_enabled, commission_pct: grid.commission_pct || 0, commission_basis: grid.commission_basis || 'gross', commission_threshold: grid.commission_threshold || 0, commission_cap: grid.commission_cap ?? null, notes: grid.notes || null, updated_at: new Date().toISOString() };
+      let gridId = grid.id;
+      if (grid.id) {
+        const { error } = await supabase.from('poste_salary_grids').update(gridPayload).eq('id', grid.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('poste_salary_grids').insert(gridPayload).select('id').single();
+        if (error) throw error;
+        gridId = data.id;
+        setGrid(g => g ? { ...g, id: gridId } : g);
+      }
+      // Tiers : delete all then re-insert (simple)
+      await supabase.from('poste_salary_tiers').delete().eq('grid_id', gridId);
+      for (const t of tiers) {
+        await supabase.from('poste_salary_tiers').insert({ tenant_id: tenant, grid_id: gridId, tier_level: t.tier_level, tier_name: t.tier_name, annual_salary: t.annual_salary, hourly_rate: t.hourly_rate, required_skills: t.required_skills, min_months_experience: t.min_months_experience, commission_pct: t.commission_pct ?? null, sort_order: t.tier_level, notes: t.notes || null });
+      }
+      setNotice(tr('Grille enregistrée ✓', 'Grid saved ✓'));
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
+  }
+
+  if (loading || !grid) return <div className="bg-gray-50 dark:bg-gray-900/40 p-4 text-center"><Loader2 className="inline animate-spin text-gray-400" /></div>;
+
+  const skillsByCategory = skills.reduce((acc, s) => { (acc[s.category] = acc[s.category] || []).push(s); return acc; }, {} as Record<string, typeof skills>);
+
+  return (
+    <div className="bg-blue-50/40 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-700">
+      <div className="p-4 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded shrink-0" style={{ background: poste.color }} />
+            <h3 className="font-bold text-sm">{tr('Grille salariale — ', 'Salary grid — ')}<span className="text-blue-600 dark:text-blue-400">{poste.name}</span></h3>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}
+            </button>
+            <button onClick={onClose} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">{tr('Fermer', 'Close')}</button>
+          </div>
+        </div>
+        {notice && <div className={`rounded-lg px-3 py-2 text-sm ${notice.includes('✓') ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{notice}</div>}
+
+        {/* Config grille */}
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nom de la grille', 'Grid name')}</label>
+            <input className={inp2} value={grid.name} onChange={e => updGrid('name', e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Mode', 'Mode')}</label>
+            <select className={inp2} value={grid.mode} onChange={e => updGrid('mode', e.target.value as GridMode)}>
+              <option value="percentage">{tr('% annuel sur plan', '% annual on plan')}</option>
+              <option value="fixed">{tr('Augmentation $ fixe', 'Fixed $ increase')}</option>
+              <option value="custom">{tr('Personnalisé', 'Custom')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Salaire de base $ /an', 'Base salary $/yr')}</label>
+            <input type="number" className={inp2} value={grid.base_salary} onChange={e => updGrid('base_salary', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Plan sur (années)', 'Plan over (years)')}</label>
+            <input type="number" min={1} max={15} className={inp2} value={grid.years_plan} onChange={e => updGrid('years_plan', Number(e.target.value))} />
+          </div>
+          {grid.mode === 'percentage' && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('% augmentation/an', '% increase/yr')}</label>
+              <div className="flex items-center gap-1">
+                <input type="number" step={0.1} className={inp2} value={grid.annual_increase_pct} onChange={e => updGrid('annual_increase_pct', Number(e.target.value))} />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+            </div>
+          )}
+          {grid.mode === 'fixed' && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('$ augmentation/an', '$ increase/yr')}</label>
+              <input type="number" className={inp2} value={grid.annual_increase_fixed} onChange={e => updGrid('annual_increase_fixed', Number(e.target.value))} />
+            </div>
+          )}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">
+              {tr('Ajustement coût de la vie %', 'Cost of living %')}
+              <span className="ml-1 text-[10px] text-gray-400 font-normal">{tr('(appliqué à tous)', '(applied to all)')}</span>
+            </label>
+            <input type="number" step={0.1} className={inp2} value={grid.cola_pct} onChange={e => updGrid('cola_pct', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Heures /an (pour taux $/h)', 'Hours/yr (for hourly)')}</label>
+            <input type="number" className={inp2} value={grid.hours_per_year} onChange={e => updGrid('hours_per_year', Number(e.target.value))} />
+          </div>
+        </div>
+
+        {/* Section Commission vente */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/5 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-bold text-sm flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+              💰 {tr('Commission sur ventes', 'Sales commission')}
+            </h4>
+            <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+              <input type="checkbox" checked={!!grid.commission_enabled} onChange={e => updGrid('commission_enabled', e.target.checked)} />
+              {tr('Applicable à ce poste', 'Applicable to this position')}
+            </label>
+          </div>
+          {grid.commission_enabled && (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mt-2">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('% par défaut', 'Default %')}</label>
+                <div className="flex items-center gap-1">
+                  <input type="number" step={0.1} min={0} max={100} className={inp2} value={grid.commission_pct || 0} onChange={e => updGrid('commission_pct', Number(e.target.value))} />
+                  <span className="text-xs text-gray-500">%</span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Base de calcul', 'Calculation basis')}</label>
+                <select className={inp2} value={grid.commission_basis || 'gross'} onChange={e => updGrid('commission_basis', e.target.value as any)}>
+                  <option value="gross">{tr('Chiffre d\'affaires (CA brut)', 'Gross revenue')}</option>
+                  <option value="net">{tr('Net (après dépenses)', 'Net (after expenses)')}</option>
+                  <option value="margin">{tr('Marge bénéficiaire', 'Profit margin')}</option>
+                  <option value="custom">{tr('Personnalisée', 'Custom')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Seuil min. $ (optionnel)', 'Min threshold $ (optional)')}</label>
+                <input type="number" min={0} className={inp2} value={grid.commission_threshold || 0} onChange={e => updGrid('commission_threshold', Number(e.target.value))} placeholder="0" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Plafond annuel $ (optionnel)', 'Annual cap $ (optional)')}</label>
+                <input type="number" min={0} className={inp2} value={grid.commission_cap || ''} onChange={e => updGrid('commission_cap', e.target.value ? Number(e.target.value) : null)} placeholder={tr('Aucun', 'None')} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4 text-[10px] text-amber-700 dark:text-amber-400 italic">
+                💡 {tr('Chaque palier peut avoir son propre % (colonne "Comm. %" du tableau). Si vide, le % par défaut s\'applique.', 'Each tier can have its own % (column "Comm. %" in the table). If empty, the default % applies.')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tableau des paliers */}
+        <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+            <h4 className="font-bold text-sm flex items-center gap-1.5">
+              <TrendingUp size={14} className="text-emerald-500" />
+              {tr('Paliers de progression', 'Progression tiers')}
+              <span className="text-xs text-gray-400 font-normal">({tiers.length})</span>
+            </h4>
+            {grid.mode === 'custom' && (
+              <button onClick={addTier} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                <Plus size={12} /> {tr('Palier', 'Tier')}
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                <th className="px-2 py-1.5 w-8">#</th>
+                <th className="px-2">{tr('Palier', 'Tier name')}</th>
+                <th className="px-2 text-right">{tr('Salaire annuel $', 'Annual salary $')}</th>
+                <th className="px-2 text-right">{tr('Taux $/h', 'Hourly $')}</th>
+                <th className="px-2">{tr('Min. mois exp.', 'Min. months exp.')}</th>
+                {grid.commission_enabled && <th className="px-2 text-right">{tr('Comm. %', 'Comm. %')}</th>}
+                <th className="px-2">{tr('Compétences requises', 'Required skills')}</th>
+                {grid.mode === 'custom' && <th></th>}
+              </tr></thead>
+              <tbody>
+                {tiers.map((t, i) => (
+                  <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50 align-top">
+                    <td className="px-2 py-1.5 font-mono text-gray-400">{t.tier_level}</td>
+                    <td className="px-2">
+                      <input className={`${inp2} text-xs`} value={t.tier_name} onChange={e => updTier(i, 'tier_name', e.target.value)} />
+                    </td>
+                    <td className="px-2">
+                      <input type="number" disabled={grid.mode !== 'custom'} className={`${inp2} text-xs text-right ${grid.mode !== 'custom' ? 'opacity-60' : ''}`} value={t.annual_salary} onChange={e => updTier(i, 'annual_salary', Number(e.target.value))} />
+                    </td>
+                    <td className="px-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold">{t.hourly_rate.toFixed(2)} $</td>
+                    <td className="px-2">
+                      <input type="number" min={0} className={`${inp2} w-16 text-xs text-center`} value={t.min_months_experience} onChange={e => updTier(i, 'min_months_experience', Number(e.target.value))} />
+                    </td>
+                    {grid.commission_enabled && (
+                      <td className="px-2">
+                        <input type="number" step={0.1} min={0} max={100} className={`${inp2} w-16 text-xs text-right`} value={t.commission_pct ?? ''} placeholder={String(grid.commission_pct || 0)} onChange={e => updTier(i, 'commission_pct', e.target.value === '' ? null : Number(e.target.value))} />
+                      </td>
+                    )}
+                    <td className="px-2 py-1.5">
+                      <div className="flex flex-wrap gap-1">
+                        {t.required_skills.map(s => (
+                          <span key={s.name} className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 text-[10px] font-semibold">
+                            <Award size={10} /> {s.name}
+                            <button onClick={() => toggleSkillOnTier(i, s.name)} className="text-purple-400 hover:text-red-500">×</button>
+                          </span>
+                        ))}
+                        <details className="inline">
+                          <summary className="cursor-pointer rounded-full border border-dashed border-gray-300 dark:border-gray-600 px-2 py-0.5 text-[10px] text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">+ {tr('Ajouter', 'Add')}</summary>
+                          <div className="absolute z-10 mt-1 max-h-48 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-1">
+                            {Object.entries(skillsByCategory).map(([cat, list]) => (
+                              <div key={cat}>
+                                <div className="px-1 py-0.5 text-[9px] font-bold text-gray-400 uppercase">{cat}</div>
+                                {list.map(s => (
+                                  <button key={s.id} onClick={() => toggleSkillOnTier(i, s.name)}
+                                    className={`block w-full text-left px-2 py-1 rounded text-xs ${t.required_skills.some(x => x.name === s.name) ? 'bg-purple-100 text-purple-700' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                    {t.required_skills.some(x => x.name === s.name) ? '✓ ' : ''}{s.name}
+                                  </button>
+                                ))}
+                              </div>
+                            ))}
+                            {skills.length === 0 && <p className="text-[10px] text-gray-400 px-1 py-2">{tr('Catalogue vide — ajoutez des compétences ci-dessous.', 'Empty catalog — add skills below.')}</p>}
+                          </div>
+                        </details>
+                      </div>
+                    </td>
+                    {grid.mode === 'custom' && (
+                      <td className="px-2"><button onClick={() => delTier(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button></td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Catalogue de compétences */}
+        <div className="rounded-xl border border-purple-200 bg-purple-50/40 dark:border-purple-500/30 dark:bg-purple-500/5 p-3">
+          <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5 text-purple-700 dark:text-purple-300">
+            <Award size={14} /> {tr('Catalogue de compétences', 'Skills catalog')}
+            <span className="text-xs text-gray-400 font-normal">({skills.length})</span>
+          </h4>
+          <div className="flex gap-2 mb-2">
+            <input className={`${inp2} flex-1`} placeholder={tr('Nom de compétence (ex: Soudure TIG)', 'Skill name (e.g. TIG welding)')} value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSkillToCatalog()} />
+            <select className={`${inp2} w-32`} value={newSkillCat} onChange={e => setNewSkillCat(e.target.value)}>
+              <option>Technique</option>
+              <option>Sécurité</option>
+              <option>Gestion</option>
+              <option>Soft skills</option>
+              <option>Certification</option>
+            </select>
+            <button onClick={addSkillToCatalog} className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700"><Plus size={14} /></button>
+          </div>
+          {Object.entries(skillsByCategory).map(([cat, list]) => (
+            <div key={cat} className="mb-1.5">
+              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase mr-2">{cat}:</span>
+              {list.map(s => (<span key={s.id} className="inline-block bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-500/30 rounded px-2 py-0.5 text-[11px] mr-1 mb-1">{s.name}</span>))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PostesPlanner({ tenant, tr, inp, onPostesChanged }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void }) {
+  const empty = (): PosteRow => ({ name: '', code: '', color: '#6b7280' });
+  const [rows, setRows] = useState<PosteRow[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -2267,7 +2851,7 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
-  const upd = (i: number, k: keyof Row, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const upd = (i: number, k: keyof PosteRow, v: any) => setRows(p => p.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const add = () => setRows(p => [...p, empty()]);
 
   async function save() {
@@ -2276,17 +2860,28 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
       for (const r of rows) {
         if (!r.name?.trim()) continue;
         const payload = { tenant_id: tenant, name: r.name, code: r.code || null, color: r.color || '#6b7280' };
-        if (r.id) await supabase.from('planner_postes').update(payload).eq('id', r.id);
-        else await supabase.from('planner_postes').insert(payload);
+        if (r.id) { const { error } = await supabase.from('planner_postes').update(payload).eq('id', r.id); if (error) throw error; }
+        else      { const { error } = await supabase.from('planner_postes').insert(payload);                if (error) throw error; }
       }
-      setNotice(tr('Postes enregistrés ✓', 'Positions saved ✓')); load();
+      setNotice(tr('Postes enregistrés ✓', 'Positions saved ✓'));
+      await load();
+      onPostesChanged?.();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }
 
   async function del(i: number) {
     const r = rows[i];
-    if (r.id) await supabase.from('planner_postes').delete().eq('id', r.id);
+    if (r.id) { await supabase.from('planner_postes').delete().eq('id', r.id); onPostesChanged?.(); }
     setRows(p => p.filter((_, j) => j !== i));
+  }
+
+  function toggle(id?: string) {
+    if (!id) return;
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -2296,7 +2891,7 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div>
           <h2 className="font-bold">{tr('Postes / Rôles', 'Positions / Roles')}</h2>
-          <p className="text-xs text-gray-500">{tr('Types de postes disponibles dans le calendrier.', 'Position types available in the calendar.')}</p>
+          <p className="text-xs text-gray-500">{tr('Cliquez sur un poste pour configurer sa grille salariale, paliers de progression et compétences requises.', 'Click a position to configure its salary grid, progression tiers and required skills.')}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
@@ -2304,31 +2899,30 @@ function PostesPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: string, e:
         </div>
       </div>
       {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
-      <div className="overflow-x-auto p-2">
-        <table className="w-full text-sm">
-          <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-            <th className="px-2 py-1.5">{tr('Nom *', 'Name *')}</th>
-            <th className="px-2">{tr('Code', 'Code')}</th>
-            <th className="px-2">{tr('Couleur', 'Color')}</th>
-            <th></th>
-          </tr></thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id || i} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-2 py-1"><input className={inp} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} /></td>
-                <td className="px-2"><input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" /></td>
-                <td className="px-2">
-                  <div className="flex items-center gap-2">
-                    <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
-                    <span className="text-xs text-gray-500">{r.color || '#6b7280'}</span>
-                  </div>
-                </td>
-                <td className="px-2"><button onClick={() => del(i)} className="text-gray-400 hover:text-red-600"><Trash2 size={15} /></button></td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={4} className="px-2 py-6 text-center text-gray-400">{tr('Aucun poste. Ajoute-en un.', 'No position yet. Add one.')}</td></tr>}
-          </tbody>
-        </table>
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        {rows.map((r, i) => {
+          const isOpen = !!r.id && expanded.has(r.id);
+          return (
+            <div key={r.id || i}>
+              <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                <button onClick={() => toggle(r.id)} disabled={!r.id} className={`p-1 rounded ${r.id ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : 'opacity-30 cursor-not-allowed'}`} title={r.id ? tr('Configurer grille', 'Configure grid') : tr('Enregistrez d\'abord', 'Save first')}>
+                  {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
+                <input className={`${inp} flex-1`} value={r.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tr('Technicien senior', 'Senior technician')} />
+                <input className={`${inp} w-24`} value={r.code || ''} onChange={e => upd(i, 'code', e.target.value)} placeholder="TECH-SR" />
+                <div className="flex items-center gap-1.5">
+                  <input type="color" value={r.color || '#6b7280'} onChange={e => upd(i, 'color', e.target.value)} className="h-8 w-10 cursor-pointer rounded border border-gray-300 p-0.5 dark:border-gray-600" />
+                  <span className="text-[10px] text-gray-400 font-mono w-14">{r.color || '#6b7280'}</span>
+                </div>
+                <button onClick={() => del(i)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={15} /></button>
+              </div>
+              {isOpen && r.id && (
+                <PosteSalaryGridPanel tenant={tenant} poste={r} tr={tr} onClose={() => toggle(r.id)} />
+              )}
+            </div>
+          );
+        })}
+        {rows.length === 0 && <div className="px-4 py-6 text-center text-gray-400 text-sm">{tr('Aucun poste. Ajoute-en un.', 'No position yet. Add one.')}</div>}
       </div>
     </div>
   );
