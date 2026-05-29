@@ -2589,47 +2589,62 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
   }, [employee.id, tenant]);
 
   const useGrid = grid?.use_skill_grid !== false;
+  const hpy = Number(grid?.hours_per_year) || 2080; // heures/an pour le taux horaire
   const skillForm: SkillForm | undefined = useGrid && grid?.skill_form && Array.isArray(grid.skill_form.types) ? grid.skill_form : undefined;
 
   // ─── Note globale pondérée + note par type (formulaire de la grille) ───
   const { global: skillScore, byType } = useMemo(() => computeSkillScore(skillForm, scores), [skillForm, scores]);
 
-  // ─── Palier justifié par la note (seuils min_score) ───
-  const tierByScoreIdx = useMemo(() => tierForScore(tiers, skillScore), [tiers, skillScore]);
+  // ─── Palier suggéré par la note ───
+  // Si des seuils min_score distincts sont configurés → on les utilise.
+  // Sinon → interpolation : la note (%) situe l'employé entre le 1er et le dernier
+  // palier salarial, et on retient le palier dont le salaire est le plus proche.
+  const tierByScoreIdx = useMemo(() => {
+    if (!tiers.length) return 0;
+    const sorted = [...tiers].sort((a, b) => a.tier_level - b.tier_level);
+    const hasThresholds = new Set(sorted.map(t => Number(t.min_score) || 0)).size > 1;
+    if (hasThresholds) return tierForScore(sorted, skillScore);
+    const base = Number(sorted[0]?.annual_salary) || 0;
+    const top = Number(sorted[sorted.length - 1]?.annual_salary) || base;
+    const interp = base + (skillScore / 100) * (top - base);
+    let nearest = 0, best = Infinity;
+    sorted.forEach((t, i) => { const d = Math.abs((Number(t.annual_salary) || 0) - interp); if (d < best) { best = d; nearest = i; } });
+    return nearest;
+  }, [tiers, skillScore]);
 
   // ─── Palier où le salaire actuel situe l'employé ───
   const currentTierIdx = useMemo(() => {
-    if (!tiers.length || !currentSalary) return 0;
-    const cs = parseFloat(currentSalary) || 0;
+    const cs = parseFloat(currentSalary) || parseFloat(hireSalary) || 0;
+    if (!tiers.length || !cs) return 0;
     let idx = 0;
     for (let i = 0; i < tiers.length; i++) {
       if (cs >= (tiers[i].annual_salary || 0) * 0.95) idx = i;
     }
     return idx;
-  }, [tiers, currentSalary]);
+  }, [tiers, currentSalary, hireSalary]);
 
   // ─── Système intelligent : recommandation de positionnement ───
+  // Réf. = salaire actuel, ou salaire d'embauche s'il n'y a pas encore de salaire actuel.
   const reco = useMemo(() => {
-    const cs = parseFloat(currentSalary) || 0;
+    const cs = parseFloat(currentSalary) || parseFloat(hireSalary) || 0;       // salaire de référence
     const cola = parseFloat(colaPct) || 0;
-    const colaAmt = cs * cola / 100;
+    const colaAmt = Math.round(cs * cola / 100);                               // COLA : une seule fois, sur la référence
     if (!useGrid) {
-      // Salaire fixe : pas de palier, seulement le coût de la vie.
       const newSalary = cs + colaAmt;
-      return { cs, cola, colaAmt, target: null as any, targetSalary: cs, gapVsSalary: 0, verdict: 'aligned' as const, newSalary, totalAmt: colaAmt, totalPct: cs > 0 ? (colaAmt / cs) * 100 : 0 };
+      return { cs, cola, colaAmt, target: null as any, targetSalary: cs, skillAdjust: 0, gapVsSalary: 0, verdict: 'aligned' as const, newSalary, totalAmt: colaAmt, totalPct: cs > 0 ? (colaAmt / cs) * 100 : 0 };
     }
-    const target = tiers[tierByScoreIdx];           // palier justifié par la note
-    const targetSalary = target?.annual_salary || 0;
-    const gapVsSalary = targetSalary - cs;           // écart salaire-cible vs actuel
-    // verdict : la note place plus haut / plus bas / aligné avec le salaire actuel
+    const target = tiers[tierByScoreIdx];                                      // palier suggéré par la note
+    const targetSalary = Number(target?.annual_salary) || 0;
+    const gapVsSalary = targetSalary - cs;                                     // écart brut (peut être négatif)
+    const skillAdjust = Math.max(0, gapVsSalary);                              // ajustement appliqué : JAMAIS de baisse
     let verdict: 'under' | 'over' | 'aligned' = 'aligned';
-    if (tierByScoreIdx > currentTierIdx) verdict = 'under';      // sous-payé
-    else if (tierByScoreIdx < currentTierIdx) verdict = 'over';  // au-dessus du palier mérité
-    const newSalary = targetSalary > 0 ? targetSalary + colaAmt : cs + colaAmt;
+    if (gapVsSalary > 1) verdict = 'under';                                    // sous-payé → augmentation due
+    else if (gapVsSalary < -1) verdict = 'over';                              // au-dessus (aucune baisse imposée)
+    const newSalary = cs + skillAdjust + colaAmt;                              // réf + ajustement (≥0) + COLA
     const totalAmt = newSalary - cs;
     const totalPct = cs > 0 ? (totalAmt / cs) * 100 : 0;
-    return { cs, cola, colaAmt, target, targetSalary, gapVsSalary, verdict, newSalary, totalAmt, totalPct };
-  }, [currentSalary, colaPct, tiers, tierByScoreIdx, currentTierIdx, useGrid]);
+    return { cs, cola, colaAmt, target, targetSalary, skillAdjust, gapVsSalary, verdict, newSalary, totalAmt, totalPct };
+  }, [currentSalary, hireSalary, colaPct, tiers, tierByScoreIdx, currentTierIdx, useGrid]);
 
   const setScore = (id: string, v: number) => setScores(p => ({ ...p, [id]: v }));
 
@@ -2865,35 +2880,39 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                     {reco.verdict === 'over' && `⬇️ ${tr('Au-dessus du palier que sa note justifie', 'Above the tier justified by the score')}`}
                     {reco.verdict === 'aligned' && `✓ ${tr('Aligné — le salaire est cohérent avec la note', 'Aligned — salary is consistent with the score')}`}
                   </div>
+                  {useGrid && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-gray-500 dark:text-gray-400">{tr('Note globale', 'Global score')} : <strong>{skillScore.toFixed(0)} %</strong> → {tr('palier suggéré', 'suggested tier')} <strong className="text-blue-700 dark:text-blue-300">{reco.target?.tier_name || '—'}</strong></span>
+                    </div>
+                  )}
                   <table className="w-full text-xs">
+                    <thead><tr className="border-b border-blue-100 text-gray-400 dark:border-blue-500/20">
+                      <th className="py-1 text-left font-medium">{tr('Élément', 'Item')}</th>
+                      <th className="py-1 text-right font-medium">{tr('Annuel', 'Annual')}</th>
+                      <th className="py-1 text-right font-medium">$/h</th>
+                    </tr></thead>
                     <tbody>
-                      {useGrid && (<>
                       <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                        <td className="py-1.5">{tr('Note globale', 'Global score')}</td>
-                        <td className="text-right font-bold">{skillScore.toFixed(0)} %</td>
-                      </tr>
-                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                        <td className="py-1.5">{tr('Palier justifié par la note', 'Tier justified by the score')}</td>
-                        <td className="text-right font-semibold text-blue-700 dark:text-blue-300">{reco.target?.tier_name || '—'} <span className="font-normal text-gray-400">(≥{reco.target?.min_score ?? 0} %)</span></td>
-                      </tr>
-                      </>)}
-                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                        <td className="py-1.5">{tr('Salaire actuel', 'Current salary')}</td>
-                        <td className="text-right font-mono">{fmt(reco.cs)}{useGrid && <span className="text-gray-400"> · {tiers[currentTierIdx]?.tier_name || '—'}</span>}</td>
+                        <td className="py-1.5">{tr('Salaire de référence', 'Reference salary')}{useGrid && <span className="text-gray-400"> · {tiers[currentTierIdx]?.tier_name || '—'}</span>}</td>
+                        <td className="text-right font-mono">{fmt(reco.cs)}</td>
+                        <td className="text-right font-mono">{(reco.cs / hpy).toFixed(2)} $</td>
                       </tr>
                       {useGrid && (
-                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                        <td className="py-1.5">{tr('Salaire cible du palier', 'Tier target salary')}</td>
-                        <td className="text-right font-mono">{fmt(reco.targetSalary)} <span className={reco.gapVsSalary >= 0 ? 'text-emerald-600' : 'text-red-600'}>({reco.gapVsSalary >= 0 ? '+' : ''}{fmt(reco.gapVsSalary)})</span></td>
+                      <tr className="border-b border-blue-100 text-purple-700 dark:border-blue-500/20 dark:text-purple-300">
+                        <td className="py-1.5">+ {tr('Ajustement compétences', 'Skill adjustment')} ({reco.cs > 0 ? ((reco.skillAdjust / reco.cs) * 100).toFixed(1) : '0'} %){reco.gapVsSalary < -1 && <span className="text-[10px] text-amber-600"> · {tr('déjà au-dessus, aucune baisse', 'already above, no decrease')}</span>}</td>
+                        <td className="text-right font-mono">+{fmt(reco.skillAdjust)}</td>
+                        <td className="text-right font-mono">+{(reco.skillAdjust / hpy).toFixed(2)} $</td>
                       </tr>
                       )}
-                      <tr className="border-b border-blue-100 dark:border-blue-500/20">
-                        <td className="py-1.5 text-amber-700 dark:text-amber-300">+ {tr('Coût de la vie', 'COLA')} ({reco.cola.toFixed(1)} %)</td>
-                        <td className="text-right font-mono text-amber-700 dark:text-amber-300">+{fmt(reco.colaAmt)}</td>
+                      <tr className="border-b border-blue-100 text-amber-700 dark:border-blue-500/20 dark:text-amber-300">
+                        <td className="py-1.5">+ {tr('Coût de la vie', 'COLA')} ({reco.cola.toFixed(1)} %)</td>
+                        <td className="text-right font-mono">+{fmt(reco.colaAmt)}</td>
+                        <td className="text-right font-mono">+{(reco.colaAmt / hpy).toFixed(2)} $</td>
                       </tr>
-                      <tr className="border-t-2 border-blue-300 dark:border-blue-500/40 font-bold">
-                        <td className="py-2 text-base">= {tr('Salaire recommandé', 'Recommended salary')}</td>
-                        <td className="text-right font-mono text-base text-blue-700 dark:text-blue-300">{fmt(reco.newSalary)} <span className="text-xs">({reco.totalPct >= 0 ? '+' : ''}{reco.totalPct.toFixed(1)} %)</span></td>
+                      <tr className="border-t-2 border-blue-300 font-bold text-blue-700 dark:border-blue-500/40 dark:text-blue-300">
+                        <td className="py-2">= {tr('Total recommandé', 'Recommended total')} ({reco.totalPct >= 0 ? '+' : ''}{reco.totalPct.toFixed(1)} %)</td>
+                        <td className="text-right font-mono text-sm">{fmt(reco.newSalary)}</td>
+                        <td className="text-right font-mono text-sm">{(reco.newSalary / hpy).toFixed(2)} $</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3745,7 +3764,9 @@ function rebalanceWeights<T extends { id: string; weight: number }>(items: T[], 
 
 function computeTiers(grid: GridRow, prev?: TierRow[]): TierRow[] {
   const tiers: TierRow[] = [];
-  const colaMult = 1 + (grid.cola_pct || 0) / 100;
+  // Les paliers représentent les salaires de COMPÉTENCE (hors coût de la vie).
+  // Le COLA n'est appliqué qu'UNE fois, lors de l'évaluation de l'employé, pour
+  // éviter tout double comptage comptable.
   const hpy = grid.hours_per_year || 2080;
   const n = grid.years_plan || 5;
   const defaultNames = ['Entrée / Junior', 'Intermédiaire', 'Senior', 'Expert', 'Principal', 'Lead', 'Architecte'];
@@ -3753,7 +3774,6 @@ function computeTiers(grid: GridRow, prev?: TierRow[]): TierRow[] {
     let annual = grid.base_salary || 0;
     if (grid.mode === 'percentage') annual = annual * Math.pow(1 + (grid.annual_increase_pct || 0) / 100, i);
     else if (grid.mode === 'fixed')  annual = annual + i * (grid.annual_increase_fixed || 0);
-    annual = annual * colaMult;
     const p = prev?.[i]; // préserve les valeurs déjà éditées si on régénère
     tiers.push({
       tier_level: i,
