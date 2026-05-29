@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -211,7 +211,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -220,6 +220,7 @@ export default function AdminPage() {
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
     { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
     { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
+    { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
     { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
     { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
@@ -309,6 +310,7 @@ export default function AdminPage() {
         {tab === 'clients'    && <Clients tenant={tenant} tr={tr} />}
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
+        {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
@@ -5239,6 +5241,92 @@ function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// CARNET DE BORD — consultation des relevés véhicule (saisis via feuilles de temps)
+// ============================================================
+function LogbookModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [empFilter, setEmpFilter] = useState('');
+  const km = (n: any) => `${Math.round(Number(n) || 0).toLocaleString('fr-CA')} km`;
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from('vehicle_logbook').select('*').eq('tenant_id', tenant).order('week_start', { ascending: false });
+    if (error) setNotice(tr('Carnet de bord indisponible (migration 030 requise).', 'Logbook unavailable (migration 030 required).'));
+    setRows(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const years = useMemo(() => { const ys = [...new Set(rows.map((r: any) => new Date(r.week_start).getFullYear()))].sort((a: any, b: any) => b - a) as number[]; return ys.length ? ys : [new Date().getFullYear()]; }, [rows]);
+  const employees = useMemo(() => [...new Set(rows.map((r: any) => r.employee_name).filter(Boolean))].sort(), [rows]);
+  const filtered = useMemo(() => rows.filter((r: any) => new Date(r.week_start).getFullYear() === year && (!empFilter || r.employee_name === empFilter)), [rows, year, empFilter]);
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <div>
+            <h2 className="font-bold">{tr('Carnet de bord — véhicules', 'Logbook — vehicles')}</h2>
+            <p className="text-xs text-gray-500 max-w-2xl">{tr('Relevés saisis par les conducteurs dans leurs feuilles de temps (odomètre + km affaires ; perso = différence). Base des rapports fiscaux (TP-41 à venir).', 'Entries filled by drivers in their timesheets (odometer + business km; personal = difference). Basis for tax reports (TP-41 to come).')}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+              {years.map(y => <button key={y} onClick={() => setYear(y)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${year === y ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{y}</button>)}
+            </div>
+            {employees.length > 0 && (
+              <select value={empFilter} onChange={e => setEmpFilter(e.target.value)} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
+                <option value="">{tr('Tous les conducteurs', 'All drivers')}</option>
+                {employees.map(e => <option key={e as string} value={e as string}>{e as string}</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+        {notice && <div className="px-4 pt-3 text-sm text-blue-700 dark:text-blue-300">{notice}</div>}
+        <div className="overflow-x-auto p-2">
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-2 py-1.5">{tr('Semaine', 'Week')}</th>
+              <th className="px-2">{tr('Conducteur', 'Driver')}</th>
+              <th className="px-2">{tr('Véhicule', 'Vehicle')}</th>
+              <th className="px-2 text-right">{tr('Odo début', 'Odo start')}</th>
+              <th className="px-2 text-right">{tr('Odo fin', 'Odo end')}</th>
+              <th className="px-2 text-right">{tr('Km total', 'Total km')}</th>
+              <th className="px-2 text-right">{tr('Km affaires', 'Business km')}</th>
+              <th className="px-2 text-right">{tr('Km perso', 'Personal km')}</th>
+            </tr></thead>
+            <tbody>
+              {filtered.map((r: any) => {
+                const total = Number(r.km_total ?? (Number(r.odometer_end) - Number(r.odometer_start))) || 0;
+                const perso = Number(r.km_personal) || 0;
+                const job = Number(r.km_professional ?? (total - perso)) || 0;
+                return (
+                  <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-2 py-1.5" data-label={tr('Semaine', 'Week')}>{r.week_start}</td>
+                    <td className="px-2" data-label={tr('Conducteur', 'Driver')}>{r.employee_name || r.employee_id || '—'}</td>
+                    <td className="px-2" data-label={tr('Véhicule', 'Vehicle')}>{r.vehicle_name || '—'}</td>
+                    <td className="px-2 text-right" data-label={tr('Odo début', 'Odo start')}>{km(r.odometer_start)}</td>
+                    <td className="px-2 text-right" data-label={tr('Odo fin', 'Odo end')}>{Number(r.odometer_end) > 0 ? km(r.odometer_end) : '—'}</td>
+                    <td className="px-2 text-right font-medium" data-label={tr('Km total', 'Total km')}>{km(total)}</td>
+                    <td className="px-2 text-right text-emerald-600" data-label={tr('Km affaires', 'Business km')}>{km(job)}</td>
+                    <td className="px-2 text-right text-amber-600" data-label={tr('Km perso', 'Personal km')}>{km(perso)}</td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && <tr><td colSpan={8} className="px-2 py-8 text-center text-gray-400">{tr('Aucun relevé pour cette sélection.', 'No entry for this selection.')}</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
