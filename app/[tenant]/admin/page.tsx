@@ -3043,44 +3043,59 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
 
   async function save() {
     setSaving(true); setNotice(null);
+    const debug: string[] = [];
+    debug.push(`📋 Total lignes en mémoire : ${rows.length}`);
+    const rowsToSave = rows.filter(r => r.name?.trim());
+    debug.push(`✏️  Lignes avec nom non vide : ${rowsToSave.length}`);
+    if (rowsToSave.length === 0) {
+      setNotice(`⚠️ Aucune ligne à enregistrer. ${debug.join(' · ')}`);
+      setSaving(false);
+      return;
+    }
     let ok = 0, err = 0; const errs: string[] = [];
-    for (const r of rows) {
-      if (!r.name?.trim()) continue;
-      // Payload de base avec colonnes garanties par les migrations 020/047/048
+    for (const r of rowsToSave) {
       const base: any = { tenant_id: tenant, name: r.name.trim(), role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
-      // Colonnes optionnelles (migrations 047, 048, 070) — ajoutées si valeur
       if (r.niveauAcces) base.niveauAcces = r.niveauAcces;
       if (r.succursale != null) base.succursale = r.succursale || null;
       if (r.subclass != null) base.subclass = r.subclass || null;
 
-      const attemptSave = async (payload: any) => {
-        if (r.id) {
-          const { error } = await supabase.from('planner_personnel').update(payload).eq('id', r.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('planner_personnel').insert(payload);
-          if (error) throw error;
-        }
-      };
+      console.log('[Personnel save] payload pour', r.name, ':', base, 'id existant ?', r.id);
 
       try {
-        await attemptSave(base);
+        let result;
+        if (r.id) {
+          result = await supabase.from('planner_personnel').update(base).eq('id', r.id).select();
+        } else {
+          result = await supabase.from('planner_personnel').insert(base).select();
+        }
+        console.log('[Personnel save] résultat pour', r.name, ':', result);
+        if (result.error) throw result.error;
+        if (!result.data || result.data.length === 0) {
+          throw new Error('RLS a bloqué l\'opération (0 ligne retournée — vérifiez les policies)');
+        }
         ok++;
       } catch (e: any) {
-        const msg = String(e?.message || '');
-        // Si erreur "column does not exist" → réessayer sans la colonne fautive
-        const colMatch = msg.match(/column "?(\w+)"?/i);
-        if (colMatch) {
-          const minimal = { tenant_id: tenant, name: r.name.trim(), role: r.role || null, phone: r.phone || null, email: r.email || null, is_active: r.is_active !== false };
-          try { await attemptSave(minimal); ok++; errs.push(`${r.name}: ${tr('colonne manquante', 'missing column')} "${colMatch[1]}" — sauvegardé sans (exécutez les migrations 047/048/070/071)`); }
-          catch (e2: any) { err++; errs.push(`${r.name}: ${e2?.message || msg}`); }
-        } else {
-          err++; errs.push(`${r.name}: ${msg || 'erreur'}`);
-        }
+        const msg = String(e?.message || e?.details || e?.hint || '');
+        console.error('[Personnel save] ERREUR pour', r.name, ':', e);
+        err++; errs.push(`${r.name}: ${msg || 'erreur inconnue'}`);
       }
     }
-    setNotice(`${ok} ${tr('enregistré(s)', 'saved')}${err ? `, ${err} ${tr('erreur(s)', 'errors')}` : ' ✓'}${errs.length ? `\n${errs.slice(0, 4).join(' · ')}` : ''}`);
-    await load(); setSaving(false);
+    setNotice(`✓ ${ok} enregistré(s)${err ? ` · ✗ ${err} erreur(s)` : ''}${errs.length ? `\n${errs.slice(0, 4).join('\n')}` : ''}`);
+    await load();
+    setSaving(false);
+  }
+
+  // Bouton de diagnostic : insère une ligne test directement
+  async function testDirectInsert() {
+    setSaving(true); setNotice(null);
+    const testRow = { tenant_id: tenant, name: `TEST ${new Date().toISOString().slice(11, 19)}`, is_active: true, niveauAcces: 'consultation' };
+    console.log('[TEST] tentative insert :', testRow);
+    const { data, error } = await supabase.from('planner_personnel').insert(testRow).select();
+    console.log('[TEST] résultat :', { data, error });
+    if (error) setNotice(`❌ TEST ÉCHEC : ${error.message}\nCode: ${error.code} · Détails: ${error.details || '—'} · Hint: ${error.hint || '—'}`);
+    else if (!data || data.length === 0) setNotice(`❌ TEST BLOQUÉ : RLS a refusé silencieusement (vérifiez les policies de planner_personnel)`);
+    else { setNotice(`✓ TEST RÉUSSI : ligne "${testRow.name}" insérée avec id ${data[0].id}`); await load(); }
+    setSaving(false);
   }
 
   async function del(i: number) {
@@ -3100,10 +3115,23 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowGuide(true)} className="inline-flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-semibold text-purple-600 hover:bg-purple-50 dark:border-purple-500/40 dark:text-purple-300 dark:hover:bg-purple-500/10">🔐 {tr('Guide des accès', 'Access guide')}</button>
+          <button onClick={testDirectInsert} disabled={saving} className="inline-flex items-center gap-1 rounded-lg border border-orange-300 px-3 py-1.5 text-sm font-semibold text-orange-600 hover:bg-orange-50 dark:border-orange-500/40 dark:text-orange-300" title={tr('Diagnostic : insère une ligne de test directement', 'Diagnostic: inserts a test row directly')}>🧪 {tr('Test BD', 'Test DB')}</button>
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
       </div>
+      {/* Notice persistante en bandeau si erreur */}
+      {notice && (
+        <div className={`mx-4 mt-3 rounded-lg border-2 px-3 py-2 text-sm whitespace-pre-line font-medium ${
+          notice.includes('✓') && !notice.includes('✗') && !notice.includes('❌')
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300'
+            : notice.includes('❌') || notice.includes('✗')
+              ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300'
+              : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300'
+        }`}>
+          {notice}
+        </div>
+      )}
       {showGuide && <AccessGuideModal tr={tr} onClose={() => setShowGuide(false)} />}
       {postes.length === 0 && (
         <button type="button" onClick={goToPostes}
