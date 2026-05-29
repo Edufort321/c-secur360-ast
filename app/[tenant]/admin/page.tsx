@@ -2835,16 +2835,26 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
   async function save() {
     setSaving(true); setNotice(null);
     let ok = 0, err = 0; const errs: string[] = [];
-    for (const r of rows) {
-      if (!r.name?.trim()) continue;
+    const rowsToSave = rows.filter(r => r.name?.trim());
+    if (rowsToSave.length === 0) { setNotice('⚠️ Aucune sous-classe à enregistrer (nom vide)'); setSaving(false); return; }
+    for (const r of rowsToSave) {
       const payload = { tenant_id: tenant, name: r.name.trim(), code: r.code?.trim() || null, color: r.color || '#06b6d4', category: r.category || 'Métier', description: r.description || null, active: r.active !== false, sort_order: r.sort_order || 0 };
+      console.log('[Sous-classes save] payload:', payload, 'id:', r.id);
       try {
-        if (r.id) { const { error } = await supabase.from('poste_subclasses_catalog').update(payload).eq('id', r.id); if (error) throw error; }
-        else      { const { error } = await supabase.from('poste_subclasses_catalog').insert(payload);                if (error) throw error; }
+        let result;
+        if (r.id) result = await supabase.from('poste_subclasses_catalog').update(payload).eq('id', r.id).select();
+        else      result = await supabase.from('poste_subclasses_catalog').insert(payload).select();
+        console.log('[Sous-classes save] résultat:', result);
+        if (result.error) throw result.error;
+        if (!result.data || result.data.length === 0) throw new Error('RLS a bloqué silencieusement (0 ligne retournée)');
         ok++;
-      } catch (e: any) { err++; errs.push(`${r.name}: ${e?.message || 'erreur'}`); }
+      } catch (e: any) {
+        const msg = String(e?.message || e?.details || e?.hint || 'erreur');
+        console.error('[Sous-classes save] ERREUR:', e);
+        err++; errs.push(`${r.name}: ${msg}`);
+      }
     }
-    setNotice(`${ok} ${tr('enregistré(s)', 'saved')}${err ? `, ${err} ${tr('erreur(s)', 'errors')}` : ' ✓'}${err ? `\n${errs.slice(0, 3).join(' · ')}` : ''}`);
+    setNotice(`✓ ${ok} ${tr('enregistré(s)', 'saved')}${err ? ` · ✗ ${err} ${tr('erreur(s)', 'errors')}` : ''}${errs.length ? `\n${errs.slice(0, 3).join('\n')}` : ''}`);
     await load(); onSubclassesChanged?.(); setSaving(false);
   }
 
