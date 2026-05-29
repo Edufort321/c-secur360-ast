@@ -105,6 +105,7 @@ export default function InspectionsPage() {
         soon:        toExport.filter(c => c.urgency === 'soon').length,
         nonConforme: toExport.filter(c => c.latest?.overall_result === 'non_conforme' || c.latest?.overall_result === 'retrait').length,
       };
+      const { data: tn } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
       await exportInspectionsPDF({
         tenant,
         typeFilter:  exportFilter,
@@ -112,6 +113,7 @@ export default function InspectionsPage() {
         cards:       toExport,
         supabase,
         stats:       exportStats,
+        logoUrl:     tn?.logo_url || undefined,
       } as ExportOptions);
       setShowExport(false);
     } catch (err) {

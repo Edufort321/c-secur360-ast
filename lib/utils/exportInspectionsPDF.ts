@@ -31,6 +31,18 @@ export interface ExportOptions {
   cards: CardForExport[];
   supabase: SupabaseClient;
   stats: { total: number; overdue: number; soon: number; nonConforme: number };
+  logoUrl?: string;
+}
+
+// Charge une image (logo) en dataURL pour jsPDF. null si échec/CORS.
+async function loadLogoData(url: string): Promise<{ data: string; w: number; h: number } | null> {
+  try {
+    const res = await fetch(url); if (!res.ok) return null;
+    const blob = await res.blob();
+    const data: string = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(blob); });
+    const dims = await new Promise<{ w: number; h: number }>(resolve => { const img = new Image(); img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = () => resolve({ w: 0, h: 0 }); img.src = data; });
+    return dims.w ? { data, w: dims.w, h: dims.h } : null;
+  } catch { return null; }
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -85,7 +97,7 @@ function ensureY(doc: jsPDF, y: number, need: number): number {
 // ─── Export principal ─────────────────────────────────────────────────────────
 
 export async function exportInspectionsPDF(opts: ExportOptions): Promise<void> {
-  const { tenant, typeFilter, typeLabel, cards, supabase, stats } = opts;
+  const { tenant, typeFilter, typeLabel, cards, supabase, stats, logoUrl } = opts;
 
   // Récupérer tout l'historique d'un coup
   const ids = cards.map(c => c.equipment.id);
@@ -111,14 +123,23 @@ export async function exportInspectionsPDF(opts: ExportOptions): Promise<void> {
   doc.setFillColor(17, 24, 39);
   doc.rect(0, 0, PAGE_W, 24, 'F');
 
+  // Logo (tenant si fourni, sinon C-Secur360 par défaut) en haut à gauche
+  let logo = logoUrl ? await loadLogoData(logoUrl) : null;
+  if (!logo) logo = await loadLogoData('/c-secur360-logo.png');
+  let tx = MARGIN;
+  if (logo) {
+    const lh = 14; const lw = Math.min((logo.w / logo.h) * lh, 50);
+    const fmt = logo.data.includes('image/png') ? 'PNG' : 'JPEG';
+    try { doc.addImage(logo.data, fmt as any, MARGIN, 5, lw, lh); tx = MARGIN + lw + 4; } catch { /* ignore */ }
+  }
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(15);
-  doc.setFont('helvetica', 'bold');
-  doc.text('C-Secur360', MARGIN, 10);
-
+  if (tx === MARGIN) {
+    doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+    doc.text('C-Secur360', tx, 10);
+  }
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text("Rapport d'inspections d'équipements", MARGIN, 16);
+  doc.text("Rapport d'inspections d'équipements", tx, 16);
 
   doc.setFontSize(8);
   doc.text(tenant.toUpperCase(), PAGE_W - MARGIN, 10, { align: 'right' });
