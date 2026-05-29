@@ -28,6 +28,7 @@ type Project = {
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   soumission: { label: 'Soumission', cls: 'bg-amber-100 text-amber-700' },
+  vente: { label: 'Vente', cls: 'bg-violet-100 text-violet-700' },
   'en-cours': { label: 'En cours', cls: 'bg-blue-100 text-blue-700' },
   facture: { label: 'Facturé', cls: 'bg-emerald-100 text-emerald-700' },
 };
@@ -36,6 +37,7 @@ const emptyForm = {
   project_number: '', title: '', client_name: '', location: '',
   status: 'soumission', project_type: 'budgetaire',
   po_amount: '', date_submission: '', date_work_start: '',
+  primary_seller_id: '',
 };
 
 export default function ProjectsPage() {
@@ -58,10 +60,14 @@ export default function ProjectsPage() {
   const [clientQuery, setClientQuery] = useState('');
   const [showClientDrop, setShowClientDrop] = useState(false);
   const clientRef = useRef<HTMLDivElement>(null);
+  // Vendeurs (personnel) pour l'attribution de commission
+  const [sellers, setSellers] = useState<{ id: string; name: string; email: string }[]>([]);
 
   useEffect(() => {
     supabase.from('clients').select('id,name,contact_name,contact_phone,email,address,city,province').eq('tenant_id', tenant).eq('active', true).order('name')
       .then(({ data }) => setClients(data || []));
+    supabase.from('planner_personnel').select('id,name,email').eq('tenant_id', tenant).order('name')
+      .then(({ data }) => setSellers((data || []).filter((p: any) => p.name)));
   }, [tenant]);
 
   const filteredClients = useMemo(() => {
@@ -159,7 +165,8 @@ export default function ProjectsPage() {
       po_amount: form.po_amount ? Number(form.po_amount) : null,
       date_submission: form.date_submission || null,
       date_work_start: form.date_work_start || null,
-    };
+      primary_seller_id: form.primary_seller_id || null,
+    } as any;
     setProjects(prev => [optimistic, ...prev]);
 
     // Best-effort DB (fonctionnera avec la vraie clé Supabase)
@@ -167,7 +174,15 @@ export default function ProjectsPage() {
       const { id, ...insert } = optimistic;
       const { data, error } = await supabase.from('projects').insert(insert).select().single();
       if (error) throw error;
-      if (data) setProjects(prev => prev.map(p => (p.id === optimistic.id ? data : p)));
+      if (data) {
+        setProjects(prev => prev.map(p => (p.id === optimistic.id ? data : p)));
+        // Commission de vente : si le projet est créé directement en « vente »
+        if (data.status === 'vente' && data.primary_seller_id) {
+          const { syncProjectCommission } = await import('@/lib/commission');
+          const r = await syncProjectCommission(supabase, tenant, data);
+          if (r.ok) setNotice('✓ ' + r.msg);
+        }
+      }
     } catch {
       setNotice("Aperçu local (DB non connectée) — fournir la clé Supabase pour persister.");
     } finally {
@@ -342,8 +357,15 @@ export default function ProjectsPage() {
                 <Field label="Statut">
                   <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="inp">
                     <option value="soumission">Soumission</option>
+                    <option value="vente">Vente</option>
                     <option value="en-cours">En cours</option>
                     <option value="facture">Facturé</option>
+                  </select>
+                </Field>
+                <Field label="Vendeur (commission)">
+                  <select value={form.primary_seller_id} onChange={e => setForm(f => ({ ...f, primary_seller_id: e.target.value }))} className="inp">
+                    <option value="">— Aucun —</option>
+                    {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </Field>
                 <Field label="Type">

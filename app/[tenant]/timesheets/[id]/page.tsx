@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Send, Loader2, Plus, Trash2,
   Search, Briefcase, Settings2, Wrench, MoreHorizontal, Car, Building2,
-  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown,
+  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -22,7 +22,7 @@ type Entry = {
 type Project  = { id: string; project_number: string; title: string | null; client_name: string | null };
 type Rate     = { code: string; rate_regular: number; rate_overtime: number; rate_premium: number };
 type Vehicle  = { id: string; name: string; make: string; model: string; type: string };
-type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string };
+type Sheet    = { id: string; tenant_id: string; employee_id: string; employee_name: string; employee_email: string; period_start: string; period_end: string; status: string; notes: string; total_commissions?: number; commission_details?: any[] };
 type Allowance = { id: string; name: string; amount: number; is_taxable: boolean };
 type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount: number };
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
@@ -255,7 +255,10 @@ export default function TimesheetDetailPage() {
     return Math.max(0, Number(logEntry.km_personal)) * OPERATING_RATE;
   }, [assignedVehicle, logEntry]);
 
-  const netTotal = totals.amount + totalBonuses - vehicleDeduction;
+  // Commission de vente reportée sur cette feuille (posée par le module Projets)
+  const commissions = Number(sheet?.total_commissions) || 0;
+  const commissionDetails: any[] = Array.isArray(sheet?.commission_details) ? sheet!.commission_details : [];
+  const netTotal = totals.amount + totalBonuses + commissions - vehicleDeduction;
 
   // Gate: employee has assigned vehicle but no logbook entry with odo_start
   const needsOdometer = assignedVehicle !== null && (!logEntry || Number(logEntry.odometer_start) === 0);
@@ -664,7 +667,7 @@ export default function TimesheetDetailPage() {
         )}
 
         {/* Footer total */}
-        {(entries.length > 0 || vehicleDeduction > 0 || totalBonuses > 0) && (
+        {(entries.length > 0 || vehicleDeduction > 0 || totalBonuses > 0 || commissions > 0) && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
               <div className="flex flex-wrap gap-4 text-sm text-slate-500">
@@ -673,7 +676,7 @@ export default function TimesheetDetailPage() {
               </div>
               <div className="text-sm font-semibold text-slate-700">Brut main-d'œuvre : {money(totals.amount)}</div>
             </div>
-            {(totals.allowances > 0 || totalBonuses > 0 || vehicleDeduction > 0) && (
+            {(totals.allowances > 0 || totalBonuses > 0 || vehicleDeduction > 0 || commissions > 0) && (
               <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-3 text-sm">
                 {totals.allowances > 0 && (
                   <div className="flex items-center justify-between text-emerald-700">
@@ -685,6 +688,20 @@ export default function TimesheetDetailPage() {
                   <div className="flex items-center justify-between text-amber-700">
                     <span className="flex items-center gap-1.5"><Timer size={13} /> Primes horaires</span>
                     <span className="font-semibold">+{money(totalBonuses)}</span>
+                  </div>
+                )}
+                {commissions > 0 && (
+                  <div className="flex flex-col gap-0.5 text-violet-700">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><DollarSign size={13} /> Commissions de vente</span>
+                      <span className="font-semibold">+{money(commissions)}</span>
+                    </div>
+                    {commissionDetails.map((d: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between pl-5 text-[11px] text-violet-500">
+                        <span>#{d.project_number}{d.title ? ` — ${d.title}` : ''}</span>
+                        <span>+{money(Number(d.amount) || 0)}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {vehicleDeduction > 0 && (

@@ -33,10 +33,13 @@ export default function ProjectDetailPage() {
   const [linkedAst,     setLinkedAst]     = useState<any[]>([]);
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setTenantLogoUrl(data.logo_url); }, () => {});
+    supabase.from('planner_personnel').select('id,name').eq('tenant_id', tenant).order('name')
+      .then(({ data }) => setSellers((data || []).filter((s: any) => s.name)), () => {});
   }, [tenant]);
 
   async function exportPdf() {
@@ -122,11 +125,19 @@ export default function ProjectDetailPage() {
       status: p.status, project_type: p.project_type, pricing_mode: p.pricing_mode,
       global_price: p.global_price ? Number(p.global_price) : null,
       date_submission: p.date_submission || null, date_work_start: p.date_work_start || null,
+      primary_seller_id: p.primary_seller_id || null,
     };
     try {
       const { error } = await supabase.from('projects').update(payload).eq('id', id).eq('tenant_id', tenant);
       if (error) throw error;
-      setNotice(tr('Enregistré ✓', 'Saved ✓'));
+      // Commission de vente : déclenchée quand le projet est au statut « vente »
+      if (p.status === 'vente' && p.primary_seller_id) {
+        const { syncProjectCommission } = await import('@/lib/commission');
+        const r = await syncProjectCommission(supabase, tenant, { ...p, id });
+        setNotice(r.ok ? '✓ ' + r.msg : tr('Enregistré ✓ — commission : ', 'Saved ✓ — commission: ') + r.msg);
+      } else {
+        setNotice(tr('Enregistré ✓', 'Saved ✓'));
+      }
     } catch {
       setNotice(tr('Erreur d’enregistrement (DB).', 'Save error (DB).'));
     } finally {
@@ -237,8 +248,15 @@ export default function ProjectDetailPage() {
                   <Field label={tr('Statut', 'Status')}>
                     <select className="inp" value={p.status || 'soumission'} onChange={e => set('status', e.target.value)}>
                       <option value="soumission">{tr('Soumission', 'Quote')}</option>
+                      <option value="vente">{tr('Vente', 'Sale')}</option>
                       <option value="en-cours">{tr('En cours', 'In progress')}</option>
                       <option value="facture">{tr('Facturé', 'Invoiced')}</option>
+                    </select>
+                  </Field>
+                  <Field label={tr('Vendeur (commission)', 'Salesperson (commission)')}>
+                    <select className="inp" value={p.primary_seller_id || ''} onChange={e => set('primary_seller_id', e.target.value)}>
+                      <option value="">{tr('— Aucun —', '— None —')}</option>
+                      {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </Field>
                   <Field label={tr('Type', 'Type')}>
