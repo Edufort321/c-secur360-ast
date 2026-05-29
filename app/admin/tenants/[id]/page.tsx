@@ -176,7 +176,7 @@ export default function TenantManagePage() {
   async function saveProfile() {
     setSaving(true); setNotice(null);
     try {
-      const { error } = await supabase.from('tenants').update({
+      const base: any = {
         companyName: tenant.companyName,
         subdomain: (tenant.subdomain || '').toLowerCase(),
         domain: tenant.domain || null,
@@ -188,8 +188,12 @@ export default function TenantManagePage() {
         erp_base_url: tenant.erp_base_url || null,
         erp_company_id: tenant.erp_company_id || null,
         logo_url: tenant.logo_url || null,
-        max_sites: Math.max(1, Number(tenant.max_sites) || 1),
-      }).eq('id', id);
+      };
+      // max_sites ajouté à part : tolérant si la colonne (migration 078) n'existe pas encore
+      let { error } = await supabase.from('tenants').update({ ...base, max_sites: Math.max(1, Number(tenant.max_sites) || 1) }).eq('id', id);
+      if (error && /max_sites/i.test(error.message || '')) {
+        ({ error } = await supabase.from('tenants').update(base).eq('id', id));
+      }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
     } catch { setNotice('Erreur DB (migration 013 exécutée ?)'); } finally { setSaving(false); }
@@ -308,7 +312,7 @@ export default function TenantManagePage() {
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Abonnement — sites</div>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Nombre de sites inclus</span>
-                  <input type="number" min={1} className={inputCls} value={tenant.max_sites ?? 1} onChange={e => setTenant((t: any) => ({ ...t, max_sites: Number(e.target.value) }))} />
+                  <input type="number" min={1} className={inputCls} value={tenant.max_sites ?? 1} onFocus={e => e.target.select()} onChange={e => setTenant((t: any) => ({ ...t, max_sites: e.target.value === '' ? '' : Number(e.target.value) }))} />
                   <span className="mt-1 block text-[11px] text-gray-400">1 site inclus ; chaque site supplémentaire est facturé (prix « site additionnel » dans la gestion des prix). Le tenant est bloqué au-delà de cette limite.</span>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
