@@ -3827,7 +3827,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div>
           <h2 className="font-bold">{tr('Postes / Rôles', 'Positions / Roles')} <span className="text-xs font-normal text-gray-400">({rows.length})</span></h2>
@@ -3932,7 +3932,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                         return (
                           <>
                             <div className="fixed inset-0 z-30" onClick={() => setSubPickerFor(null)} />
-                            <div className="absolute z-40 mt-1 w-72 rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 overflow-hidden">
+                            <div className="absolute z-40 bottom-full right-0 mb-1 w-80 rounded-lg border border-gray-200 bg-white shadow-2xl dark:border-gray-600 dark:bg-gray-800 overflow-hidden">
                               <div className="border-b border-gray-100 dark:border-gray-700 p-2">
                                 <input
                                   type="text"
