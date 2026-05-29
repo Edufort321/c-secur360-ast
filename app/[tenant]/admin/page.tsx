@@ -2546,6 +2546,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
   const [objectives, setObjectives] = useState((employee as any).objectives || '');
   const [evaluatedBy, setEvaluatedBy] = useState('');
   const [history, setHistory] = useState<any[]>([]);
+  const [approvedAt, setApprovedAt] = useState<string>(''); // horodatage d'approbation en direct par l'employé
   const [notice, setNotice] = useState<string | null>(null);
   // Clic simple = tout sélectionner (la frappe écrase) ; recliquer = éditer.
   const selectOnFocus = (e: React.FocusEvent) => {
@@ -2656,8 +2657,8 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       employeeName: employee.name, posteName: employee.role || '', evaluatedBy,
       useGrid, globalScore: skillScore, tierName: reco.target?.tier_name || '—', tierMinScore: reco.target?.min_score ?? 0,
       skillForm: skillForm || null, scores, byType,
-      salaryBefore: reco.cs, salaryAfter: reco.newSalary, targetSalary: reco.targetSalary, colaPct: reco.cola, colaAmt: reco.colaAmt,
-      objectives,
+      salaryBefore: reco.cs, salaryAfter: reco.newSalary, targetSalary: reco.targetSalary, skillAdjust: reco.skillAdjust, colaPct: reco.cola, colaAmt: reco.colaAmt, totalPct: reco.totalPct, hpy,
+      objectives, approvedAt,
     });
   }
 
@@ -2694,13 +2695,15 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         cola_pct: reco.cola,
         cola_amount: reco.colaAmt,
         skill_score: skillScore,
-        skill_increase_pct: 0,
-        skill_increase_amount: reco.gapVsSalary,
+        skill_increase_pct: reco.cs > 0 ? (reco.skillAdjust / reco.cs) * 100 : 0,
+        skill_increase_amount: reco.skillAdjust,
         total_increase_pct: reco.totalPct,
         total_increase_amount: reco.totalAmt,
         evaluated_by: evaluatedBy || null,
         objectives: objectives || null,
-        status: 'pending',
+        approved_at: approvedAt || null,
+        approved_by: approvedAt ? employee.name : null,
+        status: approvedAt ? 'approved' : 'pending',
       };
       let { error: evErr } = await supabase.from('employee_evaluations').insert(evalPayload);
       if (evErr && /evaluated_by|objectives/i.test(evErr.message || '')) {
@@ -2979,6 +2982,19 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                   </table>
                 </div>
               )}
+            </div>
+
+            {/* Approbation en direct par l'employé (horodatée) */}
+            <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 ${approvedAt ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10' : 'border-dashed border-gray-300 dark:border-gray-600'}`}>
+              <div className="text-xs">
+                <div className="font-semibold">{tr("Approbation de l'employé", 'Employee approval')}</div>
+                {approvedAt
+                  ? <div className="text-emerald-700 dark:text-emerald-300">✓ {tr('Approuvé le', 'Approved on')} {new Date(approvedAt).toLocaleString('fr-CA')} — {tr("l'employé confirme avoir pris connaissance de son évaluation et de l'ajustement.", 'employee confirms having reviewed their evaluation and adjustment.')}</div>
+                  : <div className="text-gray-500 dark:text-gray-400">{tr("L'employé clique pour confirmer, en direct, avoir pris connaissance.", 'The employee clicks to confirm, live, that they have reviewed it.')}</div>}
+              </div>
+              {approvedAt
+                ? <button onClick={() => setApprovedAt('')} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('Annuler', 'Undo')}</button>
+                : <button onClick={() => setApprovedAt(new Date().toISOString())} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✓ {tr("J'approuve", 'I approve')}</button>}
             </div>
 
             {notice && <div className={`rounded-lg px-3 py-2 text-sm ${notice.includes('✓') ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{notice}</div>}

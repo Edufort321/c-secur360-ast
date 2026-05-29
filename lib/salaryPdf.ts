@@ -154,9 +154,10 @@ export async function exportEvaluationPdf(opts: {
   tr: Tr; dateStr: string; employeeName: string; posteName: string; evaluatedBy: string; logoUrl?: string;
   useGrid: boolean; globalScore: number; tierName: string; tierMinScore: number;
   skillForm: { types: any[] } | null; scores: Record<string, number>; byType: Record<string, number>;
-  salaryBefore: number; salaryAfter: number; targetSalary: number; colaPct: number; colaAmt: number; objectives: string;
+  salaryBefore: number; salaryAfter: number; targetSalary: number; skillAdjust: number; colaPct: number; colaAmt: number; totalPct: number; hpy: number; objectives: string; approvedAt?: string;
 }) {
-  const { tr, dateStr, employeeName, posteName, evaluatedBy, logoUrl, useGrid, globalScore, tierName, tierMinScore, skillForm, scores, byType, salaryBefore, salaryAfter, targetSalary, colaPct, colaAmt, objectives } = opts;
+  const { tr, dateStr, employeeName, posteName, evaluatedBy, logoUrl, useGrid, globalScore, tierName, tierMinScore, skillForm, scores, byType, salaryBefore, salaryAfter, targetSalary, skillAdjust, colaPct, colaAmt, totalPct, hpy, objectives, approvedAt } = opts;
+  const hr = (n: number) => `${((n || 0) / (hpy || 2080)).toFixed(2)} $/h`;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const M = 40; let y = 48;
 
@@ -195,17 +196,21 @@ export async function exportEvaluationPdf(opts: {
     }
   }
 
-  // Cascade salariale
+  // Ajustement salarial (annuel + horaire)
   doc.setFontSize(11); doc.setTextColor(30);
   doc.text(tr('Ajustement salarial', 'Salary adjustment'), M, y); y += 6;
-  const rows: any[] = [[tr('Salaire actuel', 'Current salary'), money(salaryBefore)]];
-  if (useGrid) rows.push([tr('Salaire cible du palier', 'Tier target salary'), money(targetSalary)]);
-  rows.push([`${tr('Coût de la vie', 'Cost of living')} (${colaPct} %)`, `+ ${money(colaAmt)}`]);
-  rows.push([{ content: tr('Salaire recommandé', 'Recommended salary'), styles: { fontStyle: 'bold' } }, { content: money(salaryAfter), styles: { fontStyle: 'bold' } }]);
+  const rows: any[] = [[tr('Salaire de référence', 'Reference salary'), money(salaryBefore), hr(salaryBefore)]];
+  if (useGrid) rows.push([tr('+ Ajustement compétences', '+ Skill adjustment'), `+ ${money(skillAdjust)}`, `+ ${hr(skillAdjust)}`]);
+  rows.push([`+ ${tr('Coût de la vie', 'Cost of living')} (${colaPct} %)`, `+ ${money(colaAmt)}`, `+ ${hr(colaAmt)}`]);
+  rows.push([
+    { content: `= ${tr('Total recommandé', 'Recommended total')} (${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(1)} %)`, styles: { fontStyle: 'bold' } },
+    { content: money(salaryAfter), styles: { fontStyle: 'bold' } },
+    { content: hr(salaryAfter), styles: { fontStyle: 'bold' } },
+  ]);
   autoTable(doc, {
     startY: y, theme: 'grid', styles: { fontSize: 10, cellPadding: 5 },
     headStyles: { fillColor: [59, 130, 246] },
-    head: [[tr('Élément', 'Item'), tr('Montant', 'Amount')]],
+    head: [[tr('Élément', 'Item'), tr('Annuel', 'Annual'), '$/h']],
     body: rows,
   });
   y = lastY(doc, y) + 18;
@@ -224,11 +229,19 @@ export async function exportEvaluationPdf(opts: {
   const pageH = doc.internal.pageSize.getHeight();
   y += 16;
   if (y > pageH - 120) { doc.addPage(); y = 48; }
-  doc.setDrawColor(120); doc.setFontSize(9); doc.setTextColor(30);
-  doc.rect(M, y, 11, 11); // case à cocher
-  doc.text(doc.splitTextToSize(tr("Je consens avoir pris connaissance de mon évaluation et de l'ajustement salarial proposé.", 'I acknowledge having reviewed my evaluation and the proposed salary adjustment.'), 500), M + 17, y + 9);
-  y += 46;
-  doc.setDrawColor(60);
+  doc.setFontSize(9);
+  if (approvedAt) {
+    // Approbation en ligne horodatée (pas besoin de signature manuscrite)
+    doc.setTextColor(16, 122, 70);
+    doc.text(doc.splitTextToSize(`✓ ${tr('Approuvé en ligne par', 'Approved online by')} ${employeeName} ${tr('le', 'on')} ${new Date(approvedAt).toLocaleString('fr-CA')} — ${tr("l'employé confirme avoir pris connaissance de son évaluation et de l'ajustement salarial.", 'employee confirms having reviewed the evaluation and salary adjustment.')}`, 500), M, y + 9);
+    y += 40;
+  } else {
+    doc.setDrawColor(120); doc.setTextColor(30);
+    doc.rect(M, y, 11, 11); // case à cocher
+    doc.text(doc.splitTextToSize(tr("Je consens avoir pris connaissance de mon évaluation et de l'ajustement salarial proposé.", 'I acknowledge having reviewed my evaluation and the proposed salary adjustment.'), 500), M + 17, y + 9);
+    y += 46;
+  }
+  doc.setDrawColor(60); doc.setTextColor(90); doc.setFontSize(8);
   doc.line(M, y, M + 230, y);            // signature employé
   doc.line(M + 270, y, M + 430, y);      // date
   doc.setFontSize(8); doc.setTextColor(90);
