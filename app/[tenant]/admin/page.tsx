@@ -2859,6 +2859,15 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                       </tr>
                     </tbody>
                   </table>
+                  {canEdit && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button onClick={() => { const s = String(Math.round(reco.newSalary)); setCurrentSalary(s); if (!hireSalary) setHireSalary(s); }}
+                        className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                        📊 {tr('Placer selon la note (embauche)', 'Place by score (hire)')} — {fmt(reco.newSalary)}
+                      </button>
+                      <span className="self-center text-[10px] text-gray-400">{tr('ou saisir un taux manuel selon l\'expérience pertinente ci-dessus', 'or enter a manual rate based on relevant experience above')}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
