@@ -27,20 +27,24 @@ function AppContent({ tenant = 'cerdia' }) {
     const [showResourcesManagement, setShowResourcesManagement] = useState(false);
     const [currentUser, setCurrentUser] = useState({ id: 'host', nom: 'Utilisateur', niveauAcces: 'administration' });
 
-    // Résoudre le niveau d'accès depuis planner_personnel via l'email Supabase Auth
+    // Résoudre le niveau d'accès — priorité users.role, puis planner_personnel
     useEffect(() => {
         (async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user?.email) return;
-                const { data: personnel } = await supabase
-                    .from('planner_personnel')
-                    .select('id, name, niveauAcces, email')
-                    .eq('tenant_id', tenant)
-                    .ilike('email', user.email)
-                    .maybeSingle();
+                // 1. Rôle global (super_admin/client_admin/user)
+                const { data: u } = await supabase.from('users').select('name, role').ilike('email', user.email).maybeSingle();
+                if (u?.role === 'super_admin') {
+                    setCurrentUser({ id: 'super', nom: u.name || 'Super-utilisateur', niveauAcces: 'super_user' });
+                    return;
+                }
+                // 2. Raffinement par planner_personnel
+                const { data: personnel } = await supabase.from('planner_personnel').select('id, name, niveauAcces').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
                 if (personnel) {
-                    setCurrentUser({ id: personnel.id, nom: personnel.name, niveauAcces: personnel.niveauAcces || 'consultation' });
+                    setCurrentUser({ id: personnel.id, nom: personnel.name, niveauAcces: personnel.niveauAcces || (u?.role === 'client_admin' ? 'direction' : 'consultation') });
+                } else if (u?.role === 'client_admin') {
+                    setCurrentUser({ id: 'admin', nom: u.name || 'Admin', niveauAcces: 'direction' });
                 }
             } catch { /* Supabase non dispo → garde la valeur par défaut */ }
         })();

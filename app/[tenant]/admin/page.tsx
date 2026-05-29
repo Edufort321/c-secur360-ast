@@ -13,23 +13,36 @@ type Mod = { key: string; name_fr: string; name_en: string; monthly_price: numbe
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
 // ─── Hook : détecte le niveau d'accès de l'utilisateur connecté ─────────────
+// Cascade de résolution :
+//   1. users.role == 'super_admin'  → niveau 8 super_user (tous accès)
+//   2. users.role == 'client_admin' → niveau 7 direction (par défaut)
+//   3. planner_personnel.niveauAcces (raffinement fin par tenant)
+//   4. Fallback super_user en dev si rien trouvé
 function useCurrentAccess(tenant: string) {
-  const [niveauAcces, setNiveauAcces] = useState<AccessLevel>('super_user'); // fallback admin pour développement
+  const [niveauAcces, setNiveauAcces] = useState<AccessLevel>('super_user');
+  const [userEmail, setUserEmail] = useState<string>('');
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
+          setUserEmail(user.email);
+          // 1. Rôle Supabase Auth — prioritaire
+          const { data: u } = await supabase.from('users').select('role').ilike('email', user.email).maybeSingle();
+          if (u?.role === 'super_admin') { setNiveauAcces('super_user'); setLoading(false); return; }
+          // 2. Raffinement par planner_personnel
           const { data: p } = await supabase.from('planner_personnel').select('niveauAcces').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
           if (p?.niveauAcces) setNiveauAcces(p.niveauAcces as AccessLevel);
+          else if (u?.role === 'client_admin') setNiveauAcces('direction');
+          else if (u?.role === 'user') setNiveauAcces('consultation');
         }
       } catch { /* Supabase indispo → garde super_user */ }
       setLoading(false);
     })();
   }, [tenant]);
   const perms = PERMS[niveauAcces] || PERMS.consultation;
-  return { niveauAcces, perms, loading };
+  return { niveauAcces, perms, loading, userEmail };
 }
 
 // ─── Niveaux d'accès & matrice de permissions ───────────────────────────────
@@ -200,7 +213,7 @@ export default function AdminPage() {
   type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'abonnement' | 'facturation';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { perms } = useCurrentAccess(tenant);
+  const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
 
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
@@ -220,7 +233,31 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-6 lg:px-6">
-        <h1 className="mb-4 text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
+        <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-2xl font-bold">{tr('Administration', 'Administration')}</h1>
+          {userEmail && (() => {
+            const lvl = ACCESS_LEVELS.find(l => l.value === niveauAcces);
+            const tierStyles: Record<number, string> = {
+              1: 'bg-gray-100 text-gray-700 border-gray-300',
+              2: 'bg-blue-100 text-blue-700 border-blue-300',
+              3: 'bg-cyan-100 text-cyan-700 border-cyan-300',
+              4: 'bg-indigo-100 text-indigo-700 border-indigo-300',
+              5: 'bg-amber-100 text-amber-700 border-amber-300',
+              6: 'bg-pink-100 text-pink-700 border-pink-300',
+              7: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+              8: 'bg-red-100 text-red-700 border-red-300',
+            };
+            return lvl ? (
+              <div className={`inline-flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 text-sm font-semibold ${tierStyles[lvl.tier]}`} title={userEmail}>
+                <span className="text-lg">{lvl.emoji}</span>
+                <div className="text-left">
+                  <div className="text-[10px] uppercase opacity-70 leading-none">{tr('Niveau', 'Tier')} {lvl.tier}</div>
+                  <div className="font-bold leading-tight">{tr(lvl.label_fr, lvl.label_en)}</div>
+                </div>
+              </div>
+            ) : null;
+          })()}
+        </div>
 
         {/* Mobile: hamburger */}
         <div className="mb-4 sm:hidden">
