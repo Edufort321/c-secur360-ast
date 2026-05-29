@@ -155,8 +155,9 @@ export async function exportEvaluationPdf(opts: {
   useGrid: boolean; globalScore: number; tierName: string; tierMinScore: number;
   skillForm: { types: any[] } | null; scores: Record<string, number>; byType: Record<string, number>;
   salaryBefore: number; salaryAfter: number; targetSalary: number; skillAdjust: number; colaPct: number; colaAmt: number; totalPct: number; hpy: number; objectives: string; approvedAt?: string;
+  verifiedBy?: string; verifiedAt?: string; hrBy?: string; hrAt?: string;
 }) {
-  const { tr, dateStr, employeeName, posteName, evaluatedBy, logoUrl, useGrid, globalScore, tierName, tierMinScore, skillForm, scores, byType, salaryBefore, salaryAfter, targetSalary, skillAdjust, colaPct, colaAmt, totalPct, hpy, objectives, approvedAt } = opts;
+  const { tr, dateStr, employeeName, posteName, evaluatedBy, logoUrl, useGrid, globalScore, tierName, tierMinScore, skillForm, scores, byType, salaryBefore, salaryAfter, targetSalary, skillAdjust, colaPct, colaAmt, totalPct, hpy, objectives, approvedAt, verifiedBy, verifiedAt, hrBy, hrAt } = opts;
   const hr = (n: number) => `${((n || 0) / (hpy || 2080)).toFixed(2)} $/h`;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const M = 40; let y = 48;
@@ -252,6 +253,24 @@ export async function exportEvaluationPdf(opts: {
   doc.line(M + 270, y, M + 430, y);
   doc.text(tr("Signature de l'évaluateur", 'Evaluator signature') + (evaluatedBy ? ` — ${evaluatedBy}` : ''), M, y + 11);
   doc.text(tr('Date', 'Date'), M + 270, y + 11);
+  y += 42;
+  // Vérifié par le gestionnaire
+  if (verifiedAt) {
+    doc.setTextColor(16, 122, 70);
+    doc.text(`✓ ${tr('Vérifié par', 'Verified by')} ${verifiedBy || '—'} ${tr('le', 'on')} ${new Date(verifiedAt).toLocaleString('fr-CA')}`, M, y + 4);
+    doc.setTextColor(90);
+  } else {
+    doc.line(M, y, M + 230, y); doc.line(M + 270, y, M + 430, y);
+    doc.text(tr('Vérifié par (gestionnaire)', 'Verified by (manager)'), M, y + 11);
+    doc.text(tr('Date', 'Date'), M + 270, y + 11);
+  }
+  // Approbation RH (uniquement si effectuée)
+  if (hrAt) {
+    y += 24;
+    doc.setTextColor(16, 122, 70);
+    doc.text(`✓ ${tr('Approbation RH', 'HR approval')} — ${hrBy || '—'} ${tr('le', 'on')} ${new Date(hrAt).toLocaleString('fr-CA')}`, M, y + 4);
+    doc.setTextColor(90);
+  }
 
   doc.save(`${tr('evaluation', 'evaluation')}-${(employeeName || 'employe').replace(/\s+/g, '_')}-${dateStr}.pdf`);
 }

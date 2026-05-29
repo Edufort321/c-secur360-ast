@@ -2547,6 +2547,8 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
   const [evaluatedBy, setEvaluatedBy] = useState('');
   const [history, setHistory] = useState<any[]>([]);
   const [approvedAt, setApprovedAt] = useState<string>(''); // horodatage d'approbation en direct par l'employé
+  const [verifiedBy, setVerifiedBy] = useState<string>(''); const [verifiedAt, setVerifiedAt] = useState<string>(''); // vérifié par le gestionnaire
+  const [hrBy, setHrBy] = useState<string>(''); const [hrAt, setHrAt] = useState<string>(''); // approbation RH (optionnelle)
   const [notice, setNotice] = useState<string | null>(null);
   // Clic simple = tout sélectionner (la frappe écrase) ; recliquer = éditer.
   const selectOnFocus = (e: React.FocusEvent) => {
@@ -2658,7 +2660,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       useGrid, globalScore: skillScore, tierName: reco.target?.tier_name || '—', tierMinScore: reco.target?.min_score ?? 0,
       skillForm: skillForm || null, scores, byType,
       salaryBefore: reco.cs, salaryAfter: reco.newSalary, targetSalary: reco.targetSalary, skillAdjust: reco.skillAdjust, colaPct: reco.cola, colaAmt: reco.colaAmt, totalPct: reco.totalPct, hpy,
-      objectives, approvedAt,
+      objectives, approvedAt, verifiedBy, verifiedAt, hrBy, hrAt,
     });
   }
 
@@ -2703,11 +2705,16 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         objectives: objectives || null,
         approved_at: approvedAt || null,
         approved_by: approvedAt ? employee.name : null,
+        approvals: {
+          verified: verifiedAt ? { by: verifiedBy, at: verifiedAt } : null,
+          employee: approvedAt ? { at: approvedAt } : null,
+          hr: hrAt ? { by: hrBy, at: hrAt } : null,
+        },
         status: approvedAt ? 'approved' : 'pending',
       };
       let { error: evErr } = await supabase.from('employee_evaluations').insert(evalPayload);
-      if (evErr && /evaluated_by|objectives/i.test(evErr.message || '')) {
-        const { evaluated_by, objectives: _o2, ...evFallback } = evalPayload;
+      if (evErr && /evaluated_by|objectives|approvals/i.test(evErr.message || '')) {
+        const { evaluated_by, objectives: _o2, approvals: _ap, ...evFallback } = evalPayload;
         ({ error: evErr } = await supabase.from('employee_evaluations').insert(evFallback));
       }
       if (evErr) throw evErr;
@@ -2984,17 +2991,33 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
               )}
             </div>
 
-            {/* Approbation en direct par l'employé (horodatée) */}
-            <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 ${approvedAt ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10' : 'border-dashed border-gray-300 dark:border-gray-600'}`}>
-              <div className="text-xs">
-                <div className="font-semibold">{tr("Approbation de l'employé", 'Employee approval')}</div>
-                {approvedAt
-                  ? <div className="text-emerald-700 dark:text-emerald-300">✓ {tr('Approuvé le', 'Approved on')} {new Date(approvedAt).toLocaleString('fr-CA')} — {tr("l'employé confirme avoir pris connaissance de son évaluation et de l'ajustement.", 'employee confirms having reviewed their evaluation and adjustment.')}</div>
-                  : <div className="text-gray-500 dark:text-gray-400">{tr("L'employé clique pour confirmer, en direct, avoir pris connaissance.", 'The employee clicks to confirm, live, that they have reviewed it.')}</div>}
+            {/* Vérifications & approbations (multi-niveaux, horodatées) */}
+            <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h4 className="mb-1 flex items-center gap-1.5 text-sm font-bold">✅ {tr('Vérifications & approbations', 'Verifications & approvals')}</h4>
+              {/* 1. Vérifié par le gestionnaire */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="w-44 font-semibold">{tr('Vérifié par (gestionnaire)', 'Verified by (manager)')}</span>
+                <input className={`${inp2} min-w-[8rem] flex-1`} value={verifiedBy} disabled={!canEdit || !!verifiedAt} placeholder={tr('Nom du gestionnaire', 'Manager name')} onChange={e => setVerifiedBy(e.target.value)} />
+                {verifiedAt
+                  ? <span className="text-emerald-700 dark:text-emerald-300">✓ {new Date(verifiedAt).toLocaleString('fr-CA')} <button onClick={() => setVerifiedAt('')} className="ml-1 text-gray-400 hover:text-gray-600">✕</button></span>
+                  : <button onClick={() => verifiedBy.trim() && setVerifiedAt(new Date().toISOString())} disabled={!verifiedBy.trim()} className="rounded-lg bg-blue-600 px-3 py-1.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{tr('Vérifier', 'Verify')}</button>}
               </div>
-              {approvedAt
-                ? <button onClick={() => setApprovedAt('')} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-600">{tr('Annuler', 'Undo')}</button>
-                : <button onClick={() => setApprovedAt(new Date().toISOString())} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✓ {tr("J'approuve", 'I approve')}</button>}
+              {/* 2. Approuvé en direct par l'employé */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="w-44 font-semibold">{tr("Approuvé par l'employé", 'Approved by employee')}</span>
+                <span className="min-w-[8rem] flex-1 text-gray-500 dark:text-gray-400">{approvedAt ? `✓ ${new Date(approvedAt).toLocaleString('fr-CA')}` : tr('En direct sur cet écran', 'Live on this screen')}</span>
+                {approvedAt
+                  ? <button onClick={() => setApprovedAt('')} className="text-gray-400 hover:text-gray-600">{tr('Annuler', 'Undo')}</button>
+                  : <button onClick={() => setApprovedAt(new Date().toISOString())} className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white hover:bg-emerald-700">✓ {tr("J'approuve", 'I approve')}</button>}
+              </div>
+              {/* 3. Approbation RH (optionnelle) */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="w-44 font-semibold">{tr('Approbation RH', 'HR approval')} <span className="font-normal text-gray-400">({tr('optionnel', 'optional')})</span></span>
+                <input className={`${inp2} min-w-[8rem] flex-1`} value={hrBy} disabled={!canEdit || !!hrAt} placeholder={tr('Nom RH', 'HR name')} onChange={e => setHrBy(e.target.value)} />
+                {hrAt
+                  ? <span className="text-emerald-700 dark:text-emerald-300">✓ {new Date(hrAt).toLocaleString('fr-CA')} <button onClick={() => setHrAt('')} className="ml-1 text-gray-400 hover:text-gray-600">✕</button></span>
+                  : <button onClick={() => hrBy.trim() && setHrAt(new Date().toISOString())} disabled={!hrBy.trim()} className="rounded-lg bg-purple-600 px-3 py-1.5 font-semibold text-white hover:bg-purple-700 disabled:opacity-50">{tr('Approuver', 'Approve')}</button>}
+              </div>
             </div>
 
             {notice && <div className={`rounded-lg px-3 py-2 text-sm ${notice.includes('✓') ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{notice}</div>}
