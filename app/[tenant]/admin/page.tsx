@@ -3057,13 +3057,19 @@ function PersonnelPlanner({ tenant, tr, inp, goToPostes, sharedPostes, sharedSub
                         const currentPoste = postes.find(p => p.name === r.role);
                         const ids = currentPoste?.subclass_ids || [];
                         const availableSubs = ids.map(id => sharedSubclasses.find(s => s.id === id)).filter(Boolean) as { id: string; name: string; color?: string }[];
-                        if (!r.role || availableSubs.length === 0) return null;
+                        if (!r.role) return null;
+                        if (availableSubs.length === 0) {
+                          return <div className="text-[10px] text-gray-400 italic px-1">{tr('Aucune sous-classe appliquée à ce poste', 'No sub-class applied to this poste')}</div>;
+                        }
                         const chosen = availableSubs.find(s => s.name === r.subclass);
                         return (
-                          <select className={`${inp} min-w-[130px] text-[11px]`} value={r.subclass || ''} onChange={e => upd(i, 'subclass', e.target.value)} style={{ borderColor: chosen?.color || undefined }}>
-                            <option value="">— {tr('Sous-classe', 'Sub-class')} —</option>
-                            {availableSubs.map(sc => <option key={sc.id} value={sc.name}>{sc.name}</option>)}
-                          </select>
+                          <AutocompleteInput
+                            value={r.subclass || ''}
+                            onChange={v => upd(i, 'subclass', v)}
+                            suggestions={availableSubs.map(s => s.name)}
+                            placeholder={tr(`Sous-classe (${availableSubs.length} dispo)`, `Sub-class (${availableSubs.length} avail)`)}
+                            className="min-w-[130px]"
+                          />
                         );
                       })()}
                     </div>
@@ -3566,6 +3572,7 @@ function PosteSalaryGridPanel({ tenant, poste, tr, onClose, canEdit = true }: { 
 function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goToSubclasses, perms }: { tenant: string; tr: (f: string, e: string) => string; inp: string; onPostesChanged?: () => void; sharedSubclasses: { id: string; name: string; color?: string; category?: string }[]; goToSubclasses: () => void; perms: typeof PERMS[AccessLevel] }) {
   const empty = (): PosteRow => ({ name: '', code: '', color: '#6b7280', subclass_ids: [] });
   const [subPickerFor, setSubPickerFor] = useState<number | null>(null);
+  const [subSearch, setSubSearch] = useState('');
   const [rows, setRows] = useState<PosteRow[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -3737,38 +3744,57 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
                   ))}
                   {sharedSubclasses.length > 0 ? (
                     <div className="relative">
-                      <button type="button" onClick={() => setSubPickerFor(subPickerFor === i ? null : i)}
+                      <button type="button" onClick={() => { setSubPickerFor(subPickerFor === i ? null : i); setSubSearch(''); }}
                         className="rounded-full border border-dashed border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 text-[11px] text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10">
                         + {tr('Ajouter du catalogue', 'Add from catalog')} ({sharedSubclasses.length})
                       </button>
-                      {subPickerFor === i && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setSubPickerFor(null)} />
-                          <div className="absolute z-40 mt-1 max-h-64 w-72 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 p-2 space-y-0.5">
-                            <div className="px-1 py-0.5 text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100 dark:border-gray-700 mb-1">
-                              {tr('Cliquez pour ajouter', 'Click to add')}
+                      {subPickerFor === i && (() => {
+                        const available = sharedSubclasses.filter(s => !ids.includes(s.id));
+                        const search = subSearch.toLowerCase().trim();
+                        const filtered = search ? available.filter(s => s.name.toLowerCase().includes(search) || (s.category || '').toLowerCase().includes(search)) : available;
+                        return (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setSubPickerFor(null)} />
+                            <div className="absolute z-40 mt-1 w-72 rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800 overflow-hidden">
+                              <div className="border-b border-gray-100 dark:border-gray-700 p-2">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={subSearch}
+                                  onChange={e => setSubSearch(e.target.value)}
+                                  placeholder={tr('🔍 Rechercher dans le catalogue…', '🔍 Search catalog…')}
+                                  className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-transparent px-2 py-1 text-xs outline-none focus:border-cyan-500"
+                                />
+                                <p className="mt-1 text-[9px] text-gray-400">{filtered.length} {tr('résultat(s) sur', 'result(s) of')} {available.length}</p>
+                              </div>
+                              <div className="max-h-56 overflow-y-auto p-1">
+                                {filtered.map(s => (
+                                  <button key={s.id} type="button"
+                                    onClick={() => { upd(i, 'subclass_ids', [...ids, s.id]); setSubSearch(''); }}
+                                    className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-cyan-50 dark:hover:bg-cyan-900/30 flex items-center gap-2">
+                                    <span className="h-3 w-3 rounded-full shrink-0 border border-gray-300" style={{ background: s.color }} />
+                                    <span className="flex-1 font-medium">{s.name}</span>
+                                    {s.category && <span className="text-[9px] text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">{s.category}</span>}
+                                  </button>
+                                ))}
+                                {filtered.length === 0 && (
+                                  <p className="text-[10px] text-gray-400 px-2 py-3 text-center">
+                                    {available.length === 0
+                                      ? tr('Toutes les sous-classes sont déjà appliquées.', 'All sub-classes already applied.')
+                                      : tr('Aucun résultat. Tapez moins de caractères.', 'No result. Try fewer characters.')}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="border-t border-gray-100 dark:border-gray-700 p-1">
+                                <button type="button" onClick={() => { setSubPickerFor(null); goToSubclasses(); }}
+                                  className="w-full text-center text-[10px] text-purple-600 hover:underline py-1">
+                                  ⚙️ {tr('Gérer / créer dans le catalogue', 'Manage / create in catalog')}
+                                </button>
+                              </div>
                             </div>
-                            {sharedSubclasses.filter(s => !ids.includes(s.id)).map(s => (
-                              <button key={s.id} type="button"
-                                onClick={() => { upd(i, 'subclass_ids', [...ids, s.id]); }}
-                                className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-cyan-50 dark:hover:bg-cyan-900/30 flex items-center gap-2">
-                                <span className="h-3 w-3 rounded-full shrink-0 border border-gray-300" style={{ background: s.color }} />
-                                <span className="flex-1 font-medium">{s.name}</span>
-                                {s.category && <span className="text-[9px] text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5">{s.category}</span>}
-                              </button>
-                            ))}
-                            {sharedSubclasses.filter(s => !ids.includes(s.id)).length === 0 && (
-                              <p className="text-[10px] text-gray-400 px-2 py-3 text-center">{tr('Toutes les sous-classes sont déjà appliquées.', 'All sub-classes already applied.')}</p>
-                            )}
-                            <div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
-                              <button type="button" onClick={() => { setSubPickerFor(null); goToSubclasses(); }}
-                                className="w-full text-center text-[10px] text-purple-600 hover:underline py-1">
-                                ⚙️ {tr('Gérer le catalogue', 'Manage catalog')}
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <button onClick={goToSubclasses} className="rounded-full border border-dashed border-amber-300 dark:border-amber-500/40 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 hover:bg-amber-50">
