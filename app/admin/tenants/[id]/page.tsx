@@ -33,7 +33,7 @@ export default function TenantManagePage() {
 
   const [tenant, setTenant] = useState<any>(null);
   const [mods, setMods] = useState<Mod[]>([]);
-  const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30 });
+  const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30, per_site_monthly: 0 });
   const [sub, setSub] = useState<any>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
@@ -65,8 +65,8 @@ export default function TenantManagePage() {
       const { data: tm } = await supabase.from('tenant_modules').select('module_key, enabled').eq('tenant_id', id);
       const enabledSet = new Set((tm || []).filter((x: any) => x.enabled).map((x: any) => x.module_key));
       setMods((catalog || []).map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price), enabled: enabledSet.has(m.key) })));
-      const { data: bc } = await supabase.from('billing_config').select('discount_per_module, discount_cap').eq('id', 'default').maybeSingle();
-      if (bc) setCfg({ discount_per_module: Number(bc.discount_per_module), discount_cap: Number(bc.discount_cap) });
+      const { data: bc } = await supabase.from('billing_config').select('discount_per_module, discount_cap, per_site_monthly').eq('id', 'default').maybeSingle();
+      if (bc) setCfg({ discount_per_module: Number(bc.discount_per_module), discount_cap: Number(bc.discount_cap), per_site_monthly: Number(bc.per_site_monthly) || 0 });
       const { data: s } = await supabase.from('tenant_subscriptions').select('*').eq('tenant_id', id).maybeSingle();
       setSub(s);
       const { data: txData } = await supabase.from('tenant_transactions').select('*').eq('tenant_id', id).order('created_at', { ascending: false });
@@ -84,7 +84,10 @@ export default function TenantManagePage() {
   const selected = mods.filter(m => m.enabled);
   const subtotal = useMemo(() => selected.reduce((s, m) => s + (m.monthly_price || 0), 0), [mods]);
   const discountPct = Math.min(Math.max(selected.length - 1, 0) * cfg.discount_per_module, cfg.discount_cap);
-  const total = subtotal * (1 - discountPct / 100);
+  // Sites supplémentaires : (sites inclus − 1) × prix mensuel × 12 (facture annuelle)
+  const extraSites = Math.max(0, (Number(tenant?.max_sites) || 1) - 1);
+  const sitesAnnual = extraSites * cfg.per_site_monthly * 12;
+  const total = subtotal * (1 - discountPct / 100) + sitesAnnual;
   const subState = useMemo(() => computeSubState(sub), [sub]);
   const dirty = !!tenant && profileKey(tenant) !== savedJson;
 
@@ -362,6 +365,7 @@ export default function TenantManagePage() {
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Sous-total</span><span>{money(subtotal)}</span></div>
                     <div className="flex justify-between text-emerald-600"><span>Escompte ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
+                    {extraSites > 0 && <div className="flex justify-between text-blue-600"><span>Sites suppl. ({extraSites} × {money(cfg.per_site_monthly)}/mois × 12)</span><span>+ {money(sitesAnnual)}</span></div>}
                     <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
                   </div>
                   <p className="mt-2 text-xs text-gray-400">{cfg.discount_per_module}% par module additionnel (max {cfg.discount_cap}%).</p>
