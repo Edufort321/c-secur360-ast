@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Save, Loader2, Tag, MapPin } from 'lucide-react';
 
-const FREE_KEYS = ['admin', 'todo'];
-
 export default function PriceManager() {
   const [mods, setMods] = useState<any[]>([]);
   const [perSite, setPerSite] = useState<number>(0);
@@ -42,7 +40,8 @@ export default function PriceManager() {
   }
 
   // Calcul annuel avec rabais (monthly_price = prix annuel dans la DB)
-  const paidMods = mods.filter(m => !FREE_KEYS.includes(m.key) && m.monthly_price > 0);
+  // Tout module à 0 $ est gratuit ; mettre un prix > 0 le rend payant (y compris Administration / To-Do).
+  const paidMods = mods.filter(m => m.monthly_price > 0);
   const subtotal = paidMods.reduce((s, m) => s + Number(m.monthly_price || 0), 0);
   const discountPct = Math.min(Math.max(paidMods.length - 1, 0) * 5, 30);
   const totalAnnual = Math.round(subtotal * (1 - discountPct / 100));
@@ -95,32 +94,28 @@ export default function PriceManager() {
             <>
               <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
                 Note : les prix ci-dessous sont des <strong>prix annuels</strong> (colonne <code>monthly_price</code> dans la DB — nom de colonne historique).
-                Administration et To-Do sont toujours gratuits.
+                Laissez un module à <strong>0 $</strong> pour qu'il reste gratuit (ex. Administration, To-Do), ou donnez-lui un prix pour le rendre payant.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px' }}>
                 {mods.map((m, i) => {
-                  const isFree = FREE_KEYS.includes(m.key);
+                  const isFree = (m.monthly_price || 0) === 0;
                   return (
                     <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', border: `1px solid ${isFree ? '#fed7aa' : '#e5e7eb'}`, borderRadius: '10px', padding: '8px 12px', background: isFree ? '#fff7ed' : '#fff' }}>
                       <span style={{ fontSize: '14px', fontWeight: 500 }}>
                         {m.name_fr}
                         {isFree && <span style={{ fontSize: '11px', color: '#f97316', marginLeft: '6px', fontWeight: 700 }}>GRATUIT</span>}
                       </span>
-                      {isFree ? (
-                        <span style={{ fontSize: '13px', color: '#f97316', fontWeight: 700 }}>0 $</span>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <input
-                            type="number"
-                            min={0}
-                            value={m.monthly_price}
-                            onChange={e => setMods(p => p.map((x, j) => j === i ? { ...x, monthly_price: Number(e.target.value) } : x))}
-                            onFocus={e => e.target.select()}
-                            style={{ width: '90px', textAlign: 'right', border: '1px solid #d1d5db', borderRadius: '6px', padding: '4px 6px', fontSize: '14px' }}
-                          />
-                          <span style={{ fontSize: '13px', color: '#6b7280' }}>$/an</span>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="number"
+                          min={0}
+                          value={m.monthly_price}
+                          onChange={e => setMods(p => p.map((x, j) => j === i ? { ...x, monthly_price: Number(e.target.value) } : x))}
+                          onFocus={e => e.target.select()}
+                          style={{ width: '90px', textAlign: 'right', border: '1px solid #d1d5db', borderRadius: '6px', padding: '4px 6px', fontSize: '14px' }}
+                        />
+                        <span style={{ fontSize: '13px', color: '#6b7280' }}>$/an</span>
+                      </div>
                     </div>
                   );
                 })}
