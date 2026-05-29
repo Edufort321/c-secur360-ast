@@ -2762,6 +2762,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 <input type="date" disabled={!canEdit} className={inp2} value={hireDate} onChange={e => setHireDate(e.target.value)} />
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">Taux $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
                 {useGrid && tiers.length > 0 && (
                   <div className="mt-2">
                     <div className="text-[9px] uppercase font-bold text-gray-400 mb-1">{tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</div>
@@ -2771,7 +2772,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                           onClick={() => { setHireSalary(String(t.annual_salary)); if (!currentSalary) setCurrentSalary(String(t.annual_salary)); }}
                           className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-blue-500/10"
                           title={tr('Appliquer au salaire de départ', 'Apply to starting salary')}>
-                          {t.tier_name}: {fmt(Number(t.annual_salary) || 0)}
+                          {t.tier_name}: {fmt(Number(t.annual_salary) || 0)} · {((Number(t.annual_salary) || 0) / hpy).toFixed(2)}/h
                         </button>
                       ))}
                     </div>
