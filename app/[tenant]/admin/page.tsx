@@ -12,6 +12,7 @@ import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
 import { syncPayrollEntries } from '@/lib/accountingAuto';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
+import { exportInvoicePdf } from '@/lib/invoicePdf';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -5750,6 +5751,7 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                   <td className="px-4 py-2 text-right" data-label="">
                     {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
                       <button onClick={() => editInvoice(inv)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                      <button onClick={() => exportInvoicePdf(tenant, inv).catch((e: any) => setNotice(e?.message || 'PDF erreur'))} className="text-gray-600 hover:underline dark:text-gray-300">PDF</button>
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
                       {inv.status !== 'paid' && <button onClick={() => changeStatus(inv, 'paid')} className="text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
                     </div>}
