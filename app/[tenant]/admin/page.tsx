@@ -14,6 +14,7 @@ import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } f
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
+import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -5437,7 +5438,14 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {accounts.length > 0 && (sub === 'ledger' || sub === 'balance' || sub === 'statements') && (
+            <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800">
+              <span className="text-gray-400">{tr('Exporter', 'Export')}</span>
+              <button onClick={() => { try { sub === 'ledger' ? exportLedgerCsv(ledger) : sub === 'balance' ? exportTrialBalanceCsv(accounts, bal) : exportStatementsCsv(accounts, bal); } catch (e: any) { setNotice(e?.message); } }} className="rounded-lg px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">CSV</button>
+              <button onClick={async () => { try { sub === 'ledger' ? await exportLedgerPdf(tenant, ledger) : sub === 'balance' ? await exportTrialBalancePdf(tenant, accounts, bal) : await exportStatementsPdf(tenant, accounts, bal); } catch (e: any) { setNotice(e?.message); } }} className="rounded-lg px-2 py-1 font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">PDF</button>
+            </div>
+          )}
           {accounts.length > 0 && canEdit && (
             <button onClick={syncPay} disabled={syncing} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40">
               {syncing ? <Loader2 size={15} className="inline animate-spin" /> : tr('Synchroniser la paie', 'Sync payroll')}
