@@ -6,6 +6,7 @@ import { Logo } from '../../components/UI/Logo';
 import { DropZone } from '../../components/UI/DropZone';
 import { FilePreview } from '../../components/UI/FilePreview';
 import { ResourceSelector } from './ResourceSelector';
+import { WeatherPanel } from '@/components/WeatherPanel';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
 import {
     formatLocalizedDate,
@@ -3495,6 +3496,8 @@ export function JobModal({
                                                             src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(formData.lieu)}`}
                                                         />
                                                     )}
+                                                    {/* Meteo de l'endroit des travaux (a la date de debut) + alerte orage */}
+                                                    <WeatherPanel location={formData.lieu} date={formData.dateDebut} className="mt-2" />
                                                 </>
                                             )}
                                         </div>
