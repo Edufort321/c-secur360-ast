@@ -5651,6 +5651,25 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   async function changeStatus(inv: Invoice, status: Invoice['status']) {
     try { await setInvoiceStatus(tenant, inv.id!, status); await load(); } catch (e: any) { setNotice(e?.message); }
   }
+  async function markPaid(inv: Invoice) {
+    setNotice(null);
+    try {
+      const accs = await getAccounts(tenant); const m: Record<string, string> = {}; accs.forEach(a => m[a.code] = a.id);
+      if (!inv.gl_entry_id && m['1100'] && m['4000']) await postSale(inv); // comptabilise la vente si pas déjà fait
+      if (m['1000'] && m['1100']) {
+        const { data: ex } = await supabase.from('gl_entries').select('id').eq('tenant_id', tenant).eq('source_type', 'invoice_payment').eq('source_id', inv.id).limit(1);
+        if (!ex || !ex.length) {
+          await createEntry(tenant, {
+            entry_date: new Date().toISOString().slice(0, 10), description: `Encaissement — facture ${inv.invoice_number}`,
+            reference: inv.invoice_number, journal_code: 'BNK', source_type: 'invoice_payment', source_id: inv.id,
+            lines: [{ account_id: m['1000'], debit: Number(inv.total) || 0, credit: 0, description: 'Banque' }, { account_id: m['1100'], debit: 0, credit: Number(inv.total) || 0, description: 'Clients' }],
+          });
+        }
+      }
+      await setInvoiceStatus(tenant, inv.id!, 'paid');
+      setNotice(tr('Facture payée — encaissement comptabilisé.', 'Invoice paid — payment posted.')); await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
   async function postSale(inv: Invoice) {
     setNotice(null);
     if (inv.gl_entry_id) { setNotice(tr('Déjà comptabilisée.', 'Already posted.')); return; }
@@ -5753,7 +5772,7 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                       <button onClick={() => editInvoice(inv)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
                       <button onClick={() => exportInvoicePdf(tenant, inv).catch((e: any) => setNotice(e?.message || 'PDF erreur'))} className="text-gray-600 hover:underline dark:text-gray-300">PDF</button>
                       {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
-                      {inv.status !== 'paid' && <button onClick={() => changeStatus(inv, 'paid')} className="text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
+                      {inv.status !== 'paid' && <button onClick={() => markPaid(inv)} className="text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
                     </div>}
                   </td>
                 </tr>
