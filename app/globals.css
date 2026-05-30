@@ -18,13 +18,14 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Tableaux responsives — « cartes empilées » sur cellulaire (< 640px)
+   Tableaux responsives — « cartes empilées » sous 1024px (lg)
    Ajoutez la classe `mobile-cards` à un <table> et un attribut
-   `data-label="…"` à chaque <td>. Sous 640px : l'en-tête se masque, chaque
-   ligne devient une carte verticale et chaque cellule affiche son label.
-   Au-delà de 640px : tableau classique inchangé.
+   `data-label="…"` à chaque <td>. Sous 1024px (cellulaire, tablette ET
+   demi-écran d'un moniteur de bureau) : l'en-tête se masque, chaque ligne
+   devient une carte verticale et chaque cellule affiche son label — la saisie
+   reste lisible. À 1024px et plus : tableau classique inchangé.
    ───────────────────────────────────────────────────────────────────────── */
-@media (max-width: 639px) {
+@media (max-width: 1023px) {
   table.mobile-cards,
   table.mobile-cards tbody {
     display: block;

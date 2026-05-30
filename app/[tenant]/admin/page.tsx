@@ -273,8 +273,8 @@ export default function AdminPage() {
           })()}
         </div>
 
-        {/* Mobile: hamburger */}
-        <div className="mb-4 sm:hidden">
+        {/* Mobile / demi-écran (< 1024px) : menu hamburger */}
+        <div className="mb-4 lg:hidden">
           <div className="relative">
             <button
               onClick={() => setMobileMenuOpen(o => !o)}
@@ -301,8 +301,8 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Desktop: onglets */}
-        <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:flex">
+        {/* Desktop plein écran (>= 1024px) : barre d'onglets */}
+        <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:flex">
           {tabs.map(x => {
             const Icon = x.icon as any;
             return (
