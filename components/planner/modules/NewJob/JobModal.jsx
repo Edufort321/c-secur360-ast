@@ -3474,14 +3474,28 @@ export function JobModal({
                                                 placeholder="Adresse / lieu d'intervention"
                                             />
                                             {formData.lieu && formData.lieu.trim() && (
-                                                <a
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.lieu)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                                                >
-                                                    🗺️ Voir sur Google Maps
-                                                </a>
+                                                <>
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.lieu)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                                                    >
+                                                        🗺️ Voir sur Google Maps
+                                                    </a>
+                                                    {/* Carte integree (API Embed) — s'affiche si la cle NEXT_PUBLIC_GOOGLE_MAPS_API_KEY est configuree */}
+                                                    {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                                                        <iframe
+                                                            title="Carte de l'endroit des travaux"
+                                                            className="mt-2 w-full rounded-lg border border-gray-200"
+                                                            height="200"
+                                                            style={{ border: 0 }}
+                                                            loading="lazy"
+                                                            referrerPolicy="no-referrer-when-downgrade"
+                                                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(formData.lieu)}`}
+                                                        />
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
