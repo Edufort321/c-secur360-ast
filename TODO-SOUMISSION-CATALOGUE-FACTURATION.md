@@ -54,8 +54,8 @@ Quand un mandat/projet provient d'une soumission, le **portrait du Gantt est pr�
   - **Sélecteur de mode en haut des items/travaux** : **En suite** (séquentiel) · **Parallèle** · **Custom**. Applique le mode à toutes les étapes de l'item d'un coup (en suite = dépendances FS en chaîne ; parallèle = démarrage simultané sous réserve du personnel ; custom = configuration manuelle des dépendances/parallélisme conservée). Le mode « Parallèle » respecte le nivellement (S4b) si le personnel est insuffisant.
 - [ ] **S5** — Convergence Facturation : soumission + temps + matériel → module Facturation → vente→GL ; rapport devis vs réel.
 
-## ❓ Décisions
-1. La soumission vit-elle dans le **module Projets** existant (table `projects`/`projects.facture` JSONB) ou dans de **nouvelles tables** dédiées (recommandé pour la structure hiérarchique + versions) ?
-2. `Maj` (heures majorées) = quel multiplicateur vs `Supp` ? (à relier aux `time_types` de la paie, cf. TODO-POINTAGE.)
-3. La « durée de l'arrêt » est-elle une **fenêtre de dates** du mandat, ou un champ distinct (nb d'heures/jours d'arrêt) ?
-4. Le pré-montage Gantt crée-t-il **une étape par ligne** (Travaux 1..6) sous un parent **Item**, ou un niveau supplémentaire par catégorie (MO Bureau / MO Chantier) ?
+## ✅ Décisions (tranchées 2026-05-30)
+1. **Nouvelles tables dédiées** : `catalogue_taux`, `soumissions`, `soumission_items`, `soumission_lignes` (+ versions/révisions). Migration 090.
+2. `Maj` = **multiplicateur configurable, défaut 2,0×** ; `Supp` = 1,5×. Stockés dans le catalogue (`mult_supp`, `mult_maj`).
+3. « Durée d'arrêt » = **fenêtre de dates du mandat** `[dateDebut, dateFin]` ; les heures de la soumission s'y répartissent.
+4. Pré-montage Gantt : **Item = tâche parent, chaque ligne = étape enfant** (2 niveaux).
