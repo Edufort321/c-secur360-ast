@@ -67,7 +67,7 @@ export async function saveTransaction(tenant: string, header: Transaction, items
   if (id) {
     const { error } = await supabase.from('commerce_transactions').update(payload).eq('id', id);
     if (error) throw error;
-    await supabase.from('commerce_transaction_items').delete().eq('transaction_id', id);
+    await supabase.from('commerce_transaction_items').delete().eq('tenant_id', tenant).eq('transaction_id', id);
   } else {
     const { data, error } = await supabase.from('commerce_transactions').insert(payload).select('id').single();
     if (error) throw error;

@@ -97,7 +97,7 @@ export async function saveInvoice(tenant: string, header: Invoice, items: Invoic
   if (id) {
     const { error } = await supabase.from('commerce_invoices').update(payload).eq('id', id);
     if (error) throw error;
-    await supabase.from('commerce_invoice_items').delete().eq('invoice_id', id);
+    await supabase.from('commerce_invoice_items').delete().eq('tenant_id', tenant).eq('invoice_id', id);
   } else {
     const { data, error } = await supabase.from('commerce_invoices').insert(payload).select('id').single();
     if (error) throw error;

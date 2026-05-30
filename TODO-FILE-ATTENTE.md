@@ -41,6 +41,12 @@
 - [ ] PP8 Répertoire de stats (occupation 40 h).
 - [ ] ⚠️ **11 décisions à trancher** (listées en fin de `TODO-POINTAGE-PUSH-PLANIFICATEUR.md`) avant d'implémenter ce sous-système.
 
+## 🔒 SÉCURITÉ — voir `TODO-SECURITE.md` (PRIORITÉ ABSOLUE avant exposition publique)
+- [ ] 🔴 **#9-#10 RLS multi-tenant** (`USING(true)` + DEFAULT tenant) — fuite de données entre tenants, le pire. Design tenant-courant requis.
+- [ ] 🔴 **#1-#4** routes API admin sans auth + secrets hardcodés ; **#7** mot de passe admin en clair ; **#5-#6-#8** service role / cron.
+- [x] 🟠 **#11/#12** suppressions cross-tenant (soumissions/invoicing/transactions) — **corrigées**.
+- [ ] 🟠 #13-#17 (checkout/AST/upload/IA/SMS) · 🟡 #18-#21 (debug/status/weather/paths) · 🌐 #22-#27 (headers, SEO, metadata, cookies, privacy).
+
 ## 🔎 Audit
 - **`AUDIT-INTERMODULE.md`** — audit global de la logique inter-module : 3 architectures coexistantes (hub Projets 010 / planner_* / compta gl_*), **duplications à trancher** (catalogue_taux vs labor_rates/rate_settings ; soumissions 090 vs projects.estimate/submission_number ; planner_jobs.projectId TEXT vs projects.id UUID), généricité « tout type », **écarts Gantt** (drag-to-link, jalons, nivellement, export), recommandations de réconciliation. ⚠️ Arbitrer §6.1 (source des taux) + §6.2 (soumission→projet) AVANT l'UI Soumission S2.
 

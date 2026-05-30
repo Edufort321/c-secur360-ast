@@ -152,7 +152,8 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
   else { const { data, error } = await supabase.from('soumissions').insert(hPayload).select('id').single(); if (error) throw error; id = data.id; }
 
   // Remplacer items + lignes (cascade delete sur items supprime leurs lignes)
-  await supabase.from('soumission_items').delete().eq('soumission_id', id);
+  // Securite : filtrer par tenant_id pour eviter toute suppression cross-tenant.
+  await supabase.from('soumission_items').delete().eq('tenant_id', tenant).eq('soumission_id', id);
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
     const itemTotal = computeItemTotal(it, cat);
