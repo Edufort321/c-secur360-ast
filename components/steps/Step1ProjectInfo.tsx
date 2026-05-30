@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { WeatherPanel } from '@/components/WeatherPanel';
 
 const _sbProjects = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
@@ -2600,8 +2601,10 @@ const Step1ProjectInfo = memo(({
                 onChange={(e) => updateField('workAddress', e.target.value)}
                 style={inputStyle}
               />
+              {/* Meteo + alerte orage du lieu des travaux (conditions pour l'evaluation des dangers) */}
+              <WeatherPanel location={localData.workAddress || localData.workSite} date={localData.startDate} className="mt-2" />
             </div>
-            
+
             <div>
               <label style={labelStyle}>{t.workZone}</label>
               <input
