@@ -16,6 +16,7 @@ import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, 
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
+import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, nextSoumissionNumero, computeLigneMontant, computeItemTotal, computeSoumissionTotal, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie } from '@/lib/soumissions';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -218,7 +219,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'transactions' | 'comptabilite' | 'fiscal';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'transactions' | 'comptabilite' | 'fiscal';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -236,6 +237,7 @@ export default function AdminPage() {
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
+    { k: 'soumissions', label: tr('Soumissions', 'Quotes'),                    icon: FileText },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
@@ -324,6 +326,7 @@ export default function AdminPage() {
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
@@ -6144,6 +6147,266 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
             </tbody>
           </table>
           <p className="px-4 py-2 text-xs text-gray-400">{tr('Revenu d\'emploi = montants versés ; avantage auto reporté du calcul TP-41.C. Transmission XML obligatoire dès le 6e feuillet (schémas ARC et RQ distincts).', 'Employment income = amounts paid; vehicle benefit from TP-41.C calc. XML filing required from the 6th slip (separate CRA/RQ schemas).')}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// SOUMISSIONS — devis hierarchiques (Item -> categories -> lignes) + catalogue de taux versionne
+// ============================================================
+function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+  const nowYear = new Date().getFullYear();
+  const [sub, setSub] = useState<'liste' | 'catalogue'>('liste');
+  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [soumissions, setSoumissions] = useState<Soumission[]>([]);
+  const [catalogues, setCatalogues] = useState<CatalogueTaux[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [migMissing, setMigMissing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const blankHdr = (): Soumission => ({ numero: '', revision: 1, year: nowYear, status: 'draft', total: 0, client_snapshot: {} });
+  const [hdr, setHdr] = useState<Soumission>(blankHdr());
+  const [items, setItems] = useState<SoumissionItem[]>([]);
+  const [clientName, setClientName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
+
+  const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
+  const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
+  const isMO = (c: Categorie) => CATEGORIES_MO.includes(c);
+  const blankLigne = (categorie: Categorie): SoumissionLigne => ({ categorie, description: '', tech: 1, reg: 0, supp: 0, maj: 0, quantity: 0, unit: '', unit_cost: 0, montant: 0 });
+
+  const cat = useMemo(() => {
+    const ys = catalogues.filter(c => Number(c.year) === Number(hdr.year) && c.status === 'active');
+    return ys.sort((a, b) => (Number(b.revision) || 0) - (Number(a.revision) || 0))[0] || null;
+  }, [catalogues, hdr.year]);
+
+  async function load() {
+    setLoading(true); setMigMissing(false);
+    try { const [s, c] = await Promise.all([getSoumissions(tenant), getCatalogues(tenant)]); setSoumissions(s); setCatalogues(c); }
+    catch { setMigMissing(true); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  async function newSoumission() {
+    const numero = await nextSoumissionNumero(tenant, 'S');
+    setHdr({ ...blankHdr(), numero }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+  }
+  async function editSoumission(s: Soumission) {
+    const full = await getSoumissionFull(tenant, s.id!);
+    if (!full) return;
+    setHdr(full.soumission); setClientName(full.soumission.client_snapshot?.name || ''); setItems(full.items.length ? full.items : [{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+  }
+  async function save() {
+    setSaving(true); setNotice(null);
+    try {
+      await saveSoumissionFull(tenant, { ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } }, items, cat);
+      setNotice(tr('Soumission enregistrée.', 'Quote saved.')); await load(); setView('list');
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSaving(false);
+  }
+  async function revise(s: Soumission) {
+    setNotice(null);
+    try { await reviseSoumission(tenant, s.id!); setNotice(tr('Révision créée (originale archivée).', 'Revision created (original archived).')); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  async function accept(s: Soumission) {
+    setNotice(null);
+    try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.`, `Quote accepted → project ${r.projectNumber} created/updated.`)); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  async function remove(s: Soumission) {
+    if (s.status === 'accepted') { setNotice(tr('Soumission acceptée : liée à un projet, non supprimable ici.', 'Accepted quote: linked to a project, not deletable here.')); return; }
+    try { await deleteSoumission(tenant, s.id!); await load(); } catch (e: any) { setNotice(e?.message); }
+  }
+
+  // Operations items / lignes
+  const updItem = (i: number, patch: Partial<SoumissionItem>) => setItems(p => p.map((it, j) => j === i ? { ...it, ...patch } : it));
+  const addItem = () => setItems(p => [...p, { name: `Item ${p.length + 1}`, total: 0, lignes: [] }]);
+  const delItem = (i: number) => setItems(p => p.filter((_, j) => j !== i));
+  const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, blankLigne(c)] } : it));
+  const updLigne = (i: number, li: number, patch: Partial<SoumissionLigne>) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.map((l, k) => k === li ? { ...l, ...patch } : l) } : it));
+  const delLigne = (i: number, li: number) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.filter((_, k) => k !== li) } : it));
+
+  async function saveCat() {
+    if (!catForm) return;
+    setNotice(null);
+    try { await saveCatalogue(tenant, catForm); setNotice(tr('Catalogue enregistré.', 'Catalogue saved.')); setCatForm(null); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+  if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module soumissions non initialisé', 'Quotes module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 090 dans Supabase, puis rechargez.', 'Run migration 090 in Supabase, then reload.')}</p></div>);
+
+  const STATUS: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), accepted: tr('Acceptée', 'Accepted'), archived: tr('Archivée', 'Archived') };
+  const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', accepted: 'bg-emerald-100 text-emerald-700', archived: 'bg-amber-100 text-amber-700' };
+  const totals = computeSoumissionTotal(items, cat);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          {([['liste', tr('Soumissions', 'Quotes')], ['catalogue', tr('Catalogue de taux', 'Rate catalogue')]] as const).map(([k, lbl]) => (
+            <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{lbl}</button>
+          ))}
+        </div>
+        {sub === 'liste' && view === 'list' && canEdit && <button onClick={newSoumission} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle soumission', 'New quote')}</button>}
+        {sub === 'catalogue' && canEdit && <button onClick={() => setCatForm({ name: 'Catalogue', year: nowYear, revision: 1, status: 'active', taux_mo_bureau: 0, taux_mo_chantier: 0, mult_supp: 1.5, mult_maj: 2.0 })} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouveau catalogue', 'New catalogue')}</button>}
+      </div>
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+      {sub === 'catalogue' ? (
+        <div className="space-y-3">
+          {catForm && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="text-xs font-semibold text-gray-500">{tr('Nom', 'Name')}<input value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={catForm.year} onChange={e => setCatForm({ ...catForm, year: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Révision', 'Revision')}<input type="number" value={catForm.revision} onChange={e => setCatForm({ ...catForm, revision: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Taux MO bureau ($/h)', 'Office labor rate')}<input type="number" value={catForm.taux_mo_bureau} onChange={e => setCatForm({ ...catForm, taux_mo_bureau: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Taux MO chantier ($/h)', 'Field labor rate')}<input type="number" value={catForm.taux_mo_chantier} onChange={e => setCatForm({ ...catForm, taux_mo_chantier: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Statut', 'Status')}<select value={catForm.status} onChange={e => setCatForm({ ...catForm, status: e.target.value as any })} className={`mt-1 w-full ${inputCls}`}><option value="active">{tr('Actif', 'Active')}</option><option value="archived">{tr('Archivé', 'Archived')}</option></select></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Mult. supp.', 'OT mult.')}<input type="number" step="0.1" value={catForm.mult_supp} onChange={e => setCatForm({ ...catForm, mult_supp: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Mult. maj. (défaut 2)', 'Premium mult.')}<input type="number" step="0.1" value={catForm.mult_maj} onChange={e => setCatForm({ ...catForm, mult_maj: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <button onClick={() => setCatForm(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
+                <button onClick={saveCat} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Enregistrer', 'Save')}</button>
+              </div>
+            </div>
+          )}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <table className="mobile-cards w-full text-sm">
+              <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400"><th className="px-4 py-2">{tr('Nom', 'Name')}</th><th className="px-4">{tr('Année', 'Year')}</th><th className="px-4">{tr('Rév.', 'Rev.')}</th><th className="px-4 text-right">{tr('MO bureau', 'Office')}</th><th className="px-4 text-right">{tr('MO chantier', 'Field')}</th><th className="px-4">Supp/Maj</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4"></th></tr></thead>
+              <tbody>
+                {catalogues.map(c => (
+                  <tr key={c.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-2" data-label={tr('Nom', 'Name')}>{c.name}</td>
+                    <td className="px-4 py-2" data-label={tr('Année', 'Year')}>{c.year}</td>
+                    <td className="px-4 py-2" data-label={tr('Rév.', 'Rev.')}>{c.revision}</td>
+                    <td className="px-4 py-2 text-right" data-label={tr('MO bureau', 'Office')}>{mny(c.taux_mo_bureau)}</td>
+                    <td className="px-4 py-2 text-right" data-label={tr('MO chantier', 'Field')}>{mny(c.taux_mo_chantier)}</td>
+                    <td className="px-4 py-2" data-label="Supp/Maj">×{c.mult_supp} / ×{c.mult_maj}</td>
+                    <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.status === 'active' ? tr('Actif', 'Active') : tr('Archivé', 'Archived')}</span></td>
+                    <td className="px-4 py-2 text-right">{canEdit && <button onClick={() => setCatForm(c)} className="text-xs text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>}</td>
+                  </tr>
+                ))}
+                {catalogues.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{tr('Aucun catalogue. Créez-en un pour tarifer les soumissions.', 'No catalogue yet.')}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : view === 'edit' ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <label className="text-xs font-semibold text-gray-500">{tr('N° soumission', 'Quote #')}<input value={hdr.numero} onChange={e => setHdr(h => ({ ...h, numero: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Client', 'Client')}<input value={clientName} onChange={e => setClientName(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={hdr.year || nowYear} onChange={e => setHdr(h => ({ ...h, year: Number(e.target.value) }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              {cat ? tr(`Tarification : ${cat.name} ${cat.year} rév.${cat.revision} (MO bureau ${mny(cat.taux_mo_bureau)}/h, chantier ${mny(cat.taux_mo_chantier)}/h)`, `Pricing: ${cat.name} ${cat.year}`) : <span className="text-amber-600">{tr('⚠ Aucun catalogue actif pour cette année — montants MO à 0. Créez un catalogue.', '⚠ No active catalogue for this year.')}</span>}
+            </div>
+          </div>
+
+          {items.map((it, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/40">
+                <input value={it.name} onChange={e => updItem(i, { name: e.target.value })} className={`font-semibold ${inputCls}`} />
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold">{mny(computeItemTotal(it, cat))}</span>
+                  {canEdit && <button onClick={() => delItem(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>}
+                </div>
+              </div>
+              <div className="space-y-3 p-3">
+                {CATS.map(c => {
+                  const lignes = it.lignes.map((l, li) => ({ l, li })).filter(x => x.l.categorie === c);
+                  if (lignes.length === 0 && !canEdit) return null;
+                  return (
+                    <div key={c} className="rounded-lg border border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center justify-between bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                        <span>{CATEGORIE_LABELS[c]}</span>
+                        {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
+                      </div>
+                      {lignes.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead><tr className="text-left text-gray-400">
+                              <th className="px-2 py-1">Description</th>
+                              {isMO(c) ? (<><th className="px-2">Tech</th><th className="px-2">Rég</th><th className="px-2">Supp</th><th className="px-2">Maj</th></>) : (<><th className="px-2">Qté</th><th className="px-2">Unité</th><th className="px-2">Coût</th></>)}
+                              <th className="px-2 text-right">Montant</th><th className="px-2"></th>
+                            </tr></thead>
+                            <tbody>
+                              {lignes.map(({ l, li }) => (
+                                <tr key={li} className="border-t border-gray-50 dark:border-gray-700/50">
+                                  <td className="px-2 py-1"><input value={l.description || ''} onChange={e => updLigne(i, li, { description: e.target.value })} className={`w-full ${inputCls}`} /></td>
+                                  {isMO(c) ? (
+                                    <>
+                                      <td className="px-2"><input type="number" value={l.tech} onChange={e => updLigne(i, li, { tech: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
+                                      <td className="px-2"><input type="number" value={l.reg} onChange={e => updLigne(i, li, { reg: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
+                                      <td className="px-2"><input type="number" value={l.supp} onChange={e => updLigne(i, li, { supp: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
+                                      <td className="px-2"><input type="number" value={l.maj} onChange={e => updLigne(i, li, { maj: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td className="px-2"><input type="number" value={l.quantity} onChange={e => updLigne(i, li, { quantity: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} /></td>
+                                      <td className="px-2"><input value={l.unit || ''} onChange={e => updLigne(i, li, { unit: e.target.value })} className={`w-16 ${inputCls}`} /></td>
+                                      <td className="px-2"><input type="number" value={l.unit_cost} onChange={e => updLigne(i, li, { unit_cost: Number(e.target.value) })} className={`w-24 text-right ${inputCls}`} /></td>
+                                    </>
+                                  )}
+                                  <td className="px-2 text-right font-medium">{mny(computeLigneMontant(l, cat))}</td>
+                                  <td className="px-2 text-right">{canEdit && <button onClick={() => delLigne(i, li)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {canEdit && <button onClick={addItem} className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-blue-600 dark:border-gray-700">+ {tr('Ajouter un item', 'Add item')}</button>}
+            <div className="text-lg font-bold">{tr('Total', 'Total')} : {mny(totals)}</div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Retour', 'Back')}</button>
+            {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400"><th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Rév.', 'Rev.')}</th><th className="px-4">{tr('Client', 'Client')}</th><th className="px-4">{tr('Année', 'Year')}</th><th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4"></th></tr></thead>
+            <tbody>
+              {soumissions.map(s => (
+                <tr key={s.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-4 py-2 font-mono text-xs" data-label="N°">{s.numero}</td>
+                  <td className="px-4 py-2" data-label={tr('Rév.', 'Rev.')}>{s.revision}</td>
+                  <td className="px-4 py-2" data-label={tr('Client', 'Client')}>{s.client_snapshot?.name || '—'}</td>
+                  <td className="px-4 py-2" data-label={tr('Année', 'Year')}>{s.year || '—'}</td>
+                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(s.total)}</td>
+                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span></td>
+                  <td className="px-4 py-2 text-right" data-label="">
+                    {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
+                      <button onClick={() => editSoumission(s)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                      {s.status !== 'archived' && <button onClick={() => revise(s)} className="text-indigo-600 hover:underline">{tr('Réviser', 'Revise')}</button>}
+                      {s.status !== 'accepted' && s.status !== 'archived' && <button onClick={() => accept(s)} className="text-emerald-600 hover:underline">{tr('Accepter → Projet', 'Accept → Project')}</button>}
+                      <button onClick={() => remove(s)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
+                    </div>}
+                  </td>
+                </tr>
+              ))}
+              {soumissions.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune soumission.', 'No quote yet.')}</td></tr>}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
