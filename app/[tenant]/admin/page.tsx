@@ -16,7 +16,7 @@ import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, 
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
-import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, nextSoumissionNumero, computeLigneMontant, computeItemTotal, computeSoumissionTotal, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie } from '@/lib/soumissions';
+import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie } from '@/lib/soumissions';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -6171,6 +6171,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
   const [clientName, setClientName] = useState('');
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
+  const [sitePrefix, setSitePrefix] = useState('XX'); // initiales du site de l'utilisateur, pour la numerotation
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
@@ -6187,12 +6188,21 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
     setLoading(true); setMigMissing(false);
     try { const [s, c] = await Promise.all([getSoumissions(tenant), getCatalogues(tenant)]); setSoumissions(s); setCatalogues(c); }
     catch { setMigMissing(true); }
+    // Resoudre le site de l'utilisateur connecte -> prefixe de numerotation (initiales du site)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: p } = await supabase.from('planner_personnel').select('succursale').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+        if (p?.succursale) setSitePrefix(siteInitials(p.succursale));
+        else setSitePrefix(siteInitials(tenant));
+      }
+    } catch { /* defaut XX */ }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
   async function newSoumission() {
-    const numero = await nextSoumissionNumero(tenant, 'S');
+    const numero = await genSoumissionNumero(tenant, sitePrefix);
     setHdr({ ...blankHdr(), numero }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
   }
   async function editSoumission(s: Soumission) {

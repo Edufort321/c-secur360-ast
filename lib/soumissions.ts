@@ -64,7 +64,52 @@ export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<s
   if (error) throw error; return data.id;
 }
 
+// ── Numérotation (spec client) : <PREFIX><AA><NNN><S|P> ─────────────────────
+// PREFIX = initiales des mots du site (« CERDIA Sherbrooke » -> « CS »). AA = 2 chiffres année.
+// NNN = séquentiel monotone (001+). Suffixe S = soumission, P = projet. Compteurs séparés.
+export function siteInitials(siteName?: string | null): string {
+  if (!siteName) return 'XX';
+  const ini = siteName.trim().split(/\s+/).map(w => (w[0] || '')).join('').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return ini || 'XX';
+}
+
+/** Prochain séquentiel pour un (prefix, année, suffixe) donné, dans la table/colonne indiquée. */
+async function nextSeq(tenant: string, table: string, column: string, prefix: string, suffix: string): Promise<number> {
+  const yy = String(new Date().getFullYear()).slice(-2);
+  const { data } = await supabase.from(table).select(column).eq('tenant_id', tenant).like(column, `${prefix}${yy}%${suffix}`);
+  const re = new RegExp(`^${prefix}${yy}(\\d{3})${suffix}$`);
+  let max = 0;
+  for (const row of (data || []) as any[]) {
+    const m = String(row[column] || '').match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return max + 1;
+}
+
+/** Numéro de soumission : <PREFIX><AA><NNN>S. */
+export async function genSoumissionNumero(tenant: string, sitePrefix: string): Promise<string> {
+  const prefix = (sitePrefix || 'XX').toUpperCase();
+  const yy = String(new Date().getFullYear()).slice(-2);
+  const seq = await nextSeq(tenant, 'soumissions', 'numero', prefix, 'S');
+  return `${prefix}${yy}${String(seq).padStart(3, '0')}S`;
+}
+
+/** Numéro de projet : <PREFIX><AA><NNN>P (compteur séparé des soumissions). */
+export async function genProjetNumero(tenant: string, sitePrefix: string): Promise<string> {
+  const prefix = (sitePrefix || 'XX').toUpperCase();
+  const yy = String(new Date().getFullYear()).slice(-2);
+  const seq = await nextSeq(tenant, 'projects', 'project_number', prefix, 'P');
+  return `${prefix}${yy}${String(seq).padStart(3, '0')}P`;
+}
+
+/** Extrait le PREFIX (lettres de tête) d'un numéro <PREFIX><AA><NNN><S|P>. */
+export function prefixFromNumero(numero?: string | null): string {
+  const m = String(numero || '').match(/^([A-Za-z]+)\d{2}\d{3}[A-Za-z]$/);
+  return m ? m[1].toUpperCase() : 'XX';
+}
+
 // ── Soumissions ─────────────────────────────────────────────────────────────
+/** Compat : ancien format. Préférer genSoumissionNumero(tenant, sitePrefix). */
 export async function nextSoumissionNumero(tenant: string, prefix = 'S'): Promise<string> {
   const year = new Date().getFullYear();
   const { data } = await supabase.from('soumissions').select('numero').eq('tenant_id', tenant).like('numero', `${prefix}-${year}-%`).order('numero', { ascending: false }).limit(1);
@@ -157,7 +202,15 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
   const full = await getSoumissionFull(tenant, soumissionId);
   if (!full) throw new Error('Soumission introuvable.');
   const s = full.soumission;
-  const projectNumber = s.numero; // le n° de soumission devient le n° de projet (upsert si re-accepte/revise)
+  // N° de projet = compteur SEPARE (suffixe P), meme PREFIX de site que la soumission.
+  // Idempotent : si la soumission est deja liee a un projet, on reutilise son numero (pas de doublon).
+  let projectNumber: string;
+  if (s.project_id) {
+    const { data: ex } = await supabase.from('projects').select('project_number').eq('id', s.project_id).maybeSingle();
+    projectNumber = ex?.project_number || await genProjetNumero(tenant, prefixFromNumero(s.numero));
+  } else {
+    projectNumber = await genProjetNumero(tenant, prefixFromNumero(s.numero));
+  }
   const estimate = {
     source: 'soumission', soumission_id: soumissionId, revision: s.revision, total: s.total,
     items: full.items.map(it => ({ name: it.name, total: it.total, lignes: it.lignes })),
