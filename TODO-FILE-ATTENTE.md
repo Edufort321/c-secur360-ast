@@ -20,7 +20,7 @@
 - [ ] **P4** — **Lien AST** si module débarré : rattacher/créer une AST préremplie avant travaux.
 - [ ] **P4** — **Pièces jointes** : documentation projet + photos (DropZone/carrousel, JSONB documents/photos).
 - [ ] **Météo (planner + AST)** — météo de l'endroit des travaux aux dates du mandat + conditions dans l'AST. `WEATHER_API_KEY` = secret serveur → route API `/api/weather` (clé déjà dans Vercel, à valider).
-- [ ] **P5** — Nettoyage : supprimer doublons morts (JobModal/components/Modals + .backup + _temp), réduire les `console.log`, découper le mégafichier, divulgation progressive poussée.
+- [~] **P5** — Nettoyage : [x] doublons morts supprimés (~14k lignes : JobModal/components/Modals + .backup + _temp) ; [x] `console.*` retirés en prod (`next.config` removeConsole) ; [ ] **découpage du mégafichier** JobModal (7450 l.) en sous-composants (gros refactor, à faire dédié) ; [ ] divulgation progressive poussée.
 
 ## 🔜 En attente — Soumission / Catalogue de taux / Facturation (voir `TODO-SOUMISSION-CATALOGUE-FACTURATION.md`)
 - [ ] **Structure de soumission** hiérarchique : Item → MO Bureau / MO Chantier / Voyagement / Subsistance / Hébergement / Matériaux → lignes (Description, Tech, Rég, Supp, Maj, Montant).
