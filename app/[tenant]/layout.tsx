@@ -5,15 +5,20 @@ import { SiteProvider } from '@/contexts/SiteContext'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { computeSubState } from '@/lib/subscription'
 
-// ⭐ AJOUT : Métadonnées avec votre logo
-export const metadata: Metadata = {
-  title: 'CSécur360 - AST',
-  description: 'Analyse Sécuritaire de Tâches - Plateforme multi-tenant',
-  icons: {
-    icon: '/c-secur360-logo.png',
-    apple: '/c-secur360-logo.png',
-    shortcut: '/c-secur360-logo.png',
-  },
+// Métadonnées tenant-aware : le manifest pointe vers /{tenant}/manifest.webmanifest
+// (start_url = /{tenant}/login) -> le PWA installe ici s'ouvre sur l'auth du tenant.
+// Override le manifest du layout racine ('/manifest.json') pour les pages de tenant.
+export function generateMetadata({ params }: { params: { tenant: string } }): Metadata {
+  return {
+    title: 'CSécur360 - AST',
+    description: 'Analyse Sécuritaire de Tâches - Plateforme multi-tenant',
+    manifest: `/${params.tenant}/manifest.webmanifest`,
+    icons: {
+      icon: '/c-secur360-logo.png',
+      apple: '/c-secur360-logo.png',
+      shortcut: '/c-secur360-logo.png',
+    },
+  }
 }
 
 interface TenantLayoutProps {
