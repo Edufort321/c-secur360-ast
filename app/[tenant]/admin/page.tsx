@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +11,7 @@ import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
 import { syncPayrollEntries } from '@/lib/accountingAuto';
+import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -213,7 +214,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'comptabilite';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'comptabilite';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -230,6 +231,7 @@ export default function AdminPage() {
     { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog },
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
+    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
   ];
 
@@ -314,6 +316,7 @@ export default function AdminPage() {
         {tab === 'feuilles'   && <FeuillesDeTemps tenant={tenant} tr={tr} />}
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
+        {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
@@ -5592,6 +5595,170 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
               {saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer l\'écriture', 'Post entry')}
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// FACTURE DE COMMERCE — facturation client multi-province + écriture de vente
+// ============================================================
+function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [view, setView] = useState<'list' | 'edit' | 'settings'>('list');
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [settings, setSettings] = useState<CompanySettings>({});
+  const [loading, setLoading] = useState(true);
+  const [migMissing, setMigMissing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const blankItem = (): InvoiceItem => ({ description: '', quantity: 1, unit_price: 0, subtotal: 0, taxable: true });
+  const [hdr, setHdr] = useState<Invoice>({ invoice_number: '', status: 'draft', issue_date: today, province: 'QC', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  const [clientName, setClientName] = useState('');
+  const [items, setItems] = useState<InvoiceItem[]>([blankItem()]);
+  const [saving, setSaving] = useState(false);
+
+  const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+
+  async function load() {
+    setLoading(true); setMigMissing(false);
+    try { const [inv, st] = await Promise.all([getInvoices(tenant), getCompanySettings(tenant)]); setInvoices(inv); setSettings(st || {}); }
+    catch { setMigMissing(true); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const totals = computeInvoiceTotals(items, hdr.province);
+  const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
+
+  async function newInvoice() {
+    const num = await nextInvoiceNumber(tenant, settings.invoice_prefix || 'F');
+    setHdr({ invoice_number: num, status: 'draft', issue_date: today, province: settings.province || 'QC', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0, payment_terms: settings.default_terms });
+    setClientName(''); setItems([blankItem()]); setView('edit');
+  }
+  function editInvoice(inv: Invoice) {
+    setHdr(inv); setClientName(inv.client_snapshot?.name || '');
+    getInvoiceItems(tenant, inv.id!).then(its => setItems(its.length ? its : [blankItem()]));
+    setView('edit');
+  }
+  async function save() {
+    setSaving(true); setNotice(null);
+    try { await saveInvoice(tenant, { ...hdr, client_snapshot: { name: clientName } }, items.filter(i => i.description.trim())); setNotice(tr('Facture enregistrée.', 'Invoice saved.')); await load(); setView('list'); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSaving(false);
+  }
+  async function changeStatus(inv: Invoice, status: Invoice['status']) {
+    try { await setInvoiceStatus(tenant, inv.id!, status); await load(); } catch (e: any) { setNotice(e?.message); }
+  }
+  async function postSale(inv: Invoice) {
+    setNotice(null);
+    if (inv.gl_entry_id) { setNotice(tr('Déjà comptabilisée.', 'Already posted.')); return; }
+    try {
+      const accs = await getAccounts(tenant); const m: Record<string, string> = {}; accs.forEach(a => m[a.code] = a.id);
+      if (!m['1100'] || !m['4000']) { setNotice(tr('Initialisez d\'abord le plan comptable (onglet Comptabilité).', 'Initialize the chart of accounts first.')); return; }
+      const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
+        { account_id: m['1100'], debit: Number(inv.total) || 0, credit: 0, description: 'Clients' },
+        { account_id: m['4000'], debit: 0, credit: Number(inv.subtotal) || 0, description: 'Ventes et services' },
+      ];
+      const taxFed = (Number(inv.gst_amount) || 0) + (Number(inv.pst_amount) || 0);
+      if (taxFed > 0 && m['2100']) lines.push({ account_id: m['2100'], debit: 0, credit: taxFed, description: 'TPS/TVH/PST à payer' });
+      if ((Number(inv.qst_amount) || 0) > 0 && m['2110']) lines.push({ account_id: m['2110'], debit: 0, credit: Number(inv.qst_amount), description: 'TVQ à payer' });
+      const entryId = await createEntry(tenant, { entry_date: inv.issue_date, description: `Vente — facture ${inv.invoice_number}`, reference: inv.invoice_number, journal_code: 'VEN', source_type: 'invoice', source_id: inv.id, lines });
+      await supabase.from('commerce_invoices').update({ gl_entry_id: entryId, status: inv.status === 'draft' ? 'sent' : inv.status }).eq('id', inv.id);
+      setNotice(tr('Vente comptabilisée au grand livre.', 'Sale posted to ledger.')); await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+  if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module facturation non initialisé', 'Invoicing module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 086 dans Supabase, puis rechargez.', 'Run migration 086 in Supabase, then reload.')}</p></div>);
+
+  const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
+  const STATUS_LABEL: Record<string, string> = { draft: tr('Brouillon', 'Draft'), sent: tr('Envoyée', 'Sent'), paid: tr('Payée', 'Paid'), cancelled: tr('Annulée', 'Cancelled') };
+  const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', sent: 'bg-blue-100 text-blue-700', paid: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-600' };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          <button onClick={() => setView('list')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view !== 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Factures', 'Invoices')}</button>
+          <button onClick={() => setView('settings')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{tr('Paramètres', 'Settings')}</button>
+        </div>
+        {view === 'list' && canEdit && <button onClick={newInvoice} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle facture', 'New invoice')}</button>}
+      </div>
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+      {view === 'settings' ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([['legal_name', tr('Raison sociale', 'Legal name')], ['address', tr('Adresse', 'Address')], ['city', tr('Ville', 'City')], ['postal_code', tr('Code postal', 'Postal code')], ['phone', tr('Téléphone', 'Phone')], ['email', 'Courriel'], ['website', tr('Site web', 'Website')], ['gst_number', tr('N° TPS/TVH', 'GST/HST #')], ['qst_number', tr('N° TVQ', 'QST #')], ['invoice_prefix', tr('Préfixe facture', 'Invoice prefix')], ['default_terms', tr('Conditions par défaut', 'Default terms')], ['bank_details', tr('Coordonnées de paiement', 'Payment details')]] as const).map(([k, lbl]) => (
+              <label key={k} className="text-xs font-semibold text-gray-500">{lbl}<input value={(settings as any)[k] || ''} onChange={e => setSettings(s => ({ ...s, [k]: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            ))}
+            <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={settings.province || 'QC'} onChange={e => setSettings(s => ({ ...s, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
+          </div>
+          {canEdit && <button onClick={async () => { try { await saveCompanySettings(tenant, settings); setNotice(tr('Paramètres enregistrés.', 'Settings saved.')); } catch (e: any) { setNotice(e?.message); } }} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Enregistrer', 'Save')}</button>}
+        </div>
+      ) : view === 'edit' ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="text-xs font-semibold text-gray-500">{tr('N° facture', 'Invoice #')}<input value={hdr.invoice_number} onChange={e => setHdr(h => ({ ...h, invoice_number: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Client', 'Client')}<input value={clientName} onChange={e => setClientName(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.issue_date} onChange={e => setHdr(h => ({ ...h, issue_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Échéance', 'Due date')}<input type="date" value={hdr.due_date || ''} onChange={e => setHdr(h => ({ ...h, due_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Conditions', 'Terms')}<input value={hdr.payment_terms || ''} onChange={e => setHdr(h => ({ ...h, payment_terms: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+          </div>
+          <div className="mt-4 space-y-2">
+            {items.map((it, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-2">
+                <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-5 ${inputCls}`} />
+                <input type="number" placeholder={tr('Qté', 'Qty')} value={it.quantity} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, quantity: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
+                <input type="number" placeholder={tr('Prix', 'Price')} value={it.unit_price} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, unit_price: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
+                <label className="col-span-2 flex items-center gap-1 text-xs text-gray-500"><input type="checkbox" checked={it.taxable !== false} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, taxable: e.target.checked } : x))} />{tr('Taxable', 'Taxable')}</label>
+                <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
+              </div>
+            ))}
+            <button onClick={() => setItems(p => [...p, blankItem()])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+          </div>
+          <div className="mt-4 flex flex-col items-end gap-1 border-t border-gray-100 pt-3 text-sm dark:border-gray-700">
+            <div>{tr('Sous-total', 'Subtotal')} : <b>{mny(totals.subtotal)}</b></div>
+            {totals.gst_amount > 0 && <div>TPS ({(taxInfo.gst * 100).toFixed(0)} %) : {mny(totals.gst_amount)}</div>}
+            {totals.qst_amount > 0 && <div>TVQ ({(taxInfo.qst * 100).toFixed(3)} %) : {mny(totals.qst_amount)}</div>}
+            {totals.pst_amount > 0 && <div>{taxInfo.pstLabel} ({(taxInfo.pst * 100).toFixed(0)} %) : {mny(totals.pst_amount)}</div>}
+            <div className="text-base font-bold">{tr('Total', 'Total')} : {mny(totals.total)}</div>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
+            {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Date', 'Date')}</th><th className="px-4">{tr('Client', 'Client')}</th>
+              <th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4">GL</th><th className="px-4"></th>
+            </tr></thead>
+            <tbody>
+              {invoices.map(inv => (
+                <tr key={inv.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-4 py-2 font-mono text-xs" data-label="N°">{inv.invoice_number}</td>
+                  <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{inv.issue_date}</td>
+                  <td className="px-4 py-2" data-label={tr('Client', 'Client')}>{inv.client_snapshot?.name || '—'}</td>
+                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(inv.total)}</td>
+                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[inv.status]}`}>{STATUS_LABEL[inv.status]}</span></td>
+                  <td className="px-4 py-2" data-label="GL">{inv.gl_entry_id ? <Check size={15} className="text-emerald-600" /> : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-2 text-right" data-label="">
+                    {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
+                      <button onClick={() => editInvoice(inv)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                      {!inv.gl_entry_id && <button onClick={() => postSale(inv)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {inv.status !== 'paid' && <button onClick={() => changeStatus(inv, 'paid')} className="text-emerald-600 hover:underline">{tr('Payée', 'Paid')}</button>}
+                    </div>}
+                  </td>
+                </tr>
+              ))}
+              {invoices.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune facture.', 'No invoice yet.')}</td></tr>}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
