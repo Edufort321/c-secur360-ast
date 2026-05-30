@@ -42,6 +42,12 @@ Quand un mandat/projet provient d'une soumission, le **portrait du Gantt est pr�
 - Le planner **tient compte du nombre d'heures planifiées et du nombre de personnes par item** selon la **durée de l'arrêt** (shutdown) gérée à la création de la planif (répartition des heures sur la fenêtre d'arrêt → personnel requis, cf. calculs bidirectionnels heures↔personnel déjà présents).
 - L'utilisateur ajuste ensuite dépendances (cascade), parallélisme et horaires dans le Gantt.
 
+## 💸 Commission de vente au transfert (interconnexion poste/grille)
+Réutiliser le mécanisme existant : `poste_salary_grids.commission_enabled/pct/basis(gross|net|margin|custom)/threshold/cap` + `lib/commission.ts` (projet `status='vente'` + `primary_seller_id` → commission calculée selon la grille du vendeur, reportée sur sa **feuille de temps** `total_commissions/commission_details` + historique `project_commissions`). Migration 069 / 077.
+- **À l'acceptation (transfert soumission → projet)** : si le **vendeur** (l'utilisateur dont le **poste a la fonction commission**, `commission_enabled`) est rattaché, poser `projects.primary_seller_id` + `status='vente'` puis appeler `lib/commission.ts` → la commission s'applique automatiquement.
+- Le **vendeur** = créateur de la soumission (ou champ « vendeur » sélectionnable). → stocker le vendeur sur la soumission (`seller_id`) pour le propager au projet.
+- ❓ À confirmer : vendeur = créateur de la soumission, ou sélection explicite ? Base de commission (`po`/`net`/`margin`) = montant de la soumission acceptée.
+
 ## 🔁 Convergence vers l'Admin Facturation
 « Tout transite vers l'admin Facturation » : **soumission (devis)** + **temps réel (pointage)** + **matériel/équipements** → consolidés dans **Facturation** → écriture vente→GL (Comptabilité). Comparaison **devis vs réel** (heures/personnes/coûts planifiés de la soumission vs pointés).
 
