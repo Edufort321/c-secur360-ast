@@ -199,24 +199,9 @@ export function JobModal({
         return 'week';
     };
 
-    // Effect pour forcer l'onglet Gantt en mode mobile
-    useEffect(() => {
-        const handleResize = () => {
-            const isMobile = window.innerWidth < 640; // sm breakpoint
-            if (isMobile && activeTab !== 'gantt') {
-                setActiveTab('gantt');
-            }
-        };
-
-        // Vérifier au chargement
-        handleResize();
-
-        // Ajouter le listener
-        window.addEventListener('resize', handleResize);
-
-        // Nettoyer
-        return () => window.removeEventListener('resize', handleResize);
-    }, [activeTab]);
+    // Note: l'ancien effet forcait l'onglet Gantt sous 640px et bloquait la navigation
+    // vers les autres onglets. Retire au profit d'un selecteur responsive (voir les onglets) :
+    // sous 1024px on affiche un menu deroulant donnant acces a TOUS les onglets.
 
     // Initialisation des données si c'est un job existant
     useEffect(() => {
@@ -2768,11 +2753,29 @@ export function JobModal({
 
     // Handler pour la soumission du formulaire
     const handleSubmit = () => {
-        if (!formData.nom || !formData.dateDebut || !formData.dateFin) {
-            addNotification?.('Veuillez remplir tous les champs obligatoires', 'error');
+        // Validation : signaler precisement les champs requis manquants
+        const manquants = [];
+        if (!formData.nom?.trim()) manquants.push('Nom du mandat');
+        if (!formData.dateDebut) manquants.push('Date de début');
+        if (!formData.dateFin) manquants.push('Date de fin');
+        if (manquants.length) {
+            addNotification?.(`Champs requis manquants : ${manquants.join(', ')}.`, 'error');
+            if (activeTab !== 'form') setActiveTab('form');
+            return;
+        }
+        // Coherence des dates
+        if (formData.dateFin < formData.dateDebut) {
+            addNotification?.('La date de fin doit être postérieure ou égale à la date de début.', 'error');
+            if (activeTab !== 'form') setActiveTab('form');
+            return;
+        }
+        // Garde defensive : sans handler de sauvegarde, ne pas fermer en silence
+        if (typeof onSave !== 'function') {
+            addNotification?.('Sauvegarde indisponible (aucun gestionnaire onSave). Contactez un administrateur.', 'error');
             return;
         }
         onSave(formData);
+        addNotification?.(job ? 'Mandat mis à jour.' : 'Mandat créé.', 'success');
         onClose();
     };
 
@@ -2964,81 +2967,49 @@ export function JobModal({
                         </button>
                     </div>
 
-                    {/* Tabs - Responsive comme OLD */}
-                    <div className="flex border-b bg-gray-50 overflow-x-auto">
-                        {/* Afficher tous les onglets sur desktop et tablet */}
-                        <div className="hidden sm:flex w-full">
-                            <button
-                                onClick={() => setActiveTab('form')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'form'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                📝 Formulaire
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('gantt')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'gantt'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                📊 Gantt
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('resources')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'resources'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                👥 Ressources
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('files')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'files'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                📎 Fichiers ({(formData.documents?.length || 0) + (formData.photos?.length || 0)})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('recurrence')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'recurrence'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                🔄 Récurrence {formData.recurrence?.active ? '(Activé)' : ''}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('teams')}
-                                className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === 'teams'
-                                        ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                🎯 Équipes {formData.horaireMode === 'personnalise' ? '(Avancé)' : ''}
-                            </button>
-                        </div>
-                        {/* Mode mobile - Seulement l'onglet actif */}
-                        <div className="flex sm:hidden w-full">
-                            <button
-                                onClick={() => setActiveTab('gantt')}
-                                className="w-full px-6 py-3 font-medium text-purple-600 border-b-2 border-purple-600 bg-white"
-                            >
-                                📊 Aperçu Gantt
-                            </button>
-                        </div>
-                    </div>
+                    {/* Onglets — responsive : rangee complete en >=1024px, menu deroulant sous 1024px */}
+                    {(() => {
+                        const TABS = [
+                            { id: 'form', label: '📝 Formulaire' },
+                            { id: 'gantt', label: '📊 Gantt' },
+                            { id: 'resources', label: '👥 Ressources' },
+                            { id: 'files', label: `📎 Fichiers (${(formData.documents?.length || 0) + (formData.photos?.length || 0)})` },
+                            { id: 'recurrence', label: `🔄 Récurrence ${formData.recurrence?.active ? '(Activé)' : ''}`.trim() },
+                            { id: 'teams', label: `🎯 Équipes ${formData.horaireMode === 'personnalise' ? '(Avancé)' : ''}`.trim() },
+                        ];
+                        return (
+                            <div className="flex-shrink-0 border-b bg-gray-50">
+                                {/* Desktop large (>=1024px) : tous les onglets, defilement horizontal si besoin */}
+                                <div className="hidden lg:flex overflow-x-auto">
+                                    {TABS.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
+                                                activeTab === tab.id
+                                                    ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
+                                                    : 'text-gray-600 hover:text-gray-900'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {/* Mobile / demi-ecran (<1024px) : menu deroulant donnant acces a TOUS les onglets */}
+                                <div className="lg:hidden p-2">
+                                    <select
+                                        value={activeTab}
+                                        onChange={(e) => setActiveTab(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white font-medium text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    >
+                                        {TABS.map(tab => (
+                                            <option key={tab.id} value={tab.id}>{tab.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto">
@@ -3590,7 +3561,7 @@ export function JobModal({
                                         {/* Affichage différent selon l'état d'expansion */}
                                         {expandedSections.etapes ? (
                                             /* Vue élargie avec Gantt côte à côte */
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[70vh]">
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[70vh]">
                                                 {/* Colonne gauche - Étapes */}
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center justify-between mb-2">
@@ -3807,7 +3778,7 @@ export function JobModal({
                                                                     {formData.etapes.length} étape{formData.etapes.length > 1 ? 's' : ''}
                                                                 </div>
                                                             </div>
-                                                            <div className="flex-1 overflow-x-auto overflow-y-auto border border-gray-300 rounded bg-white" style={{minWidth: '800px'}}>
+                                                            <div className="flex-1 min-w-0 max-h-96 overflow-x-auto overflow-y-auto border border-gray-300 rounded bg-white">
                                                                 <div className="space-y-1 p-2 min-w-max" style={{minWidth: '1200px'}}>
                                                                     {(() => {
                                                                         const hierarchicalTasks = generateHierarchicalGanttData();

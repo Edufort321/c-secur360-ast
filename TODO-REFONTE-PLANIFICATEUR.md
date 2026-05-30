@@ -69,12 +69,13 @@ Onglets : **Formulaire · Gantt · Ressources · Fichiers · Récurrence · Équ
 - [x] Bug : `appData.saveJob` est **undefined** (le hook expose `addJob`/`updateJob`/`deleteJob` mais pas `saveJob`), alors que `App.jsx` et `PlanificateurFinal` l'utilisent comme handler `onSave`/`onSaveJob` → la sauvegarde d'un mandat ne fait rien.
 - [x] Ajouter `saveJob` dans `useAppData` (route add/update selon existence, comme `savePersonnel`) + l'exporter.
 
-### P2 — Renommage + mise en page + condensation (hamburgers) + débordements
-- [ ] Renommer **Job → Mandat** dans l'UI (titres, libellés, boutons) ; n° « M-AAAA-NNN ».
-- [ ] Réorganiser l'en-tête + onglets : barre claire, bascule cartes/hamburger sous 1024px (cohérent avec l'admin), pas de débordement horizontal.
-- [ ] Condenser les fonctions avancées dans des sections repliables / menus (divulgation progressive).
-- [ ] Corriger les débordements du Gantt (`minWidth:800px`, scroll horizontal maîtrisé, mode compact/plein écran).
-- [ ] Validation de sauvegarde renforcée (champs requis clairs + messages).
+### P2 — Renommage + mise en page + condensation (hamburgers) + débordements  ✅ FAIT
+- [x] Renommer **Job → Mandat** dans l'UI (titre modal, libellés Numéro/Nom, confirm suppression, message récurrence). Identifiants de code inchangés.
+- [x] Onglets responsives : rangée complète ≥1024px, **menu déroulant donnant accès à TOUS les onglets sous 1024px** (au lieu de l'ancien comportement qui forçait Gantt et bloquait la navigation mobile).
+- [x] Suppression de l'effet qui forçait l'onglet Gantt sous 640px.
+- [x] Débordements Gantt : retrait du `minWidth:800px` sur le viewport de l'aperçu (scroll interne maîtrisé, contenu 1200px conservé) ; vue « côte à côte » étapes|Gantt qui **s'empile sous 1024px** (`lg:grid-cols-2`).
+- [x] Validation de sauvegarde renforcée : champs requis nommés, contrôle cohérence des dates, garde si `onSave` absent, notification de succès, bascule auto vers l'onglet Formulaire en cas d'erreur.
+- [ ] (Reporté P5) Condenser davantage les fonctions avancées dans des sections repliables (divulgation progressive poussée).
 
 ### P3 — Gantt : cascade, travaux parallèles, priorité (fiabilisation)
 - [ ] Modèle de dépendances complet : types **FS/SS/FF/SF** + **lead/lag**.
