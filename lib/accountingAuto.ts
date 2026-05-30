@@ -55,6 +55,77 @@ export async function postTimesheetPayroll(
   return 'created';
 }
 
+/**
+ * Écriture d'achat pour une transaction (dépense / achat fournisseur).
+ *   DR <comptes de charge>          = montants nets ventilés par ligne
+ *   DR 5300 (taxe non récupérable)  = PST/RST (hors Québec) capitalisée en charge
+ *   DR 1200 TPS/TVH à récupérer     = gst_amount (CTI)
+ *   DR 1210 TVQ à récupérer         = qst_amount (RTI)
+ *   CR 1000 Banque (comptant) | CR 2000 Fournisseurs (à crédit) = total
+ * Idempotent par (source_type='transaction', source_id). Met à jour gl_entry_id + statut 'posted'.
+ */
+export async function postTransactionPurchase(
+  tenant: string, txn: any, items: any[], accMap?: Record<string, string>
+): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (txn.gl_entry_id) return 'skipped';
+  if (await entryExists(tenant, 'transaction', txn.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  const payAcc = txn.payment_method === 'on_account' ? m['2000'] : m['1000'];
+  if (!payAcc || !m['5300']) return 'no-accounts';
+
+  const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [];
+  for (const it of (items || [])) {
+    const amt = Number(it.amount) || 0;
+    if (amt <= 0) continue;
+    const acc = m[it.account_code] || m['5300'];
+    lines.push({ account_id: acc, debit: amt, credit: 0, description: it.description || 'Charge' });
+  }
+  const pst = Number(txn.pst_amount) || 0;
+  if (pst > 0) lines.push({ account_id: m['5300'], debit: pst, credit: 0, description: 'Taxe provinciale non recuperable (PST/RST)' });
+  const gst = Number(txn.gst_amount) || 0;
+  if (gst > 0 && m['1200']) lines.push({ account_id: m['1200'], debit: gst, credit: 0, description: 'TPS/TVH a recuperer (CTI)' });
+  const qst = Number(txn.qst_amount) || 0;
+  if (qst > 0 && m['1210']) lines.push({ account_id: m['1210'], debit: qst, credit: 0, description: 'TVQ a recuperer (RTI)' });
+  const total = Number(txn.total) || 0;
+  lines.push({ account_id: payAcc, debit: 0, credit: total, description: txn.payment_method === 'on_account' ? 'Fournisseurs a payer' : 'Banque' });
+
+  const entryId = await createEntry(tenant, {
+    entry_date: txn.txn_date || new Date().toISOString().slice(0, 10),
+    description: `Achat — ${txn.vendor_name || txn.transaction_number || ''}`,
+    reference: txn.transaction_number || undefined,
+    journal_code: 'ACH', source_type: 'transaction', source_id: txn.id, lines,
+  });
+  await supabase.from('commerce_transactions').update({ gl_entry_id: entryId, status: txn.status === 'draft' ? 'posted' : txn.status }).eq('id', txn.id);
+  return 'created';
+}
+
+/**
+ * Paiement d'un achat à crédit : solde le compte fournisseurs.
+ *   DR 2000 Fournisseurs   = total
+ *   CR 1000 Banque         = total
+ * Idempotent par (source_type='transaction_payment', source_id).
+ */
+export async function postTransactionPayment(
+  tenant: string, txn: any, accMap?: Record<string, string>
+): Promise<'created' | 'skipped' | 'no-accounts'> {
+  if (await entryExists(tenant, 'transaction_payment', txn.id)) return 'skipped';
+  const m = accMap || await accountMap(tenant);
+  if (!m['2000'] || !m['1000']) return 'no-accounts';
+  const total = Number(txn.total) || 0;
+  if (total <= 0) return 'skipped';
+  await createEntry(tenant, {
+    entry_date: new Date().toISOString().slice(0, 10),
+    description: `Paiement fournisseur — ${txn.vendor_name || txn.transaction_number || ''}`,
+    reference: txn.transaction_number || undefined,
+    journal_code: 'BNK', source_type: 'transaction_payment', source_id: txn.id,
+    lines: [
+      { account_id: m['2000'], debit: total, credit: 0, description: 'Fournisseurs a payer' },
+      { account_id: m['1000'], debit: 0, credit: total, description: 'Banque' },
+    ],
+  });
+  return 'created';
+}
+
 /** Génère les écritures de paie manquantes pour toutes les feuilles approuvées/payées. */
 export async function syncPayrollEntries(tenant: string): Promise<{ created: number; skipped: number; empty: number }> {
   const { data, error } = await supabase.from('timesheets').select('*')

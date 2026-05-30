@@ -3,14 +3,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
-import { syncPayrollEntries } from '@/lib/accountingAuto';
+import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
+import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 
@@ -215,7 +216,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'comptabilite';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'transactions' | 'comptabilite';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -233,6 +234,7 @@ export default function AdminPage() {
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
+    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
   ];
 
@@ -318,6 +320,7 @@ export default function AdminPage() {
         {tab === 'paie'       && <PayeConfig tenant={tenant} tr={tr} />}
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
@@ -5830,6 +5833,182 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
                 </tr>
               ))}
               {invoices.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune facture.', 'No invoice yet.')}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// TRANSACTIONS — depenses / achats fournisseurs + ecriture d'achat -> GL
+// ============================================================
+function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [txns, setTxns] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<GLAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [migMissing, setMigMissing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const blankItem = (): TransactionItem => ({ description: '', account_code: '5300', amount: 0, taxable: true });
+  const [hdr, setHdr] = useState<Transaction>({ transaction_number: '', vendor_name: '', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  const expenseAccounts = accounts.filter(a => a.type === 'expense' || a.type === 'asset');
+
+  async function load() {
+    setLoading(true); setMigMissing(false);
+    try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); }
+    catch { setMigMissing(true); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  const totals = computeTransactionTotals(items, hdr.province);
+  const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
+
+  async function newTxn() {
+    const num = await nextTransactionNumber(tenant, 'A');
+    setHdr({ transaction_number: num, vendor_name: '', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+    setItems([blankItem()]); setView('edit');
+  }
+  function editTxn(t: Transaction) {
+    setHdr(t);
+    getTransactionItems(tenant, t.id!).then(its => setItems(its.length ? its : [blankItem()]));
+    setView('edit');
+  }
+  async function save() {
+    setSaving(true); setNotice(null);
+    try { await saveTransaction(tenant, hdr, items.filter(i => i.description.trim() || (Number(i.amount) || 0) > 0)); setNotice(tr('Transaction enregistrée.', 'Transaction saved.')); await load(); setView('list'); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setSaving(false);
+  }
+  async function onReceipt(file: File) {
+    setUploading(true); setNotice(null);
+    try { const url = await uploadReceipt(tenant, file); setHdr(h => ({ ...h, receipt_url: url })); setNotice(tr('Reçu joint.', 'Receipt attached.')); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur téléversement.', 'Upload error.')); }
+    setUploading(false);
+  }
+  async function postPurchase(t: Transaction) {
+    setNotice(null);
+    if (t.gl_entry_id) { setNotice(tr('Déjà comptabilisée.', 'Already posted.')); return; }
+    try {
+      const its = await getTransactionItems(tenant, t.id!);
+      const m: Record<string, string> = {}; accounts.forEach(a => m[a.code] = a.id);
+      const r = await postTransactionPurchase(tenant, t, its, m);
+      if (r === 'no-accounts') { setNotice(tr('Initialisez d\'abord le plan comptable (onglet Comptabilité).', 'Initialize the chart of accounts first.')); return; }
+      setNotice(r === 'created' ? tr('Achat comptabilisé au grand livre.', 'Purchase posted to ledger.') : tr('Déjà comptabilisée.', 'Already posted.'));
+      await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  async function payTxn(t: Transaction) {
+    setNotice(null);
+    try {
+      const m: Record<string, string> = {}; accounts.forEach(a => m[a.code] = a.id);
+      if (!t.gl_entry_id) await postPurchase(t); // comptabilise l'achat si pas deja fait
+      const r = await postTransactionPayment(tenant, t, m);
+      if (r === 'no-accounts') { setNotice(tr('Plan comptable non initialisé.', 'Chart of accounts not initialized.')); return; }
+      await setTransactionStatus(tenant, t.id!, 'paid');
+      setNotice(tr('Paiement comptabilisé.', 'Payment posted.')); await load();
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  async function removeTxn(t: Transaction) {
+    if (t.gl_entry_id) { setNotice(tr('Transaction comptabilisée : contre-passez l\'écriture dans le grand livre avant de supprimer.', 'Posted transaction: reverse the entry in the ledger before deleting.')); return; }
+    try { await deleteTransaction(tenant, t.id!); await load(); } catch (e: any) { setNotice(e?.message); }
+  }
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+  if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module transactions non initialisé', 'Transactions module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 087 dans Supabase, puis rechargez.', 'Run migration 087 in Supabase, then reload.')}</p></div>);
+
+  const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
+  const STATUS_LABEL: Record<string, string> = { draft: tr('Brouillon', 'Draft'), posted: tr('Comptabilisée', 'Posted'), paid: tr('Payée', 'Paid'), cancelled: tr('Annulée', 'Cancelled') };
+  const STATUS_COLOR: Record<string, string> = { draft: 'bg-gray-100 text-gray-600', posted: 'bg-blue-100 text-blue-700', paid: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-600' };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-gray-500">{tr('Dépenses & achats', 'Expenses & purchases')}</h2>
+        {view === 'list' && canEdit && <button onClick={newTxn} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle transaction', 'New transaction')}</button>}
+      </div>
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+      {view === 'edit' ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="text-xs font-semibold text-gray-500">{tr('N°', '#')}<input value={hdr.transaction_number} onChange={e => setHdr(h => ({ ...h, transaction_number: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Fournisseur', 'Vendor')}<input value={hdr.vendor_name || ''} onChange={e => setHdr(h => ({ ...h, vendor_name: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.txn_date} onChange={e => setHdr(h => ({ ...h, txn_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque', 'Cash / bank')}</option><option value="on_account">{tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<input value={hdr.notes || ''} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+          </div>
+          <div className="mt-4 space-y-2">
+            {items.map((it, i) => (
+              <div key={i} className="grid grid-cols-12 items-center gap-2">
+                <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-4 ${inputCls}`} />
+                <select value={it.account_code} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, account_code: e.target.value } : x))} className={`col-span-4 ${inputCls}`}>
+                  {expenseAccounts.map(a => <option key={a.id} value={a.code}>{a.code} · {a.name}</option>)}
+                </select>
+                <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
+                <label className="col-span-1 flex items-center justify-center text-xs text-gray-500" title={tr('Taxable', 'Taxable')}><input type="checkbox" checked={it.taxable !== false} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, taxable: e.target.checked } : x))} /></label>
+                <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
+              </div>
+            ))}
+            <button onClick={() => setItems(p => [...p, blankItem()])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+          </div>
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+            <div className="flex items-center gap-3 text-sm">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
+                <Paperclip size={14} /> {uploading ? <Loader2 size={13} className="inline animate-spin" /> : tr('Joindre un reçu', 'Attach receipt')}
+                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceipt(f); }} />
+              </label>
+              {hdr.receipt_url && <a href={hdr.receipt_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">{tr('Voir le reçu', 'View receipt')}</a>}
+            </div>
+            <div className="flex flex-col items-end gap-1 text-sm">
+              <div>{tr('Sous-total', 'Subtotal')} : <b>{mny(totals.subtotal)}</b></div>
+              {totals.gst_amount > 0 && <div>TPS ({(taxInfo.gst * 100).toFixed(0)} %) : {mny(totals.gst_amount)}</div>}
+              {totals.qst_amount > 0 && <div>TVQ ({(taxInfo.qst * 100).toFixed(3)} %) : {mny(totals.qst_amount)}</div>}
+              {totals.pst_amount > 0 && <div>{taxInfo.pstLabel} ({(taxInfo.pst * 100).toFixed(0)} %) : {mny(totals.pst_amount)}</div>}
+              <div className="text-base font-bold">{tr('Total', 'Total')} : {mny(totals.total)}</div>
+            </div>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
+            {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Date', 'Date')}</th><th className="px-4">{tr('Fournisseur', 'Vendor')}</th>
+              <th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4">GL</th><th className="px-4"></th>
+            </tr></thead>
+            <tbody>
+              {txns.map(t => (
+                <tr key={t.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-4 py-2 font-mono text-xs" data-label="N°">{t.transaction_number}</td>
+                  <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{t.txn_date}</td>
+                  <td className="px-4 py-2" data-label={tr('Fournisseur', 'Vendor')}>{t.vendor_name || '—'}{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
+                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
+                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[t.status]}`}>{STATUS_LABEL[t.status]}</span></td>
+                  <td className="px-4 py-2" data-label="GL">{t.gl_entry_id ? <Check size={15} className="text-emerald-600" /> : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-2 text-right" data-label="">
+                    {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
+                      <button onClick={() => editTxn(t)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                      {!t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {t.payment_method === 'on_account' && t.status !== 'paid' && <button onClick={() => payTxn(t)} className="text-emerald-600 hover:underline">{tr('Payer', 'Pay')}</button>}
+                      {!t.gl_entry_id && <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>}
+                    </div>}
+                  </td>
+                </tr>
+              ))}
+              {txns.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune transaction.', 'No transaction yet.')}</td></tr>}
             </tbody>
           </table>
         </div>
