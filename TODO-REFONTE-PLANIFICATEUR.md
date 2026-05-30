@@ -93,6 +93,9 @@ Onglets : **Formulaire · Gantt · Ressources · Fichiers · Récurrence · Équ
 - [x] **Documentation de projet en pièces jointes** (P4.5 FAIT) : onglet Fichiers fonctionnel ; `handleFilesAdded` ne conserve que les champs sérialisables (le File brut cassait le JSONB) → persistance propre dans `documents`/`photos`. _Optimisation à venir : upload Supabase Storage au lieu du data URL base64._
 - [~] **Endroit des travaux + Google Maps** : champ « Endroit des travaux » + lien « Voir sur Google Maps » + **carte intégrée (API Embed)** qui s'affiche dès que `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` est configurée dans `.env.local` (sinon lien seul). Colonnes `lieuLat/lieuLng` prêtes (089). _Reste : autocomplete d'adresse (Places JS API) + géocodage lat/lng + **préremplissage depuis Projets** (adresse/client) si module Projets activé._
 
+### P4 — Météo (planner + AST)
+- [ ] Afficher la **météo de l'endroit des travaux** aux dates du mandat (prévisions si dans la fenêtre, sinon note saisonnière) dans le planificateur, ET les **conditions météo** dans l'**AST** (évaluation des dangers). Clé **`WEATHER_API_KEY`** = **secret serveur** (pas de `NEXT_PUBLIC_`) → fetch via une **route API** `/api/weather?lat=&lng=&date=` (ne jamais exposer la clé côté client). Clé déjà dans Vercel (statut « Needs Attention » → valider). S'appuie sur `lieuLat/lieuLng` (089).
+
 ### P5 — Nettoyage + polish UX
 - [ ] Supprimer les doublons morts : `components/planner/components/Modals/JobModal.jsx`, `.backup`, `_temp`.
 - [ ] Découper le mégafichier en sous-composants (Form, Gantt, Ressources, Préparation, Horaires) pour la maintenabilité.

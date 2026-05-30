@@ -19,6 +19,7 @@
 - [ ] **P4** — **Endroit des travaux + Google Maps** (géocodage à la saisie ; préremplissage depuis Projets si module activé).
 - [ ] **P4** — **Lien AST** si module débarré : rattacher/créer une AST préremplie avant travaux.
 - [ ] **P4** — **Pièces jointes** : documentation projet + photos (DropZone/carrousel, JSONB documents/photos).
+- [ ] **Météo (planner + AST)** — météo de l'endroit des travaux aux dates du mandat + conditions dans l'AST. `WEATHER_API_KEY` = secret serveur → route API `/api/weather` (clé déjà dans Vercel, à valider).
 - [ ] **P5** — Nettoyage : supprimer doublons morts (JobModal/components/Modals + .backup + _temp), réduire les `console.log`, découper le mégafichier, divulgation progressive poussée.
 
 ## 🔜 En attente — Soumission / Catalogue de taux / Facturation (voir `TODO-SOUMISSION-CATALOGUE-FACTURATION.md`)
