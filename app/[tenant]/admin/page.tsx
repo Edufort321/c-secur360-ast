@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,6 +15,7 @@ import { getTransactions, getTransactionItems, saveTransaction, setTransactionSt
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
+import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -217,7 +218,7 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'transactions' | 'comptabilite';
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'transactions' | 'comptabilite' | 'fiscal';
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
@@ -237,6 +238,7 @@ export default function AdminPage() {
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
+    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
   ];
 
   const activeTab = tabs.find(t => t.k === tab);
@@ -323,6 +325,7 @@ export default function AdminPage() {
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
@@ -6019,6 +6022,139 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               {txns.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune transaction.', 'No transaction yet.')}</td></tr>}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// RAPPORTS FISCAUX (Phase 5) — TPS/TVQ, avantage auto (TP-41.C), base T4/RL-1
+// ============================================================
+function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [sub, setSub] = useState<'taxes' | 'vehicle' | 't4rl1'>('taxes');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [tax, setTax] = useState<TaxSummary | null>(null);
+  const [veh, setVeh] = useState<VehicleBenefit[]>([]);
+  const [emp, setEmp] = useState<EmployeeFiscal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [migMissing, setMigMissing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+
+  async function load() {
+    setLoading(true); setMigMissing(false);
+    try {
+      const [t, v, e] = await Promise.all([getTaxSummary(tenant, year), getVehicleBenefits(tenant, year), getT4RL1Base(tenant, year)]);
+      setTax(t); setVeh(v); setEmp(e);
+    } catch { setMigMissing(true); }
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant, year]);
+
+  const years = (() => { const y = new Date().getFullYear(); return [y + 1, y, y - 1, y - 2, y - 3]; })();
+
+  if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
+  if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Rapports fiscaux indisponibles', 'Tax reports unavailable')}</p><p className="mt-1 text-sm">{tr('Exécutez les migrations 085 à 088 dans Supabase, puis rechargez.', 'Run migrations 085-088 in Supabase, then reload.')}</p></div>);
+
+  const csv = () => { try { sub === 'taxes' ? (tax && exportTaxSummaryCsv(tax)) : sub === 'vehicle' ? exportVehicleBenefitsCsv(veh, year) : exportT4RL1Csv(emp, year); } catch (e: any) { setNotice(e?.message); } };
+  const pdf = async () => { try { sub === 'taxes' ? (tax && await exportTaxSummaryPdf(tenant, tax)) : sub === 'vehicle' ? await exportVehicleBenefitsPdf(tenant, veh, year) : await exportT4RL1Pdf(tenant, emp, year); } catch (e: any) { setNotice(e?.message); } };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+          {([['taxes', tr('TPS / TVQ', 'GST / QST')], ['vehicle', tr('Avantage auto', 'Vehicle benefit')], ['t4rl1', tr('T4 / RL-1', 'T4 / RL-1')]] as const).map(([k, lbl]) => (
+            <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={year} onChange={e => setYear(Number(e.target.value))} className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800">
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800">
+            <span className="text-gray-400">{tr('Exporter', 'Export')}</span>
+            <button onClick={csv} className="rounded-lg px-2 py-1 font-semibold text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">CSV</button>
+            <button onClick={pdf} className="rounded-lg px-2 py-1 font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">PDF</button>
+          </div>
+        </div>
+      </div>
+      {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
+
+      {sub === 'taxes' && tax && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('TPS / TVH', 'GST / HST')}</div>
+            <table className="w-full text-sm"><tbody>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(tax.gstCollected)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('CTI à récupérer', 'ITC recoverable')}</td><td className="px-4 py-2 text-right">{mny(tax.gstItc)}</td></tr>
+              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(tax.gstNet)}</td></tr>
+            </tbody></table>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('TVQ', 'QST')}</div>
+            <table className="w-full text-sm"><tbody>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('Taxe perçue (à payer)', 'Collected (payable)')}</td><td className="px-4 py-2 text-right">{mny(tax.qstCollected)}</td></tr>
+              <tr className="border-t border-gray-50 dark:border-gray-700/50"><td className="px-4 py-2">{tr('RTI à récupérer', 'ITR recoverable')}</td><td className="px-4 py-2 text-right">{mny(tax.qstItc)}</td></tr>
+              <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{tr('Net à remettre', 'Net to remit')}</td><td className="px-4 py-2 text-right">{mny(tax.qstNet)}</td></tr>
+            </tbody></table>
+          </div>
+          <p className="sm:col-span-2 text-xs text-gray-400">{tr('Basé sur les comptes 2100/2110 (taxe perçue) et 1200/1210 (CTI/RTI) du grand livre pour l\'année sélectionnée.', 'Based on ledger accounts 2100/2110 (collected) and 1200/1210 (ITC/ITR) for the selected year.')}</p>
+        </div>
+      )}
+
+      {sub === 'vehicle' && (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('Avantage automobile — TP-41.C (report RL-1 case W / T4 code 34)', 'Vehicle benefit — TP-41.C (RL-1 box W / T4 code 34)')}</div>
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-4 py-2">{tr('Unité', 'Unit')}</th><th className="px-4">{tr('Employé', 'Employee')}</th>
+              <th className="px-4 text-right">{tr('Km perso', 'Personal km')}</th><th className="px-4 text-right">{tr('Droit usage', 'Standby')}</th>
+              <th className="px-4 text-right">{tr('Fonctionnement', 'Operating')}</th><th className="px-4 text-right">{tr('Avantage', 'Benefit')}</th>
+            </tr></thead>
+            <tbody>
+              {veh.map((v, i) => (
+                <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-4 py-2 font-mono text-xs" data-label={tr('Unité', 'Unit')}>{v.unit_number}</td>
+                  <td className="px-4 py-2" data-label={tr('Employé', 'Employee')}>{v.employee_name || '—'}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Km perso', 'Personal km')}>{v.kmPerso.toLocaleString('fr-CA')}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Droit usage', 'Standby')}>{mny(v.standby)}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Fonctionnement', 'Operating')}>{mny(v.operating)}</td>
+                  <td className="px-4 py-2 text-right font-semibold" data-label={tr('Avantage', 'Benefit')}>{mny(v.total)}</td>
+                </tr>
+              ))}
+              {veh.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">{tr('Aucun véhicule employeur avec avantage imposable pour cette année.', 'No employer vehicle with taxable benefit for this year.')}</td></tr>}
+              {veh.length > 0 && <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2" colSpan={5}>{tr('Total des avantages', 'Total benefits')}</td><td className="px-4 py-2 text-right">{mny(veh.reduce((s, v) => s + v.total, 0))}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {sub === 't4rl1' && (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('Base T4 / RL-1 par employé', 'T4 / RL-1 base per employee')}</div>
+          <table className="mobile-cards w-full text-sm">
+            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+              <th className="px-4 py-2">{tr('Employé', 'Employee')}</th>
+              <th className="px-4 text-right">{tr('Revenu emploi', 'Employment')}</th><th className="px-4 text-right">{tr('Commissions', 'Commissions')}</th>
+              <th className="px-4 text-right">{tr('Avantage auto', 'Vehicle benefit')}</th><th className="px-4 text-right">{tr('Ret. féd.', 'Fed. ded.')}</th><th className="px-4 text-right">{tr('Ret. QC', 'QC ded.')}</th>
+            </tr></thead>
+            <tbody>
+              {emp.map((e, i) => (
+                <tr key={i} className="border-t border-gray-50 dark:border-gray-700/50">
+                  <td className="px-4 py-2" data-label={tr('Employé', 'Employee')}>{e.employee_name || e.employee_email || '—'}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Revenu emploi', 'Employment')}>{mny(e.employmentIncome)}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Commissions', 'Commissions')}>{mny(e.commissions)}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Avantage auto', 'Vehicle benefit')}>{mny(e.vehicleBenefit)}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Ret. féd.', 'Fed. ded.')}>{mny(e.federalDeductions)}</td>
+                  <td className="px-4 py-2 text-right" data-label={tr('Ret. QC', 'QC ded.')}>{mny(e.quebecDeductions)}</td>
+                </tr>
+              ))}
+              {emp.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">{tr('Aucune feuille de temps approuvée/payée pour cette année.', 'No approved/paid timesheet for this year.')}</td></tr>}
+            </tbody>
+          </table>
+          <p className="px-4 py-2 text-xs text-gray-400">{tr('Revenu d\'emploi = montants versés ; avantage auto reporté du calcul TP-41.C. Transmission XML obligatoire dès le 6e feuillet (schémas ARC et RQ distincts).', 'Employment income = amounts paid; vehicle benefit from TP-41.C calc. XML filing required from the 6th slip (separate CRA/RQ schemas).')}</p>
         </div>
       )}
     </div>

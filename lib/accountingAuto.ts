@@ -19,11 +19,14 @@ async function entryExists(tenant: string, sourceType: string, sourceId: string)
 
 /**
  * Écriture de paie pour une feuille de temps.
- *   DR 5000 Salaires et avantages   = net + déduction véhicule − commissions
+ *   DR 5000 Salaires et avantages   = net + déduction véhicule − commissions + retenues à la source
  *   DR 5050 Commissions             = commissions
+ *   CR 2300 Salaires à payer        = montant net versé
+ *   CR 2200 Retenues fédéral        = federal_deductions (RPC/AE/impôt fédéral)
+ *   CR 2210 Retenues Québec         = quebec_deductions (RRQ/RQAP/impôt QC/FSS)
  *   CR 5200 Frais de véhicules      = déduction véhicule (usage perso retenu)
- *   CR 2300 Salaires à payer        = montant net
- * (Les retenues à la source seront ventilées en Phase 5.)
+ * Les retenues sont prises sur la feuille (federal_deductions / quebec_deductions, migration 088) ;
+ * si elles sont à 0, l'écriture est identique au comportement antérieur.
  */
 export async function postTimesheetPayroll(
   tenant: string, ts: any, accMap?: Record<string, string>
@@ -36,13 +39,17 @@ export async function postTimesheetPayroll(
 
   const ded = Number(ts.vehicle_deduction) || 0;
   const comm = Number(ts.total_commissions) || 0;
-  const salaries = total + ded - comm;
+  const fedDed = Number(ts.federal_deductions) || 0;
+  const qcDed = Number(ts.quebec_deductions) || 0;
+  const salaries = total + ded - comm + fedDed + qcDed;
 
   const lines: { account_id: string; debit: number; credit: number; description?: string }[] = [
     { account_id: m['5000'], debit: salaries, credit: 0, description: 'Salaires et avantages' },
   ];
   if (comm > 0 && m['5050']) lines.push({ account_id: m['5050'], debit: comm, credit: 0, description: 'Commissions sur ventes' });
   lines.push({ account_id: m['2300'], debit: 0, credit: total, description: 'Net à payer' });
+  if (fedDed > 0 && m['2200']) lines.push({ account_id: m['2200'], debit: 0, credit: fedDed, description: 'Retenues a la source - federal (RPC/AE/impot)' });
+  if (qcDed > 0 && m['2210']) lines.push({ account_id: m['2210'], debit: 0, credit: qcDed, description: 'Retenues a la source - Quebec (RRQ/RQAP/impot/FSS)' });
   if (ded > 0 && m['5200']) lines.push({ account_id: m['5200'], debit: 0, credit: ded, description: 'Déduction véhicule (usage personnel)' });
 
   await createEntry(tenant, {
