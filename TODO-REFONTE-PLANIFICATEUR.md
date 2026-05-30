@@ -97,6 +97,9 @@ Onglets : **Formulaire · Gantt · Ressources · Fichiers · Récurrence · Équ
 - [ ] Découper le mégafichier en sous-composants (Form, Gantt, Ressources, Préparation, Horaires) pour la maintenabilité.
 - [ ] Revue d'accessibilité, états de chargement/sauvegarde, retours visuels.
 
+## 🔌 Sous-système associé
+Voir **`TODO-POINTAGE-PUSH-PLANIFICATEUR.md`** : pointage « push » in/out (app + QR), ajustement travailleur, validation superviseur, banner imprimable, facturation sélective + ressources, présence QR + heures max, notifications, répertoire de stats (occupation 40 h), et notes Évaluation/Paie (primes, commissions, types de temps). Contient les **décisions à trancher** avant implémentation.
+
 ## 🛠️ Règles de travail
 - `npx tsc --noEmit` = 0 erreur + build OK avant chaque push.
 - Commit + push après CHAQUE phase sur `feat/modular-foundation` ET `main`.

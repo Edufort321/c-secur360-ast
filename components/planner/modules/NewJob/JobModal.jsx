@@ -2778,7 +2778,7 @@ export function JobModal({
 
     // Handler pour la suppression du job
     const handleDelete = () => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer ce job ?')) {
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer ce mandat ?')) {
             onDelete(job.id);
             onClose();
         }
@@ -2947,7 +2947,7 @@ export function JobModal({
                             <Logo size="normal" showText={true} />
                             <div>
                                 <h2 className="text-xl font-bold text-white">
-                                    {job ? 'Modifier le Job' : 'Nouveau Job'}
+                                    {job ? 'Modifier le mandat' : 'Nouveau mandat'}
                                 </h2>
                                 <p className="text-gray-300 text-sm">
                                     Planification des travaux C-Secur360
@@ -3261,7 +3261,7 @@ export function JobModal({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Numéro de Job
+                                                Numéro de mandat
                                             </label>
                                             <input
                                                 type="text"
@@ -3274,14 +3274,14 @@ export function JobModal({
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Nom du Job
+                                                Nom du mandat
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.nom}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du job"
+                                                placeholder="Nom du mandat"
                                                 required
                                             />
                                         </div>
@@ -6816,7 +6816,7 @@ export function JobModal({
                                             {formData.recurrence?.active && (
                                                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                                                     <p className="text-green-800 text-sm">
-                                                        ✅ La récurrence est activée. Ce job sera automatiquement dupliqué selon la configuration ci-dessous.
+                                                        ✅ La récurrence est activée. Ce mandat sera automatiquement dupliqué selon la configuration ci-dessous.
                                                     </p>
                                                 </div>
                                             )}
