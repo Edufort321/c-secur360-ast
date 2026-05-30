@@ -2,6 +2,7 @@
 // Chaine devis -> planificateur -> facturation. Calcul des montants depuis le catalogue versionne
 // (taux MO bureau/chantier + multiplicateurs supp/maj). Revision = clone + re-tarification + archivage.
 import { supabase } from '@/lib/supabase';
+import { syncProjectCommission } from '@/lib/commission';
 
 export type Categorie = 'mo_bureau' | 'mo_chantier' | 'voyagement' | 'subsistance' | 'hebergement' | 'materiaux';
 export const CATEGORIES_MO: Categorie[] = ['mo_bureau', 'mo_chantier'];
@@ -23,6 +24,7 @@ export type SoumissionItem = { id?: string; name: string; year?: number | null; 
 export type Soumission = {
   id?: string; numero: string; revision: number; parent_soumission_id?: string | null; year?: number | null;
   client_id?: string | null; client_snapshot?: any; project_id?: string | null; catalogue_id?: string | null;
+  seller_id?: string | null; // vendeur = createur de la soumission (planner_personnel.id) -> commission au transfert
   status: 'draft' | 'sent' | 'accepted' | 'archived'; total: number; notes?: string | null;
 };
 
@@ -142,8 +144,8 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
   const hPayload: any = {
     tenant_id: tenant, numero: header.numero, revision: header.revision ?? 1, parent_soumission_id: header.parent_soumission_id ?? null,
     year: header.year ?? null, client_id: header.client_id ?? null, client_snapshot: header.client_snapshot ?? null,
-    project_id: header.project_id ?? null, catalogue_id: header.catalogue_id ?? null, status: header.status || 'draft',
-    total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
+    project_id: header.project_id ?? null, catalogue_id: header.catalogue_id ?? null, seller_id: header.seller_id ?? null,
+    status: header.status || 'draft', total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
   };
   let id = header.id;
   if (id) { const { error } = await supabase.from('soumissions').update(hPayload).eq('id', id); if (error) throw error; }
@@ -198,7 +200,7 @@ export async function reviseSoumission(tenant: string, sourceId: string, catalog
  * Le planificateur recherche ensuite par `project_number` pour le pré-montage du Gantt.
  * (Décision : la soumission alimente Projets ; catalogue_taux = devis, labor_rates = paie/réel.)
  */
-export async function accepterSoumission(tenant: string, soumissionId: string): Promise<{ projectId: string; projectNumber: string }> {
+export async function accepterSoumission(tenant: string, soumissionId: string): Promise<{ projectId: string; projectNumber: string; commission?: string }> {
   const full = await getSoumissionFull(tenant, soumissionId);
   if (!full) throw new Error('Soumission introuvable.');
   const s = full.soumission;
@@ -221,13 +223,22 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
     title: s.client_snapshot?.projet || s.numero,
     client_name: s.client_snapshot?.name || null,
     location: s.client_snapshot?.lieu || null,
-    submission_number: s.numero, status: 'actif', project_type: 'budgetaire',
-    global_price: s.total, estimate, updated_at: new Date().toISOString(),
+    submission_number: s.numero, project_type: 'budgetaire',
+    // 'vente' = vente conclue -> declenche la commission du vendeur (lib/commission.ts)
+    status: 'vente', primary_seller_id: s.seller_id || null,
+    global_price: s.total, po_amount: s.total, estimate, updated_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('id, project_number').single();
+  const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('*').single();
   if (error) throw error;
   await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
-  return { projectId: data.id, projectNumber: data.project_number };
+
+  // Commission de vente : le vendeur (createur) touche sa commission si son poste l'active
+  let commission: string | undefined;
+  if (s.seller_id) {
+    try { const r = await syncProjectCommission(supabase, tenant, data); commission = r.msg; }
+    catch (e: any) { commission = e?.message; }
+  }
+  return { projectId: data.id, projectNumber: data.project_number, commission };
 }
 
 export async function setSoumissionStatus(tenant: string, id: string, status: Soumission['status']) {

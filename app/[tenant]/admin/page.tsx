@@ -6172,6 +6172,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
   const [sitePrefix, setSitePrefix] = useState('XX'); // initiales du site de l'utilisateur, pour la numerotation
+  const [sellerId, setSellerId] = useState<string | null>(null); // vendeur = createur (pour la commission au transfert)
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
@@ -6192,7 +6193,8 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
-        const { data: p } = await supabase.from('planner_personnel').select('succursale').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+        const { data: p } = await supabase.from('planner_personnel').select('id, succursale').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+        if (p?.id) setSellerId(p.id);
         if (p?.succursale) setSitePrefix(siteInitials(p.succursale));
         else setSitePrefix(siteInitials(tenant));
       }
@@ -6203,7 +6205,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
 
   async function newSoumission() {
     const numero = await genSoumissionNumero(tenant, sitePrefix);
-    setHdr({ ...blankHdr(), numero }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+    setHdr({ ...blankHdr(), numero, seller_id: sellerId }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
   }
   async function editSoumission(s: Soumission) {
     const full = await getSoumissionFull(tenant, s.id!);
@@ -6225,7 +6227,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
   }
   async function accept(s: Soumission) {
     setNotice(null);
-    try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.`, `Quote accepted → project ${r.projectNumber} created/updated.`)); await load(); }
+    try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.${r.commission ? ' Commission : ' + r.commission : ''}`, `Quote accepted → project ${r.projectNumber}.${r.commission ? ' Commission: ' + r.commission : ''}`)); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
   async function remove(s: Soumission) {
