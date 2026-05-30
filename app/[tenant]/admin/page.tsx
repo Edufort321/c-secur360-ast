@@ -9,7 +9,7 @@ import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
 import { ARC_2026 } from '@/lib/constants/arc';
-import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
+import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
 import { syncPayrollEntries } from '@/lib/accountingAuto';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
@@ -5343,10 +5343,11 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [taxCodes, setTaxCodes] = useState<GLTaxCode[]>([]);
   const [ledger, setLedger] = useState<any[]>([]);
+  const [bal, setBal] = useState<Record<string, { debit: number; credit: number }>>({});
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [sub, setSub] = useState<'plan' | 'ledger' | 'new'>('plan');
+  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'new'>('plan');
 
   // Saisie d'écriture
   const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -5362,8 +5363,8 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   async function load() {
     setLoading(true); setMigMissing(false);
     try {
-      const [acc, tc, led] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant)]);
-      setAccounts(acc); setTaxCodes(tc); setLedger(led);
+      const [acc, tc, led, tb] = await Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)]);
+      setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb);
     } catch { setMigMissing(true); }
     setLoading(false);
   }
@@ -5425,7 +5426,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
@@ -5520,6 +5521,46 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
             );
           })}
         </div>
+      ) : sub === 'balance' ? (
+        (() => {
+          const lines = accounts
+            .map(a => ({ a, d: bal[a.id]?.debit || 0, c: bal[a.id]?.credit || 0 }))
+            .filter(r => r.d !== 0 || r.c !== 0)
+            .map(r => { const net = r.d - r.c; return { ...r, debitCol: net > 0 ? net : 0, creditCol: net < 0 ? -net : 0 }; });
+          const totD = lines.reduce((s, r) => s + r.debitCol, 0);
+          const totC = lines.reduce((s, r) => s + r.creditCol, 0);
+          return (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('Balance de vérification', 'Trial balance')}</div>
+              {lines.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">{tr('Aucun mouvement comptable validé.', 'No posted movement yet.')}</div>
+              ) : (
+                <table className="mobile-cards w-full text-sm">
+                  <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+                    <th className="px-4 py-2">{tr('Compte', 'Account')}</th>
+                    <th className="px-4 text-right">{tr('Débit', 'Debit')}</th>
+                    <th className="px-4 text-right">{tr('Crédit', 'Credit')}</th>
+                  </tr></thead>
+                  <tbody>
+                    {lines.map(r => (
+                      <tr key={r.a.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                        <td className="px-4 py-1.5" data-label={tr('Compte', 'Account')}><span className="font-mono text-xs text-gray-400">{r.a.code}</span> {r.a.name}</td>
+                        <td className="px-4 py-1.5 text-right" data-label={tr('Débit', 'Debit')}>{r.debitCol > 0 ? mny(r.debitCol) : ''}</td>
+                        <td className="px-4 py-1.5 text-right" data-label={tr('Crédit', 'Credit')}>{r.creditCol > 0 ? mny(r.creditCol) : ''}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600">
+                      <td className="px-4 py-2">{tr('Total', 'Total')}</td>
+                      <td className="px-4 py-2 text-right">{mny(totD)}</td>
+                      <td className="px-4 py-2 text-right">{mny(totC)}</td>
+                    </tr>
+                    <tr><td colSpan={3} className={`px-4 py-2 text-right text-xs font-semibold ${Math.abs(totD - totC) < 0.005 ? 'text-emerald-600' : 'text-red-500'}`}>{Math.abs(totD - totC) < 0.005 ? tr('✓ Balance équilibrée', '✓ Balanced') : tr('⚠ Écart détecté', '⚠ Out of balance')}</td></tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+          );
+        })()
       ) : (
         // Nouvelle écriture
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
