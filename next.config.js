@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Retire les console.* (sauf error/warn) des bundles de PRODUCTION uniquement.
+  // Nettoie le bruit (ex. logs verbeux du Gantt du planificateur) sans toucher au dev.
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
   images: {
     domains: ['localhost', 'mdl.ca', 'vercel.app'],
   },
