@@ -3464,15 +3464,25 @@ export function JobModal({
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Lieu
+                                                📍 Endroit des travaux
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.lieu}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Lieu d'intervention"
+                                                placeholder="Adresse / lieu d'intervention"
                                             />
+                                            {formData.lieu && formData.lieu.trim() && (
+                                                <a
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.lieu)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                                                >
+                                                    🗺️ Voir sur Google Maps
+                                                </a>
+                                            )}
                                         </div>
 
                                         <div className="relative">
