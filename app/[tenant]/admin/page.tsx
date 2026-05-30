@@ -5351,7 +5351,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'new'>('plan');
+  const [sub, setSub] = useState<'plan' | 'ledger' | 'balance' | 'statements' | 'new'>('plan');
 
   // Saisie d'écriture
   const [neDate, setNeDate] = useState(new Date().toISOString().slice(0, 10));
@@ -5430,7 +5430,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
+          {([['plan', tr('Plan comptable', 'Chart of accounts')], ['ledger', tr('Grand livre', 'General ledger')], ['balance', tr('Balance', 'Trial balance')], ['statements', tr('États', 'Statements')], ['new', tr('Nouvelle écriture', 'New entry')]] as const).map(([k, lbl]) => (
             (k !== 'new' || canEdit) && <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>{lbl}</button>
           ))}
         </div>
@@ -5562,6 +5562,58 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
                   </tbody>
                 </table>
               )}
+            </div>
+          );
+        })()
+      ) : sub === 'statements' ? (
+        (() => {
+          const byType = (t: string) => accounts.filter(a => a.type === t).map(a => {
+            const b = bal[a.id] || { debit: 0, credit: 0 };
+            const amt = (t === 'asset' || t === 'expense') ? b.debit - b.credit : b.credit - b.debit;
+            return { a, amt };
+          }).filter(r => Math.abs(r.amt) > 0.005);
+          const sum = (rows: { amt: number }[]) => rows.reduce((s, r) => s + r.amt, 0);
+          const revenue = byType('revenue'), expense = byType('expense');
+          const totRev = sum(revenue), totExp = sum(expense), netIncome = totRev - totExp;
+          const asset = byType('asset'), liability = byType('liability'), equity = byType('equity');
+          const totAsset = sum(asset), totLiab = sum(liability), totEq = sum(equity);
+          const Section = ({ title, rows, total, totalLabel }: { title: string; rows: { a: GLAccount; amt: number }[]; total: number; totalLabel: string }) => (
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{title}</div>
+              <table className="w-full text-sm"><tbody>
+                {rows.length === 0 && <tr><td className="px-4 py-2 text-gray-400">—</td></tr>}
+                {rows.map(r => (
+                  <tr key={r.a.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-1.5"><span className="font-mono text-xs text-gray-400">{r.a.code}</span> {r.a.name}</td>
+                    <td className="px-4 py-1.5 text-right">{mny(r.amt)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600"><td className="px-4 py-2">{totalLabel}</td><td className="px-4 py-2 text-right">{mny(total)}</td></tr>
+              </tbody></table>
+            </div>
+          );
+          return (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-gray-500">{tr('État des résultats', 'Income statement')}</h3>
+                <Section title={tr('Produits', 'Revenue')} rows={revenue} total={totRev} totalLabel={tr('Total des produits', 'Total revenue')} />
+                <Section title={tr('Charges', 'Expenses')} rows={expense} total={totExp} totalLabel={tr('Total des charges', 'Total expenses')} />
+                <div className={`rounded-2xl border p-4 text-center font-bold ${netIncome >= 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20'}`}>
+                  {tr('Résultat net', 'Net income')} : {mny(netIncome)}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-gray-500">{tr('Bilan', 'Balance sheet')}</h3>
+                <Section title={tr('Actif', 'Assets')} rows={asset} total={totAsset} totalLabel={tr('Total de l\'actif', 'Total assets')} />
+                <Section title={tr('Passif', 'Liabilities')} rows={liability} total={totLiab} totalLabel={tr('Total du passif', 'Total liabilities')} />
+                <Section title={tr('Capitaux propres', 'Equity')} rows={equity} total={totEq} totalLabel={tr('Total des capitaux', 'Total equity')} />
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-900/40">
+                  <div className="flex justify-between"><span>{tr('Passif + Capitaux + Résultat net', 'Liabilities + Equity + Net income')}</span><b>{mny(totLiab + totEq + netIncome)}</b></div>
+                  <div className={`mt-1 text-right text-xs font-semibold ${Math.abs(totAsset - (totLiab + totEq + netIncome)) < 0.01 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {Math.abs(totAsset - (totLiab + totEq + netIncome)) < 0.01 ? tr('✓ Bilan équilibré', '✓ Balanced') : tr('⚠ Écart avec l\'actif', '⚠ Does not match assets')}
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })()
