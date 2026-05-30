@@ -1049,7 +1049,8 @@ export function JobModal({
             console.log(`📎 DEPS - ${task.dependencies.length} dépendance(s) trouvée(s)`);
 
             task.dependencies.forEach(dep => {
-                const depTask = processedTasks.find(t => t.id === dep.id);
+                // Comparaison robuste : les ids peuvent etre nombre (addEtape) ou chaine (select DOM)
+                const depTask = processedTasks.find(t => String(t.id) === String(dep.id));
                 if (depTask) {
                     const depStartHours = (depTask.calculatedStart.getTime() - projectStart.getTime()) / (1000 * 60 * 60);
                     const depEndHours = (depTask.calculatedEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60);
@@ -1076,9 +1077,9 @@ export function JobModal({
                 }
             });
         }
-        // 2. Gestion du mode parallèle explicite
-        else if (task.isParallel && task.parallelWith && task.parallelWith.length > 0) {
-            const parallelTasks = processedTasks.filter(t => task.parallelWith.includes(t.id));
+        // 2. Gestion du mode parallèle explicite (déclenché dès qu'une tâche parallèle est définie)
+        else if (task.parallelWith && task.parallelWith.length > 0) {
+            const parallelTasks = processedTasks.filter(t => task.parallelWith.some(pid => String(pid) === String(t.id)));
             if (parallelTasks.length > 0) {
                 // Démarrer en même temps que la première tâche parallèle
                 const firstParallelStart = Math.min(...parallelTasks.map(t =>
@@ -2199,7 +2200,7 @@ export function JobModal({
 
                 Object.values(taskMap).forEach(task => {
                     const hasSuccessors = formData.etapes.some(e =>
-                        e.dependencies && e.dependencies.some(dep => dep.id === task.id)
+                        e.dependencies && e.dependencies.some(dep => String(dep.id) === String(task.id))
                     );
 
                     if (!hasSuccessors) {
@@ -2215,7 +2216,7 @@ export function JobModal({
 
                     const task = taskMap[taskId];
                     const successors = formData.etapes.filter(e =>
-                        e.dependencies && e.dependencies.some(dep => dep.id === taskId)
+                        e.dependencies && e.dependencies.some(dep => String(dep.id) === String(taskId))
                     );
 
                     let minLateStart = task.lateStart;
@@ -2223,7 +2224,7 @@ export function JobModal({
                     successors.forEach(successor => {
                         processTaskBackward(successor.id);
                         const succTask = taskMap[successor.id];
-                        const dep = successor.dependencies.find(d => d.id === taskId);
+                        const dep = successor.dependencies.find(d => String(d.id) === String(taskId));
 
                         if (succTask && dep) {
                             let lateStartCandidate;
@@ -4366,23 +4367,30 @@ export function JobModal({
                                                 <button
                                                     onClick={() => {
                                                         const projectTemplate = [
-                                                            { name: 'Inspection initiale', duration: 2, priority: 'haute' },
-                                                            { name: 'Préparation matériel', duration: 1, priority: 'normale' },
-                                                            { name: 'Installation système', duration: 6, priority: 'haute' },
-                                                            { name: 'Tests et validation', duration: 2, priority: 'haute' },
-                                                            { name: 'Formation client', duration: 1, priority: 'normale' }
+                                                            { name: 'Inspection initiale', duration: 2, priority: 'high' },
+                                                            { name: 'Préparation matériel', duration: 1, priority: 'normal' },
+                                                            { name: 'Installation système', duration: 6, priority: 'high' },
+                                                            { name: 'Tests et validation', duration: 2, priority: 'high' },
+                                                            { name: 'Formation client', duration: 1, priority: 'normal' }
                                                         ];
 
+                                                        const baseId = Date.now();
                                                         const newTasks = projectTemplate.map((template, index) => ({
-                                                            id: (Date.now() + index).toString(),
-                                                            name: template.name,
+                                                            id: (baseId + index).toString(),
+                                                            text: template.name,                 // champ canonique affiche dans la liste
                                                             duration: template.duration,
                                                             startHour: index * template.duration,
                                                             description: `Tâche générée automatiquement: ${template.name}`,
-                                                            priority: template.priority,
+                                                            priority: template.priority,         // valeurs alignees sur l'indicateur (normal/high/critical)
                                                             status: 'planifie',
+                                                            parentId: null,
+                                                            order: index,
                                                             resources: [],
-                                                            dependencies: index > 0 ? [(Date.now() + index - 1).toString()] : []
+                                                            assignedPersonnel: [],
+                                                            assignedEquipement: [],
+                                                            parallelWith: [],
+                                                            // Dependance FS en cascade vers la tache precedente (format {id,type,lag} attendu)
+                                                            dependencies: index > 0 ? [{ id: (baseId + index - 1).toString(), type: 'FS', lag: 0 }] : []
                                                         }));
 
                                                         setFormData(prev => ({
@@ -4398,7 +4406,7 @@ export function JobModal({
                                                 </button>
                                                 <button
                                                     onClick={() => {
-                                                        const criticalPath = calculateCriticalPath();
+                                                        const criticalPath = calculateCriticalPath(formData.etapes);
                                                         setFormData(prev => ({
                                                             ...prev,
                                                             criticalPath,

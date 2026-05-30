@@ -574,17 +574,6 @@ function FacturationProjets({ tenant, tr }: { tenant: string; tr: (f: string, e:
 
   return (
     <div className="space-y-4">
-      {/* Commerce CERDIA banner */}
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-xs font-bold text-white">CC</div>
-        <div>
-          <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Commerce CERDIA</div>
-          <div className="text-xs text-emerald-700 dark:text-emerald-300">
-            {tr('Toutes les factures sont émises par Commerce CERDIA. Aucun lien avec les finances personnelles.', 'All invoices are issued by Commerce CERDIA. No link to personal finances.')}
-          </div>
-        </div>
-      </div>
-
       {/* Sub-tabs */}
       <div className="flex w-fit gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
         {[
