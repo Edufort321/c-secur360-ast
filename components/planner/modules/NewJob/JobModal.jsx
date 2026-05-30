@@ -50,6 +50,12 @@ export function JobModal({
         equipementAssigne: [],
         horaireMode: 'global',
         lieu: '',
+        lieuLat: null,
+        lieuLng: null,
+        responsableId: '',
+        projectId: '',
+        clientId: '',
+        astId: '',
         priorite: 'normale',
         statut: 'planifie',
         client: '',
@@ -3294,6 +3300,37 @@ export function JobModal({
                                                 onChange={(e) => setFormData(prev => ({ ...prev, dateFin: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
+                                        </div>
+
+                                        {/* Responsable de l'evenement (designe par le coordonnateur ; monte le Gantt) */}
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                👤 Responsable de l'événement
+                                            </label>
+                                            {estCoordonnateur ? (
+                                                <select
+                                                    value={formData.responsableId || ''}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, responsableId: e.target.value }))}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                >
+                                                    <option value="">— Sélectionner un responsable —</option>
+                                                    {(personnel || []).map(p => (
+                                                        <option key={p.id} value={p.id}>
+                                                            {p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                                                    {(() => {
+                                                        const r = (personnel || []).find(p => String(p.id) === String(formData.responsableId));
+                                                        return r ? (r.nom || r.name || [r.prenom, r.nomFamille].filter(Boolean).join(' ') || r.email || r.id) : '— Non assigné —';
+                                                    })()}
+                                                </div>
+                                            )}
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Le responsable monte le Gantt et l'exécution. {estCoordonnateur ? 'Défini par le coordonnateur.' : 'Assigné par le coordonnateur.'}
+                                            </p>
                                         </div>
 
                                         {/* Section Heures Planifiées */}

@@ -106,6 +106,7 @@ function AppContent({ tenant = 'cerdia' }) {
                     addSousTraitant={addSousTraitant}
                     addNotification={addNotification}
                     peutModifier={canModify}
+                    estCoordonnateur={isCoordinator}
                     tenant={tenant}
                 />
             )}

@@ -1575,6 +1575,8 @@ export function PlanificateurFinal({
                     addSousTraitant={addSousTraitant}
                     addNotification={addNotification}
                     onOpenConflictJob={handleOpenConflictJob}
+                    peutModifier={peutModifier}
+                    estCoordonnateur={estCoordonnateur}
                 />
             )}
 

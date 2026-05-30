@@ -194,26 +194,38 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     try {
       let result;
 
+      // Execute une operation en retirant automatiquement les colonnes absentes du schema
+      // (PGRST204 / 42703) puis en reessayant. Rend l'app tolerante aux migrations pas encore
+      // executees : les nouveaux champs persistent une fois la migration passee, sinon ils sont
+      // ignores sans casser la sauvegarde.
+      const execWithColumnRetry = async (run) => {
+        let payload = { ...item };
+        for (let attempt = 0; attempt < 15; attempt++) {
+          const { data, error } = await run(payload);
+          if (!error) return data;
+          const msg = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+          const match = msg.match(/'([^']+)' column/i)
+            || msg.match(/column "?([a-zA-Z0-9_]+)"? of/i)
+            || msg.match(/column ["']?([a-zA-Z0-9_.]+)["']? does not exist/i);
+          const col = match && match[1] ? match[1].replace(/["']/g, '').split('.').pop() : null;
+          if ((error.code === 'PGRST204' || error.code === '42703') && col && Object.prototype.hasOwnProperty.call(payload, col)) {
+            const { [col]: _omit, ...rest } = payload;
+            payload = rest;
+            console.warn(` [${table}] colonne absente "${col}" ignoree (migration non executee ?)`);
+            continue;
+          }
+          throw error;
+        }
+        throw new Error(`[${table}] trop de colonnes inconnues lors de la sauvegarde`);
+      };
+
       switch (type) {
         case 'INSERT':
-          const { data: insertData, error: insertError } = await supabase
-            .from(table)
-            .insert([item])
-            .select()
-            .single();
-          if (insertError) throw insertError;
-          result = insertData;
+          result = await execWithColumnRetry(p => supabase.from(table).insert([p]).select().single());
           break;
 
         case 'UPDATE':
-          const { data: updateData, error: updateError } = await supabase
-            .from(table)
-            .update(item)
-            .eq('id', itemId)
-            .select()
-            .single();
-          if (updateError) throw updateError;
-          result = updateData;
+          result = await execWithColumnRetry(p => supabase.from(table).update(p).eq('id', itemId).select().single());
           break;
 
         case 'DELETE':
