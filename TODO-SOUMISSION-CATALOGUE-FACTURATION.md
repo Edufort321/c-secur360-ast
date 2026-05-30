@@ -26,6 +26,14 @@ Une soumission est **hiérarchique** : `Soumission → Items → Catégories →
 - Mode « **réviser au taux actuel** » : réviser p. ex. une soumission **2025 → 2026** re-tarife les lignes sur le **catalogue courant**.
 - L'**ancienne version s'archive**, une **nouvelle version active** apparaît avec mes **ajouts / mises à jour de prix**. Lien `parent ↔ révisions`, numéro de révision.
 
+## 🔌 Modules indépendants & flux d'entrée dans la planification
+Les modules sont **indépendants** (gate via `useEntitlements` : `soumission`/`projects`/`planner`). Deux chemins de création d'un mandat :
+1. **Depuis une soumission transférée en projet** (si le tenant a Soumission + Projets) :
+   - Une soumission **transférée en projet** rend son **numéro de projet recherchable dans la planification** (champ de recherche du mandat).
+   - Sélectionner ce numéro **préremplit tout d'un coup** : identification, client, lieu, dates/durée d'arrêt, et **pré-montage du Gantt** depuis les items (cf. ci-dessous).
+2. **Sinon — création de A à Z (custom)** : si pas de soumission (ou module absent), création **manuelle complète** du mandat comme aujourd'hui (aucun préremplissage imposé).
+> Le préremplissage est donc **optionnel et conditionnel** ; le mode custom reste toujours disponible.
+
 ## 📅 Pré-montage du Planificateur depuis la soumission (interconnexion clé)
 Quand un mandat/projet provient d'une soumission, le **portrait du Gantt est pré-monté** à partir des items :
 - Chaque **ligne de travail** (MO Chantier « Travaux N », MO Bureau « Préparation/Gestion/Rédaction ») devient une **étape Gantt** :
