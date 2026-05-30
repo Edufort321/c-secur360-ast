@@ -13,17 +13,21 @@
 - [x] Retrait du bandeau codé en dur « Commerce CERDIA » dans l'onglet Facturation du tenant.
 
 ## 🔜 En attente — Refonte planificateur (voir `TODO-REFONTE-PLANIFICATEUR.md`)
-- [ ] **P4** — Séparation par rôle : formulaire **Mandat** (coordonnateur+) vs **Événement** (responsable monte son Gantt). Permissions.
+- [x] **P4.0** — Sauvegarde **tolérante aux colonnes manquantes** (retrait auto + retry) → ajouter des champs ne casse plus l'enregistrement avant migration.
+- [x] **P4.1** — Désignation du **Responsable** (éditable coordonnateur+, lecture seule sinon) + câblage `estCoordonnateur` ; migration 089 (responsableId/projectId/clientId/astId/lieuLat/lieuLng). Reste : gating lecture seule exhaustif des sections Mandat pour non-coordonnateur (à finaliser avec le découpage P5).
 - [ ] **P4** — Interconnexions (conditionnées aux modules activés `useEntitlements`) : Projets, Clients, Inventaire, Personnel/Congés, Équipements/Véhicules.
 - [ ] **P4** — **Endroit des travaux + Google Maps** (géocodage à la saisie ; préremplissage depuis Projets si module activé).
 - [ ] **P4** — **Lien AST** si module débarré : rattacher/créer une AST préremplie avant travaux.
 - [ ] **P4** — **Pièces jointes** : documentation projet + photos (DropZone/carrousel, JSONB documents/photos).
 - [ ] **P5** — Nettoyage : supprimer doublons morts (JobModal/components/Modals + .backup + _temp), réduire les `console.log`, découper le mégafichier, divulgation progressive poussée.
 
-## 🔜 En attente — Catalogue de taux & soumissions (NOUVEAU, → converge vers Admin Facturation)
-- [ ] **Catalogue de taux** paramétrable par l'utilisateur, **enregistré par année** avec **révisions** (ex. « rév. 1 2026 » ou nouvelle année). Restructurable. Historique des versions.
-- [ ] **Révision de soumission** : mode « **réviser au taux actuel** ». Réviser p. ex. une soumission 2025 en 2026 → l'**ancienne s'archive**, une **nouvelle version active** apparaît avec mes ajouts / mises à jour de prix (re-tarifée sur le catalogue courant). Lien version parent ↔ révisions.
-- [ ] **Convergence Facturation** : « **tout transite vers l'admin Facturation** » — taux, soumissions, temps (pointage), matériel/équipements → consolidés dans le module **Facturation** (puis écriture vente→GL côté Comptabilité). Point de convergence unique des sorties facturables.
+## 🔜 En attente — Soumission / Catalogue de taux / Facturation (voir `TODO-SOUMISSION-CATALOGUE-FACTURATION.md`)
+- [ ] **Structure de soumission** hiérarchique : Item → MO Bureau / MO Chantier / Voyagement / Subsistance / Hébergement / Matériaux → lignes (Description, Tech, Rég, Supp, Maj, Montant).
+- [ ] **Catalogue de taux** versionné par année + révisions (« rév. 1 2026 » / nouvelle année), restructurable, historisé.
+- [ ] **Révision de soumission** : « réviser au taux actuel » → archive l'ancienne, nouvelle version active re-tarifée avec ajouts/mises à jour.
+- [ ] **Pré-montage du Gantt depuis la soumission** : items/travaux → étapes (durée=heures, personnes=Tech, parent=item), selon la durée d'arrêt.
+- [ ] **Planif selon personnel dispo** (nivellement) + **sélecteur de mode en haut des items** : En suite · Parallèle · Custom.
+- [ ] **Convergence Facturation** : soumission (devis) + temps (pointage) + matériel → module **Facturation** → vente→GL ; rapport devis vs réel.
 
 ## 🔜 En attente — Pointage « push » & paie (voir `TODO-POINTAGE-PUSH-PLANIFICATEUR.md`)
 - [ ] PP1 Pointage push in/out (app + QR) + arrondi 15/30 configurable.
