@@ -41,6 +41,9 @@
 - [ ] PP8 Répertoire de stats (occupation 40 h).
 - [ ] ⚠️ **11 décisions à trancher** (listées en fin de `TODO-POINTAGE-PUSH-PLANIFICATEUR.md`) avant d'implémenter ce sous-système.
 
+## 🔎 Audit
+- **`AUDIT-INTERMODULE.md`** — audit global de la logique inter-module : 3 architectures coexistantes (hub Projets 010 / planner_* / compta gl_*), **duplications à trancher** (catalogue_taux vs labor_rates/rate_settings ; soumissions 090 vs projects.estimate/submission_number ; planner_jobs.projectId TEXT vs projects.id UUID), généricité « tout type », **écarts Gantt** (drag-to-link, jalons, nivellement, export), recommandations de réconciliation. ⚠️ Arbitrer §6.1 (source des taux) + §6.2 (soumission→projet) AVANT l'UI Soumission S2.
+
 ## 🗂️ TODO spécialisées
 - `TODO-REFONTE-PLANIFICATEUR.md` — refonte formulaire Mandat (P1-P5) + stratégie d'interconnexion.
 - `TODO-POINTAGE-PUSH-PLANIFICATEUR.md` — pointage/présence/paie/stats + décisions.
