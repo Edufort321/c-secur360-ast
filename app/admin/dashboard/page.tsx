@@ -103,13 +103,22 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'CGEstion321$') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('adminAuth', 'true');
-    } else {
-      alert('Mot de passe incorrect');
+    // Securite (#7) : verification cote serveur (le mot de passe n'est plus dans le bundle client).
+    try {
+      const res = await fetch('/api/admin/dashboard-auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('adminAuth', 'true');
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d?.error || 'Mot de passe incorrect');
+      }
+    } catch {
+      alert('Erreur de connexion au serveur.');
     }
   };
 

@@ -15,9 +15,9 @@
 - [ ] **#4** — `app/api/admin/modules/route.ts:4` + `app/api/admin/vendors/route.ts:4` : même secret hardcodé. → Fail-secure.
 
 ### Service role / secrets
-- [ ] **#5** — `lib/supabaseAdmin.ts:10-11` : `SERVICE_ROLE_KEY || ANON_KEY` en fallback (bypass RLS involontaire). → `throw` si service_role absent.
+- [x] **#5** — `lib/supabaseAdmin.ts` : **CORRIGÉ** — plus de fallback anon en **runtime production** (throw si service_role absent) ; fallback toléré en dev/build avec avertissement.
 - [ ] **#6** — `middleware.ts:6-9` : lit les sessions avec service_role (bypass RLS). → Clé restreinte / RLS stricte sur `auth_sessions`.
-- [ ] **#7** — `app/admin/dashboard/page.tsx:108` : mot de passe admin **en clair** (`'CGEstion321$'`) côté client + sessionStorage. → Retirer, passer par JWT httpOnly + middleware.
+- [~] **#7** — `app/admin/dashboard/page.tsx` : **mot de passe retiré du bundle client** — vérification déplacée vers `/api/admin/dashboard-auth` (lit `ADMIN_DASHBOARD_PASSWORD`, fail-closed). ⚠️ **Ajouter `ADMIN_DASHBOARD_PASSWORD` dans Vercel + `.env.local`** sinon login refusé. _Reste (durcissement) : sessionStorage trivialement falsifiable → migrer vers JWT httpOnly + middleware (#19)._
 - [ ] **#8** — `app/api/admin/billing/cron/route.ts:11` : auth ignorée si `NODE_ENV !== 'production'`. → Exiger le secret dans TOUS les environnements.
 
 ## 🟠 CRITIQUE — avant prod
@@ -30,7 +30,7 @@
 - [ ] **#17** — `app/api/sms/send/route.ts:59` : rate-limit en mémoire (Map) + pas de check tenant. → Redis/DB + scope tenant.
 
 ## 🟡 MOYEN / nettoyage
-- [ ] **#18** — `app/api/test-supabase/route.ts` + `app/api/db/init/route.ts` : endpoints debug sans auth. → Supprimer avant prod.
+- [x] **#18** — `app/api/test-supabase` + `app/api/db/init` : **SUPPRIMÉS**.
 - [ ] **#19** — `app/api/system/status/route.ts:14` : expose quelles clés env sont configurées. → Restreindre super_admin.
 - [ ] **#20** — `app/api/weather/route.ts` : pas de rate-limit public. → Limiter par IP.
 - [ ] **#21** — `middleware.ts:207` : regex routes publiques contournables (`//login`). → Normaliser les paths.
