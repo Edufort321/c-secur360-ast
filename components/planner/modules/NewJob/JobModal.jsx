@@ -2677,9 +2677,20 @@ export function JobModal({
     };
 
     const handleFilesAdded = (files, type) => {
+        // Ne conserver que les champs serialisables : le File brut ne persiste pas en JSONB
+        // (il devient {} apres JSON) et alourdit inutilement la ligne. On garde l'apercu (url),
+        // le nom, la taille et le type. (Optimisation a venir : upload Storage au lieu du data URL.)
+        const serializable = (files || []).map(f => ({
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            url: f.url,
+            lastModified: f.lastModified,
+            addedAt: new Date().toISOString()
+        }));
         setFormData(prev => ({
             ...prev,
-            [type]: [...prev[type], ...files]
+            [type]: [...(prev[type] || []), ...serializable]
         }));
     };
 

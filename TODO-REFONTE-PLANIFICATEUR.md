@@ -90,7 +90,7 @@ Onglets : **Formulaire · Gantt · Ressources · Fichiers · Récurrence · Équ
 - [ ] Gates de permission (`estCoordonnateur`/`canModify` vs responsable).
 - [ ] **Interconnexion** : lier le mandat aux modules **Clients**, **Projets**, **Inventaire** (préparation matériel), **Personnel** (planner_personnel) ; (optionnel) pont vers **Facturation/Comptabilité**.
 - [ ] **Lien AST** (si le module AST est **débarré/activé** pour le tenant — vérifier l'entitlement/abonnement) : depuis le formulaire de planif, rattacher ou créer une **AST** liée au mandat et **préremplir l'information avant travaux** (lieu, client, équipe/personnel assigné, équipements, dates). Si AST non activé : masquer le lien.
-- [ ] **Documentation de projet en pièces jointes** : joindre documents + **photos** au mandat (plans, devis, fiches techniques, permis…), réutiliser DropZone/FilePreview/carrousel, persistance JSONB `documents`/`photos` (migration 065 déjà en place), accessible des deux niveaux (Mandat et Événement).
+- [x] **Documentation de projet en pièces jointes** (P4.5 FAIT) : onglet Fichiers fonctionnel ; `handleFilesAdded` ne conserve que les champs sérialisables (le File brut cassait le JSONB) → persistance propre dans `documents`/`photos`. _Optimisation à venir : upload Supabase Storage au lieu du data URL base64._
 - [ ] **Endroit des travaux + Google Maps** : champ adresse du lieu de travaux avec **géocodage/carte Google Maps** (aperçu + lien itinéraire) à la saisie ; **préremplissage depuis le module Projets** si le projet sélectionné existe et que le tenant a le **module Projets activé** (adresse/lieu, client). Dégradation propre si la clé Maps ou le module est absent (champ texte simple).
 
 ### P5 — Nettoyage + polish UX
