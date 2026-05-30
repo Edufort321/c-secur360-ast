@@ -40,6 +40,10 @@
 - Planner (mandats) : générique (pas de dépendance métier). ✅
 - **Action** : exposer `project_type` à la création (mandat/soumission) et permettre des catégories de lignes personnalisables.
 
+## ✅ Arbitrages pris (2026-05-30)
+- **Soumission → Projet** : les tables `soumissions` (090) restent (devis détaillé) ; à l'**acceptation**, `accepterSoumission()` crée/maj un `projects` (`submission_number`, `estimate`, `global_price`, status `actif`) et pose `soumissions.project_id`. Vérité finale = **`projects`** ; le planner cherche par `project_number`. _(Implémenté dans `lib/soumissions.ts`.)_
+- **Taux** : **`catalogue_taux` = devis/soumission** ; **`labor_rates` (010) = paie/réel**. Rôles distincts, pas de double saisie sur le même usage.
+
 ## 6. Recommandations (réconciliation) — par priorité
 1. **Source de vérité des taux** : promouvoir **`catalogue_taux` versionné** (année/révision) comme catalogue *de soumission*, et **migrer/aligner** `labor_rates` (paie/réel) pour s'y référer ou inversement. Au minimum : documenter qui sert à quoi (catalogue = devis ; labor_rates = paie réelle) et éviter double saisie.
 2. **Soumission → Projet** : à l'acceptation, une `soumission` **crée un `projects`** (status `soumission`→`actif`, `submission_number`=numéro, `estimate` rempli) et pose `soumissions.project_id`. Le planner recherche alors par `project_number` (flux déjà spécifié).

@@ -146,6 +146,37 @@ export async function reviseSoumission(tenant: string, sourceId: string, catalog
   return await saveSoumissionFull(tenant, newHeader, full.items, cat);
 }
 
+/**
+ * Transfert soumission -> projet (réconciliation avec le hub Projets, migration 010).
+ * À l'acceptation : crée ou met à jour un `projects` (upsert sur tenant_id+project_number),
+ * y dépose l'estimé (snapshot items/lignes + total), pose `soumissions.project_id` et statut 'accepted'.
+ * Le planificateur recherche ensuite par `project_number` pour le pré-montage du Gantt.
+ * (Décision : la soumission alimente Projets ; catalogue_taux = devis, labor_rates = paie/réel.)
+ */
+export async function accepterSoumission(tenant: string, soumissionId: string): Promise<{ projectId: string; projectNumber: string }> {
+  const full = await getSoumissionFull(tenant, soumissionId);
+  if (!full) throw new Error('Soumission introuvable.');
+  const s = full.soumission;
+  const projectNumber = s.numero; // le n° de soumission devient le n° de projet (upsert si re-accepte/revise)
+  const estimate = {
+    source: 'soumission', soumission_id: soumissionId, revision: s.revision, total: s.total,
+    items: full.items.map(it => ({ name: it.name, total: it.total, lignes: it.lignes })),
+    generated_at: new Date().toISOString(),
+  };
+  const payload: any = {
+    tenant_id: tenant, project_number: projectNumber,
+    title: s.client_snapshot?.projet || s.numero,
+    client_name: s.client_snapshot?.name || null,
+    location: s.client_snapshot?.lieu || null,
+    submission_number: s.numero, status: 'actif', project_type: 'budgetaire',
+    global_price: s.total, estimate, updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('id, project_number').single();
+  if (error) throw error;
+  await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
+  return { projectId: data.id, projectNumber: data.project_number };
+}
+
 export async function setSoumissionStatus(tenant: string, id: string, status: Soumission['status']) {
   const { error } = await supabase.from('soumissions').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
