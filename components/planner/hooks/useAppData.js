@@ -150,6 +150,16 @@ export function useAppData(tenant = null) {
         return await removeJobSync(jobId);
     }, [removeJobSync]);
 
+    // Sauvegarde unifiee d'un mandat (job) : route vers update si l'id existe deja,
+    // sinon ajout. Indispensable : App.jsx et PlanificateurFinal passent saveJob comme
+    // handler onSave/onSaveJob du formulaire (sans ceci, la sauvegarde ne faisait rien).
+    const saveJob = useCallback(async (jobData) => {
+        if (jobData.id && jobs.find(j => j.id === jobData.id)) {
+            return await updateJob(jobData.id, jobData);
+        }
+        return await addJob(jobData);
+    }, [jobs, addJob, updateJob]);
+
     // Setter pour compatibilité (utilise Supabase en arrière-plan)
     const setJobs = useCallback((newJobsOrFunction) => {
         console.warn('⚠️ setJobs appelé directement - utiliser addJob/updateJob/deleteJob pour sync Supabase');
@@ -425,6 +435,7 @@ export function useAppData(tenant = null) {
         setJobs,
         addJob,
         updateJob,
+        saveJob,
         deleteJob,
 
         // Actions personnel

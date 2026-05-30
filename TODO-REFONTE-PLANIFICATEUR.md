@@ -1,0 +1,103 @@
+# 🗂️ Refonte du formulaire de planification — « Mandat » (ex-Job)
+
+> Module : `components/planner` · Formulaire cible : `modules/NewJob/JobModal.jsx` (7450 lignes).
+> Décidé : renommer **Job → Mandat** ; refonte **par phases** ; conserver **toutes** les fonctions actuelles + plus ; appliquer les bonnes pratiques web.
+> Dernière mise à jour : 2026-05-29.
+
+## 🎯 Objectif et architecture cible (séparation par rôle)
+Scinder le mégaformulaire monolithique en **deux niveaux** alignés sur les rôles :
+
+1. **Formulaire « Mandat » — création par Coordonnateur et + (`estCoordonnateur`/`canModify`)**
+   Vue légère, rapide, « divulgation progressive ». Contient :
+   - Identification (n° de mandat auto, nom, description, client, projet, lieu, succursale en charge).
+   - Cadre temporel (dates/heures début-fin, priorité, statut, budget).
+   - **Ressources globales** (personnel, équipements, sous-traitants requis ; nombre de personnel requis).
+   - **Liste de préparation** matériel / ressources / équipement (source : Ressources, Inventaire, ou texte libre ; quantité, statut).
+   - Désignation du **responsable** de l'événement.
+
+2. **Événement (occurrence planifiée) — détail par le Responsable (+ coordonnateur)**
+   Ouvert depuis le calendrier. Le responsable y **monte son Gantt** et exécute :
+   - Étapes / sous-tâches hiérarchiques (WBS), durées, progression.
+   - **Cascade** (dépendances FS/SS/FF/SF + lead/lag) et **travaux parallèles**.
+   - **Chemin critique** (CPM) avec surbrillance.
+   - Horaires par jour / équipe / individu, équipes numérotées.
+   - Fichiers/photos, récurrence, baseline.
+
+> Principe directeur (bonnes pratiques) : **une seule interface fluide** par niveau, pas de saut entre vues ; **divulgation progressive** (l'avancé est replié dans des sections/hamburgers) ; affectations explicites (qui, échéance, « définition de terminé »).
+
+## ✅ Inventaire des fonctions ACTUELLES à conserver (zéro régression)
+Onglets : **Formulaire · Gantt · Ressources · Fichiers · Récurrence · Équipes**.
+- Identification + cadre temporel + heures planifiées (+ inclure fins de semaine), clients, projets, notes.
+- Étapes du projet : hiérarchie récursive, durée, priorité, progression, ressources assignées, dépendances, parallélisme, indicateur chemin critique, ajout sous-tâche, config avancée, suppression.
+- Détection de conflits complète : équipements hors service (critique), congés approuvés / maintenances (haute), demandes de congé en attente (moyenne), autres (normale) + navigation vers le job en conflit.
+- Gantt hiérarchique avancé : échelle de temps réaliste (heures/dates), flèches de dépendances (SVG), templates WBS, contrôles de vue (jour/…), mode automatique, baseline, alerte dépassement timeline, stats avancées.
+- Calculs : chemin critique CPM, bidirectionnels heures/personnel, validation timeline + solutions, dates de tâches avec dépendances, génération échelle Gantt, positionnement des tâches.
+- Préparation : items depuis Ressources / Inventaire / texte libre ; type, statut, quantité.
+- Ressources : personnel, équipements, sous-traitants (ajout à la volée), gestion des équipes (membres, ajout).
+- Horaires par jour : global / par département / individuel, navigation par onglets, stats personnel (vue globale + par département), contrôles globaux.
+- Fichiers : documents + photos (DropZone, FilePreview, carrousel).
+- Récurrence ; Équipes numérotées + auto-génération + assignations.
+
+## 🔬 Bonnes pratiques retenues (recherche web, mai 2026)
+- **Formulaire** : divulgation progressive / multi-étapes, interface unique et fluide (planifier + dispo + heures au même endroit), testabilité d'usage, affectation = attentes + échéance + définition de « terminé ». (UX4Sight, Harris Constructors, Slack, Eleken time-picker)
+- **Gantt** : créer une dépendance par **glisser** (survol → cercle → flèche vers la cible) ; **surbrillance du chemin critique** activable ; **parallélisme** via prédécesseur partagé ou dépendance **Start-to-Start** (chevauchement) ; **codes couleur** pour tâches critiques ; chart **accessible/partageable**, mise à jour régulière. (Airtable, monday, Smartsheet, Teamhood, ProjectManager, TeamGantt)
+- **Dépendances** : 4 types **FS** (défaut), **SS**, **FF**, **SF** ; **lead** (chevauchement) / **lag** (délai) ; **tampons** sur les tâches critiques ; relations claires pour l'allocation des ressources. (Asana, Kantata, Ganttic, ProofHub, Moovila, Microsoft Project)
+
+## 🔗 Stratégie d'interconnexion complète
+**Principe de garde** : chaque lien/onglet n'apparaît que si le module est **débarré** pour le tenant — via `useEntitlements(tenant)` (table `tenant_modules`). Clés : `projects, ast, inventory, equipment, timesheets, logbook, inspections, planner`. Dégradation propre si module absent ou clé externe (Google Maps) manquante.
+**Règle de données** : **référence (id)** pour la navigation/synchro **+ snapshot** pour l'historique immuable (ex. `client_snapshot`). **Permissions** : coordonnateur+ crée les liens structurants (projet, client, AST, préparation) ; le responsable consomme/exécute (Gantt, avancement).
+
+| Module (clé) | Entrant → préremplit le mandat | Sortant ← le mandat alimente |
+|---|---|---|
+| **Projets** (`projects`) | client, **lieu/adresse (Google Maps)**, budget, cadre de dates, n° projet | mandat = tâche planifiée du projet ; heures/coûts → `projects_actuals` ; budget vs réel |
+| **Clients** (`clients`) | coordonnées (id + `client_snapshot`) | facturation, historique client |
+| **AST** (`ast`) | AST existante rattachée | **créer/rattacher une AST préremplie avant travaux** (lieu, client, personnel, équipements, dates) — lien bidirectionnel `ast_id` |
+| **Inventaire** (`inventory`) | catalogue matériel pour la **liste de préparation** | réservation / sortie de stock à la confirmation (item_id + quantité) |
+| **Personnel** (`planner_personnel`) | ressources humaines, rôles (coordonnateur/responsable), succursale/dépt, dispo | assignations + heures planifiées |
+| **Congés** (`planner_conges`) | détection de conflits de disponibilité | — |
+| **Équipements/Véhicules** (`equipment`) | ressources matérielles + conflits (hors service/maintenance) | réservation ; véhicules → carnet de bord (km/avantages) |
+| **Feuilles de temps** (`timesheets`) | — | heures planifiées (Gantt) = référence ; comparaison planifié vs réel ; pont Paie |
+| **Facturation / Comptabilité** | — | heures + matériel + sous-traitants → facturation projet + écriture vente→GL |
+| **Inspections** (`inspections`) | équipements du mandat à inspecter | — |
+| **Tableau de bord** | — | agrégation (charge, conflits, avancement, chemin critique) |
+
+**Ajouts modèle de données (migration future)** : `planner_jobs.project_id`, `client_id`, `ast_id`, `responsable_id` ; liens inventaire dans `preparation` (JSONB déjà présent). Adresse/lieu géocodés (lat/lng) optionnels.
+
+## 📋 PLAN PAR PHASES (commit + push après chaque phase)
+
+### P1 — Sauvegarde fonctionnelle ⛔ BLOQUANT  ✅ FAIT
+- [x] Bug : `appData.saveJob` est **undefined** (le hook expose `addJob`/`updateJob`/`deleteJob` mais pas `saveJob`), alors que `App.jsx` et `PlanificateurFinal` l'utilisent comme handler `onSave`/`onSaveJob` → la sauvegarde d'un mandat ne fait rien.
+- [x] Ajouter `saveJob` dans `useAppData` (route add/update selon existence, comme `savePersonnel`) + l'exporter.
+
+### P2 — Renommage + mise en page + condensation (hamburgers) + débordements
+- [ ] Renommer **Job → Mandat** dans l'UI (titres, libellés, boutons) ; n° « M-AAAA-NNN ».
+- [ ] Réorganiser l'en-tête + onglets : barre claire, bascule cartes/hamburger sous 1024px (cohérent avec l'admin), pas de débordement horizontal.
+- [ ] Condenser les fonctions avancées dans des sections repliables / menus (divulgation progressive).
+- [ ] Corriger les débordements du Gantt (`minWidth:800px`, scroll horizontal maîtrisé, mode compact/plein écran).
+- [ ] Validation de sauvegarde renforcée (champs requis clairs + messages).
+
+### P3 — Gantt : cascade, travaux parallèles, priorité (fiabilisation)
+- [ ] Modèle de dépendances complet : types **FS/SS/FF/SF** + **lead/lag**.
+- [ ] Recalcul automatique des dates en cascade (décalage des successeurs).
+- [ ] Travaux parallèles (prédécesseur partagé / SS) lisibles dans le Gantt.
+- [ ] Chemin critique (CPM) recalculé + surbrillance ; priorité visible (couleur).
+- [ ] Création/édition de dépendance par interaction directe (glisser) si faisable.
+
+### P4 — Séparation par rôle (Mandat vs Événement) + interconnexion des modules
+- [ ] Extraire le **formulaire Mandat léger** (coordonnateur+) : identification, dates, ressources, **liste de préparation**, désignation du responsable.
+- [ ] Vue **Événement** (responsable) : Gantt + horaires + équipes + avancement.
+- [ ] Gates de permission (`estCoordonnateur`/`canModify` vs responsable).
+- [ ] **Interconnexion** : lier le mandat aux modules **Clients**, **Projets**, **Inventaire** (préparation matériel), **Personnel** (planner_personnel) ; (optionnel) pont vers **Facturation/Comptabilité**.
+- [ ] **Lien AST** (si le module AST est **débarré/activé** pour le tenant — vérifier l'entitlement/abonnement) : depuis le formulaire de planif, rattacher ou créer une **AST** liée au mandat et **préremplir l'information avant travaux** (lieu, client, équipe/personnel assigné, équipements, dates). Si AST non activé : masquer le lien.
+- [ ] **Documentation de projet en pièces jointes** : joindre documents + **photos** au mandat (plans, devis, fiches techniques, permis…), réutiliser DropZone/FilePreview/carrousel, persistance JSONB `documents`/`photos` (migration 065 déjà en place), accessible des deux niveaux (Mandat et Événement).
+- [ ] **Endroit des travaux + Google Maps** : champ adresse du lieu de travaux avec **géocodage/carte Google Maps** (aperçu + lien itinéraire) à la saisie ; **préremplissage depuis le module Projets** si le projet sélectionné existe et que le tenant a le **module Projets activé** (adresse/lieu, client). Dégradation propre si la clé Maps ou le module est absent (champ texte simple).
+
+### P5 — Nettoyage + polish UX
+- [ ] Supprimer les doublons morts : `components/planner/components/Modals/JobModal.jsx`, `.backup`, `_temp`.
+- [ ] Découper le mégafichier en sous-composants (Form, Gantt, Ressources, Préparation, Horaires) pour la maintenabilité.
+- [ ] Revue d'accessibilité, états de chargement/sauvegarde, retours visuels.
+
+## 🛠️ Règles de travail
+- `npx tsc --noEmit` = 0 erreur + build OK avant chaque push.
+- Commit + push après CHAQUE phase sur `feat/modular-foundation` ET `main`.
+- Messages de commit en ASCII sans accents.
