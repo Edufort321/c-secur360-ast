@@ -14,6 +14,13 @@
 - [ ] **R6 — Liens intermodules manquants** : Inventaire (réservation/décrément stock depuis la préparation), Timesheets (générer feuilles de temps depuis les étapes/affectations), passerelle Facturation (coûts réels → facture projet). (Déjà faits : Clients, Projets, Personnel, Équipements, AST.)
 - [ ] **R7 — Découpage du mégafichier** : extraire GanttTab / ResourcesTab / FilesTab / RecurrenceTab / TeamsTab hors de `JobModal.jsx` (déjà extrait : `AstLinkSection`). Unifier les modales dupliquées (Personnel/Équipement/Congés présentes en double `components/Modals` ET `modules/Resource`).
 - [ ] **R8 — Refonte `PlanificateurFinal.jsx`** : extraire FilterMenu / CalendarGrid (sticky) / AnalyticsSidebar ; responsive tables.
+- [ ] **R9 — Contrôle intelligent heures ↔ personnes ↔ dates + flag « contrôle à faire »** : si date de fin fixée → calcule/enregistre le nb de personnes requis ; le mandat reste « à contrôler » tant que le plan n'est pas ajusté, mais sauvegardable avec le flag. Indicateur + filtre.
+- [ ] **R10 — Dashboard planner (compteurs)** : nombre de jobs, travailleurs actifs, % occupation qui ne se mettent pas à jour (revérifier après migration 100).
+- [ ] **R11 — Nettoyer/optimiser le menu Filtre** de `PlanificateurFinal` : retirer les fonctions gérées ailleurs (paramètres système, thème…).
+- [ ] **R12 — Refonte Dashboard Analytique** (`Analytics/AnalyticsDashboard.jsx`) : aligner la logique sur les champs réellement persistés, refresh temps réel ; KPIs focalisés (mandats actifs, travailleurs actifs, % occupation gauge/bullet, heures vs capacité, taux de complétion) ; **graphiques style TIMELINE/ligne (et non barres)** + heatmap d'utilisation + drill-down. Recharts LineChart/AreaChart.
+
+### ✅ Livré (refonte planner, session 2026-05-31)
+R0 en-tête réordonné · R1 onglets hamburger · R2 partiel (alignement Gantt + Aperçu, anti-débordement) · barre Gantt → menu Actions · tracking % + responsable par tâche · **édition directe des tâches dans l'onglet Gantt** · remplissage auto heures/date fin depuis étapes · champ durée non-écrasé · **persistance corrigée (tenant_id + title=nom)** · **migration 100 complète idempotente**.
 
 ---
 
