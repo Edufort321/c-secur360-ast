@@ -3920,13 +3920,35 @@ export function JobModal({
                                                                                         )}
                                                                                     </div>
 
-                                                                                    {/* Progress bar */}
+                                                                                    {/* Tracking : % complété (éditable) + barre + responsable de la tâche */}
                                                                                     {expandedSections.etapes && (
-                                                                                        <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                                                                            <div
-                                                                                                className="bg-green-500 h-2 rounded-full transition-all"
-                                                                                                style={{ width: `${etape.progress || 0}%` }}
-                                                                                            ></div>
+                                                                                        <div className="flex items-center gap-2 mr-2">
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <input
+                                                                                                    type="number" min="0" max="100" step="5"
+                                                                                                    value={etape.progress || 0}
+                                                                                                    onChange={(e) => updateEtape(globalIndex, 'progress', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                                                    className="w-14 p-1 border rounded text-sm focus:ring-2 focus:ring-green-500"
+                                                                                                    title="% complété"
+                                                                                                />
+                                                                                                <span className="text-xs text-gray-500">%</span>
+                                                                                            </div>
+                                                                                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                                                                                                <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${etape.progress || 0}%` }}></div>
+                                                                                            </div>
+                                                                                            <select
+                                                                                                value={etape.responsableId || ''}
+                                                                                                onChange={(e) => updateEtape(globalIndex, 'responsableId', e.target.value)}
+                                                                                                className="w-32 p-1 border rounded text-xs focus:ring-2 focus:ring-blue-500"
+                                                                                                title="Personne en charge de la tâche"
+                                                                                            >
+                                                                                                <option value="">👤 Responsable…</option>
+                                                                                                {(personnel || []).map(p => (
+                                                                                                    <option key={p.id} value={p.id}>
+                                                                                                        {p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}
+                                                                                                    </option>
+                                                                                                ))}
+                                                                                            </select>
                                                                                         </div>
                                                                                     )}
 
@@ -4800,6 +4822,15 @@ export function JobModal({
                                                                             📊
                                                                         </span>
                                                                     )}
+                                                                    {task.responsableId && !ganttCompactMode && (() => {
+                                                                        const r = (personnel || []).find(p => String(p.id) === String(task.responsableId));
+                                                                        const nm = r ? (r.nom || r.name || [r.prenom, r.nomFamille].filter(Boolean).join(' ') || r.email) : null;
+                                                                        return nm ? (
+                                                                            <span className="ml-2 rounded bg-blue-100 px-1 text-[10px] text-blue-700" title={`Responsable: ${nm}`}>
+                                                                                👤 {String(nm).split(' ')[0]}
+                                                                            </span>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </div>
 
                                                                 {/* Barre de Gantt avec échelle de temps réaliste */}
@@ -4879,15 +4910,24 @@ export function JobModal({
                                                                         const taskColors = getTaskColors(task, hierarchicalTasks);
 
 
+                                                                        const prog = Math.min(100, Math.max(0, Number(task.progress) || 0));
                                                                         return (
                                                                             <div
-                                                                                className={`absolute top-0 h-full rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-60' : ''} ${taskColors.hover}`}
+                                                                                className={`absolute top-0 h-full overflow-hidden rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-60' : ''} ${taskColors.hover}`}
                                                                                 style={{
                                                                                     left: `${startPercent}%`,
                                                                                     width: `${widthPercent}%`
                                                                                 }}
-                                                                                title={`${task.displayName} - ${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h) ${task.isCritical ? '(Critique)' : ''}`}
-                                                                            />
+                                                                                title={`${task.displayName} - ${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h) • ${prog}% complété ${task.isCritical ? '(Critique)' : ''}`}
+                                                                            >
+                                                                                {/* % complété : remplissage plus foncé */}
+                                                                                {prog > 0 && (
+                                                                                    <div className="absolute inset-y-0 left-0 bg-black/35" style={{ width: `${prog}%` }} />
+                                                                                )}
+                                                                                {!ganttCompactMode && widthPercent > 7 && prog > 0 && (
+                                                                                    <span className="absolute inset-0 z-10 flex items-center justify-center text-[9px] font-bold text-white">{prog}%</span>
+                                                                                )}
+                                                                            </div>
                                                                         );
 
                                                                     })()}
