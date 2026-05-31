@@ -46,8 +46,9 @@ const publicRoutes = [
   '/auth/admin',     // Accès super admin principal
   '/auth/client',    // Accès client admin
   '/pricing',
-  '/contact', 
+  '/contact',
   '/about',
+  '/privacy',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/forgot-password',
@@ -76,6 +77,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/logo.png' ||
     pathname === '/manifest.json' ||
     pathname === '/manifest.webmanifest' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
     pathname === '/sw.js' ||
     pathname.startsWith('/.well-known/') ||
     pathname === '/c-secur360-logo.png' ||

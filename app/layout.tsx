@@ -12,10 +12,27 @@ export const viewport = {
   themeColor: '#10b981',
 }
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://csecur360.ca';
+
 export const metadata: Metadata = {
-  title: 'C-Secur360 — Sécurité Industrielle',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'C-Secur360 — Sécurité Industrielle',
+    template: '%s — C-Secur360',
+  },
   description: 'Plateforme SaaS de sécurité industrielle — AST, permis, inspections, conformité provinciale.',
+  applicationName: 'C-Secur360',
   manifest: '/manifest.json',
+  alternates: { canonical: '/' },
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    siteName: 'C-Secur360',
+    title: 'C-Secur360 — Sécurité Industrielle',
+    description: 'Plateforme SaaS de sécurité industrielle — AST, permis, inspections, conformité provinciale.',
+    url: SITE_URL,
+    locale: 'fr_CA',
+  },
 }
 
 import { TwilioProvider } from '../contexts/TwilioContext'

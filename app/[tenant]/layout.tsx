@@ -12,6 +12,8 @@ export function generateMetadata({ params }: { params: { tenant: string } }): Me
   return {
     title: 'CSécur360 - AST',
     description: 'Analyse Sécuritaire de Tâches - Plateforme multi-tenant',
+    // Securite/SEO (#25) : espace tenant prive -> jamais indexe.
+    robots: { index: false, follow: false },
     manifest: `/${params.tenant}/manifest.webmanifest`,
     icons: {
       icon: '/c-secur360-logo.png',
