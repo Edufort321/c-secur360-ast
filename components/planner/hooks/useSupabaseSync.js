@@ -259,6 +259,9 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     const item = {
       ...newItem,
       id: newItem.id || crypto.randomUUID(),
+      // tenant_id OBLIGATOIRE : sans lui l'INSERT echoue (NOT NULL/RLS) et le rechargement
+      // filtre par tenant ne retrouve pas la ligne -> perte des donnees au retour.
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       created_at: newItem.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -270,11 +273,13 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     const result = await syncToSupabase('INSERT', item);
 
     return { success: true, data: item, synced: result.success };
-  }, [table]);
+  }, [table, tenantId]);
 
   const update = useCallback(async (itemId, updates) => {
     const updatedItem = {
       ...updates,
+      // garantit la coherence du tenant sur la ligne mise a jour
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       updated_at: new Date().toISOString()
     };
 
@@ -287,7 +292,7 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     const result = await syncToSupabase('UPDATE', updatedItem, itemId);
 
     return { success: true, synced: result.success };
-  }, [table]);
+  }, [table, tenantId]);
 
   const remove = useCallback(async (itemId) => {
     // 1. Supprimer de localStorage immédiatement
