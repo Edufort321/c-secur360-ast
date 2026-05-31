@@ -21,6 +21,10 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
         body: JSON.stringify({ name, email }),
       });
       const data = await res.json().catch(() => ({ ok: false, status: 'invalid', message: 'Erreur.' }));
+      // Mémorise l'échéance pour le compte à rebours affiché sur l'espace /demo.
+      if (data?.ok && data?.remainingSeconds) {
+        try { localStorage.setItem('demoExpiresAt', String(Date.now() + data.remainingSeconds * 1000)); } catch { /* ignore */ }
+      }
       setResult(data);
     } catch {
       setResult({ ok: false, status: 'invalid', message: fr ? 'Erreur de connexion.' : 'Connection error.' });
