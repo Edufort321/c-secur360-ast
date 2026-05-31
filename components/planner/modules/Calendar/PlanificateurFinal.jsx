@@ -949,87 +949,14 @@ export function PlanificateurFinal({
                                                 </h3>
                                             </div>
 
-                                            {/* Bouton Créer événement */}
-                                            <button
-                                                onClick={() => {
-                                                    const newJob = {
-                                                        id: null,
-                                                        nom: '',
-                                                        dateDebut: new Date().toISOString().split('T')[0],
-                                                        heureDebut: '08:00',
-                                                        heureFin: '17:00',
-                                                        personnel: [],
-                                                        equipements: [],
-                                                        sousTraitants: [],
-                                                        statut: 'planifie',
-                                                        priorite: 'normale'
-                                                    };
-                                                    setSelectedJob(newJob);
-                                                    setShowFilterMenu(false);
-                                                }}
-                                                className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-medium"
-                                            >
-                                                <span className="text-xl">➕</span>
-                                                <span>{t ? t('event.createEvent') : 'Créer un événement'}</span>
-                                            </button>
-
-                                            {/* Section Paramètres système */}
-                                            <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-sm font-medium text-gray-700">⚙️ Paramètres</span>
-                                                </div>
-
-                                                {/* Mode écran */}
-                                                <div className="mb-3">
-                                                    <label className="text-xs text-gray-600 mb-1 block">Mode d'affichage</label>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => setIsMobile(false)}
-                                                            className={`flex-1 px-2 py-1.5 text-xs rounded transition-colors ${
-                                                                !isMobile
-                                                                    ? 'bg-blue-500 text-white'
-                                                                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            🖥️ Bureau
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setIsMobile(true)}
-                                                            className={`flex-1 px-2 py-1.5 text-xs rounded transition-colors ${
-                                                                isMobile
-                                                                    ? 'bg-blue-500 text-white'
-                                                                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                                                            }`}
-                                                        >
-                                                            📱 Mobile
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Thème */}
-                                                <div>
-                                                    <label className="text-xs text-gray-600 mb-1 block">Thème</label>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            className="flex-1 px-2 py-1.5 text-xs rounded bg-blue-500 text-white"
-                                                        >
-                                                            ☀️ Jour
-                                                        </button>
-                                                        <button
-                                                            disabled
-                                                            className="flex-1 px-2 py-1.5 text-xs rounded bg-gray-300 text-gray-500 cursor-not-allowed"
-                                                        >
-                                                            🌙 Nuit
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            {/* (Bouton Créer événement retiré — déjà dans la barre du haut ;
+                                                Paramètres/Thème retirés — gérés dans le header principal) */}
 
                                             {/* Onglets */}
                                             <div className="flex border-b border-gray-200 mb-4">
                                                 {[
                                                     { key: 'type', label: t ? t('filter.type') : 'Type', icon: '🔍' },
-                                                    { key: 'bureau', label: t ? t('filter.office') : 'Bureau', icon: '🏢' },
+                                                    { key: 'bureau', label: 'Site', icon: '🏢' },
                                                     { key: 'poste', label: t ? t('filter.position') : 'Poste', icon: '👔' },
                                                     { key: 'vue', label: t ? t('filter.view') : 'Vue', icon: '👁️' }
                                                 ].map((tab) => (
