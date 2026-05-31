@@ -238,6 +238,39 @@ export function JobModal({
         return formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
     };
 
+    // Somme des heures des tâches FEUILLES (évite de compter les parents auto-calculés deux fois).
+    const getLeafProjectHours = () => {
+        const eta = formData.etapes || [];
+        return eta
+            .filter(e => !eta.some(c => String(c.parentId) === String(e.id)))
+            .reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
+    };
+
+    // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
+    // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
+    const fillScheduleFromEtapes = () => {
+        const total = getLeafProjectHours();
+        if (!total) { addNotification?.('Aucune étape avec durée pour calculer.', 'warning'); return; }
+        setFormData(prev => {
+            const next = { ...prev, heuresPlanifiees: String(Math.round(total * 100) / 100) };
+            if (prev.dateDebut) {
+                const hpd = Math.max(1, (parseFloat(prev.heuresFinJour) - parseFloat(prev.heuresDebutJour)) || 8);
+                const isWork = (dt) => prev.includeWeekendsInDuration || (dt.getDay() !== 0 && dt.getDay() !== 6);
+                let d = new Date(`${prev.dateDebut}T12:00:00`);
+                let remaining = total;
+                let guard = 0;
+                while (!isWork(d) && guard++ < 3650) d.setDate(d.getDate() + 1);
+                while (remaining > hpd && guard++ < 3650) {
+                    remaining -= hpd;
+                    do { d.setDate(d.getDate() + 1); } while (!isWork(d) && guard++ < 3650);
+                }
+                next.dateFin = d.toISOString().slice(0, 10);
+            }
+            return next;
+        });
+        addNotification?.('Heures planifiées et date de fin remplies depuis les étapes.', 'success');
+    };
+
     // Fonctions WBS avancées
     const generateWBSCode = (taskId, tasks) => {
         const task = tasks.find(t => t.id === taskId);
@@ -3589,6 +3622,17 @@ export function JobModal({
                                                     />
                                                     <p className="text-xs text-gray-500 mt-1">Nombre total d'heures à planifier</p>
 
+                                                    {/* Remplir auto depuis les étapes créées (heures + date de fin) */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={fillScheduleFromEtapes}
+                                                        disabled={!formData.etapes?.length}
+                                                        className="mt-2 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
+                                                        title="Remplit les heures planifiées et la date de fin à partir des étapes du projet"
+                                                    >
+                                                        ⤵ Remplir depuis les étapes ({getLeafProjectHours()}h)
+                                                    </button>
+
                                                     {/* Checkbox pour inclure les fins de semaine */}
                                                     <div className="mt-2">
                                                         <label className="flex items-center gap-2 text-sm">
@@ -3898,16 +3942,24 @@ export function JobModal({
                                                                                         <input
                                                                                             type="number"
                                                                                             step="0.25"
-                                                                                            min="0.25"
-                                                                                            value={etape.duration || 1}
-                                                                                            onChange={(e) => updateEtape(globalIndex, 'duration', parseFloat(e.target.value))}
+                                                                                            min="0"
+                                                                                            value={(etape.duration === '' || etape.duration === undefined || etape.duration === null) ? '' : etape.duration}
+                                                                                            onFocus={(e) => e.target.select()}
+                                                                                            onChange={(e) => {
+                                                                                                const v = e.target.value;
+                                                                                                updateEtape(globalIndex, 'duration', v === '' ? '' : (parseFloat(v) || 0));
+                                                                                            }}
+                                                                                            onBlur={(e) => {
+                                                                                                const n = parseFloat(e.target.value);
+                                                                                                if (e.target.value === '' || isNaN(n) || n <= 0) updateEtape(globalIndex, 'duration', 1);
+                                                                                            }}
                                                                                             readOnly={etape.autoCalculated}
                                                                                             className={`w-16 p-1 border rounded text-sm ${
                                                                                                 etape.autoCalculated
                                                                                                     ? 'bg-blue-50 border-blue-300 text-blue-700 cursor-default'
                                                                                                     : 'focus:ring-2 focus:ring-blue-500'
                                                                                             }`}
-                                                                                            title={etape.autoCalculated ? "Durée calculée automatiquement depuis les sous-tâches" : "Durée en heures"}
+                                                                                            title={etape.autoCalculated ? "Durée calculée automatiquement depuis les sous-tâches" : "Durée en heures (clic = tout sélectionner)"}
                                                                                         />
                                                                                         <span className="text-xs text-gray-500">h</span>
                                                                                         {etape.autoCalculated && (
