@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashPassword } from '@/lib/auth';
+import { requireAdmin } from '@/lib/apiAuth';
 
 // GET /api/admin/users?tenant=cerdia  → liste des profils du tenant
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const tenant = new URL(req.url).searchParams.get('tenant');
   if (!tenant) return NextResponse.json({ error: 'tenant requis' }, { status: 400 });
   const { data, error } = await supabaseAdmin
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/users  { tenant, email, name, role, password } → crée un profil
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const { tenant, email, name, role, password } = await req.json();
     if (!tenant || !email || !password) return NextResponse.json({ error: 'tenant, email et mot de passe requis' }, { status: 400 });
@@ -39,6 +42,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/users  { id, name, email, role, is_active, password? } → modifie un profil
 export async function PATCH(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const { id, name, email, role, is_active, password } = await req.json();
     if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
@@ -58,6 +62,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/users?id=... → supprime un profil
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const id = new URL(req.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });

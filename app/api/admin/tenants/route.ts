@@ -2,15 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashPassword } from '@/lib/auth';
-
-const SYNC_SECRET = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge'
+import { requireAdmin } from '@/lib/apiAuth';
 
 // GET → liste des tenants + leur abonnement (pour le panneau super-admin)
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const { data, error } = await supabaseAdmin.from('tenants').select('*');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { data: subs } = await supabaseAdmin
@@ -48,6 +44,7 @@ export async function GET(req: NextRequest) {
 // POST → crée un tenant (tenants + tenant_modules + admin du tenant)
 // body: { subdomain, companyName, adminEmail?, adminPassword?, modules?: string[] }
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const { subdomain, companyName, adminEmail, adminPassword, modules, billable, vendor_id } = await req.json();
     if (!subdomain || !companyName) {
@@ -111,8 +108,8 @@ export async function POST(req: NextRequest) {
 
     // Sync vers CERDIA Commerce (non-bloquant — echec silencieux)
     const cerdiaUrl = process.env.CERDIA_COMMERCE_URL;
-    const syncSecret = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge';
-    if (cerdiaUrl) {
+    const syncSecret = process.env.CSECUR360_SYNC_SECRET; // fail-secure : pas de fallback en dur
+    if (cerdiaUrl && syncSecret) {
       fetch(`${cerdiaUrl}/api/commerce/csecur360`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${syncSecret}` },
@@ -138,6 +135,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/admin/tenants?id=xxx → supprime un tenant (sauf cerdia) + données liées
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
   if (id === 'cerdia') return NextResponse.json({ error: 'CERDIA ne peut pas être supprimé' }, { status: 400 });

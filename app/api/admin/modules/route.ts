@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
-const SYNC_SECRET = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge'
+import { requireAdmin } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
 
   const [{ data: mods, error }, { data: tm }, { data: subs }] = await Promise.all([
     supabaseAdmin.from('modules').select('*').order('sort_order'),
@@ -48,10 +44,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const { key, monthly_price, is_active, name_fr, name_en } = await req.json()
   if (!key) return NextResponse.json({ error: 'key requis' }, { status: 400 })
   const updates: any = { updated_at: new Date().toISOString() }

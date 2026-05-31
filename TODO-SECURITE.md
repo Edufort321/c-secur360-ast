@@ -8,11 +8,13 @@
 - [ ] **#9** — ~78 policies `USING (true)` sur tables sensibles (`soumissions`, `catalogue_taux`, `gl_*`, `commerce_*`, `planner_*`, `clients`, `timesheets`, HR). RLS activée mais **zéro protection** → tout tenant lit/modifie les autres. → Remplacer par `USING (tenant_id = <tenant courant>)`. Migrations : 085:153, 086:73, 087:51, 090:84, etc. ⚠️ Nécessite un **mécanisme de tenant courant** en RLS (claim JWT / `current_setting`) — design requis (ne pas casser le filtrage applicatif existant).
 - [ ] **#10** — DEFAULT tenant dangereux : 016_inventory (`DEFAULT 'cerdia'`), 026_confined_space:14 (`DEFAULT ''`). → Retirer les DEFAULT (insert sans tenant doit ÉCHOUER, pas contaminer). Réf. correctif CERDIA migration 208.
 
-### Authentification routes API (BOLA — OWASP #1)
-- [ ] **#1** — `app/api/admin/users/route.ts` (GET/POST/PATCH/DELETE) : aucune auth → n'importe qui CRUD des comptes admin. → Vérif `super_admin` en tête de chaque handler.
-- [ ] **#2** — `app/api/admin/tenants/route.ts:6` : secret hardcodé `'csecur360-cerdia-bridge'` en fallback. → Fail-secure : `if (!process.env.CSECUR360_SYNC_SECRET) return 401`, jamais de fallback.
-- [ ] **#3** — `app/api/admin/landing-slides/route.ts` : CRUD sans auth → défaçage du site public. → Auth super_admin.
-- [ ] **#4** — `app/api/admin/modules/route.ts:4` + `app/api/admin/vendors/route.ts:4` : même secret hardcodé. → Fail-secure.
+### Authentification routes API (BOLA — OWASP #1) — ✅ CORRIGÉ
+Helper partagé **`lib/apiAuth.ts`** → `requireAdmin(req)` : cookie httpOnly du dashboard (jeton dérivé de `ADMIN_DASHBOARD_PASSWORD`) **OU** session `super_admin` **OU** secret de sync (`CSECUR360_SYNC_SECRET`, fail-secure). Appliqué à tous les handlers.
+- [x] **#1** — `users` (GET/POST/PATCH/DELETE) → `requireAdmin`.
+- [x] **#2** — `tenants` : secret hardcodé retiré (fail-secure), `requireAdmin` sur GET/POST/DELETE, sync sortant seulement si secret présent.
+- [x] **#3** — `landing-slides` (GET/POST/PUT/DELETE) → `requireAdmin` (la page publique lit la table directement, pas cette route).
+- [x] **#4** — `modules` + `vendors` : secret hardcodé retiré, `requireAdmin` sur tous les handlers.
+> Le dashboard super-admin pose un **cookie httpOnly** via `/api/admin/dashboard-auth` (plus de gate sessionStorage falsifiable comme seule barrière). ⚠️ Requiert `ADMIN_DASHBOARD_PASSWORD` en env.
 
 ### Service role / secrets
 - [x] **#5** — `lib/supabaseAdmin.ts` : **CORRIGÉ** — plus de fallback anon en **runtime production** (throw si service_role absent) ; fallback toléré en dev/build avec avertissement.

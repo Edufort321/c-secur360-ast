@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
-const SYNC_SECRET = process.env.CSECUR360_SYNC_SECRET || 'csecur360-cerdia-bridge'
+import { requireAdmin } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
-  if (auth && auth !== `Bearer ${SYNC_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const { data, error } = await supabaseAdmin
     .from('vendors')
     .select('*')
@@ -17,6 +13,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const { name, email, phone, commission_rate, notes } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: 'name requis' }, { status: 400 });
   const { data, error } = await supabaseAdmin.from('vendors').insert({
@@ -31,6 +28,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const { id, ...updates } = await req.json();
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
   const allowed = ['name', 'email', 'phone', 'commission_rate', 'is_active', 'notes'];
@@ -41,6 +39,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
   const { error } = await supabaseAdmin.from('vendors').update({ is_active: false }).eq('id', id);
