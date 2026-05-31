@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { computeSubState } from '@/lib/subscription'
 import { AssistantWidget } from '@/components/AssistantWidget'
 import { DemoCountdownBanner } from '@/components/DemoCountdownBanner'
+import { BackButton } from '@/components/BackButton'
 
 // Métadonnées tenant-aware : le manifest pointe vers /{tenant}/manifest.webmanifest
 // (start_url = /{tenant}/login) -> le PWA installe ici s'ouvre sur l'auth du tenant.
@@ -73,6 +74,7 @@ export default async function TenantLayout({
     <SiteProvider tenant={params.tenant}>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <DemoCountdownBanner />
+        <BackButton />
         {children}
         <AssistantWidget />
       </div>

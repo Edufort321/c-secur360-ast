@@ -8,7 +8,7 @@ import { PublicChatWidget } from '@/components/PublicChatWidget'
 import { DemoStartButton } from '@/components/DemoStartButton'
 import {
   Shield, Users, HardHat, Calendar, FileCheck, AlertTriangle,
-  AlertCircle, Package, Wrench, ClipboardCheck, Clock, Truck,
+  AlertCircle, Package, ClipboardCheck, Clock, Truck,
   CheckSquare, BarChart3, ChevronLeft, ChevronRight, Lock,
   CheckCircle, Smartphone, Globe, ArrowRight, Phone, Mail,
   Building2, Star, Menu, X
@@ -60,7 +60,6 @@ const MODULES_FR = [
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents',              desc: 'Rapport d\'accident, enquete, actions correctives et suivi reglementaire.' },
   { icon: AlertCircle,    key: 'presque',     name: 'Presque-accidents',      desc: 'Declaration et suivi des quasi-accidents pour prevention proactive.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventaire',             desc: 'Gestion du stock, equipements de protection individuelle et consommables.' },
-  { icon: Wrench,         key: 'equip',       name: 'Fiches equipements',     desc: 'Fiches techniques, historique de maintenance et certification des equipements.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Listes de verification, inspections periodiques et rapports d\'etat.' },
   { icon: Clock,          key: 'temps',       name: 'Feuilles de temps',      desc: 'Saisie des heures, approbation superviseur et export comptable.' },
   { icon: Truck,          key: 'logbook',     name: 'Logbook vehicules',      desc: 'Carnet de bord numerique, kilometrage, incidents et entretien de flotte.' },
@@ -76,7 +75,6 @@ const MODULES_EN = [
   { icon: AlertTriangle,  key: 'accidents',   name: 'Accidents',              desc: 'Accident reports, investigations, corrective actions and regulatory tracking.' },
   { icon: AlertCircle,    key: 'presque',     name: 'Near-Misses',            desc: 'Near-miss reporting and tracking for proactive hazard prevention.' },
   { icon: Package,        key: 'inventaire',  name: 'Inventory',              desc: 'Stock management, personal protective equipment and consumables.' },
-  { icon: Wrench,         key: 'equip',       name: 'Equipment Records',      desc: 'Technical sheets, maintenance history and equipment certification.' },
   { icon: ClipboardCheck, key: 'inspect',     name: 'Inspections',            desc: 'Checklists, scheduled inspections and condition reports.' },
   { icon: Clock,          key: 'temps',       name: 'Timesheets',             desc: 'Time entry, supervisor approval and accounting export.' },
   { icon: Truck,          key: 'logbook',     name: 'Vehicle Logbook',        desc: 'Digital logbook, mileage, incidents and fleet maintenance tracking.' },
@@ -86,7 +84,7 @@ const MODULES_EN = [
 // Correspondance clé d'affichage (statique) -> clé en base (table modules). Sans ça, le prix ne s'affiche pas.
 const DB_MODULE_KEY: Record<string, string> = {
   projets: 'projects', presque: 'near_miss', inventaire: 'inventory',
-  equip: 'equipment', inspect: 'inspections', temps: 'timesheets',
+  inspect: 'inspections', temps: 'timesheets',
 };
 
 // Présentation marketing détaillée par module (carte au clic). Haut niveau, sans détail technique.
@@ -123,13 +121,9 @@ const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }
     fr: { tagline: 'Maîtrisez stock, EPI et consommables, du dépôt au chantier.', points: ['Gestion du stock, des EPI et des consommables', 'Réapprovisionnement et seuils', 'Relié à la préparation de chantier du planificateur', 'Suivi par site et par projet', 'Identification par QR'] },
     en: { tagline: 'Master stock, PPE and consumables, from depot to jobsite.', points: ['Stock, PPE and consumables management', 'Restocking and thresholds', 'Linked to planner jobsite preparation', 'Per-site and per-project tracking', 'QR identification'] },
   },
-  equip: {
-    fr: { tagline: 'Chaque équipement, son dossier complet et sa conformité à jour.', points: ['Fiches techniques et certifications', 'Historique d\'entretien et de maintenance', 'Inspections périodiques reliées', 'Photos et documents', 'Identification et accès par QR'] },
-    en: { tagline: 'Every asset, a complete record with up-to-date compliance.', points: ['Technical sheets and certifications', 'Service and maintenance history', 'Linked periodic inspections', 'Photos and documents', 'QR identification and access'] },
-  },
   inspect: {
-    fr: { tagline: 'Des inspections rigoureuses, simples à exécuter même sur le terrain.', points: ['Listes de vérification personnalisables', 'Inspections périodiques et planifiées', 'Rapports d\'état avec photos', 'Création par QR depuis l\'équipement', 'Conformité documentée et historisée'] },
-    en: { tagline: 'Rigorous inspections, simple to run even in the field.', points: ['Customizable checklists', 'Periodic and scheduled inspections', 'Condition reports with photos', 'QR creation from the equipment', 'Documented, historized compliance'] },
+    fr: { tagline: 'Le dossier complet de chaque équipement et ses inspections, simples à exécuter même sur le terrain.', points: ['Fiches techniques, certifications et historique d\'entretien', 'Listes de vérification personnalisables', 'Inspections périodiques et planifiées avec rappels', 'Rapports d\'état avec photos et documents', 'Identification, création et accès par QR', 'Conformité documentée et historisée'] },
+    en: { tagline: 'Each asset\'s full record and its inspections, simple to run even in the field.', points: ['Technical sheets, certifications and service history', 'Customizable checklists', 'Periodic and scheduled inspections with reminders', 'Condition reports with photos and documents', 'QR identification, creation and access', 'Documented, historized compliance'] },
   },
   temps: {
     fr: { tagline: 'Les heures, de la saisie terrain jusqu\'à la paie, sans ressaisie.', points: ['Saisie des heures par période', 'Approbation par le superviseur', 'Avantages, déductions véhicule et commissions', 'Alimente la paie et la comptabilité', 'Export comptable'] },

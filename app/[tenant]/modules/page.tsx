@@ -14,7 +14,7 @@ import { useEntitlements } from '@/lib/entitlements';
 import { supabase } from '@/lib/supabase';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
-  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'equipment', 'inspections', 'timesheets', 'logbook', 'todo'],
+  cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'timesheets', 'logbook', 'todo'],
 };
 
 const money = (n: number) => `${Math.round(n).toLocaleString('fr-CA')} $`;

@@ -7,6 +7,6 @@ INSERT INTO tenant_modules (tenant_id, module_key, enabled, source)
 SELECT 'demo', k, true, 'seed'
 FROM (VALUES
   ('admin'),('projects'),('ast'),('permits'),('accidents'),('near_miss'),
-  ('planner'),('inventory'),('equipment'),('inspections'),('timesheets'),('logbook'),('todo')
+  ('planner'),('inventory'),('inspections'),('timesheets'),('logbook'),('todo')
 ) AS m(k)
 ON CONFLICT (tenant_id, module_key) DO UPDATE SET enabled = true;
