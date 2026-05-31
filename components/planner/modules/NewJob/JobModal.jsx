@@ -581,7 +581,6 @@ export function JobModal({
     const onUpdateResourceSchedule = (resourceType, resourceId, scheduleData) => {
         const resourceKey = `${resourceType}_${resourceId}`;
 
-        console.log('🕐 Mise à jour horaire:', { resourceKey, scheduleData });
 
         setFormData(prev => {
             const newData = {
@@ -597,7 +596,6 @@ export function JobModal({
                 }
             };
 
-            console.log('📋 Nouveaux horairesIndividuels:', newData.horairesIndividuels);
             return newData;
         });
 
@@ -1064,11 +1062,9 @@ export function JobModal({
         let calculatedStartHours = 0;
         let calculatedEndHours = taskDuration;
 
-        console.log(`📅 CALC - Calcul pour "${task.text}" (durée: ${taskDuration}h)`);
 
         // 1. Vérifier les dépendances explicites
         if (task.dependencies && task.dependencies.length > 0) {
-            console.log(`📎 DEPS - ${task.dependencies.length} dépendance(s) trouvée(s)`);
 
             task.dependencies.forEach(dep => {
                 // Comparaison robuste : les ids peuvent etre nombre (addEtape) ou chaine (select DOM)
@@ -1081,19 +1077,15 @@ export function JobModal({
                     switch (dep.type || 'FS') {
                         case 'FS': // Fin → Début (défaut)
                             calculatedStartHours = Math.max(calculatedStartHours, depEndHours + lag);
-                            console.log(`🔗 FS - "${task.text}" commence après fin de "${depTask.text}" à ${depEndHours + lag}h`);
                             break;
                         case 'SS': // Début → Début
                             calculatedStartHours = Math.max(calculatedStartHours, depStartHours + lag);
-                            console.log(`🔗 SS - "${task.text}" commence avec "${depTask.text}" à ${depStartHours + lag}h`);
                             break;
                         case 'FF': // Fin → Fin
                             calculatedStartHours = Math.max(calculatedStartHours, depEndHours - taskDuration + lag);
-                            console.log(`🔗 FF - "${task.text}" finit avec "${depTask.text}" à ${depEndHours + lag}h`);
                             break;
                         case 'SF': // Début → Fin (rare)
                             calculatedStartHours = Math.max(calculatedStartHours, depStartHours - taskDuration + lag);
-                            console.log(`🔗 SF - "${task.text}" finit quand "${depTask.text}" commence`);
                             break;
                     }
                 }
@@ -1108,7 +1100,6 @@ export function JobModal({
                     (t.calculatedStart.getTime() - projectStart.getTime()) / (1000 * 60 * 60)
                 ));
                 calculatedStartHours = firstParallelStart;
-                console.log(`🔄 PARALLEL - "${task.text}" démarre en parallèle à ${calculatedStartHours}h`);
             }
         }
         // 3. Succession séquentielle par défaut (cas par défaut)
@@ -1119,17 +1110,14 @@ export function JobModal({
                 if (siblingTasks.length > 0) {
                     const lastSibling = siblingTasks[siblingTasks.length - 1];
                     calculatedStartHours = Math.max(calculatedStartHours, lastSibling.endHours || 0);
-                    console.log(`➡️  SUB-SEQ - "${task.text}" suit sa sous-tâche précédente "${lastSibling.text}" à ${calculatedStartHours}h`);
                 } else {
                     // Première sous-tâche : hérite de la position de son parent
                     const parent = processedTasks.find(t => t.id === task.parentId);
                     if (parent) {
                         calculatedStartHours = Math.max(calculatedStartHours, parent.startHours || 0);
-                        console.log(`🔢 FIRST-SUB - "${task.text}" première sous-tâche hérite du parent à ${calculatedStartHours}h`);
                     } else {
                         // Parent pas encore calculé, on restera à 0 pour l'instant
                         calculatedStartHours = 0;
-                        console.log(`⏳ FIRST-SUB - "${task.text}" parent pas encore calculé, démarre à ${calculatedStartHours}h`);
                     }
                 }
             } else {
@@ -1138,7 +1126,6 @@ export function JobModal({
                 if (parentTasks.length > 0) {
                     const lastParent = parentTasks[parentTasks.length - 1];
                     calculatedStartHours = Math.max(calculatedStartHours, lastParent.endHours || 0);
-                    console.log(`➡️  PARENT-SEQ - "${task.text}" suit le parent précédent "${lastParent.text}" à ${calculatedStartHours}h`);
                 }
             }
         }
@@ -1148,7 +1135,6 @@ export function JobModal({
         const calculatedStart = new Date(projectStart.getTime() + (calculatedStartHours * 60 * 60 * 1000));
         const calculatedEnd = new Date(projectStart.getTime() + (calculatedEndHours * 60 * 60 * 1000));
 
-        console.log(`✅ FINAL - "${task.text}": ${calculatedStartHours}h → ${calculatedEndHours}h`);
 
         return {
             calculatedStart,
@@ -1304,14 +1290,12 @@ export function JobModal({
                     updatedParent.dateDebut = updatedParent.calculatedStart.toISOString();
                     updatedParent.dateFin = updatedParent.calculatedEnd.toISOString();
 
-                    console.log(`👨‍👩‍👧‍👦 PARENT - "${parentTask.text}": ${earliestStartHours}h → ${latestEndHours}h (durée: ${updatedParent.duration}h)`);
 
                     // Ajuster les positions des enfants par rapport au parent
                     const parentStartHours = updatedParent.startHours;
                     children.forEach(child => {
                         const childTask = taskMap.get(child.id);
                         const relativeStart = childTask.startHours - parentStartHours;
-                        console.log(`🔧 ADJUST - Enfant "${child.text}": ${childTask.startHours}h → relatif au parent: +${relativeStart}h`);
                     });
                 }
             });
@@ -1326,9 +1310,6 @@ export function JobModal({
             return [];
         }
 
-        console.log('🚀 GANTT - Génération des données Gantt avec dépendances MS Project');
-        console.log('📋 GANTT - Étapes reçues:', formData.etapes.length, formData.etapes);
-        console.log('🔍 GANTT - Structure des parentId:', formData.etapes.map(e => ({ id: e.id, parentId: e.parentId, name: e.name })));
         const projectStart = new Date(formData.dateDebut || new Date());
 
         // 1. Préparer les tâches avec leur structure hiérarchique
@@ -1384,23 +1365,19 @@ export function JobModal({
             };
         });
 
-        console.log('🔧 GANTT - Tâches normalisées:', taskList.map(t => ({ id: t.id, parentId: t.parentId, name: t.name })));
 
         // 2. Créer un parcours hiérarchique en profondeur (pré-ordre)
         const createHierarchicalOrder = (tasks, parentId = null, currentOrder = []) => {
-            console.log(`🔍 createHierarchicalOrder - Recherche enfants de parentId:`, parentId);
 
             // Trouver les enfants directs du parent actuel
             // Les parentId sont déjà normalisés (null pour les racines)
             const children = tasks
                 .filter(task => {
                     const isMatch = task.parentId === parentId;
-                    console.log(`  - Tâche ${task.id} (${task.name}): parentId="${task.parentId}" === "${parentId}" => ${isMatch}`);
                     return isMatch;
                 })
                 .sort((a, b) => (a.order || 0) - (b.order || 0)); // Trier par ordre utilisateur
 
-            console.log(`✅ Trouvé ${children.length} enfants pour parentId=${parentId}`);
 
             children.forEach(child => {
                 // Ajouter le parent d'abord
@@ -1413,7 +1390,6 @@ export function JobModal({
         };
 
         const sortedTasks = createHierarchicalOrder(taskList);
-        console.log('📊 GANTT - Tâches après tri hiérarchique:', sortedTasks.length);
 
         // 3. Calculer les dates pour chaque tâche (ordre de dépendance)
         const processedTasks = [];
@@ -1436,7 +1412,6 @@ export function JobModal({
         // 4. Mise à jour des tâches parent (propagation hiérarchique)
         const finalTasks = updateParentTasks(processedTasks);
 
-        console.log('✅ GANTT - Génération terminée:', finalTasks.length, 'tâches');
         return finalTasks;
     };
 
@@ -2463,17 +2438,12 @@ export function JobModal({
 
     // ============== P2-2: GÉNÉRATION ÉCHELLE TEMPS GANTT ==============
     const generateTimeScale = (viewMode = null) => {
-        console.log('🐛 DEBUG generateTimeScale called with viewMode:', viewMode);
-        console.log('🐛 DEBUG formData.dateDebut:', formData.dateDebut);
-        console.log('🐛 DEBUG formData.ganttViewMode:', formData.ganttViewMode);
 
         if (!formData.dateDebut) return [];
 
         // **FORCER LA VUE AUTOMATIQUE** pour corriger le problème
         const autoViewMode = getDefaultViewMode();
         const currentViewMode = viewMode || autoViewMode;
-        console.log('🐛 DEBUG auto view mode:', autoViewMode);
-        console.log('🐛 DEBUG currentViewMode selected:', currentViewMode);
 
         const startDate = new Date(formData.dateDebut);
         const scale = [];
@@ -2481,7 +2451,6 @@ export function JobModal({
         switch (currentViewMode) {
             case '6h':
                 // Vue 6 heures fixe - toujours 6 cellules d'1h chacune
-                console.log('🐛 DEBUG - Generating 6h fixed view');
                 for (let hour = 0; hour < 6; hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
@@ -2499,7 +2468,6 @@ export function JobModal({
 
             case '12h':
                 // Vue 12 heures fixe - toujours 12 cellules d'1h chacune
-                console.log('🐛 DEBUG - Generating 12h fixed view');
                 for (let hour = 0; hour < 12; hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
@@ -2517,7 +2485,6 @@ export function JobModal({
 
             case '24h':
                 // Vue 24 heures fixe - toujours 24 cellules d'1h chacune
-                console.log('🐛 DEBUG - Generating 24h fixed view');
                 for (let hour = 0; hour < 24; hour++) {
                     const currentTime = new Date(startDate.getTime() + (hour * 60 * 60 * 1000));
                     const timeLabel = currentTime.toLocaleTimeString('fr-FR', {
@@ -2537,7 +2504,6 @@ export function JobModal({
                 // Vue journalière adaptative selon la durée du projet
                 const totalTaskHours = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
                 const totalDays = Math.max(1, Math.ceil(totalTaskHours / 24));
-                console.log('🐛 DEBUG - Generating day view with totalDays:', totalDays);
                 for (let day = 0; day < totalDays; day++) {
                     const currentDate = new Date(startDate.getTime() + (day * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2556,7 +2522,6 @@ export function JobModal({
                 // Vue hebdomadaire adaptative selon la durée du projet
                 const totalTaskHoursWeek = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
                 const totalWeeks = Math.max(1, Math.ceil(totalTaskHoursWeek / (7 * 24)));
-                console.log('🐛 DEBUG - Generating week view with totalWeeks:', totalWeeks);
                 for (let week = 0; week < totalWeeks; week++) {
                     const weekStart = new Date(startDate.getTime() + (week * 7 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2576,7 +2541,6 @@ export function JobModal({
                 // Vue mensuelle adaptative selon la durée du projet
                 const totalTaskHoursMonth = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
                 const totalMonths = Math.max(1, Math.ceil(totalTaskHoursMonth / (30 * 24)));
-                console.log('🐛 DEBUG - Generating month view with totalMonths:', totalMonths);
                 for (let month = 0; month < totalMonths; month++) {
                     const monthStart = new Date(startDate.getTime() + (month * 30 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2595,7 +2559,6 @@ export function JobModal({
                 // Vue annuelle adaptative selon la durée du projet
                 const totalTaskHoursYear = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
                 const totalYears = Math.max(1, Math.ceil(totalTaskHoursYear / (365 * 24)));
-                console.log('🐛 DEBUG - Generating year view with totalYears:', totalYears);
                 for (let year = 0; year < totalYears; year++) {
                     const yearStart = new Date(startDate.getTime() + (year * 365 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2642,7 +2605,6 @@ export function JobModal({
                 // Largeur proportionnelle (en % de la timeline)
                 const widthPercent = (taskDurationHours / totalHours) * 100;
 
-                console.log(`🎯 GANTT - Tâche "${task.text}": ${taskStartHours}h→${taskStartHours + taskDurationHours}h (${taskDurationHours}h) = ${startPercent.toFixed(1)}%→${widthPercent.toFixed(1)}%`);
 
                 return {
                     startIndex: startPercent,
@@ -4235,7 +4197,6 @@ export function JobModal({
 
                                                                                                     const taskColors = getTaskColors(task, hierarchicalTasks);
 
-                                                                                                    console.log(`🎯 APERÇU [${currentViewMode}] - "${task.text}": ${taskStartHours}h→${taskStartHours + taskDurationHours}h (${startPercent.toFixed(1)}% → ${(startPercent + widthPercent).toFixed(1)}%) [Vue: ${totalViewHours}h]`);
 
                                                                                                     return (
                                                                                                         <div
@@ -4837,10 +4798,8 @@ export function JobModal({
                                                 <p>Ajoutez des étapes au projet pour voir le diagramme de Gantt</p>
                                             </div>
                                         ) : (() => {
-                                            console.log(`🔍 DEBUG GANTT - Mode plein écran: ${ganttFullscreen}, Nombre d'étapes: ${formData.etapes.length}`, formData.etapes);
                                             const hierarchicalTasks = generateHierarchicalGanttData();
                                             const dependencyArrows = renderDependencyArrows(hierarchicalTasks);
-                                            console.log(`🔍 DEBUG GANTT - Tâches générées:`, hierarchicalTasks);
 
                                             return (
                                                 <div className="space-y-1">
@@ -5050,7 +5009,6 @@ export function JobModal({
 
                                                                         const taskColors = getTaskColors(task, hierarchicalTasks);
 
-                                                                        console.log(`🎯 RENDER [${currentViewMode}] - "${task.text}": ${taskStartHours}h→${taskStartHours + taskDurationHours}h (${startPercent.toFixed(1)}% → ${(startPercent + widthPercent).toFixed(1)}%) [Vue: ${totalViewHours}h]`);
 
                                                                         return (
                                                                             <div
