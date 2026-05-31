@@ -388,7 +388,7 @@ export default function LandingPage() {
               value={clientSubdomain}
               onChange={e => setClientSubdomain(e.target.value)}
               placeholder={fr ? 'ex: construction-abc' : 'ex: construction-abc'}
-              className="flex-1 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
+              className="flex-1 min-w-0 bg-[#0B1728] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60"
             />
             <button type="submit"
               className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap">
@@ -763,13 +763,18 @@ export default function LandingPage() {
               : '© 2025 C-Secur360. Industrial safety SaaS platform. All rights reserved.'}
           </p>
           <div className="flex items-center gap-4">
-            <a href="mailto:info@c-secur360.ca" className="text-slate-400 hover:text-orange-400 transition">
+            <a href="mailto:eric.dufort@cerdia.ai" className="text-slate-400 hover:text-orange-400 transition">
               <Mail size={16} />
             </a>
             <Link href="/auth/admin" className="text-slate-400 hover:text-orange-400 transition">
               <Lock size={16} />
             </Link>
           </div>
+        </div>
+        {/* Propulsé par CERDIA */}
+        <div className="max-w-7xl mx-auto mt-6 flex items-center justify-center gap-2 border-t border-white/5 pt-5">
+          <span className="text-slate-500 text-xs">{fr ? 'Propulsé par' : 'Powered by'}</span>
+          <Image src="/logo-cerdia3.png" alt="CERDIA" width={120} height={28} className="h-6 w-auto opacity-90" />
         </div>
       </footer>
       <PublicChatWidget />

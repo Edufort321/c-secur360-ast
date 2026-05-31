@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!checkPublicQuota(ip).ok) return NextResponse.json({ reply: REPLY_QUOTA });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return NextResponse.json({ reply: REPLY_FALLBACK });
+  if (!apiKey) { console.warn('[public-chat] ANTHROPIC_API_KEY absente'); return NextResponse.json({ reply: REPLY_FALLBACK }); }
 
   let messages: any[] = [];
   try { ({ messages } = await req.json()); } catch { /* corps invalide */ }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     const client = new Anthropic({ apiKey });
     const resp = await client.messages.create({
-      model: 'claude-haiku-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 350,
       // Prompt caching sur le system prompt (réduit le coût des tokens d'entrée répétés).
       system: [{ type: 'text', text: PUBLIC_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
       .join('\n')
       .trim();
     return NextResponse.json({ reply: reply || REPLY_FALLBACK });
-  } catch {
+  } catch (e) {
+    console.error('[public-chat] erreur Anthropic:', e);
     return NextResponse.json({ reply: REPLY_FALLBACK });
   }
 }

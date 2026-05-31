@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 // Widget du chatbot PUBLIC (marketing). Bouton flottant + panneau. Anonyme.
 // Ouverture auto une fois par session. CTA démo + contact. Disclaimer. Appelle /api/assistant/public-chat.
-const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'info@csecur360.ca';
+const CONTACT = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'eric.dufort@cerdia.ai';
 const SUGGESTIONS = ["Qu'est-ce que C-Secur360 ?", 'Quels modules sont offerts ?', 'Comment voir une démo ?'];
 
 type Msg = { role: 'user' | 'assistant'; content: string };
