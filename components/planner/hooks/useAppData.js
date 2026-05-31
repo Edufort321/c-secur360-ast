@@ -132,11 +132,14 @@ export function useAppData(tenant = null) {
             ...job,
             id: job.id || crypto.randomUUID(),
             tenant_id: job.tenant_id || tenant,
+            // planner_jobs.title est NOT NULL (migration 020) alors que le formulaire utilise `nom`.
+            // Sans ce mapping, chaque INSERT echoue (contrainte NOT NULL) -> mandat non persiste.
+            title: job.title || job.nom || job.numeroJob || 'Mandat',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
         return await addJobSync(newJob);
-    }, [addJobSync]);
+    }, [addJobSync, tenant]);
 
     const updateJob = useCallback(async (jobId, updates) => {
         const updatedJob = {
