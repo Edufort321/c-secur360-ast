@@ -25,7 +25,7 @@ Helper partagé **`lib/apiAuth.ts`** → `requireAdmin(req)` : cookie httpOnly d
 ## 🟠 CRITIQUE — avant prod
 - [x] **#11** — `lib/soumissions.ts` : `delete().eq('soumission_id', id)` sans tenant_id → suppression cross-tenant. → `.eq('tenant_id', tenant)` **CORRIGÉ**.
 - [x] **#12** — `lib/invoicing.ts:100` : delete `commerce_invoice_items` sans tenant. → `.eq('tenant_id', tenant)` **CORRIGÉ**.
-- [ ] **#13** — `create-checkout-session` : accepte un `customerId` arbitraire. → Vérifier caller = customer ou super_admin. _DIFFÉRÉ : nécessite le mapping client Stripe ↔ tenant (travail dédié)._
+- [x] **#13** — `create-checkout-session` : **CORRIGÉ** — vérification de propriété : accès admin (super_admin / cookie dashboard / secret sync) OU utilisateur connecté dont le courriel = courriel du client. Sinon 403.
 - [x] **#14** — `ast/route.ts` : **CORRIGÉ** — `userId` vient de la **session** (`getSessionUser`), jamais du client ; vide = création QR publique anonyme (flux intentionnel).
 - [x] **#15** — `admin/upload` : **CORRIGÉ** — `requireAdmin` + allowlist MIME (images/pdf) + taille max 10 Mo + chemin assaini (anti path-traversal) + bucket assaini.
 - [ ] **#16** — `chat/assistant` : IA sans rate-limit. → _Sera traité avec la refonte chatbots (`TODO-CHATBOTS-IA.md` #21/#22, auth + quota)._

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin, getSessionUser } from '@/lib/apiAuth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -57,6 +58,18 @@ export async function POST(request: NextRequest) {
         { error: 'Client non trouvé' },
         { status: 404 }
       );
+    }
+
+    // Securite (#13) : verifier la propriete -> admin (super_admin/cookie dashboard/sync)
+    // OU l'utilisateur connecte dont le courriel correspond au client. Empeche de payer pour autrui.
+    let authorized = (await requireAdmin(request)).ok;
+    if (!authorized) {
+      const sessionUser = await getSessionUser(request);
+      authorized = !!sessionUser?.email && !!customerData.email &&
+        String(sessionUser.email).toLowerCase() === String(customerData.email).toLowerCase();
+    }
+    if (!authorized) {
+      return NextResponse.json({ error: 'Non autorisé pour ce client' }, { status: 403 });
     }
 
     // Utiliser priceId direct ou dériver du planType
