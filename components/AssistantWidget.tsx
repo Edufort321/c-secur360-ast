@@ -22,6 +22,8 @@ export function AssistantWidget() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const fabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +44,18 @@ export function AssistantWidget() {
   }, []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
+
+  // Fermeture en cliquant à côté du panneau (hors panneau et hors bouton flottant).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (panelRef.current?.contains(t) || fabRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -69,6 +83,7 @@ export function AssistantWidget() {
   return (
     <>
       <button
+        ref={fabRef}
         onClick={() => setOpen(o => !o)}
         aria-label="Assistant C-Secur360"
         className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
@@ -77,7 +92,7 @@ export function AssistantWidget() {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div ref={panelRef} className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 bg-[#0D1F3C] px-4 py-3 text-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
