@@ -43,17 +43,18 @@ export function PublicChatWidget() {
       <button
         onClick={() => setOpen(o => !o)}
         aria-label="Assistant C-Secur360"
-        className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-2xl text-white shadow-lg transition hover:bg-emerald-700"
+        className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
       >
-        {open ? '×' : '💬'}
+        {open ? '×' : '🤖'}
       </button>
 
       {open && (
         <div className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-          <div className="flex items-center gap-2 bg-gray-900 px-4 py-3 text-white">
+          <div className="flex items-center gap-2 bg-[#0D1F3C] px-4 py-3 text-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
             <div className="text-sm font-bold">Assistant C-Secur360</div>
+            <span className="ml-auto h-2 w-2 rounded-full bg-orange-500" aria-hidden />
           </div>
 
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
@@ -61,7 +62,7 @@ export function PublicChatWidget() {
               <div className="space-y-2">
                 <p className="text-gray-600">Bonjour ! Je peux vous présenter C-Secur360 et organiser une démo. 👋</p>
                 {SUGGESTIONS.map(s => (
-                  <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-emerald-400">
+                  <button key={s} onClick={() => send(s)} className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-gray-700 hover:border-orange-400">
                     {s}
                   </button>
                 ))}
@@ -69,7 +70,7 @@ export function PublicChatWidget() {
             )}
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 ${m.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
+                <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 ${m.role === 'user' ? 'bg-[#0D1F3C] text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
                   {m.content}
                 </div>
               </div>
@@ -80,7 +81,7 @@ export function PublicChatWidget() {
 
           {/* CTA permanents */}
           <div className="flex gap-2 border-t border-gray-100 px-3 py-2">
-            <a href={`mailto:${CONTACT}?subject=Demande de démo C-Secur360`} className="flex-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-emerald-700">Voir la démo</a>
+            <a href={`mailto:${CONTACT}?subject=Demande de démo C-Secur360`} className="flex-1 rounded-lg bg-orange-500 px-2 py-1.5 text-center text-xs font-semibold text-white hover:bg-orange-600">Voir la démo</a>
             <a href={`mailto:${CONTACT}`} className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-xs font-semibold text-gray-700 hover:bg-gray-50">Nous écrire</a>
           </div>
 

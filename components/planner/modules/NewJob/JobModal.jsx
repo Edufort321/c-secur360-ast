@@ -814,7 +814,7 @@ export function JobModal({
                 const [cRes, pRes] = await Promise.all([
                     supabase.from('clients').select('id, name, city, province, contact_name, address')
                         .eq('tenant_id', t).ilike('name', `%${text}%`).eq('active', true).limit(6),
-                    supabase.from('projects').select('id, project_number, title, client_name, location, status')
+                    supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status')
                         .eq('tenant_id', t).or(`client_name.ilike.%${text}%,title.ilike.%${text}%`).limit(8),
                 ]);
                 const clients  = (cRes.data  || []).map(c => ({ ...c, _type: 'client' }));
@@ -828,19 +828,27 @@ export function JobModal({
     // ── Appliquer une suggestion (client ou projet) ──
     const applyClientSuggestion = (item) => {
         if (item._type === 'client') {
+            // Interconnexion : on lie le mandat au CLIENT (clientId) en plus du texte affiché.
             setFormData(prev => ({
                 ...prev,
                 client: item.name,
-                lieu: [item.city, item.province].filter(Boolean).join(', ') || prev.lieu,
+                clientId: item.id || prev.clientId,
+                lieu: item.address || [item.city, item.province].filter(Boolean).join(', ') || prev.lieu,
             }));
         } else if (item._type === 'project') {
+            // Interconnexion : on lie le mandat au PROJET (projectId) et au client du projet.
             setFormData(prev => ({
                 ...prev,
                 client:     item.client_name || prev.client,
+                clientId:   item.end_client_id || prev.clientId,
+                projectId:  item.id          || prev.projectId,
                 nom:        prev.nom || item.title || '',
                 lieu:       item.location  || prev.lieu,
                 numeroJob:  prev.numeroJob  || item.project_number || '',
             }));
+            // Pré-remplit le champ de recherche projet pour faciliter le montage du Gantt depuis la soumission.
+            if (item.project_number) setProjectSearch(item.project_number);
+            addNotification?.(`Projet ${item.project_number || ''} lié — cliquez « Pré-remplir depuis soumission » pour monter le Gantt.`, 'info');
         }
         setClientSuggestions([]);
     };
@@ -2864,6 +2872,7 @@ export function JobModal({
                 nom: proj.title || prev.nom,
                 lieu: proj.location || prev.lieu,
                 client: proj.client_name || prev.client,
+                clientId: proj.end_client_id || prev.clientId,
                 projectId: proj.id,
                 etapes: newEtapes.length ? newEtapes : prev.etapes,
             }));
@@ -3695,6 +3704,30 @@ export function JobModal({
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* P4 : liens d'interconnexion actifs (modules reliés au mandat) */}
+                                    {(formData.projectId || formData.clientId || formData.astId) && (
+                                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                                            <span className="font-semibold text-gray-500">🔗 Liens :</span>
+                                            {formData.projectId && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">
+                                                    Projet {formData.numeroJob ? `#${formData.numeroJob}` : ''}
+                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, projectId: '' }))} className="hover:text-blue-900" title="Détacher le projet">×</button>
+                                                </span>
+                                            )}
+                                            {formData.clientId && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 font-semibold text-purple-700">
+                                                    Client lié
+                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, clientId: '' }))} className="hover:text-purple-900" title="Détacher le client">×</button>
+                                                </span>
+                                            )}
+                                            {formData.astId && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 font-semibold text-teal-700">
+                                                    AST {formData.astId}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* P4 : Lien AST — visible uniquement si le module AST est activé pour le tenant */}
                                     {astEnabled && (
