@@ -4032,7 +4032,7 @@ export function JobModal({
                                                                 </div>
                                                             </div>
                                                             <div className="flex-1 min-w-0 max-h-96 overflow-x-auto overflow-y-auto border border-gray-300 rounded bg-white">
-                                                                <div className="space-y-1 p-2 min-w-max" style={{minWidth: '1200px'}}>
+                                                                <div className="space-y-1 p-2">
                                                                     {(() => {
                                                                         const hierarchicalTasks = generateHierarchicalGanttData();
                                                                         const currentViewMode = formData.ganttViewMode || getDefaultViewMode();
@@ -4042,20 +4042,20 @@ export function JobModal({
                                                                             <div className="jsx-fragment-wrapper">
                                                                                 {/* En-tête mini échelle avec vraies heures/dates */}
                                                                                 {timeScale.length > 0 && (
-                                                                                    <div className="flex text-xs text-gray-500 mb-1 bg-gray-100 sticky top-0 z-20 py-1 border-b min-w-max overflow-x-auto">
-                                                                                        <div className="w-32 text-left font-medium bg-gray-100 sticky left-0 z-10 border-r border-gray-400 pr-2">Tâche</div>
-                                                                                        <div className="flex border-l border-gray-400 overflow-x-auto">
+                                                                                    <div className="flex text-xs text-gray-500 mb-1 bg-gray-100 sticky top-0 z-20 py-1 border-b">
+                                                                                        <div className="w-32 flex-shrink-0 text-left font-medium bg-gray-100 border-r border-gray-400 pr-2">Tâche</div>
+                                                                                        <div className="flex-1 flex border-l border-gray-400">
                                                                                             {timeScale.map(period => (
                                                                                                 <div
                                                                                                     key={period.key}
-                                                                                                    className="w-16 text-center border-r border-gray-300 py-0.5 font-medium flex-shrink-0"
+                                                                                                    className="flex-1 min-w-0 truncate text-center border-r border-gray-300 py-0.5 font-medium"
                                                                                                     title={currentViewMode === 'weeks' && period.longLabel ? period.longLabel : period.label}
                                                                                                 >
                                                                                                     {period.label}
                                                                                                 </div>
                                                                                             ))}
                                                                                         </div>
-                                                                                        <div className="w-12 text-center font-medium bg-gray-100 sticky right-0 z-10 border-l border-gray-400 pl-1">Dur</div>
+                                                                                        <div className="w-12 flex-shrink-0 text-center font-medium bg-gray-100 border-l border-gray-400 pl-1">Dur</div>
                                                                                     </div>
                                                                                 )}
 
@@ -4065,10 +4065,10 @@ export function JobModal({
                                                                                     return (
                                                                                         <div
                                                                                             key={task.id}
-                                                                                            className="flex items-center text-xs hover:bg-blue-50 transition-colors py-0.5 min-w-max"
+                                                                                            className="flex items-center text-xs hover:bg-blue-50 transition-colors py-0.5"
                                                                                         >
                                                                                             <div
-                                                                                                className="w-32 truncate text-left bg-white sticky left-0 z-10 border-r border-gray-300 pr-2"
+                                                                                                className="w-32 flex-shrink-0 truncate text-left bg-white border-r border-gray-300 pr-2"
                                                                                                 style={{ paddingLeft: `${task.level * 8}px` }}
                                                                                                 title={task.displayName || task.text || `Étape ${index + 1}`}
                                                                                             >
@@ -4156,7 +4156,7 @@ export function JobModal({
                                                                                                 })()}
                                                                                             </div>
 
-                                                                                            <div className="w-12 text-center text-gray-600 font-mono bg-white sticky right-0 z-10 border-l border-gray-300 pl-1">
+                                                                                            <div className="w-12 flex-shrink-0 text-center text-gray-600 font-mono bg-white border-l border-gray-300 pl-1">
                                                                                                 {task.duration}h
                                                                                             </div>
                                                                                         </div>
