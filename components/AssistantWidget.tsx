@@ -73,7 +73,7 @@ export function AssistantWidget() {
         aria-label="Assistant C-Secur360"
         className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
       >
-        {open ? '×' : '🤖'}
+        {open ? '×' : '💬'}
       </button>
 
       {open && (
