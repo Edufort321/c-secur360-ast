@@ -650,6 +650,13 @@ export function PlanificateurFinal({
                     ))}
                 </div>
 
+                {/* Marqueur quand plusieurs événements le même jour */}
+                {jobs.length > 1 && (
+                    <span className="absolute top-0.5 right-0.5 z-30 rounded-full bg-gray-800 px-1.5 text-[9px] font-bold leading-4 text-white shadow" title={`${jobs.length} événements ce jour — survolez chaque barre pour le détail`}>
+                        {jobs.length}
+                    </span>
+                )}
+
                 {/* Affichage des jobs organisés en lignes */}
                 {jobLayers.map((layer, layerIndex) => (
                     <div
@@ -669,7 +676,7 @@ export function PlanificateurFinal({
                             return (
                                 <div
                                     key={`${job.id}-${layerIndex}-${jobIndex}`}
-                                    className={`absolute h-full rounded px-1 cursor-pointer hover:opacity-80 flex flex-col justify-center`}
+                                    className={`group absolute h-full rounded px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/70 flex flex-col justify-center`}
                                     style={{
                                         left: timelineStyle.left,
                                         width: timelineStyle.width,
@@ -681,16 +688,23 @@ export function PlanificateurFinal({
                                         e.stopPropagation();
                                         onJobClick(job);
                                     }}
-                                    title={`${job.numeroJob || `Job-${job.id}`} - ${job.client} (${heureDebut}-${heureFin})`}
                                 >
-                                    {/* Contenu de l'événement */}
-                                    <div className="text-center leading-tight">
+                                    {/* Contenu de l'événement (tronqué si étroit) */}
+                                    <div className="text-center leading-tight overflow-hidden">
                                         <div className="font-bold truncate">
                                             {job.numeroJob || `Job-${job.id}`}
                                         </div>
                                         <div className="truncate opacity-90">
                                             {job.client}
                                         </div>
+                                    </div>
+                                    {/* Infobulle au survol — lisible meme si la barre est trop fine pour le texte */}
+                                    <div className="pointer-events-none absolute left-1/2 bottom-full z-[60] mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-xl group-hover:block">
+                                        <div className="font-bold">{job.numeroJob || `Job-${job.id}`}</div>
+                                        {job.nom && <div className="opacity-90">{job.nom}</div>}
+                                        {job.client && <div className="opacity-80">👤 {job.client}</div>}
+                                        <div className="opacity-80">🕒 {heureDebut} – {heureFin}</div>
+                                        {job.lieu && <div className="opacity-70">📍 {job.lieu}</div>}
                                     </div>
                                 </div>
                             );
