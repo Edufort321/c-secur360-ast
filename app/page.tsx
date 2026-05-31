@@ -82,6 +82,62 @@ const MODULES_EN = [
   { icon: CheckSquare,    key: 'todo',        name: 'Tasks / To-Do',          desc: 'Task management, priorities, assignments and automatic reminders.' },
 ]
 
+// Présentation marketing détaillée par module (carte au clic). Haut niveau, sans détail technique.
+const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }; en: { tagline: string; points: string[] } }> = {
+  admin: {
+    fr: { tagline: 'Pilotez votre organisation depuis un seul endroit.', points: ['Utilisateurs, rôles et permissions granulaires', 'Configuration du compte et des modules actifs', 'Multi-sites et multi-clients', 'Contrôle d\'accès par niveau'] },
+    en: { tagline: 'Run your organization from a single place.', points: ['Users, roles and granular permissions', 'Account and active-module configuration', 'Multi-site and multi-client', 'Level-based access control'] },
+  },
+  projets: {
+    fr: { tagline: 'De la soumission à la facturation, suivez chaque chantier.', points: ['Soumissions, projets, clients et contrats', 'Avancement et budget vs réel en temps réel', 'Numérotation automatique', 'Lien direct avec la planification et la facturation'] },
+    en: { tagline: 'From quote to invoice, track every jobsite.', points: ['Quotes, projects, clients and contracts', 'Real-time progress and budget vs actual', 'Automatic numbering', 'Direct link to planning and billing'] },
+  },
+  planner: {
+    fr: { tagline: 'Planifiez les travaux et les équipes sans effort.', points: ['Gantt avec dépendances, parallèle et chemin critique', 'Affectation du personnel et des équipements', 'Pré-montage depuis la soumission', 'Carte du lieu et météo des travaux'] },
+    en: { tagline: 'Plan work and crews effortlessly.', points: ['Gantt with dependencies, parallel and critical path', 'Personnel and equipment assignment', 'Pre-built from the quote', 'Worksite map and weather'] },
+  },
+  ast: {
+    fr: { tagline: 'Des analyses de sécurité conformes, signées sur le terrain.', points: ['AST/JSEA numériques avec signatures électroniques', 'Dangers, mesures de contrôle et discussion d\'équipe', 'Conforme aux normes provinciales', 'Accès par QR sur le chantier'] },
+    en: { tagline: 'Compliant job safety analyses, signed in the field.', points: ['Digital JSA with electronic signatures', 'Hazards, control measures and team discussion', 'Compliant with provincial standards', 'QR access on the jobsite'] },
+  },
+  permits: {
+    fr: { tagline: 'Tous vos permis de travail, sans papier.', points: ['Espace clos, travaux à chaud, hauteur, excavation', 'Vérifications préalables obligatoires', 'Traçabilité et autorisations', 'Archivage conforme'] },
+    en: { tagline: 'All your work permits, paperless.', points: ['Confined space, hot work, heights, excavation', 'Mandatory pre-checks', 'Traceability and authorizations', 'Compliant archiving'] },
+  },
+  accidents: {
+    fr: { tagline: 'Déclarez, enquêtez, corrigez — sans rien échapper.', points: ['Rapport d\'accident structuré', 'Enquête et actions correctives', 'Suivi réglementaire', 'Tendances et indicateurs'] },
+    en: { tagline: 'Report, investigate, correct — nothing slips.', points: ['Structured accident report', 'Investigation and corrective actions', 'Regulatory tracking', 'Trends and indicators'] },
+  },
+  presque: {
+    fr: { tagline: 'Prévenez avant l\'incident.', points: ['Déclaration des quasi-accidents', 'Suivi proactif des dangers', 'Culture de prévention', 'Statistiques de sécurité'] },
+    en: { tagline: 'Prevent before the incident.', points: ['Near-miss reporting', 'Proactive hazard tracking', 'Prevention culture', 'Safety statistics'] },
+  },
+  inventaire: {
+    fr: { tagline: 'Maîtrisez stock, EPI et consommables.', points: ['Gestion du stock et des EPI', 'Consommables et réapprovisionnement', 'Lien avec la préparation de chantier', 'Suivi par site'] },
+    en: { tagline: 'Master stock, PPE and consumables.', points: ['Stock and PPE management', 'Consumables and restocking', 'Link to jobsite preparation', 'Per-site tracking'] },
+  },
+  equip: {
+    fr: { tagline: 'Chaque équipement, son dossier complet.', points: ['Fiches techniques et certifications', 'Historique de maintenance', 'Inspections liées', 'Identification par QR'] },
+    en: { tagline: 'Every asset, a complete record.', points: ['Technical sheets and certifications', 'Maintenance history', 'Linked inspections', 'QR identification'] },
+  },
+  inspect: {
+    fr: { tagline: 'Des inspections rigoureuses, simples à exécuter.', points: ['Listes de vérification personnalisables', 'Inspections périodiques', 'Rapports d\'état et photos', 'Conformité documentée'] },
+    en: { tagline: 'Rigorous inspections, simple to run.', points: ['Customizable checklists', 'Scheduled inspections', 'Condition reports and photos', 'Documented compliance'] },
+  },
+  temps: {
+    fr: { tagline: 'Les heures, de la saisie à la paie.', points: ['Saisie des heures par période', 'Approbation superviseur', 'Avantages et déductions', 'Export comptable'] },
+    en: { tagline: 'Hours, from entry to payroll.', points: ['Time entry by period', 'Supervisor approval', 'Benefits and deductions', 'Accounting export'] },
+  },
+  logbook: {
+    fr: { tagline: 'Le carnet de bord numérique de votre flotte.', points: ['Kilométrage et trajets', 'Incidents et entretien', 'Avantages automobiles (ARC)', 'Suivi par véhicule'] },
+    en: { tagline: 'Your fleet\'s digital logbook.', points: ['Mileage and trips', 'Incidents and maintenance', 'Vehicle benefits (CRA)', 'Per-vehicle tracking'] },
+  },
+  todo: {
+    fr: { tagline: 'Rien ne tombe entre les mailles.', points: ['Tâches, priorités et assignations', 'Rappels automatiques', 'Suivi d\'avancement', 'Collaboration d\'équipe'] },
+    en: { tagline: 'Nothing falls through the cracks.', points: ['Tasks, priorities and assignments', 'Automatic reminders', 'Progress tracking', 'Team collaboration'] },
+  },
+};
+
 const HERO_FALLBACK_FR = [
   { title: 'Securite d\'abord.', subtitle: 'Conformite CNESST assuree.', gradient: 'from-[#0B1728] via-[#0D2040] to-[#0B1728]' },
   { title: 'ASTs, permis et inspections.', subtitle: 'Tout en un — partout sur le chantier.', gradient: 'from-[#0D1F3C] via-[#1a2744] to-[#0D1F3C]' },
@@ -129,6 +185,7 @@ export default function LandingPage() {
   const [dbModules, setDbModules] = useState<DbModule[]>([])
   const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
   const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
+  const [selectedModule, setSelectedModule] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const modules = fr ? MODULES_FR : MODULES_EN
@@ -424,7 +481,8 @@ export default function LandingPage() {
             const dbMod = dbModules.find(d => d.key === mod.key)
             return (
               <div key={mod.key}
-                className="group bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-default">
+                onClick={() => setSelectedModule(mod.key)}
+                className="group bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-pointer">
                 {/* Header toujours visible */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/30 group-hover:scale-110 transition-all duration-300">
@@ -777,6 +835,58 @@ export default function LandingPage() {
           <Image src="/logo-cerdia3.png" alt="CERDIA" width={120} height={28} className="h-6 w-auto opacity-90" />
         </div>
       </footer>
+
+      {/* Carte marketing détaillée d'un module (au clic) */}
+      {selectedModule && (() => {
+        const mod = modules.find(m => m.key === selectedModule)
+        const d = MODULE_DETAILS[selectedModule]?.[fr ? 'fr' : 'en']
+        if (!mod) return null
+        const slides = moduleSlides[selectedModule] || []
+        const dbMod = dbModules.find(x => x.key === selectedModule)
+        return (
+          <div onClick={() => setSelectedModule(null)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
+            <div onClick={e => e.stopPropagation()} className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#0D1F3C] p-6">
+              <button onClick={() => setSelectedModule(null)} aria-label="Fermer" className="absolute right-3 top-3 text-2xl text-slate-400 hover:text-white">×</button>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/15">
+                  <mod.icon size={24} className="text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">{mod.name}</h3>
+                  {dbMod && dbMod.monthly_price > 0 && <span className="text-xs font-bold text-orange-400">{dbMod.monthly_price}$/an</span>}
+                </div>
+              </div>
+              {d && <p className="mt-4 font-semibold text-orange-300">{d.tagline}</p>}
+              <p className="mt-2 text-sm text-slate-300">{mod.desc}</p>
+              {d && (
+                <ul className="mt-4 space-y-2">
+                  {d.points.map((p, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-slate-200">
+                      <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-orange-400" />{p}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {slides.length > 0 && (
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                  {slides.slice(0, 3).map((s, i) => (
+                    <img key={i} src={s.image_url} alt="" className="h-24 w-36 flex-shrink-0 rounded-lg border border-white/10 object-cover" />
+                  ))}
+                </div>
+              )}
+              <div className="mt-6 flex flex-wrap gap-2">
+                <a href="mailto:eric.dufort@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
+                  {fr ? 'Demander une démo' : 'Request a demo'}
+                </a>
+                <button onClick={() => setSelectedModule(null)} className="flex-1 rounded-lg border border-white/20 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-white/5">
+                  {fr ? 'Fermer' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <PublicChatWidget />
     </div>
   )
