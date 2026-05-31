@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { PublicChatWidget } from '@/components/PublicChatWidget'
+import { DemoStartButton } from '@/components/DemoStartButton'
 import {
   Shield, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   AlertCircle, Package, Wrench, ClipboardCheck, Clock, Truck,
@@ -380,10 +381,8 @@ export default function LandingPage() {
             )}
 
             <div className="flex flex-wrap gap-4">
-              <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
-                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-orange-500/25">
-                {fr ? 'Demarrer gratuitement' : 'Start for free'} <ArrowRight size={18} />
-              </a>
+              <DemoStartButton fr={fr}
+                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-7 py-3.5 rounded-xl font-bold text-base transition shadow-lg shadow-orange-500/25" />
               <a href={fr ? CONTACT_MAILTO_FR : CONTACT_MAILTO_EN}
                 className="inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white/8 px-7 py-3.5 rounded-xl font-semibold text-base transition">
                 <Mail size={16} /> {fr ? 'Ecrire a l\'equipe' : 'Contact the team'}
@@ -591,7 +590,7 @@ export default function LandingPage() {
         const hasPrices = paidModules.length > 0
 
         return (
-          <section className="py-24 px-4 max-w-7xl mx-auto">
+          <section id="pricing" className="py-24 px-4 max-w-7xl mx-auto scroll-mt-20">
             <div className="text-center mb-10">
               <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
                 {fr ? 'Tarification' : 'Pricing'}
