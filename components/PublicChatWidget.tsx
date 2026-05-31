@@ -16,14 +16,7 @@ export function PublicChatWidget() {
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Ouverture automatique après 2,5 s, une seule fois par session.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (sessionStorage.getItem('pubChatOpened')) return;
-    const t = setTimeout(() => { setOpen(true); sessionStorage.setItem('pubChatOpened', '1'); }, 2500);
-    return () => clearTimeout(t);
-  }, []);
-
+  // Ouverture uniquement au clic (pas d'ouverture automatique).
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
   async function send(text: string) {
@@ -96,7 +89,7 @@ export function PublicChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Votre question…"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <button type="submit" disabled={loading || !input.trim()} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">➤</button>
           </form>
