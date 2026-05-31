@@ -247,6 +247,19 @@ export function JobModal({
             .reduce((s, e) => s + (parseFloat(e.duration) || 0), 0);
     };
 
+    // Heures <-> durée : ajoute des heures à une heure HH:MM (borné 0..23:59).
+    const addHoursToTime = (t, h) => {
+        const [hh, mm] = (t || '08:00').split(':').map(Number);
+        let total = (hh * 60 + mm) + Math.round((parseFloat(h) || 0) * 60);
+        total = Math.max(0, Math.min(24 * 60 - 1, total));
+        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    };
+    const diffHours = (start, end) => {
+        const [sh, sm] = (start || '08:00').split(':').map(Number);
+        const [eh, em] = (end || '17:00').split(':').map(Number);
+        return Math.round((Math.max(0, (eh * 60 + em) - (sh * 60 + sm)) / 60) * 100) / 100;
+    };
+
     // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
     // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
     const fillScheduleFromEtapes = () => {
@@ -3585,7 +3598,24 @@ export function JobModal({
                                             <input
                                                 type="date"
                                                 value={formData.dateDebut}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, dateDebut: e.target.value }))}
+                                                onChange={(e) => setFormData(prev => {
+                                                    const newDebut = e.target.value;
+                                                    let newFin = prev.dateFin;
+                                                    if (newDebut) {
+                                                        if (prev.dateDebut && prev.dateFin) {
+                                                            // Préserve l'écart en jours entre début et fin
+                                                            const oldD = new Date(`${prev.dateDebut}T00:00:00`);
+                                                            const oldF = new Date(`${prev.dateFin}T00:00:00`);
+                                                            const offset = Math.max(0, Math.round((oldF - oldD) / 86400000));
+                                                            const nd = new Date(`${newDebut}T00:00:00`);
+                                                            nd.setDate(nd.getDate() + offset);
+                                                            newFin = nd.toISOString().slice(0, 10);
+                                                        } else if (!prev.dateFin || prev.dateFin < newDebut) {
+                                                            newFin = newDebut; // par défaut : même jour
+                                                        }
+                                                    }
+                                                    return { ...prev, dateDebut: newDebut, dateFin: newFin };
+                                                })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 required
                                             />
@@ -3603,7 +3633,7 @@ export function JobModal({
                                             />
                                         </div>
 
-                                        {/* Heures de l'evenement — utilisees par l'affichage du calendrier (barre timeline) */}
+                                        {/* Heures de l'evenement — début + durée -> fin auto (et fin manuelle recalcule la durée) */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Heure de début
@@ -3611,18 +3641,39 @@ export function JobModal({
                                             <input
                                                 type="time"
                                                 value={formData.heureDebut || '08:00'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
+                                                onChange={(e) => setFormData(prev => {
+                                                    const d = parseFloat(prev.dureeEvent);
+                                                    const heureFin = d > 0 ? addHoursToTime(e.target.value, d) : prev.heureFin;
+                                                    return { ...prev, heureDebut: e.target.value, heureFin };
+                                                })}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Heure de fin
+                                                Durée prévue (h)
+                                            </label>
+                                            <input
+                                                type="number" step="0.25" min="0"
+                                                value={formData.dureeEvent ?? diffHours(formData.heureDebut, formData.heureFin)}
+                                                onFocus={(e) => e.target.select()}
+                                                onChange={(e) => setFormData(prev => {
+                                                    const d = parseFloat(e.target.value);
+                                                    const heureFin = d > 0 ? addHoursToTime(prev.heureDebut || '08:00', d) : prev.heureFin;
+                                                    return { ...prev, dureeEvent: e.target.value, heureFin };
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                title="La fin s'ajuste automatiquement (début + durée)"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Heure de fin <span className="text-xs text-gray-400">(auto / manuel)</span>
                                             </label>
                                             <input
                                                 type="time"
                                                 value={formData.heureFin || '17:00'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value, dureeEvent: String(diffHours(prev.heureDebut || '08:00', e.target.value)) }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>

@@ -712,6 +712,34 @@ export function PlanificateurFinal({
                     </div>
                 ))}
 
+                {/* Conflit d'horaire : bande rouge sur la portion de journée où 2+ événements se chevauchent */}
+                {(() => {
+                    const iv = jobs.map(j => {
+                        const [dh, dm] = (j.heureDebut || '08:00').split(':').map(Number);
+                        const [fh, fm] = (j.heureFin || '17:00').split(':').map(Number);
+                        return { d: dh * 60 + dm, f: fh * 60 + fm };
+                    });
+                    const overlaps = [];
+                    for (let i = 0; i < iv.length; i++) {
+                        for (let k = i + 1; k < iv.length; k++) {
+                            const s = Math.max(iv[i].d, iv[k].d);
+                            const e = Math.min(iv[i].f, iv[k].f);
+                            if (s < e) overlaps.push([s, e]);
+                        }
+                    }
+                    if (!overlaps.length) return null;
+                    const tStart = 6 * 60, tEnd = 20 * 60, range = tEnd - tStart;
+                    return overlaps.map(([s, e], i) => {
+                        const left = Math.max(0, ((s - tStart) / range) * 100);
+                        const width = Math.min(100 - left, ((e - s) / range) * 100);
+                        return (
+                            <div key={`ovl-${i}`} className="pointer-events-none absolute top-0 bottom-3 z-10 border-x-2 border-red-500 bg-red-500/30"
+                                style={{ left: `${left}%`, width: `${width}%` }}
+                                title="⚠️ Conflit d'horaire (chevauchement)" />
+                        );
+                    });
+                })()}
+
                 {/* Indicateur de débordement : événements non affichés faute de place */}
                 {hiddenLayers > 0 && (
                     <span className="absolute bottom-3 right-0.5 z-30 rounded bg-gray-700 px-1 text-[8px] font-bold text-white" title={`${hiddenLayers} ligne(s) d'événements supplémentaires`}>
