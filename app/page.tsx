@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { PublicChatWidget } from '@/components/PublicChatWidget'
 import {
   Shield, Users, HardHat, Calendar, FileCheck, AlertTriangle,
   AlertCircle, Package, Wrench, ClipboardCheck, Clock, Truck,
@@ -771,6 +772,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      <PublicChatWidget />
     </div>
   )
 }
