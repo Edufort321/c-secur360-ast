@@ -2,9 +2,9 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { createTwilioClient } from '@/lib/twilio-safe';
 
-const SESSION_SECONDS = 60 * 60;       // 1 h par session
-const TOTAL_CAP_SECONDS = 4 * 60 * 60; // 4 h cumulées
-const MAX_STARTS = 3;                  // 1 session initiale + 2 reprises
+const TOTAL_CAP_SECONDS = 4 * 60 * 60; // 4 h de chrono total pour la démo
+const SESSION_SECONDS = TOTAL_CAP_SECONDS; // chrono unique de 4 h (reprise possible tant qu'il reste du temps)
+const MAX_STARTS = 5;                  // reprises autorisées tant que le total de 4 h n'est pas atteint
 
 export type DemoStartResult = {
   ok: boolean;

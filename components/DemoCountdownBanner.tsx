@@ -34,11 +34,13 @@ export function DemoCountdownBanner() {
     );
   }
 
-  const mm = Math.floor(remaining / 60);
+  const hh = Math.floor(remaining / 3600);
+  const mm = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
   const ss = String(remaining % 60).padStart(2, '0');
+  const clock = hh > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
   return (
     <div className="fixed inset-x-0 top-0 z-[80] flex items-center justify-center gap-2 bg-blue-600/95 px-4 py-1.5 text-xs font-semibold text-white">
-      🧪 Mode démo — temps restant : {mm}:{ss}
+      🧪 Mode démo — temps restant : {clock}
       <a href="/#pricing" className="ml-2 underline hover:no-underline">Forfaits</a>
     </div>
   );

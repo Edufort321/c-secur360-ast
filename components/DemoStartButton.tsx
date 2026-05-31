@@ -50,7 +50,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
               <>
                 <h3 className="text-xl font-black">{fr ? 'Essayez C-Secur360 gratuitement' : 'Try C-Secur360 free'}</h3>
                 <p className="mt-1 text-sm text-slate-300">
-                  {fr ? 'Session démo de 1 h pour tester la plateforme. Entrez vos coordonnées pour commencer.' : 'A 1-hour demo session to explore the platform. Enter your details to begin.'}
+                  {fr ? 'Accès démo de 4 h pour tester la plateforme. Entrez vos coordonnées pour commencer.' : 'A 4-hour demo to explore the platform. Enter your details to begin.'}
                 </p>
                 <form onSubmit={submit} className="mt-4 space-y-3">
                   <input value={name} onChange={e => setName(e.target.value)} placeholder={fr ? 'Votre nom' : 'Your name'} required
@@ -70,7 +70,7 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
                     </div>
                   )}
                 </form>
-                <p className="mt-3 text-[10px] leading-tight text-slate-500">{fr ? 'Données de démonstration partagées et temporaires. 1 h/session, 4 h au total.' : 'Shared, temporary demo data. 1h/session, 4h total.'}</p>
+                <p className="mt-3 text-[10px] leading-tight text-slate-500">{fr ? 'Données de démonstration partagées et temporaires. 4 h de chrono au total.' : 'Shared, temporary demo data. 4-hour total timer.'}</p>
               </>
             ) : (
               <>
