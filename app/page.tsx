@@ -485,10 +485,11 @@ export default function LandingPage() {
           {modules.map((mod) => {
             const slides = moduleSlides[mod.key] || []
             const dbMod = dbModules.find(d => d.key === mod.key)
+            const det = MODULE_DETAILS[mod.key]?.[fr ? 'fr' : 'en']
             return (
               <div key={mod.key}
                 onClick={() => setSelectedModule(mod.key)}
-                className="group bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-pointer">
+                className="group relative bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/50 hover:bg-[#142038] transition-all duration-300 cursor-pointer">
                 {/* Header toujours visible */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/30 group-hover:scale-110 transition-all duration-300">
@@ -502,9 +503,20 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-bold text-white text-sm mt-3 mb-0">{mod.name}</h3>
 
-                {/* Contenu etendu au survol */}
-                <div className="overflow-hidden max-h-0 group-hover:max-h-56 transition-all duration-500 ease-in-out">
-                  <p className="text-xs text-slate-400 leading-relaxed mt-2">{mod.desc}</p>
+                {/* Accroche TOUJOURS visible (la pub se voit sans cliquer) */}
+                {det && <p className="text-xs text-orange-300/90 leading-snug mt-1.5">{det.tagline}</p>}
+
+                {/* Détail au survol : points clés + aperçus + invite au clic */}
+                <div className="overflow-hidden max-h-0 group-hover:max-h-72 transition-all duration-500 ease-in-out">
+                  {det && det.points.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {det.points.slice(0, 4).map((p, i) => (
+                        <li key={i} className="flex gap-1.5 text-[11px] leading-snug text-slate-300">
+                          <span className="text-orange-400">•</span>{p}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {slides.length > 0 && (
                     <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
                       {slides.slice(0, 3).map((s, i) => (
@@ -514,6 +526,11 @@ export default function LandingPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Indice de clic toujours visible */}
+                <p className="mt-2 text-[10px] font-semibold text-orange-400/80 group-hover:text-orange-400">
+                  {fr ? 'Cliquer pour le détail →' : 'Click for details →'}
+                </p>
               </div>
             )
           })}

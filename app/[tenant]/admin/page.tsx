@@ -16,7 +16,7 @@ import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, 
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
-import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal, getSoumissionStats, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats } from '@/lib/soumissions';
+import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, setSoumissionStatus, deleteSoumission, genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal, getSoumissionStats, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats } from '@/lib/soumissions';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -6232,6 +6232,11 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
     try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.${r.commission ? ' Commission : ' + r.commission : ''}`, `Quote accepted → project ${r.projectNumber}.${r.commission ? ' Commission: ' + r.commission : ''}`)); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
+  async function facturer(s: Soumission) {
+    setNotice(null);
+    try { const r = await genererFactureDepuisSoumission(tenant, s.id!); setNotice(tr(`Facture ${r.numero} créée (brouillon) — voir l'onglet Factures pour la comptabiliser.`, `Invoice ${r.numero} created (draft) — see the Invoices tab.`)); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
   async function remove(s: Soumission) {
     if (s.status === 'accepted') { setNotice(tr('Soumission acceptée : liée à un projet, non supprimable ici.', 'Accepted quote: linked to a project, not deletable here.')); return; }
     try { await deleteSoumission(tenant, s.id!); await load(); } catch (e: any) { setNotice(e?.message); }
@@ -6454,6 +6459,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
                       <button onClick={() => editSoumission(s)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
                       {s.status !== 'archived' && <button onClick={() => revise(s)} className="text-indigo-600 hover:underline">{tr('Réviser', 'Revise')}</button>}
                       {s.status !== 'accepted' && s.status !== 'archived' && <button onClick={() => accept(s)} className="text-emerald-600 hover:underline">{tr('Accepter → Projet', 'Accept → Project')}</button>}
+                      {s.status === 'accepted' && <button onClick={() => facturer(s)} className="text-violet-600 hover:underline">{tr('Facturer', 'Invoice')}</button>}
                       <button onClick={() => remove(s)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
                     </div>}
                   </td>

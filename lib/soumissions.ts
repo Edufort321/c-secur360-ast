@@ -3,6 +3,7 @@
 // (taux MO bureau/chantier + multiplicateurs supp/maj). Revision = clone + re-tarification + archivage.
 import { supabase } from '@/lib/supabase';
 import { syncProjectCommission } from '@/lib/commission';
+import { saveInvoice, nextInvoiceNumber, type Invoice, type InvoiceItem } from '@/lib/invoicing';
 
 export type Categorie = 'mo_bureau' | 'mo_chantier' | 'voyagement' | 'subsistance' | 'hebergement' | 'materiaux';
 export const CATEGORIES_MO: Categorie[] = ['mo_bureau', 'mo_chantier'];
@@ -279,6 +280,30 @@ export async function getSoumissionStats(tenant: string): Promise<SoumissionStat
     valeurMoyenneAcceptee: accepted ? r2(montantAccepte / accepted) : 0,
     nbProjets,
   };
+}
+
+/**
+ * Convergence Facturation (S5) : génère une facture (commerce_invoices) depuis une soumission.
+ * Chaque item de la soumission devient une ligne de facture (montant = total de l'item).
+ * La facture est en brouillon ; elle suit ensuite le flux Factures existant (Comptabiliser = vente→GL).
+ */
+export async function genererFactureDepuisSoumission(tenant: string, soumissionId: string): Promise<{ invoiceId: string; numero: string }> {
+  const full = await getSoumissionFull(tenant, soumissionId);
+  if (!full) throw new Error('Soumission introuvable.');
+  const s = full.soumission;
+  const numero = await nextInvoiceNumber(tenant, 'F');
+  const items: InvoiceItem[] = (full.items.length ? full.items.map((it, i) => ({
+    description: it.name || `Item ${i + 1}`, quantity: 1, unit_price: Number(it.total) || 0,
+    subtotal: Number(it.total) || 0, taxable: true, sort_order: i,
+  })) : [{ description: s.numero, quantity: 1, unit_price: Number(s.total) || 0, subtotal: Number(s.total) || 0, taxable: true, sort_order: 0 }]);
+  const header: Invoice = {
+    invoice_number: numero, client_id: s.client_id ?? null, client_snapshot: s.client_snapshot ?? null,
+    status: 'draft', issue_date: new Date().toISOString().slice(0, 10), province: 'QC',
+    subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0,
+    notes: `Émise depuis la soumission ${s.numero}`,
+  };
+  const invoiceId = await saveInvoice(tenant, header, items);
+  return { invoiceId, numero };
 }
 
 export async function setSoumissionStatus(tenant: string, id: string, status: Soumission['status']) {
