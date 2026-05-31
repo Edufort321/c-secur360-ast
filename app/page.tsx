@@ -83,6 +83,12 @@ const MODULES_EN = [
   { icon: CheckSquare,    key: 'todo',        name: 'Tasks / To-Do',          desc: 'Task management, priorities, assignments and automatic reminders.' },
 ]
 
+// Correspondance clé d'affichage (statique) -> clé en base (table modules). Sans ça, le prix ne s'affiche pas.
+const DB_MODULE_KEY: Record<string, string> = {
+  projets: 'projects', presque: 'near_miss', inventaire: 'inventory',
+  equip: 'equipment', inspect: 'inspections', temps: 'timesheets',
+};
+
 // Présentation marketing détaillée par module (carte au clic). Haut niveau, sans détail technique.
 const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }; en: { tagline: string; points: string[] } }> = {
   admin: {
@@ -484,7 +490,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {modules.map((mod) => {
             const slides = moduleSlides[mod.key] || []
-            const dbMod = dbModules.find(d => d.key === mod.key)
+            const dbMod = dbModules.find(d => d.key === (DB_MODULE_KEY[mod.key] || mod.key))
             const det = MODULE_DETAILS[mod.key]?.[fr ? 'fr' : 'en']
             return (
               <div key={mod.key}
@@ -495,11 +501,9 @@ export default function LandingPage() {
                   <div className="w-10 h-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/30 group-hover:scale-110 transition-all duration-300">
                     <mod.icon size={20} className="text-orange-400" />
                   </div>
-                  {dbMod && dbMod.monthly_price > 0 && (
-                    <span className="text-xs font-bold text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-                      {dbMod.monthly_price}$/an
-                    </span>
-                  )}
+                  <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-400 whitespace-nowrap">
+                    {dbMod && dbMod.monthly_price > 0 ? `${dbMod.monthly_price}$/an` : (fr ? 'Inclus' : 'Included')}
+                  </span>
                 </div>
                 <h3 className="font-bold text-white text-sm mt-3 mb-0">{mod.name}</h3>
 
