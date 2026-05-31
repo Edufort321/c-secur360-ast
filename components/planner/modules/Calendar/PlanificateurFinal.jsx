@@ -1403,6 +1403,41 @@ export function PlanificateurFinal({
                 ) : (
                     /* Vue Calendrier */
                 <div className="space-y-4">
+                    {/* Agenda mobile (vue verticale déroulante) — événements groupés par jour, lisible sur petit écran.
+                        Remplace la grille (cachée < lg) qui est illisible en demi-écran/mobile. */}
+                    <div className="lg:hidden space-y-2">
+                        <div className="px-1 text-xs font-semibold text-gray-500">📅 Agenda — touchez un événement pour l'ouvrir</div>
+                        {(() => {
+                            const byDay = {};
+                            (jobs || []).forEach(j => {
+                                const d = j.dateDebut || j.dateFin;
+                                if (!d) return;
+                                (byDay[d] = byDay[d] || []).push(j);
+                            });
+                            const days = Object.keys(byDay).sort();
+                            if (days.length === 0) {
+                                return <div className="rounded-lg border border-gray-200 bg-white p-4 text-center text-sm text-gray-400">Aucun événement planifié.</div>;
+                            }
+                            return days.map(d => (
+                                <div key={d} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                                    <div className="border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-bold capitalize text-gray-600">
+                                        {new Date(`${d}T12:00:00`).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })} · {byDay[d].length} évén.
+                                    </div>
+                                    <div className="divide-y divide-gray-100">
+                                        {byDay[d].slice().sort((a, b) => (a.heureDebut || '').localeCompare(b.heureDebut || '')).map(j => (
+                                            <button key={j.id} type="button" onClick={() => setSelectedJob(j)}
+                                                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50">
+                                                <span className="shrink-0 text-xs font-bold text-blue-700">{j.numeroJob || `Job-${j.id}`}</span>
+                                                <span className="flex-1 truncate text-sm text-gray-800">{j.client || j.nom || '—'}</span>
+                                                <span className="shrink-0 text-xs text-gray-500">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ));
+                        })()}
+                    </div>
+
                     {/* Dashboard résumé en haut de la vue globale */}
                     {filterType === 'global' && (
                         <div className="bg-white rounded-lg shadow-sm p-4">
