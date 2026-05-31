@@ -4734,6 +4734,66 @@ export function JobModal({
                                         </div>
                                     </div>
 
+                                    {/* Liste éditable des tâches — édition directe dans l'onglet Gantt */}
+                                    <div className="bg-white border rounded-lg p-3">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-gray-700">📝 Tâches du projet (édition directe)</span>
+                                            <button type="button" onClick={() => addNewTask()} className="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white hover:bg-purple-700">➕ Ajouter</button>
+                                        </div>
+                                        {formData.etapes.length === 0 ? (
+                                            <p className="py-3 text-center text-sm text-gray-400">Aucune tâche. Cliquez « Ajouter » pour commencer.</p>
+                                        ) : (
+                                            <div className="space-y-1 max-h-72 overflow-y-auto">
+                                                {formData.etapes.map((etape, idx) => (
+                                                    <div key={etape.id} className="flex flex-wrap items-center gap-2 rounded border border-gray-100 p-1.5" style={{ marginLeft: `${(etape.level || 0) * 16}px` }}>
+                                                        <input
+                                                            value={etape.text || etape.name || ''}
+                                                            onChange={(e) => updateEtape(idx, 'text', e.target.value)}
+                                                            placeholder="Nom de la tâche"
+                                                            className="flex-1 min-w-[140px] rounded border px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500"
+                                                        />
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number" step="0.25" min="0"
+                                                                value={(etape.duration === '' || etape.duration == null) ? '' : etape.duration}
+                                                                onFocus={(e) => e.target.select()}
+                                                                onChange={(e) => { const v = e.target.value; updateEtape(idx, 'duration', v === '' ? '' : (parseFloat(v) || 0)); }}
+                                                                onBlur={(e) => { const n = parseFloat(e.target.value); if (e.target.value === '' || isNaN(n) || n <= 0) updateEtape(idx, 'duration', 1); }}
+                                                                readOnly={etape.autoCalculated}
+                                                                className={`w-16 rounded border px-1 py-1 text-sm ${etape.autoCalculated ? 'bg-blue-50 text-blue-700' : 'focus:ring-2 focus:ring-blue-500'}`}
+                                                                title={etape.autoCalculated ? 'Durée auto (sous-tâches)' : 'Durée (h)'}
+                                                            />
+                                                            <span className="text-xs text-gray-400">h</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number" min="0" max="100" step="5"
+                                                                value={etape.progress || 0}
+                                                                onFocus={(e) => e.target.select()}
+                                                                onChange={(e) => updateEtape(idx, 'progress', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                                                className="w-14 rounded border px-1 py-1 text-sm focus:ring-2 focus:ring-green-500"
+                                                                title="% complété"
+                                                            />
+                                                            <span className="text-xs text-gray-400">%</span>
+                                                        </div>
+                                                        <select
+                                                            value={etape.responsableId || ''}
+                                                            onChange={(e) => updateEtape(idx, 'responsableId', e.target.value)}
+                                                            className="w-32 rounded border px-1 py-1 text-xs focus:ring-2 focus:ring-blue-500"
+                                                            title="Responsable de la tâche"
+                                                        >
+                                                            <option value="">👤 Responsable…</option>
+                                                            {(personnel || []).map(p => (
+                                                                <option key={p.id} value={p.id}>{p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}</option>
+                                                            ))}
+                                                        </select>
+                                                        <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title="Supprimer la tâche">🗑</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Vue Gantt avancée avec hiérarchie - VERSION OLD COMPLÈTE */}
                                     <div className={`bg-white border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
                                         {formData.etapes.length === 0 ? (
