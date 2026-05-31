@@ -5278,8 +5278,9 @@ export function JobModal({
                                                                         ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200'
                                                                         : isAvailable
                                                                             ? 'bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-300'
-                                                                            : 'bg-red-50 border-red-200 opacity-60'
+                                                                            : 'bg-amber-50 border-amber-300 hover:bg-amber-100'
                                                                 }`}
+                                                                title={!isAvailable ? 'Déjà assigné/en congé sur cette période — sélectionnable, mais signalé en conflit d\'horaire' : ''}
                                                             >
                                                                 <div className="flex items-start justify-between">
                                                                     <div className="flex-1">
@@ -5288,6 +5289,11 @@ export function JobModal({
                                                                         </div>
                                                                         <div className="text-xs text-gray-600 mt-1">{person.poste}</div>
                                                                         <div className="text-xs text-gray-500">{person.succursale}</div>
+                                                                        {!isAvailable && (
+                                                                            <div className="mt-1 inline-flex items-center gap-1 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                                                                                ⚠️ Conflit d'horaire
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                     <div className="ml-2">
                                                                         {isSelected ? (

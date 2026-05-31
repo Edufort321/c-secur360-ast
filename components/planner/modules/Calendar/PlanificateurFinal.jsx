@@ -638,8 +638,14 @@ export function PlanificateurFinal({
             }
         };
 
-        const jobLayers = organizeJobsInLayers(jobs);
-        const layerHeight = Math.floor(CELL_HEIGHT / jobLayers.length); // Diviser par nombre de lignes nécessaires
+        const allLayers = organizeJobsInLayers(jobs);
+        const LABEL_AREA = 14;   // reserve pour les libelles d'heures en bas
+        const MIN_LAYER = 16;    // hauteur minimale lisible par ligne d'evenement
+        const usableH = CELL_HEIGHT - LABEL_AREA;
+        const maxLayers = Math.max(1, Math.floor(usableH / MIN_LAYER));
+        const jobLayers = allLayers.slice(0, maxLayers);
+        const hiddenLayers = allLayers.length - jobLayers.length;
+        const layerHeight = Math.floor(usableH / jobLayers.length);
 
         return (
             <div className="relative w-full h-20 bg-gray-50 border border-gray-200 rounded">
@@ -661,10 +667,10 @@ export function PlanificateurFinal({
                 {jobLayers.map((layer, layerIndex) => (
                     <div
                         key={layerIndex}
-                        className="absolute w-full"
+                        className="absolute w-full px-0.5"
                         style={{
                             top: `${layerIndex * layerHeight}px`,
-                            height: `${layerHeight}px`
+                            height: `${layerHeight - 2}px`
                         }}
                     >
                         {layer.map(({ job }, jobIndex) => {
@@ -676,7 +682,7 @@ export function PlanificateurFinal({
                             return (
                                 <div
                                     key={`${job.id}-${layerIndex}-${jobIndex}`}
-                                    className={`group absolute h-full rounded px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/70 flex flex-col justify-center`}
+                                    className={`absolute h-full rounded border border-white/40 shadow-sm px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/80 hover:z-20 flex flex-col justify-center overflow-hidden`}
                                     style={{
                                         left: timelineStyle.left,
                                         width: timelineStyle.width,
@@ -688,6 +694,7 @@ export function PlanificateurFinal({
                                         e.stopPropagation();
                                         onJobClick(job);
                                     }}
+                                    title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}`}
                                 >
                                     {/* Contenu de l'événement (tronqué si étroit) */}
                                     <div className="text-center leading-tight overflow-hidden">
@@ -698,19 +705,18 @@ export function PlanificateurFinal({
                                             {job.client}
                                         </div>
                                     </div>
-                                    {/* Infobulle au survol — lisible meme si la barre est trop fine pour le texte */}
-                                    <div className="pointer-events-none absolute left-1/2 bottom-full z-[60] mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-2 py-1 text-[11px] font-medium text-white shadow-xl group-hover:block">
-                                        <div className="font-bold">{job.numeroJob || `Job-${job.id}`}</div>
-                                        {job.nom && <div className="opacity-90">{job.nom}</div>}
-                                        {job.client && <div className="opacity-80">👤 {job.client}</div>}
-                                        <div className="opacity-80">🕒 {heureDebut} – {heureFin}</div>
-                                        {job.lieu && <div className="opacity-70">📍 {job.lieu}</div>}
-                                    </div>
                                 </div>
                             );
                         })}
                     </div>
                 ))}
+
+                {/* Indicateur de débordement : événements non affichés faute de place */}
+                {hiddenLayers > 0 && (
+                    <span className="absolute bottom-3 right-0.5 z-30 rounded bg-gray-700 px-1 text-[8px] font-bold text-white" title={`${hiddenLayers} ligne(s) d'événements supplémentaires`}>
+                        +{hiddenLayers}
+                    </span>
+                )}
 
                 {/* Indicateurs d'heures */}
                 <div className="absolute inset-x-0 bottom-0 h-3 flex text-xs text-gray-500 opacity-70 pointer-events-none">
