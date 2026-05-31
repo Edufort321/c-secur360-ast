@@ -3325,25 +3325,87 @@ export function JobModal({
                                 )}
 
                                 <div className="space-y-6">
-                                    {/* Informations de base */}
+                                    {/* En-tete du mandat : ordre demande -> # projet / nom du client / nom du mandat / lieu des travaux */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* 1. # projet */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Numéro de mandat
-                                            </label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2"># Projet</label>
                                             <input
                                                 type="text"
                                                 value={formData.numeroJob}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, numeroJob: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Ex: G25-0101"
+                                                placeholder="Ex: CS26001P / G25-0101"
                                             />
                                         </div>
 
-                                        <div>
+                                        {/* 2. Nom du client (autocomplete clients + projets) */}
+                                        <div className="relative">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Nom du mandat
+                                                Nom du client
+                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">Recherche…</span>}
                                             </label>
+                                            <input
+                                                type="text"
+                                                value={formData.client}
+                                                onChange={(e) => {
+                                                    setFormData(prev => ({ ...prev, client: e.target.value }));
+                                                    searchClientsAndProjects(e.target.value);
+                                                }}
+                                                onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder="Nom du client ou projet…"
+                                                autoComplete="off"
+                                            />
+                                            {clientSuggestions.length > 0 && (
+                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                                    {/* Clients */}
+                                                    {clientSuggestions.filter(s => s._type === 'client').length > 0 && (
+                                                        <>
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0">
+                                                                👥 Clients
+                                                            </div>
+                                                            {clientSuggestions.filter(s => s._type === 'client').map(c => (
+                                                                <button key={c.id} type="button" onMouseDown={() => applyClientSuggestion(c)}
+                                                                    className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex items-center gap-2">
+                                                                    <span className="font-medium text-gray-800">{c.name}</span>
+                                                                    {c.city && <span className="text-xs text-gray-400">{c.city}</span>}
+                                                                    {c.contact_name && <span className="text-xs text-gray-400 ml-auto">{c.contact_name}</span>}
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                    {/* Projets */}
+                                                    {clientSuggestions.filter(s => s._type === 'project').length > 0 && (
+                                                        <>
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0 border-t border-gray-100">
+                                                                📁 Projets — cliquer pour remplir le formulaire
+                                                            </div>
+                                                            {clientSuggestions.filter(s => s._type === 'project').map(p => (
+                                                                <button key={p.id} type="button" onMouseDown={() => applyClientSuggestion(p)}
+                                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex items-start gap-2 border-t border-gray-50">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="font-medium text-gray-800 truncate">{p.title}</div>
+                                                                        <div className="text-xs text-gray-400 flex gap-2 mt-0.5">
+                                                                            {p.client_name && <span>{p.client_name}</span>}
+                                                                            {p.project_number && <span className="font-mono">#{p.project_number}</span>}
+                                                                            {p.location && <span>📍 {p.location}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-semibold ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                                        {p.status || 'projet'}
+                                                                    </span>
+                                                                </button>
+                                                            ))}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 3. Nom du mandat */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Nom du mandat</label>
                                             <input
                                                 type="text"
                                                 value={formData.nom}
@@ -3354,6 +3416,54 @@ export function JobModal({
                                             />
                                         </div>
 
+                                        {/* 4. Lieu des travaux (autocomplete d'adresse + carte + meteo) */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">📍 Lieu des travaux</label>
+                                            <input
+                                                ref={attachLieuAutocomplete}
+                                                type="text"
+                                                value={formData.lieu}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value, lieuLat: null, lieuLng: null }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder="Adresse / lieu d'intervention"
+                                                autoComplete="off"
+                                            />
+                                            {formData.lieuLat != null && formData.lieuLng != null && (
+                                                <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                                                    📌 Coordonnées enregistrées ({Number(formData.lieuLat).toFixed(4)}, {Number(formData.lieuLng).toFixed(4)})
+                                                </span>
+                                            )}
+                                            {formData.lieu && formData.lieu.trim() && (
+                                                <>
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.lieu)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                                                    >
+                                                        🗺️ Voir sur Google Maps
+                                                    </a>
+                                                    {/* Carte integree (API Embed) — s'affiche si la cle NEXT_PUBLIC_GOOGLE_MAPS_API_KEY est configuree */}
+                                                    {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                                                        <iframe
+                                                            title="Carte de l'endroit des travaux"
+                                                            className="mt-2 w-full rounded-lg border border-gray-200"
+                                                            height="200"
+                                                            style={{ border: 0 }}
+                                                            loading="lazy"
+                                                            referrerPolicy="no-referrer-when-downgrade"
+                                                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${formData.lieuLat != null && formData.lieuLng != null ? `${formData.lieuLat},${formData.lieuLng}` : encodeURIComponent(formData.lieu)}`}
+                                                        />
+                                                    )}
+                                                    {/* Meteo de l'endroit des travaux (a la date de debut) + alerte orage */}
+                                                    <WeatherPanel location={formData.lieu} date={formData.dateDebut} className="mt-2" />
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Informations complementaires */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Description
@@ -3541,114 +3651,6 @@ export function JobModal({
                                             )}
                                         </div>
 
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                📍 Endroit des travaux
-                                            </label>
-                                            <input
-                                                ref={attachLieuAutocomplete}
-                                                type="text"
-                                                value={formData.lieu}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value, lieuLat: null, lieuLng: null }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Adresse / lieu d'intervention"
-                                                autoComplete="off"
-                                            />
-                                            {formData.lieuLat != null && formData.lieuLng != null && (
-                                                <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600">
-                                                    📌 Coordonnées enregistrées ({Number(formData.lieuLat).toFixed(4)}, {Number(formData.lieuLng).toFixed(4)})
-                                                </span>
-                                            )}
-                                            {formData.lieu && formData.lieu.trim() && (
-                                                <>
-                                                    <a
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.lieu)}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                                                    >
-                                                        🗺️ Voir sur Google Maps
-                                                    </a>
-                                                    {/* Carte integree (API Embed) — s'affiche si la cle NEXT_PUBLIC_GOOGLE_MAPS_API_KEY est configuree */}
-                                                    {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                                                        <iframe
-                                                            title="Carte de l'endroit des travaux"
-                                                            className="mt-2 w-full rounded-lg border border-gray-200"
-                                                            height="200"
-                                                            style={{ border: 0 }}
-                                                            loading="lazy"
-                                                            referrerPolicy="no-referrer-when-downgrade"
-                                                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${formData.lieuLat != null && formData.lieuLng != null ? `${formData.lieuLat},${formData.lieuLng}` : encodeURIComponent(formData.lieu)}`}
-                                                        />
-                                                    )}
-                                                    {/* Meteo de l'endroit des travaux (a la date de debut) + alerte orage */}
-                                                    <WeatherPanel location={formData.lieu} date={formData.dateDebut} className="mt-2" />
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Client
-                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">Recherche…</span>}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.client}
-                                                onChange={(e) => {
-                                                    setFormData(prev => ({ ...prev, client: e.target.value }));
-                                                    searchClientsAndProjects(e.target.value);
-                                                }}
-                                                onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du client ou projet…"
-                                                autoComplete="off"
-                                            />
-                                            {clientSuggestions.length > 0 && (
-                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
-                                                    {/* Clients */}
-                                                    {clientSuggestions.filter(s => s._type === 'client').length > 0 && (
-                                                        <>
-                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0">
-                                                                👥 Clients
-                                                            </div>
-                                                            {clientSuggestions.filter(s => s._type === 'client').map(c => (
-                                                                <button key={c.id} type="button" onMouseDown={() => applyClientSuggestion(c)}
-                                                                    className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex items-center gap-2">
-                                                                    <span className="font-medium text-gray-800">{c.name}</span>
-                                                                    {c.city && <span className="text-xs text-gray-400">{c.city}</span>}
-                                                                    {c.contact_name && <span className="text-xs text-gray-400 ml-auto">{c.contact_name}</span>}
-                                                                </button>
-                                                            ))}
-                                                        </>
-                                                    )}
-                                                    {/* Projets */}
-                                                    {clientSuggestions.filter(s => s._type === 'project').length > 0 && (
-                                                        <>
-                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0 border-t border-gray-100">
-                                                                📁 Projets — cliquer pour remplir le formulaire
-                                                            </div>
-                                                            {clientSuggestions.filter(s => s._type === 'project').map(p => (
-                                                                <button key={p.id} type="button" onMouseDown={() => applyClientSuggestion(p)}
-                                                                    className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex items-start gap-2 border-t border-gray-50">
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="font-medium text-gray-800 truncate">{p.title}</div>
-                                                                        <div className="text-xs text-gray-400 flex gap-2 mt-0.5">
-                                                                            {p.client_name && <span>{p.client_name}</span>}
-                                                                            {p.project_number && <span className="font-mono">#{p.project_number}</span>}
-                                                                            {p.location && <span>📍 {p.location}</span>}
-                                                                        </div>
-                                                                    </div>
-                                                                    <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-semibold ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                                        {p.status || 'projet'}
-                                                                    </span>
-                                                                </button>
-                                                            ))}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
 
                                     {/* P4 : liens d'interconnexion actifs (modules reliés au mandat) */}
