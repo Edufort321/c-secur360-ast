@@ -3572,6 +3572,30 @@ export function JobModal({
                                             />
                                         </div>
 
+                                        {/* Heures de l'evenement — utilisees par l'affichage du calendrier (barre timeline) */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Heure de début
+                                            </label>
+                                            <input
+                                                type="time"
+                                                value={formData.heureDebut || '08:00'}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Heure de fin
+                                            </label>
+                                            <input
+                                                type="time"
+                                                value={formData.heureFin || '17:00'}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            />
+                                        </div>
+
                                         {/* Responsable de l'evenement (designe par le coordonnateur ; monte le Gantt) */}
                                         <div className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
