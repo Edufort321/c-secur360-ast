@@ -51,6 +51,9 @@
 - [ ] **A. Chatbot public** (marketing, anonyme) : Claude haiku + anti-abus IP + plafond global ; widget page d'accueil.
 - [ ] **B. Assistant tenant** (dashboard, auth Bearer + quota/user) : KB générique (zéro donnée tenant → fuite impossible). `ANTHROPIC_API_KEY` requise.
 
+## 🎫 Accès démo — voir `TODO-DEMO-ACCESS.md`
+- [ ] Bouton « Démarrer maintenant » + capture Nom/courriel → démo 1 h/session, 4 h total, 2 reprises ; notif propriétaire (SMS Twilio ou courriel Resend — à décider) ; verrouillage + réactivation à l'abonnement ; CTA forfaits. Bac à sable `demo` partagé + purge.
+
 ## 🔎 Audit
 - **`AUDIT-INTERMODULE.md`** — audit global de la logique inter-module : 3 architectures coexistantes (hub Projets 010 / planner_* / compta gl_*), **duplications à trancher** (catalogue_taux vs labor_rates/rate_settings ; soumissions 090 vs projects.estimate/submission_number ; planner_jobs.projectId TEXT vs projects.id UUID), généricité « tout type », **écarts Gantt** (drag-to-link, jalons, nivellement, export), recommandations de réconciliation. ⚠️ Arbitrer §6.1 (source des taux) + §6.2 (soumission→projet) AVANT l'UI Soumission S2.
 
