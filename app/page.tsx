@@ -86,56 +86,56 @@ const MODULES_EN = [
 // Présentation marketing détaillée par module (carte au clic). Haut niveau, sans détail technique.
 const MODULE_DETAILS: Record<string, { fr: { tagline: string; points: string[] }; en: { tagline: string; points: string[] } }> = {
   admin: {
-    fr: { tagline: 'Pilotez votre organisation depuis un seul endroit.', points: ['Utilisateurs, rôles et permissions granulaires', 'Configuration du compte et des modules actifs', 'Multi-sites et multi-clients', 'Contrôle d\'accès par niveau'] },
-    en: { tagline: 'Run your organization from a single place.', points: ['Users, roles and granular permissions', 'Account and active-module configuration', 'Multi-site and multi-client', 'Level-based access control'] },
+    fr: { tagline: 'Le poste de commande complet de votre entreprise — RH, paie, comptabilité et facturation, le tout relié.', points: ['Employés, accès par niveau, mots de passe et succursales', 'Évaluation des compétences, grille salariale et progression de carrière', 'Paie & avantages, primes et commissions de vente automatiques', 'Véhicules : avantages imposables et déductions (taux ARC 2026)', 'Comptabilité en partie double : grand livre, balance, bilan et résultats', 'Facturation multi-province (TPS/TVH/TVQ/PST) avec PDF', 'Soumissions à catalogue de taux versionné et révisions', 'Transactions (achats) + rapports fiscaux : TPS/TVQ, TP-41.C, base T4/RL-1'] },
+    en: { tagline: 'Your company\'s full command center — HR, payroll, accounting and billing, all connected.', points: ['Employees, level-based access, passwords and branches', 'Skills evaluation, salary grid and career progression', 'Payroll & benefits, bonuses and automatic sales commissions', 'Vehicles: taxable benefits and deductions (CRA 2026 rates)', 'Double-entry accounting: ledger, trial balance, balance sheet and P&L', 'Multi-province billing (GST/HST/QST/PST) with PDF', 'Quotes with versioned rate catalogue and revisions', 'Purchases + tax reports: GST/QST, TP-41.C, T4/RL-1 base'] },
   },
   projets: {
-    fr: { tagline: 'De la soumission à la facturation, suivez chaque chantier.', points: ['Soumissions, projets, clients et contrats', 'Avancement et budget vs réel en temps réel', 'Numérotation automatique', 'Lien direct avec la planification et la facturation'] },
-    en: { tagline: 'From quote to invoice, track every jobsite.', points: ['Quotes, projects, clients and contracts', 'Real-time progress and budget vs actual', 'Automatic numbering', 'Direct link to planning and billing'] },
+    fr: { tagline: 'De la soumission à la facturation, pilotez chaque chantier de bout en bout.', points: ['Soumissions hiérarchiques (items, main-d\'œuvre, matériaux)', 'Catalogue de taux versionné par année + révision « au taux actuel »', 'Transfert soumission → projet en un clic (numérotation auto)', 'Budget vs réel et avancement en temps réel', 'Matériel de projet relié à l\'inventaire', 'Tout converge vers la facturation et la comptabilité'] },
+    en: { tagline: 'From quote to invoice, run every jobsite end to end.', points: ['Hierarchical quotes (items, labor, materials)', 'Year-versioned rate catalogue + revise-at-current-rate', 'One-click quote → project (auto numbering)', 'Real-time budget vs actual and progress', 'Project materials linked to inventory', 'Everything flows to billing and accounting'] },
   },
   planner: {
-    fr: { tagline: 'Planifiez les travaux et les équipes sans effort.', points: ['Gantt avec dépendances, parallèle et chemin critique', 'Affectation du personnel et des équipements', 'Pré-montage depuis la soumission', 'Carte du lieu et météo des travaux'] },
-    en: { tagline: 'Plan work and crews effortlessly.', points: ['Gantt with dependencies, parallel and critical path', 'Personnel and equipment assignment', 'Pre-built from the quote', 'Worksite map and weather'] },
+    fr: { tagline: 'Planifiez les travaux et les équipes comme un chef de projet aguerri.', points: ['Gantt avancé : dépendances (FS/SS/FF/SF), travaux parallèles, chemin critique', 'Pré-montage automatique du Gantt depuis la soumission', 'Modes En suite / Parallèle / Custom selon le personnel disponible', 'Affectation personnel, équipements, équipes et horaires par jour', 'Détection des conflits (congés, équipements hors service)', 'Endroit des travaux sur Google Maps + météo et alerte orage', 'Pièces jointes : plans, devis, photos'] },
+    en: { tagline: 'Plan work and crews like a seasoned project manager.', points: ['Advanced Gantt: dependencies (FS/SS/FF/SF), parallel work, critical path', 'Auto-built Gantt from the quote', 'Sequential / Parallel / Custom modes based on crew availability', 'Personnel, equipment, teams and per-day schedules', 'Conflict detection (leave, out-of-service equipment)', 'Worksite on Google Maps + weather and storm alerts', 'Attachments: plans, quotes, photos'] },
   },
   ast: {
-    fr: { tagline: 'Des analyses de sécurité conformes, signées sur le terrain.', points: ['AST/JSEA numériques avec signatures électroniques', 'Dangers, mesures de contrôle et discussion d\'équipe', 'Conforme aux normes provinciales', 'Accès par QR sur le chantier'] },
-    en: { tagline: 'Compliant job safety analyses, signed in the field.', points: ['Digital JSA with electronic signatures', 'Hazards, control measures and team discussion', 'Compliant with provincial standards', 'QR access on the jobsite'] },
+    fr: { tagline: 'Des analyses sécuritaires de tâches conformes, signées directement sur le terrain.', points: ['AST/JSEA numériques avec signatures électroniques', 'Dangers, mesures de contrôle, isolation/cadenassage et discussion d\'équipe', 'Météo et conditions du lieu pour l\'évaluation des dangers', 'Conforme aux normes provinciales (CNESST, etc.)', 'Accès et création par QR code sur le chantier', 'Conservation et traçabilité complètes'] },
+    en: { tagline: 'Compliant job safety analyses, signed right in the field.', points: ['Digital JSA with electronic signatures', 'Hazards, controls, lockout/tagout and team discussion', 'Site weather and conditions for hazard assessment', 'Compliant with provincial standards (CNESST, etc.)', 'QR access and creation on the jobsite', 'Full retention and traceability'] },
   },
   permits: {
-    fr: { tagline: 'Tous vos permis de travail, sans papier.', points: ['Espace clos, travaux à chaud, hauteur, excavation', 'Vérifications préalables obligatoires', 'Traçabilité et autorisations', 'Archivage conforme'] },
-    en: { tagline: 'All your work permits, paperless.', points: ['Confined space, hot work, heights, excavation', 'Mandatory pre-checks', 'Traceability and authorizations', 'Compliant archiving'] },
+    fr: { tagline: 'Tous vos permis de travail à risque, sans papier et toujours traçables.', points: ['Espace clos, travaux à chaud, hauteur, excavation, électrique', 'Vérifications préalables obligatoires avant le début', 'Autorisations et signatures électroniques', 'Lien avec l\'AST et le projet', 'Archivage conforme'] },
+    en: { tagline: 'All your high-risk work permits, paperless and always traceable.', points: ['Confined space, hot work, heights, excavation, electrical', 'Mandatory pre-checks before start', 'Authorizations and e-signatures', 'Linked to JSA and project', 'Compliant archiving'] },
   },
   accidents: {
-    fr: { tagline: 'Déclarez, enquêtez, corrigez — sans rien échapper.', points: ['Rapport d\'accident structuré', 'Enquête et actions correctives', 'Suivi réglementaire', 'Tendances et indicateurs'] },
-    en: { tagline: 'Report, investigate, correct — nothing slips.', points: ['Structured accident report', 'Investigation and corrective actions', 'Regulatory tracking', 'Trends and indicators'] },
+    fr: { tagline: 'Déclarez, enquêtez et corrigez — sans jamais rien échapper.', points: ['Rapport d\'accident structuré et guidé', 'Enquête, causes et actions correctives', 'Suivi réglementaire et échéances', 'Tendances, indicateurs et tableaux de bord', 'Pièces jointes et photos'] },
+    en: { tagline: 'Report, investigate and correct — nothing slips through.', points: ['Structured, guided accident report', 'Investigation, root causes and corrective actions', 'Regulatory tracking and deadlines', 'Trends, KPIs and dashboards', 'Attachments and photos'] },
   },
   presque: {
-    fr: { tagline: 'Prévenez avant l\'incident.', points: ['Déclaration des quasi-accidents', 'Suivi proactif des dangers', 'Culture de prévention', 'Statistiques de sécurité'] },
-    en: { tagline: 'Prevent before the incident.', points: ['Near-miss reporting', 'Proactive hazard tracking', 'Prevention culture', 'Safety statistics'] },
+    fr: { tagline: 'Transformez chaque quasi-accident en prévention concrète.', points: ['Déclaration rapide des presque-accidents', 'Suivi proactif des dangers récurrents', 'Renforce la culture de prévention', 'Statistiques de sécurité et tendances'] },
+    en: { tagline: 'Turn every near-miss into concrete prevention.', points: ['Quick near-miss reporting', 'Proactive tracking of recurring hazards', 'Strengthens prevention culture', 'Safety statistics and trends'] },
   },
   inventaire: {
-    fr: { tagline: 'Maîtrisez stock, EPI et consommables.', points: ['Gestion du stock et des EPI', 'Consommables et réapprovisionnement', 'Lien avec la préparation de chantier', 'Suivi par site'] },
-    en: { tagline: 'Master stock, PPE and consumables.', points: ['Stock and PPE management', 'Consumables and restocking', 'Link to jobsite preparation', 'Per-site tracking'] },
+    fr: { tagline: 'Maîtrisez stock, EPI et consommables, du dépôt au chantier.', points: ['Gestion du stock, des EPI et des consommables', 'Réapprovisionnement et seuils', 'Relié à la préparation de chantier du planificateur', 'Suivi par site et par projet', 'Identification par QR'] },
+    en: { tagline: 'Master stock, PPE and consumables, from depot to jobsite.', points: ['Stock, PPE and consumables management', 'Restocking and thresholds', 'Linked to planner jobsite preparation', 'Per-site and per-project tracking', 'QR identification'] },
   },
   equip: {
-    fr: { tagline: 'Chaque équipement, son dossier complet.', points: ['Fiches techniques et certifications', 'Historique de maintenance', 'Inspections liées', 'Identification par QR'] },
-    en: { tagline: 'Every asset, a complete record.', points: ['Technical sheets and certifications', 'Maintenance history', 'Linked inspections', 'QR identification'] },
+    fr: { tagline: 'Chaque équipement, son dossier complet et sa conformité à jour.', points: ['Fiches techniques et certifications', 'Historique d\'entretien et de maintenance', 'Inspections périodiques reliées', 'Photos et documents', 'Identification et accès par QR'] },
+    en: { tagline: 'Every asset, a complete record with up-to-date compliance.', points: ['Technical sheets and certifications', 'Service and maintenance history', 'Linked periodic inspections', 'Photos and documents', 'QR identification and access'] },
   },
   inspect: {
-    fr: { tagline: 'Des inspections rigoureuses, simples à exécuter.', points: ['Listes de vérification personnalisables', 'Inspections périodiques', 'Rapports d\'état et photos', 'Conformité documentée'] },
-    en: { tagline: 'Rigorous inspections, simple to run.', points: ['Customizable checklists', 'Scheduled inspections', 'Condition reports and photos', 'Documented compliance'] },
+    fr: { tagline: 'Des inspections rigoureuses, simples à exécuter même sur le terrain.', points: ['Listes de vérification personnalisables', 'Inspections périodiques et planifiées', 'Rapports d\'état avec photos', 'Création par QR depuis l\'équipement', 'Conformité documentée et historisée'] },
+    en: { tagline: 'Rigorous inspections, simple to run even in the field.', points: ['Customizable checklists', 'Periodic and scheduled inspections', 'Condition reports with photos', 'QR creation from the equipment', 'Documented, historized compliance'] },
   },
   temps: {
-    fr: { tagline: 'Les heures, de la saisie à la paie.', points: ['Saisie des heures par période', 'Approbation superviseur', 'Avantages et déductions', 'Export comptable'] },
-    en: { tagline: 'Hours, from entry to payroll.', points: ['Time entry by period', 'Supervisor approval', 'Benefits and deductions', 'Accounting export'] },
+    fr: { tagline: 'Les heures, de la saisie terrain jusqu\'à la paie, sans ressaisie.', points: ['Saisie des heures par période', 'Approbation par le superviseur', 'Avantages, déductions véhicule et commissions', 'Alimente la paie et la comptabilité', 'Export comptable'] },
+    en: { tagline: 'Hours, from field entry to payroll, no double entry.', points: ['Time entry by period', 'Supervisor approval', 'Benefits, vehicle deductions and commissions', 'Feeds payroll and accounting', 'Accounting export'] },
   },
   logbook: {
-    fr: { tagline: 'Le carnet de bord numérique de votre flotte.', points: ['Kilométrage et trajets', 'Incidents et entretien', 'Avantages automobiles (ARC)', 'Suivi par véhicule'] },
-    en: { tagline: 'Your fleet\'s digital logbook.', points: ['Mileage and trips', 'Incidents and maintenance', 'Vehicle benefits (CRA)', 'Per-vehicle tracking'] },
+    fr: { tagline: 'Le carnet de bord numérique de votre flotte, conforme à l\'ARC.', points: ['Kilométrage, trajets et usage personnel', 'Incidents et entretien', 'Calcul des avantages automobiles (ARC 2026)', 'Relié à la paie et aux déductions', 'Suivi par véhicule et par employé'] },
+    en: { tagline: 'Your fleet\'s digital logbook, CRA-compliant.', points: ['Mileage, trips and personal use', 'Incidents and maintenance', 'Automobile benefit calculation (CRA 2026)', 'Linked to payroll and deductions', 'Per-vehicle and per-employee tracking'] },
   },
   todo: {
-    fr: { tagline: 'Rien ne tombe entre les mailles.', points: ['Tâches, priorités et assignations', 'Rappels automatiques', 'Suivi d\'avancement', 'Collaboration d\'équipe'] },
-    en: { tagline: 'Nothing falls through the cracks.', points: ['Tasks, priorities and assignments', 'Automatic reminders', 'Progress tracking', 'Team collaboration'] },
+    fr: { tagline: 'Rien ne tombe entre les mailles : tâches, rappels et suivi d\'équipe.', points: ['Tâches, priorités et assignations', 'Rappels automatiques', 'Suivi d\'avancement', 'Collaboration d\'équipe'] },
+    en: { tagline: 'Nothing falls through the cracks: tasks, reminders and team tracking.', points: ['Tasks, priorities and assignments', 'Automatic reminders', 'Progress tracking', 'Team collaboration'] },
   },
 };
 
@@ -192,6 +192,13 @@ export default function LandingPage() {
   const modules = fr ? MODULES_FR : MODULES_EN
   const heroFallback = fr ? HERO_FALLBACK_FR : HERO_FALLBACK_EN
   const testimonials = fr ? TESTIMONIALS_FR : TESTIMONIALS_EN
+
+  // Ouvre la carte d'un module si l'URL contient ?module=<key> (lien partageable).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const m = new URLSearchParams(window.location.search).get('module')
+    if (m) setSelectedModule(m)
+  }, [])
 
   // No auto-redirect: users can view the public page even when logged in
 
@@ -877,8 +884,17 @@ export default function LandingPage() {
                 <a href="mailto:eric.dufort@cerdia.ai?subject=Démo C-Secur360" className="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
                   {fr ? 'Demander une démo' : 'Request a demo'}
                 </a>
-                <button onClick={() => setSelectedModule(null)} className="flex-1 rounded-lg border border-white/20 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-white/5">
-                  {fr ? 'Fermer' : 'Close'}
+                <button
+                  onClick={async () => {
+                    const url = `${window.location.origin}/?module=${selectedModule}`
+                    const shareData = { title: `C-Secur360 — ${mod.name}`, text: (d?.tagline || mod.desc), url }
+                    try {
+                      if (navigator.share) { await navigator.share(shareData) }
+                      else { await navigator.clipboard.writeText(url); alert(fr ? 'Lien copié dans le presse-papiers !' : 'Link copied to clipboard!') }
+                    } catch { /* annulé */ }
+                  }}
+                  className="flex-1 rounded-lg border border-white/20 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-white/5">
+                  {fr ? '🔗 Partager' : '🔗 Share'}
                 </button>
               </div>
             </div>
