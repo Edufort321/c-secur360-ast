@@ -67,8 +67,15 @@ const publicRoutes = [
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';
-  const { pathname } = request.nextUrl;
-  
+  // Securite (#21) : normaliser le chemin (slashs multiples) pour eviter les contournements
+  // des regex de routes publiques (ex. '//login', '/x//admin').
+  const rawPath = request.nextUrl.pathname;
+  const pathname = rawPath.replace(/\/{2,}/g, '/');
+  if (pathname !== rawPath) {
+    url.pathname = pathname;
+    return NextResponse.redirect(url);
+  }
+
   // Skip middleware for static assets and system files
   if (
     pathname.startsWith('/_next/') ||

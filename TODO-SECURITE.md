@@ -35,7 +35,7 @@ Helper partagé **`lib/apiAuth.ts`** → `requireAdmin(req)` : cookie httpOnly d
 - [x] **#18** — `app/api/test-supabase` + `app/api/db/init` : **SUPPRIMÉS**.
 - [x] **#19** — `system/status` : **CORRIGÉ** — `requireAdmin` (n'expose plus la config env publiquement).
 - [x] **#20** — `weather` : **CORRIGÉ** — rate-limit par IP (30/min, en mémoire ; Redis/DB en suivi).
-- [ ] **#21** — `middleware.ts:207` : regex routes publiques contournables (`//login`). → Normaliser les paths.
+- [x] **#21** — `middleware.ts` : **CORRIGÉ** — normalisation des slashs multiples (redirige `//login` → `/login`) avant les contrôles de routes.
 
 ## 🌐 CONFORMITÉ WEB (déploiement public)
 - [ ] **#22** — Headers HTTP de sécurité ABSENTS (`next.config.js`) : HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP. → `async headers()`.
