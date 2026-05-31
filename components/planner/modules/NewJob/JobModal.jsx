@@ -7,6 +7,7 @@ import { DropZone } from '../../components/UI/DropZone';
 import { FilePreview } from '../../components/UI/FilePreview';
 import { ResourceSelector } from './ResourceSelector';
 import { WeatherPanel } from '@/components/WeatherPanel';
+import { loadGoogleMaps } from '@/lib/googleMaps';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
 import {
     formatLocalizedDate,
@@ -2833,6 +2834,33 @@ export function JobModal({
         addNotification?.('AST ouverte dans un nouvel onglet (infos préremplies). Notez son numéro pour la rattacher ici.', 'info');
     };
 
+    // ============== P4 : AUTOCOMPLETE D'ADRESSE (Google Places) + GÉOCODAGE ==============
+    // Callback-ref : attache l'autocomplete dès que l'input « Endroit des travaux » est monté
+    // (y compris après un changement d'onglet). Renseigne lieu + lieuLat/lieuLng à la sélection.
+    // Sans clé NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, l'input reste un champ texte normal.
+    const attachLieuAutocomplete = useCallback((node) => {
+        if (!node || node._acAttached) return;
+        node._acAttached = true;
+        loadGoogleMaps().then((maps) => {
+            if (!maps?.places) return;
+            const ac = new maps.places.Autocomplete(node, {
+                fields: ['formatted_address', 'geometry'],
+                componentRestrictions: { country: 'ca' },
+            });
+            ac.addListener('place_changed', () => {
+                const p = ac.getPlace();
+                const addr = p?.formatted_address;
+                const loc = p?.geometry?.location;
+                setFormData(prev => ({
+                    ...prev,
+                    lieu: addr || prev.lieu,
+                    lieuLat: loc ? loc.lat() : prev.lieuLat,
+                    lieuLng: loc ? loc.lng() : prev.lieuLng,
+                }));
+            });
+        });
+    }, []);
+
     // ============== S4 : PRÉ-MONTAGE DEPUIS UNE SOUMISSION/PROJET ==============
     // Recherche un projet par numéro (soumission transférée), pré-remplit le mandat et
     // monte le Gantt : chaque Item = tâche parent, chaque ligne MO = étape enfant
@@ -3607,12 +3635,19 @@ export function JobModal({
                                                 📍 Endroit des travaux
                                             </label>
                                             <input
+                                                ref={attachLieuAutocomplete}
                                                 type="text"
                                                 value={formData.lieu}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value }))}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value, lieuLat: null, lieuLng: null }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 placeholder="Adresse / lieu d'intervention"
+                                                autoComplete="off"
                                             />
+                                            {formData.lieuLat != null && formData.lieuLng != null && (
+                                                <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600">
+                                                    📌 Coordonnées enregistrées ({Number(formData.lieuLat).toFixed(4)}, {Number(formData.lieuLng).toFixed(4)})
+                                                </span>
+                                            )}
                                             {formData.lieu && formData.lieu.trim() && (
                                                 <>
                                                     <a
@@ -3632,7 +3667,7 @@ export function JobModal({
                                                             style={{ border: 0 }}
                                                             loading="lazy"
                                                             referrerPolicy="no-referrer-when-downgrade"
-                                                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(formData.lieu)}`}
+                                                            src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${formData.lieuLat != null && formData.lieuLng != null ? `${formData.lieuLat},${formData.lieuLng}` : encodeURIComponent(formData.lieu)}`}
                                                         />
                                                     )}
                                                     {/* Meteo de l'endroit des travaux (a la date de debut) + alerte orage */}
