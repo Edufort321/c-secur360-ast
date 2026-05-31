@@ -137,6 +137,7 @@ export function JobModal({
     const [projectSearch, setProjectSearch] = useState('');
     const [prefilling, setPrefilling] = useState(false);
     const [ganttFullscreen, setGanttFullscreen] = useState(false);
+    const [ganttMenuOpen, setGanttMenuOpen] = useState(false); // menu Actions (hamburger) de la barre Gantt
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
 
     // États pour la gestion des horaires hiérarchiques
@@ -4533,204 +4534,128 @@ export function JobModal({
                                         </button>
                                     </div>
 
-                                    {/* Contrôles Gantt */}
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <button
-                                                    onClick={addNewTask}
-                                                    className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-                                                >
-                                                    ➕ Ajouter une tâche
-                                                </button>
-                                                {/* Templates WBS */}
-                                                <div className="relative">
-                                                    <select
-                                                        onChange={(e) => {
-                                                            if (e.target.value) {
-                                                                applyWBSTemplate(e.target.value);
-                                                                e.target.value = '';
-                                                            }
-                                                        }}
-                                                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm appearance-none pr-8"
+                                    {/* Contrôles Gantt — barre compacte + menu Actions (hamburger) */}
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <button
+                                                onClick={addNewTask}
+                                                className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm font-semibold"
+                                            >
+                                                ➕ Ajouter une tâche
+                                            </button>
+
+                                            {/* Sélecteur de vue (unique) */}
+                                            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1">
+                                                <span className="text-xs text-gray-500 px-1">Vue</span>
+                                                {['6h', '12h', '24h', 'day', 'week', 'month'].map(mode => (
+                                                    <button
+                                                        key={mode}
+                                                        onClick={() => updateField('ganttViewMode', mode)}
+                                                        className={`px-2 py-1 text-xs rounded ${
+                                                            (formData.ganttViewMode || getDefaultViewMode()) === mode
+                                                                ? 'bg-purple-600 text-white'
+                                                                : 'text-gray-600 hover:bg-gray-100'
+                                                        }`}
                                                     >
-                                                        <option value="">📋 Templates WBS</option>
-                                                        <option value="construction">🏗️ Construction/Sécurité</option>
-                                                        <option value="maintenance">🔧 Maintenance Préventive</option>
-                                                    </select>
-                                                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-white">
-                                                        ▼
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        const validation = validateWBSStructure();
-                                                        if (validation.isValid) {
-                                                            addNotification?.('Structure WBS valide ✅', 'success');
-                                                        } else {
-                                                            addNotification?.(`Problèmes WBS: ${validation.issues.join(', ')}`, 'error');
-                                                        }
-                                                    }}
-                                                    className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    ✅ Valider WBS
-                                                </button>
-
-                                                <button
-                                                    onClick={() => {
-                                                        const report = generateWorkPackageReport();
-                                                        const message = `📊 Rapport WBS:
-- ${report.totalTasks} tâches totales
-- ${report.workPackages} paquets de travail
-- ${report.totalEffort}h d'effort total
-- ${report.skillsRequired.length} compétences requises`;
-                                                        alert(message);
-                                                    }}
-                                                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    📊 Rapport WBS
-                                                </button>
-
-                                                {/* Contrôles de vue Gantt */}
-                                                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                                                    <span className="text-xs text-gray-600 px-2">Vue:</span>
-                                                    {['6h', '12h', '24h', 'day', 'week'].map(mode => (
-                                                        <button
-                                                            key={mode}
-                                                            onClick={() => setFormData(prev => ({ ...prev, ganttViewMode: mode }))}
-                                                            className={`px-2 py-1 text-xs rounded ${
-                                                                (formData.ganttViewMode || getDefaultViewMode()) === mode
-                                                                    ? 'bg-purple-600 text-white'
-                                                                    : 'text-gray-600 hover:bg-gray-200'
-                                                            }`}
-                                                        >
-                                                            {mode === 'day' ? 'Jour' : mode === 'week' ? 'Semaine' : mode}
-                                                        </button>
-                                                    ))}
-                                                </div>
-
-                                                {/* Indicateur de mode automatique */}
-                                                <div className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
-                                                    Auto: {getDefaultViewMode()} ({formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0)}h)
-                                                </div>
-
-                                                <button
-                                                    onClick={() => {
-                                                        const projectTemplate = [
-                                                            { name: 'Inspection initiale', duration: 2, priority: 'high' },
-                                                            { name: 'Préparation matériel', duration: 1, priority: 'normal' },
-                                                            { name: 'Installation système', duration: 6, priority: 'high' },
-                                                            { name: 'Tests et validation', duration: 2, priority: 'high' },
-                                                            { name: 'Formation client', duration: 1, priority: 'normal' }
-                                                        ];
-
-                                                        const baseId = Date.now();
-                                                        const newTasks = projectTemplate.map((template, index) => ({
-                                                            id: (baseId + index).toString(),
-                                                            text: template.name,                 // champ canonique affiche dans la liste
-                                                            duration: template.duration,
-                                                            startHour: index * template.duration,
-                                                            description: `Tâche générée automatiquement: ${template.name}`,
-                                                            priority: template.priority,         // valeurs alignees sur l'indicateur (normal/high/critical)
-                                                            status: 'planifie',
-                                                            parentId: null,
-                                                            order: index,
-                                                            resources: [],
-                                                            assignedPersonnel: [],
-                                                            assignedEquipement: [],
-                                                            parallelWith: [],
-                                                            // Dependance FS en cascade vers la tache precedente (format {id,type,lag} attendu)
-                                                            dependencies: index > 0 ? [{ id: (baseId + index - 1).toString(), type: 'FS', lag: 0 }] : []
-                                                        }));
-
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            etapes: [...prev.etapes, ...newTasks]
-                                                        }));
-
-                                                        addNotification?.(`${newTasks.length} tâches de projet type ajoutées`, 'success');
-                                                    }}
-                                                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    🛠️ Projet type
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const criticalPath = calculateCriticalPath(formData.etapes);
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            criticalPath,
-                                                            etapes: prev.etapes.map(task => ({
-                                                                ...task,
-                                                                isCritical: criticalPath.includes(task.id)
-                                                            }))
-                                                        }));
-                                                        addNotification?.(`Chemin critique calculé: ${criticalPath.length} tâche(s) critique(s)`, 'info');
-                                                    }}
-                                                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    🎯 Calculer critique
-                                                </button>
-                                                <button
-                                                    onClick={saveBaseline}
-                                                    className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm"
-                                                >
-                                                    💾 Sauver baseline
-                                                </button>
-                                                <button
-                                                    onClick={() => updateField('showCriticalPath', !formData.showCriticalPath)}
-                                                    className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
-                                                        formData.showCriticalPath
-                                                            ? 'bg-red-500 text-white'
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                    }`}
-                                                >
-                                                    🚨 Critique
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setGanttCompactMode(!ganttCompactMode)}
-                                                    className={`px-3 py-1 text-sm rounded flex items-center ${
-                                                        ganttCompactMode
-                                                            ? 'bg-purple-500 text-white'
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                    }`}
-                                                    title="Mode compact pour l'impression"
-                                                >
-                                                    📄 {ganttCompactMode ? 'Vue normale' : 'Mode compact'}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={toggleGanttFullscreen}
-                                                    className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                                                    title="Mode plein écran"
-                                                >
-                                                    {ganttFullscreen ? '🗗' : '⛶'} {ganttFullscreen ? 'Quitter' : 'Plein écran'}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={printGanttAndForms}
-                                                    className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-                                                    title="Imprimer rapport"
-                                                >
-                                                    🖨️ Imprimer
-                                                </button>
+                                                        {mode === 'day' ? 'Jour' : mode === 'week' ? 'Semaine' : mode === 'month' ? 'Mois' : mode}
+                                                    </button>
+                                                ))}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <label className="text-sm font-medium text-gray-700">Vue:</label>
-                                                <select
-                                                    value={formData.ganttViewMode || getDefaultViewMode()}
-                                                    onChange={(e) => updateField('ganttViewMode', e.target.value)}
-                                                    className="text-sm border rounded px-2 py-1"
+                                            <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                                                Auto: {getDefaultViewMode()} ({formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0)}h)
+                                            </span>
+
+                                            {/* Toggles rapides */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setGanttCompactMode(!ganttCompactMode)}
+                                                className={`px-3 py-1.5 text-sm rounded ${ganttCompactMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                                title="Mode compact pour l'impression"
+                                            >
+                                                📄 {ganttCompactMode ? 'Normale' : 'Compact'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={toggleGanttFullscreen}
+                                                className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                title="Mode plein écran"
+                                            >
+                                                {ganttFullscreen ? '🗗 Quitter' : '⛶ Plein écran'}
+                                            </button>
+
+                                            {/* Menu Actions (hamburger) : regroupe templates, WBS, critique, baseline, impression */}
+                                            <div className="relative ml-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGanttMenuOpen(o => !o)}
+                                                    className="px-3 py-2 text-sm font-semibold bg-gray-800 text-white rounded-lg hover:bg-gray-900 flex items-center gap-2"
+                                                    aria-expanded={ganttMenuOpen}
                                                 >
-                                                    <option value="6h">⏰ Vue 6h</option>
-                                                    <option value="12h">🕐 Vue 12h</option>
-                                                    <option value="24h">🕛 Vue 24h</option>
-                                                    <option value="day">📅 Jour</option>
-                                                    <option value="week">📋 Semaine</option>
-                                                    <option value="month">🗓️ Mois</option>
-                                                </select>
+                                                    ⚙️ Actions <span className="text-xs">{ganttMenuOpen ? '▲' : '▼'}</span>
+                                                </button>
+                                                {ganttMenuOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-40" onClick={() => setGanttMenuOpen(false)} aria-hidden />
+                                                        <div className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
+                                                            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Modèles</div>
+                                                            <button type="button" onClick={() => { applyWBSTemplate('construction'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🏗️ Modèle Construction/Sécurité</button>
+                                                            <button type="button" onClick={() => { applyWBSTemplate('maintenance'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🔧 Modèle Maintenance préventive</button>
+                                                            <button type="button" onClick={() => {
+                                                                const projectTemplate = [
+                                                                    { name: 'Inspection initiale', duration: 2, priority: 'high' },
+                                                                    { name: 'Préparation matériel', duration: 1, priority: 'normal' },
+                                                                    { name: 'Installation système', duration: 6, priority: 'high' },
+                                                                    { name: 'Tests et validation', duration: 2, priority: 'high' },
+                                                                    { name: 'Formation client', duration: 1, priority: 'normal' }
+                                                                ];
+                                                                const baseId = Date.now();
+                                                                const newTasks = projectTemplate.map((template, index) => ({
+                                                                    id: (baseId + index).toString(),
+                                                                    text: template.name,
+                                                                    duration: template.duration,
+                                                                    startHour: index * template.duration,
+                                                                    description: `Tâche générée automatiquement: ${template.name}`,
+                                                                    priority: template.priority,
+                                                                    status: 'planifie',
+                                                                    parentId: null,
+                                                                    order: index,
+                                                                    resources: [],
+                                                                    assignedPersonnel: [],
+                                                                    assignedEquipement: [],
+                                                                    parallelWith: [],
+                                                                    dependencies: index > 0 ? [{ id: (baseId + index - 1).toString(), type: 'FS', lag: 0 }] : []
+                                                                }));
+                                                                setFormData(prev => ({ ...prev, etapes: [...prev.etapes, ...newTasks] }));
+                                                                addNotification?.(`${newTasks.length} tâches de projet type ajoutées`, 'success');
+                                                                setGanttMenuOpen(false);
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🛠️ Projet type (5 tâches)</button>
+
+                                                            <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Analyse</div>
+                                                            <button type="button" onClick={() => {
+                                                                const criticalPath = calculateCriticalPath(formData.etapes);
+                                                                setFormData(prev => ({ ...prev, criticalPath, etapes: prev.etapes.map(task => ({ ...task, isCritical: criticalPath.includes(task.id) })) }));
+                                                                addNotification?.(`Chemin critique calculé: ${criticalPath.length} tâche(s) critique(s)`, 'info');
+                                                                setGanttMenuOpen(false);
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🎯 Calculer le chemin critique</button>
+                                                            <button type="button" onClick={() => { updateField('showCriticalPath', !formData.showCriticalPath); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🚨 {formData.showCriticalPath ? 'Masquer' : 'Afficher'} le chemin critique</button>
+                                                            <button type="button" onClick={() => {
+                                                                const validation = validateWBSStructure();
+                                                                if (validation.isValid) addNotification?.('Structure WBS valide ✅', 'success');
+                                                                else addNotification?.(`Problèmes WBS: ${validation.issues.join(', ')}`, 'error');
+                                                                setGanttMenuOpen(false);
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">✅ Valider la structure WBS</button>
+                                                            <button type="button" onClick={() => {
+                                                                const report = generateWorkPackageReport();
+                                                                alert(`📊 Rapport WBS:\n- ${report.totalTasks} tâches totales\n- ${report.workPackages} paquets de travail\n- ${report.totalEffort}h d'effort total\n- ${report.skillsRequired.length} compétences requises`);
+                                                                setGanttMenuOpen(false);
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">📊 Rapport WBS</button>
+
+                                                            <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Enregistrer / Exporter</div>
+                                                            <button type="button" onClick={() => { saveBaseline(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">💾 Sauver la baseline</button>
+                                                            <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🖨️ Imprimer le rapport</button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
