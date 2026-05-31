@@ -129,6 +129,9 @@ export function JobModal({
     // États pour l'interface utilisateur
     const [activeTab, setActiveTab] = useState('form');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // S4 : pré-montage du Gantt depuis une soumission transférée en projet
+    const [projectSearch, setProjectSearch] = useState('');
+    const [prefilling, setPrefilling] = useState(false);
     const [ganttFullscreen, setGanttFullscreen] = useState(false);
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
 
@@ -2770,6 +2773,81 @@ export function JobModal({
         }
     };
 
+    // ============== S4 : PRÉ-MONTAGE DEPUIS UNE SOUMISSION/PROJET ==============
+    // Recherche un projet par numéro (soumission transférée), pré-remplit le mandat et
+    // monte le Gantt : chaque Item = tâche parent, chaque ligne MO = étape enfant
+    // (durée = Rég+Supp+Maj, personnes = Tech). Décision-free (4 décisions tranchées).
+    const prefillFromProject = async () => {
+        const num = (projectSearch || '').trim();
+        if (!num) return;
+        setPrefilling(true);
+        try {
+            const tenant = window.location.pathname.split('/')[1] || 'cerdia';
+            const { data: proj } = await supabase.from('projects')
+                .select('*').eq('tenant_id', tenant).eq('project_number', num).maybeSingle();
+            if (!proj) { addNotification?.(`Projet introuvable : ${num}`, 'error'); setPrefilling(false); return; }
+            const est = proj.estimate || {};
+            const newEtapes = [];
+            let baseId = Date.now();
+            (est.items || []).forEach((it, ii) => {
+                const parentId = baseId++;
+                newEtapes.push({
+                    id: parentId, text: it.name || `Item ${ii + 1}`, description: '', completed: false,
+                    duration: 0, priority: 'normal', dependencies: [], parallelWith: [], parentId: null,
+                    level: 0, order: ii, progress: 0, assignedResources: { personnel: [], equipements: [], equipes: [], sousTraitants: [] },
+                });
+                (it.lignes || []).filter(l => l.categorie === 'mo_bureau' || l.categorie === 'mo_chantier').forEach((l, li) => {
+                    const dur = (Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0);
+                    newEtapes.push({
+                        id: baseId++, text: l.description || 'Travail', description: '', completed: false,
+                        duration: dur || 1, priority: 'normal', dependencies: [], parallelWith: [], parentId,
+                        level: 1, order: li, progress: 0, personnesRequises: Number(l.tech) || 1,
+                        assignedResources: { personnel: [], equipements: [], equipes: [], sousTraitants: [] },
+                    });
+                });
+            });
+            setFormData(prev => ({
+                ...prev,
+                numeroJob: proj.project_number || prev.numeroJob,
+                nom: proj.title || prev.nom,
+                lieu: proj.location || prev.lieu,
+                client: proj.client_name || prev.client,
+                projectId: proj.id,
+                etapes: newEtapes.length ? newEtapes : prev.etapes,
+            }));
+            addNotification?.(`Pré-rempli depuis ${proj.project_number} — ${newEtapes.length} étape(s) générée(s).`, 'success');
+        } catch (e) {
+            addNotification?.(e?.message || 'Erreur de pré-remplissage', 'error');
+        }
+        setPrefilling(false);
+    };
+
+    // Applique un mode d'ordonnancement aux sous-tâches de CHAQUE item (parent) :
+    //  - 'suite'     : chaîne FS (chaque étape dépend de la précédente) -> séquentiel
+    //  - 'parallele' : démarrage simultané (parallelWith = 1re sous-tâche) sous réserve du personnel
+    //  - 'custom'    : ne touche à rien (configuration manuelle conservée)
+    const applyBuildMode = (mode) => {
+        if (mode === 'custom') return;
+        setFormData(prev => {
+            const parents = prev.etapes.filter(e => !e.parentId);
+            const etapes = prev.etapes.map(e => ({ ...e }));
+            parents.forEach(parent => {
+                const kids = etapes.filter(e => String(e.parentId) === String(parent.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
+                kids.forEach((k, i) => {
+                    if (mode === 'suite') {
+                        k.parallelWith = [];
+                        k.dependencies = i > 0 ? [{ id: kids[i - 1].id, type: 'FS', lag: 0 }] : [];
+                    } else if (mode === 'parallele') {
+                        k.dependencies = [];
+                        k.parallelWith = i > 0 ? [kids[0].id] : [];
+                    }
+                });
+            });
+            return { ...prev, etapes };
+        });
+        addNotification?.(mode === 'suite' ? 'Étapes en séquence (l\'une après l\'autre).' : 'Étapes en parallèle (selon le personnel disponible).', 'info');
+    };
+
     // Handler pour la soumission du formulaire
     const handleSubmit = () => {
         // Validation : signaler precisement les champs requis manquants
@@ -3633,6 +3711,33 @@ export function JobModal({
                                                 </div>
                                             )}
                                         </h4>
+
+                                        {/* S4 : pré-montage depuis une soumission transférée + mode d'ordonnancement */}
+                                        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-sm">
+                                            <div className="flex items-center gap-1">
+                                                <input
+                                                    value={projectSearch}
+                                                    onChange={(e) => setProjectSearch(e.target.value)}
+                                                    placeholder="N° de projet (ex. CS26001P)"
+                                                    className="w-44 rounded border border-gray-300 px-2 py-1"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={prefillFromProject}
+                                                    disabled={prefilling}
+                                                    className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
+                                                    title="Pré-remplir le Gantt à partir des items de la soumission/projet"
+                                                >
+                                                    {prefilling ? '…' : '⤵ Pré-remplir depuis soumission'}
+                                                </button>
+                                            </div>
+                                            <div className="ml-auto flex items-center gap-1 text-xs text-gray-600">
+                                                <span>Mode :</span>
+                                                <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">En suite</button>
+                                                <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">Parallèle</button>
+                                                <button type="button" onClick={() => applyBuildMode('custom')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">Custom</button>
+                                            </div>
+                                        </div>
 
                                         {/* Affichage différent selon l'état d'expansion */}
                                         {expandedSections.etapes ? (
