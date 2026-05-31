@@ -58,7 +58,8 @@ export function PublicChatWidget() {
       {open && (
         <div className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 bg-gray-900 px-4 py-3 text-white">
-            <span className="text-lg">🛡️</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
             <div className="text-sm font-bold">Assistant C-Secur360</div>
           </div>
 
