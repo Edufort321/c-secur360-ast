@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createASTForm, getASTFormsByTenant } from '@/lib/supabase'
+import { getSessionUser } from '@/lib/apiAuth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantId and formData are required' }, { status: 400 });
     }
     const { tenantId, formData } = jsonData;
+    // Securite (#14) : l'identite vient de la SESSION (jamais du client). Vide = creation publique
+    // anonyme via QR (flux intentionnel autorise par le middleware).
+    const sessionUser = await getSessionUser(request);
 
     // Générer un numéro AST unique : AST-{TENANT}-{AAAA-MM-JJ}-{CODE}
     // ex: AST-QC-2026-05-25-VVTJ
@@ -20,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const astForm = await createASTForm({
       tenantId,
-      userId: '', // À remplacer par l'authentification
+      userId: sessionUser?.id || '', // identite de session ; vide = QR public anonyme
       projectNumber: formData.projectNumber || '',
       clientName: formData.client || '',
       workLocation: formData.workLocation || '',
