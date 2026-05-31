@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -38,9 +38,31 @@ function Spinner() {
 function NouvelASTInner() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang } = useLanguage();
   const tenant = (params?.tenant as string) || 'demo';
   const [province, setProvince] = useState<ProvinceCode>('QC');
+
+  // P4 : préremplissage depuis le planificateur (lieu, client, dates, personnel) avant travaux.
+  // Les paramètres proviennent du bouton « Créer une AST préremplie » du mandat.
+  const initialData = useMemo(() => {
+    const g = (k: string) => searchParams.get(k) || '';
+    const hasAny = ['projectNumber', 'projectName', 'workLocation', 'contractor', 'taskDate', 'workerCount']
+      .some(k => searchParams.get(k));
+    if (!hasAny) return undefined;
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      taskInfo: {
+        projectNumber: g('projectNumber'), projectName: g('projectName'),
+        workLocation: g('workLocation'), department: '',
+        contractor: g('contractor'), supervisor: '', supervisorCert: '',
+        taskDate: g('taskDate') || today, estimatedDuration: '',
+        workerCount: Number(searchParams.get('workerCount')) || 1,
+        taskDescription: '', taskType: '', equipmentInvolved: '',
+        specialConditions: '', regulatoryRef: '',
+      },
+    };
+  }, [searchParams]);
 
   return (
     <>
@@ -62,6 +84,7 @@ function NouvelASTInner() {
         language={lang}
         selectedProvince={province}
         enableAutoSave
+        initialData={initialData}
         onSave={() => router.push(`/${tenant}/ast`)}
         onCancel={() => router.push(`/${tenant}/ast`)}
       />
