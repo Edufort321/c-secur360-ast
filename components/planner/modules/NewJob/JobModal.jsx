@@ -132,6 +132,7 @@ export function JobModal({
     const [activeTab, setActiveTab] = useState('form');
     const [tabMenuOpen, setTabMenuOpen] = useState(false); // menu hamburger des onglets sous 1024px
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(''); // message d'erreur visible DANS le modal (toasts cachés derrière)
     // S4 : pré-montage du Gantt depuis une soumission transférée en projet
     const [projectSearch, setProjectSearch] = useState('');
     const [prefilling, setPrefilling] = useState(false);
@@ -2850,31 +2851,46 @@ export function JobModal({
     };
 
     // Handler pour la soumission du formulaire
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        setSubmitError('');
         // Validation : signaler precisement les champs requis manquants
         const manquants = [];
         if (!formData.nom?.trim()) manquants.push('Nom du mandat');
         if (!formData.dateDebut) manquants.push('Date de début');
         if (!formData.dateFin) manquants.push('Date de fin');
         if (manquants.length) {
-            addNotification?.(`Champs requis manquants : ${manquants.join(', ')}.`, 'error');
+            const msg = `Champs requis manquants : ${manquants.join(', ')}.`;
+            setSubmitError(msg);
+            addNotification?.(msg, 'error');
             if (activeTab !== 'form') setActiveTab('form');
             return;
         }
         // Coherence des dates
         if (formData.dateFin < formData.dateDebut) {
-            addNotification?.('La date de fin doit être postérieure ou égale à la date de début.', 'error');
+            const msg = 'La date de fin doit être postérieure ou égale à la date de début.';
+            setSubmitError(msg);
+            addNotification?.(msg, 'error');
             if (activeTab !== 'form') setActiveTab('form');
             return;
         }
         // Garde defensive : sans handler de sauvegarde, ne pas fermer en silence
         if (typeof onSave !== 'function') {
-            addNotification?.('Sauvegarde indisponible (aucun gestionnaire onSave). Contactez un administrateur.', 'error');
+            setSubmitError('Sauvegarde indisponible (aucun gestionnaire onSave). Contactez un administrateur.');
             return;
         }
-        onSave(formData);
-        addNotification?.(job ? 'Mandat mis à jour.' : 'Mandat créé.', 'success');
-        onClose();
+        // Sauvegarde reelle : on AWAIT pour surfacer toute erreur et ne fermer que sur succes.
+        try {
+            setIsSubmitting(true);
+            await onSave(formData);
+            addNotification?.(job ? 'Mandat mis à jour.' : 'Mandat créé.', 'success');
+            onClose();
+        } catch (e) {
+            const msg = `Échec de la sauvegarde : ${e?.message || 'erreur inconnue'}`;
+            setSubmitError(msg);
+            addNotification?.(msg, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Handler pour la suppression du job
@@ -7625,6 +7641,15 @@ export function JobModal({
                             </div>
                         )}
                     </div>
+
+                    {/* Erreur de validation/sauvegarde visible DANS le modal (les toasts peuvent passer derriere) */}
+                    {submitError && (
+                        <div className="flex-shrink-0 mx-6 mt-3 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+                            <span>⚠️</span>
+                            <span className="flex-1">{submitError}</span>
+                            <button type="button" onClick={() => setSubmitError('')} className="text-red-400 hover:text-red-600">✕</button>
+                        </div>
+                    )}
 
                     <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-50 border-t">
                         <div className="flex gap-2">
