@@ -16,7 +16,7 @@ import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, 
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
 import { getTaxSummary, getVehicleBenefits, getT4RL1Base, exportTaxSummaryCsv, exportTaxSummaryPdf, exportVehicleBenefitsCsv, exportVehicleBenefitsPdf, exportT4RL1Csv, exportT4RL1Pdf, type TaxSummary, type VehicleBenefit, type EmployeeFiscal } from '@/lib/fiscalReports';
-import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie } from '@/lib/soumissions';
+import { getCatalogues, getActiveCatalogue, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull, reviseSoumission, accepterSoumission, setSoumissionStatus, deleteSoumission, genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal, getSoumissionStats, CATEGORIE_LABELS, CATEGORIES_MO, type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats } from '@/lib/soumissions';
 
 type Mod = { key: string; name_fr: string; name_en: string; monthly_price: number; sort_order: number; enabled: boolean };
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -6158,8 +6158,9 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
 // ============================================================
 function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const nowYear = new Date().getFullYear();
-  const [sub, setSub] = useState<'liste' | 'catalogue'>('liste');
+  const [sub, setSub] = useState<'liste' | 'catalogue' | 'stats'>('liste');
   const [view, setView] = useState<'list' | 'edit'>('list');
+  const [stats, setStats] = useState<SoumissionStats | null>(null);
   const [soumissions, setSoumissions] = useState<Soumission[]>([]);
   const [catalogues, setCatalogues] = useState<CatalogueTaux[]>([]);
   const [loading, setLoading] = useState(true);
@@ -6202,6 +6203,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+  useEffect(() => { if (sub === 'stats') getSoumissionStats(tenant).then(setStats).catch(() => setStats(null)); }, [sub, tenant]);
 
   async function newSoumission() {
     const numero = await genSoumissionNumero(tenant, sitePrefix);
@@ -6261,7 +6263,7 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-          {([['liste', tr('Soumissions', 'Quotes')], ['catalogue', tr('Catalogue de taux', 'Rate catalogue')]] as const).map(([k, lbl]) => (
+          {([['liste', tr('Soumissions', 'Quotes')], ['catalogue', tr('Catalogue de taux', 'Rate catalogue')], ['stats', tr('Tableau de bord', 'Dashboard')]] as const).map(([k, lbl]) => (
             <button key={k} onClick={() => setSub(k as any)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300'}`}>{lbl}</button>
           ))}
         </div>
@@ -6270,7 +6272,48 @@ function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: st
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
-      {sub === 'catalogue' ? (
+      {sub === 'stats' ? (
+        !stats ? (
+          <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="text-xs text-gray-500">{tr('Taux de conversion', 'Conversion rate')}</div>
+                <div className="mt-1 text-2xl font-bold text-emerald-600">{(stats.tauxConversion * 100).toFixed(0)} %</div>
+                <div className="text-xs text-gray-400">{(stats.byStatus['accepted'] || 0)} {tr('acceptée(s)', 'accepted')} / {stats.total}</div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="text-xs text-gray-500">{tr('Soumissions', 'Quotes')}</div>
+                <div className="mt-1 text-2xl font-bold">{stats.total}</div>
+                <div className="text-xs text-gray-400">{stats.nbProjets} {tr('projet(s) issus', 'projects created')}</div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="text-xs text-gray-500">{tr('Montant soumissionné', 'Quoted amount')}</div>
+                <div className="mt-1 text-2xl font-bold">{mny(stats.montantTotal)}</div>
+                <div className="text-xs text-gray-400">{tr('moy.', 'avg')} {mny(stats.valeurMoyenne)}</div>
+              </div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="text-xs text-gray-500">{tr('Montant accepté', 'Accepted amount')}</div>
+                <div className="mt-1 text-2xl font-bold text-emerald-600">{mny(stats.montantAccepte)}</div>
+                <div className="text-xs text-gray-400">{tr('moy.', 'avg')} {mny(stats.valeurMoyenneAcceptee)}</div>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-900/40">{tr('Pipeline par statut', 'Pipeline by status')}</div>
+              <table className="w-full text-sm"><tbody>
+                {([['draft', tr('Brouillon', 'Draft')], ['sent', tr('Envoyée', 'Sent')], ['accepted', tr('Acceptée', 'Accepted')], ['archived', tr('Archivée', 'Archived')]] as const).map(([k, lbl]) => (
+                  <tr key={k} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-2">{lbl}</td>
+                    <td className="px-4 py-2 text-right font-medium">{stats.byStatus[k] || 0}</td>
+                  </tr>
+                ))}
+              </tbody></table>
+            </div>
+            <p className="text-xs text-gray-400">{tr('Conversion = soumissions acceptées / total. Les projets issus proviennent des soumissions transférées (n° de projet renseigné).', 'Conversion = accepted quotes / total. Projects come from transferred quotes.')}</p>
+          </div>
+        )
+      ) : sub === 'catalogue' ? (
         <div className="space-y-3">
           {catForm && (
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

@@ -242,6 +242,45 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
   return { projectId: data.id, projectNumber: data.project_number, commission };
 }
 
+// ── Tableau de bord / stats de gestion (taux de conversion, pipeline) ────────
+export type SoumissionStats = {
+  total: number;
+  byStatus: Record<string, number>;
+  montantTotal: number;       // somme de toutes les soumissions
+  montantAccepte: number;     // somme des soumissions acceptées
+  tauxConversion: number;     // acceptées / total (0..1)
+  valeurMoyenne: number;      // montant moyen par soumission
+  valeurMoyenneAcceptee: number;
+  nbProjets: number;          // projets issus de soumissions (submission_number renseigné)
+};
+export async function getSoumissionStats(tenant: string): Promise<SoumissionStats> {
+  const { data, error } = await supabase.from('soumissions').select('status, total').eq('tenant_id', tenant);
+  if (error) throw error;
+  const list = (data || []) as { status: string; total: number }[];
+  const byStatus: Record<string, number> = {};
+  let montantTotal = 0, montantAccepte = 0;
+  for (const s of list) {
+    byStatus[s.status] = (byStatus[s.status] || 0) + 1;
+    montantTotal += Number(s.total) || 0;
+    if (s.status === 'accepted') montantAccepte += Number(s.total) || 0;
+  }
+  const total = list.length;
+  const accepted = byStatus['accepted'] || 0;
+  let nbProjets = 0;
+  try {
+    const { count } = await supabase.from('projects').select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant).not('submission_number', 'is', null);
+    nbProjets = count || 0;
+  } catch { /* module projets indisponible */ }
+  return {
+    total, byStatus, montantTotal, montantAccepte,
+    tauxConversion: total ? accepted / total : 0,
+    valeurMoyenne: total ? r2(montantTotal / total) : 0,
+    valeurMoyenneAcceptee: accepted ? r2(montantAccepte / accepted) : 0,
+    nbProjets,
+  };
+}
+
 export async function setSoumissionStatus(tenant: string, id: string, status: Soumission['status']) {
   const { error } = await supabase.from('soumissions').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('tenant_id', tenant);
   if (error) throw error;
