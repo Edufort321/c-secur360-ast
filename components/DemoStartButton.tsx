@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Bouton "Démarrer maintenant" : capture Nom + courriel, démarre une session démo limitée
 // (notif propriétaire par SMS côté serveur), puis donne accès au bac à sable /demo.
@@ -10,6 +10,19 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; status: string; message: string } | null>(null);
+
+  // Lien de partage : ouverture automatique du formulaire si l'URL contient ?demo=1 ou #demo.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('demo') === '1' || window.location.hash === '#demo') { setOpen(true); setResult(null); }
+  }, []);
+
+  // Formate le temps restant en h/min (la démo est un chrono TOTAL de 4 h, repris entre les sessions).
+  const remSecs = (result as any)?.remainingSeconds || 0;
+  const remH = Math.floor(remSecs / 3600);
+  const remM = Math.round((remSecs % 3600) / 60);
+  const remStr = remH > 0 ? `${remH} h${remM ? ` ${remM} min` : ''}` : `${remM} min`;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,9 +87,9 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
               </>
             ) : (
               <>
-                <h3 className="text-xl font-black text-emerald-400">{fr ? 'Démo activée ! 🎉' : 'Demo activated! 🎉'}</h3>
+                <h3 className="text-xl font-black text-emerald-400">{fr ? 'Démo de 4 heures activée ! 🎉' : '4-hour demo activated! 🎉'}</h3>
                 <p className="mt-2 text-sm text-slate-300">
-                  {fr ? `Vous avez ${Math.round((result as any).remainingSeconds / 60 || 60)} min pour explorer la plateforme.` : `You have ${Math.round((result as any).remainingSeconds / 60 || 60)} min to explore.`}
+                  {fr ? `Accès démo de 4 heures au total. Temps restant : ${remStr}.` : `4-hour total demo access. Time left: ${remStr}.`}
                 </p>
                 <a href="/demo" className="mt-4 block w-full rounded-lg bg-orange-500 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-orange-600">
                   {fr ? 'Accéder à la démo →' : 'Go to the demo →'}
