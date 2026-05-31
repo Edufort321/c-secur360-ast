@@ -26,6 +26,7 @@ export function JobModal({
     equipements,
     sousTraitants,
     succursales = [],
+    departements = [],
     conges = [],
     jobs = [],
     addSousTraitant,
@@ -3534,6 +3535,36 @@ export function JobModal({
 
                                     {/* Informations complementaires */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Site (succursale) — provient des sites admin ; sinon sélection manuelle */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">🏢 Site</label>
+                                            <select
+                                                value={formData.succursaleEnCharge || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, departementId: '' }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            >
+                                                <option value="">— Sélectionner un site —</option>
+                                                {(succursales || []).map(s => (
+                                                    <option key={s.id} value={s.name || s.id}>{s.name || s.code || s.id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {/* Département (optionnel, si configuré) */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Département <span className="text-xs text-gray-400">(optionnel)</span></label>
+                                            <select
+                                                value={formData.departementId || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, departementId: e.target.value }))}
+                                                disabled={(departements || []).length === 0}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                            >
+                                                <option value="">{(departements || []).length ? '— Aucun —' : 'Aucun département configuré'}</option>
+                                                {(departements || []).map(d => (
+                                                    <option key={d.id} value={d.id}>{d.name || d.code || d.id}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
                                         <div className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Description

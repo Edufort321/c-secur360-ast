@@ -18,6 +18,7 @@ export function PlanificateurFinal({
     sousTraitants = [],
     conges = [],
     succursales = [],
+    departements = [],
     onSaveJob,
     onDeleteJob,
     onSavePersonnel,
@@ -1483,7 +1484,7 @@ export function PlanificateurFinal({
                                         <th className={`px-3 py-4 text-left font-semibold text-white bg-gray-900 border-r border-gray-600 ${isMobile ? 'w-[120px]' : 'w-[180px]'}`}>
                                             {filterType === 'global' ? "Ressource" :
                                              filterType === 'personnel' ? (isMobile ? "Nom" : "Nom / Prénom") :
-                                             filterType === 'jobs' ? (isMobile ? "Événement" : "Événement / Client") :
+                                             filterType === 'jobs' ? (isMobile ? "# Projet" : "# Projet / Nom du client") :
                                              (isMobile ? "Équip." : "Équipement")}
                                         </th>
                                         {!isMobile && (
@@ -1625,6 +1626,7 @@ export function PlanificateurFinal({
                     equipements={equipements}
                     sousTraitants={sousTraitants}
                     succursales={succursales}
+                    departements={departements}
                     conges={conges}
                     jobs={jobs}
                     addSousTraitant={addSousTraitant}
