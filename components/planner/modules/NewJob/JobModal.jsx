@@ -4779,14 +4779,13 @@ export function JobModal({
                                                         const timeScale = generateTimeScale(currentViewMode);
                                                         if (timeScale.length > 0) {
                                                             return (
-                                                                <div className="flex items-center mb-2 text-xs text-gray-600 border-b pb-1 overflow-x-auto">
+                                                                <div className="flex items-center mb-2 text-xs text-gray-600 border-b pb-1">
                                                                     <div className="w-1/3 flex-shrink-0"></div>
-                                                                    <div className="flex-1 flex overflow-x-auto">
+                                                                    <div className="flex-1 flex">
                                                                         {timeScale.map(period => (
                                                                             <div
                                                                                 key={period.key}
-                                                                                className="flex-1 text-center border-r border-gray-200 py-1 flex-shrink-0"
-                                                                                style={{ minWidth: '60px' }}
+                                                                                className="flex-1 min-w-0 truncate text-center border-r border-gray-200 py-1"
                                                                                 title={currentViewMode === 'weeks' && period.longLabel ? period.longLabel : period.label}
                                                                             >
                                                                                 {period.label}
@@ -4855,7 +4854,7 @@ export function JobModal({
                                                         {hierarchicalTasks.map((task, index) => (
                                                             <div
                                                                 key={task.id}
-                                                                className={`flex items-center space-x-3 ${ganttCompactMode ? 'p-1' : 'p-2'} border-b hover:bg-gray-50 transition-all ${
+                                                                className={`flex items-center ${ganttCompactMode ? 'py-1' : 'py-2'} border-b hover:bg-gray-50 transition-all ${
                                                                     task.isCritical ? 'bg-red-50 border-red-200' : ''
                                                                 }`}
                                                                 style={{ height: ganttCompactMode ? '24px' : '38px' }}
