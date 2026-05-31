@@ -8,10 +8,24 @@ export const dynamic = 'force-dynamic';
 
 const OWM = 'https://api.openweathermap.org/data/2.5';
 
+// Securite (#20) : rate-limit simple par IP (en memoire ; cap l'abus par instance).
+// Pour une garantie inter-instances, basculer vers un store partage (Redis/DB) ulterieurement.
+const RATE: Map<string, { count: number; reset: number }> = (globalThis as any).__weatherRate || new Map();
+(globalThis as any).__weatherRate = RATE;
+function rateOk(ip: string, limit = 30, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const e = RATE.get(ip);
+  if (!e || now > e.reset) { RATE.set(ip, { count: 1, reset: now + windowMs }); return true; }
+  if (e.count >= limit) return false;
+  e.count++; return true;
+}
+
 const isStorm = (w: any[]): boolean =>
   Array.isArray(w) && w.some((x) => (x?.id >= 200 && x?.id < 300) || x?.main === 'Thunderstorm');
 
 export async function GET(req: NextRequest) {
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+  if (!rateOk(ip)) return NextResponse.json({ available: false, reason: 'rate_limited' }, { status: 429 });
   const key = process.env.WEATHER_API_KEY;
   if (!key) return NextResponse.json({ available: false, reason: 'no_key' });
 

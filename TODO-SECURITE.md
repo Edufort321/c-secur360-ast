@@ -20,7 +20,7 @@ Helper partagé **`lib/apiAuth.ts`** → `requireAdmin(req)` : cookie httpOnly d
 - [x] **#5** — `lib/supabaseAdmin.ts` : **CORRIGÉ** — plus de fallback anon en **runtime production** (throw si service_role absent) ; fallback toléré en dev/build avec avertissement.
 - [ ] **#6** — `middleware.ts:6-9` : lit les sessions avec service_role (bypass RLS). → Clé restreinte / RLS stricte sur `auth_sessions`.
 - [~] **#7** — `app/admin/dashboard/page.tsx` : **mot de passe retiré du bundle client** — vérification déplacée vers `/api/admin/dashboard-auth` (lit `ADMIN_DASHBOARD_PASSWORD`, fail-closed). ⚠️ **Ajouter `ADMIN_DASHBOARD_PASSWORD` dans Vercel + `.env.local`** sinon login refusé. _Reste (durcissement) : sessionStorage trivialement falsifiable → migrer vers JWT httpOnly + middleware (#19)._
-- [ ] **#8** — `app/api/admin/billing/cron/route.ts:11` : auth ignorée si `NODE_ENV !== 'production'`. → Exiger le secret dans TOUS les environnements.
+- [x] **#8** — `cron/route.ts` : **CORRIGÉ** — `CRON_SECRET` requis dans tous les environnements (Bearer), bypass `force` retiré. ⚠️ Ajouter `CRON_SECRET` en env.
 
 ## 🟠 CRITIQUE — avant prod
 - [x] **#11** — `lib/soumissions.ts` : `delete().eq('soumission_id', id)` sans tenant_id → suppression cross-tenant. → `.eq('tenant_id', tenant)` **CORRIGÉ**.
@@ -33,8 +33,8 @@ Helper partagé **`lib/apiAuth.ts`** → `requireAdmin(req)` : cookie httpOnly d
 
 ## 🟡 MOYEN / nettoyage
 - [x] **#18** — `app/api/test-supabase` + `app/api/db/init` : **SUPPRIMÉS**.
-- [ ] **#19** — `app/api/system/status/route.ts:14` : expose quelles clés env sont configurées. → Restreindre super_admin.
-- [ ] **#20** — `app/api/weather/route.ts` : pas de rate-limit public. → Limiter par IP.
+- [x] **#19** — `system/status` : **CORRIGÉ** — `requireAdmin` (n'expose plus la config env publiquement).
+- [x] **#20** — `weather` : **CORRIGÉ** — rate-limit par IP (30/min, en mémoire ; Redis/DB en suivi).
 - [ ] **#21** — `middleware.ts:207` : regex routes publiques contournables (`//login`). → Normaliser les paths.
 
 ## 🌐 CONFORMITÉ WEB (déploiement public)

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/apiAuth";
 
 const mustHave = [
   "NEXT_PUBLIC_APP_URL","NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -9,7 +10,9 @@ const mustHave = [
   "OWNER_MOBILE","PUBLIC_CONTACT_NUMBER"
 ];
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Securite (#19) : ne pas exposer publiquement la config env -> reserve a l'admin.
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const env = Object.fromEntries(mustHave.map(k => [k, !!process.env[k]]));
     

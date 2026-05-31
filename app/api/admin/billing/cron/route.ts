@@ -4,20 +4,15 @@ import { billingCronJobs } from '../../../../../lib/billing-automation';
 // POST - Déclencher les tâches cron manuellement (pour tests)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { job, force } = body;
-
-    // Vérification de sécurité - seulement en développement ou avec token admin
+    // Securite (#8) : secret de cron requis dans TOUS les environnements (fail-secure, pas de bypass 'force').
+    const cronSecret = process.env.CRON_SECRET;
     const authToken = request.headers.get('authorization');
-    if (!force && (!authToken || !authToken.includes('admin'))) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Non autorisé - Token admin requis' 
-        },
-        { status: 401 }
-      );
+    if (!cronSecret || authToken !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 });
     }
+
+    const body = await request.json();
+    const { job } = body;
 
     console.log(`🤖 Exécution tâche cron: ${job}`);
 
