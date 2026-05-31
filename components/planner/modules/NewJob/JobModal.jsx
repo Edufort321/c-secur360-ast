@@ -130,6 +130,7 @@ export function JobModal({
 
     // États pour l'interface utilisateur
     const [activeTab, setActiveTab] = useState('form');
+    const [tabMenuOpen, setTabMenuOpen] = useState(false); // menu hamburger des onglets sous 1024px
     const [isSubmitting, setIsSubmitting] = useState(false);
     // S4 : pré-montage du Gantt depuis une soumission transférée en projet
     const [projectSearch, setProjectSearch] = useState('');
@@ -3092,17 +3093,36 @@ export function JobModal({
                                         </button>
                                     ))}
                                 </div>
-                                {/* Mobile / demi-ecran (<1024px) : menu deroulant donnant acces a TOUS les onglets */}
-                                <div className="lg:hidden p-2">
-                                    <select
-                                        value={activeTab}
-                                        onChange={(e) => setActiveTab(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white font-medium text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                {/* Mobile / demi-ecran (<1024px) : bouton hamburger donnant acces a TOUS les onglets */}
+                                <div className="lg:hidden relative p-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTabMenuOpen(o => !o)}
+                                        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-gray-300 bg-white font-semibold text-purple-700 hover:bg-purple-50"
+                                        aria-expanded={tabMenuOpen}
                                     >
-                                        {TABS.map(tab => (
-                                            <option key={tab.id} value={tab.id}>{tab.label}</option>
-                                        ))}
-                                    </select>
+                                        <span className="truncate">{TABS.find(t => t.id === activeTab)?.label || 'Onglets'}</span>
+                                        <span className="text-xl leading-none">{tabMenuOpen ? '✕' : '☰'}</span>
+                                    </button>
+                                    {tabMenuOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setTabMenuOpen(false)} aria-hidden />
+                                            <div className="absolute left-2 right-2 z-50 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                                                {TABS.map(tab => (
+                                                    <button
+                                                        key={tab.id}
+                                                        type="button"
+                                                        onClick={() => { setActiveTab(tab.id); setTabMenuOpen(false); }}
+                                                        className={`block w-full px-4 py-3 text-left text-sm font-medium ${
+                                                            activeTab === tab.id ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {tab.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -4700,7 +4720,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Vue Gantt avancée avec hiérarchie - VERSION OLD COMPLÈTE */}
-                                    <div className={`bg-white border rounded-lg p-4 ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
+                                    <div className={`bg-white border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
                                         {formData.etapes.length === 0 ? (
                                             <div className="text-center py-8 text-gray-500">
                                                 <div className="text-5xl mb-4 opacity-50">📊</div>

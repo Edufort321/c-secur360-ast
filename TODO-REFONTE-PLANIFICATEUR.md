@@ -1,3 +1,22 @@
+# 🚀 PRIORITÉ N°1 — REFONTE COMPLÈTE DU PLANIFICATEUR (look + responsive + fonctions + intermodules)
+
+> Décidé 2026-05-31 : le planner passe **en tête**. Objectif : compléter le module, layout **multi-desktop avec onglets auto + hamburger**, fiabiliser le Gantt, finir tous les **liens intermodules**, et découper le mégafichier. Cartographie : `JobModal.jsx` ~7000 l., `PlanificateurFinal.jsx` 1583 l., `ResourcesModal.jsx` 991 l.
+>
+> Règles : commit+push après chaque chantier ; `tsc 0` + `build 0` avant push ; ASCII sans accents dans les messages de commit.
+
+## Chantiers (ordre d'exécution)
+- [x] **R0 — En-tête mandat réordonné** : # projet / nom du client / nom du mandat / lieu des travaux (FAIT 2026-05-31).
+- [~] **R1 — Responsive du formulaire (onglets auto + hamburger multi-desk)** : barre d'onglets ≥1024px, **hamburger** sous 1024px (FAIT pour JobModal) ; reste : transition fluide, et appliquer le même patron à `PlanificateurFinal` (menu filtres auto-collapse) + tables calendrier sticky.
+- [~] **R2 — Gantt lisible (anti-débordement)** : conteneur scroll horizontal maîtrisé (FAIT : carte Gantt `overflow-x-auto`) ; reste : **aligner header timeline + barres dans UN seul scroll**, largeurs de colonnes lisibles en demi-écran, vue par défaut adaptée (jour/semaine), zoom +/- .
+- [ ] **R3 — Export PDF du Gantt (tous formats)** : exporter le diagramme en PDF (portrait/paysage, A4/A3/Letter, ajusté à la page) + impression. (Aujourd'hui `printGanttAndForms` imprime du HTML basique.)
+- [ ] **R4 — Préparation & matériel : statuts d'approvisionnement** : chaque ligne de préparation/matériel a un **statut** = `à commander` → `commande passée` → `en cours de livraison` (avec **date prévue**) → `reçu` (avec **date de réception**). Indicateurs visuels + filtre.
+- [ ] **R5 — Créateur de Bon de commande (BC) dans Admin** : module BC interrelié avec **Projet + Planner (préparation/matériel) + Inventaire** ; numérotation auto, fournisseur, lignes (item, qté, prix, taxes), statut, PDF. **Scanner le web pour les bonnes pratiques de BC** (champs requis : n° BC, fournisseur, adresse de livraison, conditions de paiement, date requise, devise, taxes, sous-total/total, approbation). **Interrelié avec la facturation du projet** (rapprochement BC ↔ facture fournisseur ↔ coûts projet).
+- [ ] **R6 — Liens intermodules manquants** : Inventaire (réservation/décrément stock depuis la préparation), Timesheets (générer feuilles de temps depuis les étapes/affectations), passerelle Facturation (coûts réels → facture projet). (Déjà faits : Clients, Projets, Personnel, Équipements, AST.)
+- [ ] **R7 — Découpage du mégafichier** : extraire GanttTab / ResourcesTab / FilesTab / RecurrenceTab / TeamsTab hors de `JobModal.jsx` (déjà extrait : `AstLinkSection`). Unifier les modales dupliquées (Personnel/Équipement/Congés présentes en double `components/Modals` ET `modules/Resource`).
+- [ ] **R8 — Refonte `PlanificateurFinal.jsx`** : extraire FilterMenu / CalendarGrid (sticky) / AnalyticsSidebar ; responsive tables.
+
+---
+
 # 🗂️ Refonte du formulaire de planification — « Mandat » (ex-Job)
 
 > Module : `components/planner` · Formulaire cible : `modules/NewJob/JobModal.jsx` (7450 lignes).
