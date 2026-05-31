@@ -35,7 +35,8 @@ export default async function TenantLayout({
 }: TenantLayoutProps) {
   const t = params.tenant
   // Tenants connus (fast-path) + validation dynamique via la table `tenants`
-  let valid = t === 'cerdia'
+  // 'demo' = bac a sable public (acces demo limite) ; valide meme sans ligne en base.
+  let valid = t === 'cerdia' || t === 'demo'
   if (!valid) {
     try {
       const { data } = await supabaseAdmin.from('tenants').select('id').eq('id', t).maybeSingle()
