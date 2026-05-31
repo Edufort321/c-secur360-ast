@@ -397,8 +397,8 @@ export function PlanificateurFinal({
                 id: `job-${job.id}`,
                 nom: `${job.numeroJob} - ${job.nom}`,
                 poste: job.client || 'Client non défini',
-                succursale: job.bureau || 'Bureau non défini',
-                bureau: job.bureau,
+                succursale: job.bureau || job.succursaleEnCharge || 'Événement',
+                bureau: job.bureau || job.succursaleEnCharge,
                 type: 'job',
                 job: job, // Référence au job complet
                 priorite: job.priorite,

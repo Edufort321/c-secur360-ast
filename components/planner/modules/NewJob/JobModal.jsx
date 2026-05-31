@@ -3539,8 +3539,8 @@ export function JobModal({
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">🏢 Site</label>
                                             <select
-                                                value={formData.succursaleEnCharge || ''}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, departementId: '' }))}
+                                                value={formData.succursaleEnCharge || formData.bureau || ''}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, bureau: e.target.value, departementId: '' }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             >
                                                 <option value="">— Sélectionner un site —</option>
