@@ -6,10 +6,10 @@
 
 ## 🟢 A. Chatbot PUBLIC (marketing / page d'accueil) — visiteurs anonymes
 **Objectif** : informer sur C-Secur360 (SaaS sécurité industrielle : AST, permis, inspections, conformité provinciale) et orienter vers **démo + contact**. Aucune auth.
-- [ ] **`lib/assistant/public-knowledge.ts`** — base de connaissance + system prompt. Règles strictes : portée UNIQUEMENT C-Secur360 (refuser hors-sujet) ; pas d'explication technique/réglementaire détaillée (rester présentation, « conforme aux normes provinciales » sans détailler) ; réponses COURTES (2-4 phrases) ; orienter vers démo + courriel (seules portes de sortie) ; ne rien inventer (faits depuis la base).
-- [ ] **`lib/assistant/public-guard.ts`** — anti-abus (CRITIQUE facture) : rate-limit par IP (~12 msg/h) + **plafond global quotidien** (~600 req/jour toutes IP) ; `getClientIp(headers)` (lit `x-forwarded-for`).
-- [ ] **`app/api/assistant/public-chat/route.ts`** — POST : `checkPublicQuota(ip)` AVANT tout appel IA (sinon message statique, zéro appel facturé) ; `max_tokens: 350` ; historique borné (8 msg) + entrée ≤ 1000 chars ; system prompt en cache (`cache_control: ephemeral`) ; **jamais throw** → repli « écrivez-nous à [courriel] ».
-- [ ] **`components/PublicChatWidget.tsx`** — bouton flottant + panneau ; ouverture auto après 2,5 s une fois/session (sessionStorage) ; 2 CTA permanents « Voir la démo » + « Nous écrire » (mailto) ; suggestions au démarrage ; disclaimer ; monté dans `app/page.tsx`.
+- [x] **`lib/assistant/public-knowledge.ts`** — base de connaissance + system prompt (portée stricte, réponses courtes, oriente démo/contact). FAIT.
+- [x] **`lib/assistant/public-guard.ts`** — rate-limit IP (12/h) + plafond global (600/j) + `getClientIp`. FAIT.
+- [x] **`app/api/assistant/public-chat/route.ts`** — quota avant appel, claude-haiku-4-5, max_tokens 350, prompt caching, historique borné, jamais throw. FAIT (requiert `ANTHROPIC_API_KEY`).
+- [ ] **`components/PublicChatWidget.tsx`** — bouton flottant + panneau ; ouverture auto 2,5 s/session ; CTA « Démo » + « Nous écrire » ; suggestions ; disclaimer ; monté dans `app/page.tsx`. **RESTE À FAIRE.**
 
 ## 🔵 B. Assistant TENANT (interne / dashboard) — utilisateurs connectés
 **Objectif** : former/aider les utilisateurs connectés (fonctionnement plateforme, aide à remplir AST/permis/inspections). **Auth obligatoire + quota par utilisateur.**
