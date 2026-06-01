@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
@@ -237,7 +238,7 @@ export default function AdminPage() {
     { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
-    { k: 'soumissions', label: tr('Soumissions', 'Quotes'),                    icon: FileText },
+    { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
@@ -326,7 +327,7 @@ export default function AdminPage() {
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
-        {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
@@ -6171,7 +6172,9 @@ function FiscalReportsModule({ tenant, tr }: { tenant: string; tr: (f: string, e
 // ============================================================
 // SOUMISSIONS — devis hierarchiques (Item -> categories -> lignes) + catalogue de taux versionne
 // ============================================================
-function SoumissionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
+// [SUPERSEDE] Remplace par le composant partage components/soumissions/SoumissionsModule.
+// Catalogue de taux -> reste en admin ; Soumissions + tableau de bord -> Projets. Ce bloc est conserve mort (non reference) le temps de la transition.
+function SoumissionsModule_LEGACY_UNUSED({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const nowYear = new Date().getFullYear();
   const [sub, setSub] = useState<'liste' | 'catalogue' | 'stats'>('liste');
   const [view, setView] = useState<'list' | 'edit'>('list');
