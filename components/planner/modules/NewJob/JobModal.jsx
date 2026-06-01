@@ -37,6 +37,8 @@ export function JobModal({
     onOpenConflictJob
 }) {
     const { t, currentLanguage } = useLanguage();
+    // Helper bilingue local (FR par défaut) pour les chaînes du formulaire non encore dans le dictionnaire.
+    const L = (fr, en) => (currentLanguage === 'en' ? en : fr);
 
     // État principal des données du formulaire
     const [formData, setFormData] = useState({
@@ -3159,12 +3161,12 @@ export function JobModal({
                     {/* Onglets — responsive : rangee complete en >=1024px, menu deroulant sous 1024px */}
                     {(() => {
                         const TABS = [
-                            { id: 'form', label: '📝 Formulaire' },
+                            { id: 'form', label: L('📝 Formulaire', '📝 Form') },
                             { id: 'gantt', label: '📊 Gantt' },
-                            { id: 'resources', label: '👥 Ressources' },
-                            { id: 'files', label: `📎 Fichiers (${(formData.documents?.length || 0) + (formData.photos?.length || 0)})` },
-                            { id: 'recurrence', label: `🔄 Récurrence ${formData.recurrence?.active ? '(Activé)' : ''}`.trim() },
-                            { id: 'teams', label: `🎯 Équipes ${formData.horaireMode === 'personnalise' ? '(Avancé)' : ''}`.trim() },
+                            { id: 'resources', label: L('👥 Ressources', '👥 Resources') },
+                            { id: 'files', label: `${L('📎 Fichiers', '📎 Files')} (${(formData.documents?.length || 0) + (formData.photos?.length || 0)})` },
+                            { id: 'recurrence', label: `${L('🔄 Récurrence', '🔄 Recurrence')} ${formData.recurrence?.active ? L('(Activé)', '(On)') : ''}`.trim() },
+                            { id: 'teams', label: `${L('🎯 Équipes', '🎯 Teams')} ${formData.horaireMode === 'personnalise' ? L('(Avancé)', '(Advanced)') : ''}`.trim() },
                         ];
                         return (
                             <div className="flex-shrink-0 border-b bg-gray-50">
@@ -3440,7 +3442,7 @@ export function JobModal({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* 1. # projet */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2"># Projet</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('# Projet', '# Project')}</label>
                                             <input
                                                 type="text"
                                                 value={formData.numeroJob}
@@ -3453,8 +3455,8 @@ export function JobModal({
                                         {/* 2. Nom du client (autocomplete clients + projets) */}
                                         <div className="relative">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Nom du client
-                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">Recherche…</span>}
+                                                {L('Nom du client', 'Client name')}
+                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">{L('Recherche…', 'Searching…')}</span>}
                                             </label>
                                             <input
                                                 type="text"
@@ -3516,7 +3518,7 @@ export function JobModal({
 
                                         {/* 3. Nom du mandat */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Nom du mandat</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('Nom du mandat', 'Mandate name')}</label>
                                             <input
                                                 type="text"
                                                 value={formData.nom}
@@ -3529,7 +3531,7 @@ export function JobModal({
 
                                         {/* 4. Lieu des travaux (autocomplete d'adresse + carte + meteo) */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">📍 Lieu des travaux</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('📍 Lieu des travaux', '📍 Work location')}</label>
                                             <input
                                                 ref={attachLieuAutocomplete}
                                                 type="text"
@@ -3577,7 +3579,7 @@ export function JobModal({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Site (succursale) — provient des sites admin ; sinon sélection manuelle */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">🏢 Site</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('🏢 Site', '🏢 Site')}</label>
                                             <select
                                                 value={formData.succursaleEnCharge || formData.bureau || ''}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, bureau: e.target.value, departementId: '' }))}
@@ -3591,7 +3593,7 @@ export function JobModal({
                                         </div>
                                         {/* Département (optionnel, si configuré) */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Département <span className="text-xs text-gray-400">(optionnel)</span></label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('Département', 'Department')} <span className="text-xs text-gray-400">{L('(optionnel)', '(optional)')}</span></label>
                                             <select
                                                 value={formData.departementId || ''}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, departementId: e.target.value }))}
@@ -3607,7 +3609,7 @@ export function JobModal({
 
                                         <div className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Description
+                                                {L('Description', 'Description')}
                                             </label>
                                             <textarea
                                                 value={formData.description}
@@ -3620,7 +3622,7 @@ export function JobModal({
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Date de début
+                                                {L('Date de début', 'Start date')}
                                             </label>
                                             <input
                                                 type="date"
@@ -3650,7 +3652,7 @@ export function JobModal({
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Date de fin
+                                                {L('Date de fin', 'End date')}
                                             </label>
                                             <input
                                                 type="date"
@@ -3663,7 +3665,7 @@ export function JobModal({
                                         {/* Heures de l'evenement — début + durée -> fin auto (et fin manuelle recalcule la durée) */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Heure de début
+                                                {L('Heure de début', 'Start time')}
                                             </label>
                                             <input
                                                 type="time"
@@ -3678,7 +3680,7 @@ export function JobModal({
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Durée prévue (h)
+                                                {L('Durée prévue (h)', 'Planned duration (h)')}
                                             </label>
                                             <input
                                                 type="number" step="0.25" min="0"
@@ -3695,7 +3697,7 @@ export function JobModal({
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Heure de fin <span className="text-xs text-gray-400">(auto / manuel)</span>
+                                                {L('Heure de fin', 'End time')} <span className="text-xs text-gray-400">{L('(auto / manuel)', '(auto / manual)')}</span>
                                             </label>
                                             <input
                                                 type="time"
@@ -7873,7 +7875,7 @@ export function JobModal({
                                     onClick={handleDelete}
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                                 >
-                                    Supprimer
+                                    {L('Supprimer', 'Delete')}
                                 </button>
                             )}
                         </div>
@@ -7882,7 +7884,7 @@ export function JobModal({
                                 onClick={onClose}
                                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                             >
-                                Annuler
+                                {L('Annuler', 'Cancel')}
                             </button>
                             {peutModifier && (
                                 <button
@@ -7890,7 +7892,7 @@ export function JobModal({
                                     disabled={isSubmitting}
                                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                                 >
-                                    {isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}
+                                    {isSubmitting ? L('Sauvegarde...', 'Saving...') : L('Sauvegarder', 'Save')}
                                 </button>
                             )}
                         </div>
