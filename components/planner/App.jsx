@@ -66,7 +66,35 @@ function AppContent({ tenant = 'cerdia' }) {
     }
 
     return (
-        <>
+        <div className="planner-root">
+            {/* Skin sombre du planner : pilote par la classe .dark du header principal.
+                Couvre la vue Grille et tous les modals (JobModal, Conges, Ressources) sans
+                reecrire chaque classe. Ne touche qu'aux neutres (blanc/gris) — les accents
+                colores (bleu/vert/rouge/etc.) sont preserves. */}
+            <style jsx global>{`
+                .dark .planner-root .bg-white { background-color:#1f2937 !important; }
+                .dark .planner-root .bg-gray-50 { background-color:#111827 !important; }
+                .dark .planner-root .bg-gray-100 { background-color:#1f2937 !important; }
+                .dark .planner-root .bg-gray-200 { background-color:#374151 !important; }
+                .dark .planner-root .border-gray-100,
+                .dark .planner-root .border-gray-200,
+                .dark .planner-root .border-gray-300 { border-color:#374151 !important; }
+                .dark .planner-root .text-gray-900,
+                .dark .planner-root .text-gray-800,
+                .dark .planner-root .text-gray-700 { color:#f3f4f6 !important; }
+                .dark .planner-root .text-gray-600,
+                .dark .planner-root .text-gray-500,
+                .dark .planner-root .text-gray-400 { color:#9ca3af !important; }
+                .dark .planner-root .hover\\:bg-gray-50:hover,
+                .dark .planner-root .hover\\:bg-gray-100:hover,
+                .dark .planner-root .hover\\:bg-gray-200:hover { background-color:#374151 !important; }
+                .dark .planner-root input,
+                .dark .planner-root select,
+                .dark .planner-root textarea { background-color:#111827 !important; color:#f3f4f6 !important; border-color:#374151 !important; }
+                .dark .planner-root input::placeholder,
+                .dark .planner-root textarea::placeholder { color:#6b7280 !important; }
+            `}</style>
+
             <NotificationContainer notifications={notifications} />
 
             <PlanificateurFinal
@@ -154,7 +182,7 @@ function AppContent({ tenant = 'cerdia' }) {
                     addNotification={addNotification}
                 />
             )}
-        </>
+        </div>
     );
 }
 
