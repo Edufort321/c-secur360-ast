@@ -1663,6 +1663,7 @@ export function JobModal({
 
             allDays.push({
                 date: dateString,
+                dateString: dateString, // alias : plusieurs vues utilisent day.dateString
                 dayName: d.toLocaleDateString('fr-FR', { weekday: 'long' }),
                 dayNumber: d.getDate(),
                 isWeekend: isWeekend,
@@ -7660,7 +7661,7 @@ export function JobModal({
                                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                             }`}
                                                         >
-                                                            {day.dayName.slice(0, 3)} {day.date.getDate()}
+                                                            {day.dayName.slice(0, 3)} {day.dayNumber}
                                                         </button>
                                                     ))}
                                                 </div>

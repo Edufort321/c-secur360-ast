@@ -168,6 +168,11 @@ ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS "astId"         TEXT;
 ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS "lieuLat"       NUMERIC(10,6);
 ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS "lieuLng"       NUMERIC(10,6);
 
+-- ─── 5b) Champs additionnels du formulaire (site/departement/duree) ──────────
+ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS bureau          TEXT;   -- site affiche dans calendrier/dashboard (= succursaleEnCharge)
+ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS "departementId" TEXT;   -- departement optionnel
+ALTER TABLE planner_jobs ADD COLUMN IF NOT EXISTS "dureeEvent"     TEXT;  -- duree prevue (h) -> heure de fin auto
+
 -- ─── 6) is_active + updated_at sur les tables planner ────────────────────────
 ALTER TABLE planner_jobs         ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE planner_personnel    ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
