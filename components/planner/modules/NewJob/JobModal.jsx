@@ -277,6 +277,19 @@ export function JobModal({
             }
             return;
         }
+        // Mode 24/24 (continu) : travail en continu -> fin = début + heures totales (heure ET date).
+        // Ex. 36 h en continu débutant à 7:00 -> fin 19:00 le lendemain.
+        if (formData.modeContinu) {
+            const p2 = (n) => String(n).padStart(2, '0');
+            const start = new Date(`${formData.dateDebut}T${formData.heureDebut || '07:00'}:00`);
+            const end = new Date(start.getTime() + total * 3600000);
+            const newFinC = `${end.getFullYear()}-${p2(end.getMonth() + 1)}-${p2(end.getDate())}`;
+            const newHeureFinC = `${p2(end.getHours())}:${p2(end.getMinutes())}`;
+            if (newFinC !== formData.dateFin || newHeureFinC !== formData.heureFin) {
+                setFormData(prev => ({ ...prev, dateFin: newFinC, heureFin: newHeureFinC }));
+            }
+            return;
+        }
         // Avec heures totales -> fin = répartition sur jours ouvrables selon fenêtre horaire et nb de personnes.
         const hpd = Math.max(0.5, diffHours(formData.heureDebut, formData.heureFin)); // heures/jour (fenêtre)
         const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
@@ -295,7 +308,7 @@ export function JobModal({
         const newFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin]);
+    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin, formData.modeContinu]);
 
     // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
     // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
@@ -3726,8 +3739,23 @@ export function JobModal({
                                                 type="time"
                                                 value={formData.heureFin || '17:00'}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                disabled={formData.modeContinu}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
                                             />
+                                        </div>
+
+                                        {/* Mode 24/24 (continu) : travail en continu, la fin (date+heure) = début + heures totales */}
+                                        <div className="md:col-span-2">
+                                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!formData.modeContinu}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, modeContinu: e.target.checked }))}
+                                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                                />
+                                                <span>🕛 {L('Travail 24/24 (continu)', '24/7 (continuous) work')}</span>
+                                            </label>
+                                            <p className="ml-6 text-[11px] text-gray-500">{L('La fin (date + heure) = début + heures totales, sans fenêtre quotidienne. Ex. 36 h dès 7:00 → 19:00 le lendemain.', 'End (date + time) = start + total hours, no daily window. E.g. 36 h from 7:00 → 19:00 next day.')}</p>
                                         </div>
 
                                         {/* Responsable de l'evenement (designe par le coordonnateur ; monte le Gantt) */}
