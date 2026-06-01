@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Download, Receipt, Trash2, BookOpen, Menu, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, FileText, Clock, DollarSign, Download, Receipt, Trash2, BookOpen, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
-import { TempsTab } from '@/components/projet/TempsTab';
+import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { FactureTab } from '@/components/projet/FactureTab';
+import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 type Tab = 'projet' | 'temps' | 'couts' | 'facture';
@@ -34,6 +35,7 @@ export default function ProjectDetailPage() {
   const [linkedPermits, setLinkedPermits] = useState<any[]>([]);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [sellers, setSellers] = useState<{ id: string; name: string }[]>([]);
+  const [tsActuals, setTsActuals] = useState<ProjectActuals | null>(null); // coût réel agrégé des feuilles de temps
 
   useEffect(() => {
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
@@ -75,6 +77,14 @@ export default function ProjectDetailPage() {
     })();
     return () => { active = false; };
   }, [id]);
+
+  // Coût réel agrégé depuis les feuilles de temps pointées sur ce projet (R6 : lien Timesheets -> Coûts)
+  useEffect(() => {
+    if (!id) { setTsActuals(null); return; }
+    let active = true;
+    computeProjectActuals(tenant, id).then(a => { if (active) setTsActuals(a); }).catch(() => { if (active) setTsActuals(null); });
+    return () => { active = false; };
+  }, [id, tenant]);
 
   // AST liés à ce projet (par n° de projet)
   useEffect(() => {
@@ -349,8 +359,8 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {tab === 'temps' && <TempsTab tenant={tenant} projectId={id} initialActuals={p.actuals} />}
-            {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={p.actuals} poAmount={p.po_amount} />}
+            {tab === 'temps' && (tsActuals ? <ProjectTimesheetSummary actuals={tsActuals} tenant={tenant} /> : <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>)}
+            {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={(tsActuals && tsActuals.count > 0) ? tsActuals : p.actuals} poAmount={p.po_amount} />}
             {tab === 'facture' && <FactureTab tenant={tenant} projectId={id} project={p} />}
           </>
         )}
