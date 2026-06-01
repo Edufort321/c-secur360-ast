@@ -832,12 +832,7 @@ export function PlanificateurFinal({
                                     <Icon name="calendar" size={13} /> Congés
                                 </button>
                             )}
-                            {onManageResources && (
-                                <button onClick={onManageResources}
-                                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-                                    <Icon name="users" size={13} /> Ressources
-                                </button>
-                            )}
+                            {/* Bouton « Ressources » retiré — personnel et équipements sont gérés via Admin. */}
                         </div>
                     </div>
 
