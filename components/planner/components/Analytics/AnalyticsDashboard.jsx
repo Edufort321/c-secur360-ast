@@ -67,9 +67,15 @@ export function AnalyticsDashboard({
             return sum + (parseInt(job.heuresPlanifiees) || 0);
         }, 0);
 
+        // Total des assignations (un meme travailleur peut etre sur plusieurs jobs)
         const totalPersonnelAssigne = filteredJobs.reduce((sum, job) => {
             return sum + (job.personnel?.length || 0);
         }, 0);
+
+        // Travailleurs ACTIFS = nombre de personnes distinctes reellement assignees sur la periode
+        const assignedSet = new Set();
+        filteredJobs.forEach(job => (job.personnel || []).forEach(id => assignedSet.add(String(id))));
+        const travailleursActifs = [...assignedSet].filter(id => personnel.some(p => String(p.id) === id)).length;
 
         // Personnel disponible (filtré par bureau)
         let personnelDisponible = personnel.filter(p => p.visibleChantier !== false);
@@ -77,25 +83,31 @@ export function AnalyticsDashboard({
             personnelDisponible = personnelDisponible.filter(p => p.succursale === filterBureau);
         }
 
+        // % d'occupation = travailleurs distincts assignes / effectif disponible (plafonne a 100)
         const tauxUtilisation = personnelDisponible.length > 0 ?
-            Math.round((totalPersonnelAssigne / personnelDisponible.length) * 100) : 0;
+            Math.min(100, Math.round((travailleursActifs / personnelDisponible.length) * 100)) : 0;
 
-        // Répartition par bureau
-        const bureaux = ['MDL - Sherbrooke', 'MDL - Terrebonne', 'MDL - Québec', 'DUAL - Électrotech', 'CFM', 'Surplec'];
+        // Répartition par bureau — bureaux derives des donnees reelles (personnel + jobs)
+        const bureaux = Array.from(new Set([
+            ...personnel.map(p => p.succursale).filter(Boolean),
+            ...jobs.map(job => job.bureau).filter(Boolean),
+        ])).sort();
         const repartitionBureau = bureaux.map(bureau => {
             const jobsBureau = jobs.filter(job => job.bureau === bureau);
             const heuresBureau = jobsBureau.reduce((sum, job) => sum + (parseInt(job.heuresPlanifiees) || 0), 0);
             const personnelBureau = personnel.filter(p => p.succursale === bureau && p.visibleChantier !== false);
-            const personnelAssigneBureau = jobsBureau.reduce((sum, job) => sum + (job.personnel?.length || 0), 0);
+            const assignedBureau = new Set();
+            jobsBureau.forEach(job => (job.personnel || []).forEach(id => assignedBureau.add(String(id))));
+            const actifsBureau = [...assignedBureau].filter(id => personnel.some(p => String(p.id) === id)).length;
 
             return {
                 bureau: bureau.split(' - ')[1] || bureau,
                 jobs: jobsBureau.length,
                 heures: heuresBureau,
                 personnelDispo: personnelBureau.length,
-                personnelAssigne: personnelAssigneBureau,
+                personnelAssigne: actifsBureau,
                 tauxUtilisation: personnelBureau.length > 0 ?
-                    Math.round((personnelAssigneBureau / personnelBureau.length) * 100) : 0
+                    Math.min(100, Math.round((actifsBureau / personnelBureau.length) * 100)) : 0
             };
         });
 
@@ -143,6 +155,7 @@ export function AnalyticsDashboard({
             jobsActifs,
             totalHeuresPlanifiees,
             totalPersonnelAssigne,
+            travailleursActifs,
             personnelDisponible: personnelDisponible.length,
             tauxUtilisation,
             repartitionBureau,
@@ -405,21 +418,21 @@ export function AnalyticsDashboard({
                 />
 
                 <MetricsCard
-                    title="Personnel Assigné"
-                    value={analyticsData.totalPersonnelAssigne}
-                    subtitle={`Sur ${analyticsData.personnelDisponible} disponibles`}
+                    title="Travailleurs actifs"
+                    value={analyticsData.travailleursActifs}
+                    subtitle={`Sur ${analyticsData.personnelDisponible} disponibles · ${analyticsData.totalPersonnelAssigne} assignations`}
                     icon="users"
                     color="purple"
                 />
 
                 <MetricsCard
-                    title="Taux d'Utilisation"
+                    title="Taux d'occupation"
                     value={analyticsData.tauxUtilisation}
                     unit="%"
                     subtitle={
-                        analyticsData.tauxUtilisation >= 80 ? 'Utilisation élevée' :
-                        analyticsData.tauxUtilisation >= 60 ? 'Utilisation modérée' :
-                        'Utilisation faible'
+                        analyticsData.tauxUtilisation >= 80 ? 'Occupation élevée' :
+                        analyticsData.tauxUtilisation >= 60 ? 'Occupation modérée' :
+                        'Occupation faible'
                     }
                     icon="barChart"
                     color={
