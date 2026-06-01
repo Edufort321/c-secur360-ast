@@ -3626,7 +3626,7 @@ export function JobModal({
                                                 onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, bureau: e.target.value, departementId: '' }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             >
-                                                <option value="">— Sélectionner un site —</option>
+                                                <option value="">{L('— Sélectionner un site —', '— Select a site —')}</option>
                                                 {(succursales || []).map(s => (
                                                     <option key={s.id} value={s.name || s.id}>{s.name || s.code || s.id}</option>
                                                 ))}
@@ -3769,7 +3769,7 @@ export function JobModal({
                                                     onChange={(e) => setFormData(prev => ({ ...prev, responsableId: e.target.value }))}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 >
-                                                    <option value="">— Sélectionner un responsable —</option>
+                                                    <option value="">{L('— Sélectionner un responsable —', '— Select a manager —')}</option>
                                                     {(personnel || []).map(p => (
                                                         <option key={p.id} value={p.id}>
                                                             {p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}
@@ -3791,7 +3791,7 @@ export function JobModal({
 
                                         {/* Section Heures Planifiées */}
                                         <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                            <h3 className="text-lg font-semibold text-blue-900 mb-4">⏱️ Système d'heures planifiées</h3>
+                                            <h3 className="text-lg font-semibold text-blue-900 mb-4">⏱️ {L("Système d'heures planifiées", 'Planned hours system')}</h3>
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
@@ -4280,7 +4280,7 @@ export function JobModal({
                                                     {formData.etapes && formData.etapes.length > 0 ? (
                                                         <div className="jsx-fragment-wrapper">
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <span className="font-medium text-gray-700">📊 Aperçu Gantt</span>
+                                                                <span className="font-medium text-gray-700">📊 {L('Aperçu Gantt', 'Gantt preview')}</span>
                                                                 <div className="text-xs text-gray-500">
                                                                     {formData.etapes.length} étape{formData.etapes.length > 1 ? 's' : ''}
                                                                 </div>
@@ -4297,7 +4297,7 @@ export function JobModal({
                                                                                 {/* En-tête mini échelle avec vraies heures/dates */}
                                                                                 {timeScale.length > 0 && (
                                                                                     <div className="flex text-xs text-gray-500 mb-1 bg-gray-100 sticky top-0 z-20 py-1 border-b">
-                                                                                        <div className="w-32 flex-shrink-0 text-left font-medium bg-gray-100 border-r border-gray-400 pr-2">Tâche</div>
+                                                                                        <div className="w-32 flex-shrink-0 text-left font-medium bg-gray-100 border-r border-gray-400 pr-2">{L('Tâche', 'Task')}</div>
                                                                                         <div className="flex-1 flex border-l border-gray-400">
                                                                                             {timeScale.map(period => (
                                                                                                 <div
@@ -4484,8 +4484,8 @@ export function JobModal({
                                                         <div className="flex-1 flex items-center justify-center text-gray-500 border border-gray-300 rounded bg-gray-50">
                                                             <div className="text-center">
                                                                 <div className="text-2xl mb-2">📊</div>
-                                                                <div className="text-sm">L'aperçu Gantt</div>
-                                                                <div className="text-xs mt-1">apparaîtra ici</div>
+                                                                <div className="text-sm">{L("L'aperçu Gantt", 'The Gantt preview')}</div>
+                                                                <div className="text-xs mt-1">{L('apparaîtra ici', 'will appear here')}</div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -4700,9 +4700,9 @@ export function JobModal({
                                                         onChange={(e) => updatePreparation(index, 'statut', e.target.value)}
                                                         className="w-24 p-1 border rounded text-xs font-medium shrink-0"
                                                     >
-                                                        <option value="a-faire">À faire</option>
+                                                        <option value="a-faire">{L('À faire', 'To do')}</option>
                                                         <option value="en-cours">En cours</option>
-                                                        <option value="termine">Terminé</option>
+                                                        <option value="termine">{L('Terminé', 'Done')}</option>
                                                     </select>
                                                     {/* Texte */}
                                                     <input
@@ -4871,7 +4871,7 @@ export function JobModal({
 
                                                             <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Enregistrer / Exporter</div>
                                                             <button type="button" onClick={() => { saveBaseline(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">💾 Sauver la baseline</button>
-                                                            <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🖨️ Imprimer le rapport</button>
+                                                            <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🖨️ {L('Imprimer le rapport', 'Print report')}</button>
                                                         </div>
                                                     </>
                                                 )}
@@ -4882,11 +4882,11 @@ export function JobModal({
                                     {/* Liste éditable des tâches — édition directe dans l'onglet Gantt */}
                                     <div className="bg-white border rounded-lg p-3">
                                         <div className="mb-2 flex items-center justify-between">
-                                            <span className="text-sm font-semibold text-gray-700">📝 Tâches du projet (édition directe)</span>
+                                            <span className="text-sm font-semibold text-gray-700">📝 {L('Tâches du projet (édition directe)', 'Project tasks (direct edit)')}</span>
                                             <button type="button" onClick={() => addEtape()} className="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white hover:bg-purple-700">➕ Ajouter</button>
                                         </div>
                                         {formData.etapes.length === 0 ? (
-                                            <p className="py-3 text-center text-sm text-gray-400">Aucune tâche. Cliquez « Ajouter » pour commencer.</p>
+                                            <p className="py-3 text-center text-sm text-gray-400">{L('Aucune tâche. Cliquez « Ajouter » pour commencer.', 'No task. Click "Add" to start.')}</p>
                                         ) : (
                                             <div className="space-y-1 max-h-72 overflow-y-auto">
                                                 {(() => {
@@ -4951,9 +4951,9 @@ export function JobModal({
                                                             title="Mode d'ordonnancement de la tâche"
                                                         >
                                                             <option value="auto">↕ Auto</option>
-                                                            <option value="suite">➡ Séquentiel</option>
-                                                            <option value="parallele">⇉ Parallèle</option>
-                                                            <option value="full">⟷ Toute la durée</option>
+                                                            <option value="suite">➡ {L('Séquentiel', 'Sequential')}</option>
+                                                            <option value="parallele">⇉ {L('Parallèle', 'Parallel')}</option>
+                                                            <option value="full">⟷ {L('Toute la durée', 'Full duration')}</option>
                                                         </select>
                                                         {etape.schedulingMode === 'parallele' && (
                                                             <select
@@ -4962,7 +4962,7 @@ export function JobModal({
                                                                 className="w-40 rounded border border-amber-300 bg-amber-50 px-1 py-1 text-xs focus:ring-2 focus:ring-amber-500"
                                                                 title="En parallèle avec quelle tâche ?"
                                                             >
-                                                                <option value="">⇉ Parallèle avec…</option>
+                                                                <option value="">⇉ {L('Parallèle avec…', 'Parallel with…')}</option>
                                                                 {formData.etapes.filter(t => String(t.id) !== String(etape.id)).map(t => (
                                                                     <option key={t.id} value={t.id}>{(t.text || t.name || 'Tâche').slice(0, 28)}</option>
                                                                 ))}
@@ -4981,7 +4981,7 @@ export function JobModal({
                                         {formData.etapes.length === 0 ? (
                                             <div className="text-center py-8 text-gray-500">
                                                 <div className="text-5xl mb-4 opacity-50">📊</div>
-                                                <p>Ajoutez des étapes au projet pour voir le diagramme de Gantt</p>
+                                                <p>{L('Ajoutez des étapes au projet pour voir le diagramme de Gantt', 'Add steps to the project to see the Gantt chart')}</p>
                                             </div>
                                         ) : (() => {
                                             const hierarchicalTasks = generateHierarchicalGanttData();
@@ -5280,14 +5280,14 @@ export function JobModal({
                                                         <div className="bg-red-100 rounded-lg p-3 mb-4">
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                                                                 <div>
-                                                                    <span className="font-medium text-red-800">📅 Date de fin prévue :</span>
+                                                                    <span className="font-medium text-red-800">📅 {L('Date de fin prévue :', 'Planned end date:')}</span>
                                                                     <br />
                                                                     <span className="text-red-700">
                                                                         {validation.projectEnd?.toLocaleDateString('fr-FR')} à {validation.projectEnd?.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                                                     </span>
                                                                 </div>
                                                                 <div>
-                                                                    <span className="font-medium text-red-800">📅 Date de fin réelle :</span>
+                                                                    <span className="font-medium text-red-800">📅 {L('Date de fin réelle :', 'Actual end date:')}</span>
                                                                     <br />
                                                                     <span className="text-red-700 font-medium">
                                                                         {validation.timelineEnd?.toLocaleDateString('fr-FR')} à {validation.timelineEnd?.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -5317,23 +5317,23 @@ export function JobModal({
                                     {formData.etapes.length > 0 && (
                                         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
                                             <div className="bg-blue-50 p-3 rounded-lg">
-                                                <div className="font-medium text-blue-800">📋 Total tâches</div>
+                                                <div className="font-medium text-blue-800">📋 {L('Total tâches', 'Total tasks')}</div>
                                                 <div className="text-blue-600 text-lg font-bold">{formData.etapes.length}</div>
                                             </div>
                                             <div className="bg-green-50 p-3 rounded-lg">
-                                                <div className="font-medium text-green-800">✅ Complétées</div>
+                                                <div className="font-medium text-green-800">✅ {L('Complétées', 'Completed')}</div>
                                                 <div className="text-green-600 text-lg font-bold">
                                                     {formData.etapes.filter(t => t.completed).length}
                                                 </div>
                                             </div>
                                             <div className="bg-yellow-50 p-3 rounded-lg">
-                                                <div className="font-medium text-yellow-800">⏰ Durée totale</div>
+                                                <div className="font-medium text-yellow-800">⏰ {L('Durée totale', 'Total duration')}</div>
                                                 <div className="text-yellow-600 text-lg font-bold">
                                                     {formData.etapes.reduce((sum, t) => sum + (t.duration || 0), 0)}h
                                                 </div>
                                             </div>
                                             <div className="bg-purple-50 p-3 rounded-lg">
-                                                <div className="font-medium text-purple-800">📊 Progression</div>
+                                                <div className="font-medium text-purple-800">📊 {L('Progression', 'Progress')}</div>
                                                 <div className="text-purple-600 text-lg font-bold">
                                                     {formData.etapes.length > 0
                                                         ? Math.round((formData.etapes.filter(t => t.completed).length / formData.etapes.length) * 100)
@@ -5341,13 +5341,13 @@ export function JobModal({
                                                 </div>
                                             </div>
                                             <div className="bg-red-50 p-3 rounded-lg">
-                                                <div className="font-medium text-red-800">🚨 Tâches critiques</div>
+                                                <div className="font-medium text-red-800">🚨 {L('Tâches critiques', 'Critical tasks')}</div>
                                                 <div className="text-red-600 text-lg font-bold">
                                                     {formData.etapes.filter(t => t.isCritical).length}
                                                 </div>
                                             </div>
                                             <div className="bg-indigo-50 p-3 rounded-lg">
-                                                <div className="font-medium text-indigo-800">🔗 Dépendances</div>
+                                                <div className="font-medium text-indigo-800">🔗 {L('Dépendances', 'Dependencies')}</div>
                                                 <div className="text-indigo-600 text-lg font-bold">
                                                     {formData.etapes.reduce((sum, t) => sum + (t.dependencies?.length || 0), 0)}
                                                 </div>
@@ -5551,7 +5551,7 @@ export function JobModal({
                                             ) : (
                                                 <div className="text-center py-8 text-gray-500">
                                                     <div className="text-4xl mb-2">🔧</div>
-                                                    <p>Aucun équipement disponible</p>
+                                                    <p>{L('Aucun équipement disponible', 'No equipment available')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -5716,7 +5716,7 @@ export function JobModal({
 
                                                                 {/* Membres de l'équipe */}
                                                                 <div className="space-y-2">
-                                                                    <h6 className="text-sm font-medium text-gray-700">Membres de l'équipe:</h6>
+                                                                    <h6 className="text-sm font-medium text-gray-700">{L("Membres de l'équipe:", 'Team members:')}</h6>
                                                                     {membresEquipe.length > 0 ? (
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                                             {membresEquipe.map(membre => (
@@ -5741,7 +5741,7 @@ export function JobModal({
                                                                             ))}
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-sm text-gray-500 italic">Aucun membre assigné</div>
+                                                                        <div className="text-sm text-gray-500 italic">{L('Aucun membre assigné', 'No member assigned')}</div>
                                                                     )}
 
                                                                     {/* Ajouter du personnel à l'équipe */}
@@ -5779,8 +5779,8 @@ export function JobModal({
                                             ) : (
                                                 <div className="text-center py-8 text-gray-500">
                                                     <div className="text-4xl mb-2">💼</div>
-                                                    <p>Aucune équipe créée</p>
-                                                    <p className="text-sm mt-1">Cliquez sur "Nouvelle équipe" pour commencer</p>
+                                                    <p>{L('Aucune équipe créée', 'No team created')}</p>
+                                                    <p className="text-sm mt-1">{L('Cliquez sur "Nouvelle équipe" pour commencer', 'Click "New team" to start')}</p>
                                                 </div>
                                             )}
                                         </div>
