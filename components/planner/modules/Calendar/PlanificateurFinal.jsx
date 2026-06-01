@@ -536,8 +536,8 @@ export function PlanificateurFinal({
             const minutesFin = finH * 60 + finM;
 
             // Timeline de 6h (360min) à 20h (1200min) = 840 minutes
-            const timelineStart = 6 * 60; // 6h00
-            const timelineEnd = 20 * 60;   // 20h00
+            const timelineStart = 0; // 0h00 (journée complète 24 h)
+            const timelineEnd = 24 * 60;   // 24h00
             const timelineRange = timelineEnd - timelineStart;
 
             // Calculer pourcentages
@@ -728,7 +728,7 @@ export function PlanificateurFinal({
                         }
                     }
                     if (!overlaps.length) return null;
-                    const tStart = 6 * 60, tEnd = 20 * 60, range = tEnd - tStart;
+                    const tStart = 0, tEnd = 24 * 60, range = tEnd - tStart;
                     return overlaps.map(([s, e], i) => {
                         const left = Math.max(0, ((s - tStart) / range) * 100);
                         const width = Math.min(100 - left, ((e - s) / range) * 100);
@@ -749,15 +749,15 @@ export function PlanificateurFinal({
 
                 {/* Indicateurs d'heures */}
                 <div className="absolute inset-x-0 bottom-0 h-3 flex text-xs text-gray-500 opacity-70 pointer-events-none">
-                    <div className="text-center text-[9px]">6h</div>
+                    <div className="text-center text-[9px]">0h</div>
                     <div className="flex-1"></div>
-                    <div className="text-center text-[9px]">9h</div>
+                    <div className="text-center text-[9px]">6h</div>
                     <div className="flex-1"></div>
                     <div className="text-center text-[9px]">12h</div>
                     <div className="flex-1"></div>
-                    <div className="text-center text-[9px]">15h</div>
-                    <div className="flex-1"></div>
                     <div className="text-center text-[9px]">18h</div>
+                    <div className="flex-1"></div>
+                    <div className="text-center text-[9px]">24h</div>
                 </div>
             </div>
         );
