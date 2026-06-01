@@ -3671,47 +3671,42 @@ export function JobModal({
                                             />
                                         </div>
 
-                                        {/* Heures de l'evenement — début + durée -> fin auto (et fin manuelle recalcule la durée) */}
+                                        {/* HEURES TOTALES = contenu de travail -> pilote la date de fin (auto).
+                                            Heure début/fin = fenêtre horaire QUOTIDIENNE. nb personnes pris en compte. */}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                {L('Heure de début', 'Start time')}
+                                                {L('Heures totales (h)', 'Total hours (h)')}
+                                            </label>
+                                            <input
+                                                type="number" step="0.5" min="0"
+                                                value={formData.heuresPlanifiees ?? ''}
+                                                onFocus={(e) => e.target.select()}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heuresPlanifiees: e.target.value }))}
+                                                placeholder="Ex: 36"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                title="Heures totales de travail -> la date de fin se calcule : heures / (heures par jour x nb de personnes)"
+                                            />
+                                            <p className="mt-1 text-[11px] text-gray-500">{L('Pilote la date de fin (selon heures/jour et nb de personnes).', 'Drives the end date (per daily window and headcount).')}</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                {L('Heure de début (jour)', 'Start time (day)')}
                                             </label>
                                             <input
                                                 type="time"
                                                 value={formData.heureDebut || '08:00'}
-                                                onChange={(e) => setFormData(prev => {
-                                                    const d = parseFloat(prev.dureeEvent);
-                                                    const heureFin = d > 0 ? addHoursToTime(e.target.value, d) : prev.heureFin;
-                                                    return { ...prev, heureDebut: e.target.value, heureFin };
-                                                })}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                {L('Durée prévue (h)', 'Planned duration (h)')}
-                                            </label>
-                                            <input
-                                                type="number" step="0.25" min="0"
-                                                value={formData.dureeEvent ?? diffHours(formData.heureDebut, formData.heureFin)}
-                                                onFocus={(e) => e.target.select()}
-                                                onChange={(e) => setFormData(prev => {
-                                                    const d = parseFloat(e.target.value);
-                                                    const heureFin = d > 0 ? addHoursToTime(prev.heureDebut || '08:00', d) : prev.heureFin;
-                                                    return { ...prev, dureeEvent: e.target.value, heureFin };
-                                                })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                title="La fin s'ajuste automatiquement (début + durée)"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                {L('Heure de fin', 'End time')} <span className="text-xs text-gray-400">{L('(auto / manuel)', '(auto / manual)')}</span>
+                                                {L('Heure de fin (jour)', 'End time (day)')}
                                             </label>
                                             <input
                                                 type="time"
                                                 value={formData.heureFin || '17:00'}
-                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value, dureeEvent: String(diffHours(prev.heureDebut || '08:00', e.target.value)) }))}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>
@@ -3754,17 +3749,9 @@ export function JobModal({
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Heures totales planifiées
+                                                        {L('Heures', 'Hours')}
                                                     </label>
-                                                    <input
-                                                        type="number"
-                                                        value={formData.heuresPlanifiees}
-                                                        onChange={(e) => setFormData(prev => ({ ...prev, heuresPlanifiees: e.target.value }))}
-                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                        placeholder="Ex: 150"
-                                                        min="0"
-                                                    />
-                                                    <p className="text-xs text-gray-500 mt-1">Nombre total d'heures à planifier</p>
+                                                    <p className="text-xs text-gray-500 mb-2">{L('Saisies via « Heures totales » en haut. Total actuel : ', 'Set via “Total hours” above. Current total: ')}<strong>{formData.heuresPlanifiees || 0} h</strong></p>
 
                                                     {/* Remplir auto depuis les étapes créées (heures + date de fin) */}
                                                     <button
