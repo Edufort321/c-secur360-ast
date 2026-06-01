@@ -3458,7 +3458,7 @@ export function JobModal({
                                                                                         }, 150);
                                                                                     }}
                                                                                     className="ml-3 px-3 py-1 text-xs bg-yellow-100 text-yellow-800 border border-yellow-300 rounded hover:bg-yellow-200 transition-colors flex items-center gap-1"
-                                                                                    title="Ouvrir l'événement en conflit"
+                                                                                    title={L("Ouvrir l'événement en conflit", 'Open the conflicting event')}
                                                                                 >
                                                                                     Voir l'événement
                                                                                 </button>
@@ -3657,7 +3657,7 @@ export function JobModal({
                                                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 rows={3}
-                                                placeholder="Description du travail à effectuer"
+                                                placeholder={L('Description du travail à effectuer', 'Description of the work to perform')}
                                             />
                                         </div>
 
@@ -3806,7 +3806,7 @@ export function JobModal({
                                                         onClick={fillScheduleFromEtapes}
                                                         disabled={!formData.etapes?.length}
                                                         className="mt-2 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40"
-                                                        title="Remplit les heures planifiées et la date de fin à partir des étapes du projet"
+                                                        title={L('Remplit les heures planifiées et la date de fin à partir des étapes du projet', 'Fills planned hours and end date from project steps')}
                                                     >
                                                         ⤵ Remplir depuis les étapes ({getLeafProjectHours()}h)
                                                     </button>
@@ -3919,13 +3919,13 @@ export function JobModal({
                                             {formData.projectId && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">
                                                     Projet {formData.numeroJob ? `#${formData.numeroJob}` : ''}
-                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, projectId: '' }))} className="hover:text-blue-900" title="Détacher le projet">×</button>
+                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, projectId: '' }))} className="hover:text-blue-900" title={L('Détacher le projet', 'Detach project')}>×</button>
                                                 </span>
                                             )}
                                             {formData.clientId && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 font-semibold text-purple-700">
                                                     Client lié
-                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, clientId: '' }))} className="hover:text-purple-900" title="Détacher le client">×</button>
+                                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, clientId: '' }))} className="hover:text-purple-900" title={L('Détacher le client', 'Detach client')}>×</button>
                                                 </span>
                                             )}
                                             {formData.astId && (
@@ -3949,7 +3949,7 @@ export function JobModal({
                                             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             rows={3}
-                                            placeholder="Notes supplémentaires"
+                                            placeholder={L('Notes supplémentaires', 'Additional notes')}
                                         />
                                     </div>
 
@@ -4021,15 +4021,15 @@ export function JobModal({
                                                     onClick={prefillFromProject}
                                                     disabled={prefilling}
                                                     className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
-                                                    title="Pré-remplir le Gantt à partir des items de la soumission/projet"
+                                                    title={L('Pré-remplir le Gantt à partir des items de la soumission/projet', 'Pre-fill the Gantt from quote/project items')}
                                                 >
                                                     {prefilling ? '…' : '⤵ Pré-remplir depuis soumission'}
                                                 </button>
                                             </div>
                                             <div className="ml-auto flex items-center gap-1 text-xs text-gray-600">
-                                                <span>Mode :</span>
-                                                <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">En suite</button>
-                                                <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">Parallèle</button>
+                                                <span>{L('Mode :', 'Mode:')}</span>
+                                                <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">{L('En suite', 'Sequential')}</button>
+                                                <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">{L('Parallèle', 'Parallel')}</button>
                                                 <button type="button" onClick={() => applyBuildMode('custom')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">Custom</button>
                                             </div>
                                         </div>
@@ -4144,7 +4144,7 @@ export function JobModal({
                                                                                         {etape.autoCalculated && (
                                                                                             <span
                                                                                                 className="text-xs text-blue-600"
-                                                                                                title="Calculé automatiquement"
+                                                                                                title={L('Calculé automatiquement', 'Automatically calculated')}
                                                                                             >
                                                                                                 📊
                                                                                             </span>
@@ -4160,7 +4160,7 @@ export function JobModal({
                                                                                                     value={etape.progress || 0}
                                                                                                     onChange={(e) => updateEtape(globalIndex, 'progress', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                                                                                                     className="w-14 p-1 border rounded text-sm focus:ring-2 focus:ring-green-500"
-                                                                                                    title="% complété"
+                                                                                                    title={L('% complété', '% complete')}
                                                                                                 />
                                                                                                 <span className="text-xs text-gray-500">%</span>
                                                                                             </div>
@@ -4171,7 +4171,7 @@ export function JobModal({
                                                                                                 value={etape.responsableId || ''}
                                                                                                 onChange={(e) => updateEtape(globalIndex, 'responsableId', e.target.value)}
                                                                                                 className="w-32 p-1 border rounded text-xs focus:ring-2 focus:ring-blue-500"
-                                                                                                title="Personne en charge de la tâche"
+                                                                                                title={L('Personne en charge de la tâche', 'Person in charge of the task')}
                                                                                             >
                                                                                                 <option value="">👤 Responsable…</option>
                                                                                                 {(personnel || []).filter(p => (formData.personnel || []).includes(p.id)).map(p => (
@@ -4190,7 +4190,7 @@ export function JobModal({
                                                                                             {(etape.assignedResources?.personnel?.length > 0 ||
                                                                                               etape.assignedResources?.equipements?.length > 0 ||
                                                                                               etape.assignedResources?.equipes?.length > 0) && (
-                                                                                                <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded" title="Ressources assignées">
+                                                                                                <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded" title={L('Ressources assignées', 'Assigned resources')}>
                                                                                                     👥 {(etape.assignedResources?.personnel?.length || 0) +
                                                                                                          (etape.assignedResources?.equipements?.length || 0) +
                                                                                                          (etape.assignedResources?.equipes?.length || 0)}
@@ -4199,14 +4199,14 @@ export function JobModal({
 
                                                                                             {/* Dépendances */}
                                                                                             {etape.dependencies?.length > 0 && (
-                                                                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded" title="A des dépendances">
+                                                                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded" title={L('A des dépendances', 'Has dependencies')}>
                                                                                                     🔗 {etape.dependencies.length}
                                                                                                 </span>
                                                                                             )}
 
                                                                                             {/* Parallélisme */}
                                                                                             {etape.parallelWith?.length > 0 && (
-                                                                                                <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded" title="Tâches parallèles">
+                                                                                                <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded" title={L('Tâches parallèles', 'Parallel tasks')}>
                                                                                                     ⚡ {etape.parallelWith.length}
                                                                                                 </span>
                                                                                             )}
@@ -4229,7 +4229,7 @@ export function JobModal({
                                                                                             type="button"
                                                                                             onClick={() => addSubTask(etape.id)}
                                                                                             className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                                                                                            title="Ajouter une sous-tâche"
+                                                                                            title={L('Ajouter une sous-tâche', 'Add a sub-task')}
                                                                                         >
                                                                                             <Icon name="plus" size={12} />
                                                                                         </button>
@@ -4240,7 +4240,7 @@ export function JobModal({
                                                                                                 type="button"
                                                                                                 onClick={() => openStepConfigModal(etape.id)}
                                                                                                 className="p-1 text-purple-600 hover:bg-purple-100 rounded"
-                                                                                                title="Configuration avancée"
+                                                                                                title={L('Configuration avancée', 'Advanced settings')}
                                                                                             >
                                                                                                 <Icon name="settings" size={12} />
                                                                                             </button>
@@ -4251,7 +4251,7 @@ export function JobModal({
                                                                                             type="button"
                                                                                             onClick={() => removeEtape(globalIndex)}
                                                                                             className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                                                            title="Supprimer l'étape"
+                                                                                            title={L("Supprimer l'étape", 'Delete step')}
                                                                                         >
                                                                                             <Icon name="trash" size={12} />
                                                                                         </button>
@@ -4721,7 +4721,7 @@ export function JobModal({
                                                             value={item.quantite || '1'}
                                                             onChange={(e) => updatePreparation(index, 'quantite', e.target.value)}
                                                             className="w-14 p-1 border rounded text-xs text-center"
-                                                            placeholder="Qté"
+                                                            placeholder={L('Qté', 'Qty')}
                                                         />
                                                         <span className="text-xs text-gray-400 w-10 truncate" title={item.unite}>{item.unite || 'u.'}</span>
                                                     </div>
@@ -4830,7 +4830,7 @@ export function JobModal({
                                                 type="button"
                                                 onClick={toggleGanttFullscreen}
                                                 className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                                                title="Mode plein écran"
+                                                title={L('Mode plein écran', 'Fullscreen mode')}
                                             >
                                                 {ganttFullscreen ? '🗗 Quitter' : '⛶ Plein écran'}
                                             </button>
@@ -4906,7 +4906,7 @@ export function JobModal({
                                                             value={etape.text || etape.name || ''}
                                                             onFocus={(e) => e.target.select()}
                                                             onChange={(e) => updateEtape(idx, 'text', e.target.value)}
-                                                            placeholder="Nom de la tâche"
+                                                            placeholder={L('Nom de la tâche', 'Task name')}
                                                             className="flex-1 min-w-[140px] rounded border px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500"
                                                         />
                                                         <div className="flex items-center gap-1">
@@ -4929,7 +4929,7 @@ export function JobModal({
                                                                 onFocus={(e) => e.target.select()}
                                                                 onChange={(e) => updateEtape(idx, 'progress', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                                                                 className="w-14 rounded border px-1 py-1 text-sm focus:ring-2 focus:ring-green-500"
-                                                                title="% complété"
+                                                                title={L('% complété', '% complete')}
                                                             />
                                                             <span className="text-xs text-gray-400">%</span>
                                                         </div>
@@ -4937,7 +4937,7 @@ export function JobModal({
                                                             value={etape.responsableId || ''}
                                                             onChange={(e) => updateEtape(idx, 'responsableId', e.target.value)}
                                                             className="w-32 rounded border px-1 py-1 text-xs focus:ring-2 focus:ring-blue-500"
-                                                            title="Responsable de la tâche"
+                                                            title={L('Responsable de la tâche', 'Task lead')}
                                                         >
                                                             <option value="">👤 Responsable…</option>
                                                             {(personnel || []).filter(p => (formData.personnel || []).includes(p.id)).map(p => (
@@ -4948,7 +4948,7 @@ export function JobModal({
                                                             value={etape.schedulingMode || 'auto'}
                                                             onChange={(e) => updateEtape(idx, 'schedulingMode', e.target.value)}
                                                             className="w-36 rounded border px-1 py-1 text-xs focus:ring-2 focus:ring-purple-500"
-                                                            title="Mode d'ordonnancement de la tâche"
+                                                            title={L("Mode d'ordonnancement de la tâche", 'Task scheduling mode')}
                                                         >
                                                             <option value="auto">↕ Auto</option>
                                                             <option value="suite">➡ {L('Séquentiel', 'Sequential')}</option>
@@ -4960,7 +4960,7 @@ export function JobModal({
                                                                 value={(Array.isArray(etape.parallelWith) && etape.parallelWith[0]) || ''}
                                                                 onChange={(e) => updateEtape(idx, 'parallelWith', e.target.value ? [e.target.value] : [])}
                                                                 className="w-40 rounded border border-amber-300 bg-amber-50 px-1 py-1 text-xs focus:ring-2 focus:ring-amber-500"
-                                                                title="En parallèle avec quelle tâche ?"
+                                                                title={L('En parallèle avec quelle tâche ?', 'Parallel with which task?')}
                                                             >
                                                                 <option value="">⇉ {L('Parallèle avec…', 'Parallel with…')}</option>
                                                                 {formData.etapes.filter(t => String(t.id) !== String(etape.id)).map(t => (
@@ -4968,8 +4968,8 @@ export function JobModal({
                                                                 ))}
                                                             </select>
                                                         )}
-                                                        <button type="button" onClick={() => addEtape(etape.id)} className="rounded px-2 py-1 text-xs font-semibold text-purple-600 hover:bg-purple-50" title="Ajouter une sous-tâche (enfant)">＋ sous</button>
-                                                        <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title="Supprimer la tâche">🗑</button>
+                                                        <button type="button" onClick={() => addEtape(etape.id)} className="rounded px-2 py-1 text-xs font-semibold text-purple-600 hover:bg-purple-50" title={L('Ajouter une sous-tâche (enfant)', 'Add a sub-task (child)')}>＋ sous</button>
+                                                        <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title={L('Supprimer la tâche', 'Delete task')}>🗑</button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -5117,7 +5117,7 @@ export function JobModal({
                                                                         {task.displayName || task.text || `Étape ${task.order + 1}`}
                                                                     </span>
                                                                     {task.autoCalculated && (
-                                                                        <span className="ml-2 text-xs text-blue-600" title="Durée calculée automatiquement">
+                                                                        <span className="ml-2 text-xs text-blue-600" title={L('Durée calculée automatiquement', 'Duration calculated automatically')}>
                                                                             📊
                                                                         </span>
                                                                     )}
@@ -5733,7 +5733,7 @@ export function JobModal({
                                                                                     <button
                                                                                         onClick={() => removePersonnelFromTeam(equipe.id, membre.id)}
                                                                                         className="text-red-500 hover:text-red-700 text-xs"
-                                                                                        title="Retirer de l'équipe"
+                                                                                        title={L("Retirer de l'équipe", 'Remove from team')}
                                                                                     >
                                                                                         ✗
                                                                                     </button>
@@ -5756,7 +5756,7 @@ export function JobModal({
                                                                                             key={person.id}
                                                                                             onClick={() => addPersonnelToTeam(equipe.id, person.id)}
                                                                                             className="flex items-center justify-between p-2 bg-gray-50 border rounded cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-colors"
-                                                                                            title="Cliquer pour ajouter à l'équipe"
+                                                                                            title={L("Cliquer pour ajouter à l'équipe", 'Click to add to the team')}
                                                                                         >
                                                                                             <div>
                                                                                                 <div className="font-medium text-sm">
