@@ -4370,14 +4370,15 @@ export function JobModal({
                                                                                                     const taskColors = getTaskColors(task, hierarchicalTasks);
 
 
+                                                                                                    const isFull = task.schedulingMode === 'full';
                                                                                                     return (
                                                                                                         <div
                                                                                                             className={`absolute top-0.5 h-3 rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-80' : ''} ${taskColors.hover}`}
                                                                                                             style={{
-                                                                                                                left: `${startPercent}%`,
-                                                                                                                width: `${widthPercent}%`
+                                                                                                                left: isFull ? '0%' : `${startPercent}%`,
+                                                                                                                width: isFull ? '100%' : `${widthPercent}%`
                                                                                                             }}
-                                                                                                            title={`${task.displayName || task.text} - ${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h) ${task.isCritical ? '(Critique)' : ''}`}
+                                                                                                            title={`${task.displayName || task.text} - ${isFull ? 'toute la durée' : `${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h)`} ${task.isCritical ? '(Critique)' : ''}`}
                                                                                                         />
                                                                                                     );
                                                                                                 })()}
@@ -4941,6 +4942,17 @@ export function JobModal({
                                                                 <option key={p.id} value={p.id}>{p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}</option>
                                                             ))}
                                                         </select>
+                                                        <select
+                                                            value={etape.schedulingMode || 'auto'}
+                                                            onChange={(e) => updateEtape(idx, 'schedulingMode', e.target.value)}
+                                                            className="w-36 rounded border px-1 py-1 text-xs focus:ring-2 focus:ring-purple-500"
+                                                            title="Mode d'ordonnancement de la tâche"
+                                                        >
+                                                            <option value="auto">↕ Auto</option>
+                                                            <option value="suite">➡ Séquentiel</option>
+                                                            <option value="parallele">⇉ Parallèle</option>
+                                                            <option value="full">⟷ Toute la durée</option>
+                                                        </select>
                                                         <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title="Supprimer la tâche">🗑</button>
                                                     </div>
                                                 ))}
@@ -5177,14 +5189,16 @@ export function JobModal({
 
 
                                                                         const prog = Math.min(100, Math.max(0, Number(task.progress) || 0));
+                                                                        // « Toute la durée » (ex. supervision) : la barre couvre toute la timeline.
+                                                                        const isFull = task.schedulingMode === 'full';
                                                                         return (
                                                                             <div
                                                                                 className={`absolute top-0 h-full overflow-hidden rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-60' : ''} ${taskColors.hover}`}
                                                                                 style={{
-                                                                                    left: `${startPercent}%`,
-                                                                                    width: `${widthPercent}%`
+                                                                                    left: isFull ? '0%' : `${startPercent}%`,
+                                                                                    width: isFull ? '100%' : `${widthPercent}%`
                                                                                 }}
-                                                                                title={`${task.displayName} - ${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h) • ${prog}% complété ${task.isCritical ? '(Critique)' : ''}`}
+                                                                                title={`${task.displayName} - ${isFull ? 'toute la durée' : `${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h)`} • ${prog}% complété ${task.isCritical ? '(Critique)' : ''}`}
                                                                             >
                                                                                 {/* % complété : remplissage plus foncé */}
                                                                                 {prog > 0 && (
