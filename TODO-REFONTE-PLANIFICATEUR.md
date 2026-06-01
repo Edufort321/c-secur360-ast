@@ -134,3 +134,28 @@ Voir **`TODO-POINTAGE-PUSH-PLANIFICATEUR.md`** : pointage « push » in/out (app
 - `npx tsc --noEmit` = 0 erreur + build OK avant chaque push.
 - Commit + push après CHAQUE phase sur `feat/modular-foundation` ET `main`.
 - Messages de commit en ASCII sans accents.
+
+---
+## 📌 Session 2026-05-31 (suite) — récap planner
+
+### ✅ FAIT (poussé)
+- Persistance mandats corrigée (tenant_id + title=nom) ; **migration 100 complète** (idempotente) ; colonnes bureau/departementId/dureeEvent.
+- En-tête mandat réordonné (# projet / client / nom / lieu) ; champs **Heure début/fin**, **Heures totales** (champ unique), **Durée auto**.
+- **Contrôle intelligent** : date de fin auto = heures / (heures-jour × personnes) sur jours ouvrables ; **mode 24/24 continu** (fin = début + heures).
+- **Site + Département** (sync `bureau`) ; décalage 1 journée calendrier corrigé (dates locales).
+- Calendrier : barre 24h, badge multi-événements, infobulle native (#projet+client), **bande rouge de conflit (overlap)**, **agenda mobile** (lg:hidden), en-tête « # Projet / Nom du client », bouton Ressources retiré.
+- Gantt : **scroll horizontal unifié + colonnes fixes + colonne tâche figée** ; **liste hiérarchique** (sous-tâches sous le parent) ; création **parent/enfant** (+ sous) ; **mode par tâche** (Auto/Séquentiel/Parallèle/Toute la durée) ; **édition directe** dans l'onglet ; **moteur timeline basé sur les dates** ; crash getTaskColors corrigé ; modèles inutiles retirés ; barre Gantt → menu Actions.
+- Optimiseur IA : **responsable prioritaire** + équilibrage par poste/évaluation.
+- Onglet « Équipes » → **Mode avancé** + **panneau de conflits visibles** (badge ⚠️N).
+- Tracking : **% complété** + **responsable par tâche** (limité aux personnes de l'événement).
+- Évaluation admin : curseurs préchargés depuis la dernière éval.
+- Bulles IA (public+tenant) couleurs site + ferme au clic extérieur ; langue FR/EN du header pilote le planner ; traduction partielle du chrome du formulaire.
+
+### ⏳ RESTE (Gantt / planner)
+- **Parallèle ciblé** : quand on met une tâche en « Parallèle », demander **avec quelle tâche/sous-tâche** (stocker `parallelWith`).
+- **« Toute la durée » = étendue de l'événement** (dateDébut→dateFin) exactement, même si < temps total (largeur = span/totalViewHours, pas 100% systématique).
+- **Garde-fous Actions** (chemin critique/WBS) si 0 tâche.
+- **Export PDF Gantt** (2 vues : principale + aperçu) avec logo tenant (R3/#25).
+- **Mode custom par employé** : jours différents + heures début/fin différentes par employé (révision complète scénarios employé) — R16.
+- Filtre calendrier **multi-sélection** (ex. 2 postes sur 2 sites) + refonte visuelle (R11/#31).
+- Dashboard analytique **timeline** (R12) ; dashboard compteurs (R10) ; traduction complète (R13).
