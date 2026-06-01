@@ -139,6 +139,8 @@ export interface ASTPermit {
   supervisorSigCert: string;
   supervisorSigDate: string;
   supervisorSigNotes: string;
+  // Verdict du superviseur responsable : '' (non statue) | approved (vert) | corrective (orange, visible a l'audit) | nonconform (rouge)
+  supervisorSigStatus?: '' | 'approved' | 'corrective' | 'nonconform';
 
   supervisor_name: string;
   supervisor_cert: string;
@@ -551,7 +553,7 @@ function createDefaultPermit(province: ProvinceCode, tenant?: string): ASTPermit
     clientDocs: [],
     workers: [],
     workerNotes: '',
-    supervisorSigName: '', supervisorSigCert: '', supervisorSigDate: '', supervisorSigNotes: '',
+    supervisorSigName: '', supervisorSigCert: '', supervisorSigDate: '', supervisorSigNotes: '', supervisorSigStatus: '',
     supervisor_name: '', supervisor_cert: '',
     permit_valid_from: '', permit_valid_to: '',
     permitted_work: '', restrictions: '', finalization_notes: '',
@@ -2661,6 +2663,7 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
     if (on) next.add(id); else next.delete(id);
     return next;
   });
+  const [supEditing, setSupEditing] = useState(false);
 
   // Employés du tenant (rafraîchis à chaque ouverture de la section : tout
   // employé créé dans l'admin devient immédiatement recherchable).
@@ -2816,22 +2819,88 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
         </div>
       </Card>
 
-      <Card title={t.cardSupervisor} icon={<CheckCircle className="w-5 h-5" />}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t.supervisorName}>
-            <TextInput value={ast.supervisorSigName} onChange={v => onChange(p => ({ ...p, supervisorSigName: v }))} disabled={readOnly} />
-          </Field>
-          <Field label={t.supervisorCert}>
-            <TextInput value={ast.supervisorSigCert} onChange={v => onChange(p => ({ ...p, supervisorSigCert: v }))} disabled={readOnly} />
-          </Field>
-          <Field label={t.supervisorDate}>
-            <TextInput type="datetime-local" value={ast.supervisorSigDate} onChange={v => onChange(p => ({ ...p, supervisorSigDate: v }))} disabled={readOnly} />
-          </Field>
-          <div className="sm:col-span-2">
-            <Textarea label={t.supervisorNotes} value={ast.supervisorSigNotes} onChange={v => onChange(p => ({ ...p, supervisorSigNotes: v }))} rows={2} disabled={readOnly} />
-          </div>
-        </div>
-      </Card>
+      {(() => {
+        const status = ast.supervisorSigStatus || '';
+        const STATUS: Record<string, { label: string; dot: string; box: string; text: string }> = {
+          approved:   { label: tr('Approuvé — conforme', 'Approved — compliant'),        dot: 'bg-green-500',  box: 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20',   text: 'text-green-700 dark:text-green-300' },
+          corrective: { label: tr('Correctif requis (audit)', 'Corrective required (audit)'), dot: 'bg-orange-500', box: 'border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-300' },
+          nonconform: { label: tr('Non-conformité', 'Non-compliance'),                   dot: 'bg-red-500',    box: 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20',           text: 'text-red-700 dark:text-red-300' },
+        };
+        const cur = STATUS[status];
+        const collapsed = !!status && ast.supervisorSigName.trim().length > 0 && !supEditing;
+        const setStatus = (s: '' | 'approved' | 'corrective' | 'nonconform') => onChange(p => ({
+          ...p, supervisorSigStatus: s, supervisorSigDate: s && !p.supervisorSigDate ? new Date().toISOString().slice(0, 16) : p.supervisorSigDate,
+        }));
+
+        // Vue repliee (mobile-friendly) : on ne voit que le nom + la pastille de verdict.
+        if (collapsed && cur) {
+          return (
+            <Card title={t.cardSupervisor} icon={<CheckCircle className="w-5 h-5" />}>
+              <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${cur.box}`}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`w-3 h-3 rounded-full shrink-0 ${cur.dot}`} />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">{ast.supervisorSigName}</div>
+                    <div className={`text-xs font-medium truncate ${cur.text}`}>{cur.label}</div>
+                  </div>
+                </div>
+                {!readOnly && (
+                  <button type="button" onClick={() => setSupEditing(true)}
+                    className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    {tr('Modifier', 'Edit')}
+                  </button>
+                )}
+              </div>
+            </Card>
+          );
+        }
+
+        // Vue depliee : memes champs + 3 boutons de verdict (vert / orange / rouge).
+        return (
+          <Card title={t.cardSupervisor} icon={<CheckCircle className="w-5 h-5" />}>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label={t.supervisorName}>
+                  <TextInput value={ast.supervisorSigName} onChange={v => onChange(p => ({ ...p, supervisorSigName: v }))} disabled={readOnly} />
+                </Field>
+                <Field label={t.supervisorCert}>
+                  <TextInput value={ast.supervisorSigCert} onChange={v => onChange(p => ({ ...p, supervisorSigCert: v }))} disabled={readOnly} />
+                </Field>
+                <Field label={t.supervisorDate}>
+                  <TextInput type="datetime-local" value={ast.supervisorSigDate} onChange={v => onChange(p => ({ ...p, supervisorSigDate: v }))} disabled={readOnly} />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Textarea label={t.supervisorNotes} value={ast.supervisorSigNotes} onChange={v => onChange(p => ({ ...p, supervisorSigNotes: v }))} rows={2} disabled={readOnly} />
+                </div>
+              </div>
+              {!readOnly && (
+                <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+                  <div className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{tr('Verdict du superviseur', 'Supervisor verdict')}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ['approved',   tr('Approuver', 'Approve'),        'bg-green-600 hover:bg-green-700',   'border-green-300 text-green-700 dark:text-green-300'],
+                      ['corrective', tr('Correctif', 'Corrective'),     'bg-orange-500 hover:bg-orange-600', 'border-orange-300 text-orange-700 dark:text-orange-300'],
+                      ['nonconform', tr('Non-conformité', 'Non-compliant'), 'bg-red-600 hover:bg-red-700',  'border-red-300 text-red-700 dark:text-red-300'],
+                    ] as [string, string, string, string][]).map(([key, label, onCls, offCls]) => {
+                      const active = status === key;
+                      return (
+                        <button key={key} type="button"
+                          disabled={ast.supervisorSigName.trim().length === 0}
+                          title={ast.supervisorSigName.trim().length === 0 ? tr('Saisissez le nom du superviseur', 'Enter the supervisor name') : ''}
+                          onClick={() => { setStatus(key as any); setSupEditing(false); }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${active ? `${onCls} text-white` : `bg-white dark:bg-slate-800 border ${offCls} hover:bg-slate-50 dark:hover:bg-slate-700`}`}>
+                          <span className={`w-2.5 h-2.5 rounded-full ${key === 'approved' ? 'bg-green-500' : key === 'corrective' ? 'bg-orange-500' : 'bg-red-500'} ${active ? 'ring-2 ring-white/70' : ''}`} />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
@@ -2990,9 +3059,13 @@ async function renderAstSection(
   y += 7;
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+  const verdictLabel = ast.supervisorSigStatus === 'approved' ? tr('Approuvé — conforme', 'Approved — compliant')
+    : ast.supervisorSigStatus === 'corrective' ? tr('Correctif requis (audit)', 'Corrective required (audit)')
+    : ast.supervisorSigStatus === 'nonconform' ? tr('Non-conformité', 'Non-compliance') : '';
   ([
     [tr('Superviseur', 'Supervisor'), ast.supervisor_name || ast.supervisorSigName],
     [tr('Certification', 'Certification'), ast.supervisor_cert || ast.supervisorSigCert],
+    [tr('Verdict', 'Verdict'), verdictLabel],
     [tr('Valide du', 'Valid from'), ast.permit_valid_from?.replace('T', ' ').slice(0, 16)],
     [tr('Valide au', 'Valid to'), ast.permit_valid_to?.replace('T', ' ').slice(0, 16)],
   ] as [string, string | undefined][]).filter(([, v]) => v && String(v).trim()).forEach(([k, v]) => {
