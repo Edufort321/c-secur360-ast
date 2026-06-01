@@ -54,6 +54,10 @@ export function PlanificateurFinal({
     const [selectedJob, setSelectedJob] = useState(null);
     const [conflictJob, setConflictJob] = useState(null); // Job en conflit ouvert en parallèle
     const [isMobile, setIsMobile] = useState(false);
+    // Vue calendrier mensuelle conventionnelle (grille du mois + détail du jour cliqué)
+    const [calendarMode, setCalendarMode] = useState('grid'); // 'grid' (ressources) | 'month' (calendrier classique)
+    const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
+    const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
 
     // Effet pour ajuster numberOfDays selon la vue temporelle
     useEffect(() => {
@@ -820,6 +824,13 @@ export function PlanificateurFinal({
                         </div>
                         {/* Actions rapides */}
                         <div className="flex flex-wrap gap-2">
+                            {/* Bascule Grille (ressources) / Mois (calendrier classique) */}
+                            <div className="flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                                <button onClick={() => setCalendarMode('grid')}
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>📊 Grille</button>
+                                <button onClick={() => setCalendarMode('month')}
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>📅 Mois</button>
+                            </div>
                             {onCreateEvent && (
                                 <button onClick={onCreateEvent}
                                     className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
@@ -1216,7 +1227,75 @@ export function PlanificateurFinal({
 
             {/* Contenu principal - Dashboard ou Calendrier */}
             <div className="p-4">
-                {filterType === 'dashboard' ? (
+                {calendarMode === 'month' ? (
+                    /* Vue calendrier mensuelle conventionnelle (responsive) : grille du mois + détail du jour cliqué */
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">←</button>
+                            <div className="text-base font-bold capitalize text-gray-800">{monthCursor.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' })}</div>
+                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">→</button>
+                        </div>
+                        {(() => {
+                            const y = monthCursor.getFullYear(), mo = monthCursor.getMonth();
+                            const first = new Date(y, mo, 1);
+                            const startDow = (first.getDay() + 6) % 7; // lundi = 0
+                            const daysInMonth = new Date(y, mo + 1, 0).getDate();
+                            const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            const evMatch = (job) => {
+                                const okB = filterBureau === 'tous' || job.bureau === filterBureau || job.succursaleEnCharge === filterBureau;
+                                const okS = !searchTerm || `${job.numeroJob || ''} ${job.nom || ''} ${job.client || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
+                                return okB && okS;
+                            };
+                            const jobsOnDay = (ds) => jobs.filter(j => evMatch(j) && (j.dateDebut || '').split('T')[0] <= ds && ds <= ((j.dateFin || j.dateDebut || '').split('T')[0]));
+                            const cells = [];
+                            for (let i = 0; i < startDow; i++) cells.push(null);
+                            for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, mo, d));
+                            const todayStr = fmt(new Date());
+                            return (
+                                <>
+                                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-500">
+                                        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => <div key={d}>{d}</div>)}
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-1">
+                                        {cells.map((d, i) => {
+                                            if (!d) return <div key={`e${i}`} />;
+                                            const ds = fmt(d);
+                                            const evs = jobsOnDay(ds);
+                                            const isSel = selectedCalDay === ds;
+                                            const isToday = ds === todayStr;
+                                            return (
+                                                <button key={ds} onClick={() => setSelectedCalDay(ds)}
+                                                    className={`min-h-[54px] rounded-lg border p-1 text-left align-top transition ${isSel ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : isToday ? 'border-blue-300 bg-white' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>{d.getDate()}</span>
+                                                        {evs.length > 0 && <span className="rounded-full bg-blue-600 px-1.5 text-[9px] font-bold leading-4 text-white">{evs.length}</span>}
+                                                    </div>
+                                                    {evs.slice(0, 2).map(e => <div key={e.id} className="mt-0.5 truncate rounded bg-blue-100 px-1 text-[9px] text-blue-800">{e.numeroJob || e.nom}</div>)}
+                                                    {evs.length > 2 && <div className="text-[9px] text-gray-400">+{evs.length - 2}</div>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                                        <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-sm font-bold capitalize text-gray-700">
+                                            {selectedCalDay ? new Date(`${selectedCalDay}T12:00:00`).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Touchez un jour pour voir ses événements'}
+                                        </div>
+                                        <div className="divide-y divide-gray-100">
+                                            {(selectedCalDay ? jobsOnDay(selectedCalDay) : []).map(e => (
+                                                <button key={e.id} onClick={() => setSelectedJob(e)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50">
+                                                    <span className="shrink-0 text-xs font-bold text-blue-700">{e.numeroJob || `Job-${e.id}`}</span>
+                                                    <span className="flex-1 truncate text-sm text-gray-800">{e.client || e.nom || '—'}</span>
+                                                    <span className="shrink-0 text-xs text-gray-500">{e.heureDebut || '08:00'}–{e.heureFin || '17:00'}</span>
+                                                </button>
+                                            ))}
+                                            {selectedCalDay && jobsOnDay(selectedCalDay).length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun événement ce jour.</div>}
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+                ) : filterType === 'dashboard' ? (
                     /* Vue Dashboard Analytique Avancé */
                     <AnalyticsDashboard
                         jobs={jobs}
