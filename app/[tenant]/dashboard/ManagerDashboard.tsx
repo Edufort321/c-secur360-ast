@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -336,7 +337,7 @@ export default function ManagerDashboard({
   }
   
   const isDemo = tenant.subdomain === 'demo'
-  const data = getFunctionalData(isDemo)
+  const [data, setData] = useState<DashboardData>(() => getFunctionalData(isDemo))
 
   // Animation d'entrée
   useEffect(() => {
@@ -369,6 +370,77 @@ export default function ManagerDashboard({
   }
 
   const t = translations[currentLanguage]
+
+  // ── Donnees reelles par tenant (les cartes lisent les vraies tables, pas du mock) ──
+  useEffect(() => {
+    if (isDemo) { setData(getFunctionalData(true)); return; }
+    let active = true;
+    (async () => {
+      try {
+        const tid = tenant.subdomain;
+        const [astRes, evtRes] = await Promise.all([
+          supabase.from('ast_permits').select('data, created_at').eq('tenant_id', tid),
+          supabase.from('near_miss_events').select('severity_level, incident_date').eq('tenant_id', tid),
+        ]);
+        const asts = astRes.data || [];
+        const events = evtRes.data || [];
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lc = currentLanguage === 'fr' ? 'fr-CA' : 'en-CA';
+        // 7 derniers mois (buckets pour les graphiques)
+        const months: { key: string; label: string; ast: number; incidents: number }[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString(lc, { month: 'short' }), ast: 0, incidents: 0 });
+        }
+        const idxOf = (dt: string) => { const d = new Date(dt); return months.findIndex(m => m.key === `${d.getFullYear()}-${d.getMonth()}`); };
+
+        let total = 0, completed = 0, thisMonth = 0;
+        asts.forEach((x: any) => {
+          total++;
+          const s = x.data?.status || 'draft';
+          if (s === 'active' || s === 'completed') completed++;
+          if (x.created_at && new Date(x.created_at) >= monthStart) thisMonth++;
+          if (x.created_at) { const k = idxOf(x.created_at); if (k >= 0) months[k].ast++; }
+        });
+
+        let incidents = 0, nearMiss = 0;
+        events.forEach((x: any) => {
+          const sev = Number(x.severity_level || 0);
+          if (sev >= 4) incidents++; else nearMiss++;
+          if (x.incident_date) { const k = idxOf(x.incident_date); if (k >= 0) months[k].incidents++; }
+        });
+
+        const safetyRate = incidents > 0 ? Math.max(90, 100 - incidents) : 100;
+        const incidentsByType = [
+          { type: currentLanguage === 'fr' ? 'Accidents' : 'Accidents', count: incidents, color: '#ef4444' },
+          { type: currentLanguage === 'fr' ? 'Passés proches' : 'Near misses', count: nearMiss, color: '#f97316' },
+        ].filter(i => i.count > 0);
+
+        if (!active) return;
+        setData(prev => ({
+          ...prev,
+          totalAST: total,
+          astThisMonth: thisMonth,
+          astCompleted: completed,
+          astMonthly: months.map(m => m.ast),
+          incidents,
+          nearMiss,
+          incidentsTrend: 0,
+          incidentsByType: incidentsByType.length ? incidentsByType : prev.incidentsByType,
+          safetyRate,
+          // Pas de source fiable (module heures/photos non branche) -> 0 plutot que des valeurs fictives.
+          hoursWorked: 0,
+          safeHours: 0,
+          photosCount: 0,
+          photosThisWeek: 0,
+          monthlyData: months.map(m => ({ month: m.label, ast: m.ast, incidents: m.incidents, safety: m.incidents > 0 ? Math.max(90, 100 - m.incidents) : 100 })),
+        }));
+      } catch { /* garde le fallback en cas d'erreur DB */ }
+    })();
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemo, tenant.subdomain, currentLanguage]);
 
   return (
     <UniversalLayout
