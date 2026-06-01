@@ -4825,40 +4825,7 @@ export function JobModal({
                                                     <>
                                                         <div className="fixed inset-0 z-40" onClick={() => setGanttMenuOpen(false)} aria-hidden />
                                                         <div className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
-                                                            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Modèles</div>
-                                                            <button type="button" onClick={() => { applyWBSTemplate('construction'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🏗️ Modèle Construction/Sécurité</button>
-                                                            <button type="button" onClick={() => { applyWBSTemplate('maintenance'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🔧 Modèle Maintenance préventive</button>
-                                                            <button type="button" onClick={() => {
-                                                                const projectTemplate = [
-                                                                    { name: 'Inspection initiale', duration: 2, priority: 'high' },
-                                                                    { name: 'Préparation matériel', duration: 1, priority: 'normal' },
-                                                                    { name: 'Installation système', duration: 6, priority: 'high' },
-                                                                    { name: 'Tests et validation', duration: 2, priority: 'high' },
-                                                                    { name: 'Formation client', duration: 1, priority: 'normal' }
-                                                                ];
-                                                                const baseId = Date.now();
-                                                                const newTasks = projectTemplate.map((template, index) => ({
-                                                                    id: (baseId + index).toString(),
-                                                                    text: template.name,
-                                                                    duration: template.duration,
-                                                                    startHour: index * template.duration,
-                                                                    description: `Tâche générée automatiquement: ${template.name}`,
-                                                                    priority: template.priority,
-                                                                    status: 'planifie',
-                                                                    parentId: null,
-                                                                    order: index,
-                                                                    resources: [],
-                                                                    assignedPersonnel: [],
-                                                                    assignedEquipement: [],
-                                                                    parallelWith: [],
-                                                                    dependencies: index > 0 ? [{ id: (baseId + index - 1).toString(), type: 'FS', lag: 0 }] : []
-                                                                }));
-                                                                setFormData(prev => ({ ...prev, etapes: [...prev.etapes, ...newTasks] }));
-                                                                addNotification?.(`${newTasks.length} tâches de projet type ajoutées`, 'success');
-                                                                setGanttMenuOpen(false);
-                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🛠️ Projet type (5 tâches)</button>
-
-                                                            <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Analyse</div>
+                                                            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Analyse</div>
                                                             <button type="button" onClick={() => {
                                                                 const criticalPath = calculateCriticalPath(formData.etapes);
                                                                 setFormData(prev => ({ ...prev, criticalPath, etapes: prev.etapes.map(task => ({ ...task, isCritical: criticalPath.includes(task.id) })) }));
@@ -4953,6 +4920,7 @@ export function JobModal({
                                                             <option value="parallele">⇉ Parallèle</option>
                                                             <option value="full">⟷ Toute la durée</option>
                                                         </select>
+                                                        <button type="button" onClick={() => addEtape(etape.id)} className="rounded px-2 py-1 text-xs font-semibold text-purple-600 hover:bg-purple-50" title="Ajouter une sous-tâche (enfant)">＋ sous</button>
                                                         <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title="Supprimer la tâche">🗑</button>
                                                     </div>
                                                 ))}
