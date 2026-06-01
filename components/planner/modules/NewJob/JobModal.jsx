@@ -4392,12 +4392,15 @@ export function JobModal({
 
 
                                                                                                     const isFull = task.schedulingMode === 'full';
+                                                                                                    const _pEnd = formData.dateFin ? new Date(formData.dateFin) : projectStart;
+                                                                                                    const _spanH = Math.max(24, Math.round((_pEnd - projectStart) / 3600000) + 24);
+                                                                                                    const fullPct = Math.min(100, Math.max(1, (_spanH / totalViewHours) * 100));
                                                                                                     return (
                                                                                                         <div
                                                                                                             className={`absolute top-0.5 h-3 rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-80' : ''} ${taskColors.hover}`}
                                                                                                             style={{
                                                                                                                 left: isFull ? '0%' : `${startPercent}%`,
-                                                                                                                width: isFull ? '100%' : `${widthPercent}%`
+                                                                                                                width: isFull ? `${fullPct}%` : `${widthPercent}%`
                                                                                                             }}
                                                                                                             title={`${task.displayName || task.text} - ${isFull ? 'toute la durée' : `${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h)`} ${task.isCritical ? '(Critique)' : ''}`}
                                                                                                         />
@@ -4952,6 +4955,19 @@ export function JobModal({
                                                             <option value="parallele">⇉ Parallèle</option>
                                                             <option value="full">⟷ Toute la durée</option>
                                                         </select>
+                                                        {etape.schedulingMode === 'parallele' && (
+                                                            <select
+                                                                value={(Array.isArray(etape.parallelWith) && etape.parallelWith[0]) || ''}
+                                                                onChange={(e) => updateEtape(idx, 'parallelWith', e.target.value ? [e.target.value] : [])}
+                                                                className="w-40 rounded border border-amber-300 bg-amber-50 px-1 py-1 text-xs focus:ring-2 focus:ring-amber-500"
+                                                                title="En parallèle avec quelle tâche ?"
+                                                            >
+                                                                <option value="">⇉ Parallèle avec…</option>
+                                                                {formData.etapes.filter(t => String(t.id) !== String(etape.id)).map(t => (
+                                                                    <option key={t.id} value={t.id}>{(t.text || t.name || 'Tâche').slice(0, 28)}</option>
+                                                                ))}
+                                                            </select>
+                                                        )}
                                                         <button type="button" onClick={() => addEtape(etape.id)} className="rounded px-2 py-1 text-xs font-semibold text-purple-600 hover:bg-purple-50" title="Ajouter une sous-tâche (enfant)">＋ sous</button>
                                                         <button type="button" onClick={() => removeEtape(idx)} className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50" title="Supprimer la tâche">🗑</button>
                                                     </div>
@@ -5188,12 +5204,16 @@ export function JobModal({
                                                                         const prog = Math.min(100, Math.max(0, Number(task.progress) || 0));
                                                                         // « Toute la durée » (ex. supervision) : la barre couvre toute la timeline.
                                                                         const isFull = task.schedulingMode === 'full';
+                                                                        // « Toute la durée » : couvre l'étendue RÉELLE de l'événement (dateDébut→dateFin), pas 100% du temps total.
+                                                                        const _pEnd = formData.dateFin ? new Date(formData.dateFin) : projectStart;
+                                                                        const _spanH = Math.max(24, Math.round((_pEnd - projectStart) / 3600000) + 24);
+                                                                        const fullPct = Math.min(100, Math.max(1, (_spanH / totalViewHours) * 100));
                                                                         return (
                                                                             <div
                                                                                 className={`absolute top-0 h-full overflow-hidden rounded-sm transition-all ${taskColors.bg} ${task.hasChildren ? 'opacity-60' : ''} ${taskColors.hover}`}
                                                                                 style={{
                                                                                     left: isFull ? '0%' : `${startPercent}%`,
-                                                                                    width: isFull ? '100%' : `${widthPercent}%`
+                                                                                    width: isFull ? `${fullPct}%` : `${widthPercent}%`
                                                                                 }}
                                                                                 title={`${task.displayName} - ${isFull ? 'toute la durée' : `${task.duration}h (${taskStartHours.toFixed(1)}h → ${(taskStartHours + taskDurationHours).toFixed(1)}h)`} • ${prog}% complété ${task.isCritical ? '(Critique)' : ''}`}
                                                                             >
