@@ -58,6 +58,7 @@ export function PlanificateurFinal({
     const [calendarMode, setCalendarMode] = useState('grid'); // 'grid' (ressources) | 'month' (calendrier classique)
     const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
     const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
+    const [mineOnly, setMineOnly] = useState(false); // n'afficher que les taches de l'utilisateur connecte (defaut mobile)
 
     // Effet pour ajuster numberOfDays selon la vue temporelle
     useEffect(() => {
@@ -271,12 +272,18 @@ export function PlanificateurFinal({
         };
     }, [jobs, startDate, numberOfDays, dashboardFilter, filterBureau, personnel, equipements]);
 
-    // Responsive
+    // Responsive — au premier rendu mobile : vue Mois + mes taches par defaut.
     useEffect(() => {
-        setIsMobile(window.innerWidth < 768);
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+        if (mobile) {
+            setCalendarMode('month');
+            if (utilisateurConnecte?.id) setMineOnly(true);
+        }
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fermer la recherche de date quand on clique en dehors
@@ -824,8 +831,8 @@ export function PlanificateurFinal({
                         </div>
                         {/* Actions rapides */}
                         <div className="flex flex-wrap gap-2">
-                            {/* Bascule Grille (ressources) / Mois (calendrier classique) */}
-                            <div className="flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                            {/* Bascule Grille (ressources) / Mois (calendrier classique) — masquee en mobile (dans le hamburger) */}
+                            <div className="hidden md:flex items-center rounded-lg border border-gray-300 overflow-hidden">
                                 <button onClick={() => setCalendarMode('grid')}
                                     className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>📊 Grille</button>
                                 <button onClick={() => setCalendarMode('month')}
@@ -869,7 +876,7 @@ export function PlanificateurFinal({
                             <Icon name="chevronRight" size={20} />
                         </button>
 
-                        {/* Sélecteur de vue temporelle et période */}
+                        {/* Sélecteur de vue temporelle et période — masque en mobile (dans le hamburger) */}
                         <select
                             value={timeView.startsWith('period-') ? timeView : timeView}
                             onChange={(e) => {
@@ -881,7 +888,7 @@ export function PlanificateurFinal({
                                     setTimeView(value);
                                 }
                             }}
-                            className="px-3 py-2 text-sm border rounded-lg bg-white"
+                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white"
                         >
                             <optgroup label={t('calendar.detailedViews')}>
                                 <option value="1day">{t('calendar.day')}</option>
@@ -897,11 +904,11 @@ export function PlanificateurFinal({
                             </optgroup>
                         </select>
 
-                        {/* Sélecteur de mode de couleur */}
+                        {/* Sélecteur de mode de couleur — masque en mobile (dans le hamburger) */}
                         <select
                             value={colorMode}
                             onChange={(e) => setColorMode(e.target.value)}
-                            className="px-3 py-2 text-sm border rounded-lg bg-white"
+                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white"
                             title={t('calendar.colorMode')}
                         >
                             <option value="succursale">{t('calendar.colorByBranch')}</option>
@@ -1123,6 +1130,50 @@ export function PlanificateurFinal({
                                                 {/* Onglet Vue */}
                                                 {activeFilterTab === 'vue' && (
                                                     <div className="space-y-4">
+                                                        {/* Affichage : Grille / Mois (repris dans le hamburger pour le mobile) */}
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('calendar.display') || 'Affichage'}</label>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <button onClick={() => setCalendarMode('grid')}
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>📊 Grille</button>
+                                                                <button onClick={() => setCalendarMode('month')}
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>📅 Mois</button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Periode (vue grille) */}
+                                                        {calendarMode === 'grid' && (
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('calendar.period') || 'Période'}</label>
+                                                                <select
+                                                                    value={timeView}
+                                                                    onChange={(e) => { const v = e.target.value; setTimeView(v); if (v.startsWith('period-')) setNumberOfDays(parseInt(v.replace('period-', ''))); }}
+                                                                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white"
+                                                                >
+                                                                    <optgroup label={t('calendar.detailedViews')}>
+                                                                        <option value="1day">{t('calendar.day')}</option>
+                                                                        <option value="1week">{t('calendar.1week')}</option>
+                                                                        <option value="2weeks">{t('calendar.2weeks')}</option>
+                                                                    </optgroup>
+                                                                    <optgroup label={t('calendar.extendedPeriods')}>
+                                                                        <option value="period-21">{t('calendar.3weeks')}</option>
+                                                                        <option value="period-30">{t('calendar.1month')}</option>
+                                                                        <option value="period-90">{t('calendar.3months')}</option>
+                                                                        <option value="period-180">{t('calendar.6months')}</option>
+                                                                        <option value="period-365">{t('calendar.1year')}</option>
+                                                                    </optgroup>
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Mes taches uniquement */}
+                                                        {utilisateurConnecte?.id && (
+                                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                                <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} className="rounded" />
+                                                                {t('filter.myTasks') || 'Mes tâches seulement'}
+                                                            </label>
+                                                        )}
+
                                                         {/* Mode couleur */}
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1235,16 +1286,26 @@ export function PlanificateurFinal({
                             <div className="text-base font-bold capitalize text-gray-800">{monthCursor.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' })}</div>
                             <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">→</button>
                         </div>
+                        {utilisateurConnecte?.id && (
+                            <div className="flex justify-center">
+                                <button onClick={() => setMineOnly(v => !v)}
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                                    {mineOnly ? `👤 ${t('filter.myTasks') || 'Mes tâches'}` : (t('filter.allTasks') || 'Toutes les tâches')}
+                                </button>
+                            </div>
+                        )}
                         {(() => {
                             const y = monthCursor.getFullYear(), mo = monthCursor.getMonth();
                             const first = new Date(y, mo, 1);
                             const startDow = (first.getDay() + 6) % 7; // lundi = 0
                             const daysInMonth = new Date(y, mo + 1, 0).getDate();
                             const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            const myId = utilisateurConnecte?.id;
                             const evMatch = (job) => {
                                 const okB = filterBureau === 'tous' || job.bureau === filterBureau || job.succursaleEnCharge === filterBureau;
                                 const okS = !searchTerm || `${job.numeroJob || ''} ${job.nom || ''} ${job.client || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
-                                return okB && okS;
+                                const okMine = !mineOnly || !myId || (Array.isArray(job.personnel) && job.personnel.map(String).includes(String(myId))) || String(job.responsable) === String(myId);
+                                return okB && okS && okMine;
                             };
                             const jobsOnDay = (ds) => jobs.filter(j => evMatch(j) && (j.dateDebut || '').split('T')[0] <= ds && ds <= ((j.dateFin || j.dateDebut || '').split('T')[0]));
                             const cells = [];
