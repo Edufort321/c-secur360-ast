@@ -2533,6 +2533,9 @@ export function JobModal({
 
         const startDate = new Date(formData.dateDebut);
         const scale = [];
+        // Étendue basée sur les DATES réelles de l'événement (dateDebut -> dateFin), pas la somme des heures.
+        const endDate = formData.dateFin ? new Date(formData.dateFin) : startDate;
+        const spanDays = Math.max(1, Math.round((endDate - startDate) / 86400000) + 1);
 
         switch (currentViewMode) {
             case '6h':
@@ -2587,9 +2590,8 @@ export function JobModal({
                 break;
 
             case 'day':
-                // Vue journalière adaptative selon la durée du projet
-                const totalTaskHours = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
-                const totalDays = Math.max(1, Math.ceil(totalTaskHours / 24));
+                // Vue journalière : une cellule par jour calendaire de l'événement
+                const totalDays = spanDays;
                 for (let day = 0; day < totalDays; day++) {
                     const currentDate = new Date(startDate.getTime() + (day * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2606,8 +2608,7 @@ export function JobModal({
 
             case 'week':
                 // Vue hebdomadaire adaptative selon la durée du projet
-                const totalTaskHoursWeek = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
-                const totalWeeks = Math.max(1, Math.ceil(totalTaskHoursWeek / (7 * 24)));
+                const totalWeeks = Math.max(1, Math.ceil(spanDays / 7));
                 for (let week = 0; week < totalWeeks; week++) {
                     const weekStart = new Date(startDate.getTime() + (week * 7 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2625,8 +2626,7 @@ export function JobModal({
 
             case 'month':
                 // Vue mensuelle adaptative selon la durée du projet
-                const totalTaskHoursMonth = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
-                const totalMonths = Math.max(1, Math.ceil(totalTaskHoursMonth / (30 * 24)));
+                const totalMonths = Math.max(1, (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1);
                 for (let month = 0; month < totalMonths; month++) {
                     const monthStart = new Date(startDate.getTime() + (month * 30 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -2643,8 +2643,7 @@ export function JobModal({
 
             case 'year':
                 // Vue annuelle adaptative selon la durée du projet
-                const totalTaskHoursYear = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
-                const totalYears = Math.max(1, Math.ceil(totalTaskHoursYear / (365 * 24)));
+                const totalYears = Math.max(1, endDate.getFullYear() - startDate.getFullYear() + 1);
                 for (let year = 0; year < totalYears; year++) {
                     const yearStart = new Date(startDate.getTime() + (year * 365 * 24 * 60 * 60 * 1000));
                     scale.push({
@@ -4315,20 +4314,14 @@ export function JobModal({
                                                                                                     // Calculer la durée de référence selon le mode de vue sélectionné
                                                                                                     const currentViewMode = formData.ganttViewMode || getDefaultViewMode();
                                                                                                     const getViewDurationHours = (viewMode) => {
+                                                                                                        const pEnd = formData.dateFin ? new Date(formData.dateFin) : projectStart;
+                                                                                                        const spanH = Math.max(24, Math.round((pEnd - projectStart) / 3600000) + 24);
+                                                                                                        const maxEnd = hierarchicalTasks.reduce((m, t) => Math.max(m, t.endHours || 0), 0);
                                                                                                         switch(viewMode) {
                                                                                                             case '6h': return 6;
                                                                                                             case '12h': return 12;
                                                                                                             case '24h': return 24;
-                                                                                                            case 'day': return 24;
-                                                                                                            case 'week': return 7 * 24;
-                                                                                                            case 'month': return 30 * 24;
-                                                                                                            case 'year': return 365 * 24;
-                                                                                                            default:
-                                                                                                                const allTasks = hierarchicalTasks;
-                                                                                                                return Math.max(1, allTasks.reduce((maxHours, t) => {
-                                                                                                                    const taskEndHours = t.endHours || 0;
-                                                                                                                    return Math.max(maxHours, taskEndHours);
-                                                                                                                }, 0));
+                                                                                                            default: return Math.max(1, spanH, maxEnd);
                                                                                                         }
                                                                                                     };
 
@@ -5104,21 +5097,16 @@ export function JobModal({
                                                                         // Calculer la durée de référence selon le mode de vue sélectionné
                                                                         const currentViewMode = formData.ganttViewMode || getDefaultViewMode();
                                                                         const getViewDurationHours = (viewMode) => {
+                                                                            // Étendue de l'événement (dates) + extension si une tâche dépasse, pour que TOUT tienne sur 0-100%.
+                                                                            const pEnd = formData.dateFin ? new Date(formData.dateFin) : projectStart;
+                                                                            const spanH = Math.max(24, Math.round((pEnd - projectStart) / 3600000) + 24);
+                                                                            const maxEnd = hierarchicalTasks.reduce((m, t) => Math.max(m, t.endHours || 0), 0);
                                                                             switch(viewMode) {
                                                                                 case '6h': return 6;
                                                                                 case '12h': return 12;
                                                                                 case '24h': return 24;
-                                                                                case 'day': return 24; // 1 jour
-                                                                                case 'week': return 7 * 24; // 1 semaine = 168h
-                                                                                case 'month': return 30 * 24; // 1 mois = 720h
-                                                                                case 'year': return 365 * 24; // 1 année = 8760h
-                                                                                default:
-                                                                                    // Mode automatique : utilise la durée réelle du projet
-                                                                                    const allTasks = hierarchicalTasks;
-                                                                                    return Math.max(1, allTasks.reduce((maxHours, t) => {
-                                                                                        const taskEndHours = t.endHours || 0;
-                                                                                        return Math.max(maxHours, taskEndHours);
-                                                                                    }, 0));
+                                                                                // jour/semaine/mois/année/auto : sur l'étendue RÉELLE de l'événement
+                                                                                default: return Math.max(1, spanH, maxEnd);
                                                                             }
                                                                         };
 
