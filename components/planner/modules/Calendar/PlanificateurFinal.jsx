@@ -435,15 +435,15 @@ export function PlanificateurFinal({
             const job = jobs.find(j => j.id.toString() === jobId);
             if (!job) return null;
 
-            const jobDateDebut = new Date(job.dateDebut).toISOString().split('T')[0];
-            const jobDateFin = job.dateFin ? new Date(job.dateFin).toISOString().split('T')[0] : jobDateDebut;
+            const jobDateDebut = (job.dateDebut || '').split('T')[0];
+            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
 
             return dayString >= jobDateDebut && dayString <= jobDateFin ? job : null;
         }
 
         return jobs.find(job => {
-            const jobDateDebut = new Date(job.dateDebut).toISOString().split('T')[0];
-            const jobDateFin = job.dateFin ? new Date(job.dateFin).toISOString().split('T')[0] : jobDateDebut;
+            const jobDateDebut = (job.dateDebut || '').split('T')[0];
+            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
 
             // Vérifier si le jour actuel est dans la plage du job
             if (!(dayString >= jobDateDebut && dayString <= jobDateFin)) return false;
@@ -466,15 +466,15 @@ export function PlanificateurFinal({
             const job = jobs.find(j => j.id.toString() === jobId);
             if (!job) return [];
 
-            const jobDateDebut = new Date(job.dateDebut).toISOString().split('T')[0];
-            const jobDateFin = job.dateFin ? new Date(job.dateFin).toISOString().split('T')[0] : jobDateDebut;
+            const jobDateDebut = (job.dateDebut || '').split('T')[0];
+            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
 
             return dayString >= jobDateDebut && dayString <= jobDateFin ? [job] : [];
         }
 
         return jobs.filter(job => {
-            const jobDateDebut = new Date(job.dateDebut).toISOString().split('T')[0];
-            const jobDateFin = job.dateFin ? new Date(job.dateFin).toISOString().split('T')[0] : jobDateDebut;
+            const jobDateDebut = (job.dateDebut || '').split('T')[0];
+            const jobDateFin = job.dateFin ? (job.dateFin).split('T')[0] : jobDateDebut;
 
             // Vérifier si le jour actuel est dans la plage du job
             if (!(dayString >= jobDateDebut && dayString <= jobDateFin)) return false;

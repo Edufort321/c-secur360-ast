@@ -121,7 +121,8 @@ export function formatCalendarDate(date, language = 'fr', isMobile = false) {
         year: d.getFullYear(),
         isWeekend: d.getDay() === 0 || d.getDay() === 6,
         isToday: d.toDateString() === new Date().toDateString(),
-        fullDate: d.toISOString().split('T')[0],
+        // Date LOCALE (pas toISOString/UTC) -> évite le décalage d'une journée avec dateDebut
+        fullDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
         // Format pour affichage mobile/desktop
         displayShort: isMobile ?
             (d.getDay() === 0 ? getLocalizedMonthName(d, language, true).substr(0, 3) : getLocalizedDayName(d, language, true).substr(0, 1)) :
