@@ -3207,7 +3207,7 @@ export function JobModal({
                             { id: 'resources', label: L('👥 Ressources', '👥 Resources') },
                             { id: 'files', label: `${L('📎 Fichiers', '📎 Files')} (${(formData.documents?.length || 0) + (formData.photos?.length || 0)})` },
                             { id: 'recurrence', label: `${L('🔄 Récurrence', '🔄 Recurrence')} ${formData.recurrence?.active ? L('(Activé)', '(On)') : ''}`.trim() },
-                            { id: 'teams', label: `${L('🎯 Équipes', '🎯 Teams')} ${formData.horaireMode === 'personnalise' ? L('(Avancé)', '(Advanced)') : ''}`.trim() },
+                            { id: 'teams', label: `${L('⚙️ Mode avancé', '⚙️ Advanced')}${(currentConflicts && currentConflicts.length) ? ` ⚠️${currentConflicts.length}` : ''}` },
                         ];
                         return (
                             <div className="flex-shrink-0 border-b bg-gray-50">
@@ -7623,18 +7623,36 @@ export function JobModal({
                         {activeTab === 'teams' && (
                             <div className="h-full overflow-y-auto p-6">
                                 <div className="space-y-6">
-                                    {/* Header Équipes */}
+                                    {/* Header Mode avancé */}
                                     <div className="flex items-center gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700 rounded-lg">
-                                        <div className="text-4xl">🎯</div>
+                                        <div className="text-4xl">⚙️</div>
                                         <div>
                                             <h3 className="text-lg font-bold text-white flex items-center">
-                                                Gestion Avancée des Équipes
+                                                {L('Mode avancé — horaires & affectations', 'Advanced mode — schedules & assignments')}
                                             </h3>
                                             <p className="text-sm text-gray-300">
-                                                Optimisation automatique et gestion personnalisée des horaires d'équipe
+                                                {L('Optimisation IA, horaires personnalisés par jour/employé et détection des conflits', 'AI optimization, per-day/per-employee schedules and conflict detection')}
                                             </p>
                                         </div>
                                     </div>
+
+                                    {/* Conflits d'horaire actuels (visible) */}
+                                    {currentConflicts.length > 0 ? (
+                                        <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                            <h4 className="mb-2 flex items-center gap-2 font-bold text-red-800">⚠️ {currentConflicts.length} {L('conflit(s) d\'horaire détecté(s)', 'schedule conflict(s) detected')}</h4>
+                                            <ul className="space-y-1 text-sm text-red-700">
+                                                {currentConflicts.map((c, i) => {
+                                                    const list = c.resourceType === 'personnel' ? personnel : c.resourceType === 'equipement' ? equipements : sousTraitants;
+                                                    const r = (list || []).find(x => String(x.id) === String(c.resourceId));
+                                                    const nm = r ? (r.nom || r.name || [r.prenom, r.nomFamille].filter(Boolean).join(' ') || r.id) : c.resourceId;
+                                                    return <li key={i}>• <strong>{nm}</strong> {L('déjà engagé sur', 'already booked on')} « {c.jobNom} » ({c.dateDebut} → {c.dateFin})</li>;
+                                                })}
+                                            </ul>
+                                            <p className="mt-2 text-xs text-red-600">{L('Le responsable de l\'événement reste prioritaire. Ajustez les affectations par jour ci-dessous, ou retirez la ressource.', 'The event lead stays prioritized. Adjust per-day assignments below, or remove the resource.')}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">✅ {L('Aucun conflit d\'horaire détecté.', 'No schedule conflict detected.')}</div>
+                                    )}
 
                                     {/* Actions Rapides */}
                                     <div className="bg-white border rounded-lg overflow-hidden">
