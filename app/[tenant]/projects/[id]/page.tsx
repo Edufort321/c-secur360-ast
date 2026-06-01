@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Download, Receipt, Trash2, BookOpen } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Download, Receipt, Trash2, BookOpen, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { SoumissionTab } from '@/components/projet/SoumissionTab';
@@ -23,6 +23,7 @@ export default function ProjectDetailPage() {
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
 
   const [tab, setTab] = useState<Tab>('projet');
+  const [tabsOpen, setTabsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -210,15 +211,37 @@ export default function ProjectDetailPage() {
 
             {notice && <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">{notice}</div>}
 
-            {/* Onglets — mobile dropdown */}
+            {/* Onglets — mobile hamburger */}
             <div className="mb-4 sm:hidden">
-              <select
-                value={tab}
-                onChange={e => setTab(e.target.value as Tab)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              <button
+                type="button"
+                onClick={() => setTabsOpen(o => !o)}
+                aria-expanded={tabsOpen}
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               >
-                {tabs.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-              </select>
+                <span className="inline-flex items-center gap-2">
+                  {(() => { const cur = tabs.find(t => t.key === tab); const I = cur?.icon || Menu; return <I size={16} />; })()}
+                  {tabs.find(t => t.key === tab)?.label}
+                </span>
+                {tabsOpen ? <X size={18} /> : <Menu size={18} />}
+              </button>
+              {tabsOpen && (
+                <div className="mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  {tabs.map(t => {
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => { setTab(t.key); setTabsOpen(false); }}
+                        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold ${tab === t.key ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+                      >
+                        <Icon size={16} /> {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             {/* Onglets — desktop */}
             <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 sm:flex dark:border-gray-700 dark:bg-gray-800">

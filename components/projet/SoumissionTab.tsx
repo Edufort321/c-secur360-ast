@@ -11,9 +11,13 @@ type VoyLine = { id: string; desc: string; nbTech: number; km: number; type: str
 type SubLine = { id: string; desc: string; nbTech: number; h5: number; h12: number; h15: number; nuitee: number };
 type HebLine = { id: string; desc: string; nbTech: number; nuits: number };
 type MatLine = { id: string; desc: string; qte: number; prixUnitaire: number };
+type RateOverride = { reg: number; supp: number; maj: number };
 type Item = {
   id: string; nom: string; tauxType: string;
+  // Taux horaire saisi directement sur l'item (override du catalogue Taux & catalogue).
+  rateOverride?: RateOverride | null;
   bureau: { prepa: LaborLine; gestion: LaborLine; redaction: LaborLine };
+  bureauExtra?: LaborLine[];
   chantier: LaborLine[]; voyagement: VoyLine[]; subsistance: SubLine[]; hebergement: HebLine[]; materiaux: MatLine[];
   prixSoumissionne: number | null; open?: boolean;
 };
@@ -21,8 +25,8 @@ type Item = {
 const money = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 const emptyLabor = (): LaborLine => ({ nbTech: 0, hrsReg: 0, hrsSupp: 0, hrsMaj: 0 });
 const newItem = (n: number, tauxType: string): Item => ({
-  id: `it_${Date.now()}_${n}`, nom: `Item ${n}`, tauxType,
-  bureau: { prepa: emptyLabor(), gestion: emptyLabor(), redaction: emptyLabor() },
+  id: `it_${Date.now()}_${n}`, nom: `Item ${n}`, tauxType, rateOverride: null,
+  bureau: { prepa: emptyLabor(), gestion: emptyLabor(), redaction: emptyLabor() }, bureauExtra: [],
   chantier: [], voyagement: [], subsistance: [], hebergement: [], materiaux: [], prixSoumissionne: null, open: true,
 });
 
@@ -67,12 +71,22 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
   const codes = (rates || []).map((r: any) => r.code);
 
   // ===== Calculs =====
-  const laborCost = (l: LaborLine, code: string) => {
-    const r: any = rateMap[code]; if (!r) return 0;
-    return (Number(l.nbTech) || 0) * ((Number(l.hrsReg) || 0) * Number(r.rate_regular) + (Number(l.hrsSupp) || 0) * Number(r.rate_overtime) + (Number(l.hrsMaj) || 0) * Number(r.rate_premium));
+  // Taux effectif d'un item : override saisi sur l'item sinon taux du catalogue.
+  const effRate = (it: Item): { rate_regular: number; rate_overtime: number; rate_premium: number } | null => {
+    if (it.rateOverride) return { rate_regular: it.rateOverride.reg, rate_overtime: it.rateOverride.supp, rate_premium: it.rateOverride.maj };
+    const r: any = rateMap[it.tauxType];
+    return r ? { rate_regular: Number(r.rate_regular) || 0, rate_overtime: Number(r.rate_overtime) || 0, rate_premium: Number(r.rate_premium) || 0 } : null;
   };
-  const bureauTotal = (it: Item) => laborCost(it.bureau.prepa, it.tauxType) + laborCost(it.bureau.gestion, it.tauxType) + laborCost(it.bureau.redaction, it.tauxType);
-  const chantierTotal = (it: Item) => it.chantier.reduce((s, l) => s + laborCost(l, it.tauxType), 0);
+  const laborCost = (l: LaborLine, rate: { rate_regular: number; rate_overtime: number; rate_premium: number } | null) => {
+    if (!rate) return 0;
+    return (Number(l.nbTech) || 0) * ((Number(l.hrsReg) || 0) * Number(rate.rate_regular) + (Number(l.hrsSupp) || 0) * Number(rate.rate_overtime) + (Number(l.hrsMaj) || 0) * Number(rate.rate_premium));
+  };
+  const bureauTotal = (it: Item) => {
+    const r = effRate(it);
+    return laborCost(it.bureau.prepa, r) + laborCost(it.bureau.gestion, r) + laborCost(it.bureau.redaction, r)
+      + (it.bureauExtra || []).reduce((s, l) => s + laborCost(l, r), 0);
+  };
+  const chantierTotal = (it: Item) => { const r = effRate(it); return it.chantier.reduce((s, l) => s + laborCost(l, r), 0); };
   const voyCost = (l: VoyLine) => (Number(l.nbTech) || 0) * (Number(l.km) || 0) * (km[l.type] ?? DEF_KM.camion);
   const subCost = (l: SubLine) => (Number(l.nbTech) || 0) * ((Number(l.h5) || 0) * sub.h5 + (Number(l.h12) || 0) * sub.h12 + (Number(l.h15) || 0) * sub.h15 + (Number(l.nuitee) || 0) * sub.nuitee);
   const hebCost = (l: HebLine) => (Number(l.nbTech) || 0) * (Number(l.nuits) || 0) * heb;
@@ -106,6 +120,15 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
   const upd = (fn: (draft: Item[]) => void) => setItems(prev => { const c = JSON.parse(JSON.stringify(prev)) as Item[]; fn(c); return c; });
   const addItem = () => setItems(prev => [...prev, newItem(prev.length + 1, codes[0] || 'IT1')]);
   const lid = () => `l_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  // Saisie directe du taux horaire sur l'item -> bascule en override (le calcul devient immediat).
+  const setRate = (ii: number, key: keyof RateOverride, val: number) => upd(d => {
+    const it = d[ii];
+    const r: any = rateMap[it.tauxType];
+    const base: RateOverride = it.rateOverride
+      ? it.rateOverride
+      : (r ? { reg: Number(r.rate_regular) || 0, supp: Number(r.rate_overtime) || 0, maj: Number(r.rate_premium) || 0 } : { reg: 0, supp: 0, maj: 0 });
+    it.rateOverride = { ...base, [key]: val };
+  });
 
   async function save() {
     setSaving(true); setNotice(null);
@@ -118,17 +141,17 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
   }
 
   // ===== Sous-rendus =====
-  const laborRow = (l: LaborLine, code: string, onCh: (k: keyof LaborLine, v: any) => void, label?: string, onDel?: () => void) => (
+  const laborRow = (l: LaborLine, rate: { rate_regular: number; rate_overtime: number; rate_premium: number } | null, onCh: (k: keyof LaborLine, v: any) => void, label?: string, onDel?: () => void) => (
     <tr className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
       <td className="px-2 py-1">{label
-        ? <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{label}</span>
+        ? <input className="inp w-36" value={l.desc ?? ''} placeholder={label} onChange={e => onCh('desc', e.target.value)} />
         : <input className="inp w-36" value={l.desc || ''} onChange={e => onCh('desc', e.target.value)} />}
       </td>
       <td className="px-2"><input type="number" min="0" onFocus={e => e.target.select()} className="inp w-14 text-right" value={l.nbTech} onChange={e => onCh('nbTech', +e.target.value)} /></td>
       <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsReg} onChange={e => onCh('hrsReg', +e.target.value)} /></td>
       <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsSupp} onChange={e => onCh('hrsSupp', +e.target.value)} /></td>
       <td className="px-2"><input type="number" min="0" step="0.5" onFocus={e => e.target.select()} className="inp w-16 text-right" value={l.hrsMaj} onChange={e => onCh('hrsMaj', +e.target.value)} /></td>
-      <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(laborCost(l, code))}</td>
+      <td className="px-2 text-right font-semibold tabular-nums text-gray-800 dark:text-gray-100">{money(laborCost(l, rate))}</td>
       <td className="px-1 text-center">{onDel && <button onClick={onDel} className="rounded p-0.5 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>}</td>
     </tr>
   );
@@ -265,7 +288,7 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
       </div>
 
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">{notice}</div>}
-      {rates.length === 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Aucun taux — configure « Taux & catalogue ».', 'No rates — set up "Rates & catalog".')}</div>}
+      {rates.length === 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Aucun taux dans « Taux & catalogue » — saisis le taux horaire directement sur chaque item ci-dessous pour calculer la soumission.', 'No rate in "Rates & catalog" — enter the hourly rate directly on each item below to compute the quote.')}</div>}
 
       {items.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-600 dark:bg-gray-800">
@@ -281,6 +304,8 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
       {items.map((it, ii) => {
         const bd = itemBreakdown(it);
         const somme = itemSomme(it);
+        const er = effRate(it);
+        const isOverride = !!it.rateOverride;
         return (
           <div key={it.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             {/* En-tête item */}
@@ -288,27 +313,58 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
               <button onClick={() => upd(d => { d[ii].open = !d[ii].open; })} className="rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 {it.open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
               </button>
-              <input className="inp flex-1 font-semibold text-gray-900 dark:text-white" value={it.nom} onChange={e => upd(d => { d[ii].nom = e.target.value; })} />
-              <select className="inp w-24" value={it.tauxType} onChange={e => upd(d => { d[ii].tauxType = e.target.value; })}>
-                {codes.map((c: string) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <input className="inp min-w-[8rem] flex-1 font-semibold text-gray-900 dark:text-white" value={it.nom} onChange={e => upd(d => { d[ii].nom = e.target.value; })} />
+              {codes.length > 0 && (
+                <select className="inp w-24" value={isOverride ? '' : it.tauxType}
+                  onChange={e => upd(d => { d[ii].tauxType = e.target.value; d[ii].rateOverride = null; })}>
+                  {isOverride && <option value="">{tr('Perso.', 'Custom')}</option>}
+                  {codes.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
               <span className="text-sm font-bold tabular-nums text-gray-800 dark:text-gray-100">{money(itemFinal(it))}</span>
               <button onClick={() => setItems(prev => prev.filter((_, i) => i !== ii))} className="rounded p-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
             </div>
+
+            {/* Taux horaire applique a l'item (modifiable directement -> le montant se calcule) */}
+            {it.open && (
+              <div className="flex flex-wrap items-end gap-3 border-b border-gray-100 bg-blue-50/40 px-4 py-2.5 dark:border-gray-700 dark:bg-blue-500/5">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Taux horaire ($/h)', 'Hourly rate ($/h)')}</span>
+                {([['reg', tr('Rég', 'Reg')], ['supp', tr('Supp', 'OT')], ['maj', tr('Maj', 'Prem')]] as [keyof RateOverride, string][]).map(([k, lbl]) => (
+                  <label key={k} className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    {lbl}
+                    <input type="number" step="0.01" min="0" onFocus={e => e.target.select()}
+                      className="inp w-20 text-right"
+                      value={er ? (k === 'reg' ? er.rate_regular : k === 'supp' ? er.rate_overtime : er.rate_premium) : 0}
+                      onChange={e => setRate(ii, k, +e.target.value)} />
+                  </label>
+                ))}
+                {isOverride ? (
+                  <button onClick={() => upd(d => { d[ii].rateOverride = null; })}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                    title={tr('Revenir au taux du catalogue', 'Reset to catalog rate')}>
+                    ↺ {tr('Catalogue', 'Catalog')}
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">{er ? tr('(depuis le catalogue)', '(from catalog)') : tr('(aucun taux — saisis-le ici)', '(no rate — enter it here)')}</span>
+                )}
+              </div>
+            )}
 
             {it.open && (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
 
                 {/* Main-d'œuvre bureau */}
                 <div>
-                  <SectionHeader title={tr("MO Bureau", "Office Labor")} amount={bd.bureau} />
+                  <SectionHeader title={tr("MO Bureau", "Office Labor")} amount={bd.bureau}
+                    onAdd={() => upd(d => { (d[ii].bureauExtra ||= []).push({ id: lid(), desc: '', ...emptyLabor() }); })} />
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       {laborHead}
                       <tbody>
-                        {laborRow(it.bureau.prepa, it.tauxType, (k, v) => upd(d => { (d[ii].bureau.prepa as any)[k] = v; }), tr('Préparation', 'Prep'))}
-                        {laborRow(it.bureau.gestion, it.tauxType, (k, v) => upd(d => { (d[ii].bureau.gestion as any)[k] = v; }), tr('Gestion', 'Mgmt'))}
-                        {laborRow(it.bureau.redaction, it.tauxType, (k, v) => upd(d => { (d[ii].bureau.redaction as any)[k] = v; }), tr('Rédaction', 'Writing'))}
+                        {laborRow(it.bureau.prepa, er, (k, v) => upd(d => { (d[ii].bureau.prepa as any)[k] = v; }), tr('Préparation', 'Prep'))}
+                        {laborRow(it.bureau.gestion, er, (k, v) => upd(d => { (d[ii].bureau.gestion as any)[k] = v; }), tr('Gestion', 'Mgmt'))}
+                        {laborRow(it.bureau.redaction, er, (k, v) => upd(d => { (d[ii].bureau.redaction as any)[k] = v; }), tr('Rédaction', 'Writing'))}
+                        {(it.bureauExtra || []).map((l, li) => laborRow(l, er, (k, v) => upd(d => { (d[ii].bureauExtra![li] as any)[k] = v; }), undefined, () => upd(d => { d[ii].bureauExtra!.splice(li, 1); })))}
                         <SubtotalRow label={tr('Sous-total bureau', 'Office subtotal')} amount={bd.bureau} />
                       </tbody>
                     </table>
@@ -323,7 +379,7 @@ export function SoumissionTab({ tenant, projectId, initialEstimate }: { tenant: 
                     <table className="w-full text-sm">
                       {laborHead}
                       <tbody>
-                        {it.chantier.map((l, li) => laborRow(l, it.tauxType, (k, v) => upd(d => { (d[ii].chantier[li] as any)[k] = v; }), undefined, () => upd(d => { d[ii].chantier.splice(li, 1); })))}
+                        {it.chantier.map((l, li) => laborRow(l, er, (k, v) => upd(d => { (d[ii].chantier[li] as any)[k] = v; }), undefined, () => upd(d => { d[ii].chantier.splice(li, 1); })))}
                         {it.chantier.length > 0 && <SubtotalRow label={tr('Sous-total chantier', 'Site subtotal')} amount={bd.chantier} />}
                       </tbody>
                     </table>
