@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Loader2, FileText, Clock, DollarSign, Download, Receip
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { ProjectTimesheetSummary } from '@/components/projet/ProjectTimesheetSummary';
+import { ConsumeMaterialPanel } from '@/components/projet/ConsumeMaterialPanel';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { computeProjectActuals, type ProjectActuals } from '@/lib/projectActuals';
@@ -356,6 +357,9 @@ export default function ProjectDetailPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Matériel consommé (lien Inventaire — sortie de stock manuelle) */}
+                {p.project_number && <ConsumeMaterialPanel tenant={tenant} projectNumber={p.project_number} />}
               </div>
             )}
 
