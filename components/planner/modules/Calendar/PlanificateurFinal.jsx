@@ -815,17 +815,17 @@ export function PlanificateurFinal({
     };
 
     return (
-        <div className="bg-gray-50">
+        <div className="bg-gray-50 dark:bg-gray-900">
             {/* Barre de contrôles */}
-            <div className="bg-white border-b border-gray-200 px-4 py-3">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
                 <div className="flex flex-col lg:flex-row gap-4">
                     {/* Statistiques + Actions rapides */}
                     <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-700">
+                            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                                 {jobs.length} événements · {personnel.length} techniciens · {equipements.length} équipements
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 Vue {modeVueIndividuel ? 'individuelle' : 'globale'} · {numberOfDays} jours
                             </p>
                         </div>
@@ -859,7 +859,7 @@ export function PlanificateurFinal({
                     <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => navigateWeeks(-1)}
-                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-200"
                         >
                             <Icon name="chevronLeft" size={20} />
                         </button>
@@ -871,7 +871,7 @@ export function PlanificateurFinal({
                         </button>
                         <button
                             onClick={() => navigateWeeks(1)}
-                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-200"
                         >
                             <Icon name="chevronRight" size={20} />
                         </button>
@@ -888,7 +888,7 @@ export function PlanificateurFinal({
                                     setTimeView(value);
                                 }
                             }}
-                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white"
+                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                         >
                             <optgroup label={t('calendar.detailedViews')}>
                                 <option value="1day">{t('calendar.day')}</option>
@@ -908,7 +908,7 @@ export function PlanificateurFinal({
                         <select
                             value={colorMode}
                             onChange={(e) => setColorMode(e.target.value)}
-                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white"
+                            className="hidden md:block px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
                             title={t('calendar.colorMode')}
                         >
                             <option value="succursale">{t('calendar.colorByBranch')}</option>
@@ -957,10 +957,10 @@ export function PlanificateurFinal({
                     <div className="flex flex-1 gap-2">
                         {/* Menu hamburger avec titre */}
                         <div className="relative flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-700">{t('filter.filters')}</span>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('filter.filters')}</span>
                             <button
                                 onClick={() => setShowFilterMenu(!showFilterMenu)}
-                                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border"
+                                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors border dark:border-gray-600"
                                 title={t('filter.menuFilters')}
                             >
                                 <svg
@@ -981,11 +981,11 @@ export function PlanificateurFinal({
                             {/* Menu déroulant avec onglets */}
                             {showFilterMenu && (
                                 <>
-                                    <div className="absolute top-full left-0 mt-2 w-96 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+                                    <div className="absolute top-full left-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-50">
                                         <div className="p-4">
                                             {/* Header du menu */}
-                                            <div className="border-b border-gray-200 pb-3 mb-4">
-                                                <h3 className="text-sm font-semibold text-gray-900">
+                                            <div className="border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+                                                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                                     {t('filter.filtersAndOptions')}
                                                 </h3>
                                             </div>
@@ -994,7 +994,7 @@ export function PlanificateurFinal({
                                                 Paramètres/Thème retirés — gérés dans le header principal) */}
 
                                             {/* Onglets */}
-                                            <div className="flex border-b border-gray-200 mb-4">
+                                            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
                                                 {[
                                                     { key: 'type', label: t ? t('filter.type') : 'Type', icon: '🔍' },
                                                     { key: 'bureau', label: 'Site', icon: '🏢' },
@@ -1006,8 +1006,8 @@ export function PlanificateurFinal({
                                                         onClick={() => setActiveFilterTab(tab.key)}
                                                         className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
                                                             activeFilterTab === tab.key
-                                                                ? 'border-blue-500 text-blue-600'
-                                                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                                                         }`}
                                                     >
                                                         <span className="mr-1">{tab.icon}</span>
@@ -1132,7 +1132,7 @@ export function PlanificateurFinal({
                                                     <div className="space-y-4">
                                                         {/* Affichage : Grille / Mois (repris dans le hamburger pour le mobile) */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('calendar.display') || 'Affichage'}</label>
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t('calendar.display') || 'Affichage'}</label>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <button onClick={() => setCalendarMode('grid')}
                                                                     className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>📊 Grille</button>
@@ -1144,11 +1144,11 @@ export function PlanificateurFinal({
                                                         {/* Periode (vue grille) */}
                                                         {calendarMode === 'grid' && (
                                                             <div>
-                                                                <label className="block text-sm font-medium text-gray-700 mb-2">{t('calendar.period') || 'Période'}</label>
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t('calendar.period') || 'Période'}</label>
                                                                 <select
                                                                     value={timeView}
                                                                     onChange={(e) => { const v = e.target.value; setTimeView(v); if (v.startsWith('period-')) setNumberOfDays(parseInt(v.replace('period-', ''))); }}
-                                                                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white"
+                                                                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600"
                                                                 >
                                                                     <optgroup label={t('calendar.detailedViews')}>
                                                                         <option value="1day">{t('calendar.day')}</option>
@@ -1168,7 +1168,7 @@ export function PlanificateurFinal({
 
                                                         {/* Mes taches uniquement */}
                                                         {utilisateurConnecte?.id && (
-                                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
                                                                 <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} className="rounded" />
                                                                 {t('filter.myTasks') || 'Mes tâches seulement'}
                                                             </label>
@@ -1269,7 +1269,7 @@ export function PlanificateurFinal({
                                 placeholder={t('form.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600 dark:placeholder-gray-500"
                             />
                         </div>
                     </div>
@@ -1282,14 +1282,14 @@ export function PlanificateurFinal({
                     /* Vue calendrier mensuelle conventionnelle (responsive) : grille du mois + détail du jour cliqué */
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">←</button>
-                            <div className="text-base font-bold capitalize text-gray-800">{monthCursor.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' })}</div>
-                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">→</button>
+                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">←</button>
+                            <div className="text-base font-bold capitalize text-gray-800 dark:text-gray-100">{monthCursor.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' })}</div>
+                            <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">→</button>
                         </div>
                         {utilisateurConnecte?.id && (
                             <div className="flex justify-center">
                                 <button onClick={() => setMineOnly(v => !v)}
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                                     {mineOnly ? `👤 ${t('filter.myTasks') || 'Mes tâches'}` : (t('filter.allTasks') || 'Toutes les tâches')}
                                 </button>
                             </div>
@@ -1314,7 +1314,7 @@ export function PlanificateurFinal({
                             const todayStr = fmt(new Date());
                             return (
                                 <>
-                                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-500">
+                                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-500 dark:text-gray-400">
                                         {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => <div key={d}>{d}</div>)}
                                     </div>
                                     <div className="grid grid-cols-7 gap-1">
@@ -1326,30 +1326,30 @@ export function PlanificateurFinal({
                                             const isToday = ds === todayStr;
                                             return (
                                                 <button key={ds} onClick={() => setSelectedCalDay(ds)}
-                                                    className={`min-h-[54px] rounded-lg border p-1 text-left align-top transition ${isSel ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : isToday ? 'border-blue-300 bg-white' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                                                    className={`min-h-[54px] rounded-lg border p-1 text-left align-top transition ${isSel ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-700' : isToday ? 'border-blue-300 bg-white dark:bg-gray-800' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                                                     <div className="flex items-center justify-between">
-                                                        <span className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>{d.getDate()}</span>
+                                                        <span className={`text-xs font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{d.getDate()}</span>
                                                         {evs.length > 0 && <span className="rounded-full bg-blue-600 px-1.5 text-[9px] font-bold leading-4 text-white">{evs.length}</span>}
                                                     </div>
-                                                    {evs.slice(0, 2).map(e => <div key={e.id} className="mt-0.5 truncate rounded bg-blue-100 px-1 text-[9px] text-blue-800">{e.numeroJob || e.nom}</div>)}
-                                                    {evs.length > 2 && <div className="text-[9px] text-gray-400">+{evs.length - 2}</div>}
+                                                    {evs.slice(0, 2).map(e => <div key={e.id} className="mt-0.5 truncate rounded bg-blue-100 dark:bg-blue-900/40 px-1 text-[9px] text-blue-800 dark:text-blue-200">{e.numeroJob || e.nom}</div>)}
+                                                    {evs.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500">+{evs.length - 2}</div>}
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-                                        <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-sm font-bold capitalize text-gray-700">
+                                    <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <div className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 px-3 py-2 text-sm font-bold capitalize text-gray-700 dark:text-gray-200">
                                             {selectedCalDay ? new Date(`${selectedCalDay}T12:00:00`).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Touchez un jour pour voir ses événements'}
                                         </div>
-                                        <div className="divide-y divide-gray-100">
+                                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
                                             {(selectedCalDay ? jobsOnDay(selectedCalDay) : []).map(e => (
-                                                <button key={e.id} onClick={() => setSelectedJob(e)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50">
-                                                    <span className="shrink-0 text-xs font-bold text-blue-700">{e.numeroJob || `Job-${e.id}`}</span>
-                                                    <span className="flex-1 truncate text-sm text-gray-800">{e.client || e.nom || '—'}</span>
-                                                    <span className="shrink-0 text-xs text-gray-500">{e.heureDebut || '08:00'}–{e.heureFin || '17:00'}</span>
+                                                <button key={e.id} onClick={() => setSelectedJob(e)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                                    <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">{e.numeroJob || `Job-${e.id}`}</span>
+                                                    <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{e.client || e.nom || '—'}</span>
+                                                    <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{e.heureDebut || '08:00'}–{e.heureFin || '17:00'}</span>
                                                 </button>
                                             ))}
-                                            {selectedCalDay && jobsOnDay(selectedCalDay).length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400">Aucun événement ce jour.</div>}
+                                            {selectedCalDay && jobsOnDay(selectedCalDay).length === 0 && <div className="px-3 py-4 text-center text-sm text-gray-400 dark:text-gray-500">Aucun événement ce jour.</div>}
                                         </div>
                                     </div>
                                 </>
