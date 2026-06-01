@@ -214,9 +214,6 @@ export default function ProjectsPage() {
             <Link href={`/${tenant}/projects/soumissions`} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white transition hover:bg-emerald-700">
               <FileText size={18} /> Soumissions
             </Link>
-            <Link href={`/${tenant}/projects/taux`} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50">
-              <FileText size={18} /> Taux & catalogue
-            </Link>
             <button
               onClick={exportPdf}
               disabled={exporting || loading}

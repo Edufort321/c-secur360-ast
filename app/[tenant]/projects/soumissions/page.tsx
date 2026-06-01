@@ -27,7 +27,7 @@ export default function SoumissionsPage() {
               {tr("Créez et suivez vos soumissions. À l'acceptation, la soumission devient un projet (n° S → P).", 'Create and track quotes. On acceptance, a quote becomes a project (# S → P).')}
             </p>
           </div>
-          <Link href={`/${tenant}/admin`} className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+          <Link href={`/${tenant}/admin?tab=soumissions`} className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
             <BookOpen size={16} /> {tr('Catalogue de taux (Admin)', 'Rate catalogue (Admin)')}
           </Link>
         </div>

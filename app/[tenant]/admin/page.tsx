@@ -220,7 +220,15 @@ export default function AdminPage() {
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'transactions' | 'comptabilite' | 'fiscal';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'transactions', 'comptabilite', 'fiscal'];
   const [tab, setTab] = useState<TabKey>('sitesdepts');
+  // Ouverture directe d'un onglet via ?tab=... (ex. lien « Catalogue » depuis les Soumissions).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search).get('tab');
+    if (q && (TAB_KEYS as string[]).includes(q)) setTab(q as TabKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
 
@@ -326,7 +334,14 @@ export default function AdminPage() {
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
-        {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
+        {tab === 'soumissions' && (
+          <div className="space-y-3">
+            <a href={`/${tenant}/admin/taux`} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Settings size={16} /> {tr('Taux & barèmes complets (MO, km, subsistance, matériel, carburant, approbations)', 'Full rates & catalog (labor, km, per-diem, materials, fuel, approvals)')}
+            </a>
+            <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />
+          </div>
+        )}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
