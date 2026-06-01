@@ -143,6 +143,8 @@ export function JobModal({
     const [ganttMenuOpen, setGanttMenuOpen] = useState(false); // menu Actions (hamburger) de la barre Gantt
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
     const [ganttZoom, setGanttZoom] = useState(1); // facteur de zoom horizontal du Gantt (0.5x .. 3x)
+    const ganttCaptureRef = useRef(null); // noeud capture pour l'export PDF du Gantt
+    const [ganttPdfBusy, setGanttPdfBusy] = useState(false);
 
     // États pour la gestion des horaires hiérarchiques
     const [showDailySchedules, setShowDailySchedules] = useState(false);
@@ -1630,6 +1632,101 @@ export function JobModal({
 
         printWindow.document.close();
         printWindow.print();
+    };
+
+    // R3 — Export PDF du diagramme de Gantt (capture fidele des barres) en tout format.
+    // orientation: 'l' (paysage) | 'p' (portrait) ; pageFormat: 'a4' | 'letter'
+    const downloadGanttPdf = async (orientation = 'l', pageFormat = 'a4') => {
+        const node = ganttCaptureRef.current;
+        if (!node || formData.etapes.length === 0) return;
+        setGanttPdfBusy(true);
+        try {
+            const [{ default: html2canvas }, jspdfMod] = await Promise.all([
+                import('html2canvas'),
+                import('jspdf'),
+            ]);
+            const JsPDF = jspdfMod.jsPDF || jspdfMod.default;
+
+            // Capture du Gantt sur toute sa largeur reelle (au-dela du viewport scrollable).
+            const fullW = Math.max(node.scrollWidth, node.clientWidth);
+            const fullH = Math.max(node.scrollHeight, node.clientHeight);
+            const canvas = await html2canvas(node, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                windowWidth: fullW,
+                width: fullW,
+                height: fullH,
+                scrollX: 0,
+                scrollY: 0,
+            });
+
+            // Logo du tenant (best-effort) pour l'en-tete.
+            let logoDataUrl = null;
+            try {
+                let url = typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : '';
+                if (supabase && tenant) {
+                    const { data } = await supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle();
+                    if (data?.logo_url) url = data.logo_url;
+                }
+                if (url) {
+                    const resp = await fetch(url);
+                    const blob = await resp.blob();
+                    logoDataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+                }
+            } catch { /* logo optionnel */ }
+
+            const doc = new JsPDF({ orientation, unit: 'mm', format: pageFormat });
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            const headerH = 22;
+
+            // En-tete : logo + titre + numero/periode
+            if (logoDataUrl) { try { doc.addImage(logoDataUrl, 'PNG', margin, 6, 22, 12); } catch { /* noop */ } }
+            const tx = logoDataUrl ? margin + 26 : margin;
+            doc.setTextColor(17, 24, 39); doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+            doc.text(`${L('Diagramme de Gantt', 'Gantt Chart')} — ${formData.nom || ''}`.slice(0, 90), tx, 12);
+            doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+            doc.text(`${formData.numeroJob || ''}${formData.dateDebut ? `  |  ${formData.dateDebut} → ${formData.dateFin || ''}` : ''}`, tx, 17);
+            doc.setDrawColor(17, 24, 39); doc.setLineWidth(0.4); doc.line(margin, headerH - 2, pageW - margin, headerH - 2);
+
+            // Image du Gantt mise a l'echelle de la largeur utile
+            const availW = pageW - margin * 2;
+            const imgH = (canvas.height / canvas.width) * availW;
+            const imgData = canvas.toDataURL('image/png');
+            let y = headerH + 2;
+            const firstPageImgH = pageH - y - margin;
+            if (imgH <= firstPageImgH) {
+                doc.addImage(imgData, 'PNG', margin, y, availW, imgH);
+            } else {
+                // Trop haut pour une page : on tranche l'image verticalement sur plusieurs pages.
+                const pxPerMm = canvas.width / availW;
+                let renderedMm = 0;
+                let pageIndex = 0;
+                while (renderedMm < imgH) {
+                    const sliceTopMm = pageIndex === 0 ? 0 : renderedMm;
+                    const availThisPage = (pageIndex === 0 ? firstPageImgH : pageH - margin * 2);
+                    const sliceMm = Math.min(availThisPage, imgH - sliceTopMm);
+                    const sY = Math.round(sliceTopMm * pxPerMm);
+                    const sH = Math.round(sliceMm * pxPerMm);
+                    const slice = document.createElement('canvas');
+                    slice.width = canvas.width; slice.height = sH;
+                    slice.getContext('2d').drawImage(canvas, 0, sY, canvas.width, sH, 0, 0, canvas.width, sH);
+                    if (pageIndex > 0) { doc.addPage(); y = margin; }
+                    doc.addImage(slice.toDataURL('image/png'), 'PNG', margin, y, availW, sliceMm);
+                    renderedMm = sliceTopMm + sliceMm;
+                    pageIndex++;
+                    if (pageIndex > 30) break; // garde-fou
+                }
+            }
+            const fname = `gantt-${(formData.numeroJob || formData.nom || 'projet').toString().replace(/[^a-z0-9]+/gi, '-')}.pdf`;
+            doc.save(fname);
+        } catch (e) {
+            alert(L('Échec de la génération du PDF.', 'PDF generation failed.'));
+        } finally {
+            setGanttPdfBusy(false);
+        }
     };
 
     // Fonction pour passer en mode plein écran
@@ -4886,6 +4983,9 @@ export function JobModal({
                                                             <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Enregistrer / Exporter</div>
                                                             <button type="button" onClick={() => { saveBaseline(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">💾 Sauver la baseline</button>
                                                             <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🖨️ {L('Imprimer le rapport', 'Print report')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {ganttPdfBusy ? L('Génération…', 'Generating…') : L('PDF Gantt — A4 paysage', 'Gantt PDF — A4 landscape')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('p', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {L('PDF Gantt — A4 portrait', 'Gantt PDF — A4 portrait')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'letter'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {L('PDF Gantt — Letter paysage', 'Gantt PDF — Letter landscape')}</button>
                                                         </div>
                                                     </>
                                                 )}
@@ -4991,7 +5091,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Vue Gantt avancée avec hiérarchie - VERSION OLD COMPLÈTE */}
-                                    <div className={`bg-white border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
+                                    <div ref={ganttCaptureRef} className={`bg-white border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
                                         {formData.etapes.length === 0 ? (
                                             <div className="text-center py-8 text-gray-500">
                                                 <div className="text-5xl mb-4 opacity-50">📊</div>
