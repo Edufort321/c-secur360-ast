@@ -6,13 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Loader2, FileText, Calculator, Clock, DollarSign, Download, Receipt, Trash2, BookOpen, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
-import { SoumissionTab } from '@/components/projet/SoumissionTab';
 import { TempsTab } from '@/components/projet/TempsTab';
 import { CoutsTab } from '@/components/projet/CoutsTab';
 import { FactureTab } from '@/components/projet/FactureTab';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type Tab = 'projet' | 'soumission' | 'temps' | 'couts' | 'facture';
+type Tab = 'projet' | 'temps' | 'couts' | 'facture';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -164,7 +163,6 @@ export default function ProjectDetailPage() {
 
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'projet', label: tr('Projet', 'Project'), icon: FileText },
-    { key: 'soumission', label: tr('Soumission', 'Quote'), icon: Calculator },
     { key: 'temps', label: tr('Feuille de temps', 'Timesheet'), icon: Clock },
     { key: 'couts', label: tr('Coûts', 'Costs'), icon: DollarSign },
     { key: 'facture', label: tr('Facture', 'Invoice'), icon: Receipt },
@@ -351,7 +349,6 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {tab === 'soumission' && <SoumissionTab tenant={tenant} projectId={id} initialEstimate={p.estimate} />}
             {tab === 'temps' && <TempsTab tenant={tenant} projectId={id} initialActuals={p.actuals} />}
             {tab === 'couts' && <CoutsTab estimate={p.estimate} actuals={p.actuals} poAmount={p.po_amount} />}
             {tab === 'facture' && <FactureTab tenant={tenant} projectId={id} project={p} />}
