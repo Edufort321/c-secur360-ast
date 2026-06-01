@@ -50,3 +50,12 @@ Cycle partie double : **ventes + paie → grand livre immuable → balance + bil
   `git push origin feat/modular-foundation && git push origin feat/modular-foundation:main`
 - Messages de commit en ASCII (éviter les accents — le shell PowerShell/here-string les casse).
 - Réf. projet à porter : `C:\CERDIA\investissement-cerdia-main` (modules Transaction + Facture, déjà analysés — voir mémoire).
+
+## R15 — Refonte module Transactions (ajoute 2026-05-31)
+- [ ] Selecteur **Revenu / Depense** en haut -> la liste filtre selon la selection.
+- [ ] Selecteur **Avec / Sans taxe** VISIBLE (au lieu d une case) + calcul TPS/TVQ/TVH/PST selon la **province du tenant**.
+- [ ] **Dashboard comptes** en haut (personnalisables) : ou l argent est pris / depose (banque, caisse, carte...).
+- [ ] **Controle bancaire** : transactions vs **solde des comptes** (rapprochement).
+- [ ] S inspirer de **C:/CERDIA/investissement-cerdia-main** (lib/transaction-service.ts ; migrations-investisseur 88/90/95/115/127). Normes fiscales par province.
+- [ ] Tout vers la **comptabilite** (GL partie double via accountingAuto) + **export pret pour le comptable**.
+- [ ] Migration : table `accounts` (+ solde), lien transaction->compte, type revenu/depense, taxe province.
