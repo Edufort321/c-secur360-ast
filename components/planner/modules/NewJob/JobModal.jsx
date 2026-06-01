@@ -4765,7 +4765,7 @@ export function JobModal({
                                     <div className="bg-gray-50 p-3 rounded-lg">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <button
-                                                onClick={addNewTask}
+                                                onClick={() => addEtape()}
                                                 className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm font-semibold"
                                             >
                                                 ➕ Ajouter une tâche
@@ -4891,7 +4891,7 @@ export function JobModal({
                                     <div className="bg-white border rounded-lg p-3">
                                         <div className="mb-2 flex items-center justify-between">
                                             <span className="text-sm font-semibold text-gray-700">📝 Tâches du projet (édition directe)</span>
-                                            <button type="button" onClick={() => addNewTask()} className="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white hover:bg-purple-700">➕ Ajouter</button>
+                                            <button type="button" onClick={() => addEtape()} className="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white hover:bg-purple-700">➕ Ajouter</button>
                                         </div>
                                         {formData.etapes.length === 0 ? (
                                             <p className="py-3 text-center text-sm text-gray-400">Aucune tâche. Cliquez « Ajouter » pour commencer.</p>
