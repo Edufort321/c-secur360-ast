@@ -1714,12 +1714,17 @@ export function LanguageProvider({ children }) {
     // Charger la langue depuis localStorage + écouter les changements de l'app principale
     useEffect(() => {
         const syncLang = () => {
-            const saved = localStorage.getItem('preferred-language');
+            // Le header principal écrit 'cs-lang' ; on accepte les deux clés.
+            const saved = localStorage.getItem('cs-lang') || localStorage.getItem('preferred-language');
             if (saved && LANGUAGES[saved]) setCurrentLanguage(saved);
         };
         syncLang();
         window.addEventListener('storage', syncLang);
-        return () => window.removeEventListener('storage', syncLang);
+        window.addEventListener('cs-lang-change', syncLang); // même onglet (storage ne se déclenche pas)
+        return () => {
+            window.removeEventListener('storage', syncLang);
+            window.removeEventListener('cs-lang-change', syncLang);
+        };
     }, []);
 
     // Fonction pour changer de langue
