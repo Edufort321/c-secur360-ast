@@ -13,6 +13,7 @@ import {
 import AppLayout from '../layout/AppLayout';
 import { useTheme } from '../layout/AppLayout';
 import WorkerPresenceDashboard from '../workers/WorkerPresenceDashboard';
+import { supabase } from '@/lib/supabase';
 
 // Types pour les données du dashboard
 interface ASTData {
@@ -53,7 +54,7 @@ interface ActivityLog {
   description: string;
 }
 
-const MainDashboard: React.FC = () => {
+const MainDashboard: React.FC<{ tenant?: string }> = ({ tenant = '' }) => {
   const { isDark } = useTheme();
   const [astData, setAstData] = useState<ASTData[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -73,140 +74,94 @@ const MainDashboard: React.FC = () => {
     gray: '#6b7280'
   };
 
-  // Simulation de données réelles - À remplacer par des appels API
+  // Donnees reelles du tenant (ast_permits) — plus de mock.
   useEffect(() => {
+    let active = true;
     const fetchDashboardData = async () => {
       setLoading(true);
-      
-      // Simuler l'API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Données simulées d'AST
-      const mockASTData: ASTData[] = [
-        {
-          id: 'ast_001',
-          projectName: 'Maintenance Turbine #3',
-          organizationName: 'Hydro-Québec',
-          createdDate: new Date('2024-08-01'),
-          lastModified: new Date('2024-08-15'),
-          status: 'approved',
-          riskLevel: 'high',
-          completionRate: 100,
-          assignedUsers: ['Jean Tremblay', 'Marie Dubois'],
-          location: 'Centrale de la Manic-5',
-          workType: 'Maintenance électrique',
-          hazards: 8,
-          controlMeasures: 12,
-          complianceScore: 95
-        },
-        {
-          id: 'ast_002',
-          projectName: 'Construction Pont Champlain - Section A',
-          organizationName: 'Construction ABC Inc.',
-          createdDate: new Date('2024-08-10'),
-          lastModified: new Date('2024-08-18'),
-          status: 'active',
-          riskLevel: 'critical',
-          completionRate: 85,
-          assignedUsers: ['Pierre Martin', 'Sophie Gagnon', 'Marc Leblanc'],
-          location: 'Montréal, QC',
-          workType: 'Construction civile',
-          hazards: 15,
-          controlMeasures: 18,
-          complianceScore: 88
-        },
-        {
-          id: 'ast_003',
-          projectName: 'Inspection Raffinerie',
-          organizationName: 'Pétrolia Canada',
-          createdDate: new Date('2024-07-20'),
-          lastModified: new Date('2024-08-19'),
-          status: 'expired',
-          riskLevel: 'medium',
-          completionRate: 90,
-          assignedUsers: ['Robert Caron'],
-          location: 'Lévis, QC',
-          workType: 'Inspection équipements',
-          hazards: 6,
-          controlMeasures: 9,
-          complianceScore: 78
-        },
-        {
-          id: 'ast_004',
-          projectName: 'Rénovation Bureau - Étage 12',
-          organizationName: 'Métallurgie Dorval',
-          createdDate: new Date('2024-08-12'),
-          lastModified: new Date('2024-08-19'),
-          status: 'draft',
-          riskLevel: 'low',
-          completionRate: 45,
-          assignedUsers: ['Anne Lapointe'],
-          location: 'Dorval, QC',
-          workType: 'Rénovation',
-          hazards: 3,
-          controlMeasures: 5,
-          complianceScore: 65
-        }
-      ];
-      
-      const mockStats: DashboardStats = {
-        totalAST: 47,
-        activeAST: 23,
-        expiringSoon: 5,
-        highRiskAST: 8,
-        averageComplianceScore: 87,
-        totalUsers: 156,
-        recentActivity: 32,
-        monthlyTrend: 12.5
-      };
-      
-      const mockActivities: ActivityLog[] = [
-        {
-          id: 'act_1',
-          type: 'approved',
-          astId: 'ast_001',
-          astName: 'Maintenance Turbine #3',
-          userName: 'Superviseur Sécurité',
-          timestamp: new Date('2024-08-19T14:30:00'),
-          description: 'AST approuvée après révision finale'
-        },
-        {
-          id: 'act_2',
-          type: 'modified',
-          astId: 'ast_002',
-          astName: 'Construction Pont Champlain - Section A',
-          userName: 'Pierre Martin',
-          timestamp: new Date('2024-08-19T11:15:00'),
-          description: 'Ajout de mesures de contrôle pour travail en hauteur'
-        },
-        {
-          id: 'act_3',
-          type: 'expired',
-          astId: 'ast_003',
-          astName: 'Inspection Raffinerie',
-          userName: 'Système',
-          timestamp: new Date('2024-08-19T09:00:00'),
-          description: 'AST expirée - renouvellement requis'
-        },
-        {
-          id: 'act_4',
-          type: 'created',
-          astId: 'ast_004',
-          astName: 'Rénovation Bureau - Étage 12',
-          userName: 'Anne Lapointe',
-          timestamp: new Date('2024-08-19T08:45:00'),
-          description: 'Nouvelle AST créée'
-        }
-      ];
-      
-      setAstData(mockASTData);
-      setStats(mockStats);
-      setActivities(mockActivities);
-      setLoading(false);
+      try {
+        const { data: rows } = await supabase
+          .from('ast_permits')
+          .select('permit_number, data, created_at, updated_at')
+          .eq('tenant_id', tenant)
+          .order('updated_at', { ascending: false });
+
+        const mapStatus = (s: string): ASTData['status'] =>
+          s === 'active' ? 'active' : s === 'completed' ? 'approved' : s === 'cancelled' ? 'archived' : 'draft';
+        const now = Date.now();
+
+        const list: ASTData[] = (rows || []).map((r: any) => {
+          const d = r.data || {};
+          const ti = d.taskInfo || {};
+          const steps: any[] = Array.isArray(d.jobSteps) ? d.jobSteps : [];
+          const hazards = steps.reduce((s, st) => s + ((st.hazards || []).length || 0), 0);
+          const controls = steps.reduce((s, st) => s + ((st.controls || []).length || 0), 0);
+          const maxRisk = steps.reduce((m, st) => Math.max(m, (Number(st.riskAfterProb) || 0) * (Number(st.riskAfterSev) || 0)), 0);
+          const riskLevel: ASTData['riskLevel'] = maxRisk >= 17 ? 'critical' : maxRisk >= 10 ? 'high' : maxRisk >= 5 ? 'medium' : 'low';
+          const status = mapStatus(d.status || 'draft');
+          const participants: any[] = Array.isArray(d.participants) ? d.participants : [];
+          const ackRate = participants.length ? Math.round((participants.filter(p => p.acknowledged).length / participants.length) * 100) : 0;
+          const completionRate = status === 'approved' ? 100 : status === 'active' ? Math.max(70, ackRate) : Math.max(30, ackRate);
+          // « expire bientot » : permit_valid_to dans les 7 prochains jours
+          const validTo = d.permit_valid_to ? new Date(d.permit_valid_to).getTime() : 0;
+          const expiring = validTo > now && validTo - now < 7 * 86400000;
+          return {
+            id: r.permit_number,
+            projectName: ti.projectName || ti.workLocation || r.permit_number,
+            organizationName: ti.contractor || '',
+            createdDate: new Date(r.created_at),
+            lastModified: new Date(r.updated_at),
+            status: expiring && status === 'active' ? 'expired' : status,
+            riskLevel,
+            completionRate,
+            assignedUsers: participants.map(p => p.name).filter(Boolean),
+            location: ti.workLocation || '',
+            workType: (ti.taskDescription || '').slice(0, 60),
+            hazards,
+            controlMeasures: controls,
+            complianceScore: completionRate,
+          } as ASTData;
+        });
+
+        const recentMs = 7 * 86400000;
+        const stats: DashboardStats = {
+          totalAST: list.length,
+          activeAST: list.filter(a => a.status === 'active').length,
+          expiringSoon: list.filter(a => a.status === 'expired').length,
+          highRiskAST: list.filter(a => a.riskLevel === 'high' || a.riskLevel === 'critical').length,
+          averageComplianceScore: list.length ? Math.round(list.reduce((s, a) => s + a.complianceScore, 0) / list.length) : 0,
+          totalUsers: new Set(list.flatMap(a => a.assignedUsers)).size,
+          recentActivity: list.filter(a => now - a.lastModified.getTime() < recentMs).length,
+          monthlyTrend: 0,
+        };
+
+        const activities: ActivityLog[] = list.slice(0, 8).map(a => ({
+          id: `act_${a.id}`,
+          type: a.status === 'approved' ? 'approved' : a.status === 'archived' ? 'archived' : a.status === 'expired' ? 'expired' : 'modified',
+          astId: a.id,
+          astName: a.projectName,
+          userName: a.assignedUsers[0] || '—',
+          timestamp: a.lastModified,
+          description: `${a.workType || a.projectName}`,
+        }));
+
+        if (!active) return;
+        setAstData(list);
+        setStats(stats);
+        setActivities(activities);
+      } catch {
+        if (!active) return;
+        setAstData([]);
+        setStats({ totalAST: 0, activeAST: 0, expiringSoon: 0, highRiskAST: 0, averageComplianceScore: 0, totalUsers: 0, recentActivity: 0, monthlyTrend: 0 });
+        setActivities([]);
+      } finally {
+        if (active) setLoading(false);
+      }
     };
 
     fetchDashboardData();
-  }, [selectedPeriod]);
+    return () => { active = false; };
+  }, [selectedPeriod, tenant]);
 
   // Données pour les graphiques
   const chartData = astData.map(ast => ({
