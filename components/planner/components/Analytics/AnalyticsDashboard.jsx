@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+    PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, ComposedChart
 } from 'recharts';
 import { Icon } from '../UI/Icon';
 import { MetricsCard } from './MetricsCard';
@@ -124,12 +124,20 @@ export function AnalyticsDashboard({
                 return jobDate.toISOString().split('T')[0] === dateStr;
             });
 
+            // Travailleurs distincts occupes ce jour-la (un meme tech sur 2 jobs = 1)
+            const actifsJour = new Set();
+            jobsJour.forEach(job => (job.personnel || []).forEach(id => actifsJour.add(String(id))));
+            const occupation = personnelDisponible.length > 0
+                ? Math.min(100, Math.round((actifsJour.size / personnelDisponible.length) * 100))
+                : 0;
+
             tendances.push({
                 date: dateStr,
                 dateFormatted: date.toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }),
                 jobs: jobsJour.length,
                 heures: jobsJour.reduce((sum, job) => sum + (parseInt(job.heuresPlanifiees) || 0), 0),
-                personnel: jobsJour.reduce((sum, job) => sum + (job.personnel?.length || 0), 0)
+                personnel: actifsJour.size,
+                occupation
             });
         }
 
@@ -464,18 +472,31 @@ export function AnalyticsDashboard({
             {/* Contenu des onglets */}
             {activeTab === 'performance' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Tendances temporelles */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Tendances (30 derniers jours)</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <AreaChart data={analyticsData.tendances}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="dateFormatted" />
-                                <YAxis />
+                    {/* Performance — timeline composee (evenements + travailleurs actifs + occupation %) */}
+                    <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Performance (30 derniers jours)</h3>
+                        <ResponsiveContainer width="100%" height={320}>
+                            <ComposedChart data={analyticsData.tendances}>
+                                <defs>
+                                    <linearGradient id="gJobs" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.35} />
+                                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.03} />
+                                    </linearGradient>
+                                    <linearGradient id="gPers" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={COLORS.success} stopOpacity={0.30} />
+                                        <stop offset="95%" stopColor={COLORS.success} stopOpacity={0.03} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="dateFormatted" tick={{ fontSize: 11 }} />
+                                <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
+                                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" tick={{ fontSize: 11 }} />
                                 <Tooltip formatter={formatTooltip} />
-                                <Area type="monotone" dataKey="jobs" stackId="1" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.3} />
-                                <Area type="monotone" dataKey="personnel" stackId="1" stroke={COLORS.success} fill={COLORS.success} fillOpacity={0.3} />
-                            </AreaChart>
+                                <Legend />
+                                <Area yAxisId="left" type="monotone" dataKey="jobs" name="Événements" stroke={COLORS.primary} fill="url(#gJobs)" strokeWidth={2} />
+                                <Area yAxisId="left" type="monotone" dataKey="personnel" name="Travailleurs actifs" stroke={COLORS.success} fill="url(#gPers)" strokeWidth={2} />
+                                <Line yAxisId="right" type="monotone" dataKey="occupation" name="Occupation %" stroke={COLORS.warning} strokeWidth={2.5} dot={false} />
+                            </ComposedChart>
                         </ResponsiveContainer>
                     </div>
 
@@ -509,13 +530,19 @@ export function AnalyticsDashboard({
                     <div className="bg-white rounded-lg shadow-sm p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">⏰ Heures par Jour</h3>
                         <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={analyticsData.tendances}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="dateFormatted" />
-                                <YAxis />
+                            <AreaChart data={analyticsData.tendances}>
+                                <defs>
+                                    <linearGradient id="gHeures" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.35} />
+                                        <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0.03} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="dateFormatted" tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
                                 <Tooltip formatter={formatTooltip} />
-                                <Line type="monotone" dataKey="heures" stroke={COLORS.primary} strokeWidth={2} />
-                            </LineChart>
+                                <Area type="monotone" dataKey="heures" name="Heures" stroke={COLORS.primary} fill="url(#gHeures)" strokeWidth={2} />
+                            </AreaChart>
                         </ResponsiveContainer>
                     </div>
 
@@ -523,17 +550,23 @@ export function AnalyticsDashboard({
                     <div className="bg-white rounded-lg shadow-sm p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">🚨 Répartition par Priorité</h3>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={analyticsData.repartitionPriorite}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="priorite" />
-                                <YAxis />
-                                <Tooltip formatter={formatTooltip} />
-                                <Bar dataKey="value" fill={COLORS.primary}>
+                            <PieChart>
+                                <Pie
+                                    data={analyticsData.repartitionPriorite}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={55}
+                                    outerRadius={85}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                    label={({ priorite, value }) => `${priorite}: ${value}`}
+                                >
                                     {analyticsData.repartitionPriorite.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
-                                </Bar>
-                            </BarChart>
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
