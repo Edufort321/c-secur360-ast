@@ -3019,26 +3019,46 @@ export function JobModal({
             return;
         }
 
+        // Nombre requis par jour + ensemble du personnel choisi pour le mandat
+        const need = Math.max(1, parseInt(formData.nombrePersonnelRequis) || (Array.isArray(formData.personnel) ? formData.personnel.length : 1));
+        const selectedIds = formData.personnel || [];
+        const responsableId = formData.responsableId;
+        // Score d'évaluation (admin) si présent sur la fiche ; sinon neutre (0). Sert à équilibrer les forces.
+        const evalOf = (p) => Number(p?.niveau ?? p?.evaluation ?? p?.note ?? p?.score ?? p?.rating ?? 0) || 0;
+        const findP = (id) => personnel.find(p => String(p.id) === String(id));
+
         const allDays = getAllDays();
         const optimizedAssignations = {};
         let assignedCount = 0;
 
         allDays.forEach(day => {
-            if (!day.isWeekend || formData.includeWeekendsInDuration) {
-                const availablePersonnel = getAvailablePersonnelForDay(day.dateString);
+            if (day.isWeekend && !formData.includeWeekendsInDuration) return;
 
-                const personnelToAssign = availablePersonnel
-                    .filter(person => formData.personnel.includes(person.id))
-                    .slice(0, formData.nombrePersonnelRequis || 1)
-                    .map(p => p.id);
+            const availableIds = new Set(getAvailablePersonnelForDay(day.dateString).map(p => p.id));
+            const candidates = selectedIds.map(findP).filter(Boolean);
 
-                if (personnelToAssign.length > 0) {
-                    optimizedAssignations[day.dateString] = {
-                        personnel: personnelToAssign,
-                        equipements: formData.assignationsParJour[day.dateString]?.equipements || []
-                    };
-                    assignedCount++;
-                }
+            const chosen = [];
+            const usedPostes = new Set();
+
+            // 1) RESPONSABLE de l'événement = SEUL prioritaire en cas de conflit (toujours retenu).
+            const resp = candidates.find(p => String(p.id) === String(responsableId));
+            if (resp) { chosen.push(resp.id); usedPostes.add(resp.poste); }
+
+            // 2) Autres candidats : uniquement s'ils sont DISPONIBLES ce jour-là, triés par évaluation décroissante.
+            const rest = candidates
+                .filter(p => String(p.id) !== String(responsableId) && availableIds.has(p.id))
+                .sort((a, b) => evalOf(b) - evalOf(a));
+
+            // 2a) Équilibrage par POSTE : d'abord un par poste distinct (forces réparties), puis on complète.
+            for (const p of rest) { if (chosen.length >= need) break; if (!usedPostes.has(p.poste)) { chosen.push(p.id); usedPostes.add(p.poste); } }
+            for (const p of rest) { if (chosen.length >= need) break; if (!chosen.includes(p.id)) chosen.push(p.id); }
+
+            if (chosen.length > 0) {
+                optimizedAssignations[day.dateString] = {
+                    personnel: chosen.slice(0, Math.max(need, resp ? 1 : need)),
+                    equipements: formData.assignationsParJour[day.dateString]?.equipements || []
+                };
+                assignedCount++;
             }
         });
 
@@ -3050,7 +3070,7 @@ export function JobModal({
             }
         }));
 
-        addNotification?.(`Optimisation terminée : ${assignedCount} jour(s) optimisé(s)`, 'success');
+        addNotification?.(`Optimisation IA : ${assignedCount} jour(s) — responsable prioritaire, équilibrage par poste puis évaluation.`, 'success');
     };
 
     // Fonction pour résoudre les conflits d'horaire
