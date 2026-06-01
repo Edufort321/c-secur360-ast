@@ -4865,7 +4865,18 @@ export function JobModal({
                                             <p className="py-3 text-center text-sm text-gray-400">Aucune tâche. Cliquez « Ajouter » pour commencer.</p>
                                         ) : (
                                             <div className="space-y-1 max-h-72 overflow-y-auto">
-                                                {formData.etapes.map((etape, idx) => (
+                                                {(() => {
+                                                    // Ordre HIERARCHIQUE (parent puis ses enfants), en conservant l'index d'origine pour l'edition.
+                                                    const eta = formData.etapes || [];
+                                                    const withIdx = eta.map((e, i) => ({ etape: e, idx: i }));
+                                                    const byParent = {};
+                                                    withIdx.forEach(x => { const p = x.etape.parentId == null ? 'root' : String(x.etape.parentId); (byParent[p] = byParent[p] || []).push(x); });
+                                                    const ordered = []; const seen = new Set();
+                                                    const walk = (key) => { (byParent[key] || []).sort((a, b) => (a.etape.order || 0) - (b.etape.order || 0)).forEach(x => { if (seen.has(x.idx)) return; seen.add(x.idx); ordered.push(x); walk(String(x.etape.id)); }); };
+                                                    walk('root');
+                                                    withIdx.forEach(x => { if (!seen.has(x.idx)) ordered.push(x); }); // orphelins eventuels
+                                                    return ordered;
+                                                })().map(({ etape, idx }) => (
                                                     <div key={etape.id} className="flex flex-wrap items-center gap-2 rounded border border-gray-100 p-1.5" style={{ marginLeft: `${(etape.level || 0) * 16}px` }}>
                                                         <input
                                                             value={etape.text || etape.name || ''}
