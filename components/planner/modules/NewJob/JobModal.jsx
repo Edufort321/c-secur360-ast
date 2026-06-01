@@ -1542,26 +1542,26 @@ export function JobModal({
 
         return `
             <div class="header">
-                <h1>Rapport de Projet: ${formData.nom}</h1>
-                <p>Numéro: ${formData.numeroJob} | Période: ${formData.dateDebut} - ${formData.dateFin}</p>
+                <h1>${L('Rapport de Projet', 'Project Report')}: ${formData.nom}</h1>
+                <p>${L('Numéro', 'Number')}: ${formData.numeroJob} | ${L('Période', 'Period')}: ${formData.dateDebut} - ${formData.dateFin}</p>
             </div>
 
             <div class="section">
-                <h2>Informations Générales</h2>
+                <h2>${L('Informations Générales', 'General Information')}</h2>
                 <p><strong>Description:</strong> ${formData.description}</p>
-                <p><strong>Lieu:</strong> ${formData.lieu}</p>
+                <p><strong>${L('Lieu', 'Location')}:</strong> ${formData.lieu}</p>
                 <p><strong>Contact:</strong> ${formData.contact}</p>
             </div>
 
             <div class="section">
-                <h2>Diagramme de Gantt</h2>
+                <h2>${L('Diagramme de Gantt', 'Gantt Chart')}</h2>
                 <table class="gantt-chart">
                     <thead>
                         <tr>
-                            <th>Tâche</th>
-                            <th>Durée</th>
-                            <th>Ressources</th>
-                            <th>État</th>
+                            <th>${L('Tâche', 'Task')}</th>
+                            <th>${L('Durée', 'Duration')}</th>
+                            <th>${L('Ressources', 'Resources')}</th>
+                            <th>${L('État', 'Status')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1575,7 +1575,7 @@ export function JobModal({
                                     ${Object.values(task.assignedResources || {}).flat().length} ressource(s)
                                 </td>
                                 <td>
-                                    ${task.completed ? 'Terminé' : task.isCritical ? 'Critique' : 'En cours'}
+                                    ${task.completed ? L('Terminé', 'Done') : task.isCritical ? L('Critique', 'Critical') : L('En cours', 'In progress')}
                                 </td>
                             </tr>
                         `).join('')}
@@ -1584,13 +1584,13 @@ export function JobModal({
             </div>
 
             <div class="section">
-                <h2>Étapes Détaillées</h2>
+                <h2>${L('Étapes Détaillées', 'Detailed Steps')}</h2>
                 ${hierarchicalTasks.map(task => `
                     <div style="margin-left: ${task.level * 20}px; margin-bottom: 15px; border-left: 3px solid ${task.isCritical ? '#ef4444' : '#3b82f6'}; padding-left: 10px;">
                         <h4>${task.hasChildren ? '📁' : '📄'} ${task.text || task.displayName || `Étape ${task.order + 1}`}</h4>
                         ${task.description ? `<p><strong>Description:</strong> ${task.description}</p>` : ''}
-                        <p><strong>Durée:</strong> ${task.duration}h | <strong>Priorité:</strong> ${task.priority}</p>
-                        ${task.dependencies?.length ? `<p><strong>Dépendances:</strong> ${task.dependencies.length}</p>` : ''}
+                        <p><strong>${L('Durée', 'Duration')}:</strong> ${task.duration}h | <strong>${L('Priorité', 'Priority')}:</strong> ${task.priority}</p>
+                        ${task.dependencies?.length ? `<p><strong>${L('Dépendances', 'Dependencies')}:</strong> ${task.dependencies.length}</p>` : ''}
                         ${task.notes ? `<p><strong>Notes:</strong> ${task.notes}</p>` : ''}
                     </div>
                 `).join('')}
