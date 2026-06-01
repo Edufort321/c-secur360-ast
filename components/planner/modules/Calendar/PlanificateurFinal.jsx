@@ -1101,26 +1101,8 @@ export function PlanificateurFinal({
                                                                     {t('filter.showPersonnelPosition')}
                                                                 </p>
                                                             </>
-                                                        ) : filterType === 'dashboard' ? (
-                                                            <>
-                                                                <label className="block text-sm font-medium text-gray-700 mb-3">
-                                                                    {t('filter.dashboardFocus')}
-                                                                </label>
-                                                                <select
-                                                                    value={dashboardFilter}
-                                                                    onChange={(e) => setDashboardFilter(e.target.value)}
-                                                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                                                                >
-                                                                    <option value="global">{t('viewType.globalFocus')}</option>
-                                                                    <option value="personnel">{t('viewType.personnelFocus')}</option>
-                                                                    <option value="equipements">{t('viewType.equipmentFocus')}</option>
-                                                                </select>
-                                                                <p className="text-xs text-gray-500 mt-2">
-                                                                    {t('filter.chooseAnalysisType')}
-                                                                </p>
-                                                            </>
                                                         ) : (
-                                                            <div className="text-center py-8 text-gray-500">
+                                                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                                 <p>{t('filter.positionNotAvailable')}</p>
                                                                 <p className="text-xs mt-1">{t('filter.selectPersonnelOrGlobal')}</p>
                                                             </div>
