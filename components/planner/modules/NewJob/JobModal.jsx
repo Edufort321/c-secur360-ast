@@ -5142,17 +5142,14 @@ export function JobModal({
                                                                             }
 
                                                                             if (task.parentId) {
-                                                                                // C'est une sous-tâche : utilise la couleur de son parent
-                                                                                const parentTask = hierarchicalTasks.find(t => t.id === task.parentId);
-                                                                                if (parentTask) {
-                                                                                    const parentIndex = hierarchicalTasks.filter(t => !t.parentId).findIndex(t => t.id === task.parentId);
-                                                                                    const colorSet = parentColors[parentIndex % parentColors.length];
-                                                                                    return { bg: colorSet.light, hover: colorSet.hover, light: colorSet.light }; // Couleur plus claire pour les enfants
-                                                                                }
+                                                                                // C'est une sous-tâche : utilise la couleur de son parent (avec repli si parent introuvable)
+                                                                                const parentIndex = hierarchicalTasks.filter(t => !t.parentId).findIndex(t => String(t.id) === String(task.parentId));
+                                                                                const colorSet = parentColors[Math.max(0, parentIndex) % parentColors.length] || parentColors[0];
+                                                                                return { bg: colorSet.light, hover: colorSet.hover, light: colorSet.light }; // Couleur plus claire pour les enfants
                                                                             } else {
                                                                                 // C'est un parent : attribue une couleur selon son index
-                                                                                const parentIndex = hierarchicalTasks.filter(t => !t.parentId).findIndex(t => t.id === task.id);
-                                                                                return parentColors[parentIndex % parentColors.length];
+                                                                                const parentIndex = hierarchicalTasks.filter(t => !t.parentId).findIndex(t => String(t.id) === String(task.id));
+                                                                                return parentColors[Math.max(0, parentIndex) % parentColors.length] || parentColors[0];
                                                                             }
 
                                                                             return parentColors[0]; // Couleur par défaut
