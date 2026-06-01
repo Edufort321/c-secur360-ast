@@ -267,8 +267,17 @@ export function JobModal({
     //   Réactif : changer heures totales, fenêtre horaire, nb de personnes, date de début ou
     //   l'inclusion des fins de semaine réajuste la fin (ex. 40 h, 7:00–18:00, 2 pers. -> 2 jours).
     useEffect(() => {
-        const total = parseFloat(formData.heuresPlanifiees);
-        if (!total || total <= 0 || !formData.dateDebut) return;
+        if (!formData.dateDebut) return;
+        const total = parseFloat(formData.heuresPlanifiees) || 0;
+        // Sans heures totales -> mandat d'une seule journée : remplir la fin (= début) si vide/incohérente,
+        // sans écraser une date de fin saisie manuellement.
+        if (total <= 0) {
+            if (!formData.dateFin || formData.dateFin < formData.dateDebut) {
+                setFormData(prev => ({ ...prev, dateFin: prev.dateDebut }));
+            }
+            return;
+        }
+        // Avec heures totales -> fin = répartition sur jours ouvrables selon fenêtre horaire et nb de personnes.
         const hpd = Math.max(0.5, diffHours(formData.heureDebut, formData.heureFin)); // heures/jour (fenêtre)
         const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
             ? formData.personnel.length
@@ -286,7 +295,7 @@ export function JobModal({
         const newFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration]);
+    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration, formData.dateFin]);
 
     // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
     // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
