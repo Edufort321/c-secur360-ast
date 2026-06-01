@@ -142,6 +142,7 @@ export function JobModal({
     const [ganttFullscreen, setGanttFullscreen] = useState(false);
     const [ganttMenuOpen, setGanttMenuOpen] = useState(false); // menu Actions (hamburger) de la barre Gantt
     const [ganttCompactMode, setGanttCompactMode] = useState(false);
+    const [ganttZoom, setGanttZoom] = useState(1); // facteur de zoom horizontal du Gantt (0.5x .. 3x)
 
     // États pour la gestion des horaires hiérarchiques
     const [showDailySchedules, setShowDailySchedules] = useState(false);
@@ -4817,6 +4818,19 @@ export function JobModal({
                                                 Auto: {getDefaultViewMode()} ({formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0)}h)
                                             </span>
 
+                                            {/* Zoom horizontal du Gantt */}
+                                            <div className="flex items-center rounded border border-gray-300 overflow-hidden" title={L('Zoom du diagramme', 'Chart zoom')}>
+                                                <button type="button" onClick={() => setGanttZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
+                                                    disabled={ganttZoom <= 0.5}
+                                                    className="px-2 py-1.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40">−</button>
+                                                <span className="px-2 py-1.5 text-xs font-semibold text-gray-700 tabular-nums select-none" style={{ minWidth: 44, textAlign: 'center' }}>{Math.round(ganttZoom * 100)}%</span>
+                                                <button type="button" onClick={() => setGanttZoom(z => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
+                                                    disabled={ganttZoom >= 3}
+                                                    className="px-2 py-1.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40">+</button>
+                                                <button type="button" onClick={() => setGanttZoom(1)}
+                                                    className="px-2 py-1.5 text-xs bg-white text-gray-500 hover:bg-gray-100 border-l border-gray-300" title={L('Réinitialiser le zoom', 'Reset zoom')}>⊘</button>
+                                            </div>
+
                                             {/* Toggles rapides */}
                                             <button
                                                 type="button"
@@ -4986,8 +5000,8 @@ export function JobModal({
                                         ) : (() => {
                                             const hierarchicalTasks = generateHierarchicalGanttData();
                                             const dependencyArrows = renderDependencyArrows(hierarchicalTasks);
-                                            // R2 : largeurs fixes + scroll horizontal unifié (en-tête + barres alignés ; colonne tâche figée)
-                                            const G_NAME_W = 220, G_PERIOD_W = 56, G_DUR_W = 80;
+                                            // R2 : largeurs fixes + scroll horizontal unifié (en-tête + barres alignés ; colonne tâche figée) + zoom
+                                            const G_NAME_W = 220, G_PERIOD_W = Math.round(56 * ganttZoom), G_DUR_W = 80;
                                             const gScaleLen = Math.max(1, generateTimeScale(formData.ganttViewMode || getDefaultViewMode()).length);
                                             const ganttMinW = G_NAME_W + gScaleLen * G_PERIOD_W + G_DUR_W;
 
