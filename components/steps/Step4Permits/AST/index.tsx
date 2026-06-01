@@ -2651,8 +2651,16 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
   language: Language; readOnly: boolean; tenant: string;
 }) {
   const t = T[language].participants;
+  const tr = (fr: string, en: string) => (language === 'fr' ? fr : en);
   const participants = ast.participants;
   const acknowledgedCount = participants.filter(p => p.acknowledged).length;
+  // Cartes dépliées pour modification (un participant finalisé se replie sur son nom).
+  const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
+  const setEditing = (id: string, on: boolean) => setEditingIds(prev => {
+    const next = new Set(prev);
+    if (on) next.add(id); else next.delete(id);
+    return next;
+  });
 
   // Employés du tenant (rafraîchis à chaque ouverture de la section : tout
   // employé créé dans l'admin devient immédiatement recherchable).
@@ -2716,22 +2724,46 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
           </div>
 
           {participants.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                    <th className="text-left pb-2 pr-3 font-medium">{t.name}</th>
-                    <th className="text-left pb-2 pr-3 font-medium w-40">{t.role}</th>
-                    <th className="text-left pb-2 pr-3 font-medium">{t.company}</th>
-                    <th className="text-center pb-2 pr-3 font-medium w-28">{t.acknowledged}</th>
-                    <th className="text-left pb-2 pr-3 font-medium">{t.acknowledgedAt}</th>
-                    {!readOnly && <th className="w-8" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {participants.map(par => (
-                    <tr key={par.id}>
-                      <td className="py-2 pr-3">
+            <div className="space-y-3">
+              {participants.map(par => {
+                const roleLabel = (t.roles as Record<string, string>)[par.role] || par.role;
+                const collapsed = par.acknowledged && !editingIds.has(par.id);
+                const canFinalize = par.name.trim().length > 0;
+
+                // Vue repliee : prise de connaissance finalisee -> on ne voit que le nom.
+                if (collapsed) {
+                  return (
+                    <div key={par.id} className="flex items-center justify-between gap-3 rounded-lg border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-800 dark:text-slate-100 truncate">{par.name || tr('(sans nom)', '(no name)')}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {roleLabel}
+                            {par.acknowledgedAt ? ` · ${new Date(par.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA')}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      {!readOnly && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => setEditing(par.id, true)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                            {tr('Modifier', 'Edit')}
+                          </button>
+                          <button type="button" onClick={() => removeParticipant(par.id)} className="p-1.5 text-red-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Vue depliee : meme presentation en cartes que l'approbation superviseur.
+                return (
+                  <div key={par.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label={t.name}>
                         <EmployeeNameInput
                           value={par.name}
                           employees={employees}
@@ -2739,39 +2771,39 @@ function ParticipantsSection({ ast, onChange, language, readOnly, tenant }: {
                           language={language}
                           onChange={name => updateParticipant(par.id, x => ({ ...x, name }))}
                           onSelectEmployee={() => updateParticipant(par.id, x => ({ ...x, company: defaultCompany }))}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50"
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50"
                         />
-                      </td>
-                      <td className="py-2 pr-3">
+                      </Field>
+                      <Field label={t.role}>
                         <select value={par.role} onChange={e => updateParticipant(par.id, x => ({ ...x, role: e.target.value }))} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50">
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50">
                           {roleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input type="text" value={par.company} onChange={e => updateParticipant(par.id, x => ({ ...x, company: e.target.value }))} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      <td className="py-2 pr-3 text-center">
-                        <input type="checkbox" checked={par.acknowledged} onChange={e => toggleAcknowledged(par.id, e.target.checked)} disabled={readOnly}
-                          className="w-4 h-4 accent-teal-600" />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {par.acknowledgedAt ? new Date(par.acknowledgedAt).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA') : '—'}
-                        </span>
-                      </td>
-                      {!readOnly && (
-                        <td className="py-2">
-                          <button type="button" onClick={() => removeParticipant(par.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </Field>
+                      <Field label={t.company}>
+                        <TextInput value={par.company} onChange={v => updateParticipant(par.id, x => ({ ...x, company: v }))} disabled={readOnly} />
+                      </Field>
+                    </div>
+                    {!readOnly && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+                        <button
+                          type="button"
+                          disabled={!canFinalize}
+                          title={!canFinalize ? tr('Saisissez le nom pour finaliser', 'Enter the name to finalize') : ''}
+                          onClick={() => { toggleAcknowledged(par.id, true); setEditing(par.id, false); }}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          {tr('Finaliser la prise de connaissance', 'Finalize acknowledgement')}
+                        </button>
+                        <button type="button" onClick={() => removeParticipant(par.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
