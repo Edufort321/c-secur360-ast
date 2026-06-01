@@ -4938,12 +4938,16 @@ export function JobModal({
                                         ) : (() => {
                                             const hierarchicalTasks = generateHierarchicalGanttData();
                                             const dependencyArrows = renderDependencyArrows(hierarchicalTasks);
+                                            // R2 : largeurs fixes + scroll horizontal unifié (en-tête + barres alignés ; colonne tâche figée)
+                                            const G_NAME_W = 220, G_PERIOD_W = 56, G_DUR_W = 80;
+                                            const gScaleLen = Math.max(1, generateTimeScale(formData.ganttViewMode || getDefaultViewMode()).length);
+                                            const ganttMinW = G_NAME_W + gScaleLen * G_PERIOD_W + G_DUR_W;
 
                                             return (
-                                                <div className="space-y-1">
+                                                <div className="space-y-1" style={{ minWidth: `${ganttMinW}px` }}>
                                                     {/* En-tête du timeline */}
                                                     <div className="flex items-center mb-4 pb-2 border-b">
-                                                        <div className="w-1/3 font-medium text-gray-700">
+                                                        <div className="flex-shrink-0 sticky left-0 z-20 bg-white font-medium text-gray-700" style={{ width: G_NAME_W }}>
                                                             Tâches hiérarchiques
                                                         </div>
                                                         <div className="flex-1 text-center font-medium text-gray-700">
@@ -4973,19 +4977,20 @@ export function JobModal({
                                                         if (timeScale.length > 0) {
                                                             return (
                                                                 <div className="flex items-center mb-2 text-xs text-gray-600 border-b pb-1">
-                                                                    <div className="w-1/3 flex-shrink-0"></div>
+                                                                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white" style={{ width: G_NAME_W }}></div>
                                                                     <div className="flex-1 flex">
                                                                         {timeScale.map(period => (
                                                                             <div
                                                                                 key={period.key}
-                                                                                className="flex-1 min-w-0 truncate text-center border-r border-gray-200 py-1"
+                                                                                className="flex-shrink-0 truncate text-center border-r border-gray-200 py-1"
+                                                                                style={{ width: G_PERIOD_W }}
                                                                                 title={currentViewMode === 'weeks' && period.longLabel ? period.longLabel : period.label}
                                                                             >
                                                                                 {period.label}
                                                                             </div>
                                                                         ))}
                                                                     </div>
-                                                                    <div className="w-20 flex-shrink-0"></div>
+                                                                    <div className="flex-shrink-0" style={{ width: G_DUR_W }}></div>
                                                                 </div>
                                                             );
                                                         }
@@ -5052,10 +5057,10 @@ export function JobModal({
                                                                 }`}
                                                                 style={{ height: ganttCompactMode ? '24px' : '38px' }}
                                                             >
-                                                                {/* Nom de la tâche avec hiérarchie */}
+                                                                {/* Nom de la tâche avec hiérarchie (colonne figée) */}
                                                                 <div
-                                                                    className={`w-1/3 ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium truncate flex items-center`}
-                                                                    style={{ paddingLeft: `${task.indent}px` }}
+                                                                    className={`flex-shrink-0 sticky left-0 z-10 bg-white ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium truncate flex items-center`}
+                                                                    style={{ width: G_NAME_W, paddingLeft: `${task.indent}px` }}
                                                                 >
                                                                     <span className={`${ganttCompactMode ? 'mr-1 text-xs' : 'mr-2'}`}>
                                                                         {task.hasChildren ? '📁' : '📄'}
@@ -5191,7 +5196,7 @@ export function JobModal({
                                                                 </div>
 
                                                                 {/* Durée */}
-                                                                <div className={`${ganttCompactMode ? 'w-16' : 'w-20'} ${ganttCompactMode ? 'text-xs' : 'text-xs'} text-gray-600 text-center`}>
+                                                                <div className="flex-shrink-0 text-xs text-gray-600 text-center" style={{ width: G_DUR_W }}>
                                                                     <div className={task.autoCalculated ? 'text-blue-600 font-medium' : ''}>
                                                                         {task.duration}h
                                                                     </div>
