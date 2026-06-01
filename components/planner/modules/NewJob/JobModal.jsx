@@ -5940,25 +5940,25 @@ export function JobModal({
                                                 {/* Instructions selon l'onglet */}
                                                 {dailyPersonnelTab === 'horaires' && (
                                                     <div className="text-xs text-purple-600 mb-3 p-2 bg-purple-100 rounded">
-                                                        <div className="font-medium mb-1">Guide horaires:</div>
-                                                        <div>🔵 Jour ouvrable • 🟣 Fin de semaine • ⚪ Exclu • 🟠 Mode 24/24</div>
-                                                        <div>Cliquez sur les jours pour les inclure/exclure • Utilisez les boutons 24h pour le mode continu</div>
+                                                        <div className="font-medium mb-1">{L('Guide horaires:', 'Schedule guide:')}</div>
+                                                        <div>🔵 {L('Jour ouvrable', 'Working day')} • 🟣 {L('Fin de semaine', 'Weekend')} • ⚪ {L('Exclu', 'Excluded')} • 🟠 {L('Mode 24/24', '24/7 mode')}</div>
+                                                        <div>{L('Cliquez sur les jours pour les inclure/exclure • Utilisez les boutons 24h pour le mode continu', 'Click days to include/exclude • Use the 24h buttons for continuous mode')}</div>
                                                     </div>
                                                 )}
 
                                                 {dailyPersonnelTab === 'personnel' && (
                                                     <div className="text-xs text-purple-600 mb-3 p-2 bg-purple-100 rounded">
-                                                        <div className="font-medium mb-1">Guide personnel:</div>
-                                                        <div>Cliquez sur un jour pour gérer son personnel spécifique • Filtres par poste et département/succursale disponibles</div>
-                                                        <div>🟢 Disponible • 🔴 Occupé • ✅ Assigné à ce jour • 🕐 Personnaliser horaire</div>
+                                                        <div className="font-medium mb-1">{L('Guide personnel:', 'Personnel guide:')}</div>
+                                                        <div>{L('Cliquez sur un jour pour gérer son personnel spécifique • Filtres par poste et département/succursale disponibles', 'Click a day to manage its specific personnel • Filters by position and department/office available')}</div>
+                                                        <div>🟢 {L('Disponible', 'Available')} • 🔴 {L('Occupé', 'Busy')} • ✅ {L('Assigné à ce jour', 'Assigned this day')} • 🕐 {L('Personnaliser horaire', 'Customize schedule')}</div>
                                                     </div>
                                                 )}
 
                                                 {dailyPersonnelTab === 'equipement' && (
                                                     <div className="text-xs text-purple-600 mb-3 p-2 bg-purple-100 rounded">
-                                                        <div className="font-medium mb-1">Guide équipement:</div>
-                                                        <div>Cliquez sur un jour pour gérer les équipements spécifiques • Filtres par département/succursale disponibles</div>
-                                                        <div>🟢 Disponible • 🔴 En maintenance/occupé • ✅ Assigné à ce jour • 🕐 Personnaliser horaire</div>
+                                                        <div className="font-medium mb-1">{L('Guide équipement:', 'Equipment guide:')}</div>
+                                                        <div>{L('Cliquez sur un jour pour gérer les équipements spécifiques • Filtres par département/succursale disponibles', 'Click a day to manage specific equipment • Filters by department/office available')}</div>
+                                                        <div>🟢 {L('Disponible', 'Available')} • 🔴 {L('En maintenance/occupé', 'In maintenance/busy')} • ✅ {L('Assigné à ce jour', 'Assigned this day')} • 🕐 {L('Personnaliser horaire', 'Customize schedule')}</div>
                                                     </div>
                                                 )}
 
@@ -6089,7 +6089,7 @@ export function JobModal({
                                                                                 }`}
                                                                                 placeholder={formData.heureDebut}
                                                                             />
-                                                                            <span className="text-xs text-gray-400">à</span>
+                                                                            <span className="text-xs text-gray-400">{L('à', 'to')}</span>
                                                                             <input
                                                                                 type="time"
                                                                                 value={schedule?.heureFin || formData.heureFin}
@@ -6144,7 +6144,7 @@ export function JobModal({
                                                     {!selectedDay ? (
                                                         // Vue générale : sélection du jour
                                                         <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">Sélectionnez un jour pour gérer son personnel</h4>
+                                                            <h4 className="font-medium text-gray-900 mb-3">{L('Sélectionnez un jour pour gérer son personnel', 'Select a day to manage its personnel')}</h4>
                                                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                                                                 {getAllDays().filter(day => day.included).map(({ date: dateString, dayName, dayNumber, isWeekend }) => {
                                                                     const dayStats = getDayStats(dateString);
@@ -6211,7 +6211,7 @@ export function JobModal({
                                                                             onChange={(e) => setPersonnelFilters(prev => ({ ...prev, departement: e.target.value }))}
                                                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                         >
-                                                                            <option value="global">🌐 Tous les départements/succursales</option>
+                                                                            <option value="global">🌐 {L('Tous les départements/succursales', 'All departments/offices')}</option>
                                                                             {[...new Set(personnel.map(p => p.departement).filter(Boolean))].sort().map(departement => (
                                                                                 <option key={departement} value={departement}>🏢 {departement}</option>
                                                                             ))}
@@ -6249,7 +6249,7 @@ export function JobModal({
                                                                 </div>
                                                                 {showPersonnelQuickActions && (
                                                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                                                                        <div className="text-sm font-medium text-blue-900 mb-2">⚡ Accès rapide à tout l'événement</div>
+                                                                        <div className="text-sm font-medium text-blue-900 mb-2">⚡ {L("Accès rapide à tout l'événement", 'Quick access to the whole event')}</div>
                                                                         <div className="grid grid-cols-2 gap-2">
                                                                             <button
                                                                                 type="button"
@@ -6287,7 +6287,7 @@ export function JobModal({
                                                                             </button>
                                                                         </div>
                                                                         <div className="mt-3 pt-3 border-t border-blue-200">
-                                                                            <div className="text-sm font-medium text-blue-900 mb-2">📅 Sélection rapide par jour</div>
+                                                                            <div className="text-sm font-medium text-blue-900 mb-2">📅 {L('Sélection rapide par jour', 'Quick selection by day')}</div>
                                                                             <div className="flex gap-2 flex-wrap">
                                                                                 <button
                                                                                     type="button"
@@ -6401,7 +6401,7 @@ export function JobModal({
                                                                 </div>
                                                                 {showAvailablePersonnelQuickActions && (
                                                                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                                                                        <div className="text-sm font-medium text-green-900 mb-2">⚡ Accès rapide pour tout le personnel disponible</div>
+                                                                        <div className="text-sm font-medium text-green-900 mb-2">⚡ {L('Accès rapide pour tout le personnel disponible', 'Quick access for all available personnel')}</div>
                                                                         <div className="grid grid-cols-2 gap-2">
                                                                             <button
                                                                                 type="button"
@@ -6511,7 +6511,7 @@ export function JobModal({
                                                     {!selectedDay ? (
                                                         // Vue générale : sélection du jour
                                                         <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">Sélectionnez un jour pour gérer ses équipements</h4>
+                                                            <h4 className="font-medium text-gray-900 mb-3">{L('Sélectionnez un jour pour gérer ses équipements', 'Select a day to manage its equipment')}</h4>
                                                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                                                                 {getAllDays().filter(day => day.included).map(({ date: dateString, dayName, dayNumber, isWeekend }) => {
                                                                     const equipementsAssignes = getAssignedEquipementForDay(dateString).length;
@@ -6562,7 +6562,7 @@ export function JobModal({
                                                                             onChange={(e) => setPersonnelFilters(prev => ({ ...prev, departement: e.target.value }))}
                                                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                         >
-                                                                            <option value="global">🌐 Tous les départements/succursales</option>
+                                                                            <option value="global">🌐 {L('Tous les départements/succursales', 'All departments/offices')}</option>
                                                                             {[...new Set(equipements.map(e => e.departement).filter(Boolean))].sort().map(departement => (
                                                                                 <option key={departement} value={departement}>🏢 {departement}</option>
                                                                             ))}
@@ -6577,7 +6577,7 @@ export function JobModal({
                                                                                 onChange={(e) => setPersonnelFilters(prev => ({ ...prev, showAll: e.target.checked }))}
                                                                                 className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-200"
                                                                             />
-                                                                            <span className="text-gray-700">Afficher tous les équipements</span>
+                                                                            <span className="text-gray-700">{L('Afficher tous les équipements', 'Show all equipment')}</span>
                                                                         </label>
                                                                     </div>
                                                                 </div>
@@ -6600,7 +6600,7 @@ export function JobModal({
                                                                 </div>
                                                                 {showEquipementQuickActions && (
                                                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                                                                        <div className="text-sm font-medium text-blue-900 mb-2">⚡ Accès rapide à tout l'événement</div>
+                                                                        <div className="text-sm font-medium text-blue-900 mb-2">⚡ {L("Accès rapide à tout l'événement", 'Quick access to the whole event')}</div>
                                                                         <div className="grid grid-cols-2 gap-2">
                                                                             <button
                                                                                 type="button"
@@ -6638,7 +6638,7 @@ export function JobModal({
                                                                             </button>
                                                                         </div>
                                                                         <div className="mt-3 pt-3 border-t border-blue-200">
-                                                                            <div className="text-sm font-medium text-blue-900 mb-2">📅 Sélection rapide par jour</div>
+                                                                            <div className="text-sm font-medium text-blue-900 mb-2">📅 {L('Sélection rapide par jour', 'Quick selection by day')}</div>
                                                                             <div className="flex gap-2 flex-wrap">
                                                                                 <button
                                                                                     type="button"
@@ -6748,7 +6748,7 @@ export function JobModal({
                                                                 </div>
                                                                 {showAvailableEquipementQuickActions && (
                                                                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                                                                        <div className="text-sm font-medium text-green-900 mb-2">⚡ Accès rapide pour tous les équipements disponibles</div>
+                                                                        <div className="text-sm font-medium text-green-900 mb-2">⚡ {L('Accès rapide pour tous les équipements disponibles', 'Quick access for all available equipment')}</div>
                                                                         <div className="grid grid-cols-2 gap-2">
                                                                             <button
                                                                                 type="button"
@@ -6845,7 +6845,7 @@ export function JobModal({
                                             {dailyPersonnelTab === 'succursales' && (
                                                 <div>
                                                     <div className="mb-4">
-                                                        <h4 className="font-medium text-gray-900 mb-3">🏢 Horaires par département/succursale</h4>
+                                                        <h4 className="font-medium text-gray-900 mb-3">🏢 {L('Horaires par département/succursale', 'Schedules by department/office')}</h4>
                                                         <p className="text-sm text-gray-600 mb-4">
                                                             Configurez des horaires globaux ou personnalisés par jour pour chaque département/succursale.
                                                         </p>
@@ -6868,8 +6868,8 @@ export function JobModal({
                                                                 return (
                                                                     <div className="text-center text-gray-500 py-8">
                                                                         <div className="text-4xl mb-4">🏢</div>
-                                                                        <p className="text-lg font-medium mb-2">Aucun département/succursale trouvé</p>
-                                                                        <p className="text-sm">Assurez-vous que votre personnel et/ou équipements ont une succursale définie</p>
+                                                                        <p className="text-lg font-medium mb-2">{L('Aucun département/succursale trouvé', 'No department/office found')}</p>
+                                                                        <p className="text-sm">{L('Assurez-vous que votre personnel et/ou équipements ont une succursale définie', 'Make sure your personnel and/or equipment have an office set')}</p>
                                                                         <div className="mt-4 text-xs text-gray-600">
                                                                             Personnel disponible: {personnel.length} | Équipements disponibles: {equipements.length}
                                                                         </div>
@@ -7006,7 +7006,7 @@ export function JobModal({
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                                                                 />
-                                                                                <span className="text-xs text-gray-500">à</span>
+                                                                                <span className="text-xs text-gray-500">{L('à', 'to')}</span>
                                                                                 <input
                                                                                     type="time"
                                                                                     value={formData.horairesDepartements.global?.[departement]?.heureFin || formData.heureFin}
@@ -7135,7 +7135,7 @@ export function JobModal({
 
                                                                                     <div className="mt-2 text-xs text-center">
                                                                                         {hasCustomSchedule ? (
-                                                                                            <span className="text-purple-600 font-medium">✅ Personnalisé</span>
+                                                                                            <span className="text-purple-600 font-medium">✅ {L('Personnalisé', 'Custom')}</span>
                                                                                         ) : (
                                                                                             <span className="text-gray-500">🔄 Global</span>
                                                                                         )}
@@ -7159,7 +7159,7 @@ export function JobModal({
                                     {/* Résumé des ressources */}
                                     {(formData.personnel?.length > 0 || formData.equipements?.length > 0 || formData.sousTraitants?.length > 0) && (
                                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-800 mb-3">📊 Résumé des ressources assignées</h4>
+                                            <h4 className="font-medium text-gray-800 mb-3">📊 {L('Résumé des ressources assignées', 'Summary of assigned resources')}</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-blue-600">{formData.personnel?.length || 0}</div>
@@ -7167,11 +7167,11 @@ export function JobModal({
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-green-600">{formData.equipements?.length || 0}</div>
-                                                    <div className="text-gray-600">Équipements</div>
+                                                    <div className="text-gray-600">{L('Équipements', 'Equipment')}</div>
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-purple-600">{formData.sousTraitants?.length || 0}</div>
-                                                    <div className="text-gray-600">Sous-traitants</div>
+                                                    <div className="text-gray-600">{L('Sous-traitants', 'Subcontractors')}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -7248,7 +7248,7 @@ export function JobModal({
                                     {/* Résumé des fichiers */}
                                     {((formData.documents?.length || 0) + (formData.photos?.length || 0)) > 0 && (
                                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-800 mb-3">📊 Résumé des fichiers</h4>
+                                            <h4 className="font-medium text-gray-800 mb-3">📊 {L('Résumé des fichiers', 'Files summary')}</h4>
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-blue-600">{formData.documents?.length || 0}</div>
@@ -7420,7 +7420,7 @@ export function JobModal({
                                                                     }))}
                                                                     className="w-4 h-4 text-purple-600"
                                                                 />
-                                                                <span>Se terminer à une date spécifique</span>
+                                                                <span>{L('Se terminer à une date spécifique', 'End on a specific date')}</span>
                                                             </label>
                                                             {formData.recurrence?.finRecurrence === 'date' && (
                                                                 <div className="ml-7">
@@ -7454,7 +7454,7 @@ export function JobModal({
                                                                     }))}
                                                                     className="w-4 h-4 text-purple-600"
                                                                 />
-                                                                <span>Après un nombre d'occurrences</span>
+                                                                <span>{L("Après un nombre d'occurrences", 'After a number of occurrences')}</span>
                                                             </label>
                                                             {formData.recurrence?.finRecurrence === 'occurrences' && (
                                                                 <div className="ml-7 flex items-center gap-2">
@@ -7491,7 +7491,7 @@ export function JobModal({
                                                                     }))}
                                                                     className="w-4 h-4 text-purple-600"
                                                                 />
-                                                                <span>Jamais (récurrence infinie)</span>
+                                                                <span>{L('Jamais (récurrence infinie)', 'Never (infinite recurrence)')}</span>
                                                             </label>
                                                         </div>
                                                     </div>
@@ -7577,11 +7577,11 @@ export function JobModal({
                                                             <div className="space-y-2">
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" defaultChecked />
-                                                                    <span className="text-sm">Conserver les mêmes ressources</span>
+                                                                    <span className="text-sm">{L('Conserver les mêmes ressources', 'Keep the same resources')}</span>
                                                                 </label>
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" />
-                                                                    <span className="text-sm">Vérifier la disponibilité automatiquement</span>
+                                                                    <span className="text-sm">{L('Vérifier la disponibilité automatiquement', 'Check availability automatically')}</span>
                                                                 </label>
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" />
@@ -7595,15 +7595,15 @@ export function JobModal({
                                                             <div className="space-y-2">
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" defaultChecked />
-                                                                    <span className="text-sm">Création automatique de tâches</span>
+                                                                    <span className="text-sm">{L('Création automatique de tâches', 'Automatic task creation')}</span>
                                                                 </label>
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" />
-                                                                    <span className="text-sm">Rappels avant échéance</span>
+                                                                    <span className="text-sm">{L('Rappels avant échéance', 'Reminders before due date')}</span>
                                                                 </label>
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" />
-                                                                    <span className="text-sm">Rapport de récurrence mensuel</span>
+                                                                    <span className="text-sm">{L('Rapport de récurrence mensuel', 'Monthly recurrence report')}</span>
                                                                 </label>
                                                             </div>
                                                         </div>
@@ -7617,7 +7617,7 @@ export function JobModal({
                                     {!formData.recurrence?.active && (
                                         <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
                                             <div className="text-4xl mb-4">🔄</div>
-                                            <h3 className="text-lg font-medium text-gray-700 mb-2">Récurrence désactivée</h3>
+                                            <h3 className="text-lg font-medium text-gray-700 mb-2">{L('Récurrence désactivée', 'Recurrence disabled')}</h3>
                                             <p className="text-gray-600 mb-4">
                                                 Activez la récurrence pour programmer automatiquement cette tâche à des intervalles réguliers.
                                             </p>
@@ -7690,7 +7690,7 @@ export function JobModal({
                                                 >
                                                     <div className="text-2xl">🧠</div>
                                                     <div className="text-sm font-medium text-blue-800">Optimisation IA</div>
-                                                    <div className="text-xs text-blue-600 text-center">Assignation automatique basée sur les compétences</div>
+                                                    <div className="text-xs text-blue-600 text-center">{L('Assignation automatique basée sur les compétences', 'Automatic skill-based assignment')}</div>
                                                 </button>
 
                                                 <button
@@ -7699,8 +7699,8 @@ export function JobModal({
                                                     className="flex flex-col items-center gap-2 p-4 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors"
                                                 >
                                                     <div className="text-2xl">🔍</div>
-                                                    <div className="text-sm font-medium text-red-800">Résoudre Conflits</div>
-                                                    <div className="text-xs text-red-600 text-center">Détection et résolution automatique</div>
+                                                    <div className="text-sm font-medium text-red-800">{L('Résoudre Conflits', 'Resolve conflicts')}</div>
+                                                    <div className="text-xs text-red-600 text-center">{L('Détection et résolution automatique', 'Automatic detection and resolution')}</div>
                                                 </button>
 
                                                 <button
@@ -7712,8 +7712,8 @@ export function JobModal({
                                                     className="flex flex-col items-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors"
                                                 >
                                                     <div className="text-2xl">📅</div>
-                                                    <div className="text-sm font-medium text-green-800">Appliquer à Tout</div>
-                                                    <div className="text-xs text-green-600 text-center">Copier la sélection actuelle</div>
+                                                    <div className="text-sm font-medium text-green-800">{L('Appliquer à Tout', 'Apply to all')}</div>
+                                                    <div className="text-xs text-green-600 text-center">{L('Copier la sélection actuelle', 'Copy current selection')}</div>
                                                 </button>
                                             </div>
                                         </div>
@@ -7819,7 +7819,7 @@ export function JobModal({
 
                                                     {/* Actions rapides */}
                                                     <div className="mt-3 pt-3 border-t border-purple-200">
-                                                        <div className="text-sm font-medium text-purple-900 mb-2">📅 Sélection rapide par jour</div>
+                                                        <div className="text-sm font-medium text-purple-900 mb-2">📅 {L('Sélection rapide par jour', 'Quick selection by day')}</div>
                                                         <div className="flex gap-2 flex-wrap">
                                                             <button
                                                                 type="button"
@@ -7909,7 +7909,7 @@ export function JobModal({
                                                     <div className="text-2xl font-bold text-purple-600">
                                                         {Object.keys(formData.horairesPersonnalises || {}).length}
                                                     </div>
-                                                    <div className="text-sm text-purple-800">Jours Configurés</div>
+                                                    <div className="text-sm text-purple-800">{L('Jours Configurés', 'Configured days')}</div>
                                                 </div>
                                                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                                                     <div className="text-2xl font-bold text-orange-600">
