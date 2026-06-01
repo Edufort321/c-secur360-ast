@@ -4083,6 +4083,7 @@ export function JobModal({
                                                                                     <input
                                                                                         type="text"
                                                                                         value={etape.text || ''}
+                                                                                        onFocus={(e) => e.target.select()}
                                                                                         onChange={(e) => updateEtape(globalIndex, 'text', e.target.value)}
                                                                                         className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
                                                                                         placeholder={`Étape ${level > 0 ? `${level}.` : ''}${index + 1}`}
@@ -4146,7 +4147,7 @@ export function JobModal({
                                                                                                 title="Personne en charge de la tâche"
                                                                                             >
                                                                                                 <option value="">👤 Responsable…</option>
-                                                                                                {(personnel || []).map(p => (
+                                                                                                {(personnel || []).filter(p => (formData.personnel || []).includes(p.id)).map(p => (
                                                                                                     <option key={p.id} value={p.id}>
                                                                                                         {p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}
                                                                                                     </option>
@@ -4490,6 +4491,7 @@ export function JobModal({
                                                                             <input
                                                                                 type="text"
                                                                                 value={etape.text || ''}
+                                                                                onFocus={(e) => e.target.select()}
                                                                                 onChange={(e) => updateEtape(globalIndex, 'text', e.target.value)}
                                                                                 className="flex-1 p-2 border rounded focus:ring-2 focus:ring-blue-500 text-sm"
                                                                                 placeholder={`Étape ${level > 0 ? `${level}.` : ''}${index + 1}`}
@@ -4899,6 +4901,7 @@ export function JobModal({
                                                     <div key={etape.id} className="flex flex-wrap items-center gap-2 rounded border border-gray-100 p-1.5" style={{ marginLeft: `${(etape.level || 0) * 16}px` }}>
                                                         <input
                                                             value={etape.text || etape.name || ''}
+                                                            onFocus={(e) => e.target.select()}
                                                             onChange={(e) => updateEtape(idx, 'text', e.target.value)}
                                                             placeholder="Nom de la tâche"
                                                             className="flex-1 min-w-[140px] rounded border px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500"
@@ -4934,7 +4937,7 @@ export function JobModal({
                                                             title="Responsable de la tâche"
                                                         >
                                                             <option value="">👤 Responsable…</option>
-                                                            {(personnel || []).map(p => (
+                                                            {(personnel || []).filter(p => (formData.personnel || []).includes(p.id)).map(p => (
                                                                 <option key={p.id} value={p.id}>{p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || p.email || p.id}</option>
                                                             ))}
                                                         </select>
