@@ -260,6 +260,32 @@ export function JobModal({
         return Math.round((Math.max(0, (eh * 60 + em) - (sh * 60 + sm)) / 60) * 100) / 100;
     };
 
+    // R9 — Contrôle intelligent : la DATE DE FIN se recalcule automatiquement à partir de
+    //   heures totales planifiées ÷ (heures/jour × nombre de personnes), réparti sur jours ouvrables.
+    //   Réactif : changer heures totales, fenêtre horaire, nb de personnes, date de début ou
+    //   l'inclusion des fins de semaine réajuste la fin (ex. 40 h, 7:00–18:00, 2 pers. -> 2 jours).
+    useEffect(() => {
+        const total = parseFloat(formData.heuresPlanifiees);
+        if (!total || total <= 0 || !formData.dateDebut) return;
+        const hpd = Math.max(0.5, diffHours(formData.heureDebut, formData.heureFin)); // heures/jour (fenêtre)
+        const nb = Math.max(1, (Array.isArray(formData.personnel) && formData.personnel.length)
+            ? formData.personnel.length
+            : (parseInt(formData.nombrePersonnelRequis) || 1));
+        const days = Math.max(1, Math.ceil(total / (hpd * nb)));
+        const isWork = (dt) => formData.includeWeekendsInDuration || (dt.getDay() !== 0 && dt.getDay() !== 6);
+        let d = new Date(`${formData.dateDebut}T12:00:00`);
+        let guard = 0;
+        while (!isWork(d) && guard++ < 3650) d.setDate(d.getDate() + 1);
+        let counted = 1;
+        while (counted < days && guard++ < 3650) {
+            do { d.setDate(d.getDate() + 1); } while (!isWork(d) && guard++ < 3650);
+            counted++;
+        }
+        const newFin = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (newFin !== formData.dateFin) setFormData(prev => ({ ...prev, dateFin: newFin }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.heuresPlanifiees, formData.heureDebut, formData.heureFin, formData.personnel?.length, formData.nombrePersonnelRequis, formData.dateDebut, formData.includeWeekendsInDuration]);
+
     // Remplit automatiquement « heures planifiées » + « date de fin » à partir des étapes créées.
     // La date de fin répartit les heures sur les jours ouvrables (selon heures/jour et fins de semaine).
     const fillScheduleFromEtapes = () => {
