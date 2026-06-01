@@ -2556,6 +2556,21 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       } catch { /* indispo */ }
       const { data: hist } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });
       setHistory(hist || []);
+      // Pré-charge les notes (curseurs) depuis la DERNIÈRE évaluation enregistrée -> les curseurs
+      // restent au même point que la dernière fois (sinon ils repartaient à zéro).
+      const lastEval: any = (hist || [])[0];
+      const empScores = (employee as any).skill_scores;
+      if (empScores && typeof empScores === 'object' && !Array.isArray(empScores)) {
+        setScores(empScores as Record<string, number>);
+      } else if (lastEval?.scores && typeof lastEval.scores === 'object' && !Array.isArray(lastEval.scores)) {
+        setScores(lastEval.scores as Record<string, number>);
+      } else if (Array.isArray(employee.acquired_skills)) {
+        const acc: Record<string, number> = {};
+        employee.acquired_skills.forEach((s: any) => { if (s?.id) acc[s.id] = s.level ?? s.score ?? 0; });
+        setScores(acc);
+      }
+      // Reprend aussi le salaire de référence de la dernière éval (sinon curseur salaire bouge).
+      if (lastEval?.salary_after != null && !employee.current_salary) setCurrentSalary(String(lastEval.salary_after));
       // Trouver le poste de l'employé
       const { data: posteRow } = await supabase.from('planner_postes').select('id').eq('tenant_id', tenant).eq('name', employee.role || '').maybeSingle();
       if (posteRow?.id) {
