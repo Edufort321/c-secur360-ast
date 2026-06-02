@@ -2256,20 +2256,40 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       modification: 'user', consultation: 'user',
     };
     const existing = users.find(u => (u.email || '').toLowerCase() === (p.email || '').toLowerCase());
+    // Garde TOUJOURS le mot de passe stocké (base ou repli local). S'il n'y en a pas et que
+    // c'est un nouveau compte, on génère UNE proposition et on la fige aussitôt (repli local)
+    // pour qu'elle NE change PAS au prochain retour sur la page.
+    const stored = p.access_password || readLocalPwd(p.id);
+    let pwd = stored || '';
+    if (!pwd && !existing) { pwd = generatePassword(p.name); writeLocalPwd(p.id, pwd); }
     setForm({
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
       role:     niveauToRole[p.niveauAcces || ''] || 'user',
-      // Garde TOUJOURS le mot de passe stocké (base ou repli local) — ne régénère jamais
-      // sans demande explicite. Nouveau compte sans mot de passe stocké : génère une proposition.
-      password: p.access_password || readLocalPwd(p.id) || (existing ? '' : generatePassword(p.name)),
+      password: pwd,
     });
     setShowPwd(false); // masqué par défaut
   }
 
   function regenerate() {
-    setForm(f => ({ ...f, password: generatePassword(form.name || 'User') }));
+    const np = generatePassword(form.name || 'User');
+    setForm(f => ({ ...f, password: np }));
+    if (selected?.id) writeLocalPwd(selected.id, np); // fige la nouvelle valeur (stable au retour)
     setShowPwd(true); setCopied(false);
+  }
+
+  // Enregistre le mot de passe dans la fiche de l'employé (sans forcément (re)créer le compte d'accès).
+  async function savePwdToFiche() {
+    if (!selected?.id) return;
+    if (!form.password.trim()) { setNotice(tr('Saisissez ou générez un mot de passe.', 'Enter or generate a password.')); return; }
+    setBusy(true); setNotice(null);
+    try {
+      await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
+      writeLocalPwd(selected.id, form.password);
+      setSelected(s => s ? { ...s, access_password: form.password } : s);
+      setPersonnel(list => list.map(p => p.id === selected.id ? { ...p, access_password: form.password } : p));
+      setNotice(tr('Mot de passe enregistré dans la fiche ✓', 'Password saved to the record ✓'));
+    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
   function regenEmail() { setForm(f => ({ ...f, email: suggestEmail(f.name, tenant) })); }
 
@@ -2464,6 +2484,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {acc ? tr('Mettre à jour le mot de passe', 'Update password') : tr('Créer le compte', 'Create account')}
               </button>
               ); })()}
+              <button onClick={savePwdToFiche} disabled={busy} title={tr('Enregistrer le mot de passe dans la fiche (masqué dans la liste)', 'Save password to the record (masked in the list)')}
+                className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
+                💾 {tr('Enregistrer', 'Save')}
+              </button>
               <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📋 {tr('Tout', 'All')}</button>
             </div>
             {notice && <p className={`text-xs font-medium ${notice.includes('✓') ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>{notice}</p>}
