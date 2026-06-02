@@ -130,7 +130,19 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   async function saveCat() {
     if (!catForm) return;
     setNotice(null);
-    try { await saveCatalogue(tenant, catForm); setNotice(tr('Catalogue enregistré.', 'Catalogue saved.')); setCatForm(null); await load(); }
+    try {
+      const { stripped } = await saveCatalogue(tenant, catForm);
+      if (stripped && stripped.length) {
+        // Colonnes absentes en base : ces sections n'ont PAS ete sauvegardees -> il faut executer les migrations.
+        const labels: Record<string, string> = { materials: tr('matériel', 'materials'), fuel_tiers: tr('surcharge carburant', 'fuel surcharge'), approval_levels: tr("niveaux d'approbation", 'approval levels'), custom_rates: tr('barèmes additionnels', 'additional rates'), extras: tr('barèmes (km/subsistance/hébergement)', 'rates (km/per-diem/lodging)'), labels: tr('libellés', 'labels'), preferred: tr('préféré', 'preferred') };
+        const names = stripped.map(s => labels[s] || s).join(', ');
+        setNotice(tr(`Enregistré PARTIELLEMENT. Non sauvegardé : ${names}. La base n'a pas ces colonnes — exécutez les migrations 101 à 105 (Supabase) puis ré-enregistrez.`, `Saved PARTIALLY. Not saved: ${names}. The database is missing these columns — run migrations 101–105 (Supabase) then save again.`));
+      } else {
+        setNotice(tr('Catalogue enregistré.', 'Catalogue saved.'));
+        setCatForm(null);
+      }
+      await load();
+    }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
   // Dupliquer : ouvre le formulaire pré-rempli (sans id) pour juste mettre à jour puis enregistrer.
@@ -291,12 +303,39 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     {rateField('hebergement', tr('Hébergement ($/nuit)', 'Lodging ($/night)'), cf.extras?.hebergement || 0, v => setExtra('hebergement', v))}
                   </div>
                 </div>
+
+                {/* Barèmes additionnels libres — classés par catégorie (s'injectent dans la bonne section de soumission) */}
+                <div className="rounded-lg border border-dashed border-gray-200 p-2 dark:border-gray-700">
+                  <div className="mb-1 flex items-center justify-between">
+                    <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">➕ {tr('Barèmes additionnels (autres taux)', 'Additional rates (other)')}</div>
+                    <button type="button" onClick={() => addList('custom_rates', { label: '', value: 0, categorie: 'mo_chantier' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Barème', 'Rate')}</button>
+                  </div>
+                  {(cf.custom_rates || []).length > 0 && (
+                    <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
+                      <span className="min-w-[8rem] flex-1">{tr('Libellé', 'Label')}</span>
+                      <span className="w-40">{tr('Catégorie (section)', 'Category (section)')}</span>
+                      <span className="w-24 text-right">{tr('Taux ($)', 'Rate ($)')}</span>
+                      <span className="w-6" />
+                    </div>
+                  )}
+                  {(cf.custom_rates || []).map((rrow, i) => (
+                    <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                      <input value={rrow.label} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('custom_rates', i, { label: e.target.value })} placeholder={tr('Libellé', 'Label')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                      <select value={rrow.categorie || 'mo_chantier'} onChange={e => updList('custom_rates', i, { categorie: e.target.value })} className={`w-40 ${inputCls}`}>
+                        {CATS.map(c => <option key={c} value={c}>{CATEGORIE_LABELS[c]}</option>)}
+                      </select>
+                      {numInput(`cr_${i}`, rrow.value, v => updList('custom_rates', i, { value: v }), `w-24 text-right ${inputCls}`)}
+                      <button type="button" onClick={() => delList('custom_rates', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                    </div>
+                  ))}
+                  <p className="mt-1 text-[10px] text-gray-400">{tr('La colonne « Catégorie » EST l’export : chaque barème est routé vers cette section de la soumission. Aucun bouton séparé — le bouton « Enregistrer le catalogue » (bas du formulaire) sauvegarde tout (barèmes inclus).', 'The "Category" column IS the routing: each rate goes to that quote section. No separate button — "Save catalogue" (bottom of the form) persists everything, rates included.')}</p>
+                </div>
               </div>
 
               {/* Catalogue matériel (par catalogue) */}
               <div className="mt-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Catalogue matériel', 'Materials catalog')}</div>
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Catalogue matériel standardisé', 'Standardized materials catalog')}</div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {/* Marge globale appliquée à tous les articles (modifiable individuellement ensuite) */}
                     <span className="text-xs text-gray-500">{tr('Marge globale', 'Global margin')}</span>
@@ -305,6 +344,23 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                       onClick={() => { const g = numFR(globalMargin); setCatForm({ ...cf, materials: (cf.materials || []).map(m => ({ ...m, margin_pct: g, sale_price: Math.round((m.cost_price || 0) * (1 + g / 100) * 100) / 100 })) }); }}
                       className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
                       {tr('Appliquer à tous', 'Apply to all')}
+                    </button>
+                    <button type="button"
+                      title={tr('Genere un code = 4 lettres de la designation + 4 chiffres chrono. Les codes deja saisis (custom) sont conserves.', 'Generate code = 4 letters of name + 4-digit sequence. Existing (custom) codes are kept.')}
+                      onClick={() => {
+                        const used = new Set((cf.materials || []).map(m => (m.sku || '').trim()).filter(Boolean));
+                        let n = 0;
+                        const mats = (cf.materials || []).map(m => {
+                          if ((m.sku || '').trim()) return m; // conserver les codes custom deja saisis
+                          let code: string;
+                          do { n += 1; const letters = ((m.name || '').toUpperCase().replace(/[^A-Z]/g, '') + 'XXXX').slice(0, 4); code = letters + String(n).padStart(4, '0'); } while (used.has(code));
+                          used.add(code);
+                          return { ...m, sku: code };
+                        });
+                        setCatForm({ ...cf, materials: mats });
+                      }}
+                      className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      {tr('Codes auto', 'Auto codes')}
                     </button>
                     <button type="button" onClick={() => addList('materials', { sku: '', name: '', cost_price: 0, margin_pct: numFR(globalMargin) || undefined, sale_price: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Article', 'Item')}</button>
                   </div>
@@ -385,33 +441,6 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <button type="button" onClick={() => delList('approval_levels', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}
-              </div>
-
-              {/* Barèmes additionnels libres — classés par catégorie pour s'injecter dans la bonne section de soumission */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Barèmes additionnels', 'Additional rates')}</div>
-                  <button type="button" onClick={() => addList('custom_rates', { label: '', value: 0, categorie: 'mo_chantier' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Barème', 'Rate')}</button>
-                </div>
-                {(cf.custom_rates || []).length > 0 && (
-                  <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
-                    <span className="min-w-[8rem] flex-1">{tr('Libellé', 'Label')}</span>
-                    <span className="w-40">{tr('Catégorie (section soumission)', 'Category (quote section)')}</span>
-                    <span className="w-24 text-right">{tr('Taux ($)', 'Rate ($)')}</span>
-                    <span className="w-6" />
-                  </div>
-                )}
-                {(cf.custom_rates || []).map((rrow, i) => (
-                  <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-                    <input value={rrow.label} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('custom_rates', i, { label: e.target.value })} placeholder={tr('Libellé', 'Label')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
-                    <select value={rrow.categorie || 'mo_chantier'} onChange={e => updList('custom_rates', i, { categorie: e.target.value })} className={`w-40 ${inputCls}`}>
-                      {CATS.map(c => <option key={c} value={c}>{CATEGORIE_LABELS[c]}</option>)}
-                    </select>
-                    {numInput(`cr_${i}`, rrow.value, v => updList('custom_rates', i, { value: v }), `w-24 text-right ${inputCls}`)}
-                    <button type="button" onClick={() => delList('custom_rates', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
-                  </div>
-                ))}
-                <p className="mt-1 text-[10px] text-gray-400">{tr('Chaque barème apparaîtra dans la section correspondante lors de la création d\'une soumission.', 'Each rate will appear in its matching section when building a quote.')}</p>
               </div>
 
               <div className="mt-3 flex justify-end gap-2">

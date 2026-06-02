@@ -96,7 +96,7 @@ export async function getActiveCatalogue(tenant: string, _year?: number): Promis
 // (l'enregistrement de base fonctionne avant l'exécution des migrations).
 const CATALOGUE_OPTIONAL_COLS = ['preferred', 'extras', 'labels', 'materials', 'fuel_tiers', 'approval_levels', 'custom_rates'];
 
-export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<string> {
+export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<{ id: string; stripped: string[] }> {
   const payload: any = { ...c, tenant_id: tenant, updated_at: new Date().toISOString() };
   const write = async (p: any): Promise<{ id?: string; error: any }> => {
     if (c.id) { const { error } = await supabase.from('catalogue_taux').update(p).eq('id', c.id); return { id: c.id, error }; }
@@ -104,6 +104,7 @@ export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<s
     return { id: data?.id, error };
   };
   let id: string | undefined;
+  const stripped: string[] = []; // colonnes optionnelles retirees faute de migration (donnees NON sauvegardees)
   // Réessaie en retirant chaque colonne manquante signalée par PostgREST (PGRST204 / "column ... not found").
   for (let attempt = 0; attempt < CATALOGUE_OPTIONAL_COLS.length + 1; attempt++) {
     const res = await write(payload);
@@ -111,12 +112,12 @@ export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<s
     const msg = res.error.message || '';
     const m = msg.match(/'([a-z_]+)' column/i) || msg.match(/column ["']?([a-z_]+)["']?/i);
     const col = m?.[1];
-    if (col && CATALOGUE_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; continue; }
+    if (col && CATALOGUE_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; if (!stripped.includes(col)) stripped.push(col); continue; }
     throw res.error;
   }
   // Un seul préféré à la fois (ignore si la colonne n'existe pas encore).
   if (c.preferred && id) { try { await supabase.from('catalogue_taux').update({ preferred: false }).eq('tenant_id', tenant).neq('id', id); } catch { /* colonne preferred absente */ } }
-  return id as string;
+  return { id: id as string, stripped };
 }
 export async function deleteCatalogue(tenant: string, id: string): Promise<void> {
   const { error } = await supabase.from('catalogue_taux').delete().eq('tenant_id', tenant).eq('id', id);

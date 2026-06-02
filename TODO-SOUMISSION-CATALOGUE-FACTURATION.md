@@ -1,7 +1,24 @@
 # 💰 Soumission → Catalogue de taux → Planificateur → Facturation (chaîne devis/réel)
 
 > Capture des exigences client. Relie : module Projets/Soumissions, Catalogue de taux, Planificateur (pré-montage Gantt), et **convergence vers l'Admin Facturation**. Voir [[TODO-REFONTE-PLANIFICATEUR]] et [[TODO-FILE-ATTENTE]].
-> Dernière mise à jour : 2026-05-30.
+> Dernière mise à jour : 2026-06-01.
+
+## ✅ Avancement 2026-06-01 (refonte catalogue + consolidation soumission)
+**Fait :**
+- **Soumission déplacée dans Projets** (`/projets/soumissions`) ; **catalogue géré en Admin** (onglet « Catalogue de taux »). Doublons supprimés (ancien onglet Soumission projet + ancien `SoumissionTab` `labor_rates` + `SoumissionsModule` admin legacy). Composant partagé `components/soumissions/SoumissionsModule.tsx` (prop `allowed`).
+- **« Taux & catalogue » complet déplacé sous Admin** (`/admin/taux`) et retiré de Projets (redirect). Lien « Catalogue » des Soumissions ouvre l'onglet admin via `?tab=soumissions`.
+- **Multi-catalogues** : liste à l'ouverture, **dupliquer** (pré-rempli), **supprimer**, **préféré ★** ; **sélecteur de catalogue** dans la soumission (préféré 1er puis chrono).
+- **Catalogue auto-contenu** (« + Nouveau ») : MO bureau/chantier + **temps demi (1½) + double (2×)**, km, subsistance (5h/12h/15h/nuitée), hébergement, **catalogue matériel** (coûtant/**marge %**/vente bidirectionnels + marge globale « appliquer à tous »), **surcharge carburant** (prix de base + paliers prix→%), **niveaux d'approbation**, **barèmes additionnels libres classés par catégorie**.
+- **Libellés éditables** propagés à l'affichage de la soumission ; barème **regroupé par section** (MO/Voyagement/Subsistance/Hébergement).
+- **Champs numériques robustes** (`numInput`) : acceptent `.` ou `,`, décimales, 0 sélectionné au focus. `saveCatalogue` **résilient** (retire les colonnes manquantes avant l'exécution des migrations).
+- **Salaire d'évaluation → Taux horaire de Paie** ; **×OT / ×DT activables** par employé (Paie & avantages).
+- Coût de vente = catalogue (soumission/facture forfaitaire) ; coût réel = taux employé (feuilles de temps) — bien séparés.
+
+**Migrations à exécuter dans Supabase** (ordre) : `060` (employee_profiles) · `076` + `083` (éval) · `101` (preferred) · `102` (extras+labels) · `103` (materials/fuel/approvals) · `104` (OT/DT toggle) · `105` (custom_rates).
+
+**Reste (prochaine session) :**
+- [ ] **Auto-injection des taux du catalogue dans les bonnes sections de la soumission** : chaque taux (classé par catégorie) doit pré-remplir/alimenter la section correspondante des lignes de soumission (km→Voyagement, subsistance→Subsistance, matériel→Matériaux via sélecteur, barèmes additionnels→leur catégorie). Fondation posée (classement par catégorie) ; reste le câblage côté éditeur de lignes.
+
 
 ## 🧱 Structure d'une soumission (modèle de données)
 Une soumission est **hiérarchique** : `Soumission → Items → Catégories → Lignes`.
