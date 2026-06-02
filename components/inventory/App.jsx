@@ -95,6 +95,9 @@ import { getScanUrl } from './config/app';
 // Hooks
 import { useSupabaseSync } from './hooks/useSupabaseSync';
 
+// Catalogue materiel standardise (partage avec Soumissions/Admin)
+import { getCatalogues } from '@/lib/soumissions';
+
 // Styles
 
 // ============== COMPOSANTS UI RÉUTILISABLES ==============
@@ -1940,6 +1943,50 @@ function AppContent() {
 
     // Incrémenter les compteurs de racking pour chaque emplacement basé sur racking
     // Plus besoin de gérer les compteurs automatiques
+  };
+
+  // Importe les articles depuis le « Catalogue matériel standardisé » (module Soumissions/Admin).
+  // Reprend code (sku) / désignation / coûtant / prix de vente. Ignore les codes/noms déjà présents.
+  const importFromCatalogue = async () => {
+    try {
+      const tenant = (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean)[0] : '') || 'cerdia';
+      const cats = await getCatalogues(tenant);
+      const active = cats.find(c => c.preferred && c.status === 'active') || cats.find(c => c.status === 'active') || cats[0];
+      const mats = (active && active.materials) || [];
+      if (!mats.length) { window.alert('Aucun matériel dans le catalogue standardisé (créez-le dans Admin > Catalogue de taux).'); return; }
+      const existingCodes = new Set(items.map(i => (i.code || '').trim()).filter(Boolean));
+      const existingNames = new Set(items.map(i => (i.name || '').trim().toLowerCase()));
+      const stamp = Date.now();
+      const toAdd = [];
+      mats.forEach((m, idx) => {
+        const code = (m.sku || '').trim();
+        const name = (m.name || '').trim();
+        if (!name) return;
+        if (code && existingCodes.has(code)) return;
+        if (!code && existingNames.has(name.toLowerCase())) return;
+        toAdd.push({
+          id: `cat_${stamp}_${idx}`,
+          code: code || `CAT${String(idx + 1).padStart(4, '0')}`,
+          name,
+          category: 'Catalogue standardisé',
+          subcategory: '',
+          department: '',
+          location: '',
+          quantity: 0, minQuantity: 0, maxQuantity: 0,
+          unit: 'unité',
+          costPrice: Number(m.cost_price) || 0,
+          salePrice: Number(m.sale_price != null ? m.sale_price : m.cost_price) || 0,
+          createdAt: new Date().toISOString(),
+          createdBy: currentUser?.username || 'catalogue',
+        });
+      });
+      if (!toAdd.length) { window.alert('Tous les articles du catalogue sont déjà dans l’inventaire.'); return; }
+      setItems(prev => [...prev, ...toAdd]);
+      window.alert(`${toAdd.length} article(s) importé(s) du catalogue standardisé (quantité à 0 — ajustez le stock).`);
+    } catch (e) {
+      console.error('Import catalogue:', e);
+      window.alert('Import du catalogue impossible : ' + (e?.message || e));
+    }
   };
 
   const updateItem = (itemId, updates) => {
@@ -7232,6 +7279,7 @@ function AppContent() {
             setShowViewModal={setShowViewModal}
             getScanUrl={getScanUrl}
             setSearchTerm={setSearchTerm}
+            importFromCatalogue={importFromCatalogue}
           />}
           {view === 'alerts' && <AlertsView />}
           {view === 'scanner' && <ScannerView />}

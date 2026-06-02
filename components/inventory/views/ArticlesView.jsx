@@ -192,7 +192,8 @@ const ArticlesView = React.memo(({
   setSelectedItemForView,
   setShowViewModal,
   setSelectedItemForShare,
-  setShowShareModal
+  setShowShareModal,
+  importFromCatalogue
 }) => {
   // État pour les lignes expandables
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -294,6 +295,12 @@ const ArticlesView = React.memo(({
               </div>
             )}
           </div>
+          {importFromCatalogue && (
+            <Button variant="secondary" icon={Layers} onClick={importFromCatalogue} className="whitespace-nowrap" title="Importer les articles du catalogue matériel standardisé">
+              <span className="hidden sm:inline">Importer du catalogue</span>
+              <span className="sm:hidden">Catalogue</span>
+            </Button>
+          )}
           <Button variant="primary" icon={Plus} onClick={() => setShowItemForm(true)} className="whitespace-nowrap">
             <span className="hidden sm:inline">{t('articles.addArticle')}</span>
             <span className="sm:hidden">{t('actions.add')}</span>
