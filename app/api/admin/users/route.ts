@@ -4,6 +4,11 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { hashPassword } from '@/lib/auth';
 import { requireAdmin } from '@/lib/apiAuth';
 
+// Jamais de cache : la liste des comptes doit toujours refléter la base (sinon les nouveaux
+// comptes créés n'apparaissent pas après rechargement).
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET /api/admin/users?tenant=cerdia  → liste des profils du tenant
 // Tolérant : le schéma réel peut utiliser tenant_id (snake) ou tenantId (Prisma). On essaie les deux.
 export async function GET(req: NextRequest) {
@@ -67,7 +72,18 @@ export async function POST(req: NextRequest) {
       if (isMissingCol && col && USER_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; continue; }
       break; // erreur non liée à une colonne optionnelle (ex. doublon email)
     }
-    if (lastErr) throw lastErr;
+    if (lastErr) {
+      const code = (lastErr as any).code || ''; const msg = lastErr.message || '';
+      // Courriel déjà présent : on ne bloque pas — on met à jour le mot de passe et on réactive (idempotent).
+      if (code === '23505' || /duplicate key|already exists|unique constraint/i.test(msg)) {
+        const upd: any = { password: hash, is_active: true, updatedAt: new Date().toISOString() };
+        let ue = (await supabaseAdmin.from('users').update(upd).eq('email', payload.email)).error;
+        if (ue) { delete upd.updatedAt; ue = (await supabaseAdmin.from('users').update(upd).eq('email', payload.email)).error; }
+        if (ue) throw ue;
+        return NextResponse.json({ ok: true, updated: true });
+      }
+      throw lastErr;
+    }
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     const msg = e?.message || 'Erreur';

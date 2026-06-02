@@ -2237,7 +2237,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r2 = await supabase.from('planner_personnel').select('id, name, email, niveauAcces').eq('tenant_id', tenant).order('name');
       pers = r2.data;
     } else pers = r1.data;
-    const usersRes = await fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()).catch(() => ({ users: [] }));
+    const usersRes = await fetch(`/api/admin/users?tenant=${tenant}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ users: [] }));
     // Fusionne le repli local pour les fiches dont access_password n'est pas (ou plus) en base.
     const merged = (pers || []).filter((p: any) => p.name).map((p: any) => ({ ...p, access_password: p.access_password || readLocalPwd(p.id) }));
     setPersonnel(merged);
