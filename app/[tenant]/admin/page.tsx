@@ -2569,13 +2569,14 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
         const { data: { user } } = await supabase.auth.getUser();
         setEvaluatedBy(user?.email || '');
       } catch { /* indispo */ }
-      const { data: hist } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });
+      const { data: hist, error: histErr } = await supabase.from('employee_evaluations').select('*').eq('personnel_id', employee.id).order('evaluation_date', { ascending: false });
+      if (histErr) setNotice(tr('Historique indisponible — exécutez les migrations 076 et 083 dans Supabase.', 'History unavailable — run migrations 076 and 083 in Supabase.'));
       setHistory(hist || []);
       // Pré-charge les notes (curseurs) depuis la DERNIÈRE évaluation enregistrée -> les curseurs
       // restent au même point que la dernière fois (sinon ils repartaient à zéro).
       const lastEval: any = (hist || [])[0];
       const empScores = (employee as any).skill_scores;
-      if (empScores && typeof empScores === 'object' && !Array.isArray(empScores)) {
+      if (empScores && typeof empScores === 'object' && !Array.isArray(empScores) && Object.keys(empScores).length > 0) {
         setScores(empScores as Record<string, number>);
       } else if (lastEval?.scores && typeof lastEval.scores === 'object' && !Array.isArray(lastEval.scores)) {
         setScores(lastEval.scores as Record<string, number>);
