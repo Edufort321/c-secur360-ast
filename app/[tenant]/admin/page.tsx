@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
@@ -3764,6 +3764,53 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
     setRows(p => p.filter((_, j) => j !== i));
   }
 
+  // Export Excel (xlsx chargé à la demande pour ne pas alourdir le bundle admin).
+  async function exportXlsx() {
+    const XLSX = await import('xlsx');
+    const data = (rows.length ? rows : [empty()]).map(r => ({
+      'Nom': r.name, 'Type': r.type, 'No de serie': r.serial_number,
+      'Actif': r.is_active !== false ? 'Oui' : 'Non', 'Site/Dept': r.succursale, 'Photo URL': r.photo_url,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 18 }, { wch: 8 }, { wch: 24 }, { wch: 30 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Equipements');
+    XLSX.writeFile(wb, `Equipements_${tenant}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+  // Import Excel : fusionne dans la liste (mise à jour par n° série/nom, sinon ajout). « Enregistrer » persiste.
+  async function importXlsx(file: File) {
+    setNotice(null);
+    try {
+      const XLSX = await import('xlsx');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json: any[] = XLSX.utils.sheet_to_json(ws);
+      const pick = (o: any, keys: string[]) => { for (const k of keys) { const kk = Object.keys(o).find(x => x.trim().toLowerCase() === k); if (kk != null && o[kk] != null) return String(o[kk]).trim(); } return ''; };
+      const imported: Row[] = json.map(o => ({
+        name: pick(o, ['nom', 'name', 'équipement', 'equipement']),
+        type: pick(o, ['type']),
+        serial_number: pick(o, ['no de serie', 'n° série', 'no serie', 'serial', 'serial_number', 'numero de serie']),
+        is_active: !/^(non|no|false|0|inactif)/i.test(pick(o, ['actif', 'active', 'is_active']) || 'oui'),
+        succursale: pick(o, ['site/dept', 'site', 'succursale', 'site / dept']),
+        photo_url: pick(o, ['photo url', 'photo_url', 'photo']),
+      })).filter(r => r.name.trim());
+      if (!imported.length) { setNotice(tr('Aucune ligne valide (colonne « Nom » requise).', 'No valid rows (column "Nom" required).')); return; }
+      setRows(prev => {
+        const next = [...prev];
+        for (const imp of imported) {
+          const idx = next.findIndex(r =>
+            (imp.serial_number && r.serial_number && r.serial_number.toLowerCase() === imp.serial_number.toLowerCase()) ||
+            (r.name.toLowerCase() === imp.name.toLowerCase() && (r.serial_number || '').toLowerCase() === (imp.serial_number || '').toLowerCase()));
+          if (idx >= 0) next[idx] = { ...next[idx], ...imp };
+          else next.push(imp);
+        }
+        return next;
+      });
+      setNotice(tr(`${imported.length} équipement(s) importé(s) — cliquez « Enregistrer » pour sauvegarder.`, `${imported.length} item(s) imported — click "Save" to persist.`));
+    } catch (e: any) { setNotice('Erreur import : ' + (e?.message || e)); }
+  }
+
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-12 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
@@ -3773,7 +3820,12 @@ function EquipementsPlanner({ tenant, tr, inp }: { tenant: string; tr: (f: strin
           <h2 className="font-bold">{tr('Équipements du planificateur', 'Planner equipment')}</h2>
           <p className="text-xs text-gray-500">{tr('Instruments et outils assignables aux chantiers.', 'Instruments and tools assignable to job sites.')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={exportXlsx} title={tr('Exporter la liste en Excel', 'Export the list to Excel')} className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300"><Download size={15} /> {tr('Exporter', 'Export')}</button>
+          <label title={tr('Importer depuis un fichier Excel (colonnes : Nom, Type, No de serie, Actif, Site/Dept)', 'Import from an Excel file')} className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+            <Upload size={15} /> {tr('Importer Excel', 'Import Excel')}
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importXlsx(f); e.currentTarget.value = ''; }} />
+          </label>
           <button onClick={add} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"><Plus size={15} /> {tr('Ajouter', 'Add')}</button>
           <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} {tr('Enregistrer', 'Save')}</button>
         </div>
