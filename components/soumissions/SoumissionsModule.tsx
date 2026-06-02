@@ -504,6 +504,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             </div>
           </div>
 
+          {/* Liste deroulante alimentee par le catalogue materiel standardise (lignes Materiaux) */}
+          <datalist id="cat-materials">
+            {(cat?.materials || []).map((m, mi) => (
+              <option key={mi} value={m.name}>{m.sku ? `${m.sku} - ` : ''}{mny(m.sale_price ?? m.cost_price ?? 0)}</option>
+            ))}
+          </datalist>
+
           {items.map((it, i) => (
             <div key={i} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
               <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/40">
@@ -534,7 +541,22 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                             <tbody>
                               {lignes.map(({ l, li }) => (
                                 <tr key={li} className="border-t border-gray-50 dark:border-gray-700/50">
-                                  <td className="px-2 py-1"><input value={l.description || ''} onChange={e => updLigne(i, li, { description: e.target.value })} className={`w-full ${inputCls}`} /></td>
+                                  <td className="px-2 py-1">
+                                    <input
+                                      value={l.description || ''}
+                                      list={c === 'materiaux' ? 'cat-materials' : undefined}
+                                      placeholder={c === 'materiaux' ? tr('Choisir / saisir un matériel…', 'Pick / type a material…') : undefined}
+                                      onChange={e => {
+                                        const val = e.target.value;
+                                        if (c === 'materiaux') {
+                                          const mat = (cat?.materials || []).find(m => m.name === val);
+                                          if (mat) { const price = mat.sale_price ?? mat.cost_price ?? 0; updLigne(i, li, { description: val, unit_cost: price, unit: l.unit || tr('unité', 'unit'), quantity: l.quantity || 1 }); return; }
+                                        }
+                                        updLigne(i, li, { description: val });
+                                      }}
+                                      className={`w-full ${inputCls}`}
+                                    />
+                                  </td>
                                   {isMO(c) ? (
                                     <>
                                       <td className="px-2"><input type="number" value={l.tech} onChange={e => updLigne(i, li, { tech: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
