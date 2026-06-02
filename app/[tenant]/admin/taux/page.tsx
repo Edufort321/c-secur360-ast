@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Save, Loader2, ShieldCheck, ChevronUp, ChevronDown, Fuel, ExternalLink, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -30,6 +30,7 @@ type SurchargeTier = {
 
 export default function TauxPage() {
   const params = useParams();
+  const router = useRouter();
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
@@ -291,9 +292,9 @@ export default function TauxPage() {
       <div className="w-full px-4 py-6 lg:px-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href={`/${tenant}/admin`} className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400">
-              <ArrowLeft size={16} /> {tr('Retour à l\'administration', 'Back to admin')}
-            </Link>
+            <button type="button" onClick={() => router.back()} className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400">
+              <ArrowLeft size={16} /> {tr('Retour', 'Back')}
+            </button>
             <h1 className="text-2xl font-bold">{tr('Taux & catalogue', 'Rates & catalog')}</h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{tr('Configure ici tes taux, tarifs et catalogue matériel (tout est vide au départ).', 'Configure your rates, fees and materials catalog here (empty at start).')}</p>
           </div>

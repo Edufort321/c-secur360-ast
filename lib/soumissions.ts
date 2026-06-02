@@ -15,6 +15,7 @@ export const CATEGORIE_LABELS: Record<Categorie, string> = {
 export type CatalogueTaux = {
   id?: string; name: string; year: number; revision: number; status: 'active' | 'archived';
   taux_mo_bureau: number; taux_mo_chantier: number; mult_supp: number; mult_maj: number; notes?: string | null;
+  preferred?: boolean; // catalogue par défaut proposé en premier dans la soumission
 };
 export type SoumissionLigne = {
   id?: string; item_id?: string; categorie: Categorie; description?: string;
@@ -51,20 +52,42 @@ export const computeSoumissionTotal = (items: SoumissionItem[], cat?: CatalogueT
   r2((items || []).reduce((s, it) => s + computeItemTotal(it, cat), 0));
 
 // ── Catalogue ─────────────────────────────────────────────────────────────────
+// Un seul MODÈLE de catalogue, plusieurs enregistrés. Le « préféré » est proposé en
+// premier dans la soumission, suivi des autres par ordre chronologique (année/révision).
+const sortCatalogues = (list: CatalogueTaux[]): CatalogueTaux[] =>
+  [...list].sort((a, b) =>
+    (b.preferred ? 1 : 0) - (a.preferred ? 1 : 0)
+    || (Number(b.year) || 0) - (Number(a.year) || 0)
+    || (Number(b.revision) || 0) - (Number(a.revision) || 0));
+
 export async function getCatalogues(tenant: string): Promise<CatalogueTaux[]> {
-  const { data, error } = await supabase.from('catalogue_taux').select('*').eq('tenant_id', tenant).order('year', { ascending: false }).order('revision', { ascending: false });
+  const { data, error } = await supabase.from('catalogue_taux').select('*').eq('tenant_id', tenant);
   if (error) throw error;
-  return (data || []) as CatalogueTaux[];
+  return sortCatalogues((data || []) as CatalogueTaux[]);
 }
-export async function getActiveCatalogue(tenant: string, year: number): Promise<CatalogueTaux | null> {
-  const { data } = await supabase.from('catalogue_taux').select('*').eq('tenant_id', tenant).eq('year', year).eq('status', 'active').order('revision', { ascending: false }).limit(1);
-  return (data?.[0] as CatalogueTaux) || null;
+/** Catalogue par défaut : le « préféré » sinon le plus récent actif. */
+export async function getActiveCatalogue(tenant: string, _year?: number): Promise<CatalogueTaux | null> {
+  const all = (await getCatalogues(tenant)).filter(c => c.status === 'active');
+  return all.find(c => c.preferred) || all[0] || null;
 }
 export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<string> {
   const payload: any = { ...c, tenant_id: tenant, updated_at: new Date().toISOString() };
-  if (c.id) { const { error } = await supabase.from('catalogue_taux').update(payload).eq('id', c.id); if (error) throw error; return c.id; }
-  const { data, error } = await supabase.from('catalogue_taux').insert(payload).select('id').single();
-  if (error) throw error; return data.id;
+  let id = c.id;
+  if (id) { const { error } = await supabase.from('catalogue_taux').update(payload).eq('id', id); if (error) throw error; }
+  else { const { data, error } = await supabase.from('catalogue_taux').insert(payload).select('id').single(); if (error) throw error; id = data.id; }
+  // Un seul préféré à la fois.
+  if (c.preferred && id) { await supabase.from('catalogue_taux').update({ preferred: false }).eq('tenant_id', tenant).neq('id', id); }
+  return id as string;
+}
+export async function deleteCatalogue(tenant: string, id: string): Promise<void> {
+  const { error } = await supabase.from('catalogue_taux').delete().eq('tenant_id', tenant).eq('id', id);
+  if (error) throw error;
+}
+/** Marque un catalogue comme préféré (et retire le préféré des autres). */
+export async function setPreferredCatalogue(tenant: string, id: string): Promise<void> {
+  const { error } = await supabase.from('catalogue_taux').update({ preferred: true }).eq('tenant_id', tenant).eq('id', id);
+  if (error) throw error;
+  await supabase.from('catalogue_taux').update({ preferred: false }).eq('tenant_id', tenant).neq('id', id);
 }
 
 // ── Numérotation (spec client) : <PREFIX><AA><NNN><S|P> ─────────────────────

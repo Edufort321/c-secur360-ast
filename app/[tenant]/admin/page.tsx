@@ -337,7 +337,7 @@ export default function AdminPage() {
         {tab === 'soumissions' && (
           <div className="space-y-3">
             <a href={`/${tenant}/admin/taux`} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-              <Settings size={16} /> {tr('Taux & barèmes complets (MO, km, subsistance, matériel, carburant, approbations)', 'Full rates & catalog (labor, km, per-diem, materials, fuel, approvals)')}
+              <Settings size={16} /> {tr('Barèmes divers (km, subsistance, matériel, carburant, approbations)', 'Other rates (km, per-diem, materials, fuel, approvals)')}
             </a>
             <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />
           </div>

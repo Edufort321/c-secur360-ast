@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Copy, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
-  getCatalogues, saveCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
+  getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
   getSoumissionStats, CATEGORIE_LABELS, CATEGORIES_MO,
@@ -42,10 +42,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const isMO = (c: Categorie) => CATEGORIES_MO.includes(c);
   const blankLigne = (categorie: Categorie): SoumissionLigne => ({ categorie, description: '', tech: 1, reg: 0, supp: 0, maj: 0, quantity: 0, unit: '', unit_cost: 0, montant: 0 });
 
+  // Catalogue appliqué = celui sélectionné sur la soumission, sinon le préféré, sinon le 1er.
   const cat = useMemo(() => {
-    const ys = catalogues.filter(c => Number(c.year) === Number(hdr.year) && c.status === 'active');
-    return ys.sort((a, b) => (Number(b.revision) || 0) - (Number(a.revision) || 0))[0] || null;
-  }, [catalogues, hdr.year]);
+    return catalogues.find(c => c.id === hdr.catalogue_id)
+      || catalogues.find(c => c.preferred)
+      || catalogues[0] || null;
+  }, [catalogues, hdr.catalogue_id]);
 
   async function load() {
     setLoading(true); setMigMissing(false);
@@ -68,7 +70,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
   async function newSoumission() {
     const numero = await genSoumissionNumero(tenant, sitePrefix);
-    setHdr({ ...blankHdr(), numero, seller_id: sellerId }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
+    const def = catalogues.find(c => c.preferred) || catalogues[0] || null;
+    setHdr({ ...blankHdr(), numero, seller_id: sellerId, catalogue_id: def?.id || null }); setClientName(''); setItems([{ name: 'Item 1', total: 0, lignes: [] }]); setView('edit');
   }
   async function editSoumission(s: Soumission) {
     const full = await getSoumissionFull(tenant, s.id!);
@@ -116,6 +119,24 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     setNotice(null);
     try { await saveCatalogue(tenant, catForm); setNotice(tr('Catalogue enregistré.', 'Catalogue saved.')); setCatForm(null); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  // Dupliquer : ouvre le formulaire pré-rempli (sans id) pour juste mettre à jour puis enregistrer.
+  function duplicateCat(c: CatalogueTaux) {
+    setCatForm({ ...c, id: undefined, name: `${c.name} (copie)`, revision: (Number(c.revision) || 1) + 1, status: 'active', preferred: false });
+    setNotice(tr('Copie pré-remplie : ajustez puis Enregistrer.', 'Pre-filled copy: adjust then Save.'));
+  }
+  async function removeCat(c: CatalogueTaux) {
+    if (!c.id) return;
+    if (!window.confirm(tr(`Supprimer le catalogue « ${c.name} » ?`, `Delete catalogue "${c.name}"?`))) return;
+    setNotice(null);
+    try { await deleteCatalogue(tenant, c.id); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+  }
+  async function setPreferred(c: CatalogueTaux) {
+    if (!c.id) return;
+    setNotice(null);
+    try { await setPreferredCatalogue(tenant, c.id); await load(); }
+    catch (e: any) { setNotice(e?.message || tr('Erreur (migration 101 requise ?).', 'Error (migration 101 needed?).')); }
   }
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
@@ -193,6 +214,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 <label className="text-xs font-semibold text-gray-500">{tr('Statut', 'Status')}<select value={catForm.status} onChange={e => setCatForm({ ...catForm, status: e.target.value as any })} className={`mt-1 w-full ${inputCls}`}><option value="active">{tr('Actif', 'Active')}</option><option value="archived">{tr('Archivé', 'Archived')}</option></select></label>
                 <label className="text-xs font-semibold text-gray-500">{tr('Mult. supp.', 'OT mult.')}<input type="number" step="0.1" value={catForm.mult_supp} onChange={e => setCatForm({ ...catForm, mult_supp: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
                 <label className="text-xs font-semibold text-gray-500">{tr('Mult. maj. (défaut 2)', 'Premium mult.')}<input type="number" step="0.1" value={catForm.mult_maj} onChange={e => setCatForm({ ...catForm, mult_maj: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:col-span-3">
+                  <input type="checkbox" checked={!!catForm.preferred} onChange={e => setCatForm({ ...catForm, preferred: e.target.checked })} className="rounded" />
+                  {tr('Catalogue préféré (proposé par défaut dans les soumissions)', 'Preferred catalogue (default in quotes)')}
+                </label>
               </div>
               <div className="mt-3 flex justify-end gap-2">
                 <button onClick={() => setCatForm(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
@@ -212,8 +237,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <td className="px-4 py-2 text-right" data-label={tr('MO bureau', 'Office')}>{mny(c.taux_mo_bureau)}</td>
                     <td className="px-4 py-2 text-right" data-label={tr('MO chantier', 'Field')}>{mny(c.taux_mo_chantier)}</td>
                     <td className="px-4 py-2" data-label="Supp/Maj">×{c.mult_supp} / ×{c.mult_maj}</td>
-                    <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.status === 'active' ? tr('Actif', 'Active') : tr('Archivé', 'Archived')}</span></td>
-                    <td className="px-4 py-2 text-right">{canEdit && <button onClick={() => setCatForm(c)} className="text-xs text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>}</td>
+                    <td className="px-4 py-2" data-label={tr('Statut', 'Status')}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.status === 'active' ? tr('Actif', 'Active') : tr('Archivé', 'Archived')}</span>
+                      {c.preferred && <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700"><Star size={11} className="fill-blue-700" /> {tr('Préféré', 'Preferred')}</span>}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {canEdit && (
+                        <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+                          {!c.preferred && <button onClick={() => setPreferred(c)} title={tr('Définir comme préféré', 'Set as preferred')} className="inline-flex items-center gap-0.5 text-blue-600 hover:underline"><Star size={13} /> {tr('Préférer', 'Prefer')}</button>}
+                          <button onClick={() => setCatForm(c)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                          <button onClick={() => duplicateCat(c)} className="inline-flex items-center gap-0.5 text-indigo-600 hover:underline"><Copy size={13} /> {tr('Dupliquer', 'Duplicate')}</button>
+                          <button onClick={() => removeCat(c)} className="inline-flex items-center gap-0.5 text-red-500 hover:underline"><Trash2 size={13} /> {tr('Suppr.', 'Del.')}</button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {catalogues.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{tr('Aucun catalogue. Créez-en un pour tarifer les soumissions.', 'No catalogue yet.')}</td></tr>}
@@ -228,6 +265,14 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               <label className="text-xs font-semibold text-gray-500">{tr('N° soumission', 'Quote #')}<input value={hdr.numero} onChange={e => setHdr(h => ({ ...h, numero: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
               <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Client', 'Client')}<input value={clientName} onChange={e => setClientName(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
               <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={hdr.year || nowYear} onChange={e => setHdr(h => ({ ...h, year: Number(e.target.value) }))} className={`mt-1 w-full ${inputCls}`} /></label>
+              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Catalogue de taux', 'Rate catalogue')}
+                <select value={hdr.catalogue_id || ''} onChange={e => setHdr(h => ({ ...h, catalogue_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
+                  {catalogues.length === 0 && <option value="">{tr('— Aucun catalogue —', '— No catalogue —')}</option>}
+                  {catalogues.map(c => (
+                    <option key={c.id} value={c.id}>{c.preferred ? '★ ' : ''}{c.name} · {c.year} rév.{c.revision}</option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div className="mt-2 text-xs text-gray-500">
               {cat ? tr(`Tarification : ${cat.name} ${cat.year} rév.${cat.revision} (MO bureau ${mny(cat.taux_mo_bureau)}/h, chantier ${mny(cat.taux_mo_chantier)}/h)`, `Pricing: ${cat.name} ${cat.year}`) : <span className="text-amber-600">{tr('⚠ Aucun catalogue actif pour cette année — montants MO à 0. Créez un catalogue.', '⚠ No active catalogue for this year.')}</span>}
