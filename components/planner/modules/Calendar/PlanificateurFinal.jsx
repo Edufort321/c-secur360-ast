@@ -60,6 +60,40 @@ export function PlanificateurFinal({
     const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
     const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
     const [mineOnly, setMineOnly] = useState(true); // defaut: seulement les taches de l'utilisateur connecte (basculable)
+    const [controleOnly, setControleOnly] = useState(false); // R9 : n'afficher que les mandats a controler
+
+    // R9 — Contrôle intelligent : un mandat est « à contrôler » si l'effectif/les heures/les dates
+    // semblent incohérents, ou s'il est marqué manuellement (controleAFaire).
+    function jobNeedsControl(job) {
+        if (!job) return false;
+        if (job.controleAFaire) return true;
+        const nb = Array.isArray(job.personnel) ? job.personnel.length : 0;
+        const req = Number(job.nombrePersonnelRequis) || 0;
+        if (nb === 0) return true;                              // personne d'assigné
+        if (req > 0 && nb !== req) return true;                 // sous- ou sur-effectif
+        if (!job.dateDebut || !job.dateFin) return true;        // dates incomplètes
+        const heures = Number(job.heuresPlanifiees) || 0;
+        const aEtapes = Array.isArray(job.etapes) && job.etapes.length > 0;
+        if (heures === 0 && !aEtapes) return true;              // aucune heure / étape définie
+        return false;
+    }
+    function jobControlReasons(job) {
+        const fr = currentLanguage === 'fr';
+        const T = (f, e) => (fr ? f : e);
+        const r = [];
+        if (!job) return r;
+        if (job.controleAFaire) r.push(T('Marqué à contrôler', 'Flagged for control'));
+        const nb = Array.isArray(job.personnel) ? job.personnel.length : 0;
+        const req = Number(job.nombrePersonnelRequis) || 0;
+        if (nb === 0) r.push(T('Aucun personnel assigné', 'No staff assigned'));
+        else if (req > 0 && nb < req) r.push(T(`Sous-effectif (${nb}/${req})`, `Understaffed (${nb}/${req})`));
+        else if (req > 0 && nb > req) r.push(T(`Sur-effectif (${nb}/${req})`, `Overstaffed (${nb}/${req})`));
+        if (!job.dateDebut || !job.dateFin) r.push(T('Dates incomplètes', 'Incomplete dates'));
+        const heures = Number(job.heuresPlanifiees) || 0;
+        const aEtapes = Array.isArray(job.etapes) && job.etapes.length > 0;
+        if (heures === 0 && !aEtapes) r.push(T('Heures non définies', 'Hours not set'));
+        return r;
+    }
 
     // Effet pour ajuster numberOfDays selon la vue temporelle
     useEffect(() => {
@@ -687,6 +721,8 @@ export function PlanificateurFinal({
                         }}
                     >
                         {layer.map(({ job }, jobIndex) => {
+                            const aControler = jobNeedsControl(job);
+                            if (controleOnly && !aControler) return null; // R9 : filtre « à contrôler »
                             const timelineStyle = getJobTimelineStyle(job);
                             const colorStyle = getJobStyle(job);
                             const heureDebut = job.heureDebut || '08:00';
@@ -695,7 +731,7 @@ export function PlanificateurFinal({
                             return (
                                 <div
                                     key={`${job.id}-${layerIndex}-${jobIndex}`}
-                                    className={`absolute h-full rounded border border-white/40 shadow-sm px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/80 hover:z-20 flex flex-col justify-center overflow-hidden`}
+                                    className={`absolute h-full rounded border shadow-sm px-1 cursor-pointer hover:opacity-90 hover:ring-2 hover:ring-white/80 hover:z-20 flex flex-col justify-center overflow-hidden ${aControler ? 'border-amber-400 ring-1 ring-amber-400' : 'border-white/40'}`}
                                     style={{
                                         left: timelineStyle.left,
                                         width: timelineStyle.width,
@@ -707,8 +743,9 @@ export function PlanificateurFinal({
                                         e.stopPropagation();
                                         onJobClick(job);
                                     }}
-                                    title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}`}
+                                    title={`${job.numeroJob || `Job-${job.id}`}${job.client ? ` — ${job.client}` : ''}${aControler ? `\n⚠ ${jobControlReasons(job).join(' · ')}` : ''}`}
                                 >
+                                    {aControler && <span className="absolute right-0 top-0 text-[10px] leading-none" title={jobControlReasons(job).join(' · ')}>⚠️</span>}
                                     {/* Contenu de l'événement (tronqué si étroit) */}
                                     <div className="text-center leading-tight overflow-hidden">
                                         <div className="font-bold truncate">
@@ -1269,14 +1306,19 @@ export function PlanificateurFinal({
                             <div className="text-base font-bold capitalize text-gray-800 dark:text-gray-100">{monthCursor.toLocaleDateString(currentLanguage === 'fr' ? 'fr-CA' : 'en-CA', { month: 'long', year: 'numeric' })}</div>
                             <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">→</button>
                         </div>
-                        {utilisateurConnecte?.id && (
-                            <div className="flex justify-center">
+                        <div className="flex justify-center gap-2">
+                            {utilisateurConnecte?.id && (
                                 <button onClick={() => setMineOnly(v => !v)}
                                     className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                                     {mineOnly ? `👤 ${t('filter.myTasks') || 'Mes tâches'}` : (t('filter.allTasks') || 'Toutes les tâches')}
                                 </button>
-                            </div>
-                        )}
+                            )}
+                            <button onClick={() => setControleOnly(v => !v)}
+                                title={tr('Afficher seulement les mandats à contrôler', 'Show only jobs needing control')}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${controleOnly ? 'bg-amber-500 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                                ⚠️ {tr('À contrôler', 'To control')}
+                            </button>
+                        </div>
                         {(() => {
                             const y = monthCursor.getFullYear(), mo = monthCursor.getMonth();
                             const first = new Date(y, mo, 1);
@@ -1288,7 +1330,8 @@ export function PlanificateurFinal({
                                 const okB = filterBureau === 'tous' || job.bureau === filterBureau || job.succursaleEnCharge === filterBureau;
                                 const okS = !searchTerm || `${job.numeroJob || ''} ${job.nom || ''} ${job.client || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
                                 const okMine = !mineOnly || !myId || (Array.isArray(job.personnel) && job.personnel.map(String).includes(String(myId))) || String(job.responsable) === String(myId);
-                                return okB && okS && okMine;
+                                const okControle = !controleOnly || jobNeedsControl(job);
+                                return okB && okS && okMine && okControle;
                             };
                             const jobsOnDay = (ds) => jobs.filter(j => evMatch(j) && (j.dateDebut || '').split('T')[0] <= ds && ds <= ((j.dateFin || j.dateDebut || '').split('T')[0]));
                             const cells = [];
@@ -1314,7 +1357,7 @@ export function PlanificateurFinal({
                                                         <span className={`text-xs font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{d.getDate()}</span>
                                                         {evs.length > 0 && <span className="rounded-full bg-blue-600 px-1.5 text-[9px] font-bold leading-4 text-white">{evs.length}</span>}
                                                     </div>
-                                                    {evs.slice(0, 2).map(e => <div key={e.id} className="mt-0.5 truncate rounded bg-blue-100 dark:bg-blue-900/40 px-1 text-[9px] text-blue-800 dark:text-blue-200">{e.numeroJob || e.nom}</div>)}
+                                                    {evs.slice(0, 2).map(e => { const ctrl = jobNeedsControl(e); return <div key={e.id} title={ctrl ? jobControlReasons(e).join(' · ') : undefined} className={`mt-0.5 truncate rounded px-1 text-[9px] ${ctrl ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'}`}>{ctrl ? '⚠️ ' : ''}{e.numeroJob || e.nom}</div>; })}
                                                     {evs.length > 2 && <div className="text-[9px] text-gray-400 dark:text-gray-500">+{evs.length - 2}</div>}
                                                 </button>
                                             );
@@ -1327,6 +1370,7 @@ export function PlanificateurFinal({
                                         <div className="divide-y divide-gray-100 dark:divide-gray-700">
                                             {(selectedCalDay ? jobsOnDay(selectedCalDay) : []).map(e => (
                                                 <button key={e.id} onClick={() => setSelectedJob(e)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                                    {jobNeedsControl(e) && <span className="shrink-0" title={jobControlReasons(e).join(' · ')}>⚠️</span>}
                                                     <span className="shrink-0 text-xs font-bold text-blue-700 dark:text-blue-400">{e.numeroJob || `Job-${e.id}`}</span>
                                                     <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{e.client || e.nom || '—'}</span>
                                                     <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{e.heureDebut || '08:00'}–{e.heureFin || '17:00'}</span>
