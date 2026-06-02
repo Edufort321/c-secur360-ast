@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Anti-abus : limiteur IP en memoire (30 generations / 5 min / IP). Persiste sur globalThis
+// pour survivre au hot-reload en dev. Suffisant pour un endpoint sans cout externe.
+const QR_RL: Map<string, { count: number; reset: number }> = (globalThis as any).__qrRl || new Map();
+(globalThis as any).__qrRl = QR_RL;
+function qrRateOk(req: NextRequest): boolean {
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+  const now = Date.now();
+  const e = QR_RL.get(ip);
+  if (!e || now > e.reset) { QR_RL.set(ip, { count: 1, reset: now + 5 * 60 * 1000 }); return true; }
+  if (e.count >= 30) return false;
+  e.count++;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
+  if (!qrRateOk(request)) return NextResponse.json({ error: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
   try {
     const { url, clientName, size = 256 } = await request.json();
 
@@ -81,6 +96,7 @@ function generatePatternDots(border: number, size: number): string {
 
 // GET endpoint to generate QR for specific client
 export async function GET(request: NextRequest) {
+  if (!qrRateOk(request)) return NextResponse.json({ error: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
   const { searchParams } = new URL(request.url);
   const client = searchParams.get('client');
   const domain = searchParams.get('domain') || 'csecur360.com';

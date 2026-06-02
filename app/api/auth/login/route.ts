@@ -28,6 +28,17 @@ export async function POST(req: NextRequest) {
 
     const ok = await verifyPassword(password, user.password);
     if (!ok) {
+      // Securite (#4 brute-force) : incremente le compteur d'echecs ; verrouille le
+      // compte 15 min apres 5 tentatives infructueuses, puis remet le compteur a zero.
+      const MAX_ATTEMPTS = 5;
+      const LOCK_MS = 15 * 60 * 1000;
+      const attempts = (user.failed_attempts || 0) + 1;
+      const update: { failed_attempts: number; locked_until?: string } = { failed_attempts: attempts };
+      if (attempts >= MAX_ATTEMPTS) {
+        update.locked_until = new Date(Date.now() + LOCK_MS).toISOString();
+        update.failed_attempts = 0;
+      }
+      await supabase.from('users').update(update).eq('id', user.id);
       return NextResponse.json({ error: 'Identifiants invalides' }, { status: 401 });
     }
 

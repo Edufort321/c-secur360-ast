@@ -100,7 +100,22 @@ export default function TimesheetDetailPage() {
       ]);
       if (!active) return;
       setSheet(sh);
-      setEntries((ents || []).map((e: any) => ({ ...e, allowances: Array.isArray(e.allowances) ? e.allowances : [] })));
+      // Charge les lignes existantes + amorce les 7 jours de la période (lun→dim) manquants,
+      // pour que TOUS les jours apparaissent comme lignes. Les jours vides ne sont pas persistés.
+      const loaded = (ents || []).map((e: any) => ({ ...e, allowances: Array.isArray(e.allowances) ? e.allowances : [] }));
+      if (sh?.period_start && sh?.period_end) {
+        const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const days: string[] = [];
+        let d = new Date(sh.period_start + 'T00:00'); const end = new Date(sh.period_end + 'T00:00');
+        let guard = 0;
+        while (d <= end && guard < 31) { days.push(f(d)); d = new Date(d.getTime() + 86400000); guard++; }
+        const have = new Set(loaded.map((e: any) => e.date));
+        const seeded = days.filter(dt => !have.has(dt)).map(dt => newEntry(dt));
+        const all = [...loaded, ...seeded].sort((a: any, b: any) => String(a.date).localeCompare(String(b.date)));
+        setEntries(all);
+      } else {
+        setEntries(loaded);
+      }
       setRates(r || []);
       setProjects(p || []);
       setVehicles(v || []);
@@ -330,9 +345,16 @@ export default function TimesheetDetailPage() {
     setSaving(true); setNotice(null);
     try {
       await supabase.from('timesheet_entries').delete().eq('timesheet_id', sheetId);
-      if (entries.length) {
+      // Ne persiste que les lignes RENSEIGNÉES (on ignore les 7 jours amorcés restés vides),
+      // et on laisse la base générer l'id (les lignes neuves ont un id temporaire non-UUID).
+      const toInsert = entries.filter(e =>
+        Number(e.hrs_regular) || Number(e.hrs_overtime) || Number(e.hrs_premium) ||
+        Number(e.km) || Number(e.materiel) || (e.allowances && e.allowances.length) ||
+        e.project_id || (e.description && e.description.trim())
+      );
+      if (toInsert.length) {
         await supabase.from('timesheet_entries').insert(
-          entries.map((e, i) => ({ ...e, timesheet_id: sheetId, tenant_id: tenant, sort_order: i }))
+          toInsert.map((e, i) => { const { id, ...rest } = e as any; return { ...rest, timesheet_id: sheetId, tenant_id: tenant, sort_order: i }; })
         );
       }
       const update: any = {

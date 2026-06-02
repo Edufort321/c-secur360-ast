@@ -9,13 +9,35 @@ const nextConfig = {
     domains: ['localhost', 'mdl.ca', 'vercel.app'],
   },
   // Securite (#22) : en-tetes HTTP de securite sur toutes les reponses.
-  // CSP volontairement laissee en suivi (necessite un reglage fin par source : Supabase, Google Maps,
-  // OpenWeatherMap, Stripe, Twilio - une CSP trop stricte casserait l'app).
   async headers() {
+    // Content-Security-Policy reglee par source reelle de l'app.
+    // 'unsafe-eval' UNIQUEMENT en dev (le HMR de Next l'exige) ; retire en production.
+    // 'unsafe-inline' conserve (Next inline ses scripts d'hydratation + styled-jsx/Tailwind)
+    // tant qu'un mecanisme de nonce n'est pas en place.
+    const isDev = process.env.NODE_ENV !== 'production';
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+      "form-action 'self'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://maps.googleapis.com https://js.stripe.com https://calendly.com https://assets.calendly.com`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.googleapis.com https://api.stripe.com https://api.openweathermap.org",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://calendly.com",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "media-src 'self' blob: data:",
+      'upgrade-insecure-requests',
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
         headers: [
+          { key: 'Content-Security-Policy', value: csp },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
