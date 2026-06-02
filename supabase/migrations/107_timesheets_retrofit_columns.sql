@@ -33,6 +33,17 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS timesheets_tenant_employee_idx ON timesheets (tenant_id, employee_id, period_start DESC);
 
+-- RLS : l'ancienne table avait une policy restrictive (liée à auth.uid() de Supabase Auth), or
+-- l'app utilise une auth maison par cookie -> auth.uid() est NULL -> INSERT refusé (401 / RLS).
+-- On réinitialise sur la policy permissive de l'app (cohérent avec les autres tables ; durcissement = tâche #17).
+ALTER TABLE timesheets ENABLE ROW LEVEL SECURITY;
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = 'timesheets' LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON timesheets', r.policyname);
+  END LOOP;
+END $$;
+CREATE POLICY timesheets_access ON timesheets FOR ALL USING (true) WITH CHECK (true);
+
 -- S'assure que la table des lignes existe (référencée par le détail de feuille).
 CREATE TABLE IF NOT EXISTS timesheet_entries (
   id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
