@@ -207,6 +207,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             const cf = catForm;
             const setLabel = (k: string, v: string) => setCatForm({ ...cf, labels: { ...(cf.labels || {}), [k]: v } });
             const setExtra = (k: string, v: number) => setCatForm({ ...cf, extras: { ...(cf.extras || {}), [k]: v } });
+            // Listes auto-contenues (matériel, paliers carburant, niveaux d'approbation).
+            const addList = (key: string, blank: any) => setCatForm({ ...cf, [key]: [...(((cf as any)[key]) || []), blank] });
+            const updList = (key: string, i: number, patch: any) => setCatForm({ ...cf, [key]: (((cf as any)[key]) || []).map((x: any, j: number) => j === i ? { ...x, ...patch } : x) });
+            const delList = (key: string, i: number) => setCatForm({ ...cf, [key]: (((cf as any)[key]) || []).filter((_: any, j: number) => j !== i) });
             // Champ de taux : libellé ÉDITABLE (propagé) + valeur.
             // NB: fonction (pas un composant <RateField/>) pour éviter le remount/perte de focus à chaque frappe.
             const rateField = (lblKey: string, defLabel: string, value: number, onValue: (n: number) => void) => (
@@ -244,6 +248,61 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   {rateField('sub_h15', tr('Subsistance 15h ($)', 'Per diem 15h ($)'), cf.extras?.sub_h15 || 0, v => setExtra('sub_h15', v))}
                   {rateField('sub_nuitee', tr('Subsistance nuitée ($)', 'Per diem overnight ($)'), cf.extras?.sub_nuitee || 0, v => setExtra('sub_nuitee', v))}
                 </div>
+              </div>
+
+              {/* Catalogue matériel (par catalogue) */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Catalogue matériel', 'Materials catalog')}</div>
+                  <button type="button" onClick={() => addList('materials', { sku: '', name: '', cost_price: 0, sale_price: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Article', 'Item')}</button>
+                </div>
+                {(cf.materials || []).map((m, i) => (
+                  <div key={i} className="mt-1 flex flex-wrap items-center gap-1">
+                    <input value={m.sku || ''} onChange={e => updList('materials', i, { sku: e.target.value })} placeholder={tr('Code', 'Code')} className={`w-24 ${inputCls}`} />
+                    <input value={m.name} onChange={e => updList('materials', i, { name: e.target.value })} placeholder={tr('Désignation', 'Name')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                    <input type="number" step="0.01" value={m.cost_price || 0} onChange={e => updList('materials', i, { cost_price: Number(e.target.value) })} placeholder={tr('Coût', 'Cost')} className={`w-24 text-right ${inputCls}`} />
+                    <input type="number" step="0.01" value={m.sale_price || 0} onChange={e => updList('materials', i, { sale_price: Number(e.target.value) })} placeholder={tr('Vente', 'Sale')} className={`w-24 text-right ${inputCls}`} />
+                    <button type="button" onClick={() => delList('materials', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Surcharge carburant (paliers + prix courant) */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Surcharge carburant', 'Fuel surcharge')}</div>
+                  <button type="button" onClick={() => addList('fuel_tiers', { price_min: 0, price_max: null, surcharge_pct: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Palier', 'Tier')}</button>
+                </div>
+                <label className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">{tr('Prix courant ($/L)', 'Current price ($/L)')}
+                  <input type="number" step="0.01" value={cf.extras?.fuel_price || 0} onChange={e => setExtra('fuel_price', Number(e.target.value))} className={`w-24 text-right ${inputCls}`} />
+                </label>
+                {(cf.fuel_tiers || []).map((t, i) => (
+                  <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                    <span className="text-gray-400">{tr('De', 'From')}</span>
+                    <input type="number" step="0.01" value={t.price_min} onChange={e => updList('fuel_tiers', i, { price_min: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} />
+                    <span className="text-gray-400">{tr('à', 'to')}</span>
+                    <input type="number" step="0.01" value={t.price_max ?? ''} onChange={e => updList('fuel_tiers', i, { price_max: e.target.value === '' ? null : Number(e.target.value) })} placeholder={tr('illim.', 'unlim.')} className={`w-20 text-right ${inputCls}`} />
+                    <span className="text-gray-400">$/L →</span>
+                    <input type="number" step="0.1" value={t.surcharge_pct} onChange={e => updList('fuel_tiers', i, { surcharge_pct: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /><span className="text-gray-400">%</span>
+                    <button type="button" onClick={() => delList('fuel_tiers', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Niveaux d'approbation des soumissions */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr("Niveaux d'approbation", 'Approval levels')}</div>
+                  <button type="button" onClick={() => addList('approval_levels', { level_name: '', max_amount: 0, approver_label: '', color: 'blue' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Niveau', 'Level')}</button>
+                </div>
+                {(cf.approval_levels || []).map((a, i) => (
+                  <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                    <input value={a.level_name} onChange={e => updList('approval_levels', i, { level_name: e.target.value })} placeholder={tr('Niveau', 'Level')} className={`w-32 ${inputCls}`} />
+                    <input value={a.approver_label || ''} onChange={e => updList('approval_levels', i, { approver_label: e.target.value })} placeholder={tr('Approbateur', 'Approver')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                    <input type="number" step="500" value={a.max_amount} onChange={e => updList('approval_levels', i, { max_amount: Number(e.target.value) })} placeholder={tr('Max $', 'Max $')} className={`w-28 text-right ${inputCls}`} />
+                    <button type="button" onClick={() => delList('approval_levels', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-3 flex justify-end gap-2">

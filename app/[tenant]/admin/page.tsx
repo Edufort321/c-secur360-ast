@@ -334,14 +334,7 @@ export default function AdminPage() {
         {tab === 'logbook'    && <LogbookModule tenant={tenant} tr={tr} />}
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
-        {tab === 'soumissions' && (
-          <div className="space-y-3">
-            <a href={`/${tenant}/admin/taux`} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
-              <Settings size={16} /> {tr('Catalogue matériel · surcharge carburant · niveaux d\'approbation (partagés)', 'Materials catalog · fuel surcharge · approval levels (shared)')}
-            </a>
-            <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />
-          </div>
-        )}
+        {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
