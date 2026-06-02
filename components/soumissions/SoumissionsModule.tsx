@@ -248,20 +248,48 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 </label>
               </div>
 
-              <div className="mt-4">
-                <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Barème — libellés éditables', 'Rates — editable labels')}</div>
-                <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">{tr('Le changement de libellé sera ajusté sur tous les champs connexes (soumission, feuille de temps, facturation).', 'Renaming a label will be reflected on all related fields (quote, timesheet, invoice).')}</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  {rateField('mo_bureau', tr('Taux MO bureau ($/h)', 'Office labor ($/h)'), cf.taux_mo_bureau, v => setCatForm({ ...cf, taux_mo_bureau: v }))}
-                  {rateField('mo_chantier', tr('Taux MO chantier ($/h)', 'Field labor ($/h)'), cf.taux_mo_chantier, v => setCatForm({ ...cf, taux_mo_chantier: v }))}
-                  {rateField('km', tr('Kilométrage ($/km)', 'Mileage ($/km)'), cf.extras?.km || 0, v => setExtra('km', v))}
-                  {rateField('hebergement', tr('Hébergement ($/nuit)', 'Lodging ($/night)'), cf.extras?.hebergement || 0, v => setExtra('hebergement', v))}
-                  {rateField('sub_h5', tr('Subsistance 5h ($)', 'Per diem 5h ($)'), cf.extras?.sub_h5 || 0, v => setExtra('sub_h5', v))}
-                  {rateField('sub_h12', tr('Subsistance 12h ($)', 'Per diem 12h ($)'), cf.extras?.sub_h12 || 0, v => setExtra('sub_h12', v))}
-                  {rateField('sub_h15', tr('Subsistance 15h ($)', 'Per diem 15h ($)'), cf.extras?.sub_h15 || 0, v => setExtra('sub_h15', v))}
-                  {rateField('sub_nuitee', tr('Subsistance nuitée ($)', 'Per diem overnight ($)'), cf.extras?.sub_nuitee || 0, v => setExtra('sub_nuitee', v))}
-                  {rateField('temps_demi', tr('Temps demi 1½ ($/h)', 'Time-and-a-half ($/h)'), cf.extras?.temps_demi || 0, v => setExtra('temps_demi', v))}
-                  {rateField('temps_double', tr('Temps double 2× ($/h)', 'Double time ($/h)'), cf.extras?.temps_double || 0, v => setExtra('temps_double', v))}
+              <div className="mt-4 space-y-3">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Barème — libellés éditables', 'Rates — editable labels')}</div>
+                  <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">{tr('Chaque taux est classé par section et se retrouve dans la section correspondante de la soumission. Le changement de libellé est propagé.', 'Each rate is classified by section and appears in the matching quote section. Label changes propagate.')}</p>
+                </div>
+
+                {/* Main-d'œuvre (-> sections MO bureau / MO chantier) */}
+                <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">👷 {tr("Main-d'œuvre", 'Labor')}</div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {rateField('mo_bureau', tr('Taux MO bureau ($/h)', 'Office labor ($/h)'), cf.taux_mo_bureau, v => setCatForm({ ...cf, taux_mo_bureau: v }))}
+                    {rateField('mo_chantier', tr('Taux MO chantier ($/h)', 'Field labor ($/h)'), cf.taux_mo_chantier, v => setCatForm({ ...cf, taux_mo_chantier: v }))}
+                    {rateField('temps_demi', tr('Temps demi 1½ ($/h)', 'Time-and-a-half ($/h)'), cf.extras?.temps_demi || 0, v => setExtra('temps_demi', v))}
+                    {rateField('temps_double', tr('Temps double 2× ($/h)', 'Double time ($/h)'), cf.extras?.temps_double || 0, v => setExtra('temps_double', v))}
+                  </div>
+                </div>
+
+                {/* Voyagement (-> section Voyagement) */}
+                <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🚚 {tr('Voyagement', 'Travel')}</div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {rateField('km', tr('Kilométrage ($/km)', 'Mileage ($/km)'), cf.extras?.km || 0, v => setExtra('km', v))}
+                  </div>
+                </div>
+
+                {/* Subsistance (-> section Subsistance) */}
+                <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🍽️ {tr('Subsistance', 'Per diem')}</div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {rateField('sub_h5', tr('Subsistance 5h ($)', 'Per diem 5h ($)'), cf.extras?.sub_h5 || 0, v => setExtra('sub_h5', v))}
+                    {rateField('sub_h12', tr('Subsistance 12h ($)', 'Per diem 12h ($)'), cf.extras?.sub_h12 || 0, v => setExtra('sub_h12', v))}
+                    {rateField('sub_h15', tr('Subsistance 15h ($)', 'Per diem 15h ($)'), cf.extras?.sub_h15 || 0, v => setExtra('sub_h15', v))}
+                    {rateField('sub_nuitee', tr('Subsistance nuitée ($)', 'Per diem overnight ($)'), cf.extras?.sub_nuitee || 0, v => setExtra('sub_nuitee', v))}
+                  </div>
+                </div>
+
+                {/* Hébergement (-> section Hébergement) */}
+                <div className="rounded-lg border border-gray-100 p-2 dark:border-gray-700">
+                  <div className="mb-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">🏨 {tr('Hébergement', 'Lodging')}</div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {rateField('hebergement', tr('Hébergement ($/nuit)', 'Lodging ($/night)'), cf.extras?.hebergement || 0, v => setExtra('hebergement', v))}
+                  </div>
                 </div>
               </div>
 
