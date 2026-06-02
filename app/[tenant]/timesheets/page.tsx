@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 
 type Sheet = {
-  id: string; employee_name: string; employee_email: string;
+  id: string; employee_id?: string; employee_name: string; employee_email: string;
   period_start: string; period_end: string; status: string;
   total_regular: number; total_overtime: number; total_premium: number;
   total_km: number; total_km_personal: number; total_amount: number;
@@ -78,6 +78,9 @@ export default function TimesheetsPage() {
   const [employeeFilter, setEmployeeFilter] = useState('');
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
+  // Superviseur : bascule entre sa propre grille de semaines (« mine ») et la table d'équipe (« team »).
+  // Défaut « mine » pour que la grille des semaines ne disparaisse pas au chargement.
+  const [svView, setSvView] = useState<'mine' | 'team'>('mine');
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
@@ -162,9 +165,15 @@ export default function TimesheetsPage() {
   const allPeriods = useMemo(() => generatePeriods(yearFilter), [yearFilter]);
   const fullGrid = useMemo(() => {
     const byStart: Record<string, Sheet> = {};
-    sheets.forEach(s => { if (new Date(s.period_start).getFullYear() === yearFilter) byStart[s.period_start] = s; });
+    // Grille PERSONNELLE : seulement les feuilles de l'utilisateur courant (un superviseur charge toutes
+    // les feuilles de l'équipe, mais sa grille ne doit montrer que les siennes).
+    sheets.forEach(s => {
+      if (new Date(s.period_start).getFullYear() !== yearFilter) return;
+      if (currentUserId && s.employee_id && String(s.employee_id) !== String(currentUserId)) return;
+      byStart[s.period_start] = s;
+    });
     return allPeriods.map(p => ({ ...p, sheet: byStart[p.start] as Sheet | undefined }));
-  }, [allPeriods, sheets, yearFilter]);
+  }, [allPeriods, sheets, yearFilter, currentUserId]);
 
   async function createForPeriod(start: string, end: string) {
     try {
@@ -217,8 +226,8 @@ export default function TimesheetsPage() {
           </div>
         </div>
 
-        {/* Approbations en attente */}
-        {isSupervisor && pendingApproval.length > 0 && (
+        {/* Approbations en attente (vue Équipe) */}
+        {isSupervisor && svView === 'team' && pendingApproval.length > 0 && (
           <div className="mb-6 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50">
             <div className="border-b border-amber-200 px-4 py-3">
               <h2 className="flex items-center gap-2 font-bold text-amber-800">
@@ -279,11 +288,19 @@ export default function TimesheetsPage() {
           )}
         </div>
 
+        {/* Bascule superviseur : Mes feuilles (grille) / Équipe (table) */}
+        {isSupervisor && (
+          <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button onClick={() => setSvView('mine')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${svView === 'mine' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>👤 Mes feuilles</button>
+            <button onClick={() => setSvView('team')} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${svView === 'team' ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>👥 Équipe{pendingApproval.length > 0 ? ` (${pendingApproval.length})` : ''}</button>
+          </div>
+        )}
+
         {/* Liste */}
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16"><Loader2 className="animate-spin text-slate-400" /></div>
-        ) : isSupervisor ? (
-          /* Supervisor : table plate de toutes les feuilles filtrées */
+        ) : (isSupervisor && svView === 'team') ? (
+          /* Supervisor (vue Équipe) : table plate de toutes les feuilles filtrées */
           filtered.length === 0 ? (
             <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
               <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Clock size={26} /></div>
