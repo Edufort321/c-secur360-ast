@@ -411,6 +411,17 @@ export default function ManagerDashboard({
           if (x.incident_date) { const k = idxOf(x.incident_date); if (k >= 0) months[k].incidents++; }
         });
 
+        // Heures travaillées réelles depuis les feuilles de temps du tenant.
+        let hoursWorked = 0;
+        try {
+          const { data: sheets } = await supabase.from('timesheets').select('id').eq('tenant_id', tid);
+          const ids = (sheets || []).map((s: any) => s.id).filter(Boolean);
+          if (ids.length) {
+            const { data: ents } = await supabase.from('timesheet_entries').select('hrs_regular, hrs_overtime, hrs_premium').in('timesheet_id', ids);
+            (ents || []).forEach((e: any) => { hoursWorked += (Number(e.hrs_regular) || 0) + (Number(e.hrs_overtime) || 0) + (Number(e.hrs_premium) || 0); });
+          }
+        } catch { /* module heures indisponible */ }
+
         const safetyRate = incidents > 0 ? Math.max(90, 100 - incidents) : 100;
         const incidentsByType = [
           { type: currentLanguage === 'fr' ? 'Accidents' : 'Accidents', count: incidents, color: '#ef4444' },
@@ -429,9 +440,9 @@ export default function ManagerDashboard({
           incidentsTrend: 0,
           incidentsByType: incidentsByType.length ? incidentsByType : prev.incidentsByType,
           safetyRate,
-          // Pas de source fiable (module heures/photos non branche) -> 0 plutot que des valeurs fictives.
-          hoursWorked: 0,
-          safeHours: 0,
+          // Heures réelles depuis les feuilles de temps ; « heures sécuritaires » = heures travaillées (aucune perte sur incident ici).
+          hoursWorked: Math.round(hoursWorked),
+          safeHours: Math.round(hoursWorked),
           photosCount: 0,
           photosThisWeek: 0,
           monthlyData: months.map(m => ({ month: m.label, ast: m.ast, incidents: m.incidents, safety: m.incidents > 0 ? Math.max(90, 100 - m.incidents) : 100 })),

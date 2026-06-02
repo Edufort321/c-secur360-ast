@@ -66,7 +66,7 @@ export default function ModulesPage() {
         const a = { total: 0, draft: 0, active: 0, completed: 0, cancelled: 0 } as any;
         (asts || []).forEach((x: any) => { a.total += 1; const s = x.data?.status || 'draft'; if (a[s] !== undefined) a[s] += 1; });
 
-        const { data: permits } = await supabase.from('confined_space_permits').select('status');
+        const { data: permits } = await supabase.from('confined_space_permits').select('status').eq('tenant_id', tenant);
         const pm = { total: 0, active: 0 };
         (permits || []).forEach((x: any) => { pm.total += 1; if (x.status === 'active') pm.active += 1; });
 
@@ -84,7 +84,8 @@ export default function ModulesPage() {
         (assigns || []).forEach((x: any) => { if (x.status === 'in_progress') pl.en_cours += 1; if (x.status === 'planned') pl.planifies += 1; });
 
         const { count: ic } = await supabase.from('inv_items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
-        const { count: uc } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
+        // « Utilisateurs » = effectif réel (roster planner_personnel), pas seulement les comptes d'accès (table users).
+        const { count: uc } = await supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
 
         const { data: todos } = await supabase.from('todo_tasks').select('status').eq('tenant_id', tenant);
         const td = { total: 0, todo: 0, in_progress: 0, done: 0 };
