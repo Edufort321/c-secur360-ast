@@ -2222,6 +2222,12 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
   const [copied, setCopied]       = useState(false);
   const [showPwdFor, setShowPwdFor] = useState<string | null>(null); // ligne dont le mot de passe est révélé
 
+  // Repli local : si la colonne access_password (migration 079) n'existe pas encore, on conserve
+  // le mot de passe d'accès localement pour qu'il reste affiché dans la fiche et NE soit PAS régénéré.
+  const pwdKey = (id: string) => `acc_pwd_${tenant}_${id}`;
+  const readLocalPwd = (id?: string) => { if (!id || typeof window === 'undefined') return ''; try { return window.localStorage.getItem(pwdKey(id)) || ''; } catch { return ''; } };
+  const writeLocalPwd = (id?: string, pwd?: string) => { if (!id || typeof window === 'undefined') return; try { if (pwd) window.localStorage.setItem(pwdKey(id), pwd); } catch { /* quota */ } };
+
   async function load() {
     setLoading(true);
     // Tente avec access_password (migration 079) ; repli sans si la colonne n'existe pas
@@ -2232,7 +2238,9 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       pers = r2.data;
     } else pers = r1.data;
     const usersRes = await fetch(`/api/admin/users?tenant=${tenant}`).then(r => r.json()).catch(() => ({ users: [] }));
-    setPersonnel((pers || []).filter((p: any) => p.name));
+    // Fusionne le repli local pour les fiches dont access_password n'est pas (ou plus) en base.
+    const merged = (pers || []).filter((p: any) => p.name).map((p: any) => ({ ...p, access_password: p.access_password || readLocalPwd(p.id) }));
+    setPersonnel(merged);
     setUsers(usersRes?.users || []);
     setLoading(false);
   }
@@ -2252,9 +2260,9 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       email:    p.email || suggestEmail(p.name, tenant),
       name:     p.name,
       role:     niveauToRole[p.niveauAcces || ''] || 'user',
-      // Compte EXISTANT : ne jamais régénérer (garde le mot de passe stocké, sinon vide
-      // pour ne pas écraser l'accès). Nouveau compte seulement : génère une proposition.
-      password: p.access_password || (existing ? '' : generatePassword(p.name)),
+      // Garde TOUJOURS le mot de passe stocké (base ou repli local) — ne régénère jamais
+      // sans demande explicite. Nouveau compte sans mot de passe stocké : génère une proposition.
+      password: p.access_password || readLocalPwd(p.id) || (existing ? '' : generatePassword(p.name)),
     });
     setShowPwd(false); // masqué par défaut
   }
@@ -2281,9 +2289,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, ...form }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      // Conserve le mot de passe pour la gestion admin (best-effort, ignoré si colonne 079 absente)
-      if (selected?.id) await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
-      setNotice(tr('Compte créé ✓ — copiez les identifiants ci-dessus', 'Account created ✓ — copy credentials above'));
+      // Conserve le mot de passe dans la fiche (base si colonne 079 présente, + repli local garanti).
+      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
+      setSelected(s => s ? { ...s, access_password: form.password } : s);
+      setNotice(tr('Compte créé ✓ — mot de passe enregistré dans la fiche. Copiez les identifiants.', 'Account created ✓ — password saved to the record. Copy the credentials.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
@@ -2298,8 +2307,9 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      if (selected?.id) await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id);
-      setNotice(tr('Mot de passe mis à jour ✓', 'Password updated ✓'));
+      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
+      setSelected(s => s ? { ...s, access_password: form.password } : s);
+      setNotice(tr('Mot de passe mis à jour ✓ — enregistré dans la fiche.', 'Password updated ✓ — saved to the record.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
@@ -2328,8 +2338,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: pwdEditFor.id, password: pwdEditValue }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      // Conserve le nouveau mot de passe pour la gestion admin (best-effort)
+      // Conserve le nouveau mot de passe dans la fiche (base + repli local par id du personnel).
       await supabase.from('planner_personnel').update({ access_password: pwdEditValue }).eq('tenant_id', tenant).ilike('email', pwdEditFor.email);
+      const matchPers = personnel.find(p => (p.email || '').toLowerCase() === (pwdEditFor.email || '').toLowerCase());
+      if (matchPers?.id) writeLocalPwd(matchPers.id, pwdEditValue);
       setNotice(tr(`Mot de passe mis à jour pour ${pwdEditFor.email} ✓`, `Password updated for ${pwdEditFor.email} ✓`));
       // Copie auto dans le presse-papier
       navigator.clipboard.writeText(pwdEditValue).catch(() => {});
