@@ -260,7 +260,8 @@ export default function TimesheetsPage() {
           {[
             { k: 'Heures totales',        v: `${ytd.hrs.toFixed(1)} h`, c: 'text-slate-900' },
             { k: 'Km remboursables',      v: `${ytd.km.toFixed(0)} km`, c: 'text-emerald-600' },
-            { k: 'Montant total',          v: money(ytd.amt),            c: 'text-violet-600' },
+            // Montant $ visible seulement pour superviseur/admin ; l'employé ne voit pas de $.
+            ...(isSupervisor ? [{ k: 'Montant total', v: money(ytd.amt), c: 'text-violet-600' }] : []),
             { k: 'En attente approbation', v: String(ytd.pending),       c: 'text-amber-600' },
           ].map(s => (
             <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -368,7 +369,7 @@ export default function TimesheetsPage() {
                   <th className="px-4 py-3">Dates</th>
                   <th className="px-3 py-3">Heures</th>
                   <th className="px-3 py-3 hidden sm:table-cell">Km pers.</th>
-                  <th className="px-3 py-3 hidden sm:table-cell">Montant</th>
+                  {isSupervisor && <th className="px-3 py-3 hidden sm:table-cell">Montant</th>}
                   <th className="px-4 py-3">Statut</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -396,7 +397,7 @@ export default function TimesheetsPage() {
                         </td>
                         <td className="px-3 py-2.5 font-medium text-xs">{sheet ? `${hrs.toFixed(1)} h` : '—'}</td>
                         <td className="px-3 py-2.5 text-slate-600 text-xs hidden sm:table-cell">{sheet ? `${Number(sheet.total_km_personal).toFixed(0)} km` : '—'}</td>
-                        <td className="px-3 py-2.5 font-semibold text-violet-700 text-xs hidden sm:table-cell">{sheet ? money(Number(sheet.total_amount)) : '—'}</td>
+                        {isSupervisor && <td className="px-3 py-2.5 font-semibold text-violet-700 text-xs hidden sm:table-cell">{sheet ? money(Number(sheet.total_amount)) : '—'}</td>}
                         <td className="px-4 py-2.5">
                           {st && Icon ? (
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>

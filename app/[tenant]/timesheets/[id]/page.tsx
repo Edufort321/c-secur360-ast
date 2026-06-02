@@ -60,6 +60,8 @@ export default function TimesheetDetailPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [notice, setNotice]     = useState<string | null>(null);
+  // L'employé ne voit AUCUN montant $ ; seul un superviseur/admin (qui fait la paie) les voit.
+  const [canSeeMoney, setCanSeeMoney] = useState(false);
 
   // Payroll profile + allowances + bonuses
   const [profile, setProfile]         = useState<EmployeeProfile | null>(null);
@@ -78,6 +80,12 @@ export default function TimesheetDetailPage() {
   const [projSearch, setProjSearch] = useState<Record<string, string>>({});
   const [projOpen, setProjOpen]     = useState<Record<string, boolean>>({});
   const projRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
+      if (user) setCanSeeMoney(user.role === 'client_admin' || user.role === 'super_admin');
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -378,7 +386,7 @@ export default function TimesheetDetailPage() {
             <p className="text-sm text-slate-500">
               {sheet?.period_start && `${new Date(sheet.period_start + 'T00:00').toLocaleDateString('fr-CA', { weekday:'long', month:'long', day:'numeric' })} → ${new Date(sheet!.period_end + 'T00:00').toLocaleDateString('fr-CA', { weekday:'long', month:'long', day:'numeric', year:'numeric' })}`}
             </p>
-            {profile && Number(profile.hourly_rate) > 0 && (
+            {canSeeMoney && profile && Number(profile.hourly_rate) > 0 && (
               <p className="mt-0.5 text-xs text-violet-600">{money(Number(profile.hourly_rate))}/h · OT ×{profile.ot_multiplier} · DT ×{profile.dt_multiplier}</p>
             )}
           </div>
@@ -429,7 +437,7 @@ export default function TimesheetDetailPage() {
                       <>
                         <span>Odo fin : <strong>{Number(logEntry.odometer_end).toLocaleString('fr-CA')} km</strong></span>
                         <span>Km pers. : <strong className="text-red-600">{Number(logEntry.km_personal).toFixed(0)} km</strong></span>
-                        <span>Déduction : <strong className="text-red-600">-{money(vehicleDeduction)}</strong></span>
+                        {canSeeMoney && <span>Déduction : <strong className="text-red-600">-{money(vehicleDeduction)}</strong></span>}
                       </>
                     ) : (
                       <button onClick={() => setShowOdoEnd(!showOdoEnd)}
@@ -487,7 +495,7 @@ export default function TimesheetDetailPage() {
             { k: 'Supp',  v: `${totals.hrs_overtime.toFixed(1)} h`,c: 'text-amber-600' },
             { k: 'Maj',   v: `${totals.hrs_premium.toFixed(1)} h`, c: 'text-orange-600' },
             { k: 'Km pers.', v: `${totals.km_personal.toFixed(0)}`,c: 'text-emerald-600' },
-            { k: 'Brut',  v: money(totals.amount),                  c: 'text-violet-700' },
+            ...(canSeeMoney ? [{ k: 'Brut', v: money(totals.amount), c: 'text-violet-700' }] : []),
           ].map(s => (
             <div key={s.k} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm text-center">
               <div className={`text-lg font-bold ${s.c}`}>{s.v}</div>
@@ -602,7 +610,7 @@ export default function TimesheetDetailPage() {
                       className="inp w-24 text-right" />
                   </label>
                   <div className="ml-auto flex items-end gap-2">
-                    <span className="text-base font-bold text-slate-700">{money(entryCost(e))}</span>
+                    {canSeeMoney && <span className="text-base font-bold text-slate-700">{money(entryCost(e))}</span>}
                     {!isReadOnly && (
                       <button onClick={() => setEntries(p => p.filter(x => x.id !== e.id))}
                         className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>
@@ -625,7 +633,7 @@ export default function TimesheetDetailPage() {
                               onChange={ev => toggleAllowance(e.id, a, ev.target.checked)}
                               className="accent-emerald-600" />
                             {a.name}
-                            <span className="font-bold">{money(a.amount)}</span>
+                            {canSeeMoney && <span className="font-bold">{money(a.amount)}</span>}
                           </label>
                         );
                       })}
@@ -639,7 +647,7 @@ export default function TimesheetDetailPage() {
                     {dayHrs.toFixed(1)}h ce jour
                     {hourBonuses.filter(b => dayHrs >= b.trigger_hours).map(b => (
                       <span key={b.id} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 font-semibold">
-                        <Timer size={10} className="inline mr-0.5" />{b.name} +{money(b.bonus_amount)}
+                        <Timer size={10} className="inline mr-0.5" />{b.name}{canSeeMoney ? ` +${money(b.bonus_amount)}` : ''}
                       </span>
                     ))}
                   </div>
@@ -675,8 +683,8 @@ export default function TimesheetDetailPage() {
           </div>
         )}
 
-        {/* Footer total */}
-        {(entries.length > 0 || vehicleDeduction > 0 || totalBonuses > 0 || commissions > 0) && (
+        {/* Footer total — $ visibles seulement pour superviseur/admin (paie). L'employé ne voit aucun montant. */}
+        {canSeeMoney && (entries.length > 0 || vehicleDeduction > 0 || totalBonuses > 0 || commissions > 0) && (
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
               <div className="flex flex-wrap gap-4 text-sm text-slate-500">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/apiAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,7 +8,8 @@ const supabase = createClient(
 );
 
 // GET - Aperçu du prochain ajustement de prix
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     // Vérifier les prix actuels
     const { data: currentPricing, error: currentError } = await supabase
@@ -56,6 +58,7 @@ export async function GET() {
 
 // POST - Appliquer l'ajustement automatique ou personnalisé
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const { 
       action, 
@@ -239,6 +242,7 @@ export async function POST(request: NextRequest) {
 
 // PUT - Modifier la configuration d'ajustement automatique
 export async function PUT(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const { 
       autoAdjustmentEnabled,

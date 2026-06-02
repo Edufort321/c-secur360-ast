@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateTwilioConfig } from '@/lib/twilio-safe';
 import { auditHelpers } from '@/lib/audit';
+import { requireAdmin } from '@/lib/apiAuth';
 
 /**
  * API pour gérer la configuration Twilio via l'interface admin
  */
 
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const config = validateTwilioConfig();
     
@@ -45,6 +47,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const body = await request.json();
     const { accountSid, authToken, phoneNumber, messagingServiceSid } = body;

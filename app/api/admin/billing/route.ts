@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BillingAutomation } from '../../../../lib/billing-automation';
+import { requireAdmin } from '@/lib/apiAuth';
 
 // GET - Obtenir les données de facturation
 export async function GET(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
