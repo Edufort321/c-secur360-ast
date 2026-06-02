@@ -56,10 +56,10 @@ export function PlanificateurFinal({
     const [conflictJob, setConflictJob] = useState(null); // Job en conflit ouvert en parallèle
     const [isMobile, setIsMobile] = useState(false);
     // Vue calendrier mensuelle conventionnelle (grille du mois + détail du jour cliqué)
-    const [calendarMode, setCalendarMode] = useState('grid'); // 'grid' (ressources) | 'month' (calendrier classique)
+    const [calendarMode, setCalendarMode] = useState('month'); // defaut: vue Mois (acces aux autres modes via les boutons) | 'grid' (ressources)
     const [monthCursor, setMonthCursor] = useState(new Date()); // mois affiché en vue 'month'
     const [selectedCalDay, setSelectedCalDay] = useState(null); // 'YYYY-MM-DD' du jour cliqué
-    const [mineOnly, setMineOnly] = useState(false); // n'afficher que les taches de l'utilisateur connecte (defaut mobile)
+    const [mineOnly, setMineOnly] = useState(true); // defaut: seulement les taches de l'utilisateur connecte (basculable)
 
     // Effet pour ajuster numberOfDays selon la vue temporelle
     useEffect(() => {
