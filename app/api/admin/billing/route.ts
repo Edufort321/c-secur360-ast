@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
 
 // POST - Créer une facture ou traiter une action de facturation
 export async function POST(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const body = await request.json();
     const { action, subscriptionId, data } = body;
@@ -259,6 +260,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH - Mettre à jour le statut de facturation
 export async function PATCH(request: NextRequest) {
+  const gate = await requireAdmin(request); if (!gate.ok) return gate.res;
   try {
     const body = await request.json();
     const { invoiceId, status, notes } = body;

@@ -9,7 +9,9 @@ import { auditHelpers } from './audit';
  */
 export async function validateTwilioSignature(
   request: Request,
-  body: string
+  // Pour les webhooks form-urlencoded, passer l'OBJET de TOUS les paramètres POST
+  // (Twilio signe l'ensemble des champs). Pour un corps JSON, passer la chaîne brute.
+  body: string | Record<string, string>
 ): Promise<{ valid: boolean; error?: string }> {
   try {
     // Vérifier si la validation est activée

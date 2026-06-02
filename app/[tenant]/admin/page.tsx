@@ -5056,7 +5056,7 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
-        {tr('Le taux horaire et les multiplicateurs servent au calcul automatique des feuilles de temps. OT = temps supplémentaire (×1,5), DT = double temps (×2).', 'Hourly rate and multipliers are used for automatic timesheet cost calculations. OT = overtime (×1.5), DT = double time (×2).')}
+        {tr('Le taux horaire (lecture seule) provient du formulaire « Évaluation & salaire » (Employés & accès) : salaire annuel ÷ heures/an de la grille. Pour le changer, faites/ajustez l’évaluation. Les multiplicateurs OT (×1,5) / DT (×2) servent au calcul des feuilles de temps.', 'The hourly rate (read-only) comes from the "Evaluation & salary" form (Employees & access): annual salary ÷ grid hours/year. To change it, run/adjust the evaluation. OT (×1.5) / DT (×2) multipliers feed timesheet calculations.')}
       </div>
       {notice && <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{notice}</div>}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
@@ -5086,10 +5086,11 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                     <div className="text-xs text-gray-400">{r.employee_email}</div>
                   </td>
                   <td className="px-2" data-label={tr('Taux horaire $', 'Hourly rate $')}>
-                    <div className="flex items-center gap-1">
-                      <input type="text" inputMode="decimal" className={`${inp} w-20`} value={r.hourly_rate} placeholder="25.00"
-                        onChange={e => upd(i, 'hourly_rate', e.target.value)}
-                        onBlur={e => { const v = parseFloat(e.target.value); upd(i, 'hourly_rate', isNaN(v) ? '' : v.toFixed(2)); }} />
+                    {/* Lecture seule : le taux provient du formulaire Évaluation & salaire (source unique). */}
+                    <div className="flex items-center gap-1" title={tr('Défini via Employés & accès → Évaluation & salaire', 'Set via Employees & access → Evaluation & salary')}>
+                      <span className={`w-20 rounded-lg border border-dashed border-gray-300 px-2 py-1 text-sm font-semibold dark:border-gray-600 ${r.hourly_rate ? 'text-gray-800 dark:text-gray-100' : 'text-amber-500'}`}>
+                        {r.hourly_rate ? `${r.hourly_rate} $` : tr('— éval.', '— eval.')}
+                      </span>
                       <span className="text-xs text-gray-400">/h</span>
                     </div>
                   </td>

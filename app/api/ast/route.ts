@@ -66,11 +66,23 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const tenantId = searchParams.get('tenantId')
-    
+
     if (!tenantId) {
       return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
     }
-    
+
+    // Securite (#2 IDOR) : la liste des AST contient des renseignements personnels.
+    // On exige une session, et l'utilisateur ne peut lister QUE son propre tenant
+    // (le super_admin peut consulter n'importe quel tenant). Contrairement au POST
+    // (creation publique via QR), la lecture en liste n'est jamais anonyme.
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser) {
+      return NextResponse.json({ error: 'Authentification requise' }, { status: 401 });
+    }
+    if (sessionUser.role !== 'super_admin' && sessionUser.tenant_id !== tenantId) {
+      return NextResponse.json({ error: 'Accès refusé à ce tenant' }, { status: 403 });
+    }
+
     const astForms = await getASTFormsByTenant(tenantId);
     
     return NextResponse.json({ astForms })

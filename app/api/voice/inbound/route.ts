@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auditHelpers } from '@/lib/audit';
+import { validateTwilioSignature } from '@/lib/twilio-webhook-validation';
 
 /**
  * Webhook Twilio pour les appels entrants
@@ -9,6 +10,15 @@ export async function POST(request: NextRequest) {
   try {
     // Parse du body Twilio (form-urlencoded)
     const formData = await request.formData();
+
+    // Securite : valider la signature Twilio (anti-usurpation du webhook).
+    const allParams: Record<string, string> = {};
+    for (const [k, v] of formData.entries()) if (typeof v === 'string') allParams[k] = v;
+    const sig = await validateTwilioSignature(request, allParams);
+    if (!sig.valid) {
+      return NextResponse.json({ error: 'Signature Twilio invalide' }, { status: 403 });
+    }
+
     const from = formData.get('From') as string;
     const to = formData.get('To') as string;
     const callSid = formData.get('CallSid') as string;
