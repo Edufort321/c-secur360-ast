@@ -5,24 +5,39 @@ import { hashPassword } from '@/lib/auth';
 import { requireAdmin } from '@/lib/apiAuth';
 
 // GET /api/admin/users?tenant=cerdia  → liste des profils du tenant
+// Tolérant : le schéma réel peut utiliser tenant_id (snake) ou tenantId (Prisma). On essaie les deux.
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   const tenant = new URL(req.url).searchParams.get('tenant');
   if (!tenant) return NextResponse.json({ error: 'tenant requis' }, { status: 400 });
-  const { data, error } = await supabaseAdmin
-    .from('users').select('id, email, name, role, is_active').eq('tenant_id', tenant).order('email');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ users: data });
+  // Sélectionne large (id/email/name/role) ; is_active peut ne pas exister selon le schéma.
+  let res: any = await supabaseAdmin.from('users').select('id, email, name, role, is_active').eq('tenant_id', tenant).order('email');
+  if (res.error) {
+    // is_active absent ? réessaie sans, puis bascule sur tenantId si tenant_id n'existe pas.
+    res = await supabaseAdmin.from('users').select('id, email, name, role').eq('tenant_id', tenant).order('email');
+    if (res.error) res = await supabaseAdmin.from('users').select('id, email, name, role').eq('tenantId', tenant).order('email');
+  }
+  if (res.error) return NextResponse.json({ error: res.error.message }, { status: 500 });
+  // Repli : si tenant_id existe mais n'a rien donné (lignes créées avec tenantId seulement), tente tenantId.
+  if ((res.data || []).length === 0) {
+    const alt = await supabaseAdmin.from('users').select('id, email, name, role').eq('tenantId', tenant).order('email');
+    if (!alt.error && (alt.data || []).length) res = alt as any;
+  }
+  return NextResponse.json({ users: (res.data || []).map((u: any) => ({ is_active: true, ...u })) });
 }
 
 // POST /api/admin/users  { tenant, email, name, role, password } → crée un profil
+// Insert résilient : retire automatiquement toute colonne absente du schéma réel
+// (tenant_id vs tenantId, is_active, first_login) pour que la création n'échoue jamais
+// à cause d'une colonne manquante (sinon le compte n'est jamais créé -> login impossible).
+const USER_OPTIONAL_COLS = ['tenant_id', 'tenantId', 'is_active', 'first_login', 'name'];
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const { tenant, email, name, role, password } = await req.json();
     if (!tenant || !email || !password) return NextResponse.json({ error: 'tenant, email et mot de passe requis' }, { status: 400 });
     const hash = await hashPassword(password);
-    const { error } = await supabaseAdmin.from('users').insert({
+    const payload: any = {
       id: randomUUID(),
       email: String(email).toLowerCase().trim(),
       name: name || null,
@@ -32,8 +47,20 @@ export async function POST(req: NextRequest) {
       tenant_id: tenant,
       is_active: true,
       first_login: true,
-    });
-    if (error) throw error;
+    };
+    let lastErr: any = null;
+    for (let attempt = 0; attempt < USER_OPTIONAL_COLS.length + 1; attempt++) {
+      const { error } = await supabaseAdmin.from('users').insert(payload);
+      if (!error) { lastErr = null; break; }
+      lastErr = error;
+      const msg = error.message || ''; const code = (error as any).code || '';
+      const isMissingCol = code === 'PGRST204' || /schema cache|could not find|does not exist|column/i.test(msg);
+      const m = msg.match(/'([a-zA-Z_]+)' column/i) || msg.match(/column ["']?([a-zA-Z_]+)["']?/i) || msg.match(/the '([a-zA-Z_]+)' column/i);
+      const col = m?.[1];
+      if (isMissingCol && col && USER_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; continue; }
+      break; // erreur non liée à une colonne optionnelle (ex. doublon email)
+    }
+    if (lastErr) throw lastErr;
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
