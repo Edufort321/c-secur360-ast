@@ -367,7 +367,7 @@ export default function TimesheetsPage() {
                     const isCurrentWeek = start <= today && today <= end;
                     return (
                       <tr key={week}
-                        className={`border-t border-slate-100 ${isFuture && !sheet ? 'opacity-40' : 'hover:bg-slate-50'} ${isCurrentWeek ? 'bg-violet-50/40 dark:bg-violet-900/10' : ''}`}>
+                        className={`border-t border-slate-100 ${isFuture && !sheet ? 'opacity-70' : 'hover:bg-slate-50'} ${isCurrentWeek ? 'bg-violet-50/40 dark:bg-violet-900/10' : ''}`}>
                         <td className="px-4 py-2.5">
                           <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isCurrentWeek ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
                             P.{week}
@@ -399,12 +399,13 @@ export default function TimesheetsPage() {
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                               Ouvrir <ChevronRight size={11} />
                             </Link>
-                          ) : !isFuture ? (
+                          ) : (
+                            /* Toute période est accessible (passée, courante ou à venir) : on peut toujours la créer/ouvrir. */
                             <button onClick={() => createForPeriod(start, end)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-700">
-                              <Plus size={11} /> Créer
+                              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-white ${isFuture ? 'bg-slate-400 hover:bg-slate-500' : 'bg-violet-600 hover:bg-violet-700'}`}>
+                              <Plus size={11} /> {isFuture ? 'Préparer' : 'Créer'}
                             </button>
-                          ) : null}
+                          )}
                         </td>
                       </tr>
                     );
