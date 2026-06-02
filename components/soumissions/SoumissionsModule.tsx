@@ -37,6 +37,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [sellerId, setSellerId] = useState<string | null>(null); // vendeur = createur (pour la commission au transfert)
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  // Parse un nombre en acceptant le point OU la virgule comme séparateur décimal.
+  const numFR = (s: string) => { const n = Number(String(s).replace(',', '.').replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
   const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
   const isMO = (c: Categorie) => CATEGORIES_MO.includes(c);
@@ -217,7 +219,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               <div key={lblKey} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                 <input value={cf.labels?.[lblKey] ?? defLabel} placeholder={defLabel} onChange={e => setLabel(lblKey, e.target.value)}
                   className="w-full bg-transparent text-xs font-semibold text-gray-600 outline-none dark:text-gray-300" title={tr('Libellé éditable (propagé)', 'Editable label (propagated)')} />
-                <input type="number" step="0.01" value={value} onChange={e => onValue(Number(e.target.value))} className={`mt-1 w-full ${inputCls}`} />
+                <input type="text" inputMode="decimal" value={String(value)} onFocus={e => e.target.select()} onChange={e => onValue(numFR(e.target.value))} className={`mt-1 w-full ${inputCls}`} />
               </div>
             );
             return (
@@ -256,12 +258,32 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Catalogue matériel', 'Materials catalog')}</div>
                   <button type="button" onClick={() => addList('materials', { sku: '', name: '', cost_price: 0, sale_price: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Article', 'Item')}</button>
                 </div>
+                {(cf.materials || []).length > 0 && (
+                  <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
+                    <span className="w-24">{tr('Code', 'Code')}</span>
+                    <span className="min-w-[8rem] flex-1">{tr('Désignation', 'Name')}</span>
+                    <span className="w-24 text-right">{tr('Coûtant ($)', 'Cost ($)')}</span>
+                    <span className="w-20 text-right">{tr('Marge (%)', 'Margin (%)')}</span>
+                    <span className="w-24 text-right">{tr('Prix de vente ($)', 'Sale price ($)')}</span>
+                    <span className="w-6" />
+                  </div>
+                )}
                 {(cf.materials || []).map((m, i) => (
                   <div key={i} className="mt-1 flex flex-wrap items-center gap-1">
-                    <input value={m.sku || ''} onChange={e => updList('materials', i, { sku: e.target.value })} placeholder={tr('Code', 'Code')} className={`w-24 ${inputCls}`} />
-                    <input value={m.name} onChange={e => updList('materials', i, { name: e.target.value })} placeholder={tr('Désignation', 'Name')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
-                    <input type="number" step="0.01" value={m.cost_price || 0} onChange={e => updList('materials', i, { cost_price: Number(e.target.value) })} placeholder={tr('Coût', 'Cost')} className={`w-24 text-right ${inputCls}`} />
-                    <input type="number" step="0.01" value={m.sale_price || 0} onChange={e => updList('materials', i, { sale_price: Number(e.target.value) })} placeholder={tr('Vente', 'Sale')} className={`w-24 text-right ${inputCls}`} />
+                    <input value={m.sku || ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('materials', i, { sku: e.target.value })} placeholder={tr('Code', 'Code')} className={`w-24 ${inputCls}`} />
+                    <input value={m.name} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('materials', i, { name: e.target.value })} placeholder={tr('Désignation', 'Name')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                    {/* Coûtant : recalcule la vente à partir de la marge si une marge est définie */}
+                    <input type="text" inputMode="decimal" value={String(m.cost_price ?? 0)} onFocus={e => e.target.select()} placeholder={tr('Coûtant', 'Cost')} className={`w-24 text-right ${inputCls}`}
+                      onChange={e => { const cost = numFR(e.target.value); const mg = m.margin_pct; updList('materials', i, mg != null ? { cost_price: cost, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 } : { cost_price: cost }); }} />
+                    {/* Marge % désirée -> calcule le prix de vente */}
+                    <input type="text" inputMode="decimal" value={m.margin_pct != null ? String(m.margin_pct) : ''} onFocus={e => e.target.select()} placeholder="%" className={`w-20 text-right ${inputCls}`}
+                      onChange={e => { const mg = numFR(e.target.value); const cost = m.cost_price || 0; updList('materials', i, { margin_pct: mg, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 }); }} />
+                    {/* Prix de vente : si une marge est définie -> calcule le COÛTANT ; sinon -> calcule la marge */}
+                    <input type="text" inputMode="decimal" value={String(m.sale_price ?? 0)} onFocus={e => e.target.select()} placeholder={tr('Vente', 'Sale')} className={`w-24 text-right ${inputCls}`}
+                      onChange={e => { const sale = numFR(e.target.value); const mg = m.margin_pct;
+                        if (mg != null) updList('materials', i, { sale_price: sale, cost_price: Math.round((sale / (1 + mg / 100)) * 100) / 100 });
+                        else { const cost = m.cost_price || 0; updList('materials', i, { sale_price: sale, margin_pct: cost > 0 ? Math.round(((sale / cost) - 1) * 1000) / 10 : m.margin_pct }); }
+                      }} />
                     <button type="button" onClick={() => delList('materials', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 ))}
@@ -274,16 +296,21 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <button type="button" onClick={() => addList('fuel_tiers', { price_min: 0, price_max: null, surcharge_pct: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Palier', 'Tier')}</button>
                 </div>
                 <label className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">{tr('Prix courant ($/L)', 'Current price ($/L)')}
-                  <input type="number" step="0.01" value={cf.extras?.fuel_price || 0} onChange={e => setExtra('fuel_price', Number(e.target.value))} className={`w-24 text-right ${inputCls}`} />
+                  <input type="text" inputMode="decimal" value={String(cf.extras?.fuel_price || 0)} onFocus={e => e.target.select()} onChange={e => setExtra('fuel_price', numFR(e.target.value))} className={`w-24 text-right ${inputCls}`} />
                 </label>
+                {(cf.fuel_tiers || []).length > 0 && (
+                  <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
+                    <span className="w-20 text-right">{tr('Prix min ($/L)', 'Min price ($/L)')}</span>
+                    <span className="w-20 text-right">{tr('Prix max ($/L)', 'Max price ($/L)')}</span>
+                    <span className="w-16 text-right">{tr('Surcharge (%)', 'Surcharge (%)')}</span>
+                    <span className="w-6" />
+                  </div>
+                )}
                 {(cf.fuel_tiers || []).map((t, i) => (
                   <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-                    <span className="text-gray-400">{tr('De', 'From')}</span>
-                    <input type="number" step="0.01" value={t.price_min} onChange={e => updList('fuel_tiers', i, { price_min: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} />
-                    <span className="text-gray-400">{tr('à', 'to')}</span>
-                    <input type="number" step="0.01" value={t.price_max ?? ''} onChange={e => updList('fuel_tiers', i, { price_max: e.target.value === '' ? null : Number(e.target.value) })} placeholder={tr('illim.', 'unlim.')} className={`w-20 text-right ${inputCls}`} />
-                    <span className="text-gray-400">$/L →</span>
-                    <input type="number" step="0.1" value={t.surcharge_pct} onChange={e => updList('fuel_tiers', i, { surcharge_pct: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /><span className="text-gray-400">%</span>
+                    <input type="text" inputMode="decimal" value={String(t.price_min)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { price_min: numFR(e.target.value) })} placeholder={tr('Min $/L', 'Min $/L')} className={`w-20 text-right ${inputCls}`} />
+                    <input type="text" inputMode="decimal" value={t.price_max ?? ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { price_max: e.target.value.trim() === '' ? null : numFR(e.target.value) })} placeholder={tr('Max (illim.)', 'Max (unlim.)')} className={`w-20 text-right ${inputCls}`} />
+                    <input type="text" inputMode="decimal" value={String(t.surcharge_pct)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { surcharge_pct: numFR(e.target.value) })} placeholder="%" className={`w-16 text-right ${inputCls}`} />
                     <button type="button" onClick={() => delList('fuel_tiers', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}
@@ -295,11 +322,19 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr("Niveaux d'approbation", 'Approval levels')}</div>
                   <button type="button" onClick={() => addList('approval_levels', { level_name: '', max_amount: 0, approver_label: '', color: 'blue' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Niveau', 'Level')}</button>
                 </div>
+                {(cf.approval_levels || []).length > 0 && (
+                  <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
+                    <span className="w-32">{tr('Niveau', 'Level')}</span>
+                    <span className="min-w-[8rem] flex-1">{tr('Approbateur', 'Approver')}</span>
+                    <span className="w-28 text-right">{tr('Montant max ($)', 'Max amount ($)')}</span>
+                    <span className="w-6" />
+                  </div>
+                )}
                 {(cf.approval_levels || []).map((a, i) => (
                   <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-                    <input value={a.level_name} onChange={e => updList('approval_levels', i, { level_name: e.target.value })} placeholder={tr('Niveau', 'Level')} className={`w-32 ${inputCls}`} />
-                    <input value={a.approver_label || ''} onChange={e => updList('approval_levels', i, { approver_label: e.target.value })} placeholder={tr('Approbateur', 'Approver')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
-                    <input type="number" step="500" value={a.max_amount} onChange={e => updList('approval_levels', i, { max_amount: Number(e.target.value) })} placeholder={tr('Max $', 'Max $')} className={`w-28 text-right ${inputCls}`} />
+                    <input value={a.level_name} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { level_name: e.target.value })} placeholder={tr('Niveau', 'Level')} className={`w-32 ${inputCls}`} />
+                    <input value={a.approver_label || ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { approver_label: e.target.value })} placeholder={tr('Approbateur', 'Approver')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                    <input type="text" inputMode="decimal" value={String(a.max_amount)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { max_amount: numFR(e.target.value) })} placeholder={tr('Max $', 'Max $')} className={`w-28 text-right ${inputCls}`} />
                     <button type="button" onClick={() => delList('approval_levels', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}

@@ -2529,7 +2529,7 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
   );
 }
 
-function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEdit }: { tenant: string; tr: (f: string, e: string) => string; employee: { id: string; name: string; role?: string; subclass?: string; hire_date?: string; hire_salary?: number; current_salary?: number; current_grid_id?: string; acquired_skills?: any[]; last_evaluation_date?: string }; onClose: () => void; onSaved: () => void; canEdit: boolean }) {
+function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEdit }: { tenant: string; tr: (f: string, e: string) => string; employee: { id: string; name: string; email?: string; role?: string; subclass?: string; hire_date?: string; hire_salary?: number; current_salary?: number; current_grid_id?: string; acquired_skills?: any[]; last_evaluation_date?: string }; onClose: () => void; onSaved: () => void; canEdit: boolean }) {
   const inp2 = 'w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2755,7 +2755,18 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
       }
       if (evErr) throw evErr;
 
-      setNotice(tr('Évaluation enregistrée ✓', 'Evaluation saved ✓'));
+      // Propage le salaire de l'évaluation -> profil de paie (taux horaire).
+      // Le profil de paie est clé sur planner_personnel.id (= employee.id ici).
+      try {
+        const hourly = reco.newSalary > 0 && hpy > 0 ? Math.round((reco.newSalary / hpy) * 10000) / 10000 : null;
+        if (hourly != null) {
+          const { data: ep } = await supabase.from('employee_profiles').select('id').eq('tenant_id', tenant).eq('employee_id', employee.id).maybeSingle();
+          if (ep?.id) await supabase.from('employee_profiles').update({ hourly_rate: hourly }).eq('id', ep.id);
+          else await supabase.from('employee_profiles').insert({ tenant_id: tenant, employee_id: employee.id, employee_name: employee.name, employee_email: (employee as any).email || '', hourly_rate: hourly, ot_multiplier: 1.5, dt_multiplier: 2.0, ot_daily_hrs: 8, ot_weekly_hrs: 40, active: true });
+        }
+      } catch { /* paie facultative — n'empêche pas l'enregistrement de l'éval */ }
+
+      setNotice(tr('Évaluation enregistrée ✓ (taux horaire de paie mis à jour)', 'Evaluation saved ✓ (payroll hourly rate updated)'));
       onSaved();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
   }
@@ -4875,7 +4886,7 @@ function PayeConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
 }
 
 function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
-  type EP = { id?: string; employee_id: string; employee_name: string; employee_email: string; hourly_rate: string; ot_multiplier: string; dt_multiplier: string; ot_daily_hrs: string; dt_daily_hrs: string; ot_weekly_hrs: string; active: boolean };
+  type EP = { id?: string; employee_id: string; employee_name: string; employee_email: string; hourly_rate: string; ot_multiplier: string; dt_multiplier: string; ot_daily_hrs: string; dt_daily_hrs: string; ot_weekly_hrs: string; ot_enabled: boolean; dt_enabled: boolean; active: boolean };
   const [rows, setRows] = useState<EP[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -4893,8 +4904,8 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
       (profiles || []).forEach((p: any) => { profileMap[p.employee_id] = p; });
       setRows(us.map(u => {
         const p = profileMap[u.id];
-        if (p) return { id: p.id, employee_id: u.id, employee_name: p.employee_name || u.name, employee_email: p.employee_email || u.email, hourly_rate: String(p.hourly_rate || ''), ot_multiplier: String(p.ot_multiplier || '1.50'), dt_multiplier: String(p.dt_multiplier || '2.00'), ot_daily_hrs: String(p.ot_daily_hrs || '8'), dt_daily_hrs: p.dt_daily_hrs != null ? String(p.dt_daily_hrs) : '', ot_weekly_hrs: String(p.ot_weekly_hrs || '40'), active: p.active !== false };
-        return { employee_id: u.id, employee_name: u.name, employee_email: u.email, hourly_rate: '', ot_multiplier: '1.50', dt_multiplier: '2.00', ot_daily_hrs: '8', dt_daily_hrs: '', ot_weekly_hrs: '40', active: true };
+        if (p) return { id: p.id, employee_id: u.id, employee_name: p.employee_name || u.name, employee_email: p.employee_email || u.email, hourly_rate: String(p.hourly_rate || ''), ot_multiplier: String(p.ot_multiplier || '1.50'), dt_multiplier: String(p.dt_multiplier || '2.00'), ot_daily_hrs: String(p.ot_daily_hrs || '8'), dt_daily_hrs: p.dt_daily_hrs != null ? String(p.dt_daily_hrs) : '', ot_weekly_hrs: String(p.ot_weekly_hrs || '40'), ot_enabled: p.ot_enabled !== false, dt_enabled: p.dt_enabled !== false, active: p.active !== false };
+        return { employee_id: u.id, employee_name: u.name, employee_email: u.email, hourly_rate: '', ot_multiplier: '1.50', dt_multiplier: '2.00', ot_daily_hrs: '8', dt_daily_hrs: '', ot_weekly_hrs: '40', ot_enabled: true, dt_enabled: true, active: true };
       }));
       setLoading(false);
     })();
@@ -4917,10 +4928,19 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
           ot_daily_hrs: r.ot_daily_hrs !== '' ? parseFloat(r.ot_daily_hrs) : 8,
           dt_daily_hrs: r.dt_daily_hrs !== '' ? parseFloat(r.dt_daily_hrs) : null,
           ot_weekly_hrs: r.ot_weekly_hrs !== '' ? parseFloat(r.ot_weekly_hrs) : 40,
+          ot_enabled: r.ot_enabled, dt_enabled: r.dt_enabled,
           active: r.active, updated_at: new Date().toISOString(),
         };
-        if (r.id) await supabase.from('employee_profiles').update(payload).eq('id', r.id);
-        else { const { error } = await supabase.from('employee_profiles').insert(payload); if (error) throw error; }
+        const writeProfile = async (pl: any) => {
+          if (r.id) return supabase.from('employee_profiles').update(pl).eq('id', r.id);
+          return supabase.from('employee_profiles').insert(pl);
+        };
+        let { error } = await writeProfile(payload);
+        if (error && /ot_enabled|dt_enabled/i.test(error.message || '')) {
+          const { ot_enabled, dt_enabled, ...fb } = payload; // migration 104 non exécutée
+          ({ error } = await writeProfile(fb));
+        }
+        if (error) throw error;
       }
       setNotice(tr('Profils enregistrés ✓', 'Profiles saved ✓'));
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setSaving(false); }
@@ -4968,8 +4988,18 @@ function EmployeeProfiles({ tenant, tr }: { tenant: string; tr: (f: string, e: s
                       <span className="text-xs text-gray-400">/h</span>
                     </div>
                   </td>
-                  <td className="px-2" data-label={tr('×OT', '×OT')}><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.ot_multiplier} placeholder="1.50" onChange={e => upd(i, 'ot_multiplier', e.target.value)} /></td>
-                  <td className="px-2" data-label={tr('×DT', '×DT')}><input type="text" inputMode="decimal" className={`${inp} w-16`} value={r.dt_multiplier} placeholder="2.00" onChange={e => upd(i, 'dt_multiplier', e.target.value)} /></td>
+                  <td className="px-2" data-label={tr('×OT', '×OT')}>
+                    <div className="flex items-center gap-1.5">
+                      <input type="checkbox" checked={r.ot_enabled} onChange={e => upd(i, 'ot_enabled', e.target.checked)} title={tr('Activer le temps supplémentaire', 'Enable overtime')} />
+                      <input type="text" inputMode="decimal" disabled={!r.ot_enabled} className={`${inp} w-16 ${!r.ot_enabled ? 'opacity-40' : ''}`} value={r.ot_multiplier} placeholder="1.50" onChange={e => upd(i, 'ot_multiplier', e.target.value)} />
+                    </div>
+                  </td>
+                  <td className="px-2" data-label={tr('×DT', '×DT')}>
+                    <div className="flex items-center gap-1.5">
+                      <input type="checkbox" checked={r.dt_enabled} onChange={e => upd(i, 'dt_enabled', e.target.checked)} title={tr('Activer le temps double', 'Enable double time')} />
+                      <input type="text" inputMode="decimal" disabled={!r.dt_enabled} className={`${inp} w-16 ${!r.dt_enabled ? 'opacity-40' : ''}`} value={r.dt_multiplier} placeholder="2.00" onChange={e => upd(i, 'dt_multiplier', e.target.value)} />
+                    </div>
+                  </td>
                   <td className="px-2" data-label={tr('Seuil OT/jour h', 'OT/day h')}><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.ot_daily_hrs} placeholder="8" onChange={e => upd(i, 'ot_daily_hrs', e.target.value)} /></td>
                   <td className="px-2" data-label={tr('Seuil DT/jour h', 'DT/day h')}><input type="number" min={0} step={0.5} className={`${inp} w-14`} value={r.dt_daily_hrs} placeholder={tr('—', '—')} onChange={e => upd(i, 'dt_daily_hrs', e.target.value)} /></td>
                   <td className="px-2" data-label={tr('Seuil OT/sem h', 'OT/wk h')}><input type="number" min={0} step={1} className={`${inp} w-14`} value={r.ot_weekly_hrs} placeholder="40" onChange={e => upd(i, 'ot_weekly_hrs', e.target.value)} /></td>

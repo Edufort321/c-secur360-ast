@@ -16,7 +16,7 @@ export type CatalogueExtras = {
   km?: number; sub_h5?: number; sub_h12?: number; sub_h15?: number; sub_nuitee?: number; hebergement?: number;
   fuel_price?: number; // prix courant du litre (pour la surcharge carburant)
 };
-export type CatMaterial = { sku?: string; name: string; cost_price?: number; sale_price?: number };
+export type CatMaterial = { sku?: string; name: string; cost_price?: number; margin_pct?: number; sale_price?: number };
 export type CatFuelTier = { price_min: number; price_max: number | null; surcharge_pct: number };
 export type CatApproval = { level_name: string; max_amount: number; approver_label?: string; color?: string };
 export type CatalogueTaux = {
