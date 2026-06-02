@@ -2399,49 +2399,38 @@ function EquipmentSection({ ast, onChange, language, readOnly }: {
       <Card title={t.cardTools} icon={<Wrench className="w-5 h-5" />}>
         <div className="space-y-4">
           {eq.tools.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                    <th className="text-left pb-2 pr-3 font-medium">{t.toolName}</th>
-                    <th className="text-left pb-2 pr-3 font-medium w-36">{t.toolCondition}</th>
-                    <th className="text-left pb-2 pr-3 font-medium">{t.toolInspectedBy}</th>
-                    <th className="text-left pb-2 pr-3 font-medium">{t.toolNotes}</th>
-                    {!readOnly && <th className="w-8" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {eq.tools.map(tool => (
-                    <tr key={tool.id}>
-                      <td className="py-2 pr-3">
-                        <input type="text" value={tool.name} onChange={e => updateTool(tool.id, 'name', e.target.value)} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <select value={tool.condition} onChange={e => updateTool(tool.id, 'condition', e.target.value)} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50">
-                          {conditionOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input type="text" value={tool.inspectedBy} onChange={e => updateTool(tool.id, 'inspectedBy', e.target.value)} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input type="text" value={tool.notes} onChange={e => updateTool(tool.id, 'notes', e.target.value)} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      {!readOnly && (
-                        <td className="py-2">
-                          <button type="button" onClick={() => removeTool(tool.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {eq.tools.map(tool => (
+                <div key={tool.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label={t.toolName}>
+                      <input type="text" value={tool.name} onChange={e => updateTool(tool.id, 'name', e.target.value)} disabled={readOnly}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                    </Field>
+                    <Field label={t.toolCondition}>
+                      <select value={tool.condition} onChange={e => updateTool(tool.id, 'condition', e.target.value)} disabled={readOnly}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50">
+                        {conditionOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </Field>
+                    <Field label={t.toolInspectedBy}>
+                      <input type="text" value={tool.inspectedBy} onChange={e => updateTool(tool.id, 'inspectedBy', e.target.value)} disabled={readOnly}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                    </Field>
+                    <Field label={t.toolNotes}>
+                      <input type="text" value={tool.notes} onChange={e => updateTool(tool.id, 'notes', e.target.value)} disabled={readOnly}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                    </Field>
+                  </div>
+                  {!readOnly && (
+                    <div className="flex justify-end border-t border-slate-100 dark:border-slate-700 pt-3">
+                      <button type="button" onClick={() => removeTool(tool.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
           {!readOnly && (
@@ -2460,43 +2449,34 @@ function EquipmentSection({ ast, onChange, language, readOnly }: {
             {INDUSTRIAL_VEHICLES[language].map(v => <option key={v} value={v} />)}
           </datalist>
           {eq.vehicles.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-                    <th className="text-left pb-2 pr-3 font-medium">{t.vehicleType}</th>
-                    <th className="text-left pb-2 pr-3 font-medium">{t.vehicleLicense}</th>
-                    <th className="text-left pb-2 pr-3 font-medium w-24">{t.vehicleInspected}</th>
-                    {!readOnly && <th className="w-8" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {eq.vehicles.map(v => (
-                    <tr key={v.id}>
-                      <td className="py-2 pr-3">
-                        <input type="text" list="ast-industrial-vehicles" value={v.type} onChange={e => updateVehicle(v.id, 'type', e.target.value)} disabled={readOnly}
-                          placeholder={language === 'fr' ? 'ex. Nacelle élévatrice' : 'e.g. Aerial lift'}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      <td className="py-2 pr-3">
-                        <input type="text" value={v.license} onChange={e => updateVehicle(v.id, 'license', e.target.value)} disabled={readOnly}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
-                      </td>
-                      <td className="py-2 pr-3 text-center">
-                        <input type="checkbox" checked={v.inspected} onChange={e => updateVehicle(v.id, 'inspected', e.target.checked)} disabled={readOnly}
-                          className="w-4 h-4 accent-teal-600" />
-                      </td>
-                      {!readOnly && (
-                        <td className="py-2">
-                          <button type="button" onClick={() => removeVehicle(v.id)} className="p-1 text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {eq.vehicles.map(v => (
+                <div key={v.id} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label={t.vehicleType}>
+                      <input type="text" list="ast-industrial-vehicles" value={v.type} onChange={e => updateVehicle(v.id, 'type', e.target.value)} disabled={readOnly}
+                        placeholder={language === 'fr' ? 'ex. Nacelle élévatrice' : 'e.g. Aerial lift'}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                    </Field>
+                    <Field label={t.vehicleLicense}>
+                      <input type="text" value={v.license} onChange={e => updateVehicle(v.id, 'license', e.target.value)} disabled={readOnly}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 outline-none disabled:bg-slate-50" />
+                    </Field>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                      <input type="checkbox" checked={v.inspected} onChange={e => updateVehicle(v.id, 'inspected', e.target.checked)} disabled={readOnly}
+                        className="w-4 h-4 accent-teal-600" />
+                      {t.vehicleInspected}
+                    </label>
+                    {!readOnly && (
+                      <button type="button" onClick={() => removeVehicle(v.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           {!readOnly && (
