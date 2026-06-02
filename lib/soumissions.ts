@@ -12,11 +12,22 @@ export const CATEGORIE_LABELS: Record<Categorie, string> = {
   subsistance: 'Subsistance', hebergement: 'Hébergement', materiaux: 'Matériaux',
 };
 
+export type CatalogueExtras = {
+  km?: number; sub_h5?: number; sub_h12?: number; sub_h15?: number; sub_nuitee?: number; hebergement?: number;
+};
 export type CatalogueTaux = {
   id?: string; name: string; year: number; revision: number; status: 'active' | 'archived';
   taux_mo_bureau: number; taux_mo_chantier: number; mult_supp: number; mult_maj: number; notes?: string | null;
   preferred?: boolean; // catalogue par défaut proposé en premier dans la soumission
+  extras?: CatalogueExtras;           // barème scalaire complet (km, subsistance, hébergement)
+  labels?: Record<string, string>;    // libellés personnalisés propagés à l'affichage
 };
+
+/** Libellé d'un champ : libellé personnalisé du catalogue sinon le libellé par défaut. */
+export function catLabel(cat: CatalogueTaux | null | undefined, key: string, fallback: string): string {
+  const v = cat?.labels?.[key];
+  return (typeof v === 'string' && v.trim()) ? v : fallback;
+}
 export type SoumissionLigne = {
   id?: string; item_id?: string; categorie: Categorie; description?: string;
   tech: number; reg: number; supp: number; maj: number;

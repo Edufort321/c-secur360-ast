@@ -7,7 +7,7 @@ import {
   getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
-  getSoumissionStats, CATEGORIE_LABELS, CATEGORIES_MO,
+  getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats,
 } from '@/lib/soumissions';
 
@@ -203,28 +203,56 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         )
       ) : sub === 'catalogue' ? (
         <div className="space-y-3">
-          {catForm && (
+          {catForm && (() => {
+            const cf = catForm;
+            const setLabel = (k: string, v: string) => setCatForm({ ...cf, labels: { ...(cf.labels || {}), [k]: v } });
+            const setExtra = (k: string, v: number) => setCatForm({ ...cf, extras: { ...(cf.extras || {}), [k]: v } });
+            // Champ de taux : libellé ÉDITABLE (propagé) + valeur.
+            // NB: fonction (pas un composant <RateField/>) pour éviter le remount/perte de focus à chaque frappe.
+            const rateField = (lblKey: string, defLabel: string, value: number, onValue: (n: number) => void) => (
+              <div key={lblKey} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                <input value={cf.labels?.[lblKey] ?? defLabel} placeholder={defLabel} onChange={e => setLabel(lblKey, e.target.value)}
+                  className="w-full bg-transparent text-xs font-semibold text-gray-600 outline-none dark:text-gray-300" title={tr('Libellé éditable (propagé)', 'Editable label (propagated)')} />
+                <input type="number" step="0.01" value={value} onChange={e => onValue(Number(e.target.value))} className={`mt-1 w-full ${inputCls}`} />
+              </div>
+            );
+            return (
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
               <div className="grid gap-3 sm:grid-cols-3">
-                <label className="text-xs font-semibold text-gray-500">{tr('Nom', 'Name')}<input value={catForm.name} onChange={e => setCatForm({ ...catForm, name: e.target.value })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={catForm.year} onChange={e => setCatForm({ ...catForm, year: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Révision', 'Revision')}<input type="number" value={catForm.revision} onChange={e => setCatForm({ ...catForm, revision: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Taux MO bureau ($/h)', 'Office labor rate')}<input type="number" value={catForm.taux_mo_bureau} onChange={e => setCatForm({ ...catForm, taux_mo_bureau: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Taux MO chantier ($/h)', 'Field labor rate')}<input type="number" value={catForm.taux_mo_chantier} onChange={e => setCatForm({ ...catForm, taux_mo_chantier: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Statut', 'Status')}<select value={catForm.status} onChange={e => setCatForm({ ...catForm, status: e.target.value as any })} className={`mt-1 w-full ${inputCls}`}><option value="active">{tr('Actif', 'Active')}</option><option value="archived">{tr('Archivé', 'Archived')}</option></select></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Mult. supp.', 'OT mult.')}<input type="number" step="0.1" value={catForm.mult_supp} onChange={e => setCatForm({ ...catForm, mult_supp: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
-                <label className="text-xs font-semibold text-gray-500">{tr('Mult. maj. (défaut 2)', 'Premium mult.')}<input type="number" step="0.1" value={catForm.mult_maj} onChange={e => setCatForm({ ...catForm, mult_maj: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Nom', 'Name')}<input value={cf.name} onChange={e => setCatForm({ ...cf, name: e.target.value })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={cf.year} onChange={e => setCatForm({ ...cf, year: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Révision', 'Revision')}<input type="number" value={cf.revision} onChange={e => setCatForm({ ...cf, revision: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Statut', 'Status')}<select value={cf.status} onChange={e => setCatForm({ ...cf, status: e.target.value as any })} className={`mt-1 w-full ${inputCls}`}><option value="active">{tr('Actif', 'Active')}</option><option value="archived">{tr('Archivé', 'Archived')}</option></select></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Mult. supp.', 'OT mult.')}<input type="number" step="0.1" value={cf.mult_supp} onChange={e => setCatForm({ ...cf, mult_supp: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
+                <label className="text-xs font-semibold text-gray-500">{tr('Mult. maj. (défaut 2)', 'Premium mult.')}<input type="number" step="0.1" value={cf.mult_maj} onChange={e => setCatForm({ ...cf, mult_maj: Number(e.target.value) })} className={`mt-1 w-full ${inputCls}`} /></label>
                 <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 sm:col-span-3">
-                  <input type="checkbox" checked={!!catForm.preferred} onChange={e => setCatForm({ ...catForm, preferred: e.target.checked })} className="rounded" />
+                  <input type="checkbox" checked={!!cf.preferred} onChange={e => setCatForm({ ...cf, preferred: e.target.checked })} className="rounded" />
                   {tr('Catalogue préféré (proposé par défaut dans les soumissions)', 'Preferred catalogue (default in quotes)')}
                 </label>
               </div>
+
+              <div className="mt-4">
+                <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Barème — libellés éditables', 'Rates — editable labels')}</div>
+                <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">{tr('Le changement de libellé sera ajusté sur tous les champs connexes (soumission, feuille de temps, facturation).', 'Renaming a label will be reflected on all related fields (quote, timesheet, invoice).')}</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {rateField('mo_bureau', tr('Taux MO bureau ($/h)', 'Office labor ($/h)'), cf.taux_mo_bureau, v => setCatForm({ ...cf, taux_mo_bureau: v }))}
+                  {rateField('mo_chantier', tr('Taux MO chantier ($/h)', 'Field labor ($/h)'), cf.taux_mo_chantier, v => setCatForm({ ...cf, taux_mo_chantier: v }))}
+                  {rateField('km', tr('Kilométrage ($/km)', 'Mileage ($/km)'), cf.extras?.km || 0, v => setExtra('km', v))}
+                  {rateField('hebergement', tr('Hébergement ($/nuit)', 'Lodging ($/night)'), cf.extras?.hebergement || 0, v => setExtra('hebergement', v))}
+                  {rateField('sub_h5', tr('Subsistance 5h ($)', 'Per diem 5h ($)'), cf.extras?.sub_h5 || 0, v => setExtra('sub_h5', v))}
+                  {rateField('sub_h12', tr('Subsistance 12h ($)', 'Per diem 12h ($)'), cf.extras?.sub_h12 || 0, v => setExtra('sub_h12', v))}
+                  {rateField('sub_h15', tr('Subsistance 15h ($)', 'Per diem 15h ($)'), cf.extras?.sub_h15 || 0, v => setExtra('sub_h15', v))}
+                  {rateField('sub_nuitee', tr('Subsistance nuitée ($)', 'Per diem overnight ($)'), cf.extras?.sub_nuitee || 0, v => setExtra('sub_nuitee', v))}
+                </div>
+              </div>
+
               <div className="mt-3 flex justify-end gap-2">
                 <button onClick={() => setCatForm(null)} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
                 <button onClick={saveCat} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Enregistrer', 'Save')}</button>
               </div>
             </div>
-          )}
+            );
+          })()}
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <table className="mobile-cards w-full text-sm">
               <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400"><th className="px-4 py-2">{tr('Nom', 'Name')}</th><th className="px-4">{tr('Année', 'Year')}</th><th className="px-4">{tr('Rév.', 'Rev.')}</th><th className="px-4 text-right">{tr('MO bureau', 'Office')}</th><th className="px-4 text-right">{tr('MO chantier', 'Field')}</th><th className="px-4">Supp/Maj</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4"></th></tr></thead>
@@ -295,7 +323,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   return (
                     <div key={c} className="rounded-lg border border-gray-100 dark:border-gray-700">
                       <div className="flex items-center justify-between bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
-                        <span>{CATEGORIE_LABELS[c]}</span>
+                        <span>{catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c])}</span>
                         {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
                       </div>
                       {lignes.length > 0 && (
