@@ -3301,6 +3301,7 @@ export function JobModal({
                     {(() => {
                         const TABS = [
                             { id: 'form', label: L('📝 Formulaire', '📝 Form') },
+                            { id: 'planned', label: `👤 ${L('Personnel planifié', 'Planned staff')} (${formData.personnel?.length || 0})` },
                             { id: 'gantt', label: '📊 Gantt' },
                             { id: 'resources', label: L('👥 Ressources', '👥 Resources') },
                             { id: 'files', label: `${L('📎 Fichiers', '📎 Files')} (${(formData.documents?.length || 0) + (formData.photos?.length || 0)})` },
@@ -4890,6 +4891,56 @@ export function JobModal({
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Onglet Personnel planifié — liste lecture seule, conviviale et mobile */}
+                        {activeTab === 'planned' && (
+                            <div className="h-full overflow-y-auto p-4 sm:p-6">
+                                <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                            👤 {L('Personnel planifié', 'Planned staff')}
+                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-semibold text-blue-700">{formData.personnel?.length || 0}</span>
+                                        </h3>
+                                        <button type="button" onClick={() => setActiveTab('resources')}
+                                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">
+                                            {L('Modifier l\'assignation', 'Edit assignment')}
+                                        </button>
+                                    </div>
+                                    {(() => {
+                                        const ids = (formData.personnel || []).map(String);
+                                        const list = (personnel || []).filter(p => ids.includes(String(p.id)));
+                                        const respId = formData.responsable != null ? String(formData.responsable) : null;
+                                        if (list.length === 0) {
+                                            return (
+                                                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-500">
+                                                    {L('Aucun personnel assigné. Cliquez « Modifier l\'assignation » pour en ajouter.', 'No staff assigned. Click "Edit assignment" to add some.')}
+                                                </div>
+                                            );
+                                        }
+                                        // Responsable en premier
+                                        const sorted = [...list].sort((a, b) => (String(a.id) === respId ? -1 : 0) - (String(b.id) === respId ? -1 : 0));
+                                        return (
+                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                {sorted.map(person => {
+                                                    const isResp = respId && String(person.id) === respId;
+                                                    const initiales = `${(person.prenom || '')[0] || ''}${(person.nom || person.name || '')[0] || ''}`.toUpperCase() || '?';
+                                                    return (
+                                                        <div key={person.id} className={`flex items-center gap-3 rounded-xl border bg-white p-3 shadow-sm ${isResp ? 'border-blue-300 ring-2 ring-blue-100' : 'border-gray-200'}`}>
+                                                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">{initiales}</div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="truncate font-semibold text-gray-900">{person.prenom ? `${person.prenom} ` : ''}{person.nom || person.name || L('Sans nom', 'No name')}</div>
+                                                                <div className="truncate text-xs text-gray-500">{person.poste || person.role || '—'}{person.telephone || person.phone ? ` · ${person.telephone || person.phone}` : ''}</div>
+                                                            </div>
+                                                            {isResp && <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">{L('Responsable', 'Lead')}</span>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         )}
