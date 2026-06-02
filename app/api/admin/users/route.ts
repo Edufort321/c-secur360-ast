@@ -70,7 +70,13 @@ export async function POST(req: NextRequest) {
     if (lastErr) throw lastErr;
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Erreur' }, { status: 500 });
+    const msg = e?.message || 'Erreur';
+    const code = e?.code || '';
+    // RLS / permission : typiquement quand la cle service_role est absente (fallback anon).
+    if (code === '42501' || /row-level security|permission denied|violates row-level/i.test(msg)) {
+      return NextResponse.json({ error: `Création bloquée par la base (RLS). La clé SUPABASE_SERVICE_ROLE_KEY est probablement absente du serveur. Détail : ${msg}` }, { status: 500 });
+    }
+    return NextResponse.json({ error: `${msg}${code ? ` [${code}]` : ''}` }, { status: 500 });
   }
 }
 
