@@ -2309,10 +2309,14 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, ...form }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      // Conserve le mot de passe dans la fiche (base si colonne 079 présente, + repli local garanti).
-      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
-      setSelected(s => s ? { ...s, access_password: form.password } : s);
-      setNotice(tr('Compte créé ✓ — mot de passe enregistré dans la fiche. Copiez les identifiants.', 'Account created ✓ — password saved to the record. Copy the credentials.'));
+      // Synchronise le courriel (si la fiche n'en avait pas) + le mot de passe dans la fiche,
+      // sinon le badge « ✓ compte » ne correspond pas (courriel fiche vide ≠ courriel du compte).
+      if (selected?.id) {
+        await supabase.from('planner_personnel').update({ access_password: form.password, email: form.email }).eq('id', selected.id);
+        writeLocalPwd(selected.id, form.password);
+      }
+      setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
+      setNotice(tr('Compte créé ✓ — courriel et mot de passe enregistrés dans la fiche.', 'Account created ✓ — email and password saved to the record.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
   }
@@ -2327,8 +2331,8 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
       const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: acc.id, password: form.password }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Erreur');
-      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
-      setSelected(s => s ? { ...s, access_password: form.password } : s);
+      if (selected?.id) { await supabase.from('planner_personnel').update({ access_password: form.password, email: form.email }).eq('id', selected.id); writeLocalPwd(selected.id, form.password); }
+      setSelected(s => s ? { ...s, access_password: form.password, email: form.email } : s);
       setNotice(tr('Mot de passe mis à jour ✓ — enregistré dans la fiche.', 'Password updated ✓ — saved to the record.'));
       load();
     } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); } finally { setBusy(false); }
