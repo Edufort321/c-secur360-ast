@@ -260,6 +260,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   {rateField('sub_h12', tr('Subsistance 12h ($)', 'Per diem 12h ($)'), cf.extras?.sub_h12 || 0, v => setExtra('sub_h12', v))}
                   {rateField('sub_h15', tr('Subsistance 15h ($)', 'Per diem 15h ($)'), cf.extras?.sub_h15 || 0, v => setExtra('sub_h15', v))}
                   {rateField('sub_nuitee', tr('Subsistance nuitée ($)', 'Per diem overnight ($)'), cf.extras?.sub_nuitee || 0, v => setExtra('sub_nuitee', v))}
+                  {rateField('temps_demi', tr('Temps demi 1½ ($/h)', 'Time-and-a-half ($/h)'), cf.extras?.temps_demi || 0, v => setExtra('temps_demi', v))}
+                  {rateField('temps_double', tr('Temps double 2× ($/h)', 'Double time ($/h)'), cf.extras?.temps_double || 0, v => setExtra('temps_double', v))}
                 </div>
               </div>
 
@@ -355,6 +357,33 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <button type="button" onClick={() => delList('approval_levels', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}
+              </div>
+
+              {/* Barèmes additionnels libres — classés par catégorie pour s'injecter dans la bonne section de soumission */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Barèmes additionnels', 'Additional rates')}</div>
+                  <button type="button" onClick={() => addList('custom_rates', { label: '', value: 0, categorie: 'mo_chantier' })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Barème', 'Rate')}</button>
+                </div>
+                {(cf.custom_rates || []).length > 0 && (
+                  <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
+                    <span className="min-w-[8rem] flex-1">{tr('Libellé', 'Label')}</span>
+                    <span className="w-40">{tr('Catégorie (section soumission)', 'Category (quote section)')}</span>
+                    <span className="w-24 text-right">{tr('Taux ($)', 'Rate ($)')}</span>
+                    <span className="w-6" />
+                  </div>
+                )}
+                {(cf.custom_rates || []).map((rrow, i) => (
+                  <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                    <input value={rrow.label} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('custom_rates', i, { label: e.target.value })} placeholder={tr('Libellé', 'Label')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
+                    <select value={rrow.categorie || 'mo_chantier'} onChange={e => updList('custom_rates', i, { categorie: e.target.value })} className={`w-40 ${inputCls}`}>
+                      {CATS.map(c => <option key={c} value={c}>{CATEGORIE_LABELS[c]}</option>)}
+                    </select>
+                    {numInput(`cr_${i}`, rrow.value, v => updList('custom_rates', i, { value: v }), `w-24 text-right ${inputCls}`)}
+                    <button type="button" onClick={() => delList('custom_rates', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
+                  </div>
+                ))}
+                <p className="mt-1 text-[10px] text-gray-400">{tr('Chaque barème apparaîtra dans la section correspondante lors de la création d\'une soumission.', 'Each rate will appear in its matching section when building a quote.')}</p>
               </div>
 
               <div className="mt-3 flex justify-end gap-2">

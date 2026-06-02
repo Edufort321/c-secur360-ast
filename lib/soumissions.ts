@@ -14,8 +14,11 @@ export const CATEGORIE_LABELS: Record<Categorie, string> = {
 
 export type CatalogueExtras = {
   km?: number; sub_h5?: number; sub_h12?: number; sub_h15?: number; sub_nuitee?: number; hebergement?: number;
-  fuel_price?: number; // prix courant du litre (pour la surcharge carburant)
+  fuel_price?: number;       // prix courant du litre (pour la surcharge carburant)
+  temps_demi?: number;       // taux temps supplémentaire (1½) $/h
+  temps_double?: number;     // taux temps double (2×) $/h
 };
+export type CatCustomRate = { label: string; value: number; categorie?: Categorie }; // barème additionnel libre, classé par catégorie de soumission
 export type CatMaterial = { sku?: string; name: string; cost_price?: number; margin_pct?: number; sale_price?: number };
 export type CatFuelTier = { price: number; surcharge_pct: number }; // palier : à ce prix du litre, ce % de surcharge s'applique
 export type CatApproval = { level_name: string; max_amount: number; approver_label?: string; color?: string };
@@ -28,6 +31,7 @@ export type CatalogueTaux = {
   materials?: CatMaterial[];          // catalogue matériel (par catalogue)
   fuel_tiers?: CatFuelTier[];         // paliers de surcharge carburant
   approval_levels?: CatApproval[];    // niveaux d'approbation des soumissions
+  custom_rates?: CatCustomRate[];     // barèmes additionnels libres (libellé + taux)
 };
 
 /** Libellé d'un champ : libellé personnalisé du catalogue sinon le libellé par défaut. */
