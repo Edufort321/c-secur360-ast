@@ -30,13 +30,14 @@ export async function GET(req: NextRequest) {
 // Insert résilient : retire automatiquement toute colonne absente du schéma réel
 // (tenant_id vs tenantId, is_active, first_login) pour que la création n'échoue jamais
 // à cause d'une colonne manquante (sinon le compte n'est jamais créé -> login impossible).
-const USER_OPTIONAL_COLS = ['tenant_id', 'tenantId', 'is_active', 'first_login', 'name'];
+const USER_OPTIONAL_COLS = ['tenant_id', 'tenantId', 'is_active', 'first_login', 'name', 'created_at', 'updated_at', 'createdAt', 'updatedAt'];
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req); if (!gate.ok) return gate.res;
   try {
     const { tenant, email, name, role, password } = await req.json();
     if (!tenant || !email || !password) return NextResponse.json({ error: 'tenant, email et mot de passe requis' }, { status: 400 });
     const hash = await hashPassword(password);
+    const nowIso = new Date().toISOString();
     const payload: any = {
       id: randomUUID(),
       email: String(email).toLowerCase().trim(),
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
       tenant_id: tenant,
       is_active: true,
       first_login: true,
+      // Fournis les deux conventions de timestamps : Prisma updatedAt n'a pas de défaut DB
+      // (un INSERT qui l'omet viole NOT NULL). Les colonnes absentes seront retirées au besoin.
+      created_at: nowIso,
+      updated_at: nowIso,
+      createdAt: nowIso,
+      updatedAt: nowIso,
     };
     let lastErr: any = null;
     for (let attempt = 0; attempt < USER_OPTIONAL_COLS.length + 1; attempt++) {
