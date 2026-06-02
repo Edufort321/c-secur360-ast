@@ -38,6 +38,7 @@ export const metadata: Metadata = {
 import { TwilioProvider } from '../contexts/TwilioContext'
 import { Providers } from './providers'
 import { SwRegister } from '@/components/SwRegister'
+import { CookieConsent } from '@/components/CookieConsent'
 
 export default function RootLayout({
   children,
@@ -59,6 +60,7 @@ export default function RootLayout({
           <TwilioProvider>
             <SwRegister />
             {children}
+            <CookieConsent />
           </TwilioProvider>
         </Providers>
       </body>
