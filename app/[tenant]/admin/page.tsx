@@ -2525,7 +2525,10 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                     className="text-[11px] rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 px-2 py-0.5 font-semibold shrink-0">
                     🔑
                   </button>
-                  <button onClick={() => toggleActive(u)} className="text-[10px] text-gray-400 hover:text-blue-600 shrink-0">{u.is_active ? tr('désact.', 'disable') : tr('activer', 'enable')}</button>
+                  <button onClick={() => toggleActive(u)} title={u.is_active ? tr('Suspendre le compte (connexion bloquée)', 'Suspend account (login blocked)') : tr('Réactiver le compte', 'Reactivate account')}
+                    className={`text-[10px] font-semibold rounded-full px-2 py-0.5 shrink-0 ${u.is_active ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
+                    {u.is_active ? tr('Suspendre', 'Suspend') : tr('Réactiver', 'Reactivate')}
+                  </button>
                   {confirmDel === u.id ? (
                     <div className="flex items-center gap-1 shrink-0">
                       <button onClick={() => deleteUser(u)} disabled={busy} className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white hover:bg-red-700 disabled:opacity-60">
@@ -2534,8 +2537,8 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
                       <button onClick={() => setConfirmDel(null)} className="text-[10px] text-gray-400 hover:text-gray-600">×</button>
                     </div>
                   ) : (
-                    <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer', 'Delete')}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 shrink-0 p-0.5">
+                    <button onClick={() => setConfirmDel(u.id)} title={tr('Supprimer le compte', 'Delete account')}
+                      className="shrink-0 rounded-full bg-red-50 p-1 text-red-500 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/10 dark:text-red-400">
                       <Trash2 size={12} />
                     </button>
                   )}
