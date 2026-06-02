@@ -17,7 +17,7 @@ export type CatalogueExtras = {
   fuel_price?: number; // prix courant du litre (pour la surcharge carburant)
 };
 export type CatMaterial = { sku?: string; name: string; cost_price?: number; margin_pct?: number; sale_price?: number };
-export type CatFuelTier = { price_min: number; price_max: number | null; surcharge_pct: number };
+export type CatFuelTier = { price: number; surcharge_pct: number }; // palier : à ce prix du litre, ce % de surcharge s'applique
 export type CatApproval = { level_name: string; max_amount: number; approver_label?: string; color?: string };
 export type CatalogueTaux = {
   id?: string; name: string; year: number; revision: number; status: 'active' | 'archived';

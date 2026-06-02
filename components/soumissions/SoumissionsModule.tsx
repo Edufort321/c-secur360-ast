@@ -34,11 +34,22 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
   const [sitePrefix, setSitePrefix] = useState('XX'); // initiales du site de l'utilisateur, pour la numerotation
+  const [globalMargin, setGlobalMargin] = useState(''); // marge % appliquée à tous les articles du catalogue
+  const [numDraft, setNumDraft] = useState<Record<string, string>>({}); // texte en cours de frappe pour les champs numériques (permet . ou , et décimales)
   const [sellerId, setSellerId] = useState<string | null>(null); // vendeur = createur (pour la commission au transfert)
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   // Parse un nombre en acceptant le point OU la virgule comme séparateur décimal.
   const numFR = (s: string) => { const n = Number(String(s).replace(',', '.').replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+  // Champ numérique robuste : garde le texte brut pendant la frappe (permet « 1.50 », « 1,5 »),
+  // écrit le nombre parsé dans le modèle, et réaffiche la valeur canonique au blur.
+  const numInput = (id: string, value: number, onValue: (n: number) => void, className: string) => (
+    <input type="text" inputMode="decimal" className={className}
+      value={numDraft[id] ?? String(value ?? 0)}
+      onFocus={e => { setNumDraft(d => ({ ...d, [id]: String(value ?? 0) })); (e.target as HTMLInputElement).select(); }}
+      onChange={e => { const raw = e.target.value; setNumDraft(d => ({ ...d, [id]: raw })); onValue(numFR(raw)); }}
+      onBlur={() => setNumDraft(d => { const n = { ...d }; delete n[id]; return n; })} />
+  );
   const inputCls = 'rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800';
   const CATS: Categorie[] = ['mo_bureau', 'mo_chantier', 'voyagement', 'subsistance', 'hebergement', 'materiaux'];
   const isMO = (c: Categorie) => CATEGORIES_MO.includes(c);
@@ -219,7 +230,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               <div key={lblKey} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                 <input value={cf.labels?.[lblKey] ?? defLabel} placeholder={defLabel} onChange={e => setLabel(lblKey, e.target.value)}
                   className="w-full bg-transparent text-xs font-semibold text-gray-600 outline-none dark:text-gray-300" title={tr('Libellé éditable (propagé)', 'Editable label (propagated)')} />
-                <input type="text" inputMode="decimal" value={String(value)} onFocus={e => e.target.select()} onChange={e => onValue(numFR(e.target.value))} className={`mt-1 w-full ${inputCls}`} />
+                {numInput(`rate_${lblKey}`, value, onValue, `mt-1 w-full ${inputCls}`)}
               </div>
             );
             return (
@@ -254,9 +265,19 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
 
               {/* Catalogue matériel (par catalogue) */}
               <div className="mt-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Catalogue matériel', 'Materials catalog')}</div>
-                  <button type="button" onClick={() => addList('materials', { sku: '', name: '', cost_price: 0, sale_price: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Article', 'Item')}</button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {/* Marge globale appliquée à tous les articles (modifiable individuellement ensuite) */}
+                    <span className="text-xs text-gray-500">{tr('Marge globale', 'Global margin')}</span>
+                    <input type="text" inputMode="decimal" value={globalMargin} onFocus={e => e.target.select()} onChange={e => setGlobalMargin(e.target.value)} placeholder="%" className={`w-16 text-right ${inputCls}`} />
+                    <button type="button"
+                      onClick={() => { const g = numFR(globalMargin); setCatForm({ ...cf, materials: (cf.materials || []).map(m => ({ ...m, margin_pct: g, sale_price: Math.round((m.cost_price || 0) * (1 + g / 100) * 100) / 100 })) }); }}
+                      className="rounded-lg border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                      {tr('Appliquer à tous', 'Apply to all')}
+                    </button>
+                    <button type="button" onClick={() => addList('materials', { sku: '', name: '', cost_price: 0, margin_pct: numFR(globalMargin) || undefined, sale_price: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Article', 'Item')}</button>
+                  </div>
                 </div>
                 {(cf.materials || []).length > 0 && (
                   <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
@@ -273,17 +294,14 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                     <input value={m.sku || ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('materials', i, { sku: e.target.value })} placeholder={tr('Code', 'Code')} className={`w-24 ${inputCls}`} />
                     <input value={m.name} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('materials', i, { name: e.target.value })} placeholder={tr('Désignation', 'Name')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
                     {/* Coûtant : recalcule la vente à partir de la marge si une marge est définie */}
-                    <input type="text" inputMode="decimal" value={String(m.cost_price ?? 0)} onFocus={e => e.target.select()} placeholder={tr('Coûtant', 'Cost')} className={`w-24 text-right ${inputCls}`}
-                      onChange={e => { const cost = numFR(e.target.value); const mg = m.margin_pct; updList('materials', i, mg != null ? { cost_price: cost, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 } : { cost_price: cost }); }} />
+                    {numInput(`mat_${i}_cost`, m.cost_price ?? 0, cost => { const mg = m.margin_pct; updList('materials', i, mg != null ? { cost_price: cost, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 } : { cost_price: cost }); }, `w-24 text-right ${inputCls}`)}
                     {/* Marge % désirée -> calcule le prix de vente */}
-                    <input type="text" inputMode="decimal" value={m.margin_pct != null ? String(m.margin_pct) : ''} onFocus={e => e.target.select()} placeholder="%" className={`w-20 text-right ${inputCls}`}
-                      onChange={e => { const mg = numFR(e.target.value); const cost = m.cost_price || 0; updList('materials', i, { margin_pct: mg, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 }); }} />
+                    {numInput(`mat_${i}_margin`, m.margin_pct ?? 0, mg => { const cost = m.cost_price || 0; updList('materials', i, { margin_pct: mg, sale_price: Math.round(cost * (1 + mg / 100) * 100) / 100 }); }, `w-20 text-right ${inputCls}`)}
                     {/* Prix de vente : si une marge est définie -> calcule le COÛTANT ; sinon -> calcule la marge */}
-                    <input type="text" inputMode="decimal" value={String(m.sale_price ?? 0)} onFocus={e => e.target.select()} placeholder={tr('Vente', 'Sale')} className={`w-24 text-right ${inputCls}`}
-                      onChange={e => { const sale = numFR(e.target.value); const mg = m.margin_pct;
-                        if (mg != null) updList('materials', i, { sale_price: sale, cost_price: Math.round((sale / (1 + mg / 100)) * 100) / 100 });
-                        else { const cost = m.cost_price || 0; updList('materials', i, { sale_price: sale, margin_pct: cost > 0 ? Math.round(((sale / cost) - 1) * 1000) / 10 : m.margin_pct }); }
-                      }} />
+                    {numInput(`mat_${i}_sale`, m.sale_price ?? 0, sale => { const mg = m.margin_pct;
+                      if (mg != null) updList('materials', i, { sale_price: sale, cost_price: Math.round((sale / (1 + mg / 100)) * 100) / 100 });
+                      else { const cost = m.cost_price || 0; updList('materials', i, { sale_price: sale, margin_pct: cost > 0 ? Math.round(((sale / cost) - 1) * 1000) / 10 : m.margin_pct }); }
+                    }, `w-24 text-right ${inputCls}`)}
                     <button type="button" onClick={() => delList('materials', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 ))}
@@ -293,24 +311,23 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               <div className="mt-4">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{tr('Surcharge carburant', 'Fuel surcharge')}</div>
-                  <button type="button" onClick={() => addList('fuel_tiers', { price_min: 0, price_max: null, surcharge_pct: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Palier', 'Tier')}</button>
+                  <button type="button" onClick={() => addList('fuel_tiers', { price: 0, surcharge_pct: 0 })} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Palier', 'Tier')}</button>
                 </div>
-                <label className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">{tr('Prix courant ($/L)', 'Current price ($/L)')}
-                  <input type="text" inputMode="decimal" value={String(cf.extras?.fuel_price || 0)} onFocus={e => e.target.select()} onChange={e => setExtra('fuel_price', numFR(e.target.value))} className={`w-24 text-right ${inputCls}`} />
+                <label className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">{tr('Prix courant / de base ($/L)', 'Current / base price ($/L)')}
+                  {numInput('fuel_price', cf.extras?.fuel_price || 0, v => setExtra('fuel_price', v), `w-24 text-right ${inputCls}`)}
                 </label>
                 {(cf.fuel_tiers || []).length > 0 && (
                   <div className="mt-1 hidden items-center gap-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:flex">
-                    <span className="w-20 text-right">{tr('Prix min ($/L)', 'Min price ($/L)')}</span>
-                    <span className="w-20 text-right">{tr('Prix max ($/L)', 'Max price ($/L)')}</span>
-                    <span className="w-16 text-right">{tr('Surcharge (%)', 'Surcharge (%)')}</span>
+                    <span className="w-24 text-right">{tr("Palier d'augmentation ($/L)", 'Increase tier ($/L)')}</span>
+                    <span className="w-20 text-right">{tr('% de plus', '% more')}</span>
                     <span className="w-6" />
                   </div>
                 )}
                 {(cf.fuel_tiers || []).map((t, i) => (
                   <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-                    <input type="text" inputMode="decimal" value={String(t.price_min)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { price_min: numFR(e.target.value) })} placeholder={tr('Min $/L', 'Min $/L')} className={`w-20 text-right ${inputCls}`} />
-                    <input type="text" inputMode="decimal" value={t.price_max ?? ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { price_max: e.target.value.trim() === '' ? null : numFR(e.target.value) })} placeholder={tr('Max (illim.)', 'Max (unlim.)')} className={`w-20 text-right ${inputCls}`} />
-                    <input type="text" inputMode="decimal" value={String(t.surcharge_pct)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('fuel_tiers', i, { surcharge_pct: numFR(e.target.value) })} placeholder="%" className={`w-16 text-right ${inputCls}`} />
+                    {numInput(`tier_${i}_price`, t.price, v => updList('fuel_tiers', i, { price: v }), `w-24 text-right ${inputCls}`)}
+                    <span className="text-gray-400">→</span>
+                    {numInput(`tier_${i}_pct`, t.surcharge_pct, v => updList('fuel_tiers', i, { surcharge_pct: v }), `w-20 text-right ${inputCls}`)}<span className="text-gray-400">%</span>
                     <button type="button" onClick={() => delList('fuel_tiers', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}
@@ -334,7 +351,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <div key={i} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
                     <input value={a.level_name} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { level_name: e.target.value })} placeholder={tr('Niveau', 'Level')} className={`w-32 ${inputCls}`} />
                     <input value={a.approver_label || ''} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { approver_label: e.target.value })} placeholder={tr('Approbateur', 'Approver')} className={`min-w-[8rem] flex-1 ${inputCls}`} />
-                    <input type="text" inputMode="decimal" value={String(a.max_amount)} onFocus={e => (e.target as HTMLInputElement).select()} onChange={e => updList('approval_levels', i, { max_amount: numFR(e.target.value) })} placeholder={tr('Max $', 'Max $')} className={`w-28 text-right ${inputCls}`} />
+                    {numInput(`appr_${i}_max`, a.max_amount, v => updList('approval_levels', i, { max_amount: v }), `w-28 text-right ${inputCls}`)}
                     <button type="button" onClick={() => delList('approval_levels', i)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={13} /></button>
                   </div>
                 ))}
