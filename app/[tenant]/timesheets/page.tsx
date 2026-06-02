@@ -78,6 +78,8 @@ export default function TimesheetsPage() {
   const [employeeFilter, setEmployeeFilter] = useState('');
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [currentUserName, setCurrentUserName] = useState('');
   // Superviseur : bascule entre sa propre grille de semaines (« mine ») et la table d'équipe (« team »).
   // Défaut « mine » pour que la grille des semaines ne disparaisse pas au chargement.
   const [svView, setSvView] = useState<'mine' | 'team'>('mine');
@@ -86,6 +88,8 @@ export default function TimesheetsPage() {
     fetch('/api/auth/me').then(r => r.json()).then(({ user }) => {
       if (!user) return;
       setCurrentUserId(user.id);
+      setCurrentUserEmail(user.email || '');
+      setCurrentUserName(user.name || user.email || 'Employé');
       setIsSupervisor(user.role === 'client_admin' || user.role === 'super_admin');
     }).catch(() => {});
   }, []);
@@ -114,10 +118,9 @@ export default function TimesheetsPage() {
       const { data: exists } = await supabase.from('timesheets').select('id')
         .eq('tenant_id', tenant).eq('employee_id', currentUserId).eq('period_start', start).maybeSingle();
       if (!exists) {
-        const { data: { user } } = await supabase.auth.getUser();
         await supabase.from('timesheets').insert({
           tenant_id: tenant, employee_id: currentUserId,
-          employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+          employee_email: currentUserEmail, employee_name: currentUserName,
           period_start: start, period_end: end, status: 'draft',
         });
         load();
@@ -126,22 +129,22 @@ export default function TimesheetsPage() {
   }, [currentUserId, tenant, isSupervisor]); // eslint-disable-line
 
   async function createNew() {
+    if (!currentUserId) { alert('Session expirée — reconnectez-vous.'); return; }
     setCreating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const start = weekStart(); const end = weekEnd(start);
       const { data: existing } = await supabase.from('timesheets')
-        .select('id').eq('tenant_id', tenant).eq('employee_id', user?.id || 'local')
+        .select('id').eq('tenant_id', tenant).eq('employee_id', currentUserId)
         .eq('period_start', start).maybeSingle();
       if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
       const { data, error } = await supabase.from('timesheets').insert({
-        tenant_id: tenant, employee_id: user?.id || 'local',
-        employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+        tenant_id: tenant, employee_id: currentUserId,
+        employee_email: currentUserEmail, employee_name: currentUserName,
         period_start: start, period_end: end, status: 'draft',
       }).select().single();
       if (error) throw error;
       window.location.href = `/${tenant}/timesheets/${data.id}`;
-    } catch { setCreating(false); }
+    } catch (e: any) { setCreating(false); alert('Erreur : ' + (e?.message || 'création impossible')); }
   }
 
   const employees = useMemo(() => [...new Set(sheets.map(s => s.employee_name))].sort(), [sheets]);
@@ -176,25 +179,23 @@ export default function TimesheetsPage() {
   }, [allPeriods, sheets, yearFilter, currentUserId]);
 
   async function createForPeriod(start: string, end: string) {
+    if (!currentUserId) { alert('Session expirée — reconnectez-vous.'); return; }
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const uid = user?.id || 'local';
       const { data: existing } = await supabase.from('timesheets').select('id')
-        .eq('tenant_id', tenant).eq('employee_id', uid).eq('period_start', start).maybeSingle();
+        .eq('tenant_id', tenant).eq('employee_id', currentUserId).eq('period_start', start).maybeSingle();
       if (existing) { window.location.href = `/${tenant}/timesheets/${existing.id}`; return; }
       const { data, error } = await supabase.from('timesheets').insert({
-        tenant_id: tenant, employee_id: uid,
-        employee_email: user?.email || '', employee_name: user?.user_metadata?.name || user?.email || 'Employé',
+        tenant_id: tenant, employee_id: currentUserId,
+        employee_email: currentUserEmail, employee_name: currentUserName,
         period_start: start, period_end: end, status: 'draft',
       }).select().single();
       if (error) throw error;
       window.location.href = `/${tenant}/timesheets/${data.id}`;
-    } catch { /* silently ignore */ }
+    } catch (e: any) { alert('Erreur : ' + (e?.message || 'création impossible')); }
   }
 
   async function approve(id: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const approver = user?.user_metadata?.name || user?.email || 'Superviseur';
+    const approver = currentUserName || currentUserEmail || 'Superviseur';
     await supabase.from('timesheets').update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: approver }).eq('id', id);
     load();
   }
