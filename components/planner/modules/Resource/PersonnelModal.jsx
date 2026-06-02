@@ -543,6 +543,20 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
                         </div>
 
+                        {/* Taux horaire issu des profils de paie (Admin) — lecture seule ici */}
+                        {personnel && personnel.hourly_rate != null && Number(personnel.hourly_rate) > 0 && (
+                            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                <div className="flex items-center gap-2 text-sm text-emerald-800">
+                                    <Icon name="dollar" size={16} />
+                                    <span className="font-medium">{t('personnel.hourlyRate') || 'Taux horaire'} :</span>
+                                    <span className="font-bold">{Number(personnel.hourly_rate).toFixed(2)} $/h</span>
+                                    {personnel.ot_enabled === false && <span className="text-xs text-gray-500">· OT désactivé</span>}
+                                    {personnel.dt_enabled === false && <span className="text-xs text-gray-500">· DT désactivé</span>}
+                                </div>
+                                <span className="text-xs text-gray-500">Profil de paie (Admin) — non modifiable ici</span>
+                            </div>
+                        )}
+
                         {/* Spécialités */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">

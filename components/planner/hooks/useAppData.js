@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DEFAULT_PERSONNEL, DEFAULT_EQUIPMENTS, DEFAULT_JOBS, STORAGE_CONFIG } from '@/components/planner/config/constants.js';
 import { useSupabaseSync } from './useSupabaseSync.js';
+import { supabase } from '@/components/planner/lib/supabaseClient.js';
 
 export function useAppData(tenant = null) {
     // ========== SYNC SUPABASE (Offline-first + Realtime) ==========
@@ -62,6 +63,34 @@ export function useAppData(tenant = null) {
         update: updateDepartementSync,
         remove: removeDepartementSync
     } = useSupabaseSync('planner_departements', `c-secur360-${tenant || 'local'}-departements`, [], tenant);
+
+    // ========== TAUX HORAIRE (Profils de paie - Admin) ==========
+    // Lu depuis employee_profiles (cle = id du personnel) pour afficher le taux dans Personnel.
+    // Lecture seule cote planificateur : le taux se modifie dans Admin > Paie & avantages / Evaluation.
+    const [payRates, setPayRates] = useState({}); // { [personnelId]: hourly_rate }
+    useEffect(() => {
+        if (!tenant) return;
+        let active = true;
+        (async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('employee_profiles')
+                    .select('id, hourly_rate, ot_enabled, dt_enabled')
+                    .eq('tenant_id', tenant);
+                if (error) throw error;
+                if (!active) return;
+                const map = {};
+                for (const row of (data || [])) {
+                    map[row.id] = { hourly_rate: Number(row.hourly_rate) || 0, ot_enabled: row.ot_enabled !== false, dt_enabled: row.dt_enabled !== false };
+                }
+                setPayRates(map);
+            } catch (e) {
+                // Table absente (migration 060 non executee) ou hors-ligne : pas de taux affiche, sans bloquer.
+                console.warn('Taux horaire (profils de paie) indisponible:', e?.message || e);
+            }
+        })();
+        return () => { active = false; };
+    }, [tenant]);
 
     // ========== ÉTATS LOCAUX (Non synchronisés - navigation uniquement) ==========
     const [sousTraitants, setSousTraitants] = useState([]);
@@ -385,17 +414,24 @@ export function useAppData(tenant = null) {
     // Normalisation : les enregistrements créés par l'admin utilisent 'name/role/phone'
     // mais le planificateur attend 'nom/poste/telephone'. On mappe les deux schémas.
     const personnelNormalized = useMemo(() =>
-        personnel.map(p => ({
-            ...p,
-            nom: p.nom || p.name || '',
-            prenom: p.prenom || '',
-            poste: p.poste || p.role || '',
-            disponible: p.disponible !== undefined ? p.disponible : (p.is_active !== false),
-            telephone: p.telephone || p.phone || '',
-            visibleChantier: p.visibleChantier !== undefined ? p.visibleChantier : true,
-            niveauAcces: p.niveauAcces || 'consultation',
-        }))
-    , [personnel]);
+        personnel.map(p => {
+            const pay = payRates[p.id];
+            return {
+                ...p,
+                nom: p.nom || p.name || '',
+                prenom: p.prenom || '',
+                poste: p.poste || p.role || '',
+                disponible: p.disponible !== undefined ? p.disponible : (p.is_active !== false),
+                telephone: p.telephone || p.phone || '',
+                visibleChantier: p.visibleChantier !== undefined ? p.visibleChantier : true,
+                niveauAcces: p.niveauAcces || 'consultation',
+                // Taux horaire issu des profils de paie (Admin) — lecture seule cote planificateur.
+                hourly_rate: pay ? pay.hourly_rate : (p.hourly_rate != null ? Number(p.hourly_rate) : null),
+                ot_enabled: pay ? pay.ot_enabled : undefined,
+                dt_enabled: pay ? pay.dt_enabled : undefined,
+            };
+        })
+    , [personnel, payRates]);
 
     const equipementsNormalized = useMemo(() =>
         equipements.map(e => ({

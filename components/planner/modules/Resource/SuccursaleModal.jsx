@@ -637,6 +637,13 @@ export function SuccursaleModal({
                                                                 {person.email}
                                                             </p>
                                                         )}
+                                                        {person.hourly_rate != null && person.hourly_rate > 0 && (
+                                                            <p className="text-sm font-medium text-emerald-700">
+                                                                <Icon name="dollar" size={14} className="inline mr-2" />
+                                                                {Number(person.hourly_rate).toFixed(2)} $/h
+                                                                <span className="ml-1 text-xs font-normal text-gray-400">(profil de paie)</span>
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <div className="mt-3 flex gap-2">
                                                         {person.niveauAcces && (
