@@ -3,9 +3,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
+import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
@@ -219,8 +220,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'transactions' | 'comptabilite' | 'fiscal';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'transactions', 'comptabilite', 'fiscal'];
+  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal'];
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   // Ouverture directe d'un onglet via ?tab=... (ex. lien « Catalogue » depuis les Soumissions).
   useEffect(() => {
@@ -246,6 +247,7 @@ export default function AdminPage() {
     { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
     { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText },
+    { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList },
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
@@ -335,6 +337,7 @@ export default function AdminPage() {
         {tab === 'factures'   && <InvoicingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
+        {tab === 'bons-commande' && <BonsCommandeModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
