@@ -4663,6 +4663,20 @@ export function JobModal({
                                                 <span className="text-xs font-normal bg-orange-200 text-orange-700 rounded-full px-2 py-0.5">
                                                     {formData.preparation.length}
                                                 </span>
+                                                {/* Résumé approvisionnement (R4) */}
+                                                {(() => {
+                                                    const ps = formData.preparation || [];
+                                                    const n = (s) => ps.filter(p => p.approStatut === s).length;
+                                                    const aCmd = n('a-commander'), cmd = n('commande'), liv = n('livraison');
+                                                    if (!aCmd && !cmd && !liv) return null;
+                                                    return (
+                                                        <span className="flex items-center gap-1">
+                                                            {aCmd > 0 && <span className="text-[10px] font-semibold bg-red-100 text-red-700 rounded-full px-2 py-0.5" title={L('À commander', 'To order')}>🛒 {aCmd}</span>}
+                                                            {cmd > 0 && <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5" title={L('Commandé', 'Ordered')}>📋 {cmd}</span>}
+                                                            {liv > 0 && <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 rounded-full px-2 py-0.5" title={L('En livraison', 'Shipping')}>🚚 {liv}</span>}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </h4>
                                             <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                                                 {/* Bouton Ressources */}
@@ -4801,6 +4815,25 @@ export function JobModal({
                                                         <option value="a-faire">{L('À faire', 'To do')}</option>
                                                         <option value="en-cours">En cours</option>
                                                         <option value="termine">{L('Terminé', 'Done')}</option>
+                                                    </select>
+                                                    {/* Approvisionnement (R4) — à commander / commandé / en livraison / reçu */}
+                                                    <select
+                                                        value={item.approStatut || ''}
+                                                        onChange={(e) => updatePreparation(index, 'approStatut', e.target.value)}
+                                                        title={L('Statut d\'approvisionnement', 'Procurement status')}
+                                                        className={`w-28 p-1 border rounded text-xs font-medium shrink-0 ${
+                                                            item.approStatut === 'a-commander' ? 'bg-red-50 text-red-700 border-red-300' :
+                                                            item.approStatut === 'commande' ? 'bg-amber-50 text-amber-700 border-amber-300' :
+                                                            item.approStatut === 'livraison' ? 'bg-blue-50 text-blue-700 border-blue-300' :
+                                                            item.approStatut === 'recu' ? 'bg-green-50 text-green-700 border-green-300' :
+                                                            'text-gray-400'
+                                                        }`}
+                                                    >
+                                                        <option value="">{L('Appro —', 'Supply —')}</option>
+                                                        <option value="a-commander">{L('À commander', 'To order')}</option>
+                                                        <option value="commande">{L('Commandé', 'Ordered')}</option>
+                                                        <option value="livraison">{L('En livraison', 'Shipping')}</option>
+                                                        <option value="recu">{L('Reçu', 'Received')}</option>
                                                     </select>
                                                     {/* Texte */}
                                                     <input
