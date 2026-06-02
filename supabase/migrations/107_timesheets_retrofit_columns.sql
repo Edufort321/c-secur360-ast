@@ -24,10 +24,13 @@ ALTER TABLE timesheets ADD COLUMN IF NOT EXISTS created_at        TIMESTAMPTZ NO
 ALTER TABLE timesheets ADD COLUMN IF NOT EXISTS updated_at        TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- Backfill : les anciennes feuilles utilisaient user_id ; on copie vers employee_id si présent.
+-- Et on retire la contrainte NOT NULL de user_id (colonne héritée non utilisée par l'app) :
+-- sinon l'INSERT (qui ne fournit qu'employee_id) viole la contrainte NOT NULL sur user_id.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'timesheets' AND column_name = 'user_id') THEN
     UPDATE timesheets SET employee_id = user_id::text WHERE employee_id IS NULL AND user_id IS NOT NULL;
+    ALTER TABLE timesheets ALTER COLUMN user_id DROP NOT NULL;
   END IF;
 END $$;
 

@@ -836,11 +836,22 @@ export default function LandingPage() {
             <Image src="/logo.png" alt="C-Secur360" width={28} height={28} className="h-7 w-auto" />
             <span className="font-bold text-white text-sm">C-Secur360</span>
           </div>
-          <p className="text-slate-500 text-xs text-center">
-            {fr
-              ? '© 2025 C-Secur360. Plateforme SaaS de securite industrielle. Tous droits reserves.'
-              : '© 2025 C-Secur360. Industrial safety SaaS platform. All rights reserved.'}
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-slate-500 text-xs text-center">
+              {fr
+                ? '© 2025 C-Secur360. Plateforme SaaS de securite industrielle. Tous droits reserves.'
+                : '© 2025 C-Secur360. Industrial safety SaaS platform. All rights reserved.'}
+            </p>
+            <div className="flex items-center gap-4 text-xs">
+              <Link href="/privacy" className="text-slate-400 hover:text-orange-400 transition">
+                {fr ? 'Politique de confidentialité' : 'Privacy policy'}
+              </Link>
+              <span className="text-slate-600">·</span>
+              <Link href="/terms" className="text-slate-400 hover:text-orange-400 transition">
+                {fr ? "Conditions d'utilisation" : 'Terms of use'}
+              </Link>
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <a href="mailto:eric.dufort@cerdia.ai" className="text-slate-400 hover:text-orange-400 transition">
               <Mail size={16} />

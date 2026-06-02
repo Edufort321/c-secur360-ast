@@ -73,6 +73,25 @@ export function DemoStartButton({ fr = true, className = '' }: { fr?: boolean; c
                   {result && !result.ok && (
                     <div className="rounded-lg bg-amber-500/15 px-3 py-2 text-xs text-amber-300">{result.message}</div>
                   )}
+                  <p className="text-[10px] leading-tight text-slate-400">
+                    {fr ? (
+                      <>
+                        En soumettant, vous acceptez que votre nom et votre courriel soient utilisés
+                        pour activer et faire le suivi de votre démo. Aucune revente.{' '}
+                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
+                          Politique de confidentialité
+                        </a>.
+                      </>
+                    ) : (
+                      <>
+                        By submitting, you agree that your name and email will be used to activate and
+                        follow up on your demo. No resale.{' '}
+                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
+                          Privacy policy
+                        </a>.
+                      </>
+                    )}
+                  </p>
                   <button type="submit" disabled={loading} className="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-600 disabled:opacity-50">
                     {loading ? '…' : (fr ? 'Démarrer la démo' : 'Start the demo')}
                   </button>

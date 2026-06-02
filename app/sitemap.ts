@@ -4,7 +4,7 @@ import type { MetadataRoute } from 'next';
 const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://csecur360.ca';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ['', '/pricing', '/privacy'];
+  const pages = ['', '/pricing', '/privacy', '/terms'];
   return pages.map((p) => ({
     url: `${BASE}${p}`,
     changeFrequency: 'weekly' as const,

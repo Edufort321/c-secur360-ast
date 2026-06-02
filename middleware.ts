@@ -49,6 +49,7 @@ const publicRoutes = [
   '/contact',
   '/about',
   '/privacy',
+  '/terms',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/forgot-password',
