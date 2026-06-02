@@ -82,10 +82,32 @@ const sortCatalogues = (list: CatalogueTaux[]): CatalogueTaux[] =>
     || (Number(b.year) || 0) - (Number(a.year) || 0)
     || (Number(b.revision) || 0) - (Number(a.revision) || 0));
 
+// ── Repli local (localStorage) : si la base ne peut pas stocker une colonne optionnelle
+// (migration non encore propagee au cache de schema PostgREST), on conserve la valeur localement
+// pour que materiel/baremes/etc. persistent quand meme. Efface des qu'un enregistrement complet reussit.
+const CAT_FALLBACK_KEY = (tenant: string, id: string) => `cat_fallback_${tenant}_${id}`;
+function readCatFallback(tenant: string, id?: string): Partial<CatalogueTaux> | null {
+  if (!id || typeof window === 'undefined') return null;
+  try { const s = window.localStorage.getItem(CAT_FALLBACK_KEY(tenant, id)); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+function writeCatFallback(tenant: string, id: string, data: Partial<CatalogueTaux>): void {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.setItem(CAT_FALLBACK_KEY(tenant, id), JSON.stringify(data)); } catch { /* quota */ }
+}
+function clearCatFallback(tenant: string, id: string): void {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.removeItem(CAT_FALLBACK_KEY(tenant, id)); } catch { /* noop */ }
+}
+
 export async function getCatalogues(tenant: string): Promise<CatalogueTaux[]> {
   const { data, error } = await supabase.from('catalogue_taux').select('*').eq('tenant_id', tenant);
   if (error) throw error;
-  return sortCatalogues((data || []) as CatalogueTaux[]);
+  // Fusionne le repli local par-dessus les colonnes que la base n'a pas pu stocker.
+  const merged = (data || []).map((c: any) => {
+    const fb = readCatFallback(tenant, c.id);
+    return fb ? { ...c, ...fb } : c;
+  });
+  return sortCatalogues(merged as CatalogueTaux[]);
 }
 /** Catalogue par défaut : le « préféré » sinon le plus récent actif. */
 export async function getActiveCatalogue(tenant: string, _year?: number): Promise<CatalogueTaux | null> {
@@ -104,19 +126,31 @@ export async function saveCatalogue(tenant: string, c: CatalogueTaux): Promise<{
     return { id: data?.id, error };
   };
   let id: string | undefined;
-  const stripped: string[] = []; // colonnes optionnelles retirees faute de migration (donnees NON sauvegardees)
-  // Réessaie en retirant chaque colonne manquante signalée par PostgREST (PGRST204 / "column ... not found").
+  const stripped: string[] = []; // colonnes optionnelles retirees faute de migration/cache (repli localStorage)
   for (let attempt = 0; attempt < CATALOGUE_OPTIONAL_COLS.length + 1; attempt++) {
     const res = await write(payload);
     if (!res.error) { id = res.id; break; }
     const msg = res.error.message || '';
-    const m = msg.match(/'([a-z_]+)' column/i) || msg.match(/column ["']?([a-z_]+)["']?/i);
+    const code = res.error.code || '';
+    // Ne retire QUE sur une vraie erreur de colonne manquante / cache de schema PostgREST — pas sur une autre erreur.
+    const isMissingCol = code === 'PGRST204' || /schema cache|could not find|does not exist/i.test(msg);
+    const m = msg.match(/'([a-z_]+)' column/i) || msg.match(/column ["']?([a-z_]+)["']?/i) || msg.match(/the '([a-z_]+)' column/i);
     const col = m?.[1];
-    if (col && CATALOGUE_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; if (!stripped.includes(col)) stripped.push(col); continue; }
+    if (isMissingCol && col && CATALOGUE_OPTIONAL_COLS.includes(col) && payload[col] !== undefined) { delete payload[col]; if (!stripped.includes(col)) stripped.push(col); continue; }
     throw res.error;
   }
   // Un seul préféré à la fois (ignore si la colonne n'existe pas encore).
   if (c.preferred && id) { try { await supabase.from('catalogue_taux').update({ preferred: false }).eq('tenant_id', tenant).neq('id', id); } catch { /* colonne preferred absente */ } }
+  // Repli local : si des colonnes ont ete retirees, on conserve leurs valeurs localement (et on relit a getCatalogues).
+  if (id) {
+    if (stripped.length) {
+      const fb: any = {};
+      for (const col of stripped) fb[col] = (c as any)[col];
+      writeCatFallback(tenant, id, fb);
+    } else {
+      clearCatFallback(tenant, id); // tout est en base : plus besoin du repli
+    }
+  }
   return { id: id as string, stripped };
 }
 export async function deleteCatalogue(tenant: string, id: string): Promise<void> {

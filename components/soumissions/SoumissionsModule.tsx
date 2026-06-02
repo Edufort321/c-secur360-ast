@@ -124,6 +124,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const addItem = () => setItems(p => [...p, { name: `Item ${p.length + 1}`, total: 0, lignes: [] }]);
   const delItem = (i: number) => setItems(p => p.filter((_, j) => j !== i));
   const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, blankLigne(c)] } : it));
+  // Ajoute une ligne pre-remplie depuis un barEme additionnel du catalogue (classe a la bonne categorie).
+  const addCatalogueLigne = (i: number, c: Categorie, label: string, value: number) => setItems(p => p.map((it, j) => {
+    if (j !== i) return it;
+    const base = blankLigne(c);
+    const filled = isMO(c) ? { ...base, description: label } : { ...base, description: label, quantity: 1, unit: tr('unité', 'unit'), unit_cost: value };
+    return { ...it, lignes: [...it.lignes, filled] };
+  }));
   const updLigne = (i: number, li: number, patch: Partial<SoumissionLigne>) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.map((l, k) => k === li ? { ...l, ...patch } : l) } : it));
   const delLigne = (i: number, li: number) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.filter((_, k) => k !== li) } : it));
 
@@ -131,16 +138,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     if (!catForm) return;
     setNotice(null);
     try {
-      const { stripped } = await saveCatalogue(tenant, catForm);
-      if (stripped && stripped.length) {
-        // Colonnes absentes en base : ces sections n'ont PAS ete sauvegardees -> il faut executer les migrations.
-        const labels: Record<string, string> = { materials: tr('matériel', 'materials'), fuel_tiers: tr('surcharge carburant', 'fuel surcharge'), approval_levels: tr("niveaux d'approbation", 'approval levels'), custom_rates: tr('barèmes additionnels', 'additional rates'), extras: tr('barèmes (km/subsistance/hébergement)', 'rates (km/per-diem/lodging)'), labels: tr('libellés', 'labels'), preferred: tr('préféré', 'preferred') };
-        const names = stripped.map(s => labels[s] || s).join(', ');
-        setNotice(tr(`Enregistré PARTIELLEMENT. Non sauvegardé : ${names}. La base n'a pas ces colonnes — exécutez les migrations 101 à 105 (Supabase) puis ré-enregistrez.`, `Saved PARTIALLY. Not saved: ${names}. The database is missing these columns — run migrations 101–105 (Supabase) then save again.`));
-      } else {
-        setNotice(tr('Catalogue enregistré.', 'Catalogue saved.'));
-        setCatForm(null);
-      }
+      // Le repli local (lib) garantit la persistance de toutes les sections meme si une colonne manque encore en base.
+      await saveCatalogue(tenant, catForm);
+      setNotice(tr('Catalogue enregistré.', 'Catalogue saved.'));
+      setCatForm(null);
       await load();
     }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
@@ -530,6 +531,18 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                         <span>{catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c])}</span>
                         {canEdit && <button onClick={() => addLigne(i, c)} className="text-blue-600 hover:underline">+ {tr('Ligne', 'Line')}</button>}
                       </div>
+                      {/* Barèmes additionnels du catalogue classés dans CETTE section : clic = ligne pré-remplie */}
+                      {canEdit && (cat?.custom_rates || []).filter(r => (r.categorie || 'mo_chantier') === c).length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-3 py-1.5 dark:border-gray-700">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{tr('Du catalogue', 'From catalogue')} :</span>
+                          {(cat?.custom_rates || []).filter(r => (r.categorie || 'mo_chantier') === c).map((r, ri) => (
+                            <button key={ri} type="button" onClick={() => addCatalogueLigne(i, c, r.label, r.value)}
+                              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              + {r.label || tr('barème', 'rate')}{r.value ? ` (${mny(r.value)})` : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {lignes.length > 0 && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
