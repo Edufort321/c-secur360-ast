@@ -2481,14 +2481,21 @@ function ComptesAcces({ tenant, tr, canReveal }: { tenant: string; tr: (f: strin
             <div className="flex gap-2 pt-1">
               {(() => { const acc = userByEmail[(form.email || '').toLowerCase()]; return (
               <button onClick={acc ? updateAccount : createAccount} disabled={busy} className={`flex-1 inline-flex items-center justify-center gap-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60 ${acc ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {acc ? tr('Mettre à jour le mot de passe', 'Update password') : tr('Créer le compte', 'Create account')}
+                {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {acc ? tr('Mettre à jour l’accès', 'Update access') : tr('Créer l’accès (connexion)', 'Create access (login)')}
               </button>
               ); })()}
-              <button onClick={savePwdToFiche} disabled={busy} title={tr('Enregistrer le mot de passe dans la fiche (masqué dans la liste)', 'Save password to the record (masked in the list)')}
+              <button onClick={savePwdToFiche} disabled={busy} title={tr('Enregistre le mot de passe dans la fiche seulement — NE crée PAS le compte de connexion', 'Saves the password to the record only — does NOT create the login account')}
                 className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
-                💾 {tr('Enregistrer', 'Save')}
+                💾 {tr('Fiche', 'Record')}
               </button>
               <button onClick={copyAll} className="rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">📋 {tr('Tout', 'All')}</button>
+            </div>
+            <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+              {(() => { const acc = userByEmail[(form.email || '').toLowerCase()]; return acc
+                ? tr('✓ Ce compte de connexion existe. « Mettre à jour l’accès » change son mot de passe.', '✓ This login account exists. "Update access" changes its password.')
+                : tr('⚠ Aucun compte de connexion pour ce courriel. Cliquez « Créer l’accès » pour qu’il puisse se connecter — « Fiche » ne fait qu’enregistrer le mot de passe affiché.', '⚠ No login account for this email. Click "Create access" so they can log in — "Record" only saves the displayed password.'); })()}
+            </p>
+            <div className="hidden">
             </div>
             {notice && <p className={`text-xs font-medium ${notice.includes('✓') ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600'}`}>{notice}</p>}
           </div>
