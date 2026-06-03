@@ -1,9 +1,36 @@
 // Tests unitaires des helpers de commissions d'affiliation (#63).
 // fetch simule ; aucune dependance serveur/DB. Lancer : npm test
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { listCommissions, getVendorFiche, isContractActive, yearsElapsed, indexedAmount, projectNextCommission } from './affiliateCommissions';
+import { listCommissions, getVendorFiche, isContractActive, yearsElapsed, indexedAmount, projectNextCommission, commissionReminders } from './affiliateCommissions';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+const c = (over: any = {}) => ({ id: 'x', vendor_id: 'v', tenant_id: 't', amount: 100, status: 'pending', due_date: null, paid_at: null, period_start: null, period_end: null, created_at: '', vendor_name: 'V', tenant_name: 'T', ...over });
+
+describe('commissionReminders (#70)', () => {
+  const today = '2026-06-03';
+  it('classe en retard vs echeance proche, ignore payees/lointaines/sans echeance', () => {
+    const list = commissionReminders([
+      c({ id: 'late', due_date: '2026-05-20' }),         // retard
+      c({ id: 'soon', due_date: '2026-06-20' }),         // dans 17 j -> proche
+      c({ id: 'far', due_date: '2026-12-01' }),          // > 30 j -> ignore
+      c({ id: 'paid', due_date: '2026-05-20', status: 'paid' }), // payee -> ignore
+      c({ id: 'nodate', due_date: null }),               // sans echeance -> ignore
+    ], { today });
+    expect(list.map(r => r.commission.id)).toEqual(['late', 'soon']);
+    expect(list[0].bucket).toBe('overdue');
+    expect(list[0].daysUntil).toBeLessThan(0);
+    expect(list[1].bucket).toBe('soon');
+  });
+
+  it('respecte la fenetre withinDays et trie par urgence', () => {
+    const list = commissionReminders([
+      c({ id: 'd10', due_date: '2026-06-13' }),
+      c({ id: 'd3', due_date: '2026-06-06' }),
+    ], { today, withinDays: 7 });
+    expect(list.map(r => r.commission.id)).toEqual(['d3']); // d10 hors fenetre 7 j
+  });
+});
 
 describe('indexation inflation (#70)', () => {
   it('yearsElapsed compte les annees revolues a la date anniversaire', () => {

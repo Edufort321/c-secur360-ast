@@ -5,9 +5,9 @@
 // action « Marquer paye » (#69) qui enregistre un paiement et passe l'echeance a paye.
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature, BadgeCheck, CheckCircle2, X, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature, BadgeCheck, CheckCircle2, X, Download, BellRing } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { listCommissions, type AffiliateCommission } from '@/lib/affiliateCommissions';
+import { listCommissions, commissionReminders, type AffiliateCommission } from '@/lib/affiliateCommissions';
 import { listPayments, markCommissionPaid, summarizePayments, paymentsToExpenses, COMMISSION_EXPENSE_ACCOUNT, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 
 const money = (n: number) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -50,6 +50,8 @@ export default function CommissionsDashboardPage() {
   const today = todayISO();
   const pending = rows.filter(r => r.status === 'pending');
   const totals = useMemo(() => summarizePayments(rows, payments, today), [rows, payments, today]);
+  const reminders = useMemo(() => commissionReminders(rows, { today }), [rows, today]);
+  const overdueCount = reminders.filter(r => r.bucket === 'overdue').length;
 
   // Lien comptabilite (#69) : expose les paiements regles comme depenses (compte 5050), en lecture seule.
   function exportExpensesCSV() {
@@ -128,6 +130,40 @@ export default function CommissionsDashboardPage() {
             <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'paid').length} paiement(s) regle(s)</p>
           </div>
         </div>
+
+        {/* Rappels d'echeance (#70) : retards + echeances proches (<= 30 j) */}
+        {!loading && reminders.length > 0 && (
+          <div className="mb-4 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-2.5 dark:border-amber-500/30">
+              <BellRing size={16} className="text-amber-600" />
+              <h2 className="text-sm font-bold text-amber-800 dark:text-amber-200">Rappels d'echeance</h2>
+              <span className="text-xs text-amber-700 dark:text-amber-300">
+                {overdueCount > 0 && <>{overdueCount} en retard · </>}{reminders.length - overdueCount} a echeance proche (30 j)
+              </span>
+            </div>
+            <ul className="divide-y divide-amber-100 dark:divide-amber-500/20">
+              {reminders.slice(0, 8).map(r => (
+                <li key={r.commission.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
+                  <span className="text-gray-700 dark:text-gray-200">
+                    <strong>{r.commission.tenant_name}</strong>
+                    <span className="text-gray-400"> · {r.commission.vendor_name || '—'}</span>
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className={`text-xs font-semibold ${r.bucket === 'overdue' ? 'text-red-600' : 'text-amber-700 dark:text-amber-300'}`}>
+                      {r.bucket === 'overdue' ? `En retard de ${Math.abs(r.daysUntil)} j` : `Dans ${r.daysUntil} j`} · {fmtDate(r.commission.due_date)}
+                    </span>
+                    <span className="font-semibold">{money(Number(r.commission.amount))}</span>
+                    <button onClick={() => setPayRow(r.commission)}
+                      className="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10">
+                      Payer
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {reminders.length > 8 && <p className="px-4 py-2 text-xs text-amber-700 dark:text-amber-300">+ {reminders.length - 8} autre(s) echeance(s) — voir le tableau ci-dessous.</p>}
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           {loading ? (

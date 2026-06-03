@@ -78,3 +78,29 @@ export function indexedAmount(base: number, inflationPct: number, periods: numbe
 export function projectNextCommission(currentAmount: number, inflationPct: number): number {
   return indexedAmount(currentAmount, inflationPct, 1);
 }
+
+// ─── Rappels d'echeance (#70) ───────────────────────────────────────────────
+
+export interface CommissionReminder {
+  commission: AffiliateCommission;
+  daysUntil: number;                 // negatif = en retard
+  bucket: 'overdue' | 'soon';
+}
+
+/** Commissions en attente echues (retard) ou a echeance proche (<= withinDays), triees par urgence. */
+export function commissionReminders(
+  commissions: AffiliateCommission[],
+  opts: { withinDays?: number; today?: string } = {},
+): CommissionReminder[] {
+  const withinDays = opts.withinDays ?? 30;
+  const today = opts.today ?? new Date().toISOString().slice(0, 10);
+  const t0 = Date.parse(today + 'T00:00:00');
+  const out: CommissionReminder[] = [];
+  for (const c of commissions || []) {
+    if (c.status !== 'pending' || !c.due_date) continue;
+    const daysUntil = Math.round((Date.parse(c.due_date + 'T00:00:00') - t0) / 86400000);
+    if (daysUntil < 0) out.push({ commission: c, daysUntil, bucket: 'overdue' });
+    else if (daysUntil <= withinDays) out.push({ commission: c, daysUntil, bucket: 'soon' });
+  }
+  return out.sort((a, b) => a.daysUntil - b.daysUntil);
+}
