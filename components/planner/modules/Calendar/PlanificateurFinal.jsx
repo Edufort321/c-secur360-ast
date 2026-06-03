@@ -1277,19 +1277,6 @@ export function PlanificateurFinal({
                             <div className="text-base font-bold capitalize text-gray-800 dark:text-gray-100">{monthCursor.toLocaleDateString(currentLanguage === 'fr' ? 'fr-CA' : 'en-CA', { month: 'long', year: 'numeric' })}</div>
                             <button onClick={() => setMonthCursor(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))} className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">→</button>
                         </div>
-                        <div className="flex justify-center gap-2">
-                            {utilisateurConnecte?.id && (
-                                <button onClick={() => setMineOnly(v => !v)}
-                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                    {mineOnly ? `👤 ${t('filter.myTasks') || 'Mes tâches'}` : (t('filter.allTasks') || 'Toutes les tâches')}
-                                </button>
-                            )}
-                            <button onClick={() => setControleOnly(v => !v)}
-                                title={tr('Afficher seulement les mandats à contrôler', 'Show only jobs needing control')}
-                                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${controleOnly ? 'bg-amber-500 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                                ⚠️ {tr('À contrôler', 'To control')}
-                            </button>
-                        </div>
                         {(() => {
                             const y = monthCursor.getFullYear(), mo = monthCursor.getMonth();
                             const first = new Date(y, mo, 1);
@@ -1333,6 +1320,20 @@ export function PlanificateurFinal({
                                                 </button>
                                             );
                                         })}
+                                    </div>
+                                    {/* #52 — boutons de filtre (Mes taches / A controler) sous le calendrier en vue Mois */}
+                                    <div className="flex justify-center gap-2">
+                                        {utilisateurConnecte?.id && (
+                                            <button onClick={() => setMineOnly(v => !v)}
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${mineOnly ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                                                {mineOnly ? `👤 ${t('filter.myTasks') || 'Mes tâches'}` : (t('filter.allTasks') || 'Toutes les tâches')}
+                                            </button>
+                                        )}
+                                        <button onClick={() => setControleOnly(v => !v)}
+                                            title={tr('Afficher seulement les mandats à contrôler', 'Show only jobs needing control')}
+                                            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${controleOnly ? 'bg-amber-500 text-white' : 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                                            ⚠️ {tr('À contrôler', 'To control')}
+                                        </button>
                                     </div>
                                     <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                                         <div className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 px-3 py-2 text-sm font-bold capitalize text-gray-700 dark:text-gray-200">
