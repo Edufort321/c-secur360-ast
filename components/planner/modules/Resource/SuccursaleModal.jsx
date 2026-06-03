@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '../../components/UI/Icon';
 import { Logo } from '../../components/UI/Logo';
 import { PersonnelModal } from './PersonnelModal';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export function SuccursaleModal({
     isOpen,
@@ -17,6 +18,9 @@ export function SuccursaleModal({
     departements = [],
     addNotification
 }) {
+    const { currentLanguage } = useLanguage();
+    const tr = (fr, en) => (currentLanguage === 'fr' ? fr : en);
+
     const [formData, setFormData] = useState({
         nom: '',
         adresse: '',
@@ -108,23 +112,23 @@ export function SuccursaleModal({
         e.preventDefault();
 
         if (!formData.nom.trim()) {
-            alert('Le nom de la succursale est requis');
+            alert(tr('Le nom de la succursale est requis', 'Branch name is required'));
             return;
         }
 
         if (!formData.adresse.trim()) {
-            alert('L\'adresse est requise');
+            alert(tr("L'adresse est requise", 'Address is required'));
             return;
         }
 
         if (!formData.ville.trim()) {
-            alert('La ville est requise');
+            alert(tr('La ville est requise', 'City is required'));
             return;
         }
 
         // Vérifier si la succursale existe déjà (sauf si on modifie)
         if (!succursale && succursales.some(s => s.nom.toLowerCase() === formData.nom.toLowerCase())) {
-            alert('Cette succursale existe déjà');
+            alert(tr('Cette succursale existe déjà', 'This branch already exists'));
             return;
         }
 
@@ -145,7 +149,7 @@ export function SuccursaleModal({
             onClose();
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error);
-            alert('Erreur lors de la sauvegarde de la succursale');
+            alert(tr('Erreur lors de la sauvegarde de la succursale', 'Error while saving the branch'));
         } finally {
             setIsSubmitting(false);
         }
@@ -164,7 +168,7 @@ export function SuccursaleModal({
                 onClose();
             } catch (error) {
                 console.error('Erreur lors de la suppression:', error);
-                alert('Erreur lors de la suppression de la succursale');
+                alert(tr('Erreur lors de la suppression de la succursale', 'Error while deleting the branch'));
             }
         }
     };
@@ -200,7 +204,7 @@ export function SuccursaleModal({
         if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${person.prenom} ${person.nom} ?`)) {
             onDeletePersonnel(personId);
             if (addNotification) {
-                addNotification(`${person.prenom} ${person.nom} supprimé avec succès`, 'success');
+                addNotification(`${person.prenom} ${person.nom} ${tr('supprimé avec succès', 'deleted successfully')}`, 'success');
             }
         }
     };
@@ -218,15 +222,15 @@ export function SuccursaleModal({
                             <div>
                                 <h2 className="text-xl font-bold text-white flex items-center">
                                     <Icon name="building" className="mr-2" size={24} />
-                                    {succursale ? `Succursale: ${succursale.nom}` : 'Nouvelle Succursale'}
+                                    {succursale ? `${tr('Succursale', 'Branch')}: ${succursale.nom}` : tr('Nouvelle Succursale', 'New Branch')}
                                 </h2>
-                                <p className="text-sm text-gray-300">Gestion des succursales et du personnel C-Secur360</p>
+                                <p className="text-sm text-gray-300">{tr('Gestion des succursales et du personnel C-Secur360', 'C-Secur360 branch and personnel management')}</p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
                             className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all"
-                            title="Fermer"
+                            title={tr('Fermer', 'Close')}
                         >
                             <Icon name="close" size={24} />
                         </button>
@@ -244,7 +248,7 @@ export function SuccursaleModal({
                                 }`}
                             >
                                 <Icon name="info" size={16} className="inline mr-2" />
-                                Informations succursale
+                                {tr('Informations succursale', 'Branch information')}
                             </button>
                             <button
                                 onClick={() => setActiveSection('personnel')}
@@ -270,39 +274,39 @@ export function SuccursaleModal({
                         <div className="bg-gray-50 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <Icon name="info" className="mr-2" size={20} />
-                                Informations générales
+                                {tr('Informations générales', 'General information')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Nom de la succursale *
+                                        {tr('Nom de la succursale *', 'Branch name *')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.nom}
                                         onChange={(e) => handleInputChange('nom', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: C-Secur360 Sherbrooke"
+                                        placeholder={tr('Ex: C-Secur360 Sherbrooke', 'E.g.: C-Secur360 Sherbrooke')}
                                         required
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Responsable
+                                        {tr('Responsable', 'Manager')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.responsable}
                                         onChange={(e) => handleInputChange('responsable', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: Jean Dupont"
+                                        placeholder={tr('Ex: Jean Dupont', 'E.g.: John Doe')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Nombre d'employés
+                                        {tr("Nombre d'employés", 'Number of employees')}
                                     </label>
                                     <input
                                         type="number"
@@ -311,13 +315,13 @@ export function SuccursaleModal({
                                         value={formData.nombreEmployes}
                                         onChange={(e) => handleInputChange('nombreEmployes', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: 15"
+                                        placeholder={tr('Ex: 15', 'E.g.: 15')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Statut
+                                        {tr('Statut', 'Status')}
                                     </label>
                                     <div className="flex items-center space-x-4">
                                         <label className="flex items-center cursor-pointer">
@@ -327,7 +331,7 @@ export function SuccursaleModal({
                                                 onChange={() => handleInputChange('actif', true)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-green-600">🟢 Actif</span>
+                                            <span className="text-green-600">🟢 {tr('Actif', 'Active')}</span>
                                         </label>
                                         <label className="flex items-center cursor-pointer">
                                             <input
@@ -336,7 +340,7 @@ export function SuccursaleModal({
                                                 onChange={() => handleInputChange('actif', false)}
                                                 className="mr-2"
                                             />
-                                            <span className="text-red-600">🔴 Inactif</span>
+                                            <span className="text-red-600">🔴 {tr('Inactif', 'Inactive')}</span>
                                         </label>
                                     </div>
                                 </div>
@@ -347,19 +351,19 @@ export function SuccursaleModal({
                         <div className="bg-gray-50 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <Icon name="location" className="mr-2" size={20} />
-                                Adresse
+                                {tr('Adresse', 'Address')}
                             </h3>
                             <div className="grid grid-cols-1 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Adresse complète *
+                                        {tr('Adresse complète *', 'Full address *')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.adresse}
                                         onChange={(e) => handleInputChange('adresse', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: 123 Rue Principale"
+                                        placeholder={tr('Ex: 123 Rue Principale', 'E.g.: 123 Main Street')}
                                         required
                                     />
                                 </div>
@@ -367,14 +371,14 @@ export function SuccursaleModal({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Ville *
+                                            {tr('Ville *', 'City *')}
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.ville}
                                             onChange={(e) => handleInputChange('ville', e.target.value)}
                                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: Sherbrooke"
+                                            placeholder={tr('Ex: Sherbrooke', 'E.g.: Sherbrooke')}
                                             required
                                         />
                                     </div>
@@ -398,14 +402,14 @@ export function SuccursaleModal({
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Code postal
+                                            {tr('Code postal', 'Postal code')}
                                         </label>
                                         <input
                                             type="text"
                                             value={formData.codePostal}
                                             onChange={(e) => handleInputChange('codePostal', formatCodePostal(e.target.value))}
                                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: J1H 2G3"
+                                            placeholder={tr('Ex: J1H 2G3', 'E.g.: J1H 2G3')}
                                             maxLength="7"
                                         />
                                     </div>
@@ -417,19 +421,19 @@ export function SuccursaleModal({
                         <div className="bg-gray-50 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <Icon name="phone" className="mr-2" size={20} />
-                                Informations de contact
+                                {tr('Informations de contact', 'Contact information')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Téléphone
+                                        {tr('Téléphone', 'Phone')}
                                     </label>
                                     <input
                                         type="tel"
                                         value={formData.telephone}
                                         onChange={(e) => handleInputChange('telephone', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: (819) 555-0123"
+                                        placeholder={tr('Ex: (819) 555-0123', 'E.g.: (819) 555-0123')}
                                     />
                                 </div>
 
@@ -442,7 +446,7 @@ export function SuccursaleModal({
                                         value={formData.fax}
                                         onChange={(e) => handleInputChange('fax', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: (819) 555-0124"
+                                        placeholder={tr('Ex: (819) 555-0124', 'E.g.: (819) 555-0124')}
                                     />
                                 </div>
 
@@ -455,7 +459,7 @@ export function SuccursaleModal({
                                         value={formData.email}
                                         onChange={(e) => handleInputChange('email', e.target.value)}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Ex: sherbrooke@c-secur360.com"
+                                        placeholder={tr('Ex: sherbrooke@c-secur360.com', 'E.g.: sherbrooke@c-secur360.com')}
                                     />
                                 </div>
                             </div>
@@ -465,12 +469,12 @@ export function SuccursaleModal({
                         <div className="bg-gray-50 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <Icon name="palette" className="mr-2" size={20} />
-                                Couleur d'affichage calendrier
+                                {tr("Couleur d'affichage calendrier", 'Calendar display color')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-3">
-                                        Couleur personnalisée
+                                        {tr('Couleur personnalisée', 'Custom color')}
                                     </label>
                                     <div className="flex items-center space-x-4">
                                         <div className="relative">
@@ -479,7 +483,7 @@ export function SuccursaleModal({
                                                 value={formData.couleur}
                                                 onChange={(e) => handleInputChange('couleur', e.target.value)}
                                                 className="w-16 h-12 border-2 border-gray-300 rounded-lg cursor-pointer shadow-sm"
-                                                title="Choisir une couleur personnalisée"
+                                                title={tr('Choisir une couleur personnalisée', 'Choose a custom color')}
                                             />
                                         </div>
                                         <div className="flex-1">
@@ -495,14 +499,14 @@ export function SuccursaleModal({
                                         <div
                                             className="w-12 h-12 rounded-lg border-2 border-gray-300 shadow-sm"
                                             style={{ backgroundColor: formData.couleur }}
-                                            title="Aperçu de la couleur"
+                                            title={tr('Aperçu de la couleur', 'Color preview')}
                                         />
                                     </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-3">
-                                        Couleurs prédéfinies
+                                        {tr('Couleurs prédéfinies', 'Preset colors')}
                                     </label>
                                     <div className="grid grid-cols-5 gap-2">
                                         {couleursPredefinies.map(couleur => (
@@ -526,13 +530,13 @@ export function SuccursaleModal({
                         <div className="bg-gray-50 rounded-lg p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <Icon name="note" className="mr-2" size={20} />
-                                Notes et commentaires
+                                {tr('Notes et commentaires', 'Notes and comments')}
                             </h3>
                             <textarea
                                 value={formData.notes}
                                 onChange={(e) => handleInputChange('notes', e.target.value)}
                                 className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-24 resize-none"
-                                placeholder="Ajoutez des notes sur cette succursale..."
+                                placeholder={tr('Ajoutez des notes sur cette succursale...', 'Add notes about this branch...')}
                             />
                         </div>
 
@@ -545,7 +549,7 @@ export function SuccursaleModal({
                                     className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                                 >
                                     <Icon name="trash" size={16} />
-                                    Supprimer
+                                    {tr('Supprimer', 'Delete')}
                                 </button>
                             )}
 
@@ -556,7 +560,7 @@ export function SuccursaleModal({
                                     className="flex items-center gap-2 px-6 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                                 >
                                     <Icon name="close" size={16} />
-                                    Annuler
+                                    {tr('Annuler', 'Cancel')}
                                 </button>
                                 <button
                                     type="submit"
@@ -566,12 +570,12 @@ export function SuccursaleModal({
                                     {isSubmitting ? (
                                         <>
                                             <Icon name="loading" size={16} className="animate-spin" />
-                                            Sauvegarde...
+                                            {tr('Sauvegarde...', 'Saving...')}
                                         </>
                                     ) : (
                                         <>
                                             <Icon name="save" size={16} />
-                                            Sauvegarder
+                                            {tr('Sauvegarder', 'Save')}
                                         </>
                                     )}
                                 </button>
@@ -585,14 +589,14 @@ export function SuccursaleModal({
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-lg font-semibold text-gray-900">
-                                    Personnel de {succursale.nom}
+                                    {tr('Personnel de', 'Personnel of')} {succursale.nom}
                                 </h3>
                                 <button
                                     onClick={handleAddPersonnel}
                                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
                                     <Icon name="plus" size={16} />
-                                    Ajouter un employé
+                                    {tr('Ajouter un employé', 'Add an employee')}
                                 </button>
                             </div>
 
@@ -600,8 +604,8 @@ export function SuccursaleModal({
                             {getPersonnelSuccursale().length === 0 ? (
                                 <div className="text-center py-12 bg-gray-50 rounded-lg">
                                     <Icon name="user" size={48} className="mx-auto text-gray-300 mb-4" />
-                                    <p className="text-gray-500 text-lg mb-2">Aucun employé dans cette succursale</p>
-                                    <p className="text-gray-400 text-sm">Cliquez sur "Ajouter un employé" pour commencer</p>
+                                    <p className="text-gray-500 text-lg mb-2">{tr('Aucun employé dans cette succursale', 'No employee in this branch')}</p>
+                                    <p className="text-gray-400 text-sm">{tr('Cliquez sur "Ajouter un employé" pour commencer', 'Click "Add an employee" to start')}</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
@@ -642,7 +646,7 @@ export function SuccursaleModal({
                                                             <p className="text-sm font-medium text-emerald-700">
                                                                 <Icon name="dollar" size={14} className="inline mr-2" />
                                                                 {Number(person.hourly_rate).toFixed(2)} $/h
-                                                                <span className="ml-1 text-xs font-normal text-gray-400">(profil de paie)</span>
+                                                                <span className="ml-1 text-xs font-normal text-gray-400">{tr('(profil de paie)', '(payroll profile)')}</span>
                                                             </p>
                                                         )}
                                                     </div>
@@ -659,12 +663,12 @@ export function SuccursaleModal({
                                                         )}
                                                         {person.disponible !== false && (
                                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                                Disponible
+                                                                {tr('Disponible', 'Available')}
                                                             </span>
                                                         )}
                                                         {person.disponible === false && (
                                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                                Indisponible
+                                                                {tr('Indisponible', 'Unavailable')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -673,14 +677,14 @@ export function SuccursaleModal({
                                                     <button
                                                         onClick={() => handleEditPersonnel(person)}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="Modifier"
+                                                        title={tr('Modifier', 'Edit')}
                                                     >
                                                         <Icon name="edit" size={18} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeletePersonnel(person.id)}
                                                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Supprimer"
+                                                        title={tr('Supprimer', 'Delete')}
                                                     >
                                                         <Icon name="trash" size={18} />
                                                     </button>
@@ -713,7 +717,7 @@ export function SuccursaleModal({
                             setSelectedPersonnel(null);
                             if (addNotification) {
                                 addNotification(
-                                    `${personnelData.prenom} ${personnelData.nom} ${selectedPersonnel ? 'modifié' : 'ajouté'} avec succès`,
+                                    `${personnelData.prenom} ${personnelData.nom} ${selectedPersonnel ? tr('modifié', 'edited') : tr('ajouté', 'added')} ${tr('avec succès', 'successfully')}`,
                                     'success'
                                 );
                             }
