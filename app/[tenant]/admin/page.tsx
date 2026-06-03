@@ -1042,8 +1042,8 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
             <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Adresse', 'Address')}</label>
             <input className={inp} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 rue Principale" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Ville', 'City')}</label>
               <input className={inp} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Montréal" />
             </div>
@@ -6289,7 +6289,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </div>
           </div>
           {bankLines.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-gray-800 dark:text-gray-100">{bankLines.length}</div><div className="text-xs text-gray-500">{tr('Lignes', 'Lines')}</div></div>
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-emerald-600">{bankLines.filter(b => b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('Rapprochées', 'Reconciled')}</div></div>
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-amber-600">{bankLines.filter(b => !b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('À rapprocher', 'To reconcile')}</div></div>

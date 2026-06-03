@@ -77,10 +77,17 @@ export function PortalHeader({ tenant, subtitle }: { tenant?: string; subtitle?:
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <div className="flex overflow-hidden rounded-lg border border-white/15 text-xs font-semibold">
-            <button onClick={() => setLang('fr')} className={lang === 'fr' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>FR</button>
-            <button onClick={() => setLang('en')} className={lang === 'en' ? 'bg-blue-600 px-2.5 py-1.5 text-white' : 'px-2.5 py-1.5 text-gray-300 hover:bg-white/10'}>EN</button>
-          </div>
+          {/* Bascule FR/EN au clic (toggle), pas une sélection */}
+          <button
+            onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+            title={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
+            aria-label={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
+            className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs font-semibold text-gray-200 transition-colors hover:bg-white/10"
+          >
+            <span className="text-white">{lang === 'fr' ? 'FR' : 'EN'}</span>
+            <span className="mx-1 opacity-40">⇄</span>
+            <span className="opacity-50">{lang === 'fr' ? 'EN' : 'FR'}</span>
+          </button>
 
           {tenant && (
             <Link

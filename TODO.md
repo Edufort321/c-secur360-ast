@@ -15,9 +15,11 @@
 
 ### 📥 Correctifs routés (file par agent) — maj 2026-06-03 (tout mergé sur main)
 - **Agent 1 (Planner)** : ✅#34, ✅#6 mergés · reste **#52** (calendrier: mois=tâches dessous / grille=retirer du dessus), **#53** (traduction FR/EN), **#60** (révision vue mobile calendrier + mode jour/nuit + responsive vue grille).
-- **Agent 2 (UI/Modules)** : ✅#49 mergé · reste **#54** (mobile inventaire débordements), **#55** (sync/mémoire inventaire), **#56** (scan QR : sans app=fiche/prix vendant/qté ; avec app=+/- ajuste stock), **#58** (min/max + champs écrasables), **#61** (inventaire bilingue connecté header), **#62** (permis espace clos: timer reprise gaz réglable).
-- **Agent 3 (Affiliation)** : ✅#51 mergé · reste **#63** (contrat actif dans fiche vendeur + tableau de bord paiements de commission à venir: échéance+client affilié).
-- **Agent 4 (Incidents)** : ✅ module near-miss + sévérité/filtres/CSV mergés.
+- **Agent 2 (UI/Modules)** : ✅#49 mergé · reste **#54** (mobile inventaire), **#55** (sync/mémoire inventaire), **#56** (scan QR : sans app=fiche/prix vendant/qté ; avec app=+/-), **#58** (min/max + champs écrasables), **#61** (inventaire bilingue header), **#62** (permis espace clos: timer gaz), **#68** (doublons inventaire → interconnecter hôte : langue/thème/header/supabase/sites/personnel/tenant — source unique). #61 est inclus dans #68.
+- **Agent 3 (Affiliation)** : ✅#51, ✅#63 mergés · reste **#69** (paiements de commission, migration 125), **#70** (rappels d'échéance + indexation inflation + export par vendeur). Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/api/admin/affiliate-*`, `lib/affiliate*`.
+- **Agent 4 (Incidents)** : ✅ near-miss mergé · reste **#67** (module Accidents/Incidents complet), **#71** (dashboard analytique incidents + export déclaration réglementaire). Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`.
+
+### 🔁 Règle file : chaque agent garde ≥2 tâches en attente (le patron réalimente). Profondeur actuelle — A1:3 · A2:6 · A3:2 (#69,#70) · A4:2 (#67,#71).
 - **Patron** : #46 (en cours), #45, #47, #57 (permissions), **#64** (header: toggle FR/EN au clic), **#65** (feuille de temps mobile + fonctions manquantes), **#66** (admin vue mobile), #59 (temps réel — propager), #17/#19 (✅ analyse+verrou 124 mergés, finaliser). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)

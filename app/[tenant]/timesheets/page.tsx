@@ -312,7 +312,7 @@ export default function TimesheetsPage() {
               <p className="font-medium text-slate-700">Aucune feuille de temps</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
@@ -364,8 +364,8 @@ export default function TimesheetsPage() {
           )
         ) : (
           /* Employé : grille complète des 52 périodes de l'année */
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full min-w-[640px] text-sm sm:min-w-0">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
                   <th className="px-4 py-3">Période</th>
