@@ -13,12 +13,12 @@
 - **Agent UI/MODULES** (branche `agent-ui`) — `components/BackButton.tsx` (nouveau), `app/[tenant]/projects/**`, `app/[tenant]/clients/**`, `components/steps/**` (AST), `components/inventory/**`, `components/soumissions/**`, `components/bons/**`. Tâche : **#49** (composant Retour partagé + application dans CES pages). Ne touche PAS planner, timesheets, `admin/page.tsx`, `lib/**`, `supabase/**`.
 - **Agent AFFILIATION** (branche `agent-affiliation`) — `app/auth/admin/**`, `app/api/admin/affiliate-contract/**` (nouveau), `components/admin/AffiliateContract.tsx` (nouveau), `lib/affiliateContract.ts` (nouveau), `supabase/migrations/120_affiliate_contracts.sql` (nouveau, n° 120 réservé). Tâche : **#51**. Ne touche PAS `app/[tenant]/admin/page.tsx`, timesheets, planner, autres `lib/*` existants, migrations < 120.
 
-### 📥 Correctifs routés (file par agent)
-- **Agent 1 (Planner)** : #34, #6, **#52** (retirer Agenda en vue Grille, garder en Mois), **#53** (traduction FR/EN complète).
-- **Agent 2 (UI/Modules)** : #49 (bouton Retour), **#54** (mobile inventaire), **#55** (sync inventaire localStorage↔Supabase), **#56** (scanner QR mobile, dépend de #55).
-- **Agent 3 (Affiliation)** : #51 (contrat co-vendeur).
-- **Agent 4 (Incidents)** : module near-miss + table `near_miss_events` (migration 121).
-- **Patron** : #45, #46 (en cours), #47, #57 (permissions), #17, #19, **#59** (temps réel : infra 109 ✅, abonnements client par module — inventaire→#55/Agent2, planner→Agent1, timesheets/AST/near-miss→patron). #35/#50 (✅ mergés).
+### 📥 Correctifs routés (file par agent) — maj 2026-06-03 (tout mergé sur main)
+- **Agent 1 (Planner)** : ✅#34, ✅#6 mergés · reste **#52** (calendrier: mois=tâches dessous / grille=retirer du dessus), **#53** (traduction FR/EN), **#60** (révision vue mobile calendrier + mode jour/nuit + responsive vue grille).
+- **Agent 2 (UI/Modules)** : ✅#49 mergé · reste **#54** (mobile inventaire débordements), **#55** (sync/mémoire inventaire), **#56** (scan QR : sans app=fiche/prix vendant/qté ; avec app=+/- ajuste stock), **#58** (min/max + champs écrasables), **#61** (inventaire bilingue connecté header), **#62** (permis espace clos: timer reprise gaz réglable).
+- **Agent 3 (Affiliation)** : ✅#51 mergé · reste **#63** (contrat actif dans fiche vendeur + tableau de bord paiements de commission à venir: échéance+client affilié).
+- **Agent 4 (Incidents)** : ✅ module near-miss + sévérité/filtres/CSV mergés.
+- **Patron** : #46 (en cours), #45, #47, #57 (permissions), **#64** (header: toggle FR/EN au clic), **#65** (feuille de temps mobile + fonctions manquantes), **#66** (admin vue mobile), #59 (temps réel — propager), #17/#19 (✅ analyse+verrou 124 mergés, finaliser). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
 | # | Tâche | Agent | Statut |
