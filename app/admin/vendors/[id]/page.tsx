@@ -1,13 +1,14 @@
 'use client';
 
 // Fiche vendeur (#63) : profil + clients affilies avec leur contrat actif + commissions du vendeur.
-// Reutilise le composant partage AffiliateContract pour ouvrir/editer le contrat d'un client.
+// + Historique des paiements et action « Marquer paye » (#69). Reutilise AffiliateContract.
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { getVendorFiche, type VendorFiche, isContractActive } from '@/lib/affiliateCommissions';
+import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
 
 const money = (n: number) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -24,14 +25,18 @@ export default function VendorFichePage() {
   const params = useParams();
   const id = params?.id as string;
   const [data, setData] = useState<VendorFiche | null>(null);
+  const [payments, setPayments] = useState<AffiliateCommissionPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<{ tenantId: string; tenantName?: string } | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null);
     try {
-      setData(await getVendorFiche(id));
+      const [fiche, pays] = await Promise.all([getVendorFiche(id), listPayments({ vendorId: id })]);
+      setData(fiche); setPayments(pays);
     } catch (e: any) {
       setError(e?.message || 'Erreur de chargement');
     } finally {
@@ -44,10 +49,20 @@ export default function VendorFichePage() {
   const clients = data?.clients || [];
   const commissions = data?.commissions || [];
   const activeCount = clients.filter(c => isContractActive(c.contract)).length;
-  const pendingTotal = useMemo(
-    () => commissions.filter(c => c.status === 'pending').reduce((s, c) => s + (Number(c.amount) || 0), 0),
-    [commissions],
-  );
+  const totals = useMemo(() => summarizePayments(commissions, payments), [commissions, payments]);
+
+  async function pay(commissionId: string, label: string) {
+    setPayingId(commissionId); setError(null);
+    try {
+      await markCommissionPaid(commissionId, { method: 'virement' });
+      setNotice(`Paiement enregistre (${label}) ✓`);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Erreur lors du paiement');
+    } finally {
+      setPayingId(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -77,17 +92,26 @@ export default function VendorFichePage() {
                     {vendor.is_active === false && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">Inactif</span>}
                   </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <div className="rounded-xl border border-gray-200 px-4 py-2 text-center dark:border-gray-700">
                     <p className="text-xs text-gray-400">Contrats actifs</p>
                     <p className="text-xl font-extrabold text-emerald-600">{activeCount}</p>
                   </div>
                   <div className="rounded-xl border border-gray-200 px-4 py-2 text-center dark:border-gray-700">
-                    <p className="text-xs text-gray-400">Commission a venir</p>
-                    <p className="text-xl font-extrabold text-blue-600">{money(pendingTotal)}</p>
+                    <p className="text-xs text-gray-400">Du (echu)</p>
+                    <p className="text-xl font-extrabold text-red-600">{money(totals.due)}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 px-4 py-2 text-center dark:border-gray-700">
+                    <p className="text-xs text-gray-400">A venir</p>
+                    <p className="text-xl font-extrabold text-blue-600">{money(totals.upcoming)}</p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 px-4 py-2 text-center dark:border-gray-700">
+                    <p className="text-xs text-gray-400">Paye</p>
+                    <p className="text-xl font-extrabold text-emerald-600">{money(totals.paid)}</p>
                   </div>
                 </div>
               </div>
+              {notice && <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">{notice}</div>}
             </div>
 
             {/* Clients affilies + contrat */}
@@ -152,6 +176,7 @@ export default function VendorFichePage() {
                         <th className="px-4 py-2">Periode</th>
                         <th className="px-4 py-2 text-right">Montant</th>
                         <th className="px-4 py-2 text-center">Statut</th>
+                        <th className="px-4 py-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -166,6 +191,56 @@ export default function VendorFichePage() {
                               c.status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
                               c.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
                               {c.status === 'paid' ? 'Payee' : c.status === 'pending' ? 'En attente' : 'Annulee'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            {c.status === 'pending' && (
+                              <button onClick={() => pay(c.id, c.tenant_name)} disabled={payingId === c.id}
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10">
+                                {payingId === c.id ? <Loader2 size={13} className="animate-spin" /> : <BadgeCheck size={13} />} Marquer paye
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Historique des paiements */}
+            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <h2 className="flex items-center gap-2 font-bold"><Receipt size={16} /> Historique des paiements</h2>
+              </div>
+              {payments.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-gray-400">Aucun paiement enregistre.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700">
+                        <th className="px-4 py-2">Paye le</th>
+                        <th className="px-4 py-2">Client</th>
+                        <th className="px-4 py-2">Methode</th>
+                        <th className="px-4 py-2">Reference</th>
+                        <th className="px-4 py-2 text-right">Montant</th>
+                        <th className="px-4 py-2 text-center">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map(p => (
+                        <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
+                          <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(p.paid_at)}</td>
+                          <td className="px-4 py-2.5">{p.tenant_name || '—'}</td>
+                          <td className="px-4 py-2.5 capitalize">{p.method || '—'}</td>
+                          <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{p.reference || '—'}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold">{money(Number(p.amount))}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              p.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {p.status === 'paid' ? 'Paye' : 'Annule'}
                             </span>
                           </td>
                         </tr>

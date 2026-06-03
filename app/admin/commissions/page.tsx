@@ -1,12 +1,14 @@
 'use client';
 
-// Tableau de bord des paiements de commission d'affiliation a venir (#63).
-// Liste les commissions dues (echeance + client affilie + vendeur + montant), avec total et retards.
+// Tableau de bord des paiements de commission d'affiliation (#63 + #69).
+// Liste les commissions (echeance + client affilie + vendeur + montant), totaux du/a venir/paye,
+// action « Marquer paye » (#69) qui enregistre un paiement et passe l'echeance a paye.
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature } from 'lucide-react';
+import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature, BadgeCheck, CheckCircle2, X } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { listCommissions, type AffiliateCommission } from '@/lib/affiliateCommissions';
+import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 
 const money = (n: number) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 const fmtDate = (d?: string | null) => d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -20,14 +22,23 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 
 export default function CommissionsDashboardPage() {
   const [rows, setRows] = useState<AffiliateCommission[]>([]);
+  const [payments, setPayments] = useState<AffiliateCommissionPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<'pending' | 'all'>('pending');
+  const [payRow, setPayRow] = useState<AffiliateCommission | null>(null);
+  const [payForm, setPayForm] = useState({ method: 'virement', reference: '' });
+  const [paying, setPaying] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function load(s: 'pending' | 'all') {
     setLoading(true); setError(null);
     try {
-      setRows(await listCommissions(s === 'pending' ? 'pending' : undefined));
+      const [comms, pays] = await Promise.all([
+        listCommissions(s === 'pending' ? 'pending' : undefined),
+        listPayments(),
+      ]);
+      setRows(comms); setPayments(pays);
     } catch (e: any) {
       setError(e?.message || 'Erreur de chargement');
     } finally {
@@ -38,9 +49,22 @@ export default function CommissionsDashboardPage() {
 
   const today = todayISO();
   const pending = rows.filter(r => r.status === 'pending');
-  const totalUpcoming = useMemo(() => pending.reduce((s, r) => s + (Number(r.amount) || 0), 0), [rows]);
-  const overdue = pending.filter(r => r.due_date && r.due_date < today);
-  const totalOverdue = useMemo(() => overdue.reduce((s, r) => s + (Number(r.amount) || 0), 0), [rows]);
+  const totals = useMemo(() => summarizePayments(rows, payments, today), [rows, payments, today]);
+
+  async function confirmPay() {
+    if (!payRow) return;
+    setPaying(true); setError(null);
+    try {
+      await markCommissionPaid(payRow.id, { method: payForm.method, reference: payForm.reference || undefined });
+      setNotice(`Paiement enregistre pour ${payRow.tenant_name} ✓`);
+      setPayRow(null); setPayForm({ method: 'virement', reference: '' });
+      await load(scope);
+    } catch (e: any) {
+      setError(e?.message || 'Erreur lors du paiement');
+    } finally {
+      setPaying(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -55,29 +79,35 @@ export default function CommissionsDashboardPage() {
             <h1 className="flex items-center gap-2 text-2xl font-bold"><Wallet size={22} /> Paiements de commission a venir</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Commissions dues aux co-vendeurs — echeance et client affilie.</p>
           </div>
-          <Link href="/admin/affiliate-contracts" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-            <FileSignature size={15} /> Contrats d'affiliation
-          </Link>
-        </div>
-
-        {/* Cartes de synthese */}
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-blue-600"><CalendarClock size={13} /> A venir</p>
-            <p className="mt-1 text-2xl font-extrabold">{money(totalUpcoming)}</p>
-            <p className="text-xs text-gray-400">{pending.length} commission(s) en attente</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-600"><AlertTriangle size={13} /> En retard</p>
-            <p className="mt-1 text-2xl font-extrabold text-red-600">{money(totalOverdue)}</p>
-            <p className="text-xs text-gray-400">{overdue.length} echeance(s) depassee(s)</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Affichage</p>
-            <div className="mt-2 inline-flex overflow-hidden rounded-lg border border-gray-300 text-sm dark:border-gray-600">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex overflow-hidden rounded-lg border border-gray-300 text-sm dark:border-gray-600">
               <button onClick={() => setScope('pending')} className={`px-3 py-1.5 font-semibold ${scope === 'pending' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>A venir</button>
               <button onClick={() => setScope('all')} className={`px-3 py-1.5 font-semibold ${scope === 'all' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>Toutes</button>
             </div>
+            <Link href="/admin/affiliate-contracts" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+              <FileSignature size={15} /> Contrats
+            </Link>
+          </div>
+        </div>
+
+        {notice && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">{notice}</div>}
+
+        {/* Cartes de synthese : du / a venir / paye */}
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-600"><AlertTriangle size={13} /> Du (echu)</p>
+            <p className="mt-1 text-2xl font-extrabold text-red-600">{money(totals.due)}</p>
+            <p className="text-xs text-gray-400">echeances atteintes, non payees</p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-blue-600"><CalendarClock size={13} /> A venir</p>
+            <p className="mt-1 text-2xl font-extrabold">{money(totals.upcoming)}</p>
+            <p className="text-xs text-gray-400">{pending.length} commission(s) en attente</p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-600"><CheckCircle2 size={13} /> Paye</p>
+            <p className="mt-1 text-2xl font-extrabold text-emerald-600">{money(totals.paid)}</p>
+            <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'paid').length} paiement(s) regle(s)</p>
           </div>
         </div>
 
@@ -102,6 +132,7 @@ export default function CommissionsDashboardPage() {
                     <th className="px-4 py-2">Periode</th>
                     <th className="px-4 py-2 text-right">Montant</th>
                     <th className="px-4 py-2 text-center">Statut</th>
+                    <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -126,6 +157,14 @@ export default function CommissionsDashboardPage() {
                         <td className="px-4 py-2.5 text-center">
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
                         </td>
+                        <td className="px-4 py-2.5 text-right">
+                          {r.status === 'pending' && (
+                            <button onClick={() => setPayRow(r)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10">
+                              <BadgeCheck size={13} /> Marquer paye
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -135,6 +174,45 @@ export default function CommissionsDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Modal : marquer une commission payee */}
+      {payRow && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={() => !paying && setPayRow(null)}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800" onMouseDown={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-100 bg-gray-900 px-5 py-4 text-white dark:border-gray-700">
+              <h2 className="flex items-center gap-2 font-bold"><BadgeCheck size={18} /> Marquer comme paye</h2>
+              <button onClick={() => !paying && setPayRow(null)} className="rounded-lg p-1.5 text-gray-300 hover:bg-white/10 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="space-y-3 p-5">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                {payRow.tenant_name} · {payRow.vendor_name || '—'} · <strong>{money(Number(payRow.amount))}</strong>
+              </p>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Methode</span>
+                <select value={payForm.method} onChange={e => setPayForm(f => ({ ...f, method: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600">
+                  <option value="virement">Virement</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="comptant">Comptant</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Reference (optionnel)</span>
+                <input value={payForm.reference} onChange={e => setPayForm(f => ({ ...f, reference: e.target.value }))}
+                  placeholder="N° de virement / cheque" className="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600" />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-700">
+              <button onClick={() => setPayRow(null)} disabled={paying} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300">Annuler</button>
+              <button onClick={confirmPay} disabled={paying}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+                {paying ? <Loader2 size={15} className="animate-spin" /> : <BadgeCheck size={15} />} Confirmer le paiement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
