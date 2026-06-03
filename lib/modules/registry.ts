@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, Plane, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'conges';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -104,6 +104,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Tâches : suivi, assignation, liste de vérification, photos, échéances.',
     descEn: 'Task list: tracking, assignment, checklist, photos, due dates.',
     icon: ListChecks, basePath: 'todo', color: 'text-indigo-600', accent: 'bg-indigo-600', status: 'available',
+  },
+  {
+    key: 'conges',
+    labelFr: 'Congés', labelEn: 'Time off',
+    descFr: 'Demandes de congés (vacances, maladie, formation), approbation superviseur, soldes.',
+    descEn: 'Time-off requests (vacation, sick, training), supervisor approval, balances.',
+    icon: Plane, basePath: 'conges', color: 'text-rose-600', accent: 'bg-rose-600', status: 'available',
   },
 ];
 
