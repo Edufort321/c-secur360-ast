@@ -1663,7 +1663,7 @@ export function PlanificateurFinal({
 
                                 <tbody>
                                     {filteredResources.map((resource) => (
-                                        <tr key={`dates-${resource.id}`} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 h-20">
+                                        <tr key={`dates-${resource.id}`} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700" style={{ height: '89px' }}>
                                             {continuousDays.map((day, dayIndex) => {
                                                 const allJobs = getAllJobsForCell(resource.id, day, resource.type);
 
