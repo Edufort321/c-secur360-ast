@@ -947,14 +947,26 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   async function save() {
     if (!form.name.trim()) return;
     setSaving(true); setNotice(null);
-    try {
-      const payload = { tenant_id: tenant, ...form };
-      if (form.id) { await supabase.from('clients').update(payload).eq('id', form.id); }
-      else { await supabase.from('clients').insert(payload); }
-      setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
-      deselect(); load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
-    finally { setSaving(false); }
+    // Insert/update resilient : on lit l'erreur (une requete Supabase ne throw pas) et on retire
+    // automatiquement toute colonne absente du schema reel (table `clients` creee par 010 sans
+    // les colonnes plates) pour que l'enregistrement n'echoue jamais silencieusement.
+    const full: any = { tenant_id: tenant, ...form };
+    delete full.id;
+    const attempt = (p: any) => form.id
+      ? supabase.from('clients').update(p).eq('id', form.id)
+      : supabase.from('clients').insert(p);
+    let res: any = await attempt(full);
+    let guard = 0;
+    while (res.error && guard < 15) {
+      const msg = res.error.message || '';
+      const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+      const col = m ? (m[1] || m[2] || m[3]) : null;
+      if (col && col in full && col !== 'name' && col !== 'tenant_id') { delete full[col]; res = await attempt(full); guard++; }
+      else break;
+    }
+    if (res.error) { setNotice('Erreur : ' + res.error.message); setSaving(false); return; }
+    setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
+    deselect(); load(); setSaving(false);
   }
 
   async function del(id: string) {
