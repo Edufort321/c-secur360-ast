@@ -18,7 +18,7 @@
 - **Agent 2 (UI/Modules)** : #49 (bouton Retour), **#54** (mobile inventaire), **#55** (sync inventaire localStorage↔Supabase), **#56** (scanner QR mobile, dépend de #55).
 - **Agent 3 (Affiliation)** : #51 (contrat co-vendeur).
 - **Agent 4 (Incidents)** : module near-miss + table `near_miss_events` (migration 121).
-- **Patron** : #45, #46 (en cours), #47, #35, #17, #19, **#57** (matrice permissions par niveau + self-edit verrouillé), #50 (✅).
+- **Patron** : #45, #46 (en cours), #47, #57 (permissions), #17, #19, **#59** (temps réel : infra 109 ✅, abonnements client par module — inventaire→#55/Agent2, planner→Agent1, timesheets/AST/near-miss→patron). #35/#50 (✅ mergés).
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
 | # | Tâche | Agent | Statut |
