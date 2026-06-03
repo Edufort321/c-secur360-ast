@@ -154,8 +154,23 @@ export default function TimesheetDetailPage() {
           supabase.from('timesheet_hour_bonuses').select('id,name,trigger_hours,bonus_amount').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
         ]);
         if (prof) setProfile(prof as EmployeeProfile);
-        setAllowances(allws || []);
         setHourBonuses(bonuses || []);
+
+        // #46 — Conditions de la grille salariale de l'employé (primes/subsistance définies dans la grille)
+        // affichées comme cases à cocher par jour, EN PLUS des avantages globaux du tenant.
+        let gridConds: Allowance[] = [];
+        try {
+          const { data: pers } = await supabase.from('planner_personnel').select('current_grid_id').eq('tenant_id', tenant).eq('id', sh.employee_id).maybeSingle();
+          if (pers?.current_grid_id) {
+            const { data: grid } = await supabase.from('poste_salary_grids').select('discretionary_bonuses').eq('id', pers.current_grid_id).maybeSingle();
+            const db = Array.isArray(grid?.discretionary_bonuses) ? grid!.discretionary_bonuses : [];
+            gridConds = db.map((b: any, i: number) => ({ id: `grid_${i}`, name: b.label || `Prime ${i + 1}`, amount: b.unit === 'fixed' ? (Number(b.amount) || 0) : 0, is_taxable: true }));
+          }
+        } catch { /* grille absente */ }
+        // Fusion : conditions de la grille d'abord, puis avantages globaux (sans doublon de nom).
+        const globals = (allws || []) as Allowance[];
+        const names = new Set(gridConds.map(g => g.name.toLowerCase()));
+        setAllowances([...gridConds, ...globals.filter(a => !names.has((a.name || '').toLowerCase()))]);
 
         // Dépenses avec reçu (migration 108 ; ignore si table absente)
         try {
@@ -480,15 +495,15 @@ export default function TimesheetDetailPage() {
             )}
           </div>
           {!isReadOnly && (
-            <div className="flex gap-2">
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
               <button onClick={() => save(false)} disabled={saving}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 sm:flex-none">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
               </button>
               {canSubmit && (
                 <button onClick={() => save(true)} disabled={saving || needsOdometer}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60">
-                  <Send size={15} /> Soumettre au superviseur
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60 sm:flex-none">
+                  <Send size={15} /> <span className="sm:hidden">Soumettre</span><span className="hidden sm:inline">Soumettre au superviseur</span>
                 </button>
               )}
             </div>
@@ -606,14 +621,15 @@ export default function TimesheetDetailPage() {
                   <input type="date" value={e.date} disabled={isReadOnly}
                     onChange={ev => updEntry(e.id, 'date', ev.target.value)}
                     className="inp w-36 shrink-0" />
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {CATS.map(c => {
                       const Icon = c.icon;
                       return (
                         <button key={c.k} type="button" disabled={isReadOnly}
                           onClick={() => updEntry(e.id, 'category', c.k)}
+                          title={c.label}
                           className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${e.category === c.k ? 'bg-violet-600 text-white' : 'border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                          <Icon size={12} /> {c.label}
+                          <Icon size={12} /> <span className="hidden sm:inline">{c.label}</span>
                         </button>
                       );
                     })}

@@ -7,6 +7,9 @@ import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, 
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
+import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
+import { RHDossiers } from '@/components/admin/RHDossiers';
+import { ErpSharing } from '@/components/admin/ErpSharing';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
@@ -221,8 +224,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal' | 'integrations';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal', 'integrations'];
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   // Ouverture directe d'un onglet via ?tab=... (ex. lien « Catalogue » depuis les Soumissions).
   useEffect(() => {
@@ -237,6 +240,7 @@ export default function AdminPage() {
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
     { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
+    { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings },
     { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
     { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
     { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
@@ -252,6 +256,7 @@ export default function AdminPage() {
     { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
     { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
     { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
+    { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink },
   ];
 
   const activeTab = tabs.find(t => t.k === tab);
@@ -339,9 +344,11 @@ export default function AdminPage() {
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'bons-commande' && <BonsCommandeModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'permissions' && <PermissionsMatrix tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user'} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
-        {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
+        {tab === 'integrations' && <ErpSharing tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user' || niveauAcces === 'direction'} />}
+        {tab === 'rh'         && <RHHub tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
@@ -399,7 +406,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'paid');
     if (!toExport.length) { alert(tr('Aucune feuille approuvée dans la sélection.', 'No approved sheet in selection.')); return; }
     const rows = [
-      ['Employé', 'Email', 'Période #', 'Période début', 'Période fin', 'Hrs rég', 'Hrs supp', 'Hrs maj', 'Km pers.', 'Déduction véhicule', 'Montant total', 'Statut'].join(','),
+      [tr('Employé', 'Employee'), 'Email', tr('Période #', 'Period #'), tr('Période début', 'Period start'), tr('Période fin', 'Period end'), tr('Hrs rég', 'Reg hrs'), tr('Hrs supp', 'OT hrs'), tr('Hrs maj', 'DT hrs'), tr('Km pers.', 'Personal km'), tr('Déduction véhicule', 'Vehicle deduction'), tr('Montant total', 'Total amount'), tr('Statut', 'Status')].join(','),
       ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
         s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, Number(s.vehicle_deduction || 0), s.total_amount, s.status].join(',')),
     ].join('\n');
@@ -940,14 +947,26 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   async function save() {
     if (!form.name.trim()) return;
     setSaving(true); setNotice(null);
-    try {
-      const payload = { tenant_id: tenant, ...form };
-      if (form.id) { await supabase.from('clients').update(payload).eq('id', form.id); }
-      else { await supabase.from('clients').insert(payload); }
-      setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
-      deselect(); load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
-    finally { setSaving(false); }
+    // Insert/update resilient : on lit l'erreur (une requete Supabase ne throw pas) et on retire
+    // automatiquement toute colonne absente du schema reel (table `clients` creee par 010 sans
+    // les colonnes plates) pour que l'enregistrement n'echoue jamais silencieusement.
+    const full: any = { tenant_id: tenant, ...form };
+    delete full.id;
+    const attempt = (p: any) => form.id
+      ? supabase.from('clients').update(p).eq('id', form.id)
+      : supabase.from('clients').insert(p);
+    let res: any = await attempt(full);
+    let guard = 0;
+    while (res.error && guard < 15) {
+      const msg = res.error.message || '';
+      const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+      const col = m ? (m[1] || m[2] || m[3]) : null;
+      if (col && col in full && col !== 'name' && col !== 'tenant_id') { delete full[col]; res = await attempt(full); guard++; }
+      else break;
+    }
+    if (res.error) { setNotice('Erreur : ' + res.error.message); setSaving(false); return; }
+    setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
+    deselect(); load(); setSaving(false);
   }
 
   async function del(id: string) {
@@ -1030,8 +1049,8 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
             <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Adresse', 'Address')}</label>
             <input className={inp} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 rue Principale" />
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Ville', 'City')}</label>
               <input className={inp} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Montréal" />
             </div>
@@ -2874,7 +2893,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 {seniorityLabel && <p className="mt-0.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400">⏳ {tr('Ancienneté', 'Seniority')} : {seniorityLabel}</p>}
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">Taux $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">{tr('Taux', 'Rate')} $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
                 {useGrid && tiers.length > 0 && (
                   <details className="mt-2">
                     <summary className="cursor-pointer select-none text-[9px] uppercase font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">☰ {tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</summary>
@@ -2899,7 +2918,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                   {tr('Palier actuel : ', 'Current tier: ')}<strong>{tiers[currentTierIdx]?.tier_name || '—'}</strong>
                 </p>
                 <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                  Taux $/h ≈ {(parseFloat(currentSalary) / (grid.hours_per_year || 2080) || 0).toFixed(2)} $
+                  {tr('Taux', 'Rate')} $/h ≈ {(parseFloat(currentSalary) / (grid.hours_per_year || 2080) || 0).toFixed(2)} $
                 </p>
               </div>
               <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/10 p-3">
@@ -3255,12 +3274,12 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
             <div className="mb-2">
               <label className="text-xs text-gray-500">{tr('Catégorie pour toutes les lignes', 'Category for all lines')}</label>
               <select className={inp} value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}>
-                <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                {([['Métier', 'Trade'], ['Spécialité', 'Specialty'], ['Domaine', 'Field'], ['Certification', 'Certification'], ['Autre', 'Other']] as [string, string][]).map(([v, en]) => <option key={v} value={v}>{tr(v, en)}</option>)}
               </select>
             </div>
             <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={10} autoFocus
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
-              placeholder={`Technique\nÉlectrique | EL\nMécanique\nSoudure TIG\nGestion\n…`} />
+              placeholder={tr(`Technique\nÉlectrique | EL\nMécanique\nSoudure TIG\nGestion\n…`, `Technical\nElectrical | EL\nMechanical\nTIG welding\nManagement\n…`)} />
             <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s)', 'lines')}</p>
             <div className="mt-4 flex gap-2 justify-end">
               <button onClick={() => { setShowBulk(false); setBulkText(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
@@ -3309,7 +3328,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
                       <div className="col-span-6 sm:col-span-2">
                         <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Catégorie', 'Category')}</label>
                         <select className={inp} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
-                          <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                          {([['Métier', 'Trade'], ['Spécialité', 'Specialty'], ['Domaine', 'Field'], ['Certification', 'Certification'], ['Autre', 'Other']] as [string, string][]).map(([v, en]) => <option key={v} value={v}>{tr(v, en)}</option>)}
                         </select>
                       </div>
                       {/* Actions */}
@@ -4659,7 +4678,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
               rows={12}
               autoFocus
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
-              placeholder={`Technicien junior\nTechnicien intermédiaire | TECH-INT\nTechnicien senior, TECH-SR\nContremaître\nChef de projet\nIngénieur électrique\n…`}
+              placeholder={tr(`Technicien junior\nTechnicien intermédiaire | TECH-INT\nTechnicien senior, TECH-SR\nContremaître\nChef de projet\nIngénieur électrique\n…`, `Junior technician\nIntermediate technician | TECH-INT\nSenior technician, TECH-SR\nForeman\nProject manager\nElectrical engineer\n…`)}
             />
             <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s) détectée(s)', 'line(s) detected')}</p>
             <div className="mt-4 flex gap-2 justify-end">
@@ -5316,8 +5335,24 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 }
 
 // ============================================================
-// RESSOURCES HUMAINES — communications corpo / documents / liens
+// RESSOURCES HUMAINES — hub 360 : Dossiers (agrege existant + manquant) + Communications
 // ============================================================
+function RHHub({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [sub, setSub] = useState<'dossiers' | 'comms'>('dossiers');
+  const subTab = (k: 'dossiers' | 'comms', label: string) => (
+    <button onClick={() => setSub(k)} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200'}`}>{label}</button>
+  );
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {subTab('dossiers', tr('Dossiers 360', '360 files'))}
+        {subTab('comms', tr('Communications RH', 'HR communications'))}
+      </div>
+      {sub === 'dossiers' ? <RHDossiers tenant={tenant} tr={tr} /> : <RHModule tenant={tenant} tr={tr} />}
+    </div>
+  );
+}
+
 function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   type Item = { id?: string; type: 'message' | 'document' | 'link'; title: string; content: string; url: string; active: boolean; sort_order: number };
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
@@ -5666,7 +5701,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
                   <div className="text-sm">
                     <span className="font-mono text-gray-500">{e.entry_date}</span>
                     <span className="ml-2 font-semibold">{e.description || tr('(sans description)', '(no description)')}</span>
-                    {e.reference && <span className="ml-2 text-xs text-gray-400">réf. {e.reference}</span>}
+                    {e.reference && <span className="ml-2 text-xs text-gray-400">{tr('réf.', 'ref.')} {e.reference}</span>}
                     {e.reversed_by_id && <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-700">{tr('contre-passée', 'reversed')}</span>}
                   </div>
                   <div className="flex items-center gap-3">
@@ -6260,7 +6295,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </div>
           </div>
           {bankLines.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-gray-800 dark:text-gray-100">{bankLines.length}</div><div className="text-xs text-gray-500">{tr('Lignes', 'Lines')}</div></div>
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-emerald-600">{bankLines.filter(b => b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('Rapprochées', 'Reconciled')}</div></div>
               <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-amber-600">{bankLines.filter(b => !b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('À rapprocher', 'To reconcile')}</div></div>

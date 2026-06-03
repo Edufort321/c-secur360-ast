@@ -94,6 +94,7 @@ import { getScanUrl } from './config/app';
 
 // Hooks
 import { useSupabaseSync } from './hooks/useSupabaseSync';
+import { supabase } from './lib/supabase';
 
 // Catalogue materiel standardise (partage avec Soumissions/Admin)
 import { getCatalogues } from '@/lib/soumissions';
@@ -1391,6 +1392,12 @@ function AppContent() {
     subscribeToCategories
   } = useSupabaseSync();
 
+  // #55 — Persistance par tenant via un instantané JSON (table inventory_state).
+  // Le tenant provient du 1er segment d'URL (cohérent avec importFromCatalogue).
+  const tenantId = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
+  const initialLoadDone = useRef(false);   // n'enregistre PAS dans le nuage tant que le chargement initial n'est pas fini
+  const cloudSaveTimer = useRef(null);
+
   // États principaux - DOIVENT être appelés avant tout return
   const [view, setView] = useState('dashboard');
   const [activeAdminTab, setActiveAdminTab] = useState('departments'); // Onglet actif dans Admin
@@ -1578,35 +1585,11 @@ function AppContent() {
     }));
   };
 
-  // ============== INITIALISATION DES DONNÉES ==============
+  // ============== INITIALISATION DES DONNÉES (#55 persistance par tenant) ==============
   useEffect(() => {
-    const initializeData = async () => {
-      // Essayer de charger depuis Supabase d'abord
-      try {
-        const success = await loadFromSupabase();
-
-        if (success) {
-          // Charger depuis localStorage (mis à jour par Supabase)
-          const savedItems = localStorage.getItem('c-secur360-inventory-items');
-          const savedDepartments = localStorage.getItem('c-secur360-inventory-departments');
-          const savedCategories = localStorage.getItem('c-secur360-inventory-categories');
-          const savedStorageUnits = localStorage.getItem('c-secur360-storage-units');
-          const savedMovements = localStorage.getItem('c-secur360-inventory-movements');
-
-          if (savedItems) setItems(JSON.parse(savedItems));
-          if (savedDepartments) setDepartments(JSON.parse(savedDepartments));
-          if (savedCategories) setCategories(JSON.parse(savedCategories));
-          if (savedStorageUnits) setStorageUnits(JSON.parse(savedStorageUnits));
-          if (savedMovements) setMovements(JSON.parse(savedMovements));
-
-          console.log('✅ Données chargées depuis Supabase');
-          return;
-        }
-      } catch (error) {
-        console.warn('⚠️ Supabase non disponible, utilisation localStorage:', error);
-      }
-
-      // Fallback: charger depuis localStorage ou valeurs par défaut
+    let alive = true;
+    const fromLocal = () => {
+      // Repli local (cache navigateur) ou valeurs par défaut.
       const savedItems = localStorage.getItem('c-secur360-inventory-items');
       const savedMovements = localStorage.getItem('c-secur360-inventory-movements');
       const savedDepartments = localStorage.getItem('c-secur360-inventory-departments');
@@ -1614,22 +1597,54 @@ function AppContent() {
       const savedStorageUnits = localStorage.getItem('c-secur360-storage-units');
       const savedBaseEbitda = localStorage.getItem('app-baseEbitda');
       const savedTargetEbitda = localStorage.getItem('app-targetEbitda');
-
-      if (savedItems) setItems(JSON.parse(savedItems));
-      else setItems(getDefaultItems());
-
+      if (savedItems) setItems(JSON.parse(savedItems)); else setItems(getDefaultItems());
       if (savedMovements) setMovements(JSON.parse(savedMovements));
-      if (savedDepartments) setDepartments(JSON.parse(savedDepartments));
-      else setDepartments(getDefaultDepartments());
-      if (savedCategories) setCategories(JSON.parse(savedCategories));
-      else setCategories(getDefaultCategories());
+      if (savedDepartments) setDepartments(JSON.parse(savedDepartments)); else setDepartments(getDefaultDepartments());
+      if (savedCategories) setCategories(JSON.parse(savedCategories)); else setCategories(getDefaultCategories());
       if (savedStorageUnits) setStorageUnits(JSON.parse(savedStorageUnits));
       if (savedBaseEbitda) setBaseEbitda(parseFloat(savedBaseEbitda));
       if (savedTargetEbitda) setTargetEbitda(parseFloat(savedTargetEbitda));
     };
 
+    const initializeData = async () => {
+      // 1) Instantané nuage par tenant (source de vérité, multi-appareils).
+      try {
+        const { data, error } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenantId).maybeSingle();
+        if (!alive) return;
+        if (!error && data && data.data) {
+          const s = data.data || {};
+          if (Array.isArray(s.items)) setItems(s.items);
+          if (Array.isArray(s.movements)) setMovements(s.movements);
+          if (Array.isArray(s.departments)) setDepartments(s.departments.length ? s.departments : getDefaultDepartments());
+          if (Array.isArray(s.categories)) setCategories(s.categories.length ? s.categories : getDefaultCategories());
+          if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
+          if (s.baseEbitda != null) setBaseEbitda(Number(s.baseEbitda));
+          if (s.targetEbitda != null) setTargetEbitda(Number(s.targetEbitda));
+          // Miroir local
+          try {
+            localStorage.setItem('c-secur360-inventory-items', JSON.stringify(s.items || []));
+            localStorage.setItem('c-secur360-inventory-movements', JSON.stringify(s.movements || []));
+            localStorage.setItem('c-secur360-inventory-departments', JSON.stringify(s.departments || []));
+            localStorage.setItem('c-secur360-inventory-categories', JSON.stringify(s.categories || []));
+            localStorage.setItem('c-secur360-storage-units', JSON.stringify(s.storageUnits || []));
+          } catch { /* quota */ }
+          console.log('✅ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
+          initialLoadDone.current = true;
+          return;
+        }
+        // Aucune ligne nuage : on part du local, puis le 1er enregistrement créera la ligne.
+        console.log('ℹ️ Aucun instantané nuage pour ' + tenantId + ' — bascule sur le cache local.');
+      } catch (e) {
+        console.warn('⚠️ inventory_state indisponible, repli localStorage:', e?.message || e);
+      }
+      if (!alive) return;
+      fromLocal();
+      initialLoadDone.current = true;
+    };
+
     initializeData();
-  }, [loadFromSupabase]);
+    return () => { alive = false; };
+  }, [tenantId]);
 
   // Sauvegarder automatiquement - TOUJOURS sauvegarder, même si vide
   useEffect(() => {
@@ -1655,6 +1670,27 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('c-secur360-global-inventory-mode', JSON.stringify(globalInventoryMode));
   }, [globalInventoryMode]);
+
+  // #55 — Enregistrement nuage débounced par tenant (instantané JSON). Persiste réellement
+  // l'inventaire (multi-appareils). N'écrit PAS tant que le chargement initial n'est pas terminé
+  // (sinon on écraserait le nuage avec l'état vide initial).
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current);
+    cloudSaveTimer.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from('inventory_state').upsert({
+          tenant_id: tenantId,
+          data: { items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'tenant_id' });
+        if (error) console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message);
+      } catch (e) {
+        console.warn('⚠️ Sauvegarde inventory_state échouée:', e?.message || e);
+      }
+    }, 800);
+    return () => { if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current); };
+  }, [items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda, tenantId]);
 
   // Souscriptions temps réel Supabase
   useEffect(() => {
