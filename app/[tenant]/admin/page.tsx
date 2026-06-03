@@ -235,27 +235,38 @@ export default function AdminPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
 
-  const tabs: { k: TabKey; label: string; icon: any }[] = [
+  // #57 : chaque onglet peut exiger une permission (matrice PERMS). Sans `need`, l'onglet est
+  // toujours visible. Les onglets sensibles (finance/paie/abonnement/RH) sont masqués si le
+  // niveau d'accès ne l'autorise pas (direction/super_user conservent tout).
+  const allTabs: { k: TabKey; label: string; icon: any; need?: (p: typeof perms) => boolean }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
-    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
+    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat, need: p => p.viewEmployees },
     { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
     { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
     { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
     { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
-    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote },
-    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog },
-    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
-    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
-    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
+    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote, need: p => p.viewSalary },
+    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog, need: p => p.viewSalary || p.manageAll },
+    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, need: p => p.manageAll },
+    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, need: p => p.manageAll },
+    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, need: p => p.viewSalary },
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText },
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList },
-    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
-    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
-    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
+    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, need: p => p.viewSalary },
+    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, need: p => p.viewSalary },
+    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, need: p => p.viewSalary },
   ];
+  const tabs = allTabs.filter(t => !t.need || t.need(perms));
 
   const activeTab = tabs.find(t => t.k === tab);
+
+  // Si l'onglet courant n'est pas (ou plus) accessible au niveau de l'utilisateur, basculer sur le 1er visible.
+  const visibleKeys = tabs.map(t => t.k).join(',');
+  useEffect(() => {
+    if (tabs.length && !tabs.some(t => t.k === tab)) setTab(tabs[0].k);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKeys]);
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
