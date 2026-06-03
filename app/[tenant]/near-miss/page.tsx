@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
-  ArrowLeft, Plus, Shield, Clock, Search, ChevronRight,
+  ArrowLeft, Plus, Shield, Clock, Search, ChevronRight, Download,
 } from 'lucide-react';
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -20,7 +20,7 @@ interface IncidentRow {
   province: string;
   status: 'draft' | 'submitted' | 'closed';
   created_at: string;
-  data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string };
+  data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string; severityLevel?: number };
 }
 
 const STATUS_LABEL = { draft: 'Brouillon', submitted: 'Soumis', closed: 'Fermé' };
@@ -28,6 +28,15 @@ const STATUS_COLOR = {
   draft:     'bg-gray-100 text-gray-600',
   submitted: 'bg-green-100 text-green-700',
   closed:    'bg-slate-100 text-slate-600',
+};
+
+// Badge couleur par severite (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident)
+const SEVERITY_META: Record<number, { label: string; color: string }> = {
+  1: { label: 'Mineur',   color: 'bg-green-100 text-green-700' },
+  2: { label: 'Faible',   color: 'bg-lime-100 text-lime-700' },
+  3: { label: 'Modéré',   color: 'bg-orange-100 text-orange-700' },
+  4: { label: 'Grave',    color: 'bg-red-100 text-red-700' },
+  5: { label: 'Critique', color: 'bg-red-200 text-red-800' },
 };
 
 export default function NearMissPage() {
@@ -39,6 +48,8 @@ export default function NearMissPage() {
   const [counter, setCounter] = useState<DayCounter | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'closed'>('all');
   const [activeReport, setActiveReport] = useState<string | null | 'new'>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
 
@@ -83,15 +94,48 @@ export default function NearMissPage() {
     load();
   }
 
-  const filtered = reports.filter(r => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      r.report_number.toLowerCase().includes(q) ||
-      (r.data?.description ?? '').toLowerCase().includes(q) ||
-      (r.data?.reportedBy ?? '').toLowerCase().includes(q)
+  const filtered = reports
+    .filter(r => {
+      if (severityFilter !== 'all' && String(r.data?.severityLevel ?? '') !== severityFilter) return false;
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        r.report_number.toLowerCase().includes(q) ||
+        (r.data?.description ?? '').toLowerCase().includes(q) ||
+        (r.data?.reportedBy ?? '').toLowerCase().includes(q)
+      );
+    })
+    // Tri : severite decroissante (critique d'abord), puis date decroissante
+    .sort((a, b) =>
+      (b.data?.severityLevel ?? 0) - (a.data?.severityLevel ?? 0) ||
+      String(b.created_at).localeCompare(String(a.created_at)),
     );
-  });
+
+  function exportCsv() {
+    const cell = (v: unknown) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const headers = ['No', 'Severite', 'Statut', 'Date incident', 'Declarant', 'Adresse', 'Description'];
+    const lines = filtered.map(r => [
+      r.report_number,
+      r.data?.severityLevel ?? '',
+      STATUS_LABEL[r.status],
+      r.data?.incidentDate ?? '',
+      r.data?.reportedBy ?? '',
+      r.data?.address ?? '',
+      r.data?.description ?? '',
+    ].map(cell).join(','));
+    // BOM pour qu'Excel ouvre l'UTF-8 correctement
+    const csv = '﻿' + [headers.map(cell).join(','), ...lines].join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `presque-accidents-${tenant}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -183,11 +227,12 @@ export default function NearMissPage() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: 'Total', value: reports.length, color: 'text-gray-700' },
                 { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
                 { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
+                { label: 'Sévérité élevée (4-5)', value: reports.filter(r => (r.data?.severityLevel ?? 0) >= 4).length, color: 'text-red-600' },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                   <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
@@ -198,8 +243,8 @@ export default function NearMissPage() {
 
             {/* Search + list */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="border-b border-gray-100 px-4 py-3">
-                <div className="relative">
+              <div className="border-b border-gray-100 px-4 py-3 flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
@@ -209,6 +254,40 @@ export default function NearMissPage() {
                     className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
+                <select
+                  value={severityFilter}
+                  onChange={e => setSeverityFilter(e.target.value as typeof severityFilter)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  aria-label="Filtrer par sévérité"
+                >
+                  <option value="all">Toutes sévérités</option>
+                  <option value="5">5 · Critique</option>
+                  <option value="4">4 · Grave</option>
+                  <option value="3">3 · Modéré</option>
+                  <option value="2">2 · Faible</option>
+                  <option value="1">1 · Mineur</option>
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  aria-label="Filtrer par statut"
+                >
+                  <option value="all">Tous statuts</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="submitted">Soumis</option>
+                  <option value="closed">Fermé</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  disabled={filtered.length === 0}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Exporter la liste filtrée en CSV"
+                >
+                  <Download size={15} />
+                  CSV
+                </button>
               </div>
 
               {loading ? (
@@ -217,9 +296,9 @@ export default function NearMissPage() {
                 <div className="py-16 text-center">
                   <Shield size={40} className="mx-auto text-gray-300 mb-3" />
                   <p className="text-sm text-gray-400">
-                    {search ? 'Aucun résultat' : 'Aucun signalement enregistré'}
+                    {(search || severityFilter !== 'all' || statusFilter !== 'all') ? 'Aucun résultat' : 'Aucun signalement enregistré'}
                   </p>
-                  {!search && (
+                  {!search && severityFilter === 'all' && statusFilter === 'all' && (
                     <button
                       onClick={() => setActiveReport('new')}
                       className="mt-4 text-sm text-orange-600 hover:underline"
@@ -242,6 +321,11 @@ export default function NearMissPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
+                          {r.data?.severityLevel && SEVERITY_META[r.data.severityLevel] && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${SEVERITY_META[r.data.severityLevel].color}`}>
+                              {r.data.severityLevel} · {SEVERITY_META[r.data.severityLevel].label}
+                            </span>
+                          )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
                             {STATUS_LABEL[r.status]}
                           </span>

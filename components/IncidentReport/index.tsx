@@ -68,6 +68,7 @@ interface CorrectiveAction {
 interface IncidentReportData {
   incidentType: IncidentType;
   province: Province;
+  severityLevel: number; // 1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident
   incidentDate: string;
   incidentTime: string;
   reportedDate: string;
@@ -847,6 +848,10 @@ function emptyReport(defaultType: IncidentType = 'accident', defaultProvince: Pr
   return {
     incidentType: defaultType,
     province: defaultProvince,
+    severityLevel:
+      defaultType === 'accident' || defaultType === 'medical' ? 5
+        : defaultType === 'vehicle' || defaultType === 'property' ? 4
+          : defaultType === 'near_miss' ? 2 : 3,
     incidentDate: today,
     incidentTime: '',
     reportedDate: today,
@@ -1247,6 +1252,20 @@ function GeneralSection({ report, onChange, readOnly }: {
               value={report.province}
               onChange={v => up('province', v as Province)}
               options={provinces}
+              readOnly={readOnly}
+            />
+          </Field>
+          <Field label="Sévérité" required>
+            <SelectInput
+              value={String(report.severityLevel ?? 3)}
+              onChange={v => up('severityLevel', Number(v))}
+              options={[
+                { value: '1', label: '1 — Mineur (presque-accident)' },
+                { value: '2', label: '2 — Faible (presque-accident)' },
+                { value: '3', label: '3 — Modéré (presque-accident)' },
+                { value: '4', label: '4 — Grave (incident)' },
+                { value: '5', label: '5 — Critique (incident)' },
+              ]}
               readOnly={readOnly}
             />
           </Field>
