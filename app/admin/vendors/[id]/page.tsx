@@ -5,9 +5,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt, Download, Link2, Copy, Check, Users } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt, Download, Link2, Copy, Check, Users, TrendingUp, Percent, BarChart3, CalendarClock } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { getVendorFiche, type VendorFiche, isContractActive, projectNextCommission } from '@/lib/affiliateCommissions';
+import { getVendorFiche, type VendorFiche, isContractActive, projectNextCommission, vendorKpis } from '@/lib/affiliateCommissions';
 import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 import { getReferral, generateReferral, referralLink, type VendorReferral } from '@/lib/affiliateReferral';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
@@ -74,6 +74,17 @@ export default function VendorFichePage() {
   const commissions = data?.commissions || [];
   const activeCount = clients.filter(c => isContractActive(c.contract)).length;
   const totals = useMemo(() => summarizePayments(commissions, payments), [commissions, payments]);
+  const kpis = useMemo(() => vendorKpis(commissions, payments, clients, referral?.referred.length || 0), [commissions, payments, clients, referral]);
+  // Paiements regles par mois (6 derniers mois) pour le mini-graphique.
+  const monthly = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of payments) if (p.status === 'paid' && p.paid_at) { const k = p.paid_at.slice(0, 7); map[k] = (map[k] || 0) + (Number(p.amount) || 0); }
+    const now = new Date(); const keys: string[] = [];
+    for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+    const max = Math.max(1, ...keys.map(k => map[k] || 0));
+    return keys.map(k => ({ k, v: map[k] || 0, pct: Math.round(((map[k] || 0) / max) * 100) }));
+  }, [payments]);
+  const commTotalBar = Math.max(1, kpis.paid + kpis.upcoming);
   // Derniere commission connue par client (pour la projection indexee a l'inflation, #70).
   const latestByTenant = useMemo(() => {
     const m: Record<string, number> = {};
@@ -170,6 +181,56 @@ export default function VendorFichePage() {
                 </div>
               </div>
               {notice && <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">{notice}</div>}
+            </div>
+
+            {/* Tableau de bord vendeur — KPIs (#79) */}
+            <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+              <h2 className="mb-3 flex items-center gap-2 font-bold"><BarChart3 size={16} /> Tableau de bord</h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {[
+                  { label: 'Clients referes', value: String(kpis.referredCount), Icon: Users, cls: 'text-blue-600' },
+                  { label: 'Clients affilies', value: String(kpis.affiliatedCount), Icon: UserCheck, cls: 'text-gray-700 dark:text-gray-200' },
+                  { label: 'Retention', value: `${kpis.retentionPct} %`, Icon: Percent, cls: 'text-emerald-600' },
+                  { label: 'MRR (commission)', value: money(kpis.mrr), Icon: TrendingUp, cls: 'text-indigo-600' },
+                  { label: 'Cumulees', value: money(kpis.totalCommissions), Icon: Wallet, cls: 'text-gray-700 dark:text-gray-200' },
+                  { label: 'Prochaine echeance', value: kpis.nextDueDate ? fmtDate(kpis.nextDueDate) : '—', Icon: CalendarClock, cls: 'text-amber-600' },
+                ].map(k => (
+                  <div key={k.label} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                    <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400"><k.Icon size={12} /> {k.label}</p>
+                    <p className={`mt-1 text-lg font-extrabold ${k.cls}`}>{k.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {/* Repartition payees / a venir */}
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Commissions — payees vs a venir</p>
+                  <div className="flex h-4 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                    <div className="bg-emerald-500" style={{ width: `${Math.round((kpis.paid / commTotalBar) * 100)}%` }} title={`Payees : ${money(kpis.paid)}`} />
+                    <div className="bg-amber-400" style={{ width: `${Math.round((kpis.upcoming / commTotalBar) * 100)}%` }} title={`A venir : ${money(kpis.upcoming)}`} />
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-xs">
+                    <span className="text-emerald-600">● Payees {money(kpis.paid)}</span>
+                    <span className="text-amber-600">A venir {money(kpis.upcoming)} ●</span>
+                  </div>
+                </div>
+
+                {/* Paiements par mois (6 mois) */}
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Paiements regles — 6 derniers mois</p>
+                  <div className="flex h-20 items-end gap-1.5">
+                    {monthly.map(m => (
+                      <div key={m.k} className="flex flex-1 flex-col items-center gap-1" title={`${m.k} : ${money(m.v)}`}>
+                        <div className="flex w-full items-end justify-center" style={{ height: '56px' }}>
+                          <div className="w-full rounded-t bg-blue-500/80" style={{ height: `${Math.max(2, m.pct)}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-400">{m.k.slice(5)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Lien de parrainage + inscriptions attribuees (#78) */}

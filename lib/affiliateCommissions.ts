@@ -87,6 +87,54 @@ export interface CommissionReminder {
   bucket: 'overdue' | 'soon';
 }
 
+// ─── Tableau de bord vendeur — KPIs (#79) ───────────────────────────────────
+
+export interface VendorKpis {
+  referredCount: number;        // inscriptions attribuees via le lien de parrainage
+  affiliatedCount: number;      // clients assignes au vendeur
+  activeContracts: number;      // contrats signes
+  retentionPct: number;         // activeContracts / affiliatedCount
+  totalCommissions: number;     // toutes commissions generees (peu importe le statut)
+  upcoming: number;             // commissions en attente (du + a venir)
+  paid: number;                 // commissions payees
+  annualRunRate: number;        // somme de la derniere commission par client a contrat actif
+  mrr: number;                  // annualRunRate / 12
+  nextDueDate: string | null;   // prochaine echeance en attente
+}
+
+/** KPIs du tableau de bord vendeur. Pur (testable). */
+export function vendorKpis(
+  commissions: AffiliateCommission[],
+  payments: Array<{ status: string; amount: number }>,
+  clients: VendorClient[],
+  referredCount: number,
+): VendorKpis {
+  const affiliatedCount = clients.length;
+  const activeContracts = clients.filter(c => isContractActive(c.contract)).length;
+  const retentionPct = affiliatedCount ? Math.round((activeContracts / affiliatedCount) * 100) : 0;
+
+  const totalCommissions = commissions.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const pending = commissions.filter(c => c.status === 'pending');
+  const upcoming = pending.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const paid = (payments || []).filter(p => p.status === 'paid').reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+  // Derniere commission connue par client (commissions supposees triees par echeance croissante).
+  const latest: Record<string, number> = {};
+  for (const c of commissions) latest[c.tenant_id] = Number(c.amount) || 0;
+  const activeTenantIds = new Set(clients.filter(c => isContractActive(c.contract)).map(c => c.tenant_id));
+  const annualRunRate = Object.entries(latest)
+    .filter(([tid]) => activeTenantIds.has(tid))
+    .reduce((s, [, amt]) => s + amt, 0);
+  const mrr = Math.round((annualRunRate / 12) * 100) / 100;
+
+  const nextDueDate = pending
+    .map(c => c.due_date)
+    .filter((d): d is string => !!d)
+    .sort()[0] ?? null;
+
+  return { referredCount, affiliatedCount, activeContracts, retentionPct, totalCommissions, upcoming, paid, annualRunRate, mrr, nextDueDate };
+}
+
 /** Commissions en attente echues (retard) ou a echeance proche (<= withinDays), triees par urgence. */
 export function commissionReminders(
   commissions: AffiliateCommission[],

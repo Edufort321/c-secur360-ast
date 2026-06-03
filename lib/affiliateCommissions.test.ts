@@ -1,11 +1,40 @@
 // Tests unitaires des helpers de commissions d'affiliation (#63).
 // fetch simule ; aucune dependance serveur/DB. Lancer : npm test
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { listCommissions, getVendorFiche, isContractActive, yearsElapsed, indexedAmount, projectNextCommission, commissionReminders } from './affiliateCommissions';
+import { listCommissions, getVendorFiche, isContractActive, yearsElapsed, indexedAmount, projectNextCommission, commissionReminders, vendorKpis } from './affiliateCommissions';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const c = (over: any = {}) => ({ id: 'x', vendor_id: 'v', tenant_id: 't', amount: 100, status: 'pending', due_date: null, paid_at: null, period_start: null, period_end: null, created_at: '', vendor_name: 'V', tenant_name: 'T', ...over });
+
+describe('vendorKpis (#79)', () => {
+  const client = (tid: string, status?: string) => ({ tenant_id: tid, tenant_name: tid, created_at: null, contract: status ? ({ status } as any) : null });
+  it('calcule retention, totaux, run rate et prochaine echeance', () => {
+    const commissions = [
+      c({ id: 'a1', tenant_id: 'a', amount: 100, status: 'pending', due_date: '2026-07-01' }),
+      c({ id: 'a2', tenant_id: 'a', amount: 120, status: 'pending', due_date: '2026-09-01' }), // derniere de a
+      c({ id: 'b1', tenant_id: 'b', amount: 200, status: 'paid', due_date: '2026-05-01' }),
+    ];
+    const payments = [{ status: 'paid', amount: 200 }, { status: 'cancelled', amount: 50 }];
+    const clients = [client('a', 'signe'), client('b', 'resilie')]; // a actif, b non
+    const k = vendorKpis(commissions as any, payments, clients as any, 3);
+    expect(k.referredCount).toBe(3);
+    expect(k.affiliatedCount).toBe(2);
+    expect(k.activeContracts).toBe(1);
+    expect(k.retentionPct).toBe(50);
+    expect(k.totalCommissions).toBe(420);
+    expect(k.upcoming).toBe(220);            // 2 pending de a
+    expect(k.paid).toBe(200);
+    expect(k.annualRunRate).toBe(120);       // derniere commission du seul client actif (a)
+    expect(k.mrr).toBe(10);                  // 120 / 12
+    expect(k.nextDueDate).toBe('2026-07-01');
+  });
+  it('retention 0 sans client', () => {
+    const k = vendorKpis([], [], [], 0);
+    expect(k.retentionPct).toBe(0);
+    expect(k.nextDueDate).toBeNull();
+  });
+});
 
 describe('commissionReminders (#70)', () => {
   const today = '2026-06-03';
