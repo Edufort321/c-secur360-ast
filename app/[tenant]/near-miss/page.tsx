@@ -202,11 +202,12 @@ export default function NearMissPage() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: 'Total', value: reports.length, color: 'text-gray-700' },
                 { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
                 { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
+                { label: 'Sévérité élevée (4-5)', value: reports.filter(r => (r.data?.severityLevel ?? 0) >= 4).length, color: 'text-red-600' },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                   <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
