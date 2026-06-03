@@ -7,6 +7,7 @@ import { Icon } from '../UI/Icon';
 import { Logo } from '../UI/Logo';
 import { DropZone } from '../UI/DropZone';
 import { BUREAU_COLORS } from '@/components/planner/config/constants.js';
+import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
 export function EquipementModal({
     isOpen,
@@ -20,6 +21,9 @@ export function EquipementModal({
     estCoordonnateur = false,
     succursalesDisponibles = []
 }) {
+    const { currentLanguage } = useLanguage();
+    const tr = (fr, en) => (currentLanguage === 'fr' ? fr : en);
+
     // ===== ÉTATS PRINCIPAUX =====
     const [formData, setFormData] = useState({
         id: null,
@@ -266,7 +270,7 @@ export function EquipementModal({
     // ===== GESTION DES MAINTENANCES =====
     const ajouterMaintenance = () => {
         if (!nouvelleMaintenance.date || !nouvelleMaintenance.type || !nouvelleMaintenance.description) {
-            addNotification('Veuillez remplir tous les champs obligatoires', 'error');
+            addNotification(tr('Veuillez remplir tous les champs obligatoires', 'Please fill in all required fields'), 'error');
             return;
         }
 
@@ -379,17 +383,17 @@ export function EquipementModal({
     // ===== VALIDATION =====
     const validerFormulaire = () => {
         if (!formData.nom.trim()) {
-            addNotification('Le nom de l\'équipement est requis', 'error');
+            addNotification(tr("Le nom de l'équipement est requis", 'Equipment name is required'), 'error');
             return false;
         }
 
         if (!formData.type) {
-            addNotification('Le département de l\'équipement est requis', 'error');
+            addNotification(tr("Le département de l'équipement est requis", 'Equipment department is required'), 'error');
             return false;
         }
 
         if (!formData.succursale) {
-            addNotification('La succursale de l\'équipement est requise', 'error');
+            addNotification(tr("La succursale de l'équipement est requise", 'Equipment branch is required'), 'error');
             return false;
         }
 
@@ -423,7 +427,7 @@ export function EquipementModal({
             onClose();
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error);
-            addNotification('Erreur lors de la sauvegarde', 'error');
+            addNotification(tr('Erreur lors de la sauvegarde', 'Error while saving'), 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -433,11 +437,11 @@ export function EquipementModal({
     const handleDelete = async () => {
         try {
             await onDelete(equipement.id);
-            addNotification(`Équipement supprimé: ${equipement.nom}`, 'success');
+            addNotification(`${tr('Équipement supprimé', 'Equipment deleted')}: ${equipement.nom}`, 'success');
             onClose();
         } catch (error) {
             console.error('Erreur lors de la suppression:', error);
-            addNotification('Erreur lors de la suppression', 'error');
+            addNotification(tr('Erreur lors de la suppression', 'Error while deleting'), 'error');
         }
         setShowDeleteConfirm(false);
     };
@@ -459,9 +463,9 @@ export function EquipementModal({
                         <div>
                             <h2 className="text-xl font-bold text-white flex items-center">
                                 <Icon name="wrench" className="mr-2" size={24} />
-                                {equipement ? 'Modifier l\'Équipement' : 'Nouvel Équipement'}
+                                {equipement ? tr("Modifier l'Équipement", 'Edit Equipment') : tr('Nouvel Équipement', 'New Equipment')}
                             </h2>
-                            <p className="text-sm text-gray-300">Gestion des équipements C-Secur360</p>
+                            <p className="text-sm text-gray-300">{tr('Gestion des équipements C-Secur360', 'C-Secur360 equipment management')}</p>
                         </div>
                     </div>
                     <button
@@ -538,21 +542,21 @@ export function EquipementModal({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Nom de l'équipement *
+                                        {tr("Nom de l'équipement *", 'Equipment name *')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.nom}
                                         onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Nom de l'équipement..."
+                                        placeholder={tr("Nom de l'équipement...", 'Equipment name...')}
                                         required
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Département *
+                                        {tr('Département *', 'Department *')}
                                     </label>
                                     <select
                                         value={formData.type}
@@ -560,7 +564,7 @@ export function EquipementModal({
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
-                                        <option value="">Sélectionner un département...</option>
+                                        <option value="">{tr('Sélectionner un département...', 'Select a department...')}</option>
                                         {typesEquipements.map(type => (
                                             <option key={type.value} value={type.value}>
                                                 {type.label}
@@ -571,7 +575,7 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Succursale *
+                                        {tr('Succursale *', 'Branch *')}
                                     </label>
                                     <select
                                         value={formData.succursale}
@@ -579,7 +583,7 @@ export function EquipementModal({
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
-                                        <option value="">Sélectionner une succursale...</option>
+                                        <option value="">{tr('Sélectionner une succursale...', 'Select a branch...')}</option>
                                         {succursalesOptions.map(succursale => (
                                             <option key={succursale} value={succursale}>{succursale}</option>
                                         ))}
@@ -591,46 +595,46 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Marque
+                                        {tr('Marque', 'Brand')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.marque}
                                         onChange={(e) => setFormData(prev => ({ ...prev, marque: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Marque..."
+                                        placeholder={tr('Marque...', 'Brand...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Modèle
+                                        {tr('Modèle', 'Model')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.modele}
                                         onChange={(e) => setFormData(prev => ({ ...prev, modele: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Modèle..."
+                                        placeholder={tr('Modèle...', 'Model...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Numéro de série
+                                        {tr('Numéro de série', 'Serial number')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.numeroSerie}
                                         onChange={(e) => setFormData(prev => ({ ...prev, numeroSerie: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Numéro de série..."
+                                        placeholder={tr('Numéro de série...', 'Serial number...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Année d'acquisition
+                                        {tr("Année d'acquisition", 'Acquisition year')}
                                     </label>
                                     <input
                                         type="number"
@@ -648,7 +652,7 @@ export function EquipementModal({
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Statut
+                                        {tr('Statut', 'Status')}
                                     </label>
                                     <select
                                         value={formData.statut}
@@ -666,27 +670,27 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Emplacement
+                                        {tr('Emplacement', 'Location')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.emplacement}
                                         onChange={(e) => setFormData(prev => ({ ...prev, emplacement: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: Entrepôt A, Étagère 3..."
+                                        placeholder={tr('Ex: Entrepôt A, Étagère 3...', 'E.g.: Warehouse A, Shelf 3...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Département
+                                        {tr('Département', 'Department')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.departement}
                                         onChange={(e) => setFormData(prev => ({ ...prev, departement: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: Transformateur, Opérations..."
+                                        placeholder={tr('Ex: Transformateur, Opérations...', 'E.g.: Transformer, Operations...')}
                                     />
                                 </div>
                             </div>
@@ -695,7 +699,7 @@ export function EquipementModal({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prix d'achat ($)
+                                        {tr("Prix d'achat ($)", 'Purchase price ($)')}
                                     </label>
                                     <input
                                         type="number"
@@ -709,7 +713,7 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Valeur actuelle ($)
+                                        {tr('Valeur actuelle ($)', 'Current value ($)')}
                                     </label>
                                     <input
                                         type="number"
@@ -725,14 +729,14 @@ export function EquipementModal({
                             {/* Commentaires */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Commentaires
+                                    {tr('Commentaires', 'Comments')}
                                 </label>
                                 <textarea
                                     value={formData.commentaires}
                                     onChange={(e) => setFormData(prev => ({ ...prev, commentaires: e.target.value }))}
                                     rows={3}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Notes, commentaires..."
+                                    placeholder={tr('Notes, commentaires...', 'Notes, comments...')}
                                 />
                             </div>
 
@@ -750,7 +754,7 @@ export function EquipementModal({
 
                                 <div className="flex items-center gap-2">
                                     <label className="text-sm font-medium text-gray-700">
-                                        Couleur:
+                                        {tr('Couleur:', 'Color:')}
                                     </label>
                                     <input
                                         type="color"
@@ -766,12 +770,12 @@ export function EquipementModal({
                     {/* ONGLET SPÉCIFICATIONS */}
                     {activeTab === 'specifications' && (
                         <div className="space-y-6">
-                            <h3 className="font-medium text-gray-900 mb-4">Caractéristiques techniques</h3>
+                            <h3 className="font-medium text-gray-900 mb-4">{tr('Caractéristiques techniques', 'Technical specifications')}</h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Puissance
+                                        {tr('Puissance', 'Power')}
                                     </label>
                                     <input
                                         type="text"
@@ -781,7 +785,7 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, puissance: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 500W, 2kW..."
+                                        placeholder={tr('Ex: 500W, 2kW...', 'E.g.: 500W, 2kW...')}
                                     />
                                 </div>
 
@@ -797,13 +801,13 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, voltage: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 120V, 240V..."
+                                        placeholder={tr('Ex: 120V, 240V...', 'E.g.: 120V, 240V...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Poids
+                                        {tr('Poids', 'Weight')}
                                     </label>
                                     <input
                                         type="text"
@@ -813,7 +817,7 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, poids: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 5kg, 25lbs..."
+                                        placeholder={tr('Ex: 5kg, 25lbs...', 'E.g.: 5kg, 25lbs...')}
                                     />
                                 </div>
 
@@ -829,13 +833,13 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, dimensions: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 30x20x15cm..."
+                                        placeholder={tr('Ex: 30x20x15cm...', 'E.g.: 30x20x15cm...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Capacité
+                                        {tr('Capacité', 'Capacity')}
                                     </label>
                                     <input
                                         type="text"
@@ -845,13 +849,13 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, capacite: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 100A, 50L..."
+                                        placeholder={tr('Ex: 100A, 50L...', 'E.g.: 100A, 50L...')}
                                     />
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Précision
+                                        {tr('Précision', 'Accuracy')}
                                     </label>
                                     <input
                                         type="text"
@@ -861,13 +865,13 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, precision: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: ±0.1%, ±5V..."
+                                        placeholder={tr('Ex: ±0.1%, ±5V...', 'E.g.: ±0.1%, ±5V...')}
                                     />
                                 </div>
 
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Plage de température
+                                        {tr('Plage de température', 'Temperature range')}
                                     </label>
                                     <input
                                         type="text"
@@ -877,14 +881,14 @@ export function EquipementModal({
                                             specifications: { ...prev.specifications, plageTemperature: e.target.value }
                                         }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: -20°C à +60°C..."
+                                        placeholder={tr('Ex: -20°C à +60°C...', 'E.g.: -20°C to +60°C...')}
                                     />
                                 </div>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Autres spécifications
+                                    {tr('Autres spécifications', 'Other specifications')}
                                 </label>
                                 <textarea
                                     value={formData.specifications.autres}
@@ -894,21 +898,21 @@ export function EquipementModal({
                                     }))}
                                     rows={4}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Autres caractéristiques techniques..."
+                                    placeholder={tr('Autres caractéristiques techniques...', 'Other technical specifications...')}
                                 />
                             </div>
 
                             {/* Accessoires et consommables */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Accessoires</h4>
+                                    <h4 className="font-medium text-gray-900 mb-3">{tr('Accessoires', 'Accessories')}</h4>
                                     <div className="flex gap-2 mb-3">
                                         <input
                                             type="text"
                                             value={nouvelAccessoire}
                                             onChange={(e) => setNouvelAccessoire(e.target.value)}
                                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ajouter un accessoire..."
+                                            placeholder={tr('Ajouter un accessoire...', 'Add an accessory...')}
                                             onKeyPress={(e) => e.key === 'Enter' && ajouterAccessoire()}
                                         />
                                         <button
@@ -934,14 +938,14 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Consommables</h4>
+                                    <h4 className="font-medium text-gray-900 mb-3">{tr('Consommables', 'Consumables')}</h4>
                                     <div className="flex gap-2 mb-3">
                                         <input
                                             type="text"
                                             value={nouveauConsommable}
                                             onChange={(e) => setNouveauConsommable(e.target.value)}
                                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ajouter un consommable..."
+                                            placeholder={tr('Ajouter un consommable...', 'Add a consumable...')}
                                             onKeyPress={(e) => e.key === 'Enter' && ajouterConsommable()}
                                         />
                                         <button
@@ -976,7 +980,7 @@ export function EquipementModal({
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prochaine maintenance
+                                        {tr('Prochaine maintenance', 'Next maintenance')}
                                     </label>
                                     <input
                                         type="date"
@@ -988,7 +992,7 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Fréquence (jours)
+                                        {tr('Fréquence (jours)', 'Frequency (days)')}
                                     </label>
                                     <input
                                         type="number"
@@ -1002,7 +1006,7 @@ export function EquipementModal({
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prochain étalonnage
+                                        {tr('Prochain étalonnage', 'Next calibration')}
                                     </label>
                                     <input
                                         type="date"
@@ -1015,7 +1019,7 @@ export function EquipementModal({
 
                             {/* Ajouter une maintenance */}
                             <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="font-medium text-gray-900 mb-3">Ajouter une maintenance</h4>
+                                <h4 className="font-medium text-gray-900 mb-3">{tr('Ajouter une maintenance', 'Add maintenance')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3">
                                     <div>
                                         <input
@@ -1033,11 +1037,11 @@ export function EquipementModal({
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                                             required
                                         >
-                                            <option value="">Type...</option>
-                                            <option value="preventive">Préventive</option>
-                                            <option value="corrective">Corrective</option>
-                                            <option value="etalonnage">Étalonnage</option>
-                                            <option value="reparation">Réparation</option>
+                                            <option value="">{tr('Type...', 'Type...')}</option>
+                                            <option value="preventive">{tr('Préventive', 'Preventive')}</option>
+                                            <option value="corrective">{tr('Corrective', 'Corrective')}</option>
+                                            <option value="etalonnage">{tr('Étalonnage', 'Calibration')}</option>
+                                            <option value="reparation">{tr('Réparation', 'Repair')}</option>
                                         </select>
                                     </div>
                                     <div>
@@ -1046,7 +1050,7 @@ export function EquipementModal({
                                             value={nouvelleMaintenance.description}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, description: e.target.value }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                            placeholder="Description..."
+                                            placeholder={tr('Description...', 'Description...')}
                                             required
                                         />
                                     </div>
@@ -1057,7 +1061,7 @@ export function EquipementModal({
                                             value={nouvelleMaintenance.cout}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, cout: e.target.value }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                            placeholder="Coût ($)"
+                                            placeholder={tr('Coût ($)', 'Cost ($)')}
                                             step="0.01"
                                         />
                                     </div>
@@ -1066,7 +1070,7 @@ export function EquipementModal({
                                             onClick={ajouterMaintenance}
                                             className="w-full px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
                                         >
-                                            Ajouter
+                                            {tr('Ajouter', 'Add')}
                                         </button>
                                     </div>
                                 </div>
@@ -1075,16 +1079,16 @@ export function EquipementModal({
                                     value={nouvelleMaintenance.technicien}
                                     onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, technicien: e.target.value }))}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                    placeholder="Technicien responsable..."
+                                    placeholder={tr('Technicien responsable...', 'Responsible technician...')}
                                 />
                             </div>
 
                             {/* Historique des maintenances */}
                             <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Historique des maintenances</h4>
+                                <h4 className="font-medium text-gray-900 mb-3">{tr('Historique des maintenances', 'Maintenance history')}</h4>
                                 <div className="space-y-2">
                                     {formData.maintenances.length === 0 ? (
-                                        <p className="text-gray-500 text-sm">Aucune maintenance enregistrée</p>
+                                        <p className="text-gray-500 text-sm">{tr('Aucune maintenance enregistrée', 'No maintenance recorded')}</p>
                                     ) : (
                                         formData.maintenances
                                             .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -1133,12 +1137,12 @@ export function EquipementModal({
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-blue-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-blue-900 mb-2">Heures d'utilisation</h4>
+                                    <h4 className="font-medium text-blue-900 mb-2">{tr("Heures d'utilisation", 'Hours of use')}</h4>
                                     <p className="text-2xl font-bold text-blue-700">{formData.heuresUtilisation}h</p>
                                 </div>
 
                                 <div className="bg-green-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-green-900 mb-2">Dernière utilisation</h4>
+                                    <h4 className="font-medium text-green-900 mb-2">{tr('Dernière utilisation', 'Last use')}</h4>
                                     <p className="text-sm text-green-700">
                                         {formData.derniereUtilisation
                                             ? new Date(formData.derniereUtilisation).toLocaleDateString()
@@ -1148,7 +1152,7 @@ export function EquipementModal({
                                 </div>
 
                                 <div className="bg-yellow-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-yellow-900 mb-2">Utilisateur actuel</h4>
+                                    <h4 className="font-medium text-yellow-900 mb-2">{tr('Utilisateur actuel', 'Current user')}</h4>
                                     <p className="text-sm text-yellow-700">
                                         {formData.utilisateurActuel || 'Non assigné'}
                                     </p>
@@ -1156,7 +1160,7 @@ export function EquipementModal({
                             </div>
 
                             <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Historique d'utilisation</h4>
+                                <h4 className="font-medium text-gray-900 mb-3">{tr("Historique d'utilisation", 'Usage history')}</h4>
                                 <div className="bg-gray-50 rounded-lg p-4">
                                     <p className="text-sm text-gray-600">
                                         L'historique d'utilisation sera automatiquement rempli lors de l'assignation de l'équipement aux jobs.
@@ -1171,11 +1175,11 @@ export function EquipementModal({
                         <div className="space-y-6">
                             {/* Garantie */}
                             <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="font-medium text-gray-900 mb-3">Informations de garantie</h4>
+                                <h4 className="font-medium text-gray-900 mb-3">{tr('Informations de garantie', 'Warranty information')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Date d'expiration
+                                            {tr("Date d'expiration", 'Expiration date')}
                                         </label>
                                         <input
                                             type="date"
@@ -1189,7 +1193,7 @@ export function EquipementModal({
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Fournisseur
+                                            {tr('Fournisseur', 'Supplier')}
                                         </label>
                                         <input
                                             type="text"
@@ -1199,12 +1203,12 @@ export function EquipementModal({
                                                 garantie: { ...prev.garantie, fournisseur: e.target.value }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Nom du fournisseur..."
+                                            placeholder={tr('Nom du fournisseur...', 'Supplier name...')}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Numéro de contrat
+                                            {tr('Numéro de contrat', 'Contract number')}
                                         </label>
                                         <input
                                             type="text"
@@ -1214,12 +1218,12 @@ export function EquipementModal({
                                                 garantie: { ...prev.garantie, numeroContrat: e.target.value }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Numéro de contrat..."
+                                            placeholder={tr('Numéro de contrat...', 'Contract number...')}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Couverture
+                                            {tr('Couverture', 'Coverage')}
                                         </label>
                                         <input
                                             type="text"
@@ -1229,7 +1233,7 @@ export function EquipementModal({
                                                 garantie: { ...prev.garantie, couverture: e.target.value }
                                             }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ex: Pièces et main d'oeuvre..."
+                                            placeholder={tr("Ex: Pièces et main d'oeuvre...", 'E.g.: Parts and labor...')}
                                         />
                                     </div>
                                 </div>
@@ -1238,7 +1242,7 @@ export function EquipementModal({
                             {/* Upload de fichiers */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Manuels</h4>
+                                    <h4 className="font-medium text-gray-900 mb-3">{tr('Manuels', 'Manuals')}</h4>
                                     <DropZone
                                         onFilesAdded={(files) => handleFilesAdded(files, 'manuels')}
                                         acceptedTypes=".pdf,.doc,.docx"
@@ -1261,7 +1265,7 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Certificats</h4>
+                                    <h4 className="font-medium text-gray-900 mb-3">{tr('Certificats', 'Certificates')}</h4>
                                     <DropZone
                                         onFilesAdded={(files) => handleFilesAdded(files, 'certificats')}
                                         acceptedTypes=".pdf,.jpg,.jpeg,.png"
@@ -1322,7 +1326,7 @@ export function EquipementModal({
                                 onClick={() => setShowDeleteConfirm(true)}
                                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                             >
-                                Supprimer
+                                {tr('Supprimer', 'Delete')}
                             </button>
                         )}
                     </div>
@@ -1332,7 +1336,7 @@ export function EquipementModal({
                             onClick={onClose}
                             className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
                         >
-                            Annuler
+                            {tr('Annuler', 'Cancel')}
                         </button>
 
                         {peutModifier && (
@@ -1341,7 +1345,7 @@ export function EquipementModal({
                                 disabled={isSubmitting}
                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                             >
-                                {isSubmitting ? 'Sauvegarde...' : (equipement ? 'Modifier' : 'Créer')}
+                                {isSubmitting ? tr('Sauvegarde...', 'Saving...') : (equipement ? tr('Modifier', 'Edit') : tr('Créer', 'Create'))}
                             </button>
                         )}
                     </div>
@@ -1355,23 +1359,23 @@ export function EquipementModal({
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                             <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                Confirmer la suppression
+                                {tr('Confirmer la suppression', 'Confirm deletion')}
                             </h3>
                             <p className="text-sm text-gray-600 mb-6">
-                                Êtes-vous sûr de vouloir supprimer {equipement?.nom} ? Cette action est irréversible.
+                                {tr('Êtes-vous sûr de vouloir supprimer', 'Are you sure you want to delete')} {equipement?.nom} ? {tr('Cette action est irréversible.', 'This action cannot be undone.')}
                             </p>
                             <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
                                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
                                 >
-                                    Annuler
+                                    {tr('Annuler', 'Cancel')}
                                 </button>
                                 <button
                                     onClick={handleDelete}
                                     className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                                 >
-                                    Supprimer
+                                    {tr('Supprimer', 'Delete')}
                                 </button>
                             </div>
                         </div>
