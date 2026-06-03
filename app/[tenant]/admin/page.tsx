@@ -6015,14 +6015,35 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const blankItem = (): TransactionItem => ({ description: '', account_code: '5300', amount: 0, taxable: true });
-  const [hdr, setHdr] = useState<Transaction>({ transaction_number: '', vendor_name: '', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+  const blankItem = (code = '5300'): TransactionItem => ({ description: '', account_code: code, amount: 0, taxable: true });
+  const [hdr, setHdr] = useState<Transaction>({ transaction_number: '', vendor_name: '', txn_type: 'expense', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
   const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  const isRevenue = hdr.txn_type === 'revenue';
+  // Comptes proposés selon le type : revenus (produits) vs dépenses (charges/actif).
   const expenseAccounts = accounts.filter(a => a.type === 'expense' || a.type === 'asset');
+  const revenueAccounts = accounts.filter(a => a.type === 'revenue');
+  const lineAccounts = isRevenue ? revenueAccounts : expenseAccounts;
+  const defaultAcct = isRevenue ? '4000' : '5300';
+
+  // Tableau de bord (#35) : agrégats lecture seule, séparés revenus / dépenses.
+  // revenue/expense = totaux par type ; gst/qst = taxes payées récupérables (CTI/RTI) sur les dépenses ;
+  // payable = dû aux fournisseurs (dépense à crédit non payée).
+  const summary = txns.reduce((a, t) => {
+    const tot = Number(t.total) || 0;
+    if (t.txn_type === 'revenue') { a.revenue += tot; a.revCount++; }
+    else {
+      a.expense += tot; a.expCount++;
+      a.gst += Number(t.gst_amount) || 0;
+      a.qst += Number(t.qst_amount) || 0;
+      if (t.status !== 'paid' && t.status !== 'cancelled' && t.payment_method === 'on_account') a.payable += tot;
+    }
+    return a;
+  }, { revenue: 0, expense: 0, revCount: 0, expCount: 0, gst: 0, qst: 0, payable: 0 });
+  const summaryCount = summary.revCount + summary.expCount;
 
   async function load() {
     setLoading(true); setMigMissing(false);
@@ -6035,10 +6056,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const totals = computeTransactionTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
 
-  async function newTxn() {
-    const num = await nextTransactionNumber(tenant, 'A');
-    setHdr({ transaction_number: num, vendor_name: '', txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
-    setItems([blankItem()]); setView('edit');
+  async function newTxn(kind: 'expense' | 'revenue' = 'expense') {
+    const num = await nextTransactionNumber(tenant, kind === 'revenue' ? 'V' : 'A');
+    setHdr({ transaction_number: num, vendor_name: '', txn_type: kind, txn_date: today, province: 'QC', payment_method: 'cash', status: 'draft', subtotal: 0, gst_rate: 0, qst_rate: 0, pst_rate: 0, gst_amount: 0, qst_amount: 0, pst_amount: 0, total: 0 });
+    setItems([blankItem(kind === 'revenue' ? '4000' : '5300')]); setView('edit');
   }
   function editTxn(t: Transaction) {
     setHdr(t);
@@ -6095,19 +6116,27 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-500">{tr('Dépenses & achats', 'Expenses & purchases')}</h2>
-        {view === 'list' && canEdit && <button onClick={newTxn} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Nouvelle transaction', 'New transaction')}</button>}
+        <h2 className="text-sm font-bold text-gray-500">{tr('Transactions (revenus & dépenses)', 'Transactions (revenue & expenses)')}</h2>
+        {view === 'list' && canEdit && <div className="flex gap-2">
+          <button onClick={() => newTxn('revenue')} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Revenu', 'Revenue')}</button>
+          <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
+        </div>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
       {view === 'edit' ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-3">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${isRevenue ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+              {isRevenue ? tr('Revenu', 'Revenue') : tr('Dépense', 'Expense')}
+            </span>
+          </div>
           <div className="grid gap-3 sm:grid-cols-4">
             <label className="text-xs font-semibold text-gray-500">{tr('N°', '#')}<input value={hdr.transaction_number} onChange={e => setHdr(h => ({ ...h, transaction_number: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
-            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Fournisseur', 'Vendor')}<input value={hdr.vendor_name || ''} onChange={e => setHdr(h => ({ ...h, vendor_name: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+            <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{isRevenue ? tr('Client', 'Client') : tr('Fournisseur', 'Vendor')}<input value={hdr.vendor_name || ''} onChange={e => setHdr(h => ({ ...h, vendor_name: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Date', 'Date')}<input type="date" value={hdr.txn_date} onChange={e => setHdr(h => ({ ...h, txn_date: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
             <label className="text-xs font-semibold text-gray-500">{tr('Province', 'Province')}<select value={hdr.province} onChange={e => setHdr(h => ({ ...h, province: e.target.value }))} className={`mt-1 w-full ${inputCls}`}>{PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}</select></label>
-            <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque', 'Cash / bank')}</option><option value="on_account">{tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
+            <label className="text-xs font-semibold text-gray-500">{tr('Paiement', 'Payment')}<select value={hdr.payment_method} onChange={e => setHdr(h => ({ ...h, payment_method: e.target.value as Transaction['payment_method'] }))} className={`mt-1 w-full ${inputCls}`}><option value="cash">{tr('Comptant / banque', 'Cash / bank')}</option><option value="on_account">{isRevenue ? tr('À recevoir (client)', 'Receivable (client)') : tr('À crédit (fournisseur)', 'On account (vendor)')}</option></select></label>
             <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Notes', 'Notes')}<input value={hdr.notes || ''} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
           </div>
           <div className="mt-4 space-y-2">
@@ -6115,14 +6144,14 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <div key={i} className="grid grid-cols-12 items-center gap-2">
                 <input placeholder={tr('Description', 'Description')} value={it.description} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} className={`col-span-4 ${inputCls}`} />
                 <select value={it.account_code} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, account_code: e.target.value } : x))} className={`col-span-4 ${inputCls}`}>
-                  {expenseAccounts.map(a => <option key={a.id} value={a.code}>{a.code} · {a.name}</option>)}
+                  {lineAccounts.map(a => <option key={a.id} value={a.code}>{a.code} · {a.name}</option>)}
                 </select>
                 <input type="number" placeholder={tr('Montant', 'Amount')} value={it.amount} onFocus={e => e.target.select()} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, amount: Number(e.target.value) } : x))} className={`col-span-2 text-right ${inputCls}`} />
                 <label className="col-span-1 flex items-center justify-center text-xs text-gray-500" title={tr('Taxable', 'Taxable')}><input type="checkbox" checked={it.taxable !== false} onChange={e => setItems(p => p.map((x, j) => j === i ? { ...x, taxable: e.target.checked } : x))} /></label>
                 <button onClick={() => setItems(p => p.filter((_, j) => j !== i))} className="col-span-1 text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
-            <button onClick={() => setItems(p => [...p, blankItem()])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
+            <button onClick={() => setItems(p => [...p, blankItem(defaultAcct)])} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter une ligne', 'Add line')}</button>
           </div>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-gray-100 pt-3 dark:border-gray-700">
             <div className="flex items-center gap-3 text-sm">
@@ -6146,35 +6175,58 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           </div>
         </div>
       ) : (
+        <>
+        {summaryCount > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="text-lg font-bold text-emerald-600">{mny(summary.revenue)}</div>
+              <div className="text-xs text-gray-500">{tr('Revenus', 'Revenue')} · {summary.revCount}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="text-lg font-bold text-rose-600">{mny(summary.expense)}</div>
+              <div className="text-xs text-gray-500">{tr('Dépenses', 'Expenses')} · {summary.expCount}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className={`text-lg font-bold ${summary.revenue - summary.expense >= 0 ? 'text-gray-800 dark:text-gray-100' : 'text-rose-600'}`}>{mny(summary.revenue - summary.expense)}</div>
+              <div className="text-xs text-gray-500">{tr('Net (revenus − dépenses)', 'Net (revenue − expenses)')}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="text-lg font-bold text-blue-600">{mny(summary.gst + summary.qst)}</div>
+              <div className="text-xs text-gray-500">{tr('Taxes récup. (CTI/RTI)', 'Recoverable taxes')} · TPS {mny(summary.gst)} · TVQ {mny(summary.qst)}{summary.payable > 0 ? ` · ${tr('Dû fourn.', 'Owed')} ${mny(summary.payable)}` : ''}</div>
+            </div>
+          </div>
+        )}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
-              <th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Date', 'Date')}</th><th className="px-4">{tr('Fournisseur', 'Vendor')}</th>
+              <th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Type', 'Type')}</th><th className="px-4">{tr('Date', 'Date')}</th><th className="px-4">{tr('Tiers', 'Party')}</th>
               <th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4">GL</th><th className="px-4"></th>
             </tr></thead>
             <tbody>
               {txns.map(t => (
                 <tr key={t.id} className="border-t border-gray-50 dark:border-gray-700/50">
                   <td className="px-4 py-2 font-mono text-xs" data-label="N°">{t.transaction_number}</td>
+                  <td className="px-4 py-2" data-label={tr('Type', 'Type')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.txn_type === 'revenue' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{t.txn_type === 'revenue' ? tr('Revenu', 'Revenue') : tr('Dépense', 'Expense')}</span></td>
                   <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{t.txn_date}</td>
-                  <td className="px-4 py-2" data-label={tr('Fournisseur', 'Vendor')}>{t.vendor_name || '—'}{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
+                  <td className="px-4 py-2" data-label={tr('Tiers', 'Party')}>{t.vendor_name || '—'}{t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" className="ml-2 inline-block align-middle text-gray-400 hover:text-blue-600"><Paperclip size={13} /></a>}</td>
                   <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(t.total)}</td>
                   <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[t.status]}`}>{STATUS_LABEL[t.status]}</span></td>
                   <td className="px-4 py-2" data-label="GL">{t.gl_entry_id ? <Check size={15} className="text-emerald-600" /> : <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-2 text-right" data-label="">
                     {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
                       <button onClick={() => editTxn(t)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
-                      {!t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
-                      {t.payment_method === 'on_account' && t.status !== 'paid' && <button onClick={() => payTxn(t)} className="text-emerald-600 hover:underline">{tr('Payer', 'Pay')}</button>}
+                      {t.txn_type !== 'revenue' && !t.gl_entry_id && <button onClick={() => postPurchase(t)} className="text-indigo-600 hover:underline">{tr('Comptabiliser', 'Post')}</button>}
+                      {t.txn_type !== 'revenue' && t.payment_method === 'on_account' && t.status !== 'paid' && <button onClick={() => payTxn(t)} className="text-emerald-600 hover:underline">{tr('Payer', 'Pay')}</button>}
                       {!t.gl_entry_id && <button onClick={() => removeTxn(t)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>}
                     </div>}
                   </td>
                 </tr>
               ))}
-              {txns.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune transaction.', 'No transaction yet.')}</td></tr>}
+              {txns.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{tr('Aucune transaction.', 'No transaction yet.')}</td></tr>}
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
