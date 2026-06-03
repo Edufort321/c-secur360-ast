@@ -1777,7 +1777,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-blue-200 dark:border-blue-500/30">
                     <div className="bg-blue-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime A — Bail', 'Regime A — Lease')} · {tr('800 $/mois · 12 mois · taux 43 %', '$800/mo · 12 mo · 43% tax')}
                     </div>
@@ -1831,7 +1831,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-violet-200 dark:border-violet-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-violet-200 dark:border-violet-500/30">
                     <div className="bg-violet-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime A — Acheté', 'Regime A — Purchased')} · {tr('35 000 $ · 12 mois · DPA Cat. 10', '$35,000 · 12 mo · CCA Cl. 10')}
                     </div>
@@ -1925,7 +1925,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ka, remb, parMois: Math.round(remb / 12) };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-emerald-200 dark:border-emerald-500/30">
                     <div className="bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime B — Véhicule personnel', 'Regime B — Personal vehicle')} · {tr('Taux ARC 2026 : 0,73 $ / 0,67 $', 'CRA 2026: $0.73 / $0.67')}
                     </div>
