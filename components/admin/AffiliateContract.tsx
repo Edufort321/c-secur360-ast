@@ -6,7 +6,7 @@
 // - Ligne de signature : nom + titre + bouton « Signer » (horodate signed_at, passe status='signe').
 // - Bouton Imprimer/PDF (jsPDF, deja present dans le projet).
 import React, { useEffect, useState } from 'react';
-import { X, Save, Loader2, FileSignature, Printer, RefreshCw, PenLine, CheckCircle2 } from 'lucide-react';
+import { X, Save, Loader2, FileSignature, Printer, RefreshCw, PenLine, CheckCircle2, Ban } from 'lucide-react';
 import {
   getContract, saveContract, defaultClauses, type AffiliateContract,
 } from '@/lib/affiliateContract';
@@ -66,6 +66,18 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
     await save({ signed_at: new Date().toISOString(), status: 'signe' });
   }
 
+  async function unlock() {
+    if (!c) return;
+    if (!confirm('Deverrouiller ce contrat pour le modifier ? Il repassera au statut Brouillon (la signature actuelle sera retiree).')) return;
+    await save({ status: 'brouillon', signed_at: null });
+  }
+
+  async function terminate() {
+    if (!c) return;
+    if (!confirm('Resilier ce contrat d affiliation ? Les commissions dues pour les periodes anterieures demeurent payables.')) return;
+    await save({ status: 'resilie' });
+  }
+
   async function exportPdf() {
     if (!c) return;
     const { default: jsPDF } = await import('jspdf');
@@ -110,6 +122,8 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
 
   const inputCls = 'w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
   const signed = c?.status === 'signe';
+  const terminated = c?.status === 'resilie';
+  const locked = signed || terminated;   // contrat non editable (signe ou resilie) tant qu'on ne le deverrouille pas
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onMouseDown={onClose}>
@@ -153,25 +167,25 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Vendeur (co-vendeur)</span>
-                  <input className={inputCls} value={c.vendor_name} onChange={e => set({ vendor_name: e.target.value })} placeholder="Nom du vendeur" disabled={signed} />
+                  <input className={inputCls} value={c.vendor_name} onChange={e => set({ vendor_name: e.target.value })} placeholder="Nom du vendeur" disabled={locked} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Courriel du vendeur</span>
-                  <input className={inputCls} value={c.vendor_email} onChange={e => set({ vendor_email: e.target.value })} placeholder="vendeur@exemple.com" disabled={signed} />
+                  <input className={inputCls} value={c.vendor_email} onChange={e => set({ vendor_email: e.target.value })} placeholder="vendeur@exemple.com" disabled={locked} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Commission (%)</span>
                   <input type="number" step="0.01" min={0} className={inputCls} value={c.commission_pct}
-                    onFocus={e => e.target.select()} onChange={e => set({ commission_pct: e.target.value === '' ? 0 : Number(e.target.value) })} disabled={signed} />
+                    onFocus={e => e.target.select()} onChange={e => set({ commission_pct: e.target.value === '' ? 0 : Number(e.target.value) })} disabled={locked} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Inflation / indexation (%)</span>
                   <input type="number" step="0.01" min={0} className={inputCls} value={c.inflation_pct}
-                    onFocus={e => e.target.select()} onChange={e => set({ inflation_pct: e.target.value === '' ? 0 : Number(e.target.value) })} disabled={signed} />
+                    onFocus={e => e.target.select()} onChange={e => set({ inflation_pct: e.target.value === '' ? 0 : Number(e.target.value) })} disabled={locked} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Recurrence</span>
-                  <input className={inputCls} value={c.recurrence} onChange={e => set({ recurrence: e.target.value })} placeholder="annuelle" disabled={signed} />
+                  <input className={inputCls} value={c.recurrence} onChange={e => set({ recurrence: e.target.value })} placeholder="annuelle" disabled={locked} />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Date de debut (creation du client)</span>
@@ -183,14 +197,14 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
               <div className="mt-4">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Clauses legales</span>
-                  <button onClick={regenerateClauses} disabled={signed}
+                  <button onClick={regenerateClauses} disabled={locked}
                     className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                     <RefreshCw size={12} /> Regenerer le texte
                   </button>
                 </div>
                 <textarea
                   className="h-64 w-full resize-y rounded-lg border border-gray-300 bg-transparent px-3 py-2 font-mono text-xs leading-relaxed outline-none focus:border-blue-500 dark:border-gray-600"
-                  value={c.clauses} onChange={e => set({ clauses: e.target.value })} disabled={signed}
+                  value={c.clauses} onChange={e => set({ clauses: e.target.value })} disabled={locked}
                 />
               </div>
 
@@ -200,16 +214,20 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Nom du signataire</span>
-                    <input className={inputCls} value={c.signataire_name} onChange={e => set({ signataire_name: e.target.value })} placeholder="Nom complet" disabled={signed} />
+                    <input className={inputCls} value={c.signataire_name} onChange={e => set({ signataire_name: e.target.value })} placeholder="Nom complet" disabled={locked} />
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Titre / fonction</span>
-                    <input className={inputCls} value={c.signataire_title} onChange={e => set({ signataire_title: e.target.value })} placeholder="ex. Directeur" disabled={signed} />
+                    <input className={inputCls} value={c.signataire_title} onChange={e => set({ signataire_title: e.target.value })} placeholder="ex. Directeur" disabled={locked} />
                   </label>
                 </div>
                 {signed ? (
                   <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                     <CheckCircle2 size={15} /> Signe le {fmtDateTime(c.signed_at)}
+                  </p>
+                ) : terminated ? (
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400">
+                    <Ban size={15} /> Contrat resilie{c.signed_at ? ` (signe le ${fmtDateTime(c.signed_at)})` : ''}
                   </p>
                 ) : (
                   <button onClick={sign} disabled={saving}
@@ -229,7 +247,18 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
               <Printer size={15} /> Imprimer / PDF
             </button>
-            {!signed && (
+            {signed && (
+              <button onClick={terminate} disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10">
+                <Ban size={15} /> Resilier
+              </button>
+            )}
+            {locked ? (
+              <button onClick={unlock} disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                {saving ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />} Deverrouiller
+              </button>
+            ) : (
               <button onClick={() => save()} disabled={saving}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />} Enregistrer
