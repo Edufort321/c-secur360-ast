@@ -1,6 +1,7 @@
 // ============== JOB MODAL - Gestion avancée des tâches ==============
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { personnelRealScore } from '../../utils/skillScore.js';
 import { Icon } from '../../components/UI/Icon';
 import { Logo } from '../../components/UI/Logo';
 import { DropZone } from '../../components/UI/DropZone';
@@ -166,6 +167,54 @@ export function JobModal({
     // États pour les modals avancés
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [scheduleModalType, setScheduleModalType] = useState(null); // 'personnel' ou 'equipement'
+
+    // #34 (R14) — Donnees d'evaluation pour l'optimiseur deterministe.
+    // skill_form par grille (poste_salary_grids) + dernier skill_score par personne
+    // (employee_evaluations), charges a l'ouverture du modal. Repli silencieux en
+    // mode local / colonnes absentes.
+    const [skillFormByGrid, setSkillFormByGrid] = useState({});
+    const [evalScoreByPerson, setEvalScoreByPerson] = useState({});
+    const [optimizationSummary, setOptimizationSummary] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setOptimizationSummary(null);
+        if (!isSupabaseConfigured()) return;
+        const tenantId = Array.isArray(personnel) ? (personnel.find(p => p?.tenant_id)?.tenant_id || null) : null;
+        let active = true;
+        (async () => {
+            try {
+                let gq = supabase.from('poste_salary_grids').select('id, skill_form, use_skill_grid');
+                if (tenantId) gq = gq.eq('tenant_id', tenantId);
+                const { data: grids } = await gq;
+                if (active && Array.isArray(grids)) {
+                    const map = {};
+                    grids.forEach(g => { if (g && g.id && g.use_skill_grid !== false) map[g.id] = g.skill_form; });
+                    setSkillFormByGrid(map);
+                }
+            } catch { /* grilles indispo : repli sur evaluation/legacy */ }
+            try {
+                const ids = (Array.isArray(personnel) ? personnel : []).map(p => p?.id).filter(Boolean);
+                if (ids.length) {
+                    const { data: evals } = await supabase
+                        .from('employee_evaluations')
+                        .select('personnel_id, skill_score, evaluation_date')
+                        .in('personnel_id', ids)
+                        .order('evaluation_date', { ascending: false });
+                    if (active && Array.isArray(evals)) {
+                        const m = {};
+                        evals.forEach(e => {
+                            if (e && e.personnel_id != null && m[e.personnel_id] === undefined && e.skill_score != null) {
+                                m[e.personnel_id] = Number(e.skill_score);
+                            }
+                        });
+                        setEvalScoreByPerson(m);
+                    }
+                }
+            } catch { /* evaluations indispo : repli sur legacy */ }
+        })();
+        return () => { active = false; };
+    }, [isOpen, personnel]);
     const [selectedResource, setSelectedResource] = useState(null);
     const [showStepConfigModal, setShowStepConfigModal] = useState(false);
     const [selectedStep, setSelectedStep] = useState(null);
@@ -3133,12 +3182,16 @@ export function JobModal({
         const need = Math.max(1, parseInt(formData.nombrePersonnelRequis) || (Array.isArray(formData.personnel) ? formData.personnel.length : 1));
         const selectedIds = formData.personnel || [];
         const responsableId = formData.responsableId;
-        // Score d'évaluation (admin) si présent sur la fiche ; sinon neutre (0). Sert à équilibrer les forces.
-        const evalOf = (p) => Number(p?.niveau ?? p?.evaluation ?? p?.note ?? p?.score ?? p?.rating ?? 0) || 0;
+        // #34 (R14) — Score REEL (0..100) : skill_scores de l'employe ponderes par la
+        // skill_form de sa grille (repli: skill_score d'employee_evaluations, puis anciens
+        // champs). Sert a equilibrer les forces sur des donnees d'evaluation reelles.
+        const scoreOf = (p) => personnelRealScore(p, { skillFormByGrid, evalScoreByPerson }).score;
+        const nameOf = (p) => (p ? (p.nom || p.name || [p.prenom, p.nomFamille].filter(Boolean).join(' ') || String(p.id)) : '');
         const findP = (id) => personnel.find(p => String(p.id) === String(id));
 
         const allDays = getAllDays();
         const optimizedAssignations = {};
+        const chosenAll = new Set();
         let assignedCount = 0;
 
         allDays.forEach(day => {
@@ -3157,17 +3210,19 @@ export function JobModal({
             // 2) Autres candidats : uniquement s'ils sont DISPONIBLES ce jour-là, triés par évaluation décroissante.
             const rest = candidates
                 .filter(p => String(p.id) !== String(responsableId) && availableIds.has(p.id))
-                .sort((a, b) => evalOf(b) - evalOf(a));
+                .sort((a, b) => scoreOf(b) - scoreOf(a));
 
             // 2a) Équilibrage par POSTE : d'abord un par poste distinct (forces réparties), puis on complète.
             for (const p of rest) { if (chosen.length >= need) break; if (!usedPostes.has(p.poste)) { chosen.push(p.id); usedPostes.add(p.poste); } }
             for (const p of rest) { if (chosen.length >= need) break; if (!chosen.includes(p.id)) chosen.push(p.id); }
 
             if (chosen.length > 0) {
+                const finalPersonnel = chosen.slice(0, Math.max(need, resp ? 1 : need));
                 optimizedAssignations[day.dateString] = {
-                    personnel: chosen.slice(0, Math.max(need, resp ? 1 : need)),
+                    personnel: finalPersonnel,
                     equipements: formData.assignationsParJour[day.dateString]?.equipements || []
                 };
+                finalPersonnel.forEach(id => chosenAll.add(id));
                 assignedCount++;
             }
         });
@@ -3180,7 +3235,17 @@ export function JobModal({
             }
         }));
 
-        addNotification?.(`Optimisation IA : ${assignedCount} jour(s) — responsable prioritaire, équilibrage par poste puis évaluation.`, 'success');
+        // Recap des suggestions avec leur score reel (affiche sous le bouton).
+        const summary = Array.from(chosenAll)
+            .map(id => {
+                const p = findP(id);
+                const r = personnelRealScore(p, { skillFormByGrid, evalScoreByPerson });
+                return { id, name: nameOf(p), score: Math.round(r.score), source: r.source };
+            })
+            .sort((a, b) => b.score - a.score);
+        setOptimizationSummary(summary);
+
+        addNotification?.(`Optimisation IA : ${assignedCount} jour(s) — classement par evaluation reelle (competences ponderees par la grille), responsable prioritaire, equilibrage par poste.`, 'success');
     };
 
     // Fonction pour résoudre les conflits d'horaire
@@ -7916,6 +7981,33 @@ export function JobModal({
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* #34 — Scores des suggestions (evaluations reelles) */}
+                                    {optimizationSummary && optimizationSummary.length > 0 && (
+                                        <div className="bg-white border rounded-lg overflow-hidden">
+                                            <div className="bg-indigo-50 p-4 border-b">
+                                                <h4 className="font-medium text-indigo-800 flex items-center gap-2">
+                                                    🧠 {L('Scores des suggestions (évaluations réelles)', 'Suggestion scores (real evaluations)')}
+                                                </h4>
+                                            </div>
+                                            <div className="p-4">
+                                                <ul className="space-y-1">
+                                                    {optimizationSummary.map(s => (
+                                                        <li key={s.id} className="flex items-center justify-between gap-3 text-sm">
+                                                            <span className="text-gray-800">{s.name}</span>
+                                                            <span className="flex items-center gap-2">
+                                                                <span className="inline-block h-1.5 w-24 overflow-hidden rounded bg-gray-200">
+                                                                    <span className="block h-full bg-indigo-500" style={{ width: `${Math.max(0, Math.min(100, s.score))}%` }} />
+                                                                </span>
+                                                                <span className="font-semibold text-indigo-700 tabular-nums">{s.score}%</span>
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                <p className="mt-2 text-xs text-gray-500">{L('Score = compétences évaluées pondérées par la grille du poste (repli: évaluation enregistrée).', 'Score = evaluated skills weighted by the role grid (fallback: saved evaluation).')}</p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Sélection de Jour */}
                                     <div className="bg-white border rounded-lg overflow-hidden">
