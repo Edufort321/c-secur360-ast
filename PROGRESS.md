@@ -41,7 +41,7 @@ Scripts utiles : `node -r dotenv/config scripts/seed-admin.mjs dotenv_config_pat
 ## Contexte
 - **Supabase** : projet existant `nzjjgcccxlqhbtpitmpo` (« C-Secur360 »). Migrations 007–010 **appliquées**. Auth via `auth_sessions` + table `users`, middleware en `SUPABASE_SERVICE_ROLE_KEY`.
 - **Déploiement** : GitHub `Edufort321/c-secur360-ast` → Vercel `cerdia/c-secur360` (auto-deploy). On bosse sur la branche `feat/modular-foundation` (preview), **pas** sur `main` (prod c-secur360.ca) sans feu vert.
-- **Tenant de dev** : **CERDIA** (`id=cerdia`), admin `eric.dufort@cerdia.ai` / `321Eduf!$` (super_admin). Portail : `/cerdia/modules`. Login : `/auth/admin`.
+- **Tenant de dev** : **CERDIA** (`id=cerdia`), admin `eric.dufort@cerdia.ai` (super_admin). Mot de passe : voir `ADMIN_PASSWORD` (non versionné). Portail : `/cerdia/modules`. Login : `/auth/admin`.
 
 ## Décisions clés
 1. **Repo UNIQUE** : porter planner + inventory DANS ce repo (pas de déploiements séparés). Objectif user : « tout modifié à 1 endroit ». Sources : `C:\CLAUDE\c-secur360-planner-master`, `C:\CLAUDE\c-secur-inventory-main`.

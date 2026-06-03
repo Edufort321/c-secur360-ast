@@ -22,7 +22,11 @@ if (!url || !key) {
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
 const EMAIL = (process.env.ADMIN_EMAIL || 'eric.dufort@cerdia.ai').toLowerCase().trim();
-const PASSWORD = process.env.ADMIN_PASSWORD || '321Eduf!$';
+const PASSWORD = process.env.ADMIN_PASSWORD;
+if (!PASSWORD) {
+  console.error('❌ ADMIN_PASSWORD requis (aucun mot de passe par défaut pour des raisons de sécurité).');
+  process.exit(1);
+}
 const ROLE = process.env.ADMIN_ROLE || 'super_admin';
 
 let tenantId = process.env.ADMIN_TENANT_ID;

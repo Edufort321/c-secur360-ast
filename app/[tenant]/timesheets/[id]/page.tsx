@@ -244,9 +244,9 @@ export default function TimesheetDetailPage() {
   }
 
   // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
-  function addExpense() {
-    const date = sheet ? sheet.period_start : new Date().toISOString().slice(0, 10);
-    setExpenses(p => [...p, newExpense(date)]);
+  function addExpense(date?: string) {
+    const d = date || (sheet ? sheet.period_start : new Date().toISOString().slice(0, 10));
+    setExpenses(p => [...p, newExpense(d)]);
   }
   function updExpense(id: string, patch: Partial<Expense>) {
     setExpenses(prev => prev.map(x => {
@@ -736,6 +736,35 @@ export default function TimesheetDetailPage() {
                     ))}
                   </div>
                 )}
+
+                {/* Dépenses du jour (avec reçu) — sur la ligne de la journée */}
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500"><Receipt size={12} /> Dépenses du jour</span>
+                    {!isReadOnly && <button type="button" onClick={() => addExpense(e.date)} className="text-xs font-semibold text-violet-600 hover:underline">+ Dépense</button>}
+                  </div>
+                  {expenses.filter(x => x.date === e.date).map(x => (
+                    <div key={x.id} className="mb-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
+                      <select value={x.category} disabled={isReadOnly} onChange={ev => updExpense(x.id, { category: ev.target.value })} className="inp w-32 text-xs">
+                        {EXPENSE_CATS.map(c => <option key={c.k} value={c.k}>{c.label}</option>)}
+                      </select>
+                      <input value={x.supplier} disabled={isReadOnly} onChange={ev => updExpense(x.id, { supplier: ev.target.value })} placeholder="Fournisseur" className="inp flex-1 min-w-[8rem] text-xs" />
+                      <input type="number" step="0.01" value={x.subtotal || ''} disabled={isReadOnly} onFocus={ev => ev.target.select()} onChange={ev => updExpense(x.id, { subtotal: +ev.target.value })} placeholder="Sous-total $" className="inp w-28 text-right text-xs" />
+                      <span className="text-[11px] text-slate-500" title="TPS + TVQ">+tx {money((x.gst || 0) + (x.qst || 0))}</span>
+                      <span className="text-xs font-bold text-slate-700">{money(x.total)}</span>
+                      <label className="flex items-center gap-1 text-[11px] text-slate-500"><input type="checkbox" checked={x.reimbursable} disabled={isReadOnly} onChange={ev => updExpense(x.id, { reimbursable: ev.target.checked })} className="accent-violet-600" />rembours.</label>
+                      {x.receipt_url ? (
+                        <a href={x.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700"><Paperclip size={11} /> Reçu ✓</a>
+                      ) : !isReadOnly && (
+                        <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-violet-300 bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">
+                          {uploadingId === x.id ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />} Reçu
+                          <input type="file" accept="image/*,.pdf" className="hidden" onChange={ev => { const f = ev.target.files?.[0]; if (f) onReceiptUpload(x.id, f); ev.currentTarget.value = ''; }} />
+                        </label>
+                      )}
+                      {!isReadOnly && <button onClick={() => delExpense(x.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={13} /></button>}
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -746,58 +775,6 @@ export default function TimesheetDetailPage() {
               <Plus size={18} /> Ajouter une ligne
             </button>
           )}
-        </div>
-
-        {/* ── DÉPENSES (avec reçu) ─────────────────────────────────────── */}
-        <div className={`mt-6 ${needsOdometer && !isReadOnly ? 'pointer-events-none opacity-40' : ''}`}>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-700"><Receipt size={16} className="text-violet-600" /> Dépenses (joindre le reçu)</h2>
-            {expensesTotal > 0 && <span className="text-sm font-semibold text-violet-700">{money(expensesTotal)}</span>}
-          </div>
-          <div className="space-y-3">
-            {expenses.map(x => (
-              <div key={x.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Date</span>
-                    <input type="date" value={x.date} disabled={isReadOnly} onChange={e => updExpense(x.id, { date: e.target.value })} className="inp w-36" /></label>
-                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Catégorie</span>
-                    <select value={x.category} disabled={isReadOnly} onChange={e => updExpense(x.id, { category: e.target.value })} className="inp w-36">
-                      {EXPENSE_CATS.map(c => <option key={c.k} value={c.k}>{c.label}</option>)}
-                    </select></label>
-                  <label className="flex flex-1 flex-col"><span className="mb-1 text-xs text-slate-400">Fournisseur</span>
-                    <input type="text" value={x.supplier} disabled={isReadOnly} onChange={e => updExpense(x.id, { supplier: e.target.value })} placeholder="Ex: Petro-Canada" className="inp w-full" /></label>
-                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Sous-total $</span>
-                    <input type="number" step="0.01" value={x.subtotal || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { subtotal: +e.target.value })} className="inp w-24 text-right" /></label>
-                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">TPS $</span>
-                    <input type="number" step="0.01" value={x.gst || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { gst: +e.target.value })} className="inp w-20 text-right" /></label>
-                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">TVQ $</span>
-                    <input type="number" step="0.01" value={x.qst || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { qst: +e.target.value })} className="inp w-20 text-right" /></label>
-                  <div className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Total</span>
-                    <span className="inp w-24 text-right font-bold text-slate-700">{money(x.total)}</span></div>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
-                  <input type="text" value={x.description} disabled={isReadOnly} onChange={e => updExpense(x.id, { description: e.target.value })} placeholder="Description (facultatif)" className="inp flex-1 min-w-[12rem]" />
-                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                    <input type="checkbox" checked={x.reimbursable} disabled={isReadOnly} onChange={e => updExpense(x.id, { reimbursable: e.target.checked })} className="accent-violet-600" /> À me rembourser
-                  </label>
-                  {x.receipt_url ? (
-                    <a href={x.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><Paperclip size={12} /> Reçu joint ✓</a>
-                  ) : !isReadOnly && (
-                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
-                      {uploadingId === x.id ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />} Joindre le reçu
-                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceiptUpload(x.id, f); e.currentTarget.value = ''; }} />
-                    </label>
-                  )}
-                  {!isReadOnly && <button onClick={() => delExpense(x.id)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>}
-                </div>
-              </div>
-            ))}
-            {!isReadOnly && (
-              <button onClick={addExpense} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-400 transition hover:border-violet-400 hover:text-violet-600">
-                <Plus size={16} /> Ajouter une dépense
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Primes journalières déclenchées */}
