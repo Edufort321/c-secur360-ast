@@ -25,7 +25,6 @@ export function useGoogleDrive() {
     const initializeGoogleAPI = async () => {
         // Si Google Drive n'est pas configuré, ne pas essayer d'initialiser
         if (!isGoogleDriveAvailable) {
-            console.log('ℹ️ Google Drive en mode démo - credentials non configurés');
             setError('Configuration Google Drive requise');
             setIsInitialized(true); // Marquer comme initialisé pour éviter les boucles
             return;
@@ -40,7 +39,6 @@ export function useGoogleDrive() {
         }
 
         try {
-            console.log('🚀 Initialisation Google Drive API...');
 
             // Initialiser gapi avec timeout
             const gapiLoaded = await Promise.race([
@@ -70,14 +68,12 @@ export function useGoogleDrive() {
                     if (tokenResponse.access_token) {
                         setIsAuthenticated(true);
                         setError(null);
-                        console.log('✅ Authentification Google Drive réussie');
                     }
                 },
             });
 
             window.googleTokenClient = tokenClient;
             setIsInitialized(true);
-            console.log('✅ Google Drive API initialisée');
 
             // Vérifier si l'utilisateur est déjà connecté
             if (window.gapi.client.getToken()) {
@@ -104,7 +100,6 @@ export function useGoogleDrive() {
         }
 
         try {
-            console.log('🔐 Demande de connexion Google Drive...');
             if (window.googleTokenClient) {
                 window.googleTokenClient.requestAccessToken();
             } else {
@@ -122,7 +117,6 @@ export function useGoogleDrive() {
             const token = window.gapi.client.getToken();
             if (token !== null) {
                 window.google.accounts.oauth2.revoke(token.access_token, () => {
-                    console.log('🚪 Déconnexion Google Drive');
                 });
                 window.gapi.client.setToken(null);
             }
@@ -160,7 +154,6 @@ export function useGoogleDrive() {
         setError(null);
 
         try {
-            console.log('💾 Sauvegarde vers Google Drive...');
 
             const dataToSave = {
                 ...data,
@@ -202,7 +195,6 @@ export function useGoogleDrive() {
 
             await request;
             setLastSync(new Date());
-            console.log('✅ Sauvegarde Google Drive réussie');
 
         } catch (error) {
             console.error('❌ Erreur sauvegarde Google Drive:', error);
@@ -223,11 +215,9 @@ export function useGoogleDrive() {
         setError(null);
 
         try {
-            console.log('📥 Chargement depuis Google Drive...');
 
             const file = await findDataFile();
             if (!file) {
-                console.log('ℹ️ Aucun fichier de données trouvé');
                 return null;
             }
 
@@ -238,7 +228,6 @@ export function useGoogleDrive() {
 
             const data = JSON.parse(response.body);
             setLastSync(new Date(file.modifiedTime));
-            console.log('✅ Chargement Google Drive réussi');
 
             return data;
 

@@ -30,7 +30,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         setData(JSON.parse(saved));
-        console.log(`=æ [${table}] Chargé depuis localStorage:`, JSON.parse(saved).length, 'éléments');
       } else {
         setData(defaultData);
         localStorage.setItem(storageKey, JSON.stringify(defaultData));
@@ -51,7 +50,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
   // Sync initial depuis Supabase (si configuré et online)
   useEffect(() => {
     if (!isSupabaseConfigured() || !isOnline) {
-      console.log(`  [${table}] Supabase non configuré ou offline - mode local uniquement`);
       return;
     }
 
@@ -67,7 +65,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
           setData(remoteData);
           localStorage.setItem(storageKey, JSON.stringify(remoteData));
           setLastSync(new Date());
-          console.log(` [${table}] Sync initial:`, remoteData.length, 'éléments');
         }
       } catch (error) {
         console.error(`L [${table}] Erreur sync initial:`, error);
@@ -93,7 +90,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
           ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {})
         },
         (payload) => {
-          console.log(`= [${table}] Changement reçu:`, payload.eventType, payload.new || payload.old);
 
           setData(prevData => {
             let newData = [...prevData];
@@ -124,7 +120,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
         }
       )
       .subscribe((status) => {
-        console.log(`=á [${table}] Realtime status:`, status);
       });
 
     channelRef.current = channel;
@@ -133,7 +128,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
-        console.log(`= [${table}] Canal realtime fermé`);
       }
     };
   }, [table, storageKey, isOnline]);
@@ -141,13 +135,11 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
   // Écouter online/offline
   useEffect(() => {
     const handleOnline = () => {
-      console.log('< [Global] Connexion rétablie');
       setIsOnline(true);
       processSyncQueue();
     };
 
     const handleOffline = () => {
-      console.log('=ô [Global] Connexion perdue - mode offline');
       setIsOnline(false);
     };
 
@@ -164,7 +156,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
   const processSyncQueue = async () => {
     if (syncQueue.length === 0 || !isOnline || !isSupabaseConfigured()) return;
 
-    console.log(`= [${table}] Traitement queue:`, syncQueue.length, 'opérations');
 
     for (const operation of syncQueue) {
       try {
@@ -180,14 +171,12 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
   // Sync vers Supabase
   const syncToSupabase = async (type, item, itemId = null) => {
     if (!isSupabaseConfigured()) {
-      console.log(`  [${table}] Supabase non configuré - sauvegarde locale uniquement`);
       return { success: true, local: true };
     }
 
     if (!isOnline) {
       // Ajouter à la queue
       setSyncQueue(prev => [...prev, { type, data: item, id: itemId }]);
-      console.log(`=å [${table}] Ajouté à la queue:`, type);
       return { success: true, queued: true };
     }
 
@@ -238,7 +227,6 @@ export function useSupabaseSync(table, storageKey, defaultData = [], tenantId = 
           break;
       }
 
-      console.log(` [${table}] Sync Supabase:`, type, result);
       return { success: true, data: result };
 
     } catch (error) {

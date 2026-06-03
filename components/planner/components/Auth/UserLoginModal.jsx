@@ -22,8 +22,6 @@ export function UserLoginModal({
     // Debug: vérifier les données personnel reçues
     useEffect(() => {
         if (personnel && personnel.length > 0) {
-            console.log('✅ Personnel reçu dans UserLoginModal:', personnel.length, 'utilisateurs');
-            console.log('👥 Liste des utilisateurs:', personnel.map(p => ({ nom: p.nom, id: p.id })));
         } else {
             console.warn('⚠️ Aucun personnel reçu dans UserLoginModal');
         }
@@ -103,7 +101,6 @@ export function UserLoginModal({
         }
 
         const nomNormalise = normaliserChaine(loginForm.nom);
-        console.log('🔍 Recherche utilisateur:', nomNormalise);
 
         // Chercher l'utilisateur correspondant
         const utilisateurTrouve = personnel.find(p => {
@@ -112,7 +109,6 @@ export function UserLoginModal({
         });
 
         if (utilisateurTrouve) {
-            console.log('✅ Utilisateur trouvé:', utilisateurTrouve.nom);
             setUtilisateurIdentifie(utilisateurTrouve);
             setShowDropdown(false);
             if (utilisateurTrouve.motDePasse) {
@@ -143,12 +139,6 @@ export function UserLoginModal({
         if (!motDePasseLocal || motDePasseLocal.trim() === '') {
             return;
         }
-
-        console.log('🔐 Tentative de connexion:', {
-            utilisateur: utilisateurIdentifie.nom,
-            motDePasse: motDePasseLocal,
-            attendu: utilisateurIdentifie.motDePasse
-        });
 
         // Appeler la fonction parent avec les données
         onLogin(utilisateurIdentifie, motDePasseLocal);
