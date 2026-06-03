@@ -6058,6 +6058,24 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     return true;
   });
 
+  // Export CSV des transactions filtrées (separateur ';' + BOM UTF-8 pour Excel FR ; pour
+  // le comptable / rapprochement bancaire). Cote client, aucune dependance.
+  function exportCsv() {
+    const head = ['No', 'Type', 'Date', 'Tiers', 'Province', 'Paiement', 'Sous-total', 'TPS', 'TVQ', 'PST', 'Total', 'Statut', 'GL'];
+    const rows = filteredTxns.map(t => [
+      t.transaction_number || '', t.txn_type === 'revenue' ? 'Revenu' : 'Depense', t.txn_date || '',
+      t.vendor_name || '', t.province || '', t.payment_method === 'on_account' ? 'A credit' : 'Comptant',
+      Number(t.subtotal) || 0, Number(t.gst_amount) || 0, Number(t.qst_amount) || 0, Number(t.pst_amount) || 0,
+      Number(t.total) || 0, t.status, t.gl_entry_id ? 'oui' : 'non',
+    ]);
+    const csv = [head, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `transactions-${tenant}-${today}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function load() {
     setLoading(true); setMigMissing(false);
     try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); }
@@ -6225,6 +6243,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <input value={fSearch} onChange={e => setFSearch(e.target.value)} placeholder={tr('Rechercher n° ou tiers…', 'Search # or party…')} className={`min-w-[160px] flex-1 ${inputCls}`} />
           {(fType !== 'all' || fStatus !== 'all' || fSearch) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
           <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
+          <button onClick={exportCsv} disabled={filteredTxns.length === 0} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300">{tr('Exporter CSV', 'Export CSV')}</button>
         </div>
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="mobile-cards w-full text-sm">
