@@ -387,6 +387,29 @@ export default function AdminDashboard() {
           <LogIn size={15} />
           Connexion tenant
         </Link>
+
+        <Link
+          href="/admin/demo-leads"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            background: 'rgba(59,130,246,0.12)',
+            border: '1px solid rgba(59,130,246,0.35)',
+            color: '#60a5fa',
+            padding: '7px 14px',
+            borderRadius: '7px',
+            textDecoration: 'none',
+            fontSize: '13px',
+            fontWeight: 500,
+            transition: 'background 0.15s'
+          }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.22)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.12)')}
+        >
+          <Users size={15} />
+          Leads démo
+        </Link>
       </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>

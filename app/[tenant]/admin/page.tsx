@@ -406,7 +406,7 @@ function FeuillesDeTemps({ tenant, tr }: { tenant: string; tr: (f: string, e: st
     const toExport = filtered.filter((s: any) => s.status === 'approved' || s.status === 'paid');
     if (!toExport.length) { alert(tr('Aucune feuille approuvée dans la sélection.', 'No approved sheet in selection.')); return; }
     const rows = [
-      ['Employé', 'Email', 'Période #', 'Période début', 'Période fin', 'Hrs rég', 'Hrs supp', 'Hrs maj', 'Km pers.', 'Déduction véhicule', 'Montant total', 'Statut'].join(','),
+      [tr('Employé', 'Employee'), 'Email', tr('Période #', 'Period #'), tr('Période début', 'Period start'), tr('Période fin', 'Period end'), tr('Hrs rég', 'Reg hrs'), tr('Hrs supp', 'OT hrs'), tr('Hrs maj', 'DT hrs'), tr('Km pers.', 'Personal km'), tr('Déduction véhicule', 'Vehicle deduction'), tr('Montant total', 'Total amount'), tr('Statut', 'Status')].join(','),
       ...toExport.map((s: any) => [`"${s.employee_name}"`, s.employee_email, `P.${weekNum(s.period_start)}`, s.period_start, s.period_end,
         s.total_regular, s.total_overtime, s.total_premium, s.total_km_personal, Number(s.vehicle_deduction || 0), s.total_amount, s.status].join(',')),
     ].join('\n');
@@ -947,14 +947,26 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   async function save() {
     if (!form.name.trim()) return;
     setSaving(true); setNotice(null);
-    try {
-      const payload = { tenant_id: tenant, ...form };
-      if (form.id) { await supabase.from('clients').update(payload).eq('id', form.id); }
-      else { await supabase.from('clients').insert(payload); }
-      setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
-      deselect(); load();
-    } catch (e: any) { setNotice('Erreur : ' + (e?.message || 'DB')); }
-    finally { setSaving(false); }
+    // Insert/update resilient : on lit l'erreur (une requete Supabase ne throw pas) et on retire
+    // automatiquement toute colonne absente du schema reel (table `clients` creee par 010 sans
+    // les colonnes plates) pour que l'enregistrement n'echoue jamais silencieusement.
+    const full: any = { tenant_id: tenant, ...form };
+    delete full.id;
+    const attempt = (p: any) => form.id
+      ? supabase.from('clients').update(p).eq('id', form.id)
+      : supabase.from('clients').insert(p);
+    let res: any = await attempt(full);
+    let guard = 0;
+    while (res.error && guard < 15) {
+      const msg = res.error.message || '';
+      const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+      const col = m ? (m[1] || m[2] || m[3]) : null;
+      if (col && col in full && col !== 'name' && col !== 'tenant_id') { delete full[col]; res = await attempt(full); guard++; }
+      else break;
+    }
+    if (res.error) { setNotice('Erreur : ' + res.error.message); setSaving(false); return; }
+    setNotice(tr('Client enregistré ✓', 'Client saved ✓'));
+    deselect(); load(); setSaving(false);
   }
 
   async function del(id: string) {
@@ -2881,7 +2893,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                 {seniorityLabel && <p className="mt-0.5 text-[10px] font-semibold text-gray-500 dark:text-gray-400">⏳ {tr('Ancienneté', 'Seniority')} : {seniorityLabel}</p>}
                 <label className="text-xs mt-2 block">{tr('Salaire à l\'embauche $', 'Hire salary $')}</label>
                 <input type="number" disabled={!canEdit} className={inp2} value={hireSalary} onChange={e => setHireSalary(e.target.value)} placeholder="48000" />
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">Taux $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">{tr('Taux', 'Rate')} $/h ≈ {((parseFloat(hireSalary) || 0) / hpy).toFixed(2)} $</p>
                 {useGrid && tiers.length > 0 && (
                   <details className="mt-2">
                     <summary className="cursor-pointer select-none text-[9px] uppercase font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">☰ {tr('Réf. grille — cliquer pour appliquer', 'Grid ref — click to apply')}</summary>
@@ -2906,7 +2918,7 @@ function EmployeeEvaluationModal({ tenant, tr, employee, onClose, onSaved, canEd
                   {tr('Palier actuel : ', 'Current tier: ')}<strong>{tiers[currentTierIdx]?.tier_name || '—'}</strong>
                 </p>
                 <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                  Taux $/h ≈ {(parseFloat(currentSalary) / (grid.hours_per_year || 2080) || 0).toFixed(2)} $
+                  {tr('Taux', 'Rate')} $/h ≈ {(parseFloat(currentSalary) / (grid.hours_per_year || 2080) || 0).toFixed(2)} $
                 </p>
               </div>
               <div className="rounded-xl border border-amber-200 bg-amber-50/40 dark:border-amber-500/30 dark:bg-amber-500/10 p-3">
@@ -3262,12 +3274,12 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
             <div className="mb-2">
               <label className="text-xs text-gray-500">{tr('Catégorie pour toutes les lignes', 'Category for all lines')}</label>
               <select className={inp} value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}>
-                <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                {([['Métier', 'Trade'], ['Spécialité', 'Specialty'], ['Domaine', 'Field'], ['Certification', 'Certification'], ['Autre', 'Other']] as [string, string][]).map(([v, en]) => <option key={v} value={v}>{tr(v, en)}</option>)}
               </select>
             </div>
             <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={10} autoFocus
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
-              placeholder={`Technique\nÉlectrique | EL\nMécanique\nSoudure TIG\nGestion\n…`} />
+              placeholder={tr(`Technique\nÉlectrique | EL\nMécanique\nSoudure TIG\nGestion\n…`, `Technical\nElectrical | EL\nMechanical\nTIG welding\nManagement\n…`)} />
             <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s)', 'lines')}</p>
             <div className="mt-4 flex gap-2 justify-end">
               <button onClick={() => { setShowBulk(false); setBulkText(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
@@ -3316,7 +3328,7 @@ function SousClassesPlanner({ tenant, tr, inp, onSubclassesChanged }: { tenant: 
                       <div className="col-span-6 sm:col-span-2">
                         <label className="block text-[9px] uppercase font-bold text-gray-400 mb-0.5">{tr('Catégorie', 'Category')}</label>
                         <select className={inp} value={r.category} onChange={e => upd(i, 'category', e.target.value)}>
-                          <option>Métier</option><option>Spécialité</option><option>Domaine</option><option>Certification</option><option>Autre</option>
+                          {([['Métier', 'Trade'], ['Spécialité', 'Specialty'], ['Domaine', 'Field'], ['Certification', 'Certification'], ['Autre', 'Other']] as [string, string][]).map(([v, en]) => <option key={v} value={v}>{tr(v, en)}</option>)}
                         </select>
                       </div>
                       {/* Actions */}
@@ -4666,7 +4678,7 @@ function PostesPlanner({ tenant, tr, inp, onPostesChanged, sharedSubclasses, goT
               rows={12}
               autoFocus
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent p-3 text-sm font-mono"
-              placeholder={`Technicien junior\nTechnicien intermédiaire | TECH-INT\nTechnicien senior, TECH-SR\nContremaître\nChef de projet\nIngénieur électrique\n…`}
+              placeholder={tr(`Technicien junior\nTechnicien intermédiaire | TECH-INT\nTechnicien senior, TECH-SR\nContremaître\nChef de projet\nIngénieur électrique\n…`, `Junior technician\nIntermediate technician | TECH-INT\nSenior technician, TECH-SR\nForeman\nProject manager\nElectrical engineer\n…`)}
             />
             <p className="text-[10px] text-gray-400 mt-1">{bulkText.split(/\r?\n|;/).filter(l => l.trim()).length} {tr('ligne(s) détectée(s)', 'line(s) detected')}</p>
             <div className="mt-4 flex gap-2 justify-end">
@@ -5689,7 +5701,7 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
                   <div className="text-sm">
                     <span className="font-mono text-gray-500">{e.entry_date}</span>
                     <span className="ml-2 font-semibold">{e.description || tr('(sans description)', '(no description)')}</span>
-                    {e.reference && <span className="ml-2 text-xs text-gray-400">réf. {e.reference}</span>}
+                    {e.reference && <span className="ml-2 text-xs text-gray-400">{tr('réf.', 'ref.')} {e.reference}</span>}
                     {e.reversed_by_id && <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-700">{tr('contre-passée', 'reversed')}</span>}
                   </div>
                   <div className="flex items-center gap-3">
