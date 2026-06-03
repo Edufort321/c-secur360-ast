@@ -552,6 +552,8 @@ function TextInput({ value, onChange, placeholder, readOnly, type = 'text', clas
       type={type}
       value={value}
       onChange={e => onChange(e.target.value)}
+      // Champ numerique : selection au clic pour ecraser directement (un 0 par defaut ne bloque pas la saisie).
+      onFocus={type === 'number' ? e => e.currentTarget.select() : undefined}
       placeholder={placeholder}
       readOnly={readOnly}
       className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent ${readOnly ? 'bg-gray-50 cursor-default' : 'bg-white'} ${className}`}
