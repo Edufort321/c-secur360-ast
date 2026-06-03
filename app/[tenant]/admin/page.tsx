@@ -5535,6 +5535,13 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
+  // #59 Temps réel : rafraîchit silencieusement le grand livre quand une écriture change (migration 127).
+  useRealtime(['gl_entries'], tenant, () => {
+    Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)])
+      .then(([acc, tc, led, tb]) => { setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb); })
+      .catch(() => { /* noop */ });
+  });
+
   async function init() {
     setNotice(null);
     try { await seedAccountingDefaults(tenant); setNotice(tr('Plan comptable initialisé.', 'Chart of accounts initialized.')); await load(); }
