@@ -1692,6 +1692,26 @@ function AppContent() {
     return () => { if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current); };
   }, [items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda, tenantId]);
 
+  // #58 — Règle globale : toute case éditable s'écrase au clic (sélection du contenu au focus).
+  // Permet de remplacer directement un 0/une valeur sans devoir effacer, et facilite la saisie
+  // multi-chiffres. S'applique a tous les champs du module inventaire (texte, nombre, numérique).
+  useEffect(() => {
+    const onFocusIn = (e) => {
+      const el = e.target;
+      if (!el) return;
+      const tag = el.tagName;
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') return;
+      const type = (el.getAttribute('type') || 'text').toLowerCase();
+      const selectable = tag === 'TEXTAREA' || el.inputMode === 'numeric'
+        || ['text', 'number', 'search', 'tel', 'url', 'email'].includes(type);
+      if (!selectable) return;
+      // Laisser le focus se poser puis sélectionner tout le contenu.
+      setTimeout(() => { try { el.select(); } catch { /* certains types ne supportent pas select() */ } }, 0);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
+
   // Souscriptions temps réel Supabase
   useEffect(() => {
     if (!isAuthenticated) return;
