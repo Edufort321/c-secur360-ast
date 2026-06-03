@@ -436,7 +436,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                     value={formData.telephone}
                                     onChange={(e) => handleInputChange('telephone', e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ex: 514-555-0123"
+                                    placeholder={t('personnel.phoneExample')}
                                 />
                             </div>
 
@@ -449,7 +449,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                     value={formData.email}
                                     onChange={(e) => handleInputChange('email', e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ex: jean.dupont@email.com"
+                                    placeholder={t('personnel.emailExample')}
                                 />
                             </div>
 
@@ -533,10 +533,11 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                 </label>
                                 <input
                                     type="number"
+                                    onFocus={(e) => e.target.select()}
                                     value={formData.salaire}
                                     onChange={(e) => handleInputChange('salaire', e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ex: 65000"
+                                    placeholder={t('personnel.salaryExample')}
                                 />
                             </div>
                         </div>
