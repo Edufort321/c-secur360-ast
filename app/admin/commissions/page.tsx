@@ -5,10 +5,10 @@
 // action « Marquer paye » (#69) qui enregistre un paiement et passe l'echeance a paye.
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature, BadgeCheck, CheckCircle2, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Wallet, AlertTriangle, CalendarClock, FileSignature, BadgeCheck, CheckCircle2, X, Download } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { listCommissions, type AffiliateCommission } from '@/lib/affiliateCommissions';
-import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
+import { listPayments, markCommissionPaid, summarizePayments, paymentsToExpenses, COMMISSION_EXPENSE_ACCOUNT, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 
 const money = (n: number) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 const fmtDate = (d?: string | null) => d ? new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -51,6 +51,20 @@ export default function CommissionsDashboardPage() {
   const pending = rows.filter(r => r.status === 'pending');
   const totals = useMemo(() => summarizePayments(rows, payments, today), [rows, payments, today]);
 
+  // Lien comptabilite (#69) : expose les paiements regles comme depenses (compte 5050), en lecture seule.
+  function exportExpensesCSV() {
+    const expenses = paymentsToExpenses(payments);
+    if (!expenses.length) { setNotice('Aucun paiement regle a exporter.'); return; }
+    const headers = ['Date', 'Description', 'Reference', 'Code', 'Compte', 'Montant'];
+    const rows = expenses.map(e => [e.date, e.description, e.reference, e.account_code, e.account_name, String(e.amount)]
+      .map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = `data:text/csv;charset=utf-8,﻿${encodeURIComponent(csv)}`;
+    a.download = `depenses-commissions-affiliation.csv`;
+    a.click();
+  }
+
   async function confirmPay() {
     if (!payRow) return;
     setPaying(true); setError(null);
@@ -84,6 +98,10 @@ export default function CommissionsDashboardPage() {
               <button onClick={() => setScope('pending')} className={`px-3 py-1.5 font-semibold ${scope === 'pending' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>A venir</button>
               <button onClick={() => setScope('all')} className={`px-3 py-1.5 font-semibold ${scope === 'all' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'}`}>Toutes</button>
             </div>
+            <button onClick={exportExpensesCSV} title={`Exporter les paiements regles comme depenses (compte ${COMMISSION_EXPENSE_ACCOUNT.code})`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Download size={15} /> Depenses (CSV)
+            </button>
             <Link href="/admin/affiliate-contracts" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
               <FileSignature size={15} /> Contrats
             </Link>
@@ -173,6 +191,10 @@ export default function CommissionsDashboardPage() {
             </div>
           )}
         </div>
+
+        <p className="mt-3 text-xs text-gray-400">
+          Lien comptabilite : les paiements regles sont exposables comme depenses sur le compte {COMMISSION_EXPENSE_ACCOUNT.code} « {COMMISSION_EXPENSE_ACCOUNT.name} » (export CSV ci-dessus). Lecture seule — n'affecte pas les ecritures du grand livre.
+        </p>
       </div>
 
       {/* Modal : marquer une commission payee */}
