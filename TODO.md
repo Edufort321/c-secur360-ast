@@ -15,12 +15,12 @@
 
 ### 📥 Correctifs routés (file par agent) — maj 2026-06-03 (tout mergé sur main)
 - **Agent 1 (Planner)** : ✅#34, ✅#6 mergés · reste **#52** (calendrier: mois=tâches dessous / grille=retirer du dessus), **#53** (traduction FR/EN), **#60** (révision vue mobile calendrier + mode jour/nuit + responsive vue grille).
-- **Agent 2 (UI/Modules)** : ✅#49 mergé · reste **#54** (mobile inventaire), **#55** (sync/mémoire inventaire), **#56** (scan QR : sans app=fiche/prix vendant/qté ; avec app=+/-), **#58** (min/max + champs écrasables), **#61** (inventaire bilingue header), **#62** (permis espace clos: timer gaz), **#68** (doublons inventaire → interconnecter hôte : langue/thème/header/supabase/sites/personnel/tenant — source unique). #61 est inclus dans #68.
-- **Agent 3 (Affiliation)** : ✅#51, ✅#63 mergés · reste **#69** (paiements de commission, migration 125), **#70** (rappels d'échéance + indexation inflation + export par vendeur). Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/api/admin/affiliate-*`, `lib/affiliate*`.
+- **Agent 2 (UI/Modules)** ⚠️ FIGÉ ~15 h (dernier push #49) — relancer d'urgence, voir BRIEF_AGENT2.md : **#55 EN PREMIER** (persistance Supabase `items`/`item_locations`, fin du localStorage silencieux), **#56 + scanner** (stand/hors-app = fiche produit + prix vendant + qté dispo en lecture ; via app = mouvements entrée/sortie→qté→OK), **QR style AST/Inspection imprimable multi-format étiquette** (réutiliser le générateur QR existant), **#54** (mobile), **#58** (min/max + champs écrasables), **#61** (bilingue header ⊂ #68), **#62** (timer gaz espace clos), **#68** (dédoublonnage + interconnexion hôte).
+- **Agent 3 (Affiliation)** : ✅#51, ✅#63 mergés · **#75** (corrections contrat : client par défaut, courriel sans repli sur l'admin, bouton Supprimer, clause résiliation si le vendeur nuit, 2 logos C-Secur haut-gauche + Cerdia bas-centre — voir BRIEF_AGENT3.md) · #69 (en cours, branche #69c poussée non mergée), #70. Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/admin/affiliate-contracts/**`, `app/api/admin/affiliate-*`, `components/admin/AffiliateContract.tsx`, `lib/affiliate*`.
 - **Agent 4 (Incidents)** : ✅ near-miss mergé · reste **#67** (module Accidents/Incidents complet), **#71** (dashboard analytique incidents + export déclaration réglementaire). Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`.
 
-### 🔁 Règle file : chaque agent garde ≥2 tâches en attente (le patron réalimente). Profondeur actuelle — A1:3 · A2:6 · A3:2 (#69,#70) · A4:2 (#67,#71).
-- **Patron** : ✅#46,#64,#65,#66,#57(Phase 1) · reste **#73** (module RH complet), **#74** (partage API sélectif par module / ERP — endpoints read-only + clé API par tenant), #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2 (gates+self-edit), #59 (propager temps réel), #17/#19 (durcir). #35/#50 ✅.
+### 🔁 Règle file : chaque agent garde ≥2 tâches en attente (le patron réalimente). Profondeur actuelle — A1:2 (#60 en cours,#72 poussé) · A2:7 (FIGÉ — relancer) · A3:3 (#75,#69,#70) · A4:2 (#67,#71).
+- **Patron** : ✅#46,#64,#65,#66,#57(Phase 1),#73(RH hub 360),#74(partage API ERP),fix enregistrement client (+migration 113) · reste **#76** (traduction FR/EN admin), #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2 (gates+self-edit), #59 (propager temps réel), **#19** (rotation service_role + mdp admin — relancé par Agent 1), #17 (durcir RLS). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
 | # | Tâche | Agent | Statut |
@@ -68,9 +68,13 @@
 ## ✅ Fait récemment
 Catalogue standardisé + soumission + inventaire · R4 appro · R5 bons de commande · audit cartes dashboard · feuilles de temps (schéma 107, accès semaines, bascule superviseur, auth maison, fix 400/RLS) · planner Mois+mes tâches · onglet Personnel planifié · AST cartes mobiles · R9 contrôle intelligent · #37 Excel équipements · #38 taux planner · accès employés (création/login/suspendre/supprimer) · **#42 masquer $ employé** · **#48 taux dérivé éval** · **#43 7 jours**.
 
-## 🗄️ Migrations Supabase
-- **107** — `timesheets` colonnes manquantes + RLS permissive + `user_id` nullable (corrige 400). Exécuter si pas déjà fait.
-- 101–106 confirmées poussées.
+## 🗄️ Migrations Supabase (à exécuter dans Supabase)
+- **113** — alignement table `clients` (colonnes plates manquantes, address JSONB→TEXT, RLS WITH CHECK) → **corrige l'enregistrement client**. ⚠️ À EXÉCUTER.
+- **112** — `tenant_api_keys` (partage API ERP #74). À exécuter.
+- **111** — `hr_documents` / `hr_certifications` / `hr_onboarding` (RH hub #73). À exécuter.
+- **110** — `tenant_permissions` (#57). · **108** — `timesheet_expenses` (#44).
+- **107** — `timesheets` colonnes + RLS + `user_id` nullable. · 101–106 confirmées poussées. · 109/079 confirmées.
+- Agents : 120 (affiliate_contracts), 125 (#69 commissions, agent 3), 128 (planner_conges, agent admin) — à exécuter selon merge.
 
 ---
 _(Historique détaillé de la session AST archivé dans l'historique git — versions précédentes de ce fichier.)_
