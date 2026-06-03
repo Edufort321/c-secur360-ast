@@ -6024,6 +6024,19 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const expenseAccounts = accounts.filter(a => a.type === 'expense' || a.type === 'asset');
 
+  // Tableau de bord (#35) : agrégats lecture seule sur les transactions chargées.
+  // total = dépenses totales ; gst/qst = taxes payées récupérables (CTI/RTI) ;
+  // payable = dû aux fournisseurs (à crédit, non payé) ; unposted = sans écriture GL.
+  const summary = txns.reduce((a, t) => {
+    a.count++;
+    a.total += Number(t.total) || 0;
+    a.gst += Number(t.gst_amount) || 0;
+    a.qst += Number(t.qst_amount) || 0;
+    if (t.status !== 'paid' && t.status !== 'cancelled' && t.payment_method === 'on_account') a.payable += Number(t.total) || 0;
+    if (!t.gl_entry_id && t.status !== 'cancelled') a.unposted++;
+    return a;
+  }, { count: 0, total: 0, gst: 0, qst: 0, payable: 0, unposted: 0 });
+
   async function load() {
     setLoading(true); setMigMissing(false);
     try { const [tx, acc] = await Promise.all([getTransactions(tenant), getAccounts(tenant)]); setTxns(tx); setAccounts(acc); }
@@ -6146,6 +6159,27 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           </div>
         </div>
       ) : (
+        <>
+        {summary.count > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="text-lg font-bold text-gray-800 dark:text-gray-100">{mny(summary.total)}</div>
+              <div className="text-xs text-gray-500">{tr('Dépenses totales', 'Total expenses')} · {summary.count} {tr('transactions', 'transactions')}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="text-lg font-bold text-emerald-600">{mny(summary.gst + summary.qst)}</div>
+              <div className="text-xs text-gray-500">{tr('Taxes récupérables (CTI/RTI)', 'Recoverable taxes')} · TPS {mny(summary.gst)} · TVQ {mny(summary.qst)}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className={`text-lg font-bold ${summary.payable > 0 ? 'text-amber-600' : 'text-gray-800 dark:text-gray-100'}`}>{mny(summary.payable)}</div>
+              <div className="text-xs text-gray-500">{tr('Dû aux fournisseurs', 'Owed to vendors')}</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className={`text-lg font-bold ${summary.unposted > 0 ? 'text-indigo-600' : 'text-gray-800 dark:text-gray-100'}`}>{summary.unposted}</div>
+              <div className="text-xs text-gray-500">{tr('À comptabiliser (écriture GL manquante)', 'To post (missing GL entry)')}</div>
+            </div>
+          </div>
+        )}
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
@@ -6175,6 +6209,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
