@@ -6020,6 +6020,10 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
   const [items, setItems] = useState<TransactionItem[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Filtres de la liste (#35 contrôle) : type, statut, recherche texte (n° / tiers).
+  const [fType, setFType] = useState<'all' | 'revenue' | 'expense'>('all');
+  const [fStatus, setFStatus] = useState<'all' | 'draft' | 'posted' | 'paid' | 'cancelled'>('all');
+  const [fSearch, setFSearch] = useState('');
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   const isRevenue = hdr.txn_type === 'revenue';
@@ -6044,6 +6048,15 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     return a;
   }, { revenue: 0, expense: 0, revCount: 0, expCount: 0, gst: 0, qst: 0, payable: 0 });
   const summaryCount = summary.revCount + summary.expCount;
+
+  // Liste filtrée (type / statut / recherche n° ou tiers).
+  const fq = fSearch.trim().toLowerCase();
+  const filteredTxns = txns.filter(t => {
+    if (fType !== 'all' && (t.txn_type || 'expense') !== fType) return false;
+    if (fStatus !== 'all' && t.status !== fStatus) return false;
+    if (fq && !`${t.transaction_number || ''} ${t.vendor_name || ''}`.toLowerCase().includes(fq)) return false;
+    return true;
+  });
 
   async function load() {
     setLoading(true); setMigMissing(false);
@@ -6196,6 +6209,23 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
             </div>
           </div>
         )}
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={fType} onChange={e => setFType(e.target.value as 'all' | 'revenue' | 'expense')} className={inputCls}>
+            <option value="all">{tr('Tous les types', 'All types')}</option>
+            <option value="revenue">{tr('Revenus', 'Revenue')}</option>
+            <option value="expense">{tr('Dépenses', 'Expenses')}</option>
+          </select>
+          <select value={fStatus} onChange={e => setFStatus(e.target.value as 'all' | 'draft' | 'posted' | 'paid' | 'cancelled')} className={inputCls}>
+            <option value="all">{tr('Tous les statuts', 'All statuses')}</option>
+            <option value="draft">{STATUS_LABEL.draft}</option>
+            <option value="posted">{STATUS_LABEL.posted}</option>
+            <option value="paid">{STATUS_LABEL.paid}</option>
+            <option value="cancelled">{STATUS_LABEL.cancelled}</option>
+          </select>
+          <input value={fSearch} onChange={e => setFSearch(e.target.value)} placeholder={tr('Rechercher n° ou tiers…', 'Search # or party…')} className={`min-w-[160px] flex-1 ${inputCls}`} />
+          {(fType !== 'all' || fStatus !== 'all' || fSearch) && <button onClick={() => { setFType('all'); setFStatus('all'); setFSearch(''); }} className="text-xs font-semibold text-gray-500 hover:underline">{tr('Réinitialiser', 'Reset')}</button>}
+          <span className="text-xs text-gray-400">{filteredTxns.length}/{txns.length}</span>
+        </div>
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           <table className="mobile-cards w-full text-sm">
             <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
@@ -6203,7 +6233,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
               <th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4">GL</th><th className="px-4"></th>
             </tr></thead>
             <tbody>
-              {txns.map(t => (
+              {filteredTxns.map(t => (
                 <tr key={t.id} className="border-t border-gray-50 dark:border-gray-700/50">
                   <td className="px-4 py-2 font-mono text-xs" data-label="N°">{t.transaction_number}</td>
                   <td className="px-4 py-2" data-label={tr('Type', 'Type')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.txn_type === 'revenue' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{t.txn_type === 'revenue' ? tr('Revenu', 'Revenue') : tr('Dépense', 'Expense')}</span></td>
@@ -6222,7 +6252,7 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
                   </td>
                 </tr>
               ))}
-              {txns.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{tr('Aucune transaction.', 'No transaction yet.')}</td></tr>}
+              {filteredTxns.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{txns.length === 0 ? tr('Aucune transaction.', 'No transaction yet.') : tr('Aucun résultat pour ces filtres.', 'No result for these filters.')}</td></tr>}
             </tbody>
           </table>
         </div>
