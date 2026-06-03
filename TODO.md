@@ -8,6 +8,13 @@
 - **Agent UI/MODULES** (branche `agent-ui`) — `components/BackButton.tsx` (nouveau), `app/[tenant]/projects/**`, `app/[tenant]/clients/**`, `components/steps/**` (AST), `components/inventory/**`, `components/soumissions/**`, `components/bons/**`. Tâche : **#49** (composant Retour partagé + application dans CES pages). Ne touche PAS planner, timesheets, `admin/page.tsx`, `lib/**`, `supabase/**`.
 - **Agent AFFILIATION** (branche `agent-affiliation`) — `app/auth/admin/**`, `app/api/admin/affiliate-contract/**` (nouveau), `components/admin/AffiliateContract.tsx` (nouveau), `lib/affiliateContract.ts` (nouveau), `supabase/migrations/120_affiliate_contracts.sql` (nouveau, n° 120 réservé). Tâche : **#51**. Ne touche PAS `app/[tenant]/admin/page.tsx`, timesheets, planner, autres `lib/*` existants, migrations < 120.
 
+### 📥 Correctifs routés (file par agent)
+- **Agent 1 (Planner)** : #34, #6, **#52** (retirer Agenda en vue Grille, garder en Mois), **#53** (traduction FR/EN complète).
+- **Agent 2 (UI/Modules)** : #49 (bouton Retour).
+- **Agent 3 (Affiliation)** : #51 (contrat co-vendeur).
+- **Agent 4 (Incidents)** : module near-miss + table `near_miss_events` (migration 121).
+- **Patron** : #45, #46 (en cours), #47, #35, #17, #19, #50 (panneau anomalies — ✅).
+
 ### 📌 Suivi d'avancement (maj continue par le patron)
 | # | Tâche | Agent | Statut |
 |---|---|---|---|
