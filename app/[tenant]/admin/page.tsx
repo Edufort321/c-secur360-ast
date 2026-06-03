@@ -15,6 +15,7 @@ import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBa
 import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
+import { useRealtime } from '@/lib/useRealtime';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
@@ -6088,6 +6089,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  // #59 Temps réel : rafraîchit silencieusement (sans spinner) sur changement des transactions
+  // ou des lignes bancaires (collaboratif multi-utilisateur). Migrations 109 + 126 (publication).
+  useRealtime(['commerce_transactions', 'bank_statement_lines'], tenant, () => {
+    getTransactions(tenant).then(setTxns).catch(() => { /* noop */ });
+    if (view === 'bank') getBankLines(tenant).then(setBankLines).catch(() => { /* noop */ });
+  });
 
   const totals = computeTransactionTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
