@@ -3,11 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt, Download, Clock, UserCheck } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Check, CalendarClock, AlertTriangle, CheckCircle2, Ban, BadgeCheck, Trash2, CreditCard, Plus, Receipt, Download, Clock, UserCheck, FileSignature } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { computeSubState } from '@/lib/subscription';
 import { uploadPhoto } from '@/lib/utils/photo';
+import { AffiliateContract } from '@/components/admin/AffiliateContract';
 
 type Mod = { key: string; name_fr: string; monthly_price: number; sort_order: number; enabled: boolean };
 type Tx  = { id: string; type: string; amount: number; status: string; description: string | null; reference: string | null; period_start: string | null; period_end: string | null; created_by: string | null; created_at: string };
@@ -42,6 +43,7 @@ export default function TenantManagePage() {
   const [vendorId, setVendorId] = useState('');
   const [commissions, setCommissions] = useState<any[]>([]);
   const [savingVendor, setSavingVendor] = useState(false);
+  const [showContract, setShowContract] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -501,8 +503,12 @@ export default function TenantManagePage() {
 
             {/* Section Vendeur & Commissions */}
             <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-              <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
                 <h2 className="flex items-center gap-2 font-bold"><UserCheck size={16} /> Vendeur & Commissions</h2>
+                <button onClick={() => setShowContract(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                  <FileSignature size={15} /> Contrat d'affiliation
+                </button>
               </div>
               <div className="p-4">
                 <div className="flex items-end gap-3">
@@ -657,6 +663,9 @@ export default function TenantManagePage() {
           </>
         )}
       </div>
+      {showContract && tenant && (
+        <AffiliateContract tenantId={id} tenantName={tenant.companyName || id} onClose={() => setShowContract(false)} />
+      )}
     </div>
   );
 }
