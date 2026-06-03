@@ -2,6 +2,11 @@
 
 > Branches : `feat/modular-foundation` (mirror `main`). Build avant chaque push : `npx tsc --noEmit` (TSC=0) **puis** `npx next build`. **Stop `next dev` (port 3000) avant tout build** (sinon `.next` se corrompt). Messages de commit ASCII sans accents ni guillemets doubles internes. Commit + push sur **les 2 branches** après chaque tâche.
 
+## ⚙️ RÈGLES GLOBALES (TOUS les agents)
+1. **Commit** : 1 commit **atomique par tâche** (build vert TSC=0 + `next build` avant de committer), push après chaque tâche, message ASCII préfixé du n° de tâche, jamais de code cassé.
+2. **Champs numériques écrasables** : tout champ nombre/quantité/montant doit être **sélectionné au clic** (`onFocus={(e)=>e.target.select()}`) pour être écrasé directement ; un **0 par défaut ne doit jamais bloquer la saisie**. Auditer sa zone et appliquer partout.
+3. **Build discipline** : stop `next dev` (port 3000) du worktree avant de builder.
+
 ## 🔀 Répartition 3 agents (zéro conflit de fichiers — chacun son worktree/branche)
 - **Agent PRINCIPAL (patron / intégrateur)** — `app/[tenant]/timesheets/**`, `app/[tenant]/admin/**`, `lib/**`, `supabase/migrations/**`. Tâches : **#45, #46, #47, #35, #17, #19** + #49 (parties timesheets/admin). Merge les branches des autres agents dans `feat/modular-foundation` + `main`.
 - **Agent PLANNER** (branche `agent-planner`) — UNIQUEMENT `components/planner/**`. Tâches : **#34 (R14)**, **#6 (P5)**.
