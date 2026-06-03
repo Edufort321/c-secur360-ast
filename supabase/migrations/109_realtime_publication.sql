@@ -22,16 +22,18 @@ BEGIN
   END IF;
 
   FOREACH t IN ARRAY tbls LOOP
-    -- La table doit exister
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = t) THEN
-      -- Ajoute à la publication si pas déjà membre
+    -- Seulement les VRAIES TABLES (relkind 'r') — on ignore les vues (ex. near_miss_events
+    -- est une vue sur incident_reports : non supporte par une publication).
+    IF EXISTS (
+      SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relname = t AND c.relkind = 'r'
+    ) THEN
       IF NOT EXISTS (
         SELECT 1 FROM pg_publication_tables
         WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
       ) THEN
         EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
       END IF;
-      -- Identité complète pour les UPDATE/DELETE
       EXECUTE format('ALTER TABLE public.%I REPLICA IDENTITY FULL', t);
     END IF;
   END LOOP;
