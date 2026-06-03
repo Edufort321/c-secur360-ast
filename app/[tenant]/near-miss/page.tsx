@@ -20,7 +20,7 @@ interface IncidentRow {
   province: string;
   status: 'draft' | 'submitted' | 'closed';
   created_at: string;
-  data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string };
+  data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string; severityLevel?: number };
 }
 
 const STATUS_LABEL = { draft: 'Brouillon', submitted: 'Soumis', closed: 'Fermé' };
@@ -28,6 +28,15 @@ const STATUS_COLOR = {
   draft:     'bg-gray-100 text-gray-600',
   submitted: 'bg-green-100 text-green-700',
   closed:    'bg-slate-100 text-slate-600',
+};
+
+// Badge couleur par severite (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident)
+const SEVERITY_META: Record<number, { label: string; color: string }> = {
+  1: { label: 'Mineur',   color: 'bg-green-100 text-green-700' },
+  2: { label: 'Faible',   color: 'bg-lime-100 text-lime-700' },
+  3: { label: 'Modéré',   color: 'bg-orange-100 text-orange-700' },
+  4: { label: 'Grave',    color: 'bg-red-100 text-red-700' },
+  5: { label: 'Critique', color: 'bg-red-200 text-red-800' },
 };
 
 export default function NearMissPage() {
@@ -242,6 +251,11 @@ export default function NearMissPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
+                          {r.data?.severityLevel && SEVERITY_META[r.data.severityLevel] && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${SEVERITY_META[r.data.severityLevel].color}`}>
+                              {r.data.severityLevel} · {SEVERITY_META[r.data.severityLevel].label}
+                            </span>
+                          )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
                             {STATUS_LABEL[r.status]}
                           </span>
