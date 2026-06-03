@@ -1,32 +1,47 @@
 'use client';
 
-import { usePathname, useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-// Bouton « Retour » en haut de chaque page de fonction d'un tenant.
-// Auto-masqué sur : la page publique (hors /[tenant]), le tableau de bord / portail du tenant,
-// et les pages d'authentification. Retour via l'historique, repli vers le portail des modules.
-const HIDE_ON_FIRST_SEGMENT = new Set([
-  '', 'dashboard', 'new-dashboard', 'modules', 'login', 'forgot-password', 'reset-password', 'bienvenue',
-]);
+interface BackButtonProps {
+  /** Route used when there is no browser history to go back to. */
+  fallback?: string;
+  /** Extra classes (e.g. spacing) merged with the base style. */
+  className?: string;
+}
 
-export function BackButton() {
-  const pathname = usePathname() || '';
+/**
+ * Bouton Retour uniformise (tache #49). A placer SOUS le PortalHeader d'une page
+ * (ne chevauche jamais le logo). Comportement : router.back() vers la page
+ * precedente ; s'il n'y a pas d'historique, repli sur router.push(fallback).
+ */
+export function BackButton({ fallback, className = '' }: BackButtonProps) {
   const router = useRouter();
-  const params = useParams();
-  const tenant = (params?.tenant as string) || '';
+  const { lang } = useLanguage();
+  const label = lang === 'en' ? 'Back' : 'Retour';
 
-  const segs = pathname.split('/').filter(Boolean); // [tenant, fonction, ...]
-  const first = segs[1] || ''; // segment après le tenant
-  // Masquer sur la racine du tenant + dashboard/portail/auth.
-  if (segs.length <= 1 || HIDE_ON_FIRST_SEGMENT.has(first)) return null;
+  const handleBack = () => {
+    const hasHistory = typeof window !== 'undefined' && window.history.length > 1;
+    if (hasHistory) {
+      router.back();
+    } else if (fallback) {
+      router.push(fallback);
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <button
-      onClick={() => { if (window.history.length > 1) router.back(); else router.push(`/${tenant}/modules`); }}
-      className="fixed left-3 top-3 z-[75] inline-flex items-center gap-1 rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-sm font-semibold text-white shadow backdrop-blur hover:bg-black/60"
-      aria-label="Retour"
+      type="button"
+      onClick={handleBack}
+      aria-label={label}
+      className={`inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 ${className}`}
     >
-      ← Retour
+      <ArrowLeft size={16} /> {label}
     </button>
   );
 }
+
+export default BackButton;
