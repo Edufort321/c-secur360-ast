@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -104,6 +104,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Tâches : suivi, assignation, liste de vérification, photos, échéances.',
     descEn: 'Task list: tracking, assignment, checklist, photos, due dates.',
     icon: ListChecks, basePath: 'todo', color: 'text-indigo-600', accent: 'bg-indigo-600', status: 'available',
+  },
+  {
+    key: 'dga',
+    labelFr: 'Diagnostic DGA', labelEn: 'DGA Diagnostic',
+    descFr: 'Analyse de gaz dissous (huile de transformateur) : IEEE C57.104 + Triangle de Duval, historique.',
+    descEn: 'Dissolved gas analysis (transformer oil): IEEE C57.104 + Duval Triangle, history.',
+    icon: FlaskConical, basePath: 'dga', color: 'text-rose-600', accent: 'bg-rose-600', status: 'available',
   },
 ];
 
