@@ -4,7 +4,7 @@
 // Liste tous les contrats enregistres ; clic sur une ligne -> ouvre l'apercu/edition (composant partage).
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, FileSignature, CheckCircle2, Ban, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, FileSignature, CheckCircle2, Ban, FileText, Wallet } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { listContracts, type AffiliateContractRow } from '@/lib/affiliateContract';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
@@ -50,7 +50,12 @@ export default function AffiliateContractsPage() {
             <h1 className="flex items-center gap-2 text-2xl font-bold"><FileSignature size={22} /> Contrats d'affiliation</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Ententes co-vendeur par client — commission, indexation, signature.</p>
           </div>
-          {!loading && <span className="text-sm text-gray-500 dark:text-gray-400">{rows.length} contrat(s) · {signedCount} signe(s)</span>}
+          <div className="flex items-center gap-3">
+            <Link href="/admin/commissions" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Wallet size={15} /> Commissions a venir
+            </Link>
+            {!loading && <span className="text-sm text-gray-500 dark:text-gray-400">{rows.length} contrat(s) · {signedCount} signe(s)</span>}
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
