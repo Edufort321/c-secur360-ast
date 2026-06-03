@@ -154,8 +154,23 @@ export default function TimesheetDetailPage() {
           supabase.from('timesheet_hour_bonuses').select('id,name,trigger_hours,bonus_amount').eq('tenant_id', tenant).eq('active', true).order('sort_order'),
         ]);
         if (prof) setProfile(prof as EmployeeProfile);
-        setAllowances(allws || []);
         setHourBonuses(bonuses || []);
+
+        // #46 — Conditions de la grille salariale de l'employé (primes/subsistance définies dans la grille)
+        // affichées comme cases à cocher par jour, EN PLUS des avantages globaux du tenant.
+        let gridConds: Allowance[] = [];
+        try {
+          const { data: pers } = await supabase.from('planner_personnel').select('current_grid_id').eq('tenant_id', tenant).eq('id', sh.employee_id).maybeSingle();
+          if (pers?.current_grid_id) {
+            const { data: grid } = await supabase.from('poste_salary_grids').select('discretionary_bonuses').eq('id', pers.current_grid_id).maybeSingle();
+            const db = Array.isArray(grid?.discretionary_bonuses) ? grid!.discretionary_bonuses : [];
+            gridConds = db.map((b: any, i: number) => ({ id: `grid_${i}`, name: b.label || `Prime ${i + 1}`, amount: b.unit === 'fixed' ? (Number(b.amount) || 0) : 0, is_taxable: true }));
+          }
+        } catch { /* grille absente */ }
+        // Fusion : conditions de la grille d'abord, puis avantages globaux (sans doublon de nom).
+        const globals = (allws || []) as Allowance[];
+        const names = new Set(gridConds.map(g => g.name.toLowerCase()));
+        setAllowances([...gridConds, ...globals.filter(a => !names.has((a.name || '').toLowerCase()))]);
 
         // Dépenses avec reçu (migration 108 ; ignore si table absente)
         try {
