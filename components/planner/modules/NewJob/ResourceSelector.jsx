@@ -36,7 +36,7 @@ export function ResourceSelector({
                     className={`px-4 py-2 font-medium transition-colors ${
                         activeResourceTab === 'personnel'
                             ? 'border-b-2 border-purple-600 text-purple-600'
-                            : 'text-gray-600 hover:text-gray-900'
+                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
                     👥 Personnel ({selectedPersonnel.length})
@@ -47,7 +47,7 @@ export function ResourceSelector({
                     className={`px-4 py-2 font-medium transition-colors ${
                         activeResourceTab === 'equipements'
                             ? 'border-b-2 border-purple-600 text-purple-600'
-                            : 'text-gray-600 hover:text-gray-900'
+                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
                     🔧 Équipements ({selectedEquipements.length})
@@ -58,7 +58,7 @@ export function ResourceSelector({
                     className={`px-4 py-2 font-medium transition-colors ${
                         activeResourceTab === 'sousTraitants'
                             ? 'border-b-2 border-purple-600 text-purple-600'
-                            : 'text-gray-600 hover:text-gray-900'
+                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                     }`}
                 >
                     🏢 Sous-traitants ({selectedSousTraitants.length})
@@ -83,7 +83,7 @@ export function ResourceSelector({
                                     key={person.id}
                                     className={`p-3 border rounded-lg cursor-pointer transition-all ${
                                         selected ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-200' :
-                                        available ? 'border-gray-300 hover:border-blue-300 hover:bg-gray-50' :
+                                        available ? 'border-gray-300 dark:border-gray-600 hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700' :
                                         'border-red-200 bg-red-50 opacity-60'
                                     }`}
                                     onClick={available ? () => onTogglePersonnel(person.id) : undefined}
@@ -91,9 +91,9 @@ export function ResourceSelector({
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="font-medium text-sm">{person.nom}</div>
-                                            <div className="text-xs text-gray-600">{person.poste}</div>
+                                            <div className="text-xs text-gray-600 dark:text-gray-300">{person.poste}</div>
                                             {person.specialites && person.specialites.length > 0 && (
-                                                <div className="text-xs text-gray-500 mt-1">
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                     {person.specialites.slice(0, 2).join(', ')}
                                                     {person.specialites.length > 2 && ' +...'}
                                                 </div>
@@ -136,7 +136,7 @@ export function ResourceSelector({
                                     key={equipement.id}
                                     className={`p-3 border rounded-lg cursor-pointer transition-all ${
                                         selected ? 'bg-green-100 border-green-500 ring-2 ring-green-200' :
-                                        available ? 'border-gray-300 hover:border-green-300 hover:bg-gray-50' :
+                                        available ? 'border-gray-300 dark:border-gray-600 hover:border-green-300 hover:bg-gray-50 dark:hover:bg-gray-700' :
                                         'border-red-200 bg-red-50 opacity-60'
                                     }`}
                                     onClick={available ? () => onToggleEquipement(equipement.id) : undefined}
@@ -144,8 +144,8 @@ export function ResourceSelector({
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="font-medium text-sm">{equipement.nom}</div>
-                                            <div className="text-xs text-gray-600">{equipement.type}</div>
-                                            <div className="text-xs text-gray-500">{equipement.marque}</div>
+                                            <div className="text-xs text-gray-600 dark:text-gray-300">{equipement.type}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{equipement.marque}</div>
                                         </div>
                                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                                             selected ? 'bg-green-500 border-green-500' :
@@ -217,7 +217,7 @@ export function ResourceSelector({
                                         key={sousTraitant.id}
                                         className={`p-3 border rounded-lg cursor-pointer transition-all ${
                                             selected ? 'bg-orange-100 border-orange-500 ring-2 ring-orange-200' :
-                                            available ? 'border-gray-300 hover:border-orange-300 hover:bg-gray-50' :
+                                            available ? 'border-gray-300 dark:border-gray-600 hover:border-orange-300 hover:bg-gray-50 dark:hover:bg-gray-700' :
                                             'border-red-200 bg-red-50 opacity-60'
                                         }`}
                                         onClick={available ? () => onToggleSousTraitant(sousTraitant.id) : undefined}
@@ -225,8 +225,8 @@ export function ResourceSelector({
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <div className="font-medium text-sm">{sousTraitant.nom}</div>
-                                                <div className="text-xs text-gray-600">{sousTraitant.specialite}</div>
-                                                <div className="text-xs text-gray-500">{sousTraitant.tarif}</div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">{sousTraitant.specialite}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">{sousTraitant.tarif}</div>
                                             </div>
                                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                                                 selected ? 'bg-orange-500 border-orange-500' :

@@ -11,7 +11,7 @@ function NotificationItem({ notification, onClose }) {
     return (
         <div
             className={`
-                relative w-full max-w-sm mx-auto bg-white shadow-lg rounded-lg pointer-events-auto
+                relative w-full max-w-sm mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto
                 ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out
                 ${notification.isLeaving ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
             `}
@@ -36,11 +36,11 @@ function NotificationItem({ notification, onClose }) {
 
                     {/* Contenu */}
                     <div className="ml-3 w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {notification.message}
                         </p>
                         {notification.timestamp && (
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 {new Date(notification.timestamp).toLocaleTimeString('fr-FR', {
                                     hour: '2-digit',
                                     minute: '2-digit'
@@ -53,7 +53,7 @@ function NotificationItem({ notification, onClose }) {
                     <div className="ml-4 flex-shrink-0 flex">
                         <button
                             className="
-                                bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500
+                                bg-white dark:bg-gray-800 rounded-md inline-flex text-gray-400 dark:text-gray-500 hover:text-gray-500
                                 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
                             "
                             onClick={() => onClose(notification.id)}

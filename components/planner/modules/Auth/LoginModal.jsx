@@ -66,14 +66,14 @@ export function LoginModal({ isOpen, onClose }) {
                     )}
 
                     <div>
-                        <label htmlFor="nom" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="nom" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                             Nom d'utilisateur
                         </label>
                         <div className="relative">
                             <Icon
                                 name="user"
                                 size={20}
-                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                             />
                             <input
                                 type="text"
@@ -82,7 +82,7 @@ export function LoginModal({ isOpen, onClose }) {
                                 value={formData.nom}
                                 onChange={handleInputChange}
                                 className="
-                                    w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md
+                                    w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                                 "
                                 placeholder="Alexandre Desrochers"
@@ -93,14 +93,14 @@ export function LoginModal({ isOpen, onClose }) {
                     </div>
 
                     <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                             Mot de passe
                         </label>
                         <div className="relative">
                             <Icon
                                 name="visibility"
                                 size={20}
-                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                             />
                             <input
                                 type="password"
@@ -109,7 +109,7 @@ export function LoginModal({ isOpen, onClose }) {
                                 value={formData.password}
                                 onChange={handleInputChange}
                                 className="
-                                    w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md
+                                    w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
                                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                                 "
                                 placeholder="••••••••"
@@ -144,8 +144,8 @@ export function LoginModal({ isOpen, onClose }) {
                     type="button"
                     onClick={handleClose}
                     className="
-                        mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md
-                        hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+                        mr-3 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md
+                        hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
                     "
                     disabled={loading}
                 >

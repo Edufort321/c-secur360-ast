@@ -62,7 +62,7 @@ function AppContent({ tenant = 'cerdia' }) {
     }, [appData.setSousTraitants]);
 
     if (appData.isLoading) {
-        return <div className="grid min-h-[60vh] place-items-center text-gray-400">Chargement du planificateur…</div>;
+        return <div className="grid min-h-[60vh] place-items-center text-gray-400 dark:text-gray-500">Chargement du planificateur…</div>;
     }
 
     return (

@@ -45,7 +45,7 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
                 return (
                     <div
                         key={index}
-                        className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"
+                        className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
                         {/* Miniature ou icône */}
                         <div className="flex-shrink-0">
@@ -64,7 +64,7 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
                                         }}
                                     />
                                     <div className="hidden w-full h-full bg-gray-200 items-center justify-center">
-                                        <Icon name="image" size={20} className="text-gray-400" />
+                                        <Icon name="image" size={20} className="text-gray-400 dark:text-gray-500" />
                                     </div>
                                 </div>
                             ) : (
@@ -76,13 +76,13 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
 
                         {/* Informations du fichier */}
                         <div className="flex-grow min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                 {fileName}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {formatFileSize(fileSize)}
                                 {fileType && (
-                                    <span className="ml-2 text-gray-400">
+                                    <span className="ml-2 text-gray-400 dark:text-gray-500">
                                         {fileType.split('/')[1]?.toUpperCase()}
                                     </span>
                                 )}
@@ -94,7 +94,7 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
                             {isImage(fileType) && (
                                 <button
                                     onClick={() => handlePreview(fileData, index)}
-                                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-600 transition-colors"
                                     title="Prévisualiser"
                                 >
                                     <Icon name="eye" size={16} />
@@ -103,7 +103,7 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
 
                             <button
                                 onClick={() => onRemove?.(index)}
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 transition-colors"
                                 title="Supprimer"
                             >
                                 <Icon name="close" size={16} />
@@ -115,7 +115,7 @@ export function FilePreview({ files, onRemove, onPreview, className = "" }) {
 
             {/* Résumé si plusieurs fichiers */}
             {files.length > 1 && (
-                <div className="text-xs text-gray-500 text-center pt-2 border-t">
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2 border-t">
                     {files.length} fichier{files.length > 1 ? 's' : ''} sélectionné{files.length > 1 ? 's' : ''}
                     ({formatFileSize(files.reduce((total, f) => total + (f.size || f.file?.size || 0), 0))})
                 </div>
