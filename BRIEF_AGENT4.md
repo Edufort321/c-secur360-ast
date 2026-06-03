@@ -21,4 +21,7 @@ Mobile soigné + bilingue (tr FR/EN depuis le header) + temps réel (`useRealtim
 - Section « Enquête » dans le rapport d'incident : 5 pourquoi (liste ordonnée), causes immédiates / fondamentales, facteurs contributifs, témoins (nom + déclaration), pièces jointes photos (upload Storage), signatures enquêteur + superviseur (nom + horodatage).
 - Persister dans le rapport (colonnes/JSONB sur la table incident, migration si besoin). Alimente le CAPA (#80) et l'export réglementaire (#71).
 
+### #88 — Notifications & alertes incidents
+- À la déclaration d'un incident : notifier le superviseur (courriel/SMS via les routes existantes `app/api/sms/*`, courriel). Rappels d'échéance des actions correctives (#80). Préférences de notification par tenant. Zone incidents (+ éventuel `lib/incidentNotify`).
+
 Après chaque tâche : prévenir le patron « Agent 4 a terminé #X » pour merge. Garde ≥2 tâches en file.

@@ -19,7 +19,8 @@
 - **Agent 3 (Affiliation)** ✅ ACTIF : #75 (corrections contrat), #69, #70, **#78** (lien parrainage + attribution inscriptions, mig ≥126), **#79** (tableau de bord vendeur KPIs) — voir BRIEF_AGENT3.md. Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/admin/affiliate-contracts/**`, `app/api/admin/affiliate-*`, `components/admin/AffiliateContract.tsx`, `lib/affiliate*`, migrations ≥120.
 - **Agent 4 (Incidents)** ✅ ACTIF : #67, #71, **#80** (CAPA actions correctives, mig ≥127), **#81** (enquête causale 5 pourquoi + témoins/photos) — voir BRIEF_AGENT4.md. Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`, migrations ≥127.
 
-### 🔁 Règle file : ≥2 tâches par agent. A1 & A2 INDISPONIBLES (pas d'identifiant) → leur charge revient au Patron. Profondeur — A3:5 (#75,#69,#70,#78,#79) · A4:4 (#67,#71,#80,#81) · Patron : inventaire #56/#54/#58/#68 + #76 + sécurité + paie.
+### 🔁 Règle file : ≥2 tâches/agent. A1 & A2 INDISPONIBLES → charge au Patron. Profondeur — A3:6 (#75,#69,#70,#78,#79,#87) · A4:5 (#67,#71,#80,#81,#88) · Patron : #86 (garde modules sur toutes routes), #54/#68 inventaire, #76 trad admin, sécu #17/#19, paie #45/#47.
+- ✅ **Modules à la carte** : mécanique en place (registre + tenant_modules.enabled + garde `useModuleEnabled`). 1er module DGA livré (route `/[tenant]/dga`, migration 116). Stratégie : développer de nouveaux modules dans le tenant, activés par abonnement (coche super-admin).
 - **Patron** : ✅#46,#64,#65,#66,#57(Phase 1),#73(RH hub 360),#74(partage API ERP),#77(relance leads démo),fix client(+mig 113),**#55 persistance inventaire(+mig 115)** · en cours **#76** (traduction FR/EN admin, passe 1 faite) · reste #56+scanner+QR inventaire, #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2, #59 (temps réel), **#19** (rotation service_role + mdp admin), #17 (RLS). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)

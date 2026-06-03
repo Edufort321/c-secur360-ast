@@ -28,4 +28,7 @@ Fichier principal : `components/admin/AffiliateContract.tsx` + `lib/affiliateCon
 ### #79 — Tableau de bord vendeur (KPIs) dans `app/admin/vendors/[id]`
 - KPIs : nb clients référés, MRR généré, commissions cumulées / à venir / payées, taux de rétention, prochaine échéance. Graphiques simples. Réutiliser `lib/affiliateCommissions`.
 
+### #87 — Portail co-vendeur en libre-service
+- Espace sécurisé (auth vendeur dédiée par jeton/lien) où un co-vendeur voit : son contrat, ses tenants référés (#78), ses commissions à venir/payées, et télécharge ses relevés PDF. Réutilise `lib/affiliate*`. Zone `app/admin/vendors/**` ou nouveau `app/vendor/**`.
+
 Après chaque tâche : prévenir le patron « Agent 3 a terminé #X » pour merge. Garde ≥2 tâches en file.
