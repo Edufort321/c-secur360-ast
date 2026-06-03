@@ -7,6 +7,7 @@ import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, 
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
+import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
@@ -221,8 +222,8 @@ export default function AdminPage() {
   const tenant = (params?.tenant as string) || 'cerdia';
   const { lang } = useLanguage();
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
-  type TabKey = 'sitesdepts' | 'employes' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal';
-  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal'];
+  type TabKey = 'sitesdepts' | 'employes' | 'permissions' | 'vehicules' | 'logbook' | 'ressources' | 'clients' | 'feuilles' | 'paie' | 'rh' | 'abonnement' | 'facturation' | 'factures' | 'soumissions' | 'bons-commande' | 'transactions' | 'comptabilite' | 'fiscal';
+  const TAB_KEYS: TabKey[] = ['sitesdepts', 'employes', 'permissions', 'vehicules', 'logbook', 'ressources', 'clients', 'feuilles', 'paie', 'rh', 'abonnement', 'facturation', 'factures', 'soumissions', 'bons-commande', 'transactions', 'comptabilite', 'fiscal'];
   const [tab, setTab] = useState<TabKey>('sitesdepts');
   // Ouverture directe d'un onglet via ?tab=... (ex. lien « Catalogue » depuis les Soumissions).
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function AdminPage() {
   const tabs: { k: TabKey; label: string; icon: any }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
     { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
+    { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings },
     { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
     { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
     { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
@@ -339,6 +341,7 @@ export default function AdminPage() {
         {tab === 'transactions' && <TransactionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'soumissions' && <SoumissionsModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} allowed={['catalogue']} />}
         {tab === 'bons-commande' && <BonsCommandeModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
+        {tab === 'permissions' && <PermissionsMatrix tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user'} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
         {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
