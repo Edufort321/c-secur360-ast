@@ -116,35 +116,6 @@ export function PlanificateurFinal({
         }
     }, [timeView]);
 
-    // Fonction pour calculer les largeurs des cellules selon la vue
-    const getCellWidth = () => {
-        if (isMobile) {
-            switch(timeView) {
-                case '1day': return 'w-32'; // 128px - très large pour 1 jour
-                case '1week': return 'w-20'; // 80px - large pour 7 jours
-                case '2weeks': return 'w-10'; // 40px - normal pour 14 jours
-                case 'period-21': return 'w-8'; // 32px - compact pour 3 semaines
-                case 'period-30': return 'w-6'; // 24px - très compact pour 1 mois
-                case 'period-90': return 'w-4'; // 16px - minimal pour 3 mois
-                case 'period-180': return 'w-3'; // 12px - très minimal pour 6 mois
-                case 'period-365': return 'w-2'; // 8px - ultra minimal pour 1 an
-                default: return 'w-10';
-            }
-        } else {
-            switch(timeView) {
-                case '1day': return 'w-48'; // 192px - très large pour 1 jour
-                case '1week': return 'w-32'; // 128px - large pour 7 jours
-                case '2weeks': return 'w-16'; // 64px - normal pour 14 jours
-                case 'period-21': return 'w-12'; // 48px - compact pour 3 semaines
-                case 'period-30': return 'w-10'; // 40px - compact pour 1 mois
-                case 'period-90': return 'w-6'; // 24px - minimal pour 3 mois
-                case 'period-180': return 'w-4'; // 16px - très minimal pour 6 mois
-                case 'period-365': return 'w-3'; // 12px - ultra minimal pour 1 an
-                default: return 'w-16';
-            }
-        }
-    };
-
     // États pour la navigation de date rapide
     const [showDateSearch, setShowDateSearch] = useState(false);
     const [quickDate, setQuickDate] = useState('');

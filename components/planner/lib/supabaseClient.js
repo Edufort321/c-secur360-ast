@@ -41,4 +41,3 @@ export const checkConnection = async () => {
   }
 };
 
-console.log('=á Supabase client initialisé:', isSupabaseConfigured() ? ' Configuré' : '  Variables ENV manquantes');

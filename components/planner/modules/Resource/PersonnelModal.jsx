@@ -84,8 +84,6 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
     // Les données sont maintenant disponibles directement via le hook useAppData
     useEffect(() => {
         if (isOpen) {
-            console.log('Postes disponibles:', postes);
-            console.log('Succursales disponibles:', succursales);
         }
     }, [isOpen, postes, succursales]);
 

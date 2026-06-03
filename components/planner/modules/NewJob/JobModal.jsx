@@ -248,15 +248,6 @@ export function JobModal({
     ];
 
     // Génération automatique du numéro de job
-    const generateJobNumber = useCallback(() => {
-        const year = new Date().getFullYear();
-        const month = String(new Date().getMonth() + 1).padStart(2, '0');
-        const existingNumbers = (jobs || [])
-            .filter(j => j.numeroJob?.startsWith(`G${year.toString().slice(-2)}-${month}`))
-            .map(j => parseInt(j.numeroJob.split('-')[1]) || 0);
-        const nextNumber = Math.max(0, ...existingNumbers) + 1;
-        return `G${year.toString().slice(-2)}-${month}${String(nextNumber).padStart(2, '0')}`;
-    }, [jobs]);
 
     // Déterminer automatiquement le mode de vue optimal
     const getDefaultViewMode = () => {
@@ -302,12 +293,6 @@ export function JobModal({
     };
 
     // Heures <-> durée : ajoute des heures à une heure HH:MM (borné 0..23:59).
-    const addHoursToTime = (t, h) => {
-        const [hh, mm] = (t || '08:00').split(':').map(Number);
-        let total = (hh * 60 + mm) + Math.round((parseFloat(h) || 0) * 60);
-        total = Math.max(0, Math.min(24 * 60 - 1, total));
-        return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-    };
     const diffHours = (start, end) => {
         const [sh, sm] = (start || '08:00').split(':').map(Number);
         const [eh, em] = (end || '17:00').split(':').map(Number);
@@ -406,117 +391,8 @@ export function JobModal({
         }
     };
 
-    const calculateWorkPackageEffort = (taskId, tasks) => {
-        const task = tasks.find(t => t.id === taskId);
-        if (!task) return 0;
 
-        const children = tasks.filter(t => t.parentId === taskId);
-        if (children.length === 0) {
-            // Tâche feuille - retourner sa propre durée
-            return task.duration || 0;
-        } else {
-            // Tâche parent - sommer les efforts des enfants
-            return children.reduce((total, child) =>
-                total + calculateWorkPackageEffort(child.id, tasks), 0
-            );
-        }
-    };
 
-    const generateProjectDecomposition = (rootTaskId, tasks) => {
-        const decomposition = [];
-        const rootTask = tasks.find(t => t.id === rootTaskId);
-        if (!rootTask) return decomposition;
-
-        const processTask = (task, level = 0) => {
-            const wbsCode = generateWBSCode(task.id, tasks);
-            const effort = calculateWorkPackageEffort(task.id, tasks);
-            const children = tasks.filter(t => t.parentId === task.id);
-
-            decomposition.push({
-                id: task.id,
-                name: task.name,
-                wbsCode,
-                level,
-                effort,
-                isWorkPackage: children.length === 0,
-                childCount: children.length,
-                description: task.description || '',
-                deliverables: task.deliverables || [],
-                acceptanceCriteria: task.acceptanceCriteria || [],
-                skills: task.requiredSkills || []
-            });
-
-            children.forEach(child => processTask(child, level + 1));
-        };
-
-        processTask(rootTask);
-        return decomposition;
-    };
-
-    const addNewTask = (parentId = null) => {
-        const level = parentId ? calculateTaskLevel(parentId, formData.etapes) + 1 : 0;
-        const lastTask = formData.etapes[formData.etapes.length - 1];
-        const nextStartHour = lastTask ? lastTask.startHour + (lastTask.duration || 1) : 0;
-
-        const newTask = {
-            id: Date.now().toString(),
-            name: parentId ? 'Nouvelle sous-tâche' : 'Nouvelle tâche',
-            duration: level > 0 ? 4 : 8, // Sous-tâches plus courtes par défaut
-            startHour: nextStartHour,
-            description: '',
-            priority: 'normale',
-            status: 'planifie',
-            resources: [],
-            dependencies: [],
-            parallelWith: [],
-            assignedResources: { personnel: [], equipements: [], equipes: [], sousTraitants: [] },
-            parentId: parentId,
-            level: level,
-            // Propriétés WBS avancées
-            wbsCode: '', // Calculé automatiquement
-            deliverables: [], // Livrables attendus
-            acceptanceCriteria: [], // Critères d'acceptation
-            requiredSkills: [], // Compétences requises
-            riskLevel: 'faible', // Niveau de risque
-            complexity: 'simple', // Complexité (simple, modérée, complexe)
-            estimationMethod: 'expert', // Méthode d'estimation (expert, analogique, paramétrique)
-            confidenceLevel: 'moyenne', // Niveau de confiance (faible, moyenne, élevée)
-            assumptions: [], // Hypothèses
-            constraints: [], // Contraintes
-            workPackageType: level > 2 ? 'executable' : 'planification' // Type de paquet de travail
-        };
-
-        setFormData(prev => {
-            const newEtapes = [...prev.etapes, newTask];
-            // Recalculer les codes WBS pour toutes les tâches
-            newEtapes.forEach(task => {
-                task.wbsCode = generateWBSCode(task.id, newEtapes);
-            });
-            return {
-                ...prev,
-                etapes: newEtapes
-            };
-        });
-
-        addNotification?.(`${parentId ? 'Sous-tâche' : 'Tâche'} ajoutée au planning WBS`, 'success');
-        return newTask;
-    };
-
-    const updateTask = (taskId, updates) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.map(task =>
-                task.id === taskId ? { ...task, ...updates } : task
-            )
-        }));
-    };
-
-    const deleteTask = (taskId) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.filter(task => task.id !== taskId)
-        }));
-    };
 
     // Gestionnaires de ressources
     const toggleResource = (resourceId, resourceType) => {
@@ -553,12 +429,6 @@ export function JobModal({
     // 21 fonctions critiques restaurées depuis OLD
 
     // Fonction pour gérer les changements de champs du formulaire
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
 
     // Fonction pour générer les horaires par défaut pour tous les jours de l'événement
     const generateDefaultDailySchedules = (inclureFinsSemaine = null) => {
@@ -606,120 +476,10 @@ export function JobModal({
     };
 
     // Fonction pour sauvegarder l'horaire personnalisé
-    const saveCustomSchedule = (scheduleData) => {
-        const resourceKey = `${selectedResource.id}`;
-
-        setFormData(prev => ({
-            ...prev,
-            horairesIndividuels: {
-                ...prev.horairesIndividuels,
-                [resourceKey]: {
-                    ...scheduleData,
-                    resourceType: scheduleModalType,
-                    resourceId: selectedResource.id,
-                    lastModified: new Date().toISOString()
-                }
-            }
-        }));
-
-        addNotification?.(`Horaire personnalisé sauvegardé pour ${selectedResource.data.nom || selectedResource.data.prenom}`, 'success');
-        closeScheduleModal();
-    };
 
     // Fonction pour obtenir l'horaire par défaut basé sur "horaire par jour"
-    const getDefaultScheduleForResource = (resourceId, resourceType) => {
-        const defaultSchedule = {};
-
-        // Utiliser les horaires par jour définis dans la section "horaire par jour"
-        getAllDays().forEach(day => {
-            if (day.included) {
-                const daySchedule = formData.horairesParJour[day.date];
-                if (daySchedule) {
-                    defaultSchedule[day.date] = {
-                        heureDebut: daySchedule.heureDebut,
-                        heureFin: daySchedule.heureFin,
-                        active: true
-                    };
-                } else {
-                    // Fallback sur l'horaire global
-                    defaultSchedule[day.date] = {
-                        heureDebut: formData.heureDebut,
-                        heureFin: formData.heureFin,
-                        active: true
-                    };
-                }
-            }
-        });
-
-        return defaultSchedule;
-    };
 
     // Fonction pour obtenir l'horaire effectif d'une ressource pour un jour donné
-    const getEffectiveSchedule = (resourceId, resourceType, date, equipeId = null) => {
-        // 1. Priorité maximale : Horaire individuel spécifique à l'équipe
-        if (equipeId) {
-            const teamSpecificKey = `${resourceType}_${resourceId}_equipe_${equipeId}`;
-            const teamSpecificSchedule = formData.horairesIndividuels[teamSpecificKey];
-
-            if (teamSpecificSchedule && teamSpecificSchedule.mode === 'personnalise') {
-                if (teamSpecificSchedule.joursTravailles && !teamSpecificSchedule.joursTravailles.includes(date)) {
-                    return null; // Ressource ne travaille pas ce jour dans cette équipe
-                }
-                return {
-                    heureDebut: teamSpecificSchedule.heureDebut,
-                    heureFin: teamSpecificSchedule.heureFin,
-                    source: 'individuel-equipe'
-                };
-            }
-        }
-
-        // 2. Priorité haute : Horaire individuel global
-        const resourceKey = `${resourceType}_${resourceId}`;
-        const individualSchedule = formData.horairesIndividuels[resourceKey];
-
-        if (individualSchedule && individualSchedule.mode === 'personnalise') {
-            if (individualSchedule.joursTravailles && !individualSchedule.joursTravailles.includes(date)) {
-                return null; // Ressource ne travaille pas ce jour
-            }
-            return {
-                heureDebut: individualSchedule.heureDebut,
-                heureFin: individualSchedule.heureFin,
-                source: 'individuel'
-            };
-        }
-
-        // 3. Priorité moyenne : Horaire d'équipe (si la ressource est dans une équipe)
-        if (equipeId) {
-            const teamSchedule = formData.horairesEquipes?.[equipeId];
-            if (teamSchedule && teamSchedule.mode === 'personnalise') {
-                if (teamSchedule.joursTravailles && !teamSchedule.joursTravailles.includes(date)) {
-                    return null;
-                }
-                return {
-                    heureDebut: teamSchedule.heureDebut,
-                    heureFin: teamSchedule.heureFin,
-                    source: 'equipe'
-                };
-            }
-        }
-
-        // 4. Priorité moyenne : Horaire spécifique du jour
-        const dailySchedule = formData.horairesParJour?.[date];
-        if (dailySchedule) {
-            return {
-                heureDebut: dailySchedule.heureDebut,
-                heureFin: dailySchedule.heureFin,
-                source: 'jour'
-            };
-        }
-
-        // 5. Priorité basse : Horaire global de l'événement
-        return {
-            heureDebut: formData.heureDebut || '08:00',
-            heureFin: formData.heureFin || '17:00',
-            source: 'global'
-        };
-    };
 
     // Fonction pour naviguer vers un onglet avec jour pré-sélectionné
     const goToResourceTab = (tab, dateString) => {
@@ -728,49 +488,6 @@ export function JobModal({
     };
 
     // Fonction pour mettre à jour l'horaire d'une ressource spécifique
-    const onUpdateResourceSchedule = (resourceType, resourceId, scheduleData) => {
-        const resourceKey = `${resourceType}_${resourceId}`;
-
-
-        setFormData(prev => {
-            const newData = {
-                ...prev,
-                horairesIndividuels: {
-                    ...prev.horairesIndividuels,
-                    [resourceKey]: {
-                        resourceId,
-                        resourceType,
-                        ...scheduleData,
-                        dateModification: new Date().toISOString()
-                    }
-                }
-            };
-
-            return newData;
-        });
-
-        // Notification de succès
-        if (addNotification) {
-            const resourceName = (() => {
-                if (resourceType === 'personnel') {
-                    const person = personnel.find(p => p.id === resourceId);
-                    return person ? `${person.prenom ? `${person.prenom} ${person.nom}` : person.nom}` : 'Personnel';
-                } else if (resourceType === 'equipements') {
-                    const equipement = equipements.find(e => e.id === resourceId);
-                    return equipement ? equipement.nom : 'Équipement';
-                } else if (resourceType === 'sousTraitants') {
-                    const sousTraitant = sousTraitants.find(s => s.id === resourceId);
-                    return sousTraitant ? sousTraitant.nom : 'Sous-traitant';
-                }
-                return 'Ressource';
-            })();
-
-            addNotification(
-                `Horaire personnalisé sauvegardé pour ${resourceName}`,
-                'success'
-            );
-        }
-    };
 
     // ============== FONCTIONS POUR LA GESTION DES ÉTAPES ==============
 
@@ -821,92 +538,10 @@ export function JobModal({
     };
 
     // Fonction pour générer les options hiérarchiques dans les sélecteurs
-    const generateHierarchicalOptions = (excludeId = null, existingDeps = []) => {
-        const availableSteps = formData.etapes.filter(e =>
-            e.id !== excludeId && !existingDeps.some(d => d.id === e.id)
-        );
-
-        const renderHierarchicalOptions = (parentId = null, level = 0) => {
-            return availableSteps
-                .filter(etape => etape.parentId === parentId)
-                .sort((a, b) => (a.order || 0) - (b.order || 0))
-                .flatMap(etape => {
-                    const prefix = '  '.repeat(level); // Indentation avec des espaces
-                    const hasChildren = availableSteps.some(e => e.parentId === etape.id);
-                    const displayText = `${prefix}${hasChildren ? '📁' : '📄'} ${etape.text || `Étape ${etape.id}`}`;
-
-                    return [
-                        <option key={etape.id} value={etape.id}>
-                            {displayText}
-                        </option>,
-                        ...renderHierarchicalOptions(etape.id, level + 1)
-                    ];
-                });
-        };
-
-        return renderHierarchicalOptions();
-    };
 
     // Fonction pour générer les checkboxes hiérarchiques (tâches parallèles)
-    const generateHierarchicalCheckboxes = (selectedStep) => {
-        const availableSteps = formData.etapes.filter(e => e.id !== selectedStep.id);
-
-        const renderHierarchicalCheckboxes = (parentId = null, level = 0) => {
-            return availableSteps
-                .filter(etape => etape.parentId === parentId)
-                .sort((a, b) => (a.order || 0) - (b.order || 0))
-                .flatMap(etape => {
-                    const indent = level * 20; // Indentation en pixels
-                    const hasChildren = availableSteps.some(e => e.parentId === etape.id);
-                    const isParallel = selectedStep.parallelWith?.includes(etape.id);
-
-                    return [
-                        <label key={etape.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded">
-                            <div style={{ marginLeft: `${indent}px` }} className="flex items-center gap-2">
-                                <span className="text-xs">
-                                    {hasChildren ? '📁' : '📄'}
-                                </span>
-                                <input
-                                    type="checkbox"
-                                    checked={isParallel}
-                                    onChange={(e) => {
-                                        if (e.target.checked) {
-                                            addParallelTask(selectedStep.id, etape.id);
-                                        } else {
-                                            removeParallelTask(selectedStep.id, etape.id);
-                                        }
-                                    }}
-                                    className="rounded border-gray-300"
-                                />
-                                <span className="text-sm">{etape.text || `Étape ${etape.id}`}</span>
-                            </div>
-                        </label>,
-                        ...renderHierarchicalCheckboxes(etape.id, level + 1)
-                    ];
-                });
-        };
-
-        return renderHierarchicalCheckboxes();
-    };
 
     // Fonction pour calculer l'échelle temporelle automatique
-    const calculateTimeScale = () => {
-        if (!formData.dateDebut || !formData.dateFin) return 'days';
-
-        const startDate = new Date(formData.dateDebut);
-        const endDate = new Date(formData.dateFin);
-        const diffTime = Math.abs(endDate - startDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        // Calcul de la durée totale des tâches en heures
-        const totalHours = formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0);
-
-        // Logique adaptative selon la durée
-        if (totalHours <= 24 && diffDays <= 1) return 'hours';
-        if (diffDays <= 7) return 'days';
-        if (diffDays <= 60) return 'weeks';
-        return 'months';
-    };
 
     // Fonction pour ouvrir le modal de configuration avancée d'une étape
     const openStepConfigModal = (etapeId) => {
@@ -918,10 +553,6 @@ export function JobModal({
     };
 
     // Fonction pour fermer le modal de configuration avancée
-    const closeStepConfigModal = () => {
-        setShowStepConfigModal(false);
-        setSelectedStep(null);
-    };
 
     // ============== FONCTIONS POUR LA PRÉPARATION ==============
 
@@ -1985,12 +1616,6 @@ export function JobModal({
     // ============== GESTION HORAIRES PAR JOUR (Partie 2/2) ==============
     // Fonctions équipements + gestion jours
 
-    const getAvailableEquipementForDay = (dateString) => {
-        return equipements.filter(equipement => {
-            const conflicts = checkResourceConflicts(equipement.id, 'equipement', dateString, dateString, formData.id);
-            return conflicts.length === 0;
-        });
-    };
 
     const filterEquipementByDay = (dateString, equipementList) => {
         return equipementList.filter(equipement => {
@@ -2282,86 +1907,10 @@ export function JobModal({
         });
     };
 
-    const addDependency = (etapeId, dependencyId, type = 'FS', lag = 0) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.map(etape =>
-                etape.id === etapeId
-                    ? {
-                        ...etape,
-                        dependencies: [...etape.dependencies, { id: dependencyId, type, lag }]
-                    }
-                    : etape
-            )
-        }));
-    };
 
-    const removeDependency = (etapeId, dependencyId) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.map(etape =>
-                etape.id === etapeId
-                    ? {
-                        ...etape,
-                        dependencies: etape.dependencies.filter(dep => dep.id !== dependencyId)
-                    }
-                    : etape
-            )
-        }));
-    };
 
-    const assignResourceToEtape = (etapeId, resourceId, resourceType) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.map(etape =>
-                etape.id === etapeId
-                    ? {
-                        ...etape,
-                        assignedResources: {
-                            ...etape.assignedResources,
-                            [resourceType]: etape.assignedResources[resourceType].includes(resourceId)
-                                ? etape.assignedResources[resourceType]
-                                : [...etape.assignedResources[resourceType], resourceId]
-                        }
-                    }
-                    : etape
-            )
-        }));
-    };
 
-    const unassignResourceFromEtape = (etapeId, resourceId, resourceType) => {
-        setFormData(prev => ({
-            ...prev,
-            etapes: prev.etapes.map(etape =>
-                etape.id === etapeId
-                    ? {
-                        ...etape,
-                        assignedResources: {
-                            ...etape.assignedResources,
-                            [resourceType]: etape.assignedResources[resourceType].filter(id => id !== resourceId)
-                        }
-                    }
-                    : etape
-            )
-        }));
-    };
 
-    const moveEtape = (dragIndex, hoverIndex) => {
-        setFormData(prev => {
-            const draggedEtape = prev.etapes[dragIndex];
-            const newEtapes = [...prev.etapes];
-            newEtapes.splice(dragIndex, 1);
-            newEtapes.splice(hoverIndex, 0, draggedEtape);
-
-            return {
-                ...prev,
-                etapes: newEtapes.map((etape, index) => ({
-                    ...etape,
-                    order: index
-                }))
-            };
-        });
-    };
 
     const toggleEtapeCollapse = (etapeId) => {
         setFormData(prev => ({
@@ -2565,46 +2114,6 @@ export function JobModal({
     };
 
     // Fonction bidirectionnelle pour calculer les heures à partir du personnel et des dates
-    const calculateHeuresFromPersonnel = (nombrePersonnel, dateDebut, dateFin, modeHoraire, heuresDebutJour, heuresFinJour, includeWeekends = false) => {
-        if (!nombrePersonnel || !dateDebut || !dateFin) return '';
-
-        const personnel = parseInt(nombrePersonnel);
-        if (isNaN(personnel) || personnel <= 0) return '';
-
-        // Calculer le nombre de jours de travail (incluant ou excluant les fins de semaine)
-        const debut = new Date(dateDebut);
-        const fin = new Date(dateFin);
-
-        let joursOuvrables = 0;
-        let currentDate = new Date(debut);
-
-        while (currentDate <= fin) {
-            const dayOfWeek = currentDate.getDay();
-            if (includeWeekends || (dayOfWeek !== 0 && dayOfWeek !== 6)) {
-                joursOuvrables++;
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        let heuresParJour;
-        if (modeHoraire === '24h-24') {
-            heuresParJour = 24;
-        } else {
-            // Calculer les heures entre début et fin de journée
-            if (!heuresDebutJour || !heuresFinJour) {
-                heuresParJour = 8; // Valeur par défaut 8h de travail
-            } else {
-                const [heureDebut, minuteDebut] = heuresDebutJour.split(':').map(Number);
-                const [heureFin, minuteFin] = heuresFinJour.split(':').map(Number);
-                const minutesDebut = heureDebut * 60 + minuteDebut;
-                const minutesFin = heureFin * 60 + minuteFin;
-                heuresParJour = (minutesFin - minutesDebut) / 60;
-            }
-        }
-
-        const totalHeuresDisponibles = joursOuvrables * heuresParJour * personnel;
-        return totalHeuresDisponibles.toString();
-    };
 
     // ============== P1-7: VALIDATION TIMELINE + SOLUTIONS ==============
     const validateProjectEndDate = () => {
@@ -2964,15 +2473,6 @@ export function JobModal({
         addNotification?.(`Équipe "${team?.nom}" supprimée`, 'info');
     };
 
-    const setTeamSchedule = (teamId, scheduleData) => {
-        setFormData(prev => ({
-            ...prev,
-            horairesEquipes: {
-                ...prev.horairesEquipes,
-                [teamId]: scheduleData
-            }
-        }));
-    };
 
     const addPersonnelToTeam = (teamId, personnelId) => {
         const team = formData.equipes.find(t => t.id === teamId);

@@ -408,7 +408,6 @@ export function useAppData(tenant = null) {
         localStorage.removeItem('c-secur360-conges');
         localStorage.removeItem('c-secur360-departements');
 
-        console.log('🔄 Données réinitialisées - recharger la page pour sync Supabase');
     }, []);
 
     // Normalisation : les enregistrements créés par l'admin utilisent 'name/role/phone'

@@ -9,7 +9,6 @@ export async function registerServiceWorker() {
         updateViaCache: 'none' // Toujours vérifier les mises à jour
       });
 
-      console.log(' Service Worker enregistré:', registration.scope);
 
       // Vérifier si une mise à jour vient d'être effectuée
       checkForCompletedUpdate();
@@ -17,12 +16,10 @@ export async function registerServiceWorker() {
       // Écouter les mises à jour
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
-        console.log('= Mise à jour du Service Worker détectée');
 
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             // Nouvelle version disponible - mise à jour forcée automatique
-            console.log('=æ Nouvelle version disponible - rechargement automatique');
 
             // Stocker un flag pour afficher la notification après rechargement
             localStorage.setItem('app-update-completed', 'true');
@@ -41,13 +38,11 @@ export async function registerServiceWorker() {
       // Vérifier les mises à jour toutes les 60 secondes
       setInterval(() => {
         registration.update().catch(err => {
-          console.log('Erreur lors de la vérification des mises à jour:', err);
         });
       }, 60000);
 
       // Vérifier immédiatement s'il y a une mise à jour
       registration.update().catch(err => {
-        console.log('Erreur lors de la vérification initiale des mises à jour:', err);
       });
 
       return registration;
@@ -55,7 +50,6 @@ export async function registerServiceWorker() {
       console.error('L Erreur lors de l\'enregistrement du Service Worker:', error);
     }
   } else {
-    console.log('  Service Worker non supporté par ce navigateur');
   }
 }
 
@@ -153,7 +147,6 @@ export function unregisterServiceWorker() {
     navigator.serviceWorker.ready
       .then((registration) => {
         registration.unregister();
-        console.log('Service Worker désenregistré');
       })
       .catch((error) => {
         console.error('Erreur lors du désenregistrement:', error);
@@ -164,6 +157,5 @@ export function unregisterServiceWorker() {
 export function clearCache() {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
-    console.log('Cache vidé');
   }
 }
