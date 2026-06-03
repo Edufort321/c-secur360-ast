@@ -5,10 +5,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt, Download, Link2, Copy, Check, Users } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { getVendorFiche, type VendorFiche, isContractActive, projectNextCommission } from '@/lib/affiliateCommissions';
 import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
+import { getReferral, generateReferral, referralLink, type VendorReferral } from '@/lib/affiliateReferral';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
 
 const money = (n: number) => `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
@@ -26,6 +27,9 @@ export default function VendorFichePage() {
   const id = params?.id as string;
   const [data, setData] = useState<VendorFiche | null>(null);
   const [payments, setPayments] = useState<AffiliateCommissionPayment[]>([]);
+  const [referral, setReferral] = useState<VendorReferral | null>(null);
+  const [genCode, setGenCode] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<{ tenantId: string; tenantName?: string } | null>(null);
@@ -35,8 +39,8 @@ export default function VendorFichePage() {
   async function load() {
     setLoading(true); setError(null);
     try {
-      const [fiche, pays] = await Promise.all([getVendorFiche(id), listPayments({ vendorId: id })]);
-      setData(fiche); setPayments(pays);
+      const [fiche, pays, ref] = await Promise.all([getVendorFiche(id), listPayments({ vendorId: id }), getReferral(id)]);
+      setData(fiche); setPayments(pays); setReferral(ref);
     } catch (e: any) {
       setError(e?.message || 'Erreur de chargement');
     } finally {
@@ -44,6 +48,26 @@ export default function VendorFichePage() {
     }
   }
   useEffect(() => { if (id) load(); /* eslint-disable-next-line */ }, [id]);
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const link = referralLink(referral?.referral_code, origin);
+
+  async function genReferral() {
+    setGenCode(true); setError(null);
+    try {
+      const code = await generateReferral(id);
+      setReferral(r => (r ? { ...r, referral_code: code } : { vendor_id: id, referral_code: code, referred: [] }));
+      setNotice('Code de parrainage genere ✓');
+    } catch (e: any) {
+      setError(e?.message || 'Erreur de generation');
+    } finally {
+      setGenCode(false);
+    }
+  }
+
+  async function copyLink() {
+    try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard indisponible */ }
+  }
 
   const vendor = data?.vendor;
   const clients = data?.clients || [];
@@ -146,6 +170,44 @@ export default function VendorFichePage() {
                 </div>
               </div>
               {notice && <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">{notice}</div>}
+            </div>
+
+            {/* Lien de parrainage + inscriptions attribuees (#78) */}
+            <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+              <h2 className="mb-3 flex items-center gap-2 font-bold"><Link2 size={16} /> Lien de parrainage</h2>
+              {referral?.referral_code ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="flex-1 truncate rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900/40" title={link}>{link}</code>
+                  <button onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+                    {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />} {copied ? 'Copie' : 'Copier'}
+                  </button>
+                  <button onClick={genReferral} disabled={genCode} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:hover:bg-gray-700">
+                    {genCode ? <Loader2 size={15} className="animate-spin" /> : null} Regenerer
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Aucun code de parrainage. Generez-en un pour attribuer automatiquement les inscriptions via ce lien.</p>
+                  <button onClick={genReferral} disabled={genCode} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                    {genCode ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />} Generer le lien
+                  </button>
+                </div>
+              )}
+              <div className="mt-4">
+                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500"><Users size={13} /> Inscriptions attribuees ({referral?.referred.length || 0})</p>
+                {(referral?.referred.length || 0) === 0 ? (
+                  <p className="text-sm text-gray-400">Aucune inscription attribuee via ce lien pour l'instant.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+                    {referral!.referred.map(t => (
+                      <li key={t.tenant_id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span className="font-medium">{t.tenant_name}</span>
+                        <span className="text-xs text-gray-400">{fmtDate(t.created_at)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             {/* Clients affilies + contrat */}
