@@ -14,7 +14,21 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.res;
 
   const tenantId = req.nextUrl.searchParams.get('tenantId');
-  if (!tenantId) return NextResponse.json({ error: 'tenantId requis' }, { status: 400 });
+
+  // Mode liste (aucun tenantId) : tous les contrats enregistres, enrichis du nom du client.
+  if (!tenantId) {
+    const { data, error } = await supabaseAdmin
+      .from('tenant_affiliate_contracts').select('*').order('updated_at', { ascending: false });
+    if (error) return NextResponse.json([]); // table absente (migration 120 non executee) -> liste vide
+    const rows = data || [];
+    const ids = Array.from(new Set(rows.map(r => r.tenant_id)));
+    const names: Record<string, string> = {};
+    if (ids.length) {
+      const { data: tns } = await supabaseAdmin.from('tenants').select('id, companyName').in('id', ids);
+      for (const t of tns || []) names[(t as any).id] = (t as any).companyName;
+    }
+    return NextResponse.json(rows.map(r => ({ ...r, tenant_name: names[r.tenant_id] || r.tenant_id })));
+  }
 
   // Contrat existant ?
   const { data: existing } = await supabaseAdmin

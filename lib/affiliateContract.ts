@@ -84,6 +84,17 @@ export function defaultContract(
   return base;
 }
 
+export interface AffiliateContractRow extends AffiliateContract {
+  tenant_name?: string;        // nom du client (joint cote serveur)
+}
+
+/** Liste tous les contrats d'affiliation enregistres (vue d'ensemble super-admin). */
+export async function listContracts(): Promise<AffiliateContractRow[]> {
+  const res = await fetch('/api/admin/affiliate-contract', { cache: 'no-store' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Erreur de chargement des contrats');
+  return res.json();
+}
+
 /** Charge le contrat d'affiliation d'un tenant (ou un brouillon prerempli si aucun n'existe). */
 export async function getContract(tenantId: string): Promise<AffiliateContract> {
   const res = await fetch(`/api/admin/affiliate-contract?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
