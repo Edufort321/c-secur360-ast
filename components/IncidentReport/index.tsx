@@ -1289,15 +1289,15 @@ export default function IncidentReportForm({
       </div>
 
       {/* Body */}
-      <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
-        {/* Sidebar */}
-        <div className="w-48 shrink-0">
-          <nav className={`sticky space-y-1 ${embedded ? 'top-36' : 'top-20'}`}>
+      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* Sidebar (desktop) / barre d'onglets horizontale defilante (mobile) */}
+        <div className="md:w-48 md:shrink-0">
+          <nav className={`flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 md:sticky ${embedded ? 'md:top-36' : 'md:top-20'}`}>
             {SECTIONS.map(s => (
               <button
                 key={s.id}
                 onClick={() => setSection(s.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                className={`shrink-0 md:w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left whitespace-nowrap transition-colors ${
                   section === s.id
                     ? 'bg-red-600 text-white font-medium'
                     : 'text-gray-600 hover:bg-gray-100'
