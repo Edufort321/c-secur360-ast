@@ -1,8 +1,7 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import {
   ArrowLeft, Plus, Shield, Clock, Search, ChevronRight,
@@ -33,6 +32,7 @@ const STATUS_COLOR = {
 
 export default function NearMissPage() {
   const params = useParams();
+  const router = useRouter();
   const tenant = params.tenant as string;
 
   const [reports, setReports] = useState<IncidentRow[]>([]);
@@ -112,9 +112,14 @@ export default function NearMissPage() {
           <div className="bg-white border-b border-gray-200">
             <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Link href={`/${tenant}/modules`} className="text-gray-500 hover:text-gray-700">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  aria-label="Retour"
+                  className="text-gray-500 hover:text-gray-700"
+                >
                   <ArrowLeft size={20} />
-                </Link>
+                </button>
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <Shield size={22} className="text-orange-500" />
