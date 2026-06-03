@@ -1,8 +1,9 @@
 'use client';
 
-// Module externe DGA — Diagnostic de gaz dissous. Intégré au tenant, style commun (header FR/EN +
-// jour/nuit). Visible/accessible uniquement si abonné (tenant_modules.enabled via useModuleEnabled).
-import React, { useEffect, useMemo, useState } from 'react';
+// Module DGA complet — port natif de dga-diagnostic.html vers C-Secur360.
+// Données Supabase, IA serveur (extract PDF + analyse experte), recherche/flags/filtres client+série,
+// import drag PDF, historique, temps réel. Shell commun (header/FR-EN/jour-nuit), gaté par abonnement.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PortalHeader } from '@/components/PortalHeader';
 import { BackButton } from '@/components/BackButton';
@@ -10,18 +11,26 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
-import { FlaskConical, Lock, Loader2, Save, Activity, History } from 'lucide-react';
+import {
+  EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
+  saveMeasure, deleteMeasure, dueStatus, type Dossier, type Measure,
+} from '@/lib/dga/dossiers';
+import { FlaskConical, Lock, Loader2, Save, Plus, Search, Upload, Activity, Trash2, ArrowLeft, FileText, Sparkles } from 'lucide-react';
 
-const GASES: { key: keyof GasInput; label: string }[] = [
-  { key: 'h2', label: 'H₂' }, { key: 'ch4', label: 'CH₄' }, { key: 'c2h6', label: 'C₂H₆' },
-  { key: 'c2h4', label: 'C₂H₄' }, { key: 'c2h2', label: 'C₂H₂' }, { key: 'co', label: 'CO' }, { key: 'co2', label: 'CO₂' },
-];
 const COND_COLOR: Record<number, string> = {
   1: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   2: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   3: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   4: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
+const DUE_COLOR: Record<string, string> = {
+  overdue: 'bg-red-100 text-red-700', soon: 'bg-amber-100 text-amber-700', uptodate: 'bg-emerald-100 text-emerald-700', none: 'bg-gray-100 text-gray-500',
+};
+const GASES: { key: keyof GasInput; label: string }[] = [
+  { key: 'h2', label: 'H₂' }, { key: 'ch4', label: 'CH₄' }, { key: 'c2h6', label: 'C₂H₆' },
+  { key: 'c2h4', label: 'C₂H₄' }, { key: 'c2h2', label: 'C₂H₂' }, { key: 'co', label: 'CO' }, { key: 'co2', label: 'CO₂' },
+];
+const emptyDraft = (): Dossier => { const o: any = { ident: '', flag: '' }; EQUIP_FIELDS.forEach(f => { if (o[f.key] === undefined) o[f.key] = ''; }); return o; };
 
 export default function DgaPage() {
   const params = useParams<{ tenant: string }>();
@@ -30,153 +39,337 @@ export default function DgaPage() {
   const tr = (fr: string, en: string) => (lang === 'fr' ? fr : en);
   const access = useModuleEnabled(tenant, 'dga', false);
 
-  const [asset, setAsset] = useState('');
-  const [sampleDate, setSampleDate] = useState('');
-  const [gas, setGas] = useState<GasInput>({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 });
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
+  const [allMeasures, setAllMeasures] = useState<Measure[]>([]);
+  const [view, setView] = useState<'list' | 'fiche'>('list');
+  const [draft, setDraft] = useState<Dossier | null>(null);
+  const [selId, setSelId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [fClient, setFClient] = useState('');
+  const [fSerie, setFSerie] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const result = useMemo(() => diagnoseFull(gas), [gas]);
-
-  async function loadHistory() {
-    const { data } = await supabase.from('dga_analyses').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(20);
-    setHistory(data || []);
+  async function reload() {
+    const [ds, ms] = await Promise.all([listDossiers(tenant), listAllMeasures(tenant)]);
+    setDossiers(ds); setAllMeasures(ms);
   }
-  useEffect(() => { if (access === 'enabled') loadHistory(); /* eslint-disable-next-line */ }, [access, tenant]);
+  useEffect(() => { if (access === 'enabled') reload(); /* eslint-disable-next-line */ }, [access, tenant]);
+  // Temps réel
+  useEffect(() => {
+    if (access !== 'enabled') return;
+    const ch = supabase.channel('dga-' + tenant)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_dossiers', filter: `tenant_id=eq.${tenant}` }, () => reload())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_measures', filter: `tenant_id=eq.${tenant}` }, () => reload())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    /* eslint-disable-next-line */
+  }, [access, tenant]);
 
-  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
-  const setG = (k: keyof GasInput, v: string) => setGas(g => ({ ...g, [k]: v === '' ? 0 : Number(v) }));
+  const lastByDossier = useMemo(() => {
+    const m: Record<string, Measure> = {};
+    for (const x of allMeasures) { if (x.dossier_id) m[x.dossier_id] = x; } // ordonné asc -> dernier écrase
+    return m;
+  }, [allMeasures]);
 
-  async function save() {
-    if (!asset.trim()) { setNotice(tr('Indiquez l’équipement.', 'Enter the asset.')); return; }
-    setSaving(true); setNotice(null);
-    const payload: any = {
-      tenant_id: tenant, asset_name: asset.trim(), sample_date: sampleDate || null,
-      ...gas, tdcg: result.tdcg, condition: result.condition, duval: result.duval,
-      fault: tr(result.fault.fr, result.fault.en), notes: notes || null,
-    };
-    const { error } = await supabase.from('dga_analyses').insert(payload);
-    if (error) setNotice('Erreur : ' + error.message);
-    else { setNotice(tr('Analyse enregistrée ✓', 'Analysis saved ✓')); loadHistory(); }
-    setSaving(false);
+  const stats = useMemo(() => {
+    let overdue = 0, soon = 0, uptodate = 0, surveillance = 0;
+    for (const d of dossiers) {
+      const last = d.id ? lastByDossier[d.id] : undefined;
+      const st = dueStatus(last?.sample_date, last?.condition);
+      if (st === 'overdue') overdue++; else if (st === 'soon') soon++; else if (st === 'uptodate') uptodate++;
+      if (d.flag === 'surveillance' || (last?.condition || 0) >= 3) surveillance++;
+    }
+    return { all: dossiers.length, overdue, soon, uptodate, surveillance };
+  }, [dossiers, lastByDossier]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return dossiers.filter(d => {
+      if (fClient && !(d.client || '').toLowerCase().includes(fClient.toLowerCase())) return false;
+      if (fSerie && !(d.serie || '').toLowerCase().includes(fSerie.toLowerCase())) return false;
+      if (!q) return true;
+      return [d.ident, d.client, d.serie, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q));
+    });
+  }, [dossiers, query, fClient, fSerie]);
+
+  // ── Import PDF (drag) → IA extract ──
+  async function handleImport(file: File) {
+    if (!file) return;
+    setImporting(true); setNotice(null);
+    try {
+      const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('read')); r.readAsDataURL(file); });
+      const resp = await fetch('/api/dga/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdfBase64: b64 }) });
+      const j = await resp.json();
+      if (!resp.ok || j.error) throw new Error(j.error || 'extraction');
+      const eq = j.equipment || {};
+      const dossier: Dossier = {
+        ident: eq.identification || eq.equipment || file.name.replace(/\.pdf$/i, ''), client: eq.location || '', serie: eq.serialNo || '',
+        company: eq.company || '', contact: eq.contact || '', email: eq.email || '', equip_no: eq.equipNo || '', apparatus: eq.apparatusType || '',
+        description: eq.description || '', kv: eq.kvClass ? Number(eq.kvClass) : null, mva: eq.maxMVA ? Number(eq.maxMVA) : null,
+        oil_vol: eq.oilVolumeL ? Number(eq.oilVolumeL) : null, oil_type: eq.oilType || '', manufacturer: eq.manufacturer || '', year: eq.year ? String(eq.year) : '',
+      };
+      const saved = await saveDossier(tenant, dossier);
+      if (saved.error || !saved.data?.id) throw new Error(saved.error || 'enregistrement dossier');
+      const did = saved.data.id;
+      const num = (v: any) => (v == null || v === '' ? 0 : Number(v) || 0);
+      for (const mm of (j.measurements || [])) {
+        const gas: GasInput = { h2: num(mm.H2), ch4: num(mm.CH4), c2h6: num(mm.C2H6), c2h4: num(mm.C2H4), c2h2: num(mm.C2H2), co: num(mm.CO), co2: num(mm.CO2) };
+        const dg = diagnoseFull(gas);
+        await saveMeasure(tenant, did, {
+          sample_date: mm.date || null, ...gas, o2: mm.O2 != null ? num(mm.O2) : null, n2: mm.N2 != null ? num(mm.N2) : null,
+          oil_quality: { moisture: mm.moisture, ift: mm.ift, acid: mm.acid, color: mm.color, dielectric: mm.dielectric, dbd877: mm.dbd877, pf25: mm.pf25, pf100: mm.pf100, f_2fal: mm.f_2fal },
+          tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf',
+        });
+      }
+      await reload(); setSelId(did); setDraft(null); setView('fiche');
+      setNotice(tr(`Importé : ${(j.measurements || []).length} mesure(s).`, `Imported: ${(j.measurements || []).length} measure(s).`));
+    } catch (e: any) { setNotice(tr('Import PDF impossible : ', 'PDF import failed: ') + (e?.message || e)); }
+    finally { setImporting(false); }
   }
 
-  if (access === 'loading') {
-    return (<div className="min-h-screen bg-gray-100 dark:bg-gray-900"><PortalHeader tenant={tenant} /><div className="grid place-items-center py-32 text-gray-400"><Loader2 className="animate-spin" /></div></div>);
-  }
-  if (access === 'locked') {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <PortalHeader tenant={tenant} />
-        <div className="mx-auto max-w-md px-4 py-20 text-center">
-          <Lock className="mx-auto text-gray-400" size={40} />
-          <h1 className="mt-4 text-xl font-bold">{tr('Module non activé', 'Module not enabled')}</h1>
-          <p className="mt-2 text-sm text-gray-500">{tr('Le module Diagnostic DGA n’est pas inclus dans votre abonnement. Contactez votre administrateur pour l’activer.', 'The DGA Diagnostic module is not included in your subscription. Contact your administrator to enable it.')}</p>
-        </div>
-      </div>
-    );
-  }
+  if (access === 'loading') return <Shell tenant={tenant}><div className="grid place-items-center py-32 text-gray-400"><Loader2 className="animate-spin" /></div></Shell>;
+  if (access === 'locked') return <Shell tenant={tenant}><div className="mx-auto max-w-md px-4 py-20 text-center"><Lock className="mx-auto text-gray-400" size={40} /><h1 className="mt-4 text-xl font-bold">{tr('Module non activé', 'Module not enabled')}</h1><p className="mt-2 text-sm text-gray-500">{tr('Le module DGA n’est pas inclus dans votre abonnement.', 'The DGA module is not in your subscription.')}</p></div></Shell>;
+
+  const selected = dossiers.find(d => d.id === selId) || null;
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-      <PortalHeader tenant={tenant} />
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <BackButton fallback={`/${tenant}/modules`} />
-        <div className="mt-3 mb-5 flex items-center gap-2">
+    <Shell tenant={tenant}>
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-4 flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-600 text-white"><FlaskConical size={18} /></span>
-          <div>
-            <h1 className="text-xl font-extrabold">{tr('Diagnostic DGA', 'DGA Diagnostic')}</h1>
-            <p className="text-xs text-gray-500">{tr('Analyse de gaz dissous — IEEE C57.104 + Triangle de Duval', 'Dissolved gas analysis — IEEE C57.104 + Duval Triangle')}</p>
-          </div>
+          <div><h1 className="text-xl font-extrabold">{tr('Diagnostic DGA', 'DGA Diagnostic')}</h1>
+            <p className="text-xs text-gray-500">{tr('Gestion des dossiers, analyse IA, normes IEEE/IEC/Duval', 'Dossier management, AI analysis, IEEE/IEC/Duval norms')}</p></div>
         </div>
-
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-          {/* Saisie */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{tr('Équipement', 'Asset')}</span>
-                <input className={inp} value={asset} onFocus={e => e.target.select()} onChange={e => setAsset(e.target.value)} placeholder={tr('Transfo T1 — poste Nord', 'Transformer T1 — North station')} /></label>
-              <label className="block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{tr('Date d’échantillon', 'Sample date')}</span>
-                <input type="date" className={inp} value={sampleDate} onChange={e => setSampleDate(e.target.value)} /></label>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {GASES.map(g => (
-                <label key={g.key} className="block">
-                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{g.label} <span className="text-gray-400">(ppm)</span></span>
-                  <input type="number" min="0" className={inp} value={gas[g.key] === 0 ? '' : gas[g.key]} placeholder="0" onFocus={e => e.target.select()} onChange={e => setG(g.key, e.target.value)} />
-                </label>
-              ))}
-            </div>
-            <label className="mt-4 block"><span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">{tr('Notes', 'Notes')}</span>
-              <textarea className={`${inp} h-20 resize-y`} value={notes} onChange={e => setNotes(e.target.value)} /></label>
-            <button onClick={save} disabled={saving} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {tr('Enregistrer l’analyse', 'Save analysis')}
-            </button>
-          </div>
+        {view === 'list' ? (
+          <ListView {...{ tr, lang, stats, filtered, lastByDossier, query, setQuery, fClient, setFClient, fSerie, setFSerie, importing, dragOver, setDragOver, fileRef, handleImport, openFiche: (d: Dossier) => { setSelId(d.id!); setDraft(null); setView('fiche'); }, newDossier: () => { setDraft(emptyDraft()); setSelId(null); setView('fiche'); } }} />
+        ) : (
+          <Fiche {...{ tenant, tr, lang, selected, draft, setDraft, busy, setBusy, setNotice, onBack: () => { setView('list'); reload(); }, reload, setSelId, setView }} />
+        )}
+      </div>
+    </Shell>
+  );
+}
 
-          {/* Résultat live */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold"><Activity size={15} /> {tr('Diagnostic', 'Diagnosis')}</h2>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
-                <span className="text-xs text-gray-500">TDCG</span><span className="font-bold">{Math.round(result.tdcg).toLocaleString('fr-CA')} ppm</span>
-              </div>
-              <div className="text-center">
-                <span className={`inline-block rounded-full px-3 py-1 text-sm font-bold ${COND_COLOR[result.condition]}`}>{tr('Condition IEEE', 'IEEE Condition')} {result.condition}/4</span>
-              </div>
-              <div className="rounded-lg border border-gray-100 p-3 text-center dark:border-gray-700">
-                <div className="text-[11px] uppercase tracking-wide text-gray-400">{tr('Zone Duval', 'Duval zone')}</div>
-                <div className="text-lg font-extrabold text-rose-600 dark:text-rose-400">{result.duval}</div>
-                <div className="mt-0.5 text-sm text-gray-700 dark:text-gray-300">{tr(result.fault.fr, result.fault.en)}</div>
-              </div>
-              <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
-                <strong>{tr('Recommandation', 'Recommendation')} :</strong> {tr(result.recommendation.fr, result.recommendation.en)}
-              </div>
-              {/* Méthodes complémentaires (Rogers / IEC 60599 / gaz dominant) */}
-              <div className="space-y-1.5 border-t border-gray-100 pt-2 dark:border-gray-700">
-                <div className="text-[11px] uppercase tracking-wide text-gray-400">{tr('Méthodes', 'Methods')}</div>
-                {result.methods.map((m, i) => (
-                  <div key={i} className="flex items-start justify-between gap-2 text-xs">
-                    <span className="font-semibold text-gray-600 dark:text-gray-300">{m.name}</span>
-                    <span className="text-right text-gray-700 dark:text-gray-200">{tr(m.fault.fr, m.fault.en)}{m.detail && m.detail !== '—' ? <span className="block text-[10px] text-gray-400">{m.detail}</span> : null}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-gray-400">{tr('Indicatif — à confirmer par laboratoire et suivi de tendance.', 'Indicative — confirm with lab and trend analysis.')}</p>
-            </div>
-          </div>
+function Shell({ tenant, children }: { tenant: string; children: React.ReactNode }) {
+  return <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100"><PortalHeader tenant={tenant} />{children}</div>;
+}
+
+function Tile({ label, value, color, onClick, active }: { label: string; value: number; color: string; onClick?: () => void; active?: boolean }) {
+  return (
+    <button onClick={onClick} className={`rounded-xl border p-3 text-center transition ${active ? 'border-rose-400 ring-2 ring-rose-200' : 'border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800`}>
+      <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
+      <div className="text-[11px] text-gray-500">{label}</div>
+    </button>
+  );
+}
+
+function ListView(p: any) {
+  const { tr, stats, filtered, lastByDossier, query, setQuery, fClient, setFClient, fSerie, setFSerie, importing, dragOver, setDragOver, fileRef, handleImport, openFiche, newDossier } = p;
+  const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <Tile label={tr('Tous', 'All')} value={stats.all} color="text-gray-800 dark:text-gray-100" />
+        <Tile label={tr('En retard', 'Overdue')} value={stats.overdue} color="text-red-600" />
+        <Tile label={tr('Bientôt dû', 'Soon due')} value={stats.soon} color="text-amber-600" />
+        <Tile label={tr('À jour', 'Up to date')} value={stats.uptodate} color="text-emerald-600" />
+        <Tile label={tr('En surveillance', 'Monitoring')} value={stats.surveillance} color="text-orange-600" />
+      </div>
+
+      {/* Import PDF drag */}
+      <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleImport(f); }}
+        className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center ${dragOver ? 'border-rose-400 bg-rose-50 dark:bg-rose-500/10' : 'border-gray-300 dark:border-gray-600'}`}>
+        {importing ? <Loader2 className="animate-spin text-rose-500" /> : <Upload className="text-gray-400" />}
+        <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo (DGA) ici — extraction IA automatique', 'Drop a lab PDF (DGA) here — automatic AI extraction')}</p>
+        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); }} />
+        <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">{tr('Choisir un fichier', 'Choose file')}</button>
+      </div>
+
+      {/* Recherche + filtres + nouveau */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[12rem]"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full pl-7`} placeholder={tr('Rechercher (nom, client, série…)', 'Search (name, client, serial…)')} value={query} onChange={e => setQuery(e.target.value)} /></div>
+        <input className={inp} placeholder={tr('Filtre client', 'Client filter')} value={fClient} onChange={e => setFClient(e.target.value)} />
+        <input className={inp} placeholder={tr('Filtre n° série', 'Serial filter')} value={fSerie} onChange={e => setFSerie(e.target.value)} />
+        <button onClick={newDossier} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau', 'New')}</button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
+            <th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('Client', 'Client')}</th><th className="px-3 py-2">{tr('N° série', 'Serial')}</th>
+            <th className="px-3 py-2">{tr('Dernier', 'Last')}</th><th className="px-3 py-2">IEEE</th><th className="px-3 py-2">{tr('Échéance', 'Due')}</th><th className="px-3 py-2">Flag</th>
+          </tr></thead>
+          <tbody>
+            {filtered.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400">{tr('Aucun dossier.', 'No dossier.')}</td></tr>}
+            {filtered.map((d: Dossier) => {
+              const last = d.id ? lastByDossier[d.id] : undefined;
+              const st = dueStatus(last?.sample_date, last?.condition);
+              return (
+                <tr key={d.id} onClick={() => openFiche(d)} className="cursor-pointer border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
+                  <td className="px-3 py-2 font-medium">{d.ident}</td><td className="px-3 py-2 text-gray-500">{d.client || '—'}</td><td className="px-3 py-2 text-gray-500">{d.serie || '—'}</td>
+                  <td className="px-3 py-2 text-gray-500">{last?.sample_date || '—'}</td>
+                  <td className="px-3 py-2">{last?.condition ? <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${COND_COLOR[last.condition]}`}>{last.condition}</span> : '—'}</td>
+                  <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${DUE_COLOR[st]}`}>{tr({ overdue: 'En retard', soon: 'Bientôt', uptodate: 'À jour', none: '—' }[st], { overdue: 'Overdue', soon: 'Soon', uptodate: 'OK', none: '—' }[st])}</span></td>
+                  <td className="px-3 py-2 text-xs text-gray-500">{d.flag === 'surveillance' ? '👁️ ' + tr('Surveillance', 'Monitoring') : (d.flag || '')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Fiche(p: any) {
+  const { tenant, tr, lang, selected, draft, setDraft, busy, setBusy, setNotice, onBack, reload, setSelId, setView } = p;
+  const cur: Dossier = draft || selected || { ident: '' };
+  const isNew = !selected;
+  const [form, setForm] = useState<Dossier>(cur);
+  const [measures, setMeasures] = useState<Measure[]>([]);
+  const [gas, setGas] = useState<GasInput>({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 });
+  const [sampleDate, setSampleDate] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+  const [ai, setAi] = useState<any>(null);
+  const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
+  const live = useMemo(() => diagnoseFull(gas), [gas]);
+
+  useEffect(() => { setForm(draft || selected || { ident: '' }); }, [draft, selected]);
+  useEffect(() => { (async () => { if (selected?.id) setMeasures(await listMeasures(tenant, selected.id)); else setMeasures([]); })(); }, [selected, tenant]);
+
+  async function save() {
+    if (!form.ident.trim()) { setNotice(tr('L’identification est requise.', 'Identification is required.')); return; }
+    setBusy(true); setNotice(null);
+    const res = await saveDossier(tenant, form);
+    setBusy(false);
+    if (res.error) { setNotice('Erreur : ' + res.error); return; }
+    setNotice(tr('Dossier enregistré ✓', 'Dossier saved ✓'));
+    if (res.data?.id) { setSelId(res.data.id); setDraft(null); }
+    reload();
+  }
+  async function addMeasure() {
+    if (!selected?.id) { setNotice(tr('Enregistrez d’abord le dossier.', 'Save the dossier first.')); return; }
+    const dg = live;
+    const res = await saveMeasure(tenant, selected.id, { sample_date: sampleDate || null, ...gas, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'manual' });
+    if (res.error) { setNotice('Erreur : ' + res.error); return; }
+    setGas({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 }); setSampleDate('');
+    setMeasures(await listMeasures(tenant, selected.id)); reload();
+  }
+  async function runAI() {
+    if (!selected?.id || measures.length === 0) { setNotice(tr('Aucune mesure à analyser.', 'No measure to analyze.')); return; }
+    setAiBusy(true); setAi(null); setNotice(null);
+    try {
+      const resp = await fetch('/api/dga/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dossier: form, measures }) });
+      const j = await resp.json();
+      if (!resp.ok || j.error) throw new Error(j.error || 'IA');
+      setAi(j.analysis);
+      const lastM = measures[measures.length - 1];
+      if (lastM?.id) await saveMeasure(tenant, selected.id, { ...lastM, ai_summary: tr(j.analysis.summaryFr, j.analysis.summaryEn) });
+    } catch (e: any) { setNotice(tr('Analyse IA impossible : ', 'AI analysis failed: ') + (e?.message || e)); }
+    finally { setAiBusy(false); }
+  }
+  async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(id); if (selected?.id) setMeasures(await listMeasures(tenant, selected.id)); reload(); }
+  async function delDossier() { if (!selected?.id) return; if (!confirm(tr('Supprimer ce dossier et ses mesures ?', 'Delete this dossier and its measures?'))) return; await deleteDossier(selected.id); onBack(); }
+
+  const setG = (k: keyof GasInput, v: string) => setGas(g => ({ ...g, [k]: v === '' ? 0 : Number(v) }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-600 hover:underline dark:text-gray-300"><ArrowLeft size={15} /> {tr('Liste', 'List')}</button>
+        <div className="flex gap-2">
+          {!isNew && <button onClick={delDossier} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>}
+          <button onClick={save} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}</button>
         </div>
+      </div>
 
-        {/* Historique */}
-        <div className="mt-5 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold"><History size={15} /> {tr('Historique', 'History')} ({history.length})</h2>
-          <div className="overflow-x-auto">
+      {/* Fiche équipement */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {EQUIP_FIELDS.map(f => (
+            <label key={f.key as string} className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr(f.fr, f.en)}</span>
+              <input className={inp} type={f.num ? 'number' : 'text'} value={(form as any)[f.key] ?? ''} placeholder={f.ph || ''} onFocus={e => e.target.select()}
+                onChange={e => setForm(s => ({ ...s, [f.key]: f.num ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value }))} /></label>
+          ))}
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">Flag</span>
+            <select className={inp} value={form.flag || ''} onChange={e => setForm(s => ({ ...s, flag: e.target.value }))}>
+              <option value="">—</option><option value="surveillance">{tr('En surveillance', 'Monitoring')}</option><option value="critique">{tr('Critique', 'Critical')}</option><option value="ok">OK</option>
+            </select></label>
+        </div>
+      </div>
+
+      {!isNew && (
+        <>
+          {/* Ajouter une mesure */}
+          <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr('Ajouter une mesure', 'Add a measure')}</h3>
+              <label className="mb-2 block w-48"><span className="mb-1 block text-[11px] text-gray-500">{tr('Date', 'Date')}</span><input type="date" className={inp} value={sampleDate} onChange={e => setSampleDate(e.target.value)} /></label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {GASES.map(g => <label key={g.key} className="block"><span className="mb-1 block text-[11px] text-gray-500">{g.label} (ppm)</span>
+                  <input type="number" min="0" className={inp} value={gas[g.key] === 0 ? '' : gas[g.key]} placeholder="0" onFocus={e => e.target.select()} onChange={e => setG(g.key, e.target.value)} /></label>)}
+              </div>
+              <button onClick={addMeasure} className="mt-3 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={14} /> {tr('Ajouter', 'Add')}</button>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold"><Activity size={15} /> {tr('Diagnostic live', 'Live diagnosis')}</h3>
+              <div className="flex items-center justify-between text-sm"><span className="text-gray-500">TDCG</span><b>{Math.round(live.tdcg)}</b></div>
+              <div className="my-2 text-center"><span className={`rounded-full px-3 py-1 text-sm font-bold ${COND_COLOR[live.condition]}`}>IEEE {live.condition}/4</span></div>
+              <div className="text-center text-lg font-extrabold text-rose-600 dark:text-rose-400">{live.duval}</div>
+              <div className="text-center text-xs text-gray-600 dark:text-gray-300">{tr(live.fault.fr, live.fault.en)}</div>
+            </div>
+          </div>
+
+          {/* Analyse IA */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold"><Sparkles size={15} className="text-violet-500" /> {tr('Analyse IA experte', 'Expert AI analysis')}</h3>
+              <button onClick={runAI} disabled={aiBusy} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {tr('Analyser', 'Analyze')}</button>
+            </div>
+            {ai ? (
+              <div className="space-y-2 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${COND_COLOR[ai.severity] || COND_COLOR[1]}`}>{tr('Sévérité', 'Severity')} {ai.severity}/4</span>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{ai.faultType}</span>
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{tr('Tendance', 'Trend')}: {ai.trend}</span>
+                  {ai.retestMonths != null && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{tr('Re-test', 'Re-test')}: {ai.retestMonths} {tr('mois', 'mo')}</span>}
+                </div>
+                <p className="text-gray-700 dark:text-gray-200">{tr(ai.summaryFr, ai.summaryEn)}</p>
+                <ul className="list-disc pl-5 text-gray-600 dark:text-gray-300">{(lang === 'fr' ? ai.recommendationsFr : ai.recommendationsEn || []).map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
+              </div>
+            ) : <p className="text-xs text-gray-400">{tr('Lance l’analyse pour obtenir un diagnostic expert basé sur l’historique et les normes.', 'Run analysis for an expert diagnosis based on history and norms.')}</p>}
+          </div>
+
+          {/* Historique */}
+          <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-gray-400"><tr>
-                <th className="px-2 py-1">{tr('Équipement', 'Asset')}</th><th className="px-2 py-1">{tr('Date', 'Date')}</th>
-                <th className="px-2 py-1">TDCG</th><th className="px-2 py-1">IEEE</th><th className="px-2 py-1">Duval</th><th className="px-2 py-1">{tr('Défaut', 'Fault')}</th>
+              <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
+                <th className="px-2 py-1.5">{tr('Date', 'Date')}</th>{GASES.map(g => <th key={g.key} className="px-2 py-1.5">{g.label}</th>)}<th className="px-2 py-1.5">TDCG</th><th className="px-2 py-1.5">IEEE</th><th className="px-2 py-1.5">Duval</th><th className="px-2 py-1.5"></th>
               </tr></thead>
               <tbody>
-                {history.length === 0 && <tr><td colSpan={6} className="px-2 py-4 text-center text-gray-400">{tr('Aucune analyse.', 'No analysis yet.')}</td></tr>}
-                {history.map(h => (
-                  <tr key={h.id} className="border-t border-gray-100 dark:border-gray-700/50">
-                    <td className="px-2 py-1.5 font-medium">{h.asset_name}</td>
-                    <td className="px-2 py-1.5 text-gray-500">{h.sample_date || (h.created_at || '').slice(0, 10)}</td>
-                    <td className="px-2 py-1.5">{Math.round(h.tdcg || 0)}</td>
-                    <td className="px-2 py-1.5"><span className={`rounded px-1.5 py-0.5 text-xs font-bold ${COND_COLOR[h.condition || 1]}`}>{h.condition}</span></td>
-                    <td className="px-2 py-1.5 font-semibold text-rose-600 dark:text-rose-400">{h.duval}</td>
-                    <td className="px-2 py-1.5 text-gray-600 dark:text-gray-300">{h.fault}</td>
+                {measures.length === 0 && <tr><td colSpan={11} className="px-2 py-4 text-center text-gray-400">{tr('Aucune mesure.', 'No measure.')}</td></tr>}
+                {measures.map(m => (
+                  <tr key={m.id} className="border-t border-gray-100 dark:border-gray-700/50">
+                    <td className="px-2 py-1.5 text-gray-500">{m.sample_date || '—'}{m.source === 'pdf' ? ' 📄' : ''}</td>
+                    {GASES.map(g => <td key={g.key} className="px-2 py-1.5">{(m as any)[g.key] ?? 0}</td>)}
+                    <td className="px-2 py-1.5">{Math.round(m.tdcg || 0)}</td>
+                    <td className="px-2 py-1.5">{m.condition ? <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${COND_COLOR[m.condition]}`}>{m.condition}</span> : '—'}</td>
+                    <td className="px-2 py-1.5 font-semibold text-rose-600 dark:text-rose-400">{m.duval}</td>
+                    <td className="px-2 py-1.5"><button onClick={() => delMeasure(m.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={13} /></button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
