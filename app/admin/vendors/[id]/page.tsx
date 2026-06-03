@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt, Download } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
 import { getVendorFiche, type VendorFiche, isContractActive, projectNextCommission } from '@/lib/affiliateCommissions';
 import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
@@ -70,13 +70,41 @@ export default function VendorFichePage() {
     }
   }
 
+  // Export CSV par vendeur (#70) : releve des commissions + statut de paiement.
+  function exportVendorCSV() {
+    if (!vendor) return;
+    if (!commissions.length) { setNotice('Aucune commission a exporter.'); return; }
+    const payByComm: Record<string, AffiliateCommissionPayment> = {};
+    for (const p of payments) if (p.commission_id) payByComm[p.commission_id] = p;
+    const cell = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const headers = ['Echeance', 'Client', 'Periode debut', 'Periode fin', 'Montant', 'Statut', 'Paye le', 'Methode', 'Reference'];
+    const lines = commissions.map(cm => {
+      const p = payByComm[cm.id];
+      return [cm.due_date || '', cm.tenant_name, cm.period_start || '', cm.period_end || '', cm.amount, cm.status,
+        p?.paid_at ? p.paid_at.slice(0, 10) : '', p?.method || '', p?.reference || ''].map(cell).join(',');
+    });
+    const csv = [headers.join(','), ...lines].join('\n');
+    const a = document.createElement('a');
+    a.href = `data:text/csv;charset=utf-8,﻿${encodeURIComponent(csv)}`;
+    a.download = `commissions-${(vendor.name || vendor.id).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`;
+    a.click();
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <PortalHeader subtitle="Fiche vendeur" />
       <div className="w-full px-4 py-6 lg:px-6">
-        <Link href="/admin/commissions" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400">
-          <ArrowLeft size={16} /> Retour aux commissions
-        </Link>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <Link href="/admin/commissions" className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-blue-600 dark:text-gray-400">
+            <ArrowLeft size={16} /> Retour aux commissions
+          </Link>
+          {vendor && commissions.length > 0 && (
+            <button onClick={exportVendorCSV}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Download size={15} /> Export CSV
+            </button>
+          )}
+        </div>
 
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
