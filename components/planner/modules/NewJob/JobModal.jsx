@@ -3153,7 +3153,7 @@ export function JobModal({
                                                 value={formData.numeroJob}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, numeroJob: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Ex: CS26001P / G25-0101"
+                                                placeholder={L('Ex: CS26001P / G25-0101', 'E.g.: CS26001P / G25-0101')}
                                             />
                                         </div>
 
@@ -3172,7 +3172,7 @@ export function JobModal({
                                                 }}
                                                 onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du client ou projet…"
+                                                placeholder={L('Nom du client ou projet…', 'Client or project name…')}
                                                 autoComplete="off"
                                             />
                                             {clientSuggestions.length > 0 && (
@@ -3229,7 +3229,7 @@ export function JobModal({
                                                 value={formData.nom}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du mandat"
+                                                placeholder={L('Nom du mandat', 'Job name')}
                                                 required
                                             />
                                         </div>
@@ -3243,7 +3243,7 @@ export function JobModal({
                                                 value={formData.lieu}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value, lieuLat: null, lieuLng: null }))}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Adresse / lieu d'intervention"
+                                                placeholder={L("Adresse / lieu d'intervention", 'Address / work site')}
                                                 autoComplete="off"
                                             />
                                             {formData.lieuLat != null && formData.lieuLng != null && (
@@ -3264,7 +3264,7 @@ export function JobModal({
                                                     {/* Carte integree (API Embed) — s'affiche si la cle NEXT_PUBLIC_GOOGLE_MAPS_API_KEY est configuree */}
                                                     {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
                                                         <iframe
-                                                            title="Carte de l'endroit des travaux"
+                                                            title={L("Carte de l'endroit des travaux", 'Map of the work site')}
                                                             className="mt-2 w-full rounded-lg border border-gray-200"
                                                             height="200"
                                                             style={{ border: 0 }}
@@ -3378,9 +3378,9 @@ export function JobModal({
                                                 value={formData.heuresPlanifiees ?? ''}
                                                 onFocus={(e) => e.target.select()}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, heuresPlanifiees: e.target.value }))}
-                                                placeholder="Ex: 36"
+                                                placeholder={L('Ex: 36', 'E.g.: 36')}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                title="Heures totales de travail -> la date de fin se calcule : heures / (heures par jour x nb de personnes)"
+                                                title={L('Heures totales de travail -> la date de fin se calcule : heures / (heures par jour x nb de personnes)', 'Total work hours -> the end date is computed: hours / (hours per day x number of people)')}
                                             />
                                             <p className="mt-1 text-[11px] text-gray-500">{L('Pilote la date de fin (selon heures/jour et nb de personnes).', 'Drives the end date (per daily window and headcount).')}</p>
                                         </div>
@@ -3663,7 +3663,7 @@ export function JobModal({
                                                             }));
                                                         }}
                                                         className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
-                                                        title="Agrandir la section"
+                                                        title={L('Agrandir la section', 'Expand section')}
                                                     >
                                                         <Icon name="chevronDown" size={14} />
                                                     </button>
@@ -3677,7 +3677,7 @@ export function JobModal({
                                                 <input
                                                     value={projectSearch}
                                                     onChange={(e) => setProjectSearch(e.target.value)}
-                                                    placeholder="N° de projet (ex. CS26001P)"
+                                                    placeholder={L('N° de projet (ex. CS26001P)', 'Project no. (e.g. CS26001P)')}
                                                     className="w-44 rounded border border-gray-300 px-2 py-1"
                                                 />
                                                 <button
@@ -3878,7 +3878,7 @@ export function JobModal({
 
                                                                                             {/* Chemin critique */}
                                                                                             {isCritical && (
-                                                                                                <span className="text-xs bg-red-100 text-red-800 px-1 rounded" title="Chemin critique">
+                                                                                                <span className="text-xs bg-red-100 text-red-800 px-1 rounded" title={L('Chemin critique', 'Critical path')}>
                                                                                                     🎯
                                                                                                 </span>
                                                                                             )}
@@ -4584,7 +4584,7 @@ export function JobModal({
                                                 type="button"
                                                 onClick={() => setGanttCompactMode(!ganttCompactMode)}
                                                 className={`px-3 py-1.5 text-sm rounded ${ganttCompactMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                                                title="Mode compact pour l'impression"
+                                                title={L("Mode compact pour l'impression", 'Compact mode for printing')}
                                             >
                                                 📄 {ganttCompactMode ? 'Normale' : 'Compact'}
                                             </button>
@@ -5337,7 +5337,7 @@ export function JobModal({
                                                         type="text"
                                                         value={newSousTraitant}
                                                         onChange={(e) => setNewSousTraitant(e.target.value)}
-                                                        placeholder="Nom du nouveau sous-traitant"
+                                                        placeholder={L('Nom du nouveau sous-traitant', 'New subcontractor name')}
                                                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                         onKeyPress={(e) => e.key === 'Enter' && handleAddSousTraitant()}
                                                     />
@@ -5796,7 +5796,7 @@ export function JobModal({
                                                                                             excludeDay(dateString);
                                                                                         }}
                                                                                         className="text-xs px-2 py-1 bg-red-200 text-red-700 rounded hover:bg-red-300 transition-colors"
-                                                                                        title="Exclure ce jour"
+                                                                                        title={L('Exclure ce jour', 'Exclude this day')}
                                                                                     >
                                                                                         ✕
                                                                                     </button>
@@ -6006,7 +6006,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowPersonnelQuickActions(!showPersonnelQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6112,7 +6112,7 @@ export function JobModal({
                                                                             key={person.id}
                                                                             onClick={() => togglePersonnelForDay(selectedDay, person.id)}
                                                                             className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                                                                            title="Cliquer pour retirer de ce jour"
+                                                                            title={L('Cliquer pour retirer de ce jour', 'Click to remove from this day')}
                                                                         >
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium text-sm">
@@ -6129,7 +6129,7 @@ export function JobModal({
                                                                                         openScheduleModal('personnel', person.id, person);
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                                                                                    title="Personnaliser l'horaire"
+                                                                                    title={L("Personnaliser l'horaire", 'Customize schedule')}
                                                                                 >
                                                                                     🕐
                                                                                 </button>
@@ -6158,7 +6158,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowAvailablePersonnelQuickActions(!showAvailablePersonnelQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6357,7 +6357,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowEquipementQuickActions(!showEquipementQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6463,7 +6463,7 @@ export function JobModal({
                                                                             key={equipement.id}
                                                                             onClick={() => toggleEquipementForDay(selectedDay, equipement.id)}
                                                                             className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                                                                            title="Cliquer pour retirer de ce jour"
+                                                                            title={L('Cliquer pour retirer de ce jour', 'Click to remove from this day')}
                                                                         >
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium text-sm">{equipement.nom}</div>
@@ -6479,7 +6479,7 @@ export function JobModal({
                                                                                         openScheduleModal('equipement', equipement.id, equipement);
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                                                                                    title="Personnaliser l'horaire"
+                                                                                    title={L("Personnaliser l'horaire", 'Customize schedule')}
                                                                                 >
                                                                                     🕐
                                                                                 </button>
@@ -6505,7 +6505,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowAvailableEquipementQuickActions(!showAvailableEquipementQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6891,7 +6891,7 @@ export function JobModal({
                                                                                                     });
                                                                                                 }}
                                                                                                 className="w-full px-1 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                                                                                                title="Revenir aux horaires globaux"
+                                                                                                title={L('Revenir aux horaires globaux', 'Back to global schedules')}
                                                                                             >
                                                                                                 🔄 Global
                                                                                             </button>
