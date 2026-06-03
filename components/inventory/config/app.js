@@ -15,14 +15,20 @@ export const APP_CONFIG = {
   VERSION: '1.0.0'
 };
 
-// Fonction helper pour générer les URLs de scan
+// Fonction helper pour générer les URLs de scan.
+// Pointe vers la page inventaire du tenant (/<tenant>/inventory?id=...), qui rend la fiche produit
+// en lecture seule (ScanPage) quand l'URL contient ?id=. Une caméra/stand ouvre donc la fiche ;
+// dans l'app, on utilise le scanner intégré pour faire des mouvements.
 export const getScanUrl = (itemId, itemCode, departmentCode = null) => {
-  const baseUrl = `${APP_CONFIG.APP_URL}/scan?id=${itemId}&code=${encodeURIComponent(itemCode)}`;
-  // Si un code de département est fourni, l'ajouter pour identifier la succursale spécifique
-  if (departmentCode) {
-    return `${baseUrl}&dept=${encodeURIComponent(departmentCode)}`;
+  const origin = APP_CONFIG.APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  let tenant = 'cerdia';
+  if (typeof window !== 'undefined') {
+    const seg = window.location.pathname.split('/').filter(Boolean);
+    if (seg.length) tenant = seg[0];
   }
-  return baseUrl;
+  let url = `${origin}/${tenant}/inventory?id=${encodeURIComponent(itemId)}&code=${encodeURIComponent(itemCode || '')}`;
+  if (departmentCode) url += `&dept=${encodeURIComponent(departmentCode)}`;
+  return url;
 };
 
 export default APP_CONFIG;

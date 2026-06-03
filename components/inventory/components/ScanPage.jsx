@@ -1,19 +1,30 @@
-// ============== PAGE DE SCAN MOBILE ==============
-// Page optimisée pour mobile permettant d'ajuster l'inventaire via QR code
+// ============== PAGE DE SCAN MOBILE (FICHE PRODUIT — LECTURE SEULE) ==============
+// #56 — Ouverte par une CAMERA / un lecteur "stand" via le QR de l'article.
+// Affiche la fiche du produit : nom, photo, description, PRIX VENDANT et QUANTITE DISPONIBLE.
+// Aucune modification ici. Pour faire un mouvement (entree/sortie), on utilise le scanner
+// INTEGRE de l'application (bouton "Ouvrir dans l'application").
 
 import React, { useState, useEffect } from 'react';
-import {
-  Package,
-  Plus,
-  Minus,
-  CheckCircle,
-  AlertCircle,
-  ArrowLeft,
-  MapPin,
-  Hash
-} from 'lucide-react';
+import { Package, AlertCircle, ArrowLeft, MapPin, Hash, DollarSign, Boxes, Tag } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { supabase } from '../lib/supabase';
+
+// Quantite disponible : champ plat `quantity` sinon somme des localisations.
+function availableQty(item) {
+  if (typeof item.quantity === 'number') return item.quantity;
+  const locs = item.locations || item.item_locations || [];
+  if (Array.isArray(locs) && locs.length) {
+    return locs.reduce((s, l) => s + (Number(l.quantity ?? l.qty ?? 0) || 0), 0);
+  }
+  return Number(item.quantity || 0) || 0;
+}
+function firstPhoto(item) {
+  const p = (item.photos && item.photos[0]) || item.photo || null;
+  if (!p) return null;
+  return typeof p === 'string' ? p : (p.url || p.dataUrl || p.src || null);
+}
+const money = (n) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 
 export function ScanPage() {
   const { t } = useLanguage();
@@ -21,109 +32,40 @@ export function ScanPage() {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [quantity, setQuantity] = useState(1);
-  const [action, setAction] = useState('add'); // 'add' ou 'remove'
-  const [success, setSuccess] = useState(false);
+
+  const tenant = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
 
   useEffect(() => {
-    // Récupérer les paramètres de l'URL
     const params = new URLSearchParams(window.location.search);
     const itemId = params.get('id');
     const itemCode = params.get('code');
+    if (!itemId && !itemCode) { setError(t('scanner.itemNotFound')); setLoading(false); return; }
 
-    if (!itemId && !itemCode) {
+    const findIn = (list) => (list || []).find(i => String(i.id) === String(itemId) || (itemCode && i.code === itemCode));
+
+    (async () => {
+      // 1) Source de verite : instantane inventory_state par tenant.
+      try {
+        const { data, error: e } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
+        if (!e && data && data.data && Array.isArray(data.data.items)) {
+          const found = findIn(data.data.items);
+          if (found) { setItem(found); setLoading(false); return; }
+        }
+      } catch (err) {
+        console.warn('inventory_state indisponible:', err?.message || err);
+      }
+      // 2) Repli cache local.
+      try {
+        const saved = localStorage.getItem('c-secur360-inventory-items');
+        if (saved) {
+          const found = findIn(JSON.parse(saved));
+          if (found) { setItem(found); setLoading(false); return; }
+        }
+      } catch { /* ignore */ }
       setError(t('scanner.itemNotFound'));
       setLoading(false);
-      return;
-    }
-
-    // Charger l'article depuis localStorage
-    loadItem(itemId, itemCode);
-  }, []);
-
-  const loadItem = async (id, code) => {
-    try {
-      // Essayer d'abord depuis Supabase
-      try {
-        const { itemsAPI } = await import('../lib/supabase');
-        const supabaseItem = await itemsAPI.getById(id);
-
-        if (supabaseItem) {
-          // Transformer le format Supabase
-          const transformedItem = {
-            ...supabaseItem,
-            locations: supabaseItem.item_locations || []
-          };
-          setItem(transformedItem);
-          setLoading(false);
-          return;
-        }
-      } catch (supabaseError) {
-        console.warn('Supabase non disponible, utilisation de localStorage:', supabaseError);
-      }
-
-      // Fallback sur localStorage
-      const storedInventory = localStorage.getItem('c-secur360-inventory');
-      if (!storedInventory) {
-        setError(t('scanner.itemNotFound'));
-        setLoading(false);
-        return;
-      }
-
-      const inventory = JSON.parse(storedInventory);
-      const foundItem = inventory.find(i => i.id === id || i.code === code);
-
-      if (!foundItem) {
-        setError(t('scanner.itemNotFound'));
-        setLoading(false);
-        return;
-      }
-
-      setItem(foundItem);
-      setLoading(false);
-    } catch (err) {
-      setError(t('common.error') + ': ' + err.message);
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const newQuantity = action === 'add'
-        ? item.quantity + quantity
-        : Math.max(0, item.quantity - quantity);
-
-      // Essayer de mettre à jour dans Supabase d'abord
-      try {
-        const { itemsAPI } = await import('../lib/supabase');
-        await itemsAPI.update(item.id, { quantity: newQuantity });
-      } catch (supabaseError) {
-        console.warn('Mise à jour Supabase échouée, utilisation de localStorage:', supabaseError);
-      }
-
-      // Mettre à jour localStorage également
-      const storedInventory = localStorage.getItem('c-secur360-inventory');
-      if (storedInventory) {
-        const inventory = JSON.parse(storedInventory);
-        const updatedInventory = inventory.map(i => {
-          if (i.id === item.id) {
-            return { ...i, quantity: newQuantity };
-          }
-          return i;
-        });
-        localStorage.setItem('c-secur360-inventory', JSON.stringify(updatedInventory));
-      }
-
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        loadItem(item.id, item.code);
-        setQuantity(1);
-      }, 2000);
-    } catch (err) {
-      setError(t('common.error') + ': ' + err.message);
-    }
-  };
+    })();
+  }, [tenant, t]);
 
   if (loading) {
     return (
@@ -136,7 +78,7 @@ export function ScanPage() {
     );
   }
 
-  if (error) {
+  if (error || !item) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-md w-full">
@@ -144,154 +86,78 @@ export function ScanPage() {
             <AlertCircle className="text-red-500" size={32} />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('common.error')}</h2>
           </div>
-          <p className="text-gray-700 dark:text-gray-300 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.href = '/'}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors"
-          >
-            <ArrowLeft size={20} />
-            {t('actions.backToHome')}
-          </button>
+          <p className="text-gray-700 dark:text-gray-300 mb-4">{error || t('scanner.itemNotFound')}</p>
+          <a href={`/${tenant}/inventory`} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-semibold transition-colors">
+            <ArrowLeft size={20} /> {t('actions.backToInventory')}
+          </a>
         </div>
       </div>
     );
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8 max-w-md w-full text-center">
-          <CheckCircle className="text-green-500 mx-auto mb-4" size={64} />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('scanner.success')}!
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('scanner.successMessage')}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const qty = availableQty(item);
+  const photo = firstPhoto(item);
+  const low = item.minQuantity != null && qty <= Number(item.minQuantity);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="max-w-md mx-auto py-8">
-        {/* En-tête */}
-        <div className="bg-gradient-to-r from-slate-700 to-red-600 text-white rounded-t-xl p-6 shadow-xl">
-          <div className="flex items-center gap-3 mb-2">
-            <Package size={32} />
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">{item.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Hash size={16} />
-                <span className="text-sm opacity-90">{t('common.codeWith')} {item.code}</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      <div className="max-w-md mx-auto py-6">
+        {/* En-tete */}
+        <div className="bg-gradient-to-r from-slate-700 to-blue-700 text-white rounded-t-2xl p-5 shadow-xl">
+          <div className="flex items-center gap-3">
+            <Package size={28} />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold truncate">{item.name}</h1>
+              <div className="flex items-center gap-1.5 mt-0.5 opacity-90">
+                <Hash size={14} /><span className="text-sm">{item.code || '—'}</span>
+                {item.category && <><span className="opacity-50">·</span><Tag size={13} /><span className="text-xs">{item.category}</span></>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Contenu */}
-        <div className="bg-white dark:bg-gray-800 rounded-b-xl shadow-xl p-6 space-y-6">
-          {/* Informations actuelles */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border-2 border-blue-200 dark:border-blue-800">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('articles.currentInventory')}
-            </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">{t('articles.quantity')}:</span>
-                <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {item.quantity}
-                </span>
-              </div>
-              {item.location && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <MapPin size={14} />
-                  <span>{item.location}</span>
-                </div>
-              )}
+        <div className="bg-white dark:bg-gray-800 rounded-b-2xl shadow-xl p-5 space-y-4">
+          {/* Photo */}
+          {photo && (
+            <img src={photo} alt={item.name} className="w-full h-44 object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
+          )}
+
+          {/* Prix vendant + Quantite disponible */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+              <DollarSign className="mx-auto text-emerald-600 dark:text-emerald-400" size={18} />
+              <div className="mt-1 text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{money(item.salePrice ?? item.sale_price)}</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">{t('scanner.salePrice') || 'Prix vendant'}</div>
+            </div>
+            <div className={`rounded-xl border-2 p-3 text-center ${low ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20' : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'}`}>
+              <Boxes className={`mx-auto ${low ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`} size={18} />
+              <div className={`mt-1 text-lg font-extrabold ${low ? 'text-red-700 dark:text-red-300' : 'text-blue-700 dark:text-blue-300'}`}>{qty} {item.unit || ''}</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">{t('scanner.available') || 'Disponible'}{low ? ' ⚠️' : ''}</div>
             </div>
           </div>
 
-          {/* Sélection de l'action */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('scanner.action')}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setAction('add')}
-                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-semibold transition-all ${
-                  action === 'add'
-                    ? 'bg-green-500 border-green-600 text-white shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-green-400'
-                }`}
-              >
-                <Plus size={24} />
-                {t('actions.addAction')}
-              </button>
-              <button
-                onClick={() => setAction('remove')}
-                className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-semibold transition-all ${
-                  action === 'remove'
-                    ? 'bg-red-500 border-red-600 text-white shadow-lg scale-105'
-                    : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-red-400'
-                }`}
-              >
-                <Minus size={24} />
-                {t('actions.removeAction')}
-              </button>
+          {/* Description */}
+          {item.description && (
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-sm text-gray-700 dark:text-gray-300">
+              {item.description}
             </div>
-          </div>
+          )}
 
-          {/* Quantité */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {t('common.quantity')}
-            </h3>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="p-2 sm:p-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors flex-shrink-0"
-              >
-                <Minus size={20} className="sm:w-6 sm:h-6" />
-              </button>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="flex-1 min-w-0 text-center text-2xl sm:text-3xl font-bold bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg py-2 sm:py-3 focus:outline-none focus:border-slate-700"
-              />
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="p-2 sm:p-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors flex-shrink-0"
-              >
-                <Plus size={20} className="sm:w-6 sm:h-6" />
-              </button>
+          {/* Emplacement(s) */}
+          {(item.location || (item.locations && item.locations.length > 0)) && (
+            <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <MapPin size={15} className="mt-0.5 flex-shrink-0" />
+              <span>
+                {item.location || (item.locations || []).map(l => `${l.name || l.department || ''}${(l.quantity ?? l.qty) != null ? ` (${l.quantity ?? l.qty})` : ''}`).filter(Boolean).join(' · ')}
+              </span>
             </div>
-          </div>
+          )}
 
-          {/* Bouton de validation */}
-          <button
-            onClick={handleSubmit}
-            className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-lg font-bold text-lg text-white shadow-lg transition-all ${
-              action === 'add'
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
-                : 'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700'
-            }`}
-          >
-            <CheckCircle size={24} />
-            {action === 'add' ? t('actions.addAction') : t('actions.removeAction')} {quantity} {item.unit || t('articles.units.units')}
-          </button>
-
-          {/* Lien retour */}
-          <button
-            onClick={() => window.location.href = '/'}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold transition-colors"
-          >
-            <ArrowLeft size={20} />
-            {t('actions.backToInventory')}
-          </button>
+          {/* Action : ouvrir dans l'app pour faire un mouvement */}
+          <a href={`/${tenant}/inventory`} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-semibold transition-colors">
+            <ArrowLeft size={18} /> {t('actions.backToInventory')}
+          </a>
+          <p className="text-center text-[11px] text-gray-400">{t('scanner.readOnlyHint') || 'Fiche en lecture seule. Pour une entrée/sortie, utilisez le scanner dans l’application.'}</p>
         </div>
       </div>
     </div>
