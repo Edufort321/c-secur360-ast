@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
 import { PortalHeader } from '@/components/PortalHeader';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useRealtime } from '@/lib/useRealtime';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -23,26 +25,73 @@ interface IncidentRow {
   data: { incidentDate?: string; reportedBy?: string; description?: string; address?: string; severityLevel?: number };
 }
 
-const STATUS_LABEL = { draft: 'Brouillon', submitted: 'Soumis', closed: 'Fermé' };
-const STATUS_COLOR = {
+const STATUS_COLOR: Record<string, string> = {
   draft:     'bg-gray-100 text-gray-600',
   submitted: 'bg-green-100 text-green-700',
   closed:    'bg-slate-100 text-slate-600',
 };
 
-// Badge couleur par severite (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident)
-const SEVERITY_META: Record<number, { label: string; color: string }> = {
-  1: { label: 'Mineur',   color: 'bg-green-100 text-green-700' },
-  2: { label: 'Faible',   color: 'bg-lime-100 text-lime-700' },
-  3: { label: 'Modéré',   color: 'bg-orange-100 text-orange-700' },
-  4: { label: 'Grave',    color: 'bg-red-100 text-red-700' },
-  5: { label: 'Critique', color: 'bg-red-200 text-red-800' },
+// Couleur par severite (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident)
+const SEVERITY_COLOR: Record<number, string> = {
+  1: 'bg-green-100 text-green-700',
+  2: 'bg-lime-100 text-lime-700',
+  3: 'bg-orange-100 text-orange-700',
+  4: 'bg-red-100 text-red-700',
+  5: 'bg-red-200 text-red-800',
 };
+
+// ── Bilingue (connecte au header FR/EN via useLanguage) ──────────────────────
+const T = {
+  fr: {
+    title: 'Presque-accidents',
+    subtitle: "Signalement d'evenements sans blessure",
+    newReport: 'Nouveau signalement',
+    daysLabel: 'jours sans presque-accident',
+    infoTitle: 'Pourquoi signaler les presque-accidents ?',
+    infoBodyA: "Pour chaque accident grave, on estime qu'il y a 29 incidents mineurs et 300 situations dangereuses non signalees (Triangle de Heinrich). Signaler les presque-accidents permet de corriger les risques ",
+    infoEm: 'avant',
+    infoBodyB: " qu'un accident survienne.",
+    resetTitle: 'Reinitialiser le compteur',
+    resetBody: "Ceci enregistre aujourd'hui comme date du dernier presque-accident et remet le compteur a zero. Le record precedent sera conserve.",
+    cancel: 'Annuler', confirm: 'Confirmer',
+    total: 'Total', drafts: 'Brouillons', submitted: 'Soumis', highSev: 'Severite elevee (4-5)',
+    searchPh: 'Rechercher...', allSeverities: 'Toutes severites', allStatuses: 'Tous statuts',
+    exportTitle: 'Exporter la liste filtree en CSV',
+    loading: 'Chargement...', noResult: 'Aucun resultat', empty: 'Aucun signalement enregistre',
+    createFirst: 'Creer le premier signalement',
+    statusLabel: { draft: 'Brouillon', submitted: 'Soumis', closed: 'Ferme' } as Record<string, string>,
+    severityLabel: { 1: 'Mineur', 2: 'Faible', 3: 'Modere', 4: 'Grave', 5: 'Critique' } as Record<number, string>,
+    locale: 'fr-CA',
+  },
+  en: {
+    title: 'Near misses',
+    subtitle: 'Reporting of events without injury',
+    newReport: 'New report',
+    daysLabel: 'days without near miss',
+    infoTitle: 'Why report near misses?',
+    infoBodyA: 'For every serious accident, an estimated 29 minor incidents and 300 unreported hazardous situations occur (Heinrich triangle). Reporting near misses helps correct risks ',
+    infoEm: 'before',
+    infoBodyB: ' an accident happens.',
+    resetTitle: 'Reset the counter',
+    resetBody: 'This records today as the date of the last near miss and resets the counter to zero. The previous record is kept.',
+    cancel: 'Cancel', confirm: 'Confirm',
+    total: 'Total', drafts: 'Drafts', submitted: 'Submitted', highSev: 'High severity (4-5)',
+    searchPh: 'Search...', allSeverities: 'All severities', allStatuses: 'All statuses',
+    exportTitle: 'Export the filtered list to CSV',
+    loading: 'Loading...', noResult: 'No result', empty: 'No report recorded',
+    createFirst: 'Create the first report',
+    statusLabel: { draft: 'Draft', submitted: 'Submitted', closed: 'Closed' } as Record<string, string>,
+    severityLabel: { 1: 'Minor', 2: 'Low', 3: 'Moderate', 4: 'Serious', 5: 'Critical' } as Record<number, string>,
+    locale: 'en-CA',
+  },
+} as const;
 
 export default function NearMissPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params.tenant as string;
+  const { lang } = useLanguage();
+  const t = T[lang];
 
   const [reports, setReports] = useState<IncidentRow[]>([]);
   const [counter, setCounter] = useState<DayCounter | null>(null);
@@ -69,6 +118,8 @@ export default function NearMissPage() {
   }, [tenant]);
 
   useEffect(() => { load(); }, [load]);
+  // Temps reel : recharge a tout changement sur incident_reports
+  useRealtime(['incident_reports'], tenant, load);
 
   async function handleReset() {
     if (!supabase) return;
@@ -121,7 +172,7 @@ export default function NearMissPage() {
     const lines = filtered.map(r => [
       r.report_number,
       r.data?.severityLevel ?? '',
-      STATUS_LABEL[r.status],
+      t.statusLabel[r.status],
       r.data?.incidentDate ?? '',
       r.data?.reportedBy ?? '',
       r.data?.address ?? '',
@@ -136,6 +187,8 @@ export default function NearMissPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const filtersActive = !!search || severityFilter !== 'all' || statusFilter !== 'all';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -167,9 +220,9 @@ export default function NearMissPage() {
                 <div>
                   <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <Shield size={22} className="text-orange-500" />
-                    Presque-accidents
+                    {t.title}
                   </h1>
-                  <p className="text-xs text-gray-400">Signalement d'événements sans blessure</p>
+                  <p className="text-xs text-gray-400">{t.subtitle}</p>
                 </div>
               </div>
               <button
@@ -177,7 +230,7 @@ export default function NearMissPage() {
                 className="flex items-center gap-1.5 text-sm px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium"
               >
                 <Plus size={15} />
-                Nouveau signalement
+                {t.newReport}
               </button>
             </div>
           </div>
@@ -186,7 +239,7 @@ export default function NearMissPage() {
             {/* Day counter */}
             <div className="max-w-xs">
               <DaySafetyCounter
-                label="jours sans presque-accident"
+                label={t.daysLabel}
                 lastDate={counter?.last_near_miss_date ?? null}
                 recordDays={counter?.near_miss_record_days ?? 0}
                 color="orange"
@@ -198,9 +251,9 @@ export default function NearMissPage() {
             <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 flex items-start gap-3">
               <Shield size={18} className="text-orange-600 mt-0.5 shrink-0" />
               <div className="text-sm text-orange-800">
-                <strong>Pourquoi signaler les presque-accidents ?</strong>
+                <strong>{t.infoTitle}</strong>
                 <p className="mt-1 text-xs text-orange-700">
-                  Pour chaque accident grave, on estime qu'il y a 29 incidents mineurs et 300 situations dangereuses non signalées (Triangle de Heinrich). Signaler les presque-accidents permet de corriger les risques <em>avant</em> qu'un accident survienne.
+                  {t.infoBodyA}<em>{t.infoEm}</em>{t.infoBodyB}
                 </p>
               </div>
             </div>
@@ -210,16 +263,14 @@ export default function NearMissPage() {
               <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
                   <Shield className="text-orange-500 mb-3" size={32} />
-                  <h3 className="text-base font-semibold text-gray-900 mb-2">Réinitialiser le compteur</h3>
-                  <p className="text-sm text-gray-500 mb-5">
-                    Ceci enregistre aujourd'hui comme date du dernier presque-accident et remet le compteur à zéro. Le record précédent sera conservé.
-                  </p>
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">{t.resetTitle}</h3>
+                  <p className="text-sm text-gray-500 mb-5">{t.resetBody}</p>
                   <div className="flex gap-3 justify-end">
                     <button onClick={() => setResetConfirm(false)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-600">
-                      Annuler
+                      {t.cancel}
                     </button>
                     <button onClick={handleReset} className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg font-medium">
-                      Confirmer
+                      {t.confirm}
                     </button>
                   </div>
                 </div>
@@ -229,10 +280,10 @@ export default function NearMissPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Total', value: reports.length, color: 'text-gray-700' },
-                { label: 'Brouillons', value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
-                { label: 'Soumis', value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
-                { label: 'Sévérité élevée (4-5)', value: reports.filter(r => (r.data?.severityLevel ?? 0) >= 4).length, color: 'text-red-600' },
+                { label: t.total, value: reports.length, color: 'text-gray-700' },
+                { label: t.drafts, value: reports.filter(r => r.status === 'draft').length, color: 'text-yellow-600' },
+                { label: t.submitted, value: reports.filter(r => r.status === 'submitted').length, color: 'text-green-600' },
+                { label: t.highSev, value: reports.filter(r => (r.data?.severityLevel ?? 0) >= 4).length, color: 'text-red-600' },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                   <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
@@ -250,7 +301,7 @@ export default function NearMissPage() {
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Rechercher…"
+                    placeholder={t.searchPh}
                     className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
@@ -258,32 +309,30 @@ export default function NearMissPage() {
                   value={severityFilter}
                   onChange={e => setSeverityFilter(e.target.value as typeof severityFilter)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  aria-label="Filtrer par sévérité"
+                  aria-label="Severite"
                 >
-                  <option value="all">Toutes sévérités</option>
-                  <option value="5">5 · Critique</option>
-                  <option value="4">4 · Grave</option>
-                  <option value="3">3 · Modéré</option>
-                  <option value="2">2 · Faible</option>
-                  <option value="1">1 · Mineur</option>
+                  <option value="all">{t.allSeverities}</option>
+                  {[5, 4, 3, 2, 1].map(n => (
+                    <option key={n} value={String(n)}>{n} · {t.severityLabel[n]}</option>
+                  ))}
                 </select>
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  aria-label="Filtrer par statut"
+                  aria-label="Statut"
                 >
-                  <option value="all">Tous statuts</option>
-                  <option value="draft">Brouillon</option>
-                  <option value="submitted">Soumis</option>
-                  <option value="closed">Fermé</option>
+                  <option value="all">{t.allStatuses}</option>
+                  <option value="draft">{t.statusLabel.draft}</option>
+                  <option value="submitted">{t.statusLabel.submitted}</option>
+                  <option value="closed">{t.statusLabel.closed}</option>
                 </select>
                 <button
                   type="button"
                   onClick={exportCsv}
                   disabled={filtered.length === 0}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Exporter la liste filtrée en CSV"
+                  title={t.exportTitle}
                 >
                   <Download size={15} />
                   CSV
@@ -291,19 +340,17 @@ export default function NearMissPage() {
               </div>
 
               {loading ? (
-                <div className="py-16 text-center text-sm text-gray-400">Chargement…</div>
+                <div className="py-16 text-center text-sm text-gray-400">{t.loading}</div>
               ) : filtered.length === 0 ? (
                 <div className="py-16 text-center">
                   <Shield size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-sm text-gray-400">
-                    {(search || severityFilter !== 'all' || statusFilter !== 'all') ? 'Aucun résultat' : 'Aucun signalement enregistré'}
-                  </p>
-                  {!search && severityFilter === 'all' && statusFilter === 'all' && (
+                  <p className="text-sm text-gray-400">{filtersActive ? t.noResult : t.empty}</p>
+                  {!filtersActive && (
                     <button
                       onClick={() => setActiveReport('new')}
                       className="mt-4 text-sm text-orange-600 hover:underline"
                     >
-                      Créer le premier signalement
+                      {t.createFirst}
                     </button>
                   )}
                 </div>
@@ -321,13 +368,13 @@ export default function NearMissPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <span className="text-sm font-semibold text-gray-900">{r.report_number}</span>
-                          {r.data?.severityLevel && SEVERITY_META[r.data.severityLevel] && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${SEVERITY_META[r.data.severityLevel].color}`}>
-                              {r.data.severityLevel} · {SEVERITY_META[r.data.severityLevel].label}
+                          {r.data?.severityLevel && SEVERITY_COLOR[r.data.severityLevel] && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${SEVERITY_COLOR[r.data.severityLevel]}`}>
+                              {r.data.severityLevel} · {t.severityLabel[r.data.severityLevel]}
                             </span>
                           )}
                           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLOR[r.status]}`}>
-                            {STATUS_LABEL[r.status]}
+                            {t.statusLabel[r.status]}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 truncate">
@@ -338,7 +385,7 @@ export default function NearMissPage() {
                       <div className="flex items-center gap-1 text-gray-400 shrink-0">
                         <Clock size={13} />
                         <span className="text-xs">
-                          {new Date(r.created_at).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
+                          {new Date(r.created_at).toLocaleDateString(t.locale, { month: 'short', day: 'numeric' })}
                         </span>
                         <ChevronRight size={15} className="ml-1" />
                       </div>
