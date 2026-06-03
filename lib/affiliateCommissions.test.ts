@@ -1,9 +1,30 @@
 // Tests unitaires des helpers de commissions d'affiliation (#63).
 // fetch simule ; aucune dependance serveur/DB. Lancer : npm test
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { listCommissions, getVendorFiche, isContractActive } from './affiliateCommissions';
+import { listCommissions, getVendorFiche, isContractActive, yearsElapsed, indexedAmount, projectNextCommission } from './affiliateCommissions';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+describe('indexation inflation (#70)', () => {
+  it('yearsElapsed compte les annees revolues a la date anniversaire', () => {
+    expect(yearsElapsed('2020-06-15', '2024-06-15')).toBe(4);   // pile l'anniversaire
+    expect(yearsElapsed('2020-06-15', '2024-06-14')).toBe(3);   // veille -> pas encore
+    expect(yearsElapsed('2020-06-15', '2020-06-15')).toBe(0);
+    expect(yearsElapsed(null, '2024-01-01')).toBe(0);
+  });
+
+  it('indexedAmount compose l\'inflation et arrondit au cent', () => {
+    expect(indexedAmount(100, 0, 5)).toBe(100);        // 0 % -> inchange
+    expect(indexedAmount(100, 10, 1)).toBe(110);
+    expect(indexedAmount(100, 10, 2)).toBe(121);
+    expect(indexedAmount(200, 2.5, 0)).toBe(200);      // 0 periode -> base
+  });
+
+  it('projectNextCommission indexe d\'une periode', () => {
+    expect(projectNextCommission(1000, 3)).toBe(1030);
+    expect(projectNextCommission(0, 5)).toBe(0);
+  });
+});
 
 describe('isContractActive', () => {
   it('vrai seulement si le contrat est signe', () => {

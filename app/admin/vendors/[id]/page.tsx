@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Loader2, UserCheck, Mail, Phone, FileSignature, CheckCircle2, FileText, Ban, Wallet, BadgeCheck, Receipt } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { getVendorFiche, type VendorFiche, isContractActive } from '@/lib/affiliateCommissions';
+import { getVendorFiche, type VendorFiche, isContractActive, projectNextCommission } from '@/lib/affiliateCommissions';
 import { listPayments, markCommissionPaid, summarizePayments, type AffiliateCommissionPayment } from '@/lib/affiliatePayments';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
 
@@ -50,6 +50,12 @@ export default function VendorFichePage() {
   const commissions = data?.commissions || [];
   const activeCount = clients.filter(c => isContractActive(c.contract)).length;
   const totals = useMemo(() => summarizePayments(commissions, payments), [commissions, payments]);
+  // Derniere commission connue par client (pour la projection indexee a l'inflation, #70).
+  const latestByTenant = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of commissions) m[c.tenant_id] = Number(c.amount) || 0; // commissions triees par echeance croissante -> la derniere ecrase
+    return m;
+  }, [commissions]);
 
   async function pay(commissionId: string, label: string) {
     setPayingId(commissionId); setError(null);
@@ -128,6 +134,7 @@ export default function VendorFichePage() {
                       <tr className="border-b border-gray-100 text-left text-xs font-semibold text-gray-500 dark:border-gray-700">
                         <th className="px-4 py-2">Client</th>
                         <th className="px-4 py-2 text-right">Commission</th>
+                        <th className="px-4 py-2 text-right">Prochaine (indexee)</th>
                         <th className="px-4 py-2">Debut</th>
                         <th className="px-4 py-2 text-center">Contrat</th>
                         <th className="px-4 py-2"></th>
@@ -136,10 +143,18 @@ export default function VendorFichePage() {
                     <tbody>
                       {clients.map(c => {
                         const b = contractBadge(c.contract?.status);
+                        const infl = Number(c.contract?.inflation_pct) || 0;
+                        const base = latestByTenant[c.tenant_id] || 0;
+                        const projected = infl > 0 && base > 0 ? projectNextCommission(base, infl) : 0;
                         return (
                           <tr key={c.tenant_id} className="border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/30">
                             <td className="px-4 py-2.5 font-medium">{c.tenant_name}</td>
                             <td className="px-4 py-2.5 text-right">{c.contract ? `${Number(c.contract.commission_pct) || 0} %` : '—'}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              {projected > 0 ? (
+                                <span title={`Indexee +${infl} % sur ${money(base)}`}>{money(projected)} <span className="text-xs text-emerald-600">+{infl}%</span></span>
+                              ) : <span className="text-gray-400">—</span>}
+                            </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-400">{fmtDate(c.contract?.start_date || c.created_at)}</td>
                             <td className="px-4 py-2.5 text-center">
                               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${b.cls}`}><b.Icon size={12} /> {b.label}</span>

@@ -49,3 +49,32 @@ export async function getVendorFiche(vendorId: string): Promise<VendorFiche> {
 
 /** Un contrat est « actif » lorsqu'il est signe. */
 export const isContractActive = (c: AffiliateContract | null | undefined): boolean => c?.status === 'signe';
+
+// ─── Indexation a l'inflation (#70) ─────────────────────────────────────────
+// La commission d'un contrat indexe est majoree chaque annee a la date anniversaire de sa creation.
+
+/** Nombre d'annees revolues entre une date de debut et une date de reference (defaut : aujourd'hui). */
+export function yearsElapsed(startDate?: string | null, asOf?: string): number {
+  if (!startDate) return 0;
+  const start = new Date(startDate + (String(startDate).length === 10 ? 'T00:00:00' : ''));
+  const ref = asOf ? new Date(asOf + (String(asOf).length === 10 ? 'T00:00:00' : '')) : new Date();
+  if (isNaN(start.getTime()) || isNaN(ref.getTime())) return 0;
+  let y = ref.getFullYear() - start.getFullYear();
+  const beforeAnniv = (ref.getMonth() < start.getMonth()) ||
+    (ref.getMonth() === start.getMonth() && ref.getDate() < start.getDate());
+  if (beforeAnniv) y -= 1;
+  return Math.max(0, y);
+}
+
+/** Montant indexe : base x (1 + inflation%)^periodes, arrondi au cent. */
+export function indexedAmount(base: number, inflationPct: number, periods: number): number {
+  const b = Number(base) || 0;
+  const r = (Number(inflationPct) || 0) / 100;
+  const n = Math.max(0, Math.floor(periods));
+  return Math.round(b * Math.pow(1 + r, n) * 100) / 100;
+}
+
+/** Projection de la prochaine commission annuelle = montant courant indexe d'une periode. */
+export function projectNextCommission(currentAmount: number, inflationPct: number): number {
+  return indexedAmount(currentAmount, inflationPct, 1);
+}
