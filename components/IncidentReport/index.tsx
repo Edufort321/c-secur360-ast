@@ -923,6 +923,24 @@ export default function IncidentReportForm({
     if (reportId) loadReport(reportId);
   }, [reportId]);
 
+  // Nouveau rapport : pre-remplir le declarant avec l'utilisateur connecte (/api/auth/me).
+  // reporter_name doit etre rempli pour que le panneau d'anomalies attribue le signalement.
+  useEffect(() => {
+    if (reportId) return; // edition : ne pas ecraser le declarant existant
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return;
+        const { user } = await res.json();
+        if (active && user?.name) {
+          setReport(prev => (prev.reportedBy ? prev : { ...prev, reportedBy: user.name }));
+        }
+      } catch { /* non bloquant */ }
+    })();
+    return () => { active = false; };
+  }, [reportId]);
+
   async function loadReport(id: string) {
     if (!supabase) return;
     const { data } = await supabase
