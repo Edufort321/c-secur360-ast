@@ -306,6 +306,7 @@ export function SuccursaleModal({
                                     </label>
                                     <input
                                         type="number"
+                                        onFocus={(e) => e.target.select()}
                                         min="0"
                                         value={formData.nombreEmployes}
                                         onChange={(e) => handleInputChange('nombreEmployes', e.target.value)}

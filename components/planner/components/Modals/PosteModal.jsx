@@ -211,6 +211,7 @@ export function PosteModal({
                             </label>
                             <input
                                 type="number"
+                                onFocus={(e) => e.target.select()}
                                 name="salaireMin"
                                 value={formData.salaireMin}
                                 onChange={handleInputChange}
@@ -224,6 +225,7 @@ export function PosteModal({
                             </label>
                             <input
                                 type="number"
+                                onFocus={(e) => e.target.select()}
                                 name="salaireMax"
                                 value={formData.salaireMax}
                                 onChange={handleInputChange}

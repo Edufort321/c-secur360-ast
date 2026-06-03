@@ -533,6 +533,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                 </label>
                                 <input
                                     type="number"
+                                    onFocus={(e) => e.target.select()}
                                     value={formData.salaire}
                                     onChange={(e) => handleInputChange('salaire', e.target.value)}
                                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
