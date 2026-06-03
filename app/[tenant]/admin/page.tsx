@@ -5849,6 +5849,9 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
+  // #59 Temps réel : rafraîchit silencieusement la liste des factures (commerce_invoices, publié en 109).
+  useRealtime(['commerce_invoices'], tenant, () => { getInvoices(tenant).then(setInvoices).catch(() => { /* noop */ }); });
+
   const totals = computeInvoiceTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
 
