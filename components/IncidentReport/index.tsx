@@ -7,7 +7,7 @@ import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
   CheckSquare, Scale, PenLine, ArrowLeft, Save, Send, Plus,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Shield,
-  RotateCcw, CheckCircle, Clock, Car, Building2, Activity,
+  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer,
 } from 'lucide-react';
 import { useLanguage, type Lang } from '@/contexts/LanguageContext';
 
@@ -496,6 +496,7 @@ const TR = {
     ac: { title: 'Actions correctives', add: 'Ajouter', none: 'Aucune action corrective enregistrée', actionN: 'Action', describePh: "Décrire l'action corrective…", responsible: 'Responsable', dueDate: 'Échéance', status: 'Statut', remove: 'Retirer' },
     c: { notifTitle: 'Notification réglementaire', declDelay: 'Délai de déclaration', formLabel: 'Formulaire', notifiedYes: 'Autorité notifiée', notifiedNo: 'Autorité non encore notifiée', notifDate: 'Date de notification', refNum: 'Numéro de référence', refNumPh: 'Ex : CNESST-2026-XXXXX' },
     ap: { title: 'Approbation', supervisor: 'Superviseur immédiat', hse: 'Responsable HSE', mgmt: 'Direction', approved: 'Approuvé', pending: 'En attente', name: 'Nom', date: 'Date' },
+    pr: { btn: 'Imprimer / PDF', docTitle: "Rapport d'incident", generated: 'Document généré le', reqTitle: 'Exigences réglementaires', notifiedOn: 'Autorité notifiée le', refLabel: 'Référence', signatures: 'Signatures', signedOn: 'Signé le', notSigned: 'Non signé', none: '—', popupBlocked: 'Veuillez autoriser les fenetres contextuelles pour imprimer.' },
   },
   en: {
     back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
@@ -523,8 +524,120 @@ const TR = {
     ac: { title: 'Corrective actions', add: 'Add', none: 'No corrective action recorded', actionN: 'Action', describePh: 'Describe the corrective action…', responsible: 'Responsible', dueDate: 'Due date', status: 'Status', remove: 'Remove' },
     c: { notifTitle: 'Regulatory notification', declDelay: 'Reporting deadline', formLabel: 'Form', notifiedYes: 'Authority notified', notifiedNo: 'Authority not yet notified', notifDate: 'Notification date', refNum: 'Reference number', refNumPh: 'e.g. CNESST-2026-XXXXX' },
     ap: { title: 'Approval', supervisor: 'Immediate supervisor', hse: 'HSE manager', mgmt: 'Management', approved: 'Approved', pending: 'Pending', name: 'Name', date: 'Date' },
+    pr: { btn: 'Print / PDF', docTitle: 'Incident report', generated: 'Document generated on', reqTitle: 'Regulatory requirements', notifiedOn: 'Authority notified on', refLabel: 'Reference', signatures: 'Signatures', signedOn: 'Signed on', notSigned: 'Not signed', none: '—', popupBlocked: 'Please allow pop-ups to print.' },
   },
 } as const;
+
+const TREATMENT_LABEL: Record<string, string> = {
+  none: 'Aucun traitement', first_aid: 'Premiers soins sur place', clinic: 'Clinique / médecin',
+  hospital: 'Hospitalisation', emergency: 'Urgence / ambulance',
+};
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  pending: 'En attente', in_progress: 'En cours', completed: 'Complété',
+};
+
+// ── #71 Export reglementaire : document imprimable (print -> PDF navigateur) ──
+function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: Lang, generatedOn: string): string {
+  const t = TR[lang];
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+  const none = t.pr.none;
+  const v = (s: unknown) => { const e = esc(s); return e || none; };
+  const typeLabel = report.incidentType === 'near_miss' ? tl(lang, 'Passé proche')
+    : tl(lang, { accident: 'Accident de travail', vehicle: 'Accident de véhicule', property: 'Dommages matériels', medical: 'Maladie professionnelle' }[report.incidentType] ?? report.incidentType);
+  const sev = t.g.sev[(report.severityLevel || 3) - 1] ?? String(report.severityLevel ?? '');
+  const row = (label: string, value: unknown) => `<div class="row"><span class="lbl">${esc(label)}</span><span class="val">${v(value)}</span></div>`;
+  const sec = (title: string, body: string) => body ? `<section><h2>${esc(title)}</h2>${body}</section>` : '';
+
+  // Personnes blessees
+  const persons = (report.injuredPersons ?? []).map((p, i) => `
+    <div class="card"><div class="card-h">${esc(t.p.injuredN)} #${i + 1} — ${v(p.name)}</div>
+      ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
+      ${row(t.p.injuryType, p.injuryType ? tl(lang, p.injuryType) : '')}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
+      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}
+    </div>`).join('');
+
+  // Temoins
+  const witnesses = (report.witnesses ?? []).map((w, i) => `
+    <div class="card"><div class="card-h">${esc(t.p.witnessN)} #${i + 1} — ${v(w.name)}</div>
+      ${row(t.p.wPost, w.jobTitle)}${row(t.p.phone, w.phone)}${row(t.p.statement, w.statement)}
+    </div>`).join('');
+
+  // 5 pourquoi + cause racine
+  const whys = (report.whyAnalysis ?? []).filter(w => w.answer).map((w, i) => `${row(`${i + 1}. ${tl(lang, w.question)}`, w.answer)}`).join('');
+
+  // Actions correctives
+  const actions = (report.correctiveActions ?? []).map((a, i) => `
+    <div class="card"><div class="card-h">${esc(t.ac.actionN)} #${i + 1}</div>
+      ${row(t.ac.title, a.description)}${row(t.ac.responsible, a.responsible)}${row(t.ac.dueDate, a.dueDate)}
+      ${row(t.ac.status, ACTION_STATUS_LABEL[a.status] ? tl(lang, ACTION_STATUS_LABEL[a.status]) : a.status)}
+    </div>`).join('');
+
+  // Reglementation (PROVINCE_INFO)
+  const info = PROVINCE_INFO[report.province];
+  const reqs = info ? `
+    ${row(info.authority, info.name)}${row(t.c.declDelay, info.deadline)}${row(t.c.formLabel, info.form)}
+    <div class="row"><span class="lbl">${esc(t.pr.reqTitle)}</span><span class="val"><ul>${info.requirements.map(r => `<li>${esc(r)}</li>`).join('')}</ul></span></div>
+    ${report.regulatoryNotified ? row(t.pr.notifiedOn, report.regulatoryNotifiedDate) + row(t.pr.refLabel, report.regulatoryReferenceNumber) : row(t.c.notifTitle, t.c.notifiedNo)}` : '';
+
+  // Signatures
+  const sig = (label: string, name: unknown, date: unknown, signed: boolean) =>
+    `<div class="sig"><div class="sig-l">${esc(label)}</div><div class="sig-n">${v(name)}</div><div class="sig-d">${signed ? `${esc(t.pr.signedOn)} ${v(date)}` : esc(t.pr.notSigned)}</div></div>`;
+  const signatures = `<div class="sigs">
+    ${sig(t.ap.supervisor, report.supervisorName, report.supervisorDate, report.supervisorSigned)}
+    ${sig(t.ap.hse, report.hseReviewerName, report.hseReviewerDate, report.hseReviewerSigned)}
+    ${sig(t.ap.mgmt, report.managementName, report.managementDate, report.managementSigned)}
+  </div>`;
+
+  const vehicleSec = report.vehicleInvolved ? sec(t.v.vehTitle,
+    row(t.v.plate, report.vehicle.licensePlate) + row(t.v.make, report.vehicle.make) + row(t.v.model, report.vehicle.model) +
+    row(t.v.year, report.vehicle.year) + row(t.v.km, report.vehicle.kmAtIncident) +
+    row(t.v.collisionType, report.vehicle.collisionType ? tl(lang, report.vehicle.collisionType) : '') + row(t.v.damageDesc, report.vehicle.damageDescription)) : '';
+  const propSec = report.propertyDamageInvolved ? sec(t.v.propTitle,
+    row(t.v.propLoc, report.propertyDamage.location) + row(t.v.estCost, report.propertyDamage.estimatedCost) + row(t.v.damageDesc, report.propertyDamage.description)) : '';
+
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
+  <title>${esc(t.pr.docTitle)} ${esc(reportNumber)}</title>
+  <style>
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #1f2937; font-size: 12px; line-height: 1.45; margin: 0; }
+    .doc-h { border-bottom: 3px solid #dc2626; padding-bottom: 10px; margin-bottom: 14px; }
+    .doc-h h1 { font-size: 20px; margin: 0 0 4px; color: #111827; }
+    .doc-h .meta { font-size: 12px; color: #6b7280; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #fee2e2; color: #b91c1c; font-weight: 600; font-size: 11px; margin-left: 6px; }
+    section { margin: 12px 0; page-break-inside: avoid; }
+    section > h2 { font-size: 13px; color: #dc2626; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .row { display: flex; gap: 10px; padding: 2px 0; }
+    .row .lbl { width: 38%; color: #6b7280; }
+    .row .val { width: 62%; font-weight: 500; }
+    .row .val ul { margin: 0; padding-left: 16px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; margin: 6px 0; page-break-inside: avoid; }
+    .card-h { font-weight: 600; margin-bottom: 4px; }
+    .sigs { display: flex; gap: 14px; margin-top: 6px; }
+    .sig { flex: 1; border-top: 1px solid #9ca3af; padding-top: 4px; }
+    .sig-l { color: #6b7280; font-size: 11px; } .sig-n { font-weight: 600; min-height: 16px; } .sig-d { font-size: 11px; color: #6b7280; }
+    .foot { margin-top: 16px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+    @media print { .noprint { display: none; } }
+  </style></head><body>
+  <div class="doc-h">
+    <h1>${esc(t.pr.docTitle)} — ${esc(typeLabel)}<span class="badge">${esc(reportNumber)}</span></h1>
+    <div class="meta">${esc(t.g.severity)}: ${esc(sev)} · ${esc(t.g.dateIncident)}: ${v(report.incidentDate)} ${esc(report.incidentTime || '')}</div>
+  </div>
+  ${sec(t.g.title, row(t.g.type, typeLabel) + row(t.g.province, report.province) + row(t.g.dateReport, report.reportedDate) + row(t.g.responsible, report.reportedBy) + row(t.g.titlePost, report.reportedByTitle) + row(t.g.phone, report.reportedByPhone))}
+  ${sec(t.loc.title, row(t.loc.address, report.address) + row(t.loc.dept, report.department) + row(t.loc.exact, report.exactLocation) + row(t.loc.weather, report.weatherConditions ? tl(lang, report.weatherConditions) : '') + row(t.loc.lighting, report.lighting ? tl(lang, report.lighting) : ''))}
+  ${persons ? sec(t.p.injured, persons) : ''}
+  ${witnesses ? sec(t.p.witnesses, witnesses) : ''}
+  ${sec(t.d.title, row(t.d.workType, report.workType) + row(t.d.narration, report.description) + row(t.d.immediate, report.immediateAction) + (report.contributingFactors?.length ? row(t.d.factors, report.contributingFactors.map(f => tl(lang, f)).join(', ')) : ''))}
+  ${vehicleSec}
+  ${propSec}
+  ${(whys || report.rootCause) ? sec(t.an.fiveWhy, whys + (report.rootCause ? row(t.an.rootTitle, report.rootCause) : '')) : ''}
+  ${actions ? sec(t.ac.title, actions) : ''}
+  ${reqs ? sec(t.c.notifTitle, reqs) : ''}
+  ${sec(t.pr.signatures, signatures)}
+  <div class="foot">${esc(t.pr.generated)} ${esc(generatedOn)} · ${esc(t.pr.docTitle)} ${esc(reportNumber)}</div>
+  <script>window.onload=function(){window.focus();window.print();}</script>
+  </body></html>`;
+}
 
 // ── Shared UI ────────────────────────────────────────────────────────────────
 
@@ -1218,6 +1331,17 @@ export default function IncidentReportForm({
     medical:   'bg-yellow-100 text-yellow-700 border-yellow-200',
   };
 
+  // #71 : ouvre un document imprimable (impression -> PDF du navigateur), bilingue + reglementaire.
+  function printReport() {
+    const stamp = new Date().toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA');
+    const html = buildPrintHtml(report, reportNumber, lang, stamp);
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) { alert(tr.pr.popupBlocked); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1251,6 +1375,15 @@ export default function IncidentReportForm({
           <div className="flex items-center gap-2 shrink-0">
             {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} />{tr.saving}</span>}
             {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />{tr.saved}</span>}
+
+            <button
+              onClick={printReport}
+              title={tr.pr.btn}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
+            >
+              <Printer size={15} />
+              <span className="hidden sm:inline">{tr.pr.btn}</span>
+            </button>
 
             {!readOnly && (
               <>
