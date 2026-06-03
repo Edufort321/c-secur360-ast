@@ -634,6 +634,7 @@ export function EquipementModal({
                                     </label>
                                     <input
                                         type="number"
+                                        onFocus={(e) => e.target.select()}
                                         value={formData.anneeAcquisition}
                                         onChange={(e) => setFormData(prev => ({ ...prev, anneeAcquisition: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -698,6 +699,7 @@ export function EquipementModal({
                                     </label>
                                     <input
                                         type="number"
+                                        onFocus={(e) => e.target.select()}
                                         value={formData.prixAchat}
                                         onChange={(e) => setFormData(prev => ({ ...prev, prixAchat: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -711,6 +713,7 @@ export function EquipementModal({
                                     </label>
                                     <input
                                         type="number"
+                                        onFocus={(e) => e.target.select()}
                                         value={formData.valeurActuelle}
                                         onChange={(e) => setFormData(prev => ({ ...prev, valeurActuelle: e.target.value }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -989,6 +992,7 @@ export function EquipementModal({
                                     </label>
                                     <input
                                         type="number"
+                                        onFocus={(e) => e.target.select()}
                                         value={formData.frequenceMaintenanceJours}
                                         onChange={(e) => setFormData(prev => ({ ...prev, frequenceMaintenanceJours: parseInt(e.target.value) || 365 }))}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -1049,6 +1053,7 @@ export function EquipementModal({
                                     <div>
                                         <input
                                             type="number"
+                                            onFocus={(e) => e.target.select()}
                                             value={nouvelleMaintenance.cout}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, cout: e.target.value }))}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"

@@ -3821,6 +3821,7 @@ export function JobModal({
                                                                                             <div className="flex items-center gap-1">
                                                                                                 <input
                                                                                                     type="number" min="0" max="100" step="5"
+                                                                                                    onFocus={(e) => e.target.select()}
                                                                                                     value={etape.progress || 0}
                                                                                                     onChange={(e) => updateEtape(globalIndex, 'progress', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
                                                                                                     className="w-14 p-1 border rounded text-sm focus:ring-2 focus:ring-green-500"
@@ -4413,6 +4414,7 @@ export function JobModal({
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         <input
                                                             type="number"
+                                                            onFocus={(e) => e.target.select()}
                                                             min="0"
                                                             step="0.5"
                                                             value={item.quantite || '1'}
@@ -7148,6 +7150,7 @@ export function JobModal({
                                                         </label>
                                                         <input
                                                             type="number"
+                                                            onFocus={(e) => e.target.select()}
                                                             min="1"
                                                             max="99"
                                                             value={formData.recurrence?.intervalle || 1}
@@ -7223,6 +7226,7 @@ export function JobModal({
                                                                 <div className="ml-7 flex items-center gap-2">
                                                                     <input
                                                                         type="number"
+                                                                        onFocus={(e) => e.target.select()}
                                                                         min="1"
                                                                         max="999"
                                                                         value={formData.recurrence?.nombreOccurrences || 10}
