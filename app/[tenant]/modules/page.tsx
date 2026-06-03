@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { MODULES, type ModuleKey } from '@/lib/modules/registry';
 import { PortalHeader } from '@/components/PortalHeader';
+import { AnomaliesPanel } from '@/components/dashboard/AnomaliesPanel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
@@ -172,6 +173,9 @@ export default function ModulesPage() {
               </div>
             </div>
           </div>
+
+          {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
+          <div className="mb-4"><AnomaliesPanel tenant={tenant} /></div>
 
           {loading ? (
             <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>
