@@ -4,7 +4,16 @@ Build vert obligatoire (`npx tsc --noEmit` puis `npx next build`, stop `next dev
 1 commit atomique/tâche, push après chaque, messages ASCII préfixés du n°. Champs nombre `onFocus={e=>e.target.select()}`.
 Style commun : `PortalHeader`, `useLanguage` (FR/EN), jour/nuit (classes dark:), `BackButton`.
 
-## #89 — DGA : gestion des actifs (transformateurs)
+## ⚠️ Schéma DGA fait par le PATRON (migration 117 : dga_dossiers + dga_measures + dga_reports). NE crée PAS de migration DGA. Construis l'UI sur ce schéma.
+
+## #89 — DGA : vue liste des dossiers (transformateurs) + fiche + tuiles de suivi
+- **Tuiles tableau de bord** (en haut de la liste) : **Tous · En retard · Bientôt dû · À jour · En surveillance** (compteurs calculés selon la dernière mesure et l'échéance de re-test + le flag `dga_dossiers.flag`).
+- **Recherche** (query) + **filtres par client (localisation) et par n° de série**, filtre par flag/échéance (dueFilter).
+- Liste des dossiers (`dga_dossiers`) + **fiche** avec tous les EQUIP_FIELDS (voir migration 117) + historique des mesures (`dga_measures` filtré `dossier_id`).
+- CRUD dossiers via `lib/dga/dossiers.ts` (Supabase, tenant_id). Réutilise `useModuleEnabled` + shell commun (header C-Secur360, FR/EN, dark).
+- (Le patron câble : saisie des mesures, import PDF via /api/dga/extract, analyse IA via /api/dga/analyze, assemblage rapports.)
+
+## (ancien #89 « assets » remplacé par ce qui précède — même esprit, sur le schéma 117)
 Le module DGA existe (`app/[tenant]/dga/page.tsx`, moteur `lib/dga/diagnose.ts`, table `dga_analyses`, migration 116).
 Construis la **gestion des actifs**, en zone disjointe pour éviter les conflits :
 - **Migration `117_dga_assets.sql`** : table `dga_assets` (id, tenant_id, name, type, kva, voltage, oil_type, in_service_date, serial, location, notes, created_at) + RLS permissive `USING(true) WITH CHECK(true)`. Ajoute aussi `ALTER TABLE dga_analyses ADD COLUMN IF NOT EXISTS asset_id uuid;`
