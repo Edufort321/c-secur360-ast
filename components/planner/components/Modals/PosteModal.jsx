@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../UI/Modal';
 import { Icon } from '../UI/Icon';
 import { Logo } from '../UI/Logo';
+import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
 export function PosteModal({
     isOpen,
@@ -13,6 +14,9 @@ export function PosteModal({
     poste = null,
     addNotification
 }) {
+    const { currentLanguage } = useLanguage();
+    const tr = (fr, en) => (currentLanguage === 'fr' ? fr : en);
+
     const [formData, setFormData] = useState({
         nom: '',
         departement: '',
@@ -109,12 +113,12 @@ export function PosteModal({
         e.preventDefault();
 
         if (!formData.nom.trim()) {
-            addNotification('Le nom du poste est requis', 'error');
+            addNotification(tr('Le nom du poste est requis', 'Job title is required'), 'error');
             return;
         }
 
         if (!formData.departement.trim()) {
-            addNotification('Le département est requis', 'error');
+            addNotification(tr('Le département est requis', 'Department is required'), 'error');
             return;
         }
 
@@ -134,9 +138,9 @@ export function PosteModal({
                         <div>
                             <h2 className="text-xl font-bold text-white flex items-center">
                                 <Icon name="briefcase" className="mr-2" size={24} />
-                                {poste ? 'Modifier le Poste' : 'Nouveau Poste'}
+                                {poste ? tr('Modifier le Poste', 'Edit Position') : tr('Nouveau Poste', 'New Position')}
                             </h2>
-                            <p className="text-sm text-gray-300">Gestion des postes C-Secur360</p>
+                            <p className="text-sm text-gray-300">{tr('Gestion des postes C-Secur360', 'C-Secur360 position management')}</p>
                         </div>
                     </div>
                     <button
@@ -154,7 +158,7 @@ export function PosteModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nom du poste *
+                            {tr('Nom du poste *', 'Job title *')}
                         </label>
                         <input
                             type="text"
@@ -162,14 +166,14 @@ export function PosteModal({
                             value={formData.nom}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Ex: Technicien Électrique Senior"
+                            placeholder={tr('Ex: Technicien Électrique Senior', 'E.g.: Senior Electrical Technician')}
                             required
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Département *
+                            {tr('Département *', 'Department *')}
                         </label>
                         <div className="flex gap-2">
                             <select
@@ -179,7 +183,7 @@ export function PosteModal({
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             >
-                                <option value="">Sélectionner un département</option>
+                                <option value="">{tr('Sélectionner un département', 'Select a department')}</option>
                                 {departements.map(dept => (
                                     <option key={dept.id || dept} value={dept.nom || dept}>{dept.nom || dept}</option>
                                 ))}
@@ -187,7 +191,7 @@ export function PosteModal({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const nomDept = prompt('Nom du nouveau département:');
+                                    const nomDept = prompt(tr('Nom du nouveau département:', 'New department name:'));
                                     if (nomDept && nomDept.trim()) {
                                         const nouveauDept = { id: Date.now(), nom: nomDept.trim() };
                                         const nouveauxDepartements = [...departements, nouveauDept];
@@ -197,7 +201,7 @@ export function PosteModal({
                                     }
                                 }}
                                 className="px-3 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                                title="Ajouter un département"
+                                title={tr('Ajouter un département', 'Add a department')}
                             >
                                 <Icon name="plus" size={16} />
                             </button>
@@ -207,7 +211,7 @@ export function PosteModal({
                     <div className="grid grid-cols-2 gap-2">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Salaire Min ($)
+                                {tr('Salaire Min ($)', 'Min salary ($)')}
                             </label>
                             <input
                                 type="number"
@@ -221,7 +225,7 @@ export function PosteModal({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Salaire Max ($)
+                                {tr('Salaire Max ($)', 'Max salary ($)')}
                             </label>
                             <input
                                 type="number"
@@ -239,7 +243,7 @@ export function PosteModal({
                 {/* Description */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description du poste
+                        {tr('Description du poste', 'Position description')}
                     </label>
                     <textarea
                         name="description"
@@ -247,14 +251,14 @@ export function PosteModal({
                         onChange={handleInputChange}
                         rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="Description détaillée du poste, missions principales..."
+                        placeholder={tr('Description détaillée du poste, missions principales...', 'Detailed position description, main duties...')}
                     />
                 </div>
 
                 {/* Compétences requises */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Compétences requises
+                        {tr('Compétences requises', 'Required skills')}
                     </label>
                     <div className="flex gap-2 mb-3">
                         <input
@@ -262,7 +266,7 @@ export function PosteModal({
                             value={nouvelleCompetence}
                             onChange={(e) => setNouvelleCompetence(e.target.value)}
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Ex: Électricité industrielle, PLC..."
+                            placeholder={tr('Ex: Électricité industrielle, PLC...', 'E.g.: Industrial electricity, PLC...')}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), ajouterCompetence())}
                         />
                         <button
@@ -295,7 +299,7 @@ export function PosteModal({
                 {/* Responsabilités */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Responsabilités principales
+                        {tr('Responsabilités principales', 'Key responsibilities')}
                     </label>
                     <div className="flex gap-2 mb-3">
                         <input
@@ -303,7 +307,7 @@ export function PosteModal({
                             value={nouvelleResponsabilite}
                             onChange={(e) => setNouvelleResponsabilite(e.target.value)}
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Ex: Maintenance préventive des équipements..."
+                            placeholder={tr('Ex: Maintenance préventive des équipements...', 'E.g.: Preventive equipment maintenance...')}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), ajouterResponsabilite())}
                         />
                         <button
@@ -340,13 +344,13 @@ export function PosteModal({
                                 onClick={onClose}
                                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                             >
-                                Annuler
+                                {tr('Annuler', 'Cancel')}
                             </button>
                             <button
                                 type="submit"
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                             >
-                                {poste ? '📝 Modifier' : '✨ Créer'} le Poste
+                                {poste ? tr('📝 Modifier le Poste', '📝 Edit Position') : tr('✨ Créer le Poste', '✨ Create Position')}
                             </button>
                         </div>
                     </form>
