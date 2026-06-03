@@ -406,53 +406,6 @@ export function JobModal({
         }
     };
 
-    const calculateWorkPackageEffort = (taskId, tasks) => {
-        const task = tasks.find(t => t.id === taskId);
-        if (!task) return 0;
-
-        const children = tasks.filter(t => t.parentId === taskId);
-        if (children.length === 0) {
-            // Tâche feuille - retourner sa propre durée
-            return task.duration || 0;
-        } else {
-            // Tâche parent - sommer les efforts des enfants
-            return children.reduce((total, child) =>
-                total + calculateWorkPackageEffort(child.id, tasks), 0
-            );
-        }
-    };
-
-    const generateProjectDecomposition = (rootTaskId, tasks) => {
-        const decomposition = [];
-        const rootTask = tasks.find(t => t.id === rootTaskId);
-        if (!rootTask) return decomposition;
-
-        const processTask = (task, level = 0) => {
-            const wbsCode = generateWBSCode(task.id, tasks);
-            const effort = calculateWorkPackageEffort(task.id, tasks);
-            const children = tasks.filter(t => t.parentId === task.id);
-
-            decomposition.push({
-                id: task.id,
-                name: task.name,
-                wbsCode,
-                level,
-                effort,
-                isWorkPackage: children.length === 0,
-                childCount: children.length,
-                description: task.description || '',
-                deliverables: task.deliverables || [],
-                acceptanceCriteria: task.acceptanceCriteria || [],
-                skills: task.requiredSkills || []
-            });
-
-            children.forEach(child => processTask(child, level + 1));
-        };
-
-        processTask(rootTask);
-        return decomposition;
-    };
-
     const addNewTask = (parentId = null) => {
         const level = parentId ? calculateTaskLevel(parentId, formData.etapes) + 1 : 0;
         const lastTask = formData.etapes[formData.etapes.length - 1];
