@@ -2894,9 +2894,9 @@ function AppContent() {
 
             const item = items.find(i => i.id === itemId || i.code === itemCode);
             if (item) {
-              setSelectedItem(item);
-              // Stocker le departmentCode pour l'utiliser lors des ajustements
-              setScannedItem({ ...item, scannedDepartmentCode: departmentCode });
+              // #84 : un seul affichage propre (la modale). On NE met PAS scannedItem (panneau intégré)
+              // pour éviter le double affichage. Le departmentCode est porté par selectedItem.
+              setSelectedItem({ ...item, scannedDepartmentCode: departmentCode });
               setShowScannedModal(true);
               html5QrCode.pause();
             } else {
@@ -2909,8 +2909,7 @@ function AppContent() {
               if (qrData.type === 'C-Secur360-Inventory') {
                 const item = items.find(i => i.id === qrData.id || i.code === qrData.code);
                 if (item) {
-                  setSelectedItem(item);
-                  setScannedItem({ ...item, scannedDepartmentCode: qrData.departmentCode });
+                  setSelectedItem({ ...item, scannedDepartmentCode: qrData.departmentCode });
                   setShowScannedModal(true);
                   html5QrCode.pause();
                 } else {
@@ -2918,11 +2917,10 @@ function AppContent() {
                 }
               }
             } catch (e2) {
-              // Si ce n'est pas du JSON, chercher par code
+              // Si ce n'est pas du JSON, chercher par code (code-barres simple)
               const item = items.find(i => i.code === decodedText);
               if (item) {
                 setSelectedItem(item);
-                setScannedItem(item);
                 setShowScannedModal(true);
                 html5QrCode.pause();
               } else {
