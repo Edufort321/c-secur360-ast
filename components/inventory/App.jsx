@@ -2878,7 +2878,13 @@ function AppContent() {
           try {
             // Essayer de parser l'URL du QR code
             const url = new URL(decodedText);
-            const itemId = url.searchParams.get('id');
+            let itemId = url.searchParams.get('id');
+            // Nouveau format public : /scan/<tenant>/<id>?code=...
+            if (!itemId) {
+              const seg = url.pathname.split('/').filter(Boolean);
+              const si = seg.indexOf('scan');
+              if (si >= 0 && seg[si + 2]) itemId = decodeURIComponent(seg[si + 2]);
+            }
             const itemCode = url.searchParams.get('code');
             const departmentCode = url.searchParams.get('dept'); // Code de la succursale
 

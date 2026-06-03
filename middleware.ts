@@ -43,6 +43,8 @@ const publicRoutes = [
   '/',
   '/demo',           // Accès demo public
   '/demo/(.*)',      // Toutes les pages demo publiques
+  '/scan',           // Fiche produit publique (QR inventaire) — ouvrable sans app
+  '/scan/(.*)',      // /scan/<tenant>/<id>
   '/auth/admin',     // Accès super admin principal
   '/auth/client',    // Accès client admin
   '/pricing',

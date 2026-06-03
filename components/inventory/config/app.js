@@ -26,7 +26,8 @@ export const getScanUrl = (itemId, itemCode, departmentCode = null) => {
     const seg = window.location.pathname.split('/').filter(Boolean);
     if (seg.length) tenant = seg[0];
   }
-  let url = `${origin}/${tenant}/inventory?id=${encodeURIComponent(itemId)}&code=${encodeURIComponent(itemCode || '')}`;
+  // Route PUBLIQUE (ouvrable sans app/connexion) : /scan/<tenant>/<id>
+  let url = `${origin}/scan/${encodeURIComponent(tenant)}/${encodeURIComponent(itemId)}?code=${encodeURIComponent(itemCode || '')}`;
   if (departmentCode) url += `&dept=${encodeURIComponent(departmentCode)}`;
   return url;
 };
