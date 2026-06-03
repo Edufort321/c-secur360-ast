@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
 import { PermissionsMatrix } from '@/components/admin/PermissionsMatrix';
+import { RHDossiers } from '@/components/admin/RHDossiers';
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
@@ -344,7 +345,7 @@ export default function AdminPage() {
         {tab === 'permissions' && <PermissionsMatrix tenant={tenant} tr={tr} canEdit={!!perms.manageAll || niveauAcces === 'super_user'} />}
         {tab === 'comptabilite' && <AccountingModule tenant={tenant} tr={tr} canEdit={!!perms.viewSalary} />}
         {tab === 'fiscal'     && <FiscalReportsModule tenant={tenant} tr={tr} />}
-        {tab === 'rh'         && <RHModule tenant={tenant} tr={tr} />}
+        {tab === 'rh'         && <RHHub tenant={tenant} tr={tr} />}
         {tab === 'abonnement' && <Abonnement tenant={tenant} tr={tr} lang={lang} />}
         {tab === 'facturation' && <FacturationProjets tenant={tenant} tr={tr} />}
       </div>
@@ -5319,8 +5320,24 @@ function HourBonusesConfig({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 }
 
 // ============================================================
-// RESSOURCES HUMAINES — communications corpo / documents / liens
+// RESSOURCES HUMAINES — hub 360 : Dossiers (agrege existant + manquant) + Communications
 // ============================================================
+function RHHub({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [sub, setSub] = useState<'dossiers' | 'comms'>('dossiers');
+  const subTab = (k: 'dossiers' | 'comms', label: string) => (
+    <button onClick={() => setSub(k)} className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${sub === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200'}`}>{label}</button>
+  );
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {subTab('dossiers', tr('Dossiers 360', '360 files'))}
+        {subTab('comms', tr('Communications RH', 'HR communications'))}
+      </div>
+      {sub === 'dossiers' ? <RHDossiers tenant={tenant} tr={tr} /> : <RHModule tenant={tenant} tr={tr} />}
+    </div>
+  );
+}
+
 function RHModule({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   type Item = { id?: string; type: 'message' | 'document' | 'link'; title: string; content: string; url: string; active: boolean; sort_order: number };
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
