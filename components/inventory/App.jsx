@@ -91,6 +91,7 @@ import { LoginScreen } from './components/Auth/LoginScreen';
 
 // Configuration
 import { getScanUrl } from './config/app';
+import { generateLabelsPdf, LABEL_FORMATS } from './lib/labelPdf';
 
 // Hooks
 import { useSupabaseSync } from './hooks/useSupabaseSync';
@@ -1464,6 +1465,9 @@ function AppContent() {
   const [bulkPrintByLocation, setBulkPrintByLocation] = useState(false); // Impression en volume par emplacement
   const [selectedLocation, setSelectedLocation] = useState(''); // Emplacement sélectionné pour impression en volume
   const [startingPosition, setStartingPosition] = useState(1); // Position de départ sur feuille partiellement utilisée
+  const [labelCopies, setLabelCopies] = useState(1); // #83 copies par article pour l'export PDF
+  const [labelSkip, setLabelSkip] = useState(() => new Set()); // #83 cases déjà utilisées (page 1) à sauter
+  const [pdfBusy, setPdfBusy] = useState(false);
   const printRef = useRef();
 
   // États pour le scanner
@@ -5770,6 +5774,32 @@ function AppContent() {
       }
     };
 
+    // #83 — Export PDF des étiquettes (formats Avery, copies, positions vides).
+    const PDF_FORMAT_MAP = { avery35520: 'avery5160', avery5160: 'avery5160', avery5163: 'avery5163', avery22806: 'avery22806', custom: 'avery5163' };
+    const pdfFmtKey = PDF_FORMAT_MAP[labelFormat] || 'avery5160';
+    const pdfFmt = LABEL_FORMATS[pdfFmtKey];
+    const perPage = pdfFmt.cols * pdfFmt.rows;
+    const toggleSkip = (idx) => setLabelSkip(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
+    const exportLabelsPdf = async () => {
+      if (pdfBusy) return;
+      setPdfBusy(true);
+      try {
+        let logoUrl = '/c-secur360-logo.png';
+        try { const { data: cs } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenantId).maybeSingle(); if (cs?.logo_url) logoUrl = cs.logo_url; } catch { /* défaut */ }
+        const copies = Math.max(1, parseInt(labelCopies) || 1);
+        const labels = [];
+        itemsToPrint.forEach(it => {
+          for (let c = 0; c < copies; c++) labels.push({
+            name: it.name, code: it.code, min: it.minQuantity, max: it.maxQuantity,
+            location: it.location || it.department || '', url: getScanUrl(it.id, it.code, it.departmentCode),
+          });
+        });
+        if (!labels.length) { alert('Aucune étiquette à générer.'); return; }
+        await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, filename: `etiquettes-${tenantId}.pdf` });
+      } catch (e) { alert('Export PDF impossible : ' + (e?.message || e)); }
+      finally { setPdfBusy(false); }
+    };
+
     return (
       <Modal
         isOpen={showPrintModal}
@@ -5785,6 +5815,9 @@ function AppContent() {
             </Button>
             <Button variant="secondary" onClick={() => window.print()}>
               {language === 'fr' ? 'Aperçu' : 'Preview'}
+            </Button>
+            <Button variant="secondary" onClick={exportLabelsPdf} disabled={pdfBusy}>
+              {pdfBusy ? '…' : (language === 'fr' ? 'Exporter PDF' : 'Export PDF')}
             </Button>
             <Button variant="primary" icon={Printer} onClick={executePrint}>
               Imprimer
@@ -5831,6 +5864,61 @@ function AppContent() {
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* #83 — Export PDF : copies + positions vides (feuille entamée) */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-semibold text-gray-900 dark:text-white">
+                {language === 'fr' ? 'Copies par article (PDF)' : 'Copies per item (PDF)'}
+              </label>
+              <input
+                type="number" min="1"
+                className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-center"
+                value={labelCopies}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setLabelCopies(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {language === 'fr'
+                    ? `Feuille entamée ? Cliquez les cases déjà utilisées (elles seront sautées). ${pdfFmt.cols}×${pdfFmt.rows} = ${perPage}/page.`
+                    : `Partial sheet? Click the cells already used (they will be skipped). ${pdfFmt.cols}×${pdfFmt.rows} = ${perPage}/page.`}
+                </p>
+                {labelSkip.size > 0 && (
+                  <button onClick={() => setLabelSkip(new Set())} className="text-xs font-semibold text-blue-600 hover:underline">
+                    {language === 'fr' ? 'Réinitialiser' : 'Reset'}
+                  </button>
+                )}
+              </div>
+              <div
+                className="inline-grid gap-1 rounded-lg border border-gray-200 dark:border-gray-700 p-2 bg-white dark:bg-gray-800"
+                style={{ gridTemplateColumns: `repeat(${pdfFmt.cols}, minmax(0, 1fr))` }}
+              >
+                {Array.from({ length: perPage }).map((_, idx) => {
+                  const used = labelSkip.has(idx);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => toggleSkip(idx)}
+                      title={`Position ${idx + 1}`}
+                      className={`h-7 w-9 rounded text-[10px] font-semibold transition-colors ${
+                        used
+                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 line-through'
+                          : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">
+                {language === 'fr' ? 'Vert = libre · Gris = déjà utilisé (sauté).' : 'Green = free · Grey = used (skipped).'}
+              </p>
             </div>
           </div>
 
