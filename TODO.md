@@ -10,7 +10,7 @@
 
 ### 📥 Correctifs routés (file par agent)
 - **Agent 1 (Planner)** : #34, #6, **#52** (retirer Agenda en vue Grille, garder en Mois), **#53** (traduction FR/EN complète).
-- **Agent 2 (UI/Modules)** : #49 (bouton Retour).
+- **Agent 2 (UI/Modules)** : #49 (bouton Retour), **#54** (mobile inventaire), **#55** (sync inventaire localStorage↔Supabase), **#56** (scanner QR mobile, dépend de #55).
 - **Agent 3 (Affiliation)** : #51 (contrat co-vendeur).
 - **Agent 4 (Incidents)** : module near-miss + table `near_miss_events` (migration 121).
 - **Patron** : #45, #46 (en cours), #47, #35, #17, #19, #50 (panneau anomalies — ✅).
