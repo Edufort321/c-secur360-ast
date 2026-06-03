@@ -6,11 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Send, Loader2, Plus, Trash2,
   Search, Briefcase, Settings2, Wrench, MoreHorizontal, Car, Building2,
-  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign,
+  Gauge, AlertTriangle, CheckCircle2, Gift, Timer, ChevronDown, DollarSign, Paperclip, Receipt,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
 import { ARC_2026 } from '@/lib/constants/arc';
+import { uploadReceipt } from '@/lib/transactions';
 
 type Entry = {
   id: string; date: string;
@@ -29,6 +30,23 @@ type HourBonus = { id: string; name: string; trigger_hours: number; bonus_amount
 type EmployeeProfile = { hourly_rate: number; ot_multiplier: number; dt_multiplier: number };
 type AssignedVehicle = { id: string; name: string; make: string; model: string; regime?: string; km_rate_override?: number | null; is_sales_employee?: boolean };
 type LogEntry = { id?: string; odometer_start: number; odometer_end: number; km_personal: number };
+type Expense = { id: string; date: string; category: string; supplier: string; description: string; subtotal: number; gst: number; qst: number; total: number; receipt_url: string; reimbursable: boolean; project_id: string };
+
+const EXPENSE_CATS = [
+  { k: 'carburant',    label: 'Carburant' },
+  { k: 'repas',        label: 'Repas' },
+  { k: 'hebergement',  label: 'Hébergement' },
+  { k: 'materiel',     label: 'Matériel' },
+  { k: 'outils',       label: 'Outils' },
+  { k: 'stationnement',label: 'Stationnement' },
+  { k: 'peage',        label: 'Péage' },
+  { k: 'autre',        label: 'Autre' },
+];
+// TPS 5 % + TVQ 9,975 % (QC) — pré-remplissage par défaut, ajustable selon le reçu.
+const TPS = 0.05, TVQ = 0.09975;
+function newExpense(date: string): Expense {
+  return { id: `x_${Date.now()}_${Math.random()}`, date, category: 'autre', supplier: '', description: '', subtotal: 0, gst: 0, qst: 0, total: 0, receipt_url: '', reimbursable: true, project_id: '' };
+}
 
 const CATS = [
   { k: 'project', label: 'Projet',          icon: Briefcase },
@@ -53,6 +71,8 @@ export default function TimesheetDetailPage() {
 
   const [sheet, setSheet]       = useState<Sheet | null>(null);
   const [entries, setEntries]   = useState<Entry[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [rates, setRates]       = useState<Rate[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -137,6 +157,16 @@ export default function TimesheetDetailPage() {
         setAllowances(allws || []);
         setHourBonuses(bonuses || []);
 
+        // Dépenses avec reçu (migration 108 ; ignore si table absente)
+        try {
+          const { data: exps } = await supabase.from('timesheet_expenses').select('*').eq('timesheet_id', sheetId).order('date');
+          setExpenses((exps || []).map((x: any) => ({
+            id: x.id, date: x.date || sh.period_start, category: x.category || 'autre', supplier: x.supplier || '',
+            description: x.description || '', subtotal: Number(x.subtotal) || 0, gst: Number(x.gst) || 0, qst: Number(x.qst) || 0,
+            total: Number(x.total) || 0, receipt_url: x.receipt_url || '', reimbursable: x.reimbursable !== false, project_id: x.project_id || '',
+          })));
+        } catch { /* table absente */ }
+
         // Load assigned company vehicle + logbook entry
         const { data: av } = await supabase.from('vehicles')
           .select('id,name,make,model,regime,km_rate_override,is_sales_employee')
@@ -212,6 +242,33 @@ export default function TimesheetDetailPage() {
     const date = sheet ? sheet.period_start : new Date().toISOString().slice(0, 10);
     setEntries(p => [...p, newEntry(date)]);
   }
+
+  // ── Dépenses (avec reçu) ───────────────────────────────────────────────────
+  function addExpense() {
+    const date = sheet ? sheet.period_start : new Date().toISOString().slice(0, 10);
+    setExpenses(p => [...p, newExpense(date)]);
+  }
+  function updExpense(id: string, patch: Partial<Expense>) {
+    setExpenses(prev => prev.map(x => {
+      if (x.id !== id) return x;
+      const nx = { ...x, ...patch };
+      // Total = sous-total + taxes ; si on saisit le sous-total sans taxes, propose TPS/TVQ QC.
+      if (patch.subtotal !== undefined && patch.gst === undefined && patch.qst === undefined && !nx.gst && !nx.qst) {
+        nx.gst = Math.round(Number(nx.subtotal) * TPS * 100) / 100;
+        nx.qst = Math.round(Number(nx.subtotal) * TVQ * 100) / 100;
+      }
+      nx.total = Math.round(((Number(nx.subtotal) || 0) + (Number(nx.gst) || 0) + (Number(nx.qst) || 0)) * 100) / 100;
+      return nx;
+    }));
+  }
+  function delExpense(id: string) { setExpenses(p => p.filter(x => x.id !== id)); }
+  async function onReceiptUpload(id: string, file: File) {
+    setUploadingId(id);
+    try { const url = await uploadReceipt(tenant, file); updExpense(id, { receipt_url: url }); }
+    catch (e: any) { setNotice('Reçu : ' + (e?.message || 'upload impossible')); }
+    finally { setUploadingId(null); }
+  }
+  const expensesTotal = useMemo(() => expenses.reduce((s, x) => s + (Number(x.total) || 0), 0), [expenses]);
 
   function entryKmRate(e: Entry) {
     if (e.vehicle_type === 'company') return 0;
@@ -357,6 +414,16 @@ export default function TimesheetDetailPage() {
           toInsert.map((e, i) => { const { id, ...rest } = e as any; return { ...rest, timesheet_id: sheetId, tenant_id: tenant, sort_order: i }; })
         );
       }
+      // Dépenses avec reçu (table 108 ; ignore en silence si absente)
+      try {
+        await supabase.from('timesheet_expenses').delete().eq('timesheet_id', sheetId);
+        const expToInsert = expenses.filter(x => Number(x.total) > 0 || (x.description && x.description.trim()) || x.receipt_url);
+        if (expToInsert.length) {
+          await supabase.from('timesheet_expenses').insert(
+            expToInsert.map(x => { const { id, ...rest } = x as any; return { ...rest, timesheet_id: sheetId, tenant_id: tenant }; })
+          );
+        }
+      } catch { /* table 108 non exécutée */ }
       const update: any = {
         total_regular: totals.hrs_regular, total_overtime: totals.hrs_overtime,
         total_premium: totals.hrs_premium, total_km: totals.km_personal + totals.km_company,
@@ -625,12 +692,7 @@ export default function TimesheetDetailPage() {
                       {e.vehicle_type === 'personal' && <Car        size={13} className="text-emerald-600" />}
                     </div>
                   </label>
-                  <label className="flex flex-col items-center">
-                    <span className="mb-1 text-xs text-slate-400">Matériel $</span>
-                    <input type="number" step="0.01" disabled={isReadOnly} onFocus={ev => ev.target.select()}
-                      value={e.materiel} onChange={ev => updEntry(e.id, 'materiel', +ev.target.value)}
-                      className="inp w-24 text-right" />
-                  </label>
+                  {/* « Matériel » remplacé par la section Dépenses (avec reçu) ci-dessous. */}
                   <div className="ml-auto flex items-end gap-2">
                     {canSeeMoney && <span className="text-base font-bold text-slate-700">{money(entryCost(e))}</span>}
                     {!isReadOnly && (
@@ -684,6 +746,58 @@ export default function TimesheetDetailPage() {
               <Plus size={18} /> Ajouter une ligne
             </button>
           )}
+        </div>
+
+        {/* ── DÉPENSES (avec reçu) ─────────────────────────────────────── */}
+        <div className={`mt-6 ${needsOdometer && !isReadOnly ? 'pointer-events-none opacity-40' : ''}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-slate-700"><Receipt size={16} className="text-violet-600" /> Dépenses (joindre le reçu)</h2>
+            {expensesTotal > 0 && <span className="text-sm font-semibold text-violet-700">{money(expensesTotal)}</span>}
+          </div>
+          <div className="space-y-3">
+            {expenses.map(x => (
+              <div key={x.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Date</span>
+                    <input type="date" value={x.date} disabled={isReadOnly} onChange={e => updExpense(x.id, { date: e.target.value })} className="inp w-36" /></label>
+                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Catégorie</span>
+                    <select value={x.category} disabled={isReadOnly} onChange={e => updExpense(x.id, { category: e.target.value })} className="inp w-36">
+                      {EXPENSE_CATS.map(c => <option key={c.k} value={c.k}>{c.label}</option>)}
+                    </select></label>
+                  <label className="flex flex-1 flex-col"><span className="mb-1 text-xs text-slate-400">Fournisseur</span>
+                    <input type="text" value={x.supplier} disabled={isReadOnly} onChange={e => updExpense(x.id, { supplier: e.target.value })} placeholder="Ex: Petro-Canada" className="inp w-full" /></label>
+                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Sous-total $</span>
+                    <input type="number" step="0.01" value={x.subtotal || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { subtotal: +e.target.value })} className="inp w-24 text-right" /></label>
+                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">TPS $</span>
+                    <input type="number" step="0.01" value={x.gst || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { gst: +e.target.value })} className="inp w-20 text-right" /></label>
+                  <label className="flex flex-col"><span className="mb-1 text-xs text-slate-400">TVQ $</span>
+                    <input type="number" step="0.01" value={x.qst || ''} disabled={isReadOnly} onFocus={e => e.target.select()} onChange={e => updExpense(x.id, { qst: +e.target.value })} className="inp w-20 text-right" /></label>
+                  <div className="flex flex-col"><span className="mb-1 text-xs text-slate-400">Total</span>
+                    <span className="inp w-24 text-right font-bold text-slate-700">{money(x.total)}</span></div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+                  <input type="text" value={x.description} disabled={isReadOnly} onChange={e => updExpense(x.id, { description: e.target.value })} placeholder="Description (facultatif)" className="inp flex-1 min-w-[12rem]" />
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                    <input type="checkbox" checked={x.reimbursable} disabled={isReadOnly} onChange={e => updExpense(x.id, { reimbursable: e.target.checked })} className="accent-violet-600" /> À me rembourser
+                  </label>
+                  {x.receipt_url ? (
+                    <a href={x.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"><Paperclip size={12} /> Reçu joint ✓</a>
+                  ) : !isReadOnly && (
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                      {uploadingId === x.id ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />} Joindre le reçu
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onReceiptUpload(x.id, f); e.currentTarget.value = ''; }} />
+                    </label>
+                  )}
+                  {!isReadOnly && <button onClick={() => delExpense(x.id)} className="rounded-lg p-1.5 text-slate-300 hover:text-red-500"><Trash2 size={15} /></button>}
+                </div>
+              </div>
+            ))}
+            {!isReadOnly && (
+              <button onClick={addExpense} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 py-3 text-sm font-semibold text-slate-400 transition hover:border-violet-400 hover:text-violet-600">
+                <Plus size={16} /> Ajouter une dépense
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Primes journalières déclenchées */}
