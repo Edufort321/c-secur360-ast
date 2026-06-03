@@ -14,13 +14,13 @@
 - **Agent AFFILIATION** (branche `agent-affiliation`) — `app/auth/admin/**`, `app/api/admin/affiliate-contract/**` (nouveau), `components/admin/AffiliateContract.tsx` (nouveau), `lib/affiliateContract.ts` (nouveau), `supabase/migrations/120_affiliate_contracts.sql` (nouveau, n° 120 réservé). Tâche : **#51**. Ne touche PAS `app/[tenant]/admin/page.tsx`, timesheets, planner, autres `lib/*` existants, migrations < 120.
 
 ### 📥 Correctifs routés (file par agent) — maj 2026-06-03 (tout mergé sur main)
-- **Agent 1 (Planner)** : ❌ INDISPONIBLE (pas d'identifiant). Inventaire #55 repris et fait par le PATRON. Reste UI inventaire (#56 scanner/QR, #54, #58, #61, #62, #68) → PATRON.
-- **Agent 2 (UI/Modules)** : ❌ INDISPONIBLE (abandonné). Idem ci-dessus → PATRON.
+- **Agent 1** ✅ RÉACTIVÉ — **#89 DGA gestion des actifs** (migration 117 dga_assets + lib/dga/assets.ts + components/dga/AssetsPanel + sélecteur d'actif). Voir BRIEF_AGENT1.md. Zone DGA actifs (disjointe).
+- **Agent 2** ✅ RÉACTIVÉ — **#90 DGA tendances/graphiques + rapport PDF + triangle Duval SVG** (components/dga/DuvalTriangle, Trends ; lib/dga/trends, report). Voir BRIEF_AGENT2.md. Zone DGA rapports (disjointe). Inventaire repris par patron.
 - **Agent 3 (Affiliation)** ✅ ACTIF : #75 (corrections contrat), #69, #70, **#78** (lien parrainage + attribution inscriptions, mig ≥126), **#79** (tableau de bord vendeur KPIs) — voir BRIEF_AGENT3.md. Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/admin/affiliate-contracts/**`, `app/api/admin/affiliate-*`, `components/admin/AffiliateContract.tsx`, `lib/affiliate*`, migrations ≥120.
 - **Agent 4 (Incidents)** ✅ ACTIF : #67, #71, **#80** (CAPA actions correctives, mig ≥127), **#81** (enquête causale 5 pourquoi + témoins/photos) — voir BRIEF_AGENT4.md. Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`, migrations ≥127.
 
-### 🔁 Règle file : ≥2 tâches/agent. A1 & A2 INDISPONIBLES → charge au Patron. Profondeur — A3:6 (#75,#69,#70,#78,#79,#87) · A4:5 (#67,#71,#80,#81,#88) · Patron : #86 (garde modules sur toutes routes), #54/#68 inventaire, #76 trad admin, sécu #17/#19, paie #45/#47.
-- ✅ **Modules à la carte** : mécanique en place (registre + tenant_modules.enabled + garde `useModuleEnabled`). 1er module DGA livré (route `/[tenant]/dga`, migration 116). Stratégie : développer de nouveaux modules dans le tenant, activés par abonnement (coche super-admin).
+### 🔁 Règle file : ≥2 tâches/agent. 4 agents actifs. Profondeur — A1:1 (#89) · A2:1 (#90) · A3:6 (#75,#69,#70,#78,#79,#87) · A4:5 (#67,#71,#80,#81,#88) · Patron : moteur DGA avancé ✅, #86 garde modules, #54/#68 inventaire, #76 trad admin, sécu #17/#19, paie #45/#47.
+- ✅ **Modules à la carte** : mécanique en place (registre + tenant_modules.enabled + garde `useModuleEnabled`). **DGA en construction complète** : moteur IEEE+Duval+Rogers+IEC+KeyGas (patron, fait) · actifs (A1 #89) · tendances/PDF/triangle (A2 #90). Migrations 116 (faite à exécuter) + 117 (A1).
 - **Patron** : ✅#46,#64,#65,#66,#57(Phase 1),#73(RH hub 360),#74(partage API ERP),#77(relance leads démo),fix client(+mig 113),**#55 persistance inventaire(+mig 115)** · en cours **#76** (traduction FR/EN admin, passe 1 faite) · reste #56+scanner+QR inventaire, #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2, #59 (temps réel), **#19** (rotation service_role + mdp admin), #17 (RLS). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)

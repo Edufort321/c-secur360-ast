@@ -1,36 +1,17 @@
-# Brief Agent 2 (UI / Inventaire) — file mise à jour 2026-06-03
+# Brief Agent 2 — file mise à jour 2026-06-03 (réactivé)
 
-⚠️ Aucun push depuis ~15 h (dernier = #49). Le client ne voit AUCUN changement en inventaire.
-Reprendre IMMÉDIATEMENT, 1 commit atomique par tâche, push après chaque.
+Build vert obligatoire (`npx tsc --noEmit` puis `npx next build`, stop `next dev` avant).
+1 commit atomique/tâche, push après chaque, messages ASCII préfixés. Style commun (FR/EN, dark, PortalHeader).
 
-Zone : `components/inventory/**`, `components/BackButton.tsx`, `app/[tenant]/projects/**`,
-`app/[tenant]/clients/**`, `components/steps/**` (AST), `components/soumissions/**`, `components/bons/**`.
-NE PAS toucher planner, timesheets, `app/[tenant]/admin/page.tsx`, `lib/**` partagés, `supabase/migrations/**`
-(si une table manque, demander au patron la migration).
+> Note : l'inventaire (#54-#68) a été repris par le patron. Tu es réorienté sur le DGA (rapports).
 
-Build vert obligatoire (`npx tsc --noEmit` puis `npx next build`, stop `next dev` du worktree avant). Champs nombre `onFocus={e=>e.target.select()}`.
+## #90 — DGA : tendances/graphiques + rapport PDF + visuel Triangle de Duval
+Module DGA existant : `app/[tenant]/dga/page.tsx`, moteur `lib/dga/diagnose.ts` (exporte `diagnose`, `diagnoseFull`,
+`rogers`, `iec60599`, `keyGas`, `gasRatePerDay`, `duvalTriangle1`, `LABEL`... ), table `dga_analyses`.
+Zone disjointe (ne touche pas `diagnose.ts` ni les fichiers actifs d'Agent 1) :
+- **`components/dga/DuvalTriangle.tsx`** : SVG du Triangle de Duval 1 (zones colorées PD/D1/D2/T1/T2/T3/DT) + point tracé depuis %CH4/%C2H2/%C2H4. Bilingue, dark.
+- **`lib/dga/trends.ts`** : à partir de l'historique `dga_analyses` d'un actif, séries temporelles par gaz + TDCG + taux de génération (utilise `gasRatePerDay`).
+- **`components/dga/Trends.tsx`** : graphiques d'évolution (recharts est déjà dans le projet — vérifier `package.json` ; sinon SVG simple).
+- **`lib/dga/report.ts`** : rapport PDF pro via jsPDF — en-tête logo tenant (`company_settings.logo_url` sinon `/c-secur360-logo.png`), tableau gaz vs limites IEEE C57.104, condition, zone Duval + image du triangle, méthodes (Rogers/IEC/Key gas), recommandations, pied de page. Bouton « Rapport PDF » à exposer (coordonne l'insertion dans la page avec le patron si besoin).
 
-## File prioritaire (le client attend du concret)
-
-### #55 — PERSISTANCE (bloquant, à faire EN PREMIER)
-« L'inventaire ne se met pas à jour / ne s'enregistre pas. » Le module écrit surtout en localStorage.
-- Brancher CRUD articles sur Supabase table `items` (et `item_locations`), filtré `tenant_id`.
-- Lire l'erreur Supabase (une requête `await` ne throw pas → tester `res.error`) ; pattern strip-retry pour colonnes manquantes ; fallback localStorage SEULEMENT si la table est inaccessible, avec avis visible.
-- Au chargement : Supabase = source de vérité ; migrer le localStorage existant vers `items` une seule fois.
-- Vérifier que création / +qté / -qté / édition min-max **persistent après rechargement**.
-
-### #56 + scanner (logique exacte demandée par le client)
-QR/code-barres. DEUX modes selon le contexte :
-- **Caméra fixe / lecteur "stand" (hors app, ex. douchette ou page publique de scan)** : le scan AFFICHE la **fiche produit** (nom, photo, description, **prix vendant**, et **quantité disponible**). LECTURE SEULE — aucun mouvement.
-- **Scan via l'app (utilisateur connecté)** : après le scan, permettre les **mouvements de stock** : Entrée / Sortie → quantité (champ écrasable) → OK. Met à jour `items.qty` + journal de mouvement.
-- Le flux mobile doit être : scan → choix entrée/sortie → quantité → OK (gros boutons, une main).
-
-### QR — même présentation que AST / Inspection + impression multi-format
-- Générer le QR de chaque article avec le **même composant/visuel** que les modules AST et Inspection
-  (chercher leur générateur QR existant, ex. `qrcode`/`qrcode.react` déjà utilisé — RÉUTILISER, ne pas réinventer).
-- Conserver la possibilité d'**imprimer sur différents formats d'étiquette** comme actuellement (ex. Avery / rouleau / A4 planche) — garder/améliorer le sélecteur de format d'étiquette existant.
-- Le QR encode l'URL de fiche produit (mode stand) ; ouverte dans l'app = mode mouvements.
-
-### #54 mobile · #58 min/max éditables + champs écrasables · #61 bilingue (header) · #68 dédoublonnage + interconnexion hôte (langue/thème/header/sites/personnel/supabase/tenant — source unique). #61 ⊂ #68.
-
-Après chaque tâche : prévenir le patron « Agent 2 a terminé #X » pour merge.
+Après la tâche : « Agent 2 a terminé #90 » pour merge. Garde ≥2 tâches.

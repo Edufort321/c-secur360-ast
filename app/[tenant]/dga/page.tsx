@@ -9,7 +9,7 @@ import { BackButton } from '@/components/BackButton';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
-import { diagnose, type GasInput } from '@/lib/dga/diagnose';
+import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { FlaskConical, Lock, Loader2, Save, Activity, History } from 'lucide-react';
 
 const GASES: { key: keyof GasInput; label: string }[] = [
@@ -38,7 +38,7 @@ export default function DgaPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
 
-  const result = useMemo(() => diagnose(gas), [gas]);
+  const result = useMemo(() => diagnoseFull(gas), [gas]);
 
   async function loadHistory() {
     const { data } = await supabase.from('dga_analyses').select('*').eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(20);
@@ -135,6 +135,16 @@ export default function DgaPage() {
               </div>
               <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
                 <strong>{tr('Recommandation', 'Recommendation')} :</strong> {tr(result.recommendation.fr, result.recommendation.en)}
+              </div>
+              {/* Méthodes complémentaires (Rogers / IEC 60599 / gaz dominant) */}
+              <div className="space-y-1.5 border-t border-gray-100 pt-2 dark:border-gray-700">
+                <div className="text-[11px] uppercase tracking-wide text-gray-400">{tr('Méthodes', 'Methods')}</div>
+                {result.methods.map((m, i) => (
+                  <div key={i} className="flex items-start justify-between gap-2 text-xs">
+                    <span className="font-semibold text-gray-600 dark:text-gray-300">{m.name}</span>
+                    <span className="text-right text-gray-700 dark:text-gray-200">{tr(m.fault.fr, m.fault.en)}{m.detail && m.detail !== '—' ? <span className="block text-[10px] text-gray-400">{m.detail}</span> : null}</span>
+                  </div>
+                ))}
               </div>
               <p className="text-[10px] text-gray-400">{tr('Indicatif — à confirmer par laboratoire et suivi de tendance.', 'Indicative — confirm with lab and trend analysis.')}</p>
             </div>
