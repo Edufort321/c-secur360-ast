@@ -213,7 +213,7 @@ export function SuccursaleModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
                 {/* Header avec logo - Navy Blue comme le principal */}
                 <div className="bg-gray-900">
                     <div className="flex items-center justify-between p-6 border-b border-gray-700">
@@ -244,7 +244,7 @@ export function SuccursaleModal({
                                 className={`py-3 px-6 font-medium text-sm transition-all ${
                                     activeSection === 'info'
                                         ? 'text-white border-b-2 border-blue-400'
-                                        : 'text-gray-400 hover:text-gray-200'
+                                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-200'
                                 }`}
                             >
                                 <Icon name="info" size={16} className="inline mr-2" />
@@ -255,7 +255,7 @@ export function SuccursaleModal({
                                 className={`py-3 px-6 font-medium text-sm transition-all ${
                                     activeSection === 'personnel'
                                         ? 'text-white border-b-2 border-blue-400'
-                                        : 'text-gray-400 hover:text-gray-200'
+                                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-200'
                                 }`}
                             >
                                 <Icon name="user" size={16} className="inline mr-2" />
@@ -271,14 +271,14 @@ export function SuccursaleModal({
                     {activeSection === 'info' && (
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Section: Informations générales */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                                 <Icon name="info" className="mr-2" size={20} />
                                 {tr('Informations générales', 'General information')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr('Nom de la succursale *', 'Branch name *')}
                                     </label>
                                     <input
@@ -292,7 +292,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr('Responsable', 'Manager')}
                                     </label>
                                     <input
@@ -305,7 +305,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr("Nombre d'employés", 'Number of employees')}
                                     </label>
                                     <input
@@ -320,7 +320,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr('Statut', 'Status')}
                                     </label>
                                     <div className="flex items-center space-x-4">
@@ -348,14 +348,14 @@ export function SuccursaleModal({
                         </div>
 
                         {/* Section: Adresse */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                                 <Icon name="location" className="mr-2" size={20} />
                                 {tr('Adresse', 'Address')}
                             </h3>
                             <div className="grid grid-cols-1 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr('Adresse complète *', 'Full address *')}
                                     </label>
                                     <input
@@ -370,7 +370,7 @@ export function SuccursaleModal({
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                             {tr('Ville *', 'City *')}
                                         </label>
                                         <input
@@ -384,7 +384,7 @@ export function SuccursaleModal({
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                             Province
                                         </label>
                                         <select
@@ -401,7 +401,7 @@ export function SuccursaleModal({
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                             {tr('Code postal', 'Postal code')}
                                         </label>
                                         <input
@@ -418,14 +418,14 @@ export function SuccursaleModal({
                         </div>
 
                         {/* Section: Contact */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                                 <Icon name="phone" className="mr-2" size={20} />
                                 {tr('Informations de contact', 'Contact information')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         {tr('Téléphone', 'Phone')}
                                     </label>
                                     <input
@@ -438,7 +438,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         Fax
                                     </label>
                                     <input
@@ -451,7 +451,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                         Email
                                     </label>
                                     <input
@@ -466,14 +466,14 @@ export function SuccursaleModal({
                         </div>
 
                         {/* Section: Couleur d'affichage */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                                 <Icon name="palette" className="mr-2" size={20} />
                                 {tr("Couleur d'affichage calendrier", 'Calendar display color')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                         {tr('Couleur personnalisée', 'Custom color')}
                                     </label>
                                     <div className="flex items-center space-x-4">
@@ -482,7 +482,7 @@ export function SuccursaleModal({
                                                 type="color"
                                                 value={formData.couleur}
                                                 onChange={(e) => handleInputChange('couleur', e.target.value)}
-                                                className="w-16 h-12 border-2 border-gray-300 rounded-lg cursor-pointer shadow-sm"
+                                                className="w-16 h-12 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer shadow-sm"
                                                 title={tr('Choisir une couleur personnalisée', 'Choose a custom color')}
                                             />
                                         </div>
@@ -497,7 +497,7 @@ export function SuccursaleModal({
                                             />
                                         </div>
                                         <div
-                                            className="w-12 h-12 rounded-lg border-2 border-gray-300 shadow-sm"
+                                            className="w-12 h-12 rounded-lg border-2 border-gray-300 dark:border-gray-600 shadow-sm"
                                             style={{ backgroundColor: formData.couleur }}
                                             title={tr('Aperçu de la couleur', 'Color preview')}
                                         />
@@ -505,7 +505,7 @@ export function SuccursaleModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                         {tr('Couleurs prédéfinies', 'Preset colors')}
                                     </label>
                                     <div className="grid grid-cols-5 gap-2">
@@ -515,7 +515,7 @@ export function SuccursaleModal({
                                                 type="button"
                                                 onClick={() => handleInputChange('couleur', couleur)}
                                                 className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 ${
-                                                    formData.couleur === couleur ? 'border-gray-800 shadow-lg' : 'border-gray-300'
+                                                    formData.couleur === couleur ? 'border-gray-800 shadow-lg' : 'border-gray-300 dark:border-gray-600'
                                                 }`}
                                                 style={{ backgroundColor: couleur }}
                                                 title={couleur}
@@ -527,8 +527,8 @@ export function SuccursaleModal({
                         </div>
 
                         {/* Section: Notes */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                                 <Icon name="note" className="mr-2" size={20} />
                                 {tr('Notes et commentaires', 'Notes and comments')}
                             </h3>
@@ -541,7 +541,7 @@ export function SuccursaleModal({
                         </div>
 
                         {/* Actions */}
-                        <div className="flex justify-between items-center pt-6 border-t bg-white sticky bottom-0">
+                        <div className="flex justify-between items-center pt-6 border-t bg-white dark:bg-gray-800 sticky bottom-0">
                             {succursale && onDelete && (
                                 <button
                                     type="button"
@@ -557,7 +557,7 @@ export function SuccursaleModal({
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="flex items-center gap-2 px-6 py-3 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                                    className="flex items-center gap-2 px-6 py-3 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                                 >
                                     <Icon name="close" size={16} />
                                     {tr('Annuler', 'Cancel')}
@@ -588,7 +588,7 @@ export function SuccursaleModal({
                     {activeSection === 'personnel' && succursale && (
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold text-gray-900">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     {tr('Personnel de', 'Personnel of')} {succursale.nom}
                                 </h3>
                                 <button
@@ -602,42 +602,42 @@ export function SuccursaleModal({
 
                             {/* Liste du personnel */}
                             {getPersonnelSuccursale().length === 0 ? (
-                                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                     <Icon name="user" size={48} className="mx-auto text-gray-300 mb-4" />
-                                    <p className="text-gray-500 text-lg mb-2">{tr('Aucun employé dans cette succursale', 'No employee in this branch')}</p>
-                                    <p className="text-gray-400 text-sm">{tr('Cliquez sur "Ajouter un employé" pour commencer', 'Click "Add an employee" to start')}</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">{tr('Aucun employé dans cette succursale', 'No employee in this branch')}</p>
+                                    <p className="text-gray-400 dark:text-gray-500 text-sm">{tr('Cliquez sur "Ajouter un employé" pour commencer', 'Click "Add an employee" to start')}</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
                                     {getPersonnelSuccursale().map(person => (
                                         <div
                                             key={person.id}
-                                            className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+                                            className="bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-shadow"
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
-                                                    <h4 className="font-semibold text-gray-900 text-lg">
+                                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
                                                         {person.prenom} {person.nom}
                                                     </h4>
                                                     <div className="mt-2 space-y-1">
-                                                        <p className="text-sm text-gray-600">
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300">
                                                             <Icon name="briefcase" size={14} className="inline mr-2" />
                                                             {person.poste}
                                                         </p>
                                                         {person.departement && (
-                                                            <p className="text-sm text-gray-600">
+                                                            <p className="text-sm text-gray-600 dark:text-gray-300">
                                                                 <Icon name="building" size={14} className="inline mr-2" />
                                                                 {person.departement}
                                                             </p>
                                                         )}
                                                         {person.telephone && (
-                                                            <p className="text-sm text-gray-600">
+                                                            <p className="text-sm text-gray-600 dark:text-gray-300">
                                                                 <Icon name="phone" size={14} className="inline mr-2" />
                                                                 {person.telephone}
                                                             </p>
                                                         )}
                                                         {person.email && (
-                                                            <p className="text-sm text-gray-600">
+                                                            <p className="text-sm text-gray-600 dark:text-gray-300">
                                                                 <Icon name="mail" size={14} className="inline mr-2" />
                                                                 {person.email}
                                                             </p>
@@ -646,7 +646,7 @@ export function SuccursaleModal({
                                                             <p className="text-sm font-medium text-emerald-700">
                                                                 <Icon name="dollar" size={14} className="inline mr-2" />
                                                                 {Number(person.hourly_rate).toFixed(2)} $/h
-                                                                <span className="ml-1 text-xs font-normal text-gray-400">{tr('(profil de paie)', '(payroll profile)')}</span>
+                                                                <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">{tr('(profil de paie)', '(payroll profile)')}</span>
                                                             </p>
                                                         )}
                                                     </div>
@@ -656,7 +656,7 @@ export function SuccursaleModal({
                                                                 person.niveauAcces === 'administration' ? 'bg-purple-100 text-purple-800' :
                                                                 person.niveauAcces === 'coordination' ? 'bg-blue-100 text-blue-800' :
                                                                 person.niveauAcces === 'modification' ? 'bg-green-100 text-green-800' :
-                                                                'bg-gray-100 text-gray-800'
+                                                                'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100'
                                                             }`}>
                                                                 {person.niveauAcces}
                                                             </span>

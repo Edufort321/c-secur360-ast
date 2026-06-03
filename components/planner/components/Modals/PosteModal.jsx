@@ -130,7 +130,7 @@ export function PosteModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b bg-gray-900">
                     <div className="flex items-center gap-4">
@@ -157,7 +157,7 @@ export function PosteModal({
                 {/* Informations de base */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                             {tr('Nom du poste *', 'Job title *')}
                         </label>
                         <input
@@ -165,14 +165,14 @@ export function PosteModal({
                             name="nom"
                             value={formData.nom}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder={tr('Ex: Technicien Électrique Senior', 'E.g.: Senior Electrical Technician')}
                             required
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                             {tr('Département *', 'Department *')}
                         </label>
                         <div className="flex gap-2">
@@ -180,7 +180,7 @@ export function PosteModal({
                                 name="departement"
                                 value={formData.departement}
                                 onChange={handleInputChange}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 required
                             >
                                 <option value="">{tr('Sélectionner un département', 'Select a department')}</option>
@@ -210,7 +210,7 @@ export function PosteModal({
 
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                 {tr('Salaire Min ($)', 'Min salary ($)')}
                             </label>
                             <input
@@ -219,12 +219,12 @@ export function PosteModal({
                                 name="salaireMin"
                                 value={formData.salaireMin}
                                 onChange={handleInputChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                                 placeholder="45000"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                 {tr('Salaire Max ($)', 'Max salary ($)')}
                             </label>
                             <input
@@ -233,7 +233,7 @@ export function PosteModal({
                                 name="salaireMax"
                                 value={formData.salaireMax}
                                 onChange={handleInputChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                                 placeholder="75000"
                             />
                         </div>
@@ -242,7 +242,7 @@ export function PosteModal({
 
                 {/* Description */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                         {tr('Description du poste', 'Position description')}
                     </label>
                     <textarea
@@ -250,14 +250,14 @@ export function PosteModal({
                         value={formData.description}
                         onChange={handleInputChange}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder={tr('Description détaillée du poste, missions principales...', 'Detailed position description, main duties...')}
                     />
                 </div>
 
                 {/* Compétences requises */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                         {tr('Compétences requises', 'Required skills')}
                     </label>
                     <div className="flex gap-2 mb-3">
@@ -265,7 +265,7 @@ export function PosteModal({
                             type="text"
                             value={nouvelleCompetence}
                             onChange={(e) => setNouvelleCompetence(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder={tr('Ex: Électricité industrielle, PLC...', 'E.g.: Industrial electricity, PLC...')}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), ajouterCompetence())}
                         />
@@ -298,7 +298,7 @@ export function PosteModal({
 
                 {/* Responsabilités */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                         {tr('Responsabilités principales', 'Key responsibilities')}
                     </label>
                     <div className="flex gap-2 mb-3">
@@ -306,7 +306,7 @@ export function PosteModal({
                             type="text"
                             value={nouvelleResponsabilite}
                             onChange={(e) => setNouvelleResponsabilite(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder={tr('Ex: Maintenance préventive des équipements...', 'E.g.: Preventive equipment maintenance...')}
                             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), ajouterResponsabilite())}
                         />
@@ -342,7 +342,7 @@ export function PosteModal({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                                 {tr('Annuler', 'Cancel')}
                             </button>

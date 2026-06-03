@@ -321,7 +321,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b bg-gray-900">
                     <div className="flex items-center gap-4">
@@ -348,7 +348,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                         {/* Informations de base */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.lastName')} *
                                 </label>
                                 <input
@@ -362,7 +362,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.firstName')} *
                                 </label>
                                 <input
@@ -376,7 +376,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.position')}
                                 </label>
                                 <select
@@ -394,7 +394,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.department')}
                                 </label>
                                 <input
@@ -407,9 +407,9 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.branch')} *
-                                    {forceSuccursale && <span className="ml-2 text-xs text-gray-500">(Défini par la succursale)</span>}
+                                    {forceSuccursale && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Défini par la succursale)</span>}
                                 </label>
                                 <select
                                     value={formData.succursale}
@@ -428,7 +428,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.phone')}
                                 </label>
                                 <input
@@ -441,7 +441,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.email')}
                                 </label>
                                 <input
@@ -454,7 +454,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.authPassword')}
                                 </label>
                                 <div className="relative">
@@ -469,14 +469,14 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors"
                                             title={showPassword ? t('personnel.hidePassword') : t('personnel.showPassword')}
                                         >
                                             <Icon name={showPassword ? "eye_off" : "eye"} size={16} />
                                         </button>
                                     </div>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {t('personnel.passwordInfo')}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
@@ -496,7 +496,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.accessLevel')} *
                                 </label>
                                 <select
@@ -510,13 +510,13 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                     <option value="coordination">{t('personnel.accessCoordination')}</option>
                                     <option value="administration">{t('personnel.accessAdministration')}</option>
                                 </select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {t('personnel.accessLevelInfo')}
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.hireDate')}
                                 </label>
                                 <input
@@ -528,7 +528,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {t('personnel.salaryOptional')}
                                 </label>
                                 <input
@@ -549,16 +549,16 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                     <Icon name="dollar" size={16} />
                                     <span className="font-medium">{t('personnel.hourlyRate') || 'Taux horaire'} :</span>
                                     <span className="font-bold">{Number(personnel.hourly_rate).toFixed(2)} $/h</span>
-                                    {personnel.ot_enabled === false && <span className="text-xs text-gray-500">· OT désactivé</span>}
-                                    {personnel.dt_enabled === false && <span className="text-xs text-gray-500">· DT désactivé</span>}
+                                    {personnel.ot_enabled === false && <span className="text-xs text-gray-500 dark:text-gray-400">· OT désactivé</span>}
+                                    {personnel.dt_enabled === false && <span className="text-xs text-gray-500 dark:text-gray-400">· DT désactivé</span>}
                                 </div>
-                                <span className="text-xs text-gray-500">Profil de paie (Admin) — non modifiable ici</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">Profil de paie (Admin) — non modifiable ici</span>
                             </div>
                         )}
 
                         {/* Spécialités */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                 {t('personnel.specialties')}
                             </label>
 
@@ -608,7 +608,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
 
                         {/* Statut disponibilité */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                 {t('personnel.status')}
                             </label>
                             <div className="flex items-center space-x-4">
@@ -635,7 +635,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
 
                         {/* Visibilité au calendrier */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                 {t('personnel.display')}
                             </label>
                             <div className="flex items-center">
@@ -644,19 +644,19 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                         type="checkbox"
                                         checked={formData.visibleChantier}
                                         onChange={(e) => handleInputChange('visibleChantier', e.target.checked)}
-                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                                     />
-                                    <span className="text-gray-700">{t('personnel.visibleOnCalendar')}</span>
+                                    <span className="text-gray-700 dark:text-gray-200">{t('personnel.visibleOnCalendar')}</span>
                                 </label>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {t('personnel.visibilityInfo')}
                             </p>
                         </div>
 
                         {/* Notes */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                 {t('personnel.notes')}
                             </label>
                             <textarea
@@ -683,7 +683,7 @@ export function PersonnelModal({ isOpen, onClose, personnel = null, onSave, onDe
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     {t('personnel.cancel')}
                                 </button>
