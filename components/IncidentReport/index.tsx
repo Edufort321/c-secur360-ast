@@ -9,6 +9,7 @@ import {
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Shield,
   RotateCcw, CheckCircle, Clock, Car, Building2, Activity,
 } from 'lucide-react';
+import { useLanguage, type Lang } from '@/contexts/LanguageContext';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -407,6 +408,124 @@ const COLLISION_TYPES = [
 
 type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'compliance' | 'approval';
 
+// ── i18n (connecte au header FR/EN via useLanguage) ──────────────────────────
+// Les valeurs stockees restent en FR (canoniques) ; on traduit seulement l'AFFICHAGE.
+const EN_LABEL: Record<string, string> = {
+  // Types d'incident
+  'Accident de travail': 'Workplace accident',
+  'Passé proche': 'Near miss',
+  'Passé proche (sans blessure)': 'Near miss (no injury)',
+  'Accident de véhicule': 'Vehicle accident',
+  'Dommages matériels': 'Property damage',
+  'Maladie professionnelle': 'Occupational illness',
+  // Traitement medical
+  'Aucun traitement': 'No treatment',
+  'Premiers soins sur place': 'On-site first aid',
+  'Clinique / médecin': 'Clinic / physician',
+  'Hospitalisation': 'Hospitalization',
+  'Urgence / ambulance': 'Emergency / ambulance',
+  // Statut action corrective
+  'En attente': 'Pending',
+  'En cours': 'In progress',
+  'Complété': 'Completed',
+  // Eclairage
+  'Bon éclairage': 'Good lighting',
+  'Éclairage insuffisant': 'Insufficient lighting',
+  'Absence de lumière': 'No light',
+  'Lumière naturelle seulement': 'Natural light only',
+  'Éblouissement': 'Glare',
+  // Facteurs contributifs
+  'Comportement / acte dangereux': 'Unsafe behavior / act',
+  "Défaillance d'équipement / outil": 'Equipment / tool failure',
+  'Conditions environnementales': 'Environmental conditions',
+  'Procédure absente ou non suivie': 'Missing or unfollowed procedure',
+  'Formation insuffisante': 'Insufficient training',
+  'Équipement de protection manquant': 'Missing protective equipment',
+  'Fatigue / stress': 'Fatigue / stress',
+  'Pression de temps': 'Time pressure',
+  'Communication déficiente': 'Poor communication',
+  'Entretien préventif insuffisant': 'Insufficient preventive maintenance',
+  'Autre': 'Other',
+  // Types de blessure
+  'Fracture': 'Fracture', 'Entorse / Foulure': 'Sprain / Strain', 'Lacération / Coupure': 'Laceration / Cut', 'Contusion': 'Contusion',
+  'Brûlure thermique': 'Thermal burn', 'Brûlure chimique': 'Chemical burn', 'Choc électrique': 'Electric shock', 'Commotion cérébrale': 'Concussion',
+  'Dislocation': 'Dislocation', 'Hernie': 'Hernia', 'Intoxication / Empoisonnement': 'Intoxication / Poisoning', 'Corps étranger': 'Foreign body',
+  'Écrasement': 'Crush injury', 'Amputation': 'Amputation', 'Égratignure / Abrasion': 'Scratch / Abrasion',
+  // Meteo
+  'Clair / ensoleillé': 'Clear / sunny', 'Nuageux': 'Cloudy', 'Pluie': 'Rain', 'Neige': 'Snow', 'Verglas': 'Black ice',
+  'Brouillard': 'Fog', 'Vent fort': 'Strong wind', 'Chaleur extrême': 'Extreme heat', 'Froid extrême': 'Extreme cold', 'Intérieur': 'Indoor',
+  // Types de collision
+  'Collision frontale': 'Head-on collision', 'Collision arrière': 'Rear-end collision', 'Collision latérale': 'Side collision',
+  'Renversement / tonneau': 'Rollover', 'Collision avec piéton': 'Pedestrian collision', 'Collision avec objet fixe': 'Collision with fixed object',
+  'Dommages au stationnement': 'Parking damage',
+  // Questions des 5 Pourquoi (stockees dans le rapport)
+  "Pourquoi l'incident s'est-il produit ?": 'Why did the incident occur?',
+  "Pourquoi cette cause existe-t-elle ?": 'Why does this cause exist?',
+  'Pourquoi cette cause fondamentale ?': 'Why this fundamental cause?',
+  'Pourquoi ce facteur systémique ?': 'Why this systemic factor?',
+  'Cause racine ultime ?': 'Ultimate root cause?',
+};
+
+// Traduit une valeur FR canonique pour l'affichage selon la langue.
+const tl = (lang: Lang, fr: string) => (lang === 'en' ? (EN_LABEL[fr] ?? fr) : fr);
+
+const TR = {
+  fr: {
+    back: 'Retour', draft: 'Brouillon', submittedRO: 'Soumis — lecture seule', closed: 'Fermé',
+    saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder', submit: 'Soumettre',
+    confirmSubmit: 'Confirmer la soumission ?', yes: 'Oui', cancel: 'Annuler',
+    nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', compliance: 'Réglementation', approval: 'Approbation' },
+    g: {
+      title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
+      dateIncident: "Date de l'incident", timeIncident: "Heure de l'incident", dateReport: 'Date du rapport',
+      responsible: 'Responsable du rapport', name: 'Nom', namePh: 'Prénom Nom', titlePost: 'Titre / Poste', titlePostPh: 'Contremaître, HSE...', phone: 'Téléphone',
+      sev: ['1 — Mineur (presque-accident)', '2 — Faible (presque-accident)', '3 — Modéré (presque-accident)', '4 — Grave (incident)', '5 — Critique (incident)'],
+      declDelay: 'Délai de déclaration', requiredForm: 'Formulaire requis',
+    },
+    loc: { title: "Lieu de l'incident", address: 'Adresse complète', addressPh: '123, rue Principale, Ville, QC', dept: 'Département / Unité', deptPh: 'Atelier, Chantier A, Bureau...', exact: 'Emplacement précis', exactPh: 'Escalier nord, zone de chargement...', weather: 'Conditions météo', lighting: 'Éclairage' },
+    p: {
+      injured: 'Personnes blessées', add: 'Ajouter', noneNear: 'Aucune blessure (passé proche)', noneInjured: 'Aucune personne blessée enregistrée', injuredN: 'Blessé',
+      fullName: 'Nom complet', jobTitle: 'Titre / Poste', employer: 'Employeur', empId: '# Employé', phone: 'Téléphone', injuryType: 'Type de blessure', treatment: 'Traitement médical',
+      injuryDesc: 'Description de la blessure', injuryDescPh: 'Décrire la nature et la localisation de la blessure…', lostTime: 'Perte de temps', daysPh: 'Jours', daysAbsence: "jours d'absence",
+      witnesses: 'Témoins', noWitness: 'Aucun témoin enregistré', witnessN: 'Témoin', wName: 'Nom', wPost: 'Poste', statement: 'Déclaration', statementPh: 'Déclaration du témoin…',
+    },
+    b: { title: 'Schéma corporel', none: "Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.", clickA: 'Cliquer sur les zones blessées pour ', injuredN: 'Blessé' },
+    d: { title: "Description de l'événement", workType: "Type de travail effectué au moment de l'incident", workTypePh: 'Entretien, installation, conduite, manutention…', narration: "Narration de l'incident", narrationPh: "Décrire chronologiquement et précisément les événements. Inclure ce qui s'est passé, comment et où…", immediate: 'Actions immédiates prises', immediatePh: "Premiers secours, évacuation, mise hors service de l'équipement, appel d'urgence…", factors: 'Facteurs contributifs' },
+    v: { vehTitle: 'Véhicule impliqué', yes: 'Oui', no: 'Non', plate: "Plaque d'immatriculation", make: 'Marque', model: 'Modèle', year: 'Année', km: 'Kilométrage au moment', collisionType: 'Type de collision', otherVeh: 'Autre véhicule impliqué', policeReport: 'Rapport de police', otherVehDesc: "Description de l'autre véhicule", policeNum: 'Numéro du rapport de police', damageDesc: 'Description des dommages', propTitle: 'Dommages matériels', propLoc: 'Localisation des dommages', estCost: 'Coût estimé ($)' },
+    an: { fiveWhy: 'Méthode des 5 Pourquoi', fiveWhyHelp: 'Remonter la chaîne causale jusqu\'à la cause racine en répondant à chaque «Pourquoi».', answerPh: 'Réponse…', rootTitle: 'Cause racine identifiée', rootPh: "Suite à l'analyse des 5 Pourquoi, la cause racine est…" },
+    ac: { title: 'Actions correctives', add: 'Ajouter', none: 'Aucune action corrective enregistrée', actionN: 'Action', describePh: "Décrire l'action corrective…", responsible: 'Responsable', dueDate: 'Échéance', status: 'Statut', remove: 'Retirer' },
+    c: { notifTitle: 'Notification réglementaire', declDelay: 'Délai de déclaration', formLabel: 'Formulaire', notifiedYes: 'Autorité notifiée', notifiedNo: 'Autorité non encore notifiée', notifDate: 'Date de notification', refNum: 'Numéro de référence', refNumPh: 'Ex : CNESST-2026-XXXXX' },
+    ap: { title: 'Approbation', supervisor: 'Superviseur immédiat', hse: 'Responsable HSE', mgmt: 'Direction', approved: 'Approuvé', pending: 'En attente', name: 'Nom', date: 'Date' },
+  },
+  en: {
+    back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
+    saving: 'Saving…', saved: 'Saved', save: 'Save', submit: 'Submit',
+    confirmSubmit: 'Confirm submission?', yes: 'Yes', cancel: 'Cancel',
+    nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', compliance: 'Regulations', approval: 'Approval' },
+    g: {
+      title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
+      dateIncident: 'Incident date', timeIncident: 'Incident time', dateReport: 'Report date',
+      responsible: 'Report author', name: 'Name', namePh: 'First Last', titlePost: 'Title / Position', titlePostPh: 'Foreman, HSE...', phone: 'Phone',
+      sev: ['1 — Minor (near miss)', '2 — Low (near miss)', '3 — Moderate (near miss)', '4 — Serious (incident)', '5 — Critical (incident)'],
+      declDelay: 'Reporting deadline', requiredForm: 'Required form',
+    },
+    loc: { title: 'Incident location', address: 'Full address', addressPh: '123 Main St, City, QC', dept: 'Department / Unit', deptPh: 'Shop, Site A, Office...', exact: 'Exact location', exactPh: 'North stairwell, loading area...', weather: 'Weather conditions', lighting: 'Lighting' },
+    p: {
+      injured: 'Injured persons', add: 'Add', noneNear: 'No injury (near miss)', noneInjured: 'No injured person recorded', injuredN: 'Injured',
+      fullName: 'Full name', jobTitle: 'Title / Position', employer: 'Employer', empId: 'Employee #', phone: 'Phone', injuryType: 'Injury type', treatment: 'Medical treatment',
+      injuryDesc: 'Injury description', injuryDescPh: 'Describe the nature and location of the injury…', lostTime: 'Lost time', daysPh: 'Days', daysAbsence: 'days off',
+      witnesses: 'Witnesses', noWitness: 'No witness recorded', witnessN: 'Witness', wName: 'Name', wPost: 'Position', statement: 'Statement', statementPh: 'Witness statement…',
+    },
+    b: { title: 'Body diagram', none: 'No injured person — add a person in the "Injured" tab to locate injuries.', clickA: 'Click the injured zones for ', injuredN: 'Injured' },
+    d: { title: 'Event description', workType: 'Type of work performed at the time of the incident', workTypePh: 'Maintenance, installation, driving, handling…', narration: 'Incident narrative', narrationPh: 'Describe the events chronologically and precisely. Include what happened, how and where…', immediate: 'Immediate actions taken', immediatePh: 'First aid, evacuation, equipment lockout, emergency call…', factors: 'Contributing factors' },
+    v: { vehTitle: 'Vehicle involved', yes: 'Yes', no: 'No', plate: 'License plate', make: 'Make', model: 'Model', year: 'Year', km: 'Mileage at time', collisionType: 'Collision type', otherVeh: 'Other vehicle involved', policeReport: 'Police report', otherVehDesc: 'Other vehicle description', policeNum: 'Police report number', damageDesc: 'Damage description', propTitle: 'Property damage', propLoc: 'Damage location', estCost: 'Estimated cost ($)' },
+    an: { fiveWhy: '5 Whys method', fiveWhyHelp: 'Trace the causal chain to the root cause by answering each "Why".', answerPh: 'Answer…', rootTitle: 'Identified root cause', rootPh: 'Following the 5 Whys analysis, the root cause is…' },
+    ac: { title: 'Corrective actions', add: 'Add', none: 'No corrective action recorded', actionN: 'Action', describePh: 'Describe the corrective action…', responsible: 'Responsible', dueDate: 'Due date', status: 'Status', remove: 'Remove' },
+    c: { notifTitle: 'Regulatory notification', declDelay: 'Reporting deadline', formLabel: 'Form', notifiedYes: 'Authority notified', notifiedNo: 'Authority not yet notified', notifDate: 'Notification date', refNum: 'Reference number', refNumPh: 'e.g. CNESST-2026-XXXXX' },
+    ap: { title: 'Approval', supervisor: 'Immediate supervisor', hse: 'HSE manager', mgmt: 'Management', approved: 'Approved', pending: 'Pending', name: 'Name', date: 'Date' },
+  },
+} as const;
+
 // ── Shared UI ────────────────────────────────────────────────────────────────
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -446,6 +565,7 @@ function SelectInput({ value, onChange, options, readOnly }: {
   options: { value: string; label: string }[];
   readOnly?: boolean;
 }) {
+  const { lang } = useLanguage();
   return (
     <select
       value={value}
@@ -453,7 +573,7 @@ function SelectInput({ value, onChange, options, readOnly }: {
       disabled={readOnly}
       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white disabled:bg-gray-50"
     >
-      <option value="">— Sélectionner —</option>
+      <option value="">{lang === 'en' ? '— Select —' : '— Sélectionner —'}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
@@ -913,6 +1033,8 @@ export default function IncidentReportForm({
   onSaved,
   embedded = false,
 }: IncidentReportFormProps) {
+  const { lang } = useLanguage();
+  const tr = TR[lang];
   const [section, setSection] = useState<SectionId>('general');
   const [report, setReport] = useState<IncidentReportData>(emptyReport(defaultType, defaultProvince));
   const [dbId, setDbId] = useState<string | null>(reportId ?? null);
@@ -1051,16 +1173,16 @@ export default function IncidentReportForm({
   }
 
   const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode }[] = [
-    { id: 'general',     label: 'Général',        icon: <FileText size={16} /> },
-    { id: 'location',    label: 'Lieu',            icon: <MapPin size={16} /> },
-    { id: 'persons',     label: 'Blessés',         icon: <User size={16} /> },
-    { id: 'body',        label: 'Schéma corporel', icon: <Heart size={16} /> },
-    { id: 'description', label: 'Description',     icon: <AlignLeft size={16} /> },
-    { id: 'vehicle',     label: 'Véhicule',        icon: <Truck size={16} /> },
-    { id: 'analysis',    label: 'Analyse',         icon: <Search size={16} /> },
-    { id: 'actions',     label: 'Actions',         icon: <CheckSquare size={16} /> },
-    { id: 'compliance',  label: 'Réglementation',  icon: <Scale size={16} /> },
-    { id: 'approval',    label: 'Approbation',     icon: <PenLine size={16} /> },
+    { id: 'general',     label: tr.nav.general,     icon: <FileText size={16} /> },
+    { id: 'location',    label: tr.nav.location,    icon: <MapPin size={16} /> },
+    { id: 'persons',     label: tr.nav.persons,     icon: <User size={16} /> },
+    { id: 'body',        label: tr.nav.body,        icon: <Heart size={16} /> },
+    { id: 'description', label: tr.nav.description, icon: <AlignLeft size={16} /> },
+    { id: 'vehicle',     label: tr.nav.vehicle,     icon: <Truck size={16} /> },
+    { id: 'analysis',    label: tr.nav.analysis,    icon: <Search size={16} /> },
+    { id: 'actions',     label: tr.nav.actions,     icon: <CheckSquare size={16} /> },
+    { id: 'compliance',  label: tr.nav.compliance,  icon: <Scale size={16} /> },
+    { id: 'approval',    label: tr.nav.approval,    icon: <PenLine size={16} /> },
   ];
 
   function renderSection() {
@@ -1079,11 +1201,11 @@ export default function IncidentReportForm({
   }
 
   const typeLabels: Record<IncidentType, string> = {
-    accident:  'Accident de travail',
-    near_miss: 'Passé proche',
-    vehicle:   'Accident de véhicule',
-    property:  'Dommages matériels',
-    medical:   'Maladie professionnelle',
+    accident:  tl(lang, 'Accident de travail'),
+    near_miss: tl(lang, 'Passé proche'),
+    vehicle:   tl(lang, 'Accident de véhicule'),
+    property:  tl(lang, 'Dommages matériels'),
+    medical:   tl(lang, 'Maladie professionnelle'),
   };
 
   const typeColors: Record<IncidentType, string> = {
@@ -1103,7 +1225,7 @@ export default function IncidentReportForm({
             {onClose && (
               <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
                 <ArrowLeft size={16} />
-                Retour
+                {tr.back}
               </button>
             )}
             <div className="min-w-0">
@@ -1112,21 +1234,21 @@ export default function IncidentReportForm({
                   {typeLabels[report.incidentType]}
                 </h1>
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeColors[report.incidentType]}`}>
-                  {report.incidentType === 'near_miss' ? 'Passé proche' : report.incidentType.toUpperCase()}
+                  {report.incidentType === 'near_miss' ? tl(lang, 'Passé proche') : report.incidentType.toUpperCase()}
                 </span>
                 <span className="text-xs text-gray-400">{reportNumber}</span>
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
-                {status === 'draft' && 'Brouillon'}
-                {status === 'submitted' && 'Soumis — lecture seule'}
-                {status === 'closed' && 'Fermé'}
+                {status === 'draft' && tr.draft}
+                {status === 'submitted' && tr.submittedRO}
+                {status === 'closed' && tr.closed}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} />Enregistrement…</span>}
-            {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />Enregistré</span>}
+            {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} />{tr.saving}</span>}
+            {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />{tr.saved}</span>}
 
             {!readOnly && (
               <>
@@ -1135,7 +1257,7 @@ export default function IncidentReportForm({
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
                 >
                   <Save size={15} />
-                  Sauvegarder
+                  {tr.save}
                 </button>
 
                 {!submitConfirm ? (
@@ -1144,18 +1266,18 @@ export default function IncidentReportForm({
                     className="flex items-center gap-1.5 text-sm px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
                   >
                     <Send size={15} />
-                    Soumettre
+                    {tr.submit}
                   </button>
                 ) : (
                   <div className="flex items-center gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-1.5">
-                    <span className="text-xs text-red-700 font-medium">Confirmer la soumission ?</span>
+                    <span className="text-xs text-red-700 font-medium">{tr.confirmSubmit}</span>
                     <button
                       onClick={() => { doSave(report, true); setSubmitConfirm(false); }}
                       className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-medium"
                     >
-                      Oui
+                      {tr.yes}
                     </button>
-                    <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500">Annuler</button>
+                    <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500">{tr.cancel}</button>
                   </div>
                 )}
               </>
@@ -1202,15 +1324,17 @@ function GeneralSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
   const incidentTypes = [
-    { value: 'accident',  label: 'Accident de travail' },
-    { value: 'near_miss', label: 'Passé proche (sans blessure)' },
-    { value: 'vehicle',   label: 'Accident de véhicule' },
-    { value: 'property',  label: 'Dommages matériels' },
-    { value: 'medical',   label: 'Maladie professionnelle' },
+    { value: 'accident',  label: tl(lang, 'Accident de travail') },
+    { value: 'near_miss', label: tl(lang, 'Passé proche (sans blessure)') },
+    { value: 'vehicle',   label: tl(lang, 'Accident de véhicule') },
+    { value: 'property',  label: tl(lang, 'Dommages matériels') },
+    { value: 'medical',   label: tl(lang, 'Maladie professionnelle') },
   ];
 
   const provinces: { value: Province; label: string; group?: string }[] = [
@@ -1236,10 +1360,10 @@ function GeneralSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <FileText size={18} className="text-red-500" />
-          Informations générales
+          {t.g.title}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <Field label="Type d'incident" required>
+          <Field label={t.g.type} required>
             <SelectInput
               value={report.incidentType}
               onChange={v => up('incidentType', v as IncidentType)}
@@ -1247,7 +1371,7 @@ function GeneralSection({ report, onChange, readOnly }: {
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Province / territoire" required>
+          <Field label={t.g.province} required>
             <SelectInput
               value={report.province}
               onChange={v => up('province', v as Province)}
@@ -1255,42 +1379,42 @@ function GeneralSection({ report, onChange, readOnly }: {
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Sévérité" required>
+          <Field label={t.g.severity} required>
             <SelectInput
               value={String(report.severityLevel ?? 3)}
               onChange={v => up('severityLevel', Number(v))}
               options={[
-                { value: '1', label: '1 — Mineur (presque-accident)' },
-                { value: '2', label: '2 — Faible (presque-accident)' },
-                { value: '3', label: '3 — Modéré (presque-accident)' },
-                { value: '4', label: '4 — Grave (incident)' },
-                { value: '5', label: '5 — Critique (incident)' },
+                { value: '1', label: t.g.sev[0] },
+                { value: '2', label: t.g.sev[1] },
+                { value: '3', label: t.g.sev[2] },
+                { value: '4', label: t.g.sev[3] },
+                { value: '5', label: t.g.sev[4] },
               ]}
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Date de l'incident" required>
+          <Field label={t.g.dateIncident} required>
             <TextInput type="date" value={report.incidentDate} onChange={v => up('incidentDate', v)} readOnly={readOnly} />
           </Field>
-          <Field label="Heure de l'incident">
+          <Field label={t.g.timeIncident}>
             <TextInput type="time" value={report.incidentTime} onChange={v => up('incidentTime', v)} readOnly={readOnly} />
           </Field>
-          <Field label="Date du rapport">
+          <Field label={t.g.dateReport}>
             <TextInput type="date" value={report.reportedDate} onChange={v => up('reportedDate', v)} readOnly={readOnly} />
           </Field>
         </div>
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-4">Responsable du rapport</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-4">{t.g.responsible}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-          <Field label="Nom" required>
-            <TextInput value={report.reportedBy} onChange={v => up('reportedBy', v)} placeholder="Prénom Nom" readOnly={readOnly} />
+          <Field label={t.g.name} required>
+            <TextInput value={report.reportedBy} onChange={v => up('reportedBy', v)} placeholder={t.g.namePh} readOnly={readOnly} />
           </Field>
-          <Field label="Titre / Poste">
-            <TextInput value={report.reportedByTitle} onChange={v => up('reportedByTitle', v)} placeholder="Contremaître, HSE..." readOnly={readOnly} />
+          <Field label={t.g.titlePost}>
+            <TextInput value={report.reportedByTitle} onChange={v => up('reportedByTitle', v)} placeholder={t.g.titlePostPh} readOnly={readOnly} />
           </Field>
-          <Field label="Téléphone">
+          <Field label={t.g.phone}>
             <TextInput value={report.reportedByPhone} onChange={v => up('reportedByPhone', v)} placeholder="514-xxx-xxxx" readOnly={readOnly} />
           </Field>
         </div>
@@ -1303,9 +1427,9 @@ function GeneralSection({ report, onChange, readOnly }: {
             <AlertTriangle size={18} className="text-blue-600 mt-0.5 shrink-0" />
             <div>
               <div className="text-sm font-semibold text-blue-800 mb-1">
-                {PROVINCE_INFO[report.province].authority} — Délai de déclaration : {PROVINCE_INFO[report.province].deadline}
+                {PROVINCE_INFO[report.province].authority} — {t.g.declDelay} : {PROVINCE_INFO[report.province].deadline}
               </div>
-              <div className="text-xs text-blue-700">Formulaire requis : {PROVINCE_INFO[report.province].form}</div>
+              <div className="text-xs text-blue-700">{t.g.requiredForm} : {PROVINCE_INFO[report.province].form}</div>
             </div>
           </div>
         </div>
@@ -1319,39 +1443,38 @@ function LocationSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
-  const weatherOpts = WEATHER_CONDITIONS.map(w => ({ value: w, label: w }));
+  const weatherOpts = WEATHER_CONDITIONS.map(w => ({ value: w, label: tl(lang, w) }));
   const lightingOpts = [
-    { value: 'Bon éclairage', label: 'Bon éclairage' },
-    { value: 'Éclairage insuffisant', label: 'Éclairage insuffisant' },
-    { value: 'Absence de lumière', label: 'Absence de lumière' },
-    { value: 'Lumière naturelle seulement', label: 'Lumière naturelle seulement' },
-    { value: 'Éblouissement', label: 'Éblouissement' },
-  ];
+    'Bon éclairage', 'Éclairage insuffisant', 'Absence de lumière',
+    'Lumière naturelle seulement', 'Éblouissement',
+  ].map(o => ({ value: o, label: tl(lang, o) }));
 
   return (
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <MapPin size={18} className="text-red-500" />
-        Lieu de l'incident
+        {t.loc.title}
       </h2>
       <div className="space-y-0">
-        <Field label="Adresse complète" required>
-          <TextInput value={report.address} onChange={v => up('address', v)} placeholder="123, rue Principale, Ville, QC" readOnly={readOnly} />
+        <Field label={t.loc.address} required>
+          <TextInput value={report.address} onChange={v => up('address', v)} placeholder={t.loc.addressPh} readOnly={readOnly} />
         </Field>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <Field label="Département / Unité">
-            <TextInput value={report.department} onChange={v => up('department', v)} placeholder="Atelier, Chantier A, Bureau..." readOnly={readOnly} />
+          <Field label={t.loc.dept}>
+            <TextInput value={report.department} onChange={v => up('department', v)} placeholder={t.loc.deptPh} readOnly={readOnly} />
           </Field>
-          <Field label="Emplacement précis">
-            <TextInput value={report.exactLocation} onChange={v => up('exactLocation', v)} placeholder="Escalier nord, zone de chargement..." readOnly={readOnly} />
+          <Field label={t.loc.exact}>
+            <TextInput value={report.exactLocation} onChange={v => up('exactLocation', v)} placeholder={t.loc.exactPh} readOnly={readOnly} />
           </Field>
-          <Field label="Conditions météo">
+          <Field label={t.loc.weather}>
             <SelectInput value={report.weatherConditions} onChange={v => up('weatherConditions', v)} options={weatherOpts} readOnly={readOnly} />
           </Field>
-          <Field label="Éclairage">
+          <Field label={t.loc.lighting}>
             <SelectInput value={report.lighting} onChange={v => up('lighting', v)} options={lightingOpts} readOnly={readOnly} />
           </Field>
         </div>
@@ -1387,15 +1510,17 @@ function PersonsSection({ report, onChange, readOnly }: {
     }));
   }
 
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const treatmentOpts = [
-    { value: 'none',       label: 'Aucun traitement' },
-    { value: 'first_aid',  label: 'Premiers soins sur place' },
-    { value: 'clinic',     label: 'Clinique / médecin' },
-    { value: 'hospital',   label: 'Hospitalisation' },
-    { value: 'emergency',  label: 'Urgence / ambulance' },
+    { value: 'none',       label: tl(lang, 'Aucun traitement') },
+    { value: 'first_aid',  label: tl(lang, 'Premiers soins sur place') },
+    { value: 'clinic',     label: tl(lang, 'Clinique / médecin') },
+    { value: 'hospital',   label: tl(lang, 'Hospitalisation') },
+    { value: 'emergency',  label: tl(lang, 'Urgence / ambulance') },
   ];
 
-  const injuryOpts = INJURY_TYPES.map(t => ({ value: t, label: t }));
+  const injuryOpts = INJURY_TYPES.map(iv => ({ value: iv, label: tl(lang, iv) }));
 
   return (
     <div className="space-y-4">
@@ -1404,26 +1529,26 @@ function PersonsSection({ report, onChange, readOnly }: {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
             <User size={18} className="text-red-500" />
-            Personnes blessées
+            {t.p.injured}
           </h2>
           {!readOnly && (
             <button onClick={addPerson} className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg">
               <Plus size={14} />
-              Ajouter
+              {t.p.add}
             </button>
           )}
         </div>
 
         {report.injuredPersons.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">
-            {report.incidentType === 'near_miss' ? 'Aucune blessure (passé proche)' : 'Aucune personne blessée enregistrée'}
+            {report.incidentType === 'near_miss' ? t.p.noneNear : t.p.noneInjured}
           </p>
         )}
 
         {report.injuredPersons.map((person, idx) => (
           <div key={person.id} className="border border-gray-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">Blessé #{idx + 1}</span>
+              <span className="text-sm font-medium text-gray-700">{t.p.injuredN} #{idx + 1}</span>
               {!readOnly && (
                 <button onClick={() => removePerson(person.id)} className="text-red-400 hover:text-red-600">
                   <Trash2 size={15} />
@@ -1431,36 +1556,36 @@ function PersonsSection({ report, onChange, readOnly }: {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-              <Field label="Nom complet" required>
-                <TextInput value={person.name} onChange={v => updatePerson(person.id, p => ({ ...p, name: v }))} placeholder="Prénom Nom" readOnly={readOnly} />
+              <Field label={t.p.fullName} required>
+                <TextInput value={person.name} onChange={v => updatePerson(person.id, p => ({ ...p, name: v }))} placeholder={t.g.namePh} readOnly={readOnly} />
               </Field>
-              <Field label="Titre / Poste">
+              <Field label={t.p.jobTitle}>
                 <TextInput value={person.jobTitle} onChange={v => updatePerson(person.id, p => ({ ...p, jobTitle: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Employeur">
+              <Field label={t.p.employer}>
                 <TextInput value={person.company} onChange={v => updatePerson(person.id, p => ({ ...p, company: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="# Employé">
+              <Field label={t.p.empId}>
                 <TextInput value={person.employeeId} onChange={v => updatePerson(person.id, p => ({ ...p, employeeId: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Téléphone">
+              <Field label={t.p.phone}>
                 <TextInput value={person.phone} onChange={v => updatePerson(person.id, p => ({ ...p, phone: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Type de blessure">
+              <Field label={t.p.injuryType}>
                 <SelectInput value={person.injuryType} onChange={v => updatePerson(person.id, p => ({ ...p, injuryType: v }))} options={injuryOpts} readOnly={readOnly} />
               </Field>
-              <Field label="Traitement médical">
+              <Field label={t.p.treatment}>
                 <SelectInput value={person.medicalTreatment} onChange={v => updatePerson(person.id, p => ({ ...p, medicalTreatment: v as InjuredPerson['medicalTreatment'] }))} options={treatmentOpts} readOnly={readOnly} />
               </Field>
             </div>
-            <Field label="Description de la blessure">
-              <Textarea value={person.injuryDescription} onChange={v => updatePerson(person.id, p => ({ ...p, injuryDescription: v }))} placeholder="Décrire la nature et la localisation de la blessure…" readOnly={readOnly} rows={2} />
+            <Field label={t.p.injuryDesc}>
+              <Textarea value={person.injuryDescription} onChange={v => updatePerson(person.id, p => ({ ...p, injuryDescription: v }))} placeholder={t.p.injuryDescPh} readOnly={readOnly} rows={2} />
             </Field>
             <div className="flex items-center gap-4 mt-2">
               <Toggle
                 checked={person.lostTime}
                 onChange={v => updatePerson(person.id, p => ({ ...p, lostTime: v }))}
-                label="Perte de temps"
+                label={t.p.lostTime}
                 disabled={readOnly}
               />
               {person.lostTime && (
@@ -1469,11 +1594,11 @@ function PersonsSection({ report, onChange, readOnly }: {
                     type="number"
                     value={String(person.lostTimeDays)}
                     onChange={v => updatePerson(person.id, p => ({ ...p, lostTimeDays: parseInt(v) || 0 }))}
-                    placeholder="Jours"
+                    placeholder={t.p.daysPh}
                     readOnly={readOnly}
                     className="w-20"
                   />
-                  <span className="text-xs text-gray-500">jours d'absence</span>
+                  <span className="text-xs text-gray-500">{t.p.daysAbsence}</span>
                   <TextInput
                     type="date"
                     value={person.returnToWorkDate}
@@ -1491,24 +1616,24 @@ function PersonsSection({ report, onChange, readOnly }: {
       {/* Witnesses */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-800">Témoins</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.p.witnesses}</h2>
           {!readOnly && (
             <button
               onClick={() => onChange(r => ({ ...r, witnesses: [...r.witnesses, emptyWitness()] }))}
               className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-lg"
             >
               <Plus size={14} />
-              Ajouter
+              {t.p.add}
             </button>
           )}
         </div>
         {report.witnesses.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-4">Aucun témoin enregistré</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t.p.noWitness}</p>
         )}
         {report.witnesses.map((w, idx) => (
           <div key={w.id} className="border border-gray-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">Témoin #{idx + 1}</span>
+              <span className="text-sm font-medium text-gray-700">{t.p.witnessN} #{idx + 1}</span>
               {!readOnly && (
                 <button onClick={() => onChange(r => ({ ...r, witnesses: r.witnesses.filter(x => x.id !== w.id) }))} className="text-red-400 hover:text-red-600">
                   <Trash2 size={15} />
@@ -1516,18 +1641,18 @@ function PersonsSection({ report, onChange, readOnly }: {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 mb-2">
-              <Field label="Nom">
+              <Field label={t.p.wName}>
                 <TextInput value={w.name} onChange={v => updateWitness(w.id, x => ({ ...x, name: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Poste">
+              <Field label={t.p.wPost}>
                 <TextInput value={w.jobTitle} onChange={v => updateWitness(w.id, x => ({ ...x, jobTitle: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Téléphone">
+              <Field label={t.p.phone}>
                 <TextInput value={w.phone} onChange={v => updateWitness(w.id, x => ({ ...x, phone: v }))} readOnly={readOnly} />
               </Field>
             </div>
-            <Field label="Déclaration">
-              <Textarea value={w.statement} onChange={v => updateWitness(w.id, x => ({ ...x, statement: v }))} placeholder="Déclaration du témoin…" readOnly={readOnly} rows={2} />
+            <Field label={t.p.statement}>
+              <Textarea value={w.statement} onChange={v => updateWitness(w.id, x => ({ ...x, statement: v }))} placeholder={t.p.statementPh} readOnly={readOnly} rows={2} />
             </Field>
           </div>
         ))}
@@ -1541,6 +1666,8 @@ function BodySection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const [personIdx, setPersonIdx] = useState(0);
 
   if (report.injuredPersons.length === 0) {
@@ -1548,10 +1675,10 @@ function BodySection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Heart size={18} className="text-red-500" />
-          Schéma corporel
+          {t.b.title}
         </h2>
         <p className="text-sm text-gray-400 text-center py-8">
-          Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.
+          {t.b.none}
         </p>
       </Card>
     );
@@ -1564,7 +1691,7 @@ function BodySection({ report, onChange, readOnly }: {
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <Heart size={18} className="text-red-500" />
-        Schéma corporel
+        {t.b.title}
       </h2>
 
       {report.injuredPersons.length > 1 && (
@@ -1577,7 +1704,7 @@ function BodySection({ report, onChange, readOnly }: {
                 personIdx === i ? 'bg-red-600 text-white border-red-600' : 'border-gray-300 text-gray-600 hover:border-red-300'
               }`}
             >
-              {p.name || `Blessé #${i + 1}`}
+              {p.name || `${t.b.injuredN} #${i + 1}`}
             </button>
           ))}
         </div>
@@ -1585,7 +1712,7 @@ function BodySection({ report, onChange, readOnly }: {
 
       <div className="flex flex-col items-center">
         <p className="text-sm text-gray-600 mb-4 text-center">
-          Cliquer sur les zones blessées pour <strong>{person.name || `Blessé #${safeIdx + 1}`}</strong>
+          {t.b.clickA}<strong>{person.name || `${t.b.injuredN} #${safeIdx + 1}`}</strong>
         </p>
         <BodyDiagram
           selected={person.bodyRegions}
@@ -1607,6 +1734,8 @@ function DescriptionSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1624,25 +1753,25 @@ function DescriptionSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <AlignLeft size={18} className="text-red-500" />
-          Description de l'événement
+          {t.d.title}
         </h2>
-        <Field label="Type de travail effectué au moment de l'incident">
-          <TextInput value={report.workType} onChange={v => up('workType', v)} placeholder="Entretien, installation, conduite, manutention…" readOnly={readOnly} />
+        <Field label={t.d.workType}>
+          <TextInput value={report.workType} onChange={v => up('workType', v)} placeholder={t.d.workTypePh} readOnly={readOnly} />
         </Field>
-        <Field label="Narration de l'incident" required>
+        <Field label={t.d.narration} required>
           <Textarea
             value={report.description}
             onChange={v => up('description', v)}
-            placeholder="Décrire chronologiquement et précisément les événements. Inclure ce qui s'est passé, comment et où…"
+            placeholder={t.d.narrationPh}
             readOnly={readOnly}
             rows={6}
           />
         </Field>
-        <Field label="Actions immédiates prises">
+        <Field label={t.d.immediate}>
           <Textarea
             value={report.immediateAction}
             onChange={v => up('immediateAction', v)}
-            placeholder="Premiers secours, évacuation, mise hors service de l'équipement, appel d'urgence…"
+            placeholder={t.d.immediatePh}
             readOnly={readOnly}
             rows={3}
           />
@@ -1650,7 +1779,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Facteurs contributifs</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-3">{t.d.factors}</h2>
         <div className="flex flex-wrap gap-2">
           {CONTRIBUTING_FACTORS.map(f => {
             const active = report.contributingFactors.includes(f);
@@ -1662,7 +1791,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
                   active ? 'bg-red-100 border-red-400 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-400'
                 } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
-                {f}
+                {tl(lang, f)}
               </button>
             );
           })}
@@ -1677,23 +1806,25 @@ function VehicleSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const upV = <K extends keyof IncidentReportData['vehicle']>(k: K, v: IncidentReportData['vehicle'][K]) =>
     onChange(r => ({ ...r, vehicle: { ...r.vehicle, [k]: v } }));
   const upP = <K extends keyof IncidentReportData['propertyDamage']>(k: K, v: IncidentReportData['propertyDamage'][K]) =>
     onChange(r => ({ ...r, propertyDamage: { ...r.propertyDamage, [k]: v } }));
 
-  const collisionOpts = COLLISION_TYPES.map(c => ({ value: c, label: c }));
+  const collisionOpts = COLLISION_TYPES.map(c => ({ value: c, label: tl(lang, c) }));
 
   return (
     <div className="space-y-4">
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <Truck size={18} className="text-red-500" />
-          <h2 className="text-base font-semibold text-gray-800">Véhicule impliqué</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.v.vehTitle}</h2>
           <Toggle
             checked={report.vehicleInvolved}
             onChange={v => onChange(r => ({ ...r, vehicleInvolved: v }))}
-            label={report.vehicleInvolved ? 'Oui' : 'Non'}
+            label={report.vehicleInvolved ? t.v.yes : t.v.no}
             disabled={readOnly}
           />
         </div>
@@ -1701,40 +1832,40 @@ function VehicleSection({ report, onChange, readOnly }: {
         {report.vehicleInvolved && (
           <div className="space-y-0">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
-              <Field label="Plaque d'immatriculation">
+              <Field label={t.v.plate}>
                 <TextInput value={report.vehicle.licensePlate} onChange={v => upV('licensePlate', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Marque">
+              <Field label={t.v.make}>
                 <TextInput value={report.vehicle.make} onChange={v => upV('make', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Modèle">
+              <Field label={t.v.model}>
                 <TextInput value={report.vehicle.model} onChange={v => upV('model', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Année">
+              <Field label={t.v.year}>
                 <TextInput value={report.vehicle.year} onChange={v => upV('year', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Kilométrage au moment">
+              <Field label={t.v.km}>
                 <TextInput value={report.vehicle.kmAtIncident} onChange={v => upV('kmAtIncident', v)} placeholder="km" readOnly={readOnly} />
               </Field>
-              <Field label="Type de collision">
+              <Field label={t.v.collisionType}>
                 <SelectInput value={report.vehicle.collisionType} onChange={v => upV('collisionType', v)} options={collisionOpts} readOnly={readOnly} />
               </Field>
             </div>
             <div className="flex flex-wrap gap-3 mt-2 mb-3">
-              <Toggle checked={report.vehicle.otherVehicle} onChange={v => upV('otherVehicle', v)} label="Autre véhicule impliqué" disabled={readOnly} />
-              <Toggle checked={report.vehicle.policeReport} onChange={v => upV('policeReport', v)} label="Rapport de police" disabled={readOnly} />
+              <Toggle checked={report.vehicle.otherVehicle} onChange={v => upV('otherVehicle', v)} label={t.v.otherVeh} disabled={readOnly} />
+              <Toggle checked={report.vehicle.policeReport} onChange={v => upV('policeReport', v)} label={t.v.policeReport} disabled={readOnly} />
             </div>
             {report.vehicle.otherVehicle && (
-              <Field label="Description de l'autre véhicule">
+              <Field label={t.v.otherVehDesc}>
                 <TextInput value={report.vehicle.otherVehicleDesc} onChange={v => upV('otherVehicleDesc', v)} readOnly={readOnly} />
               </Field>
             )}
             {report.vehicle.policeReport && (
-              <Field label="Numéro du rapport de police">
+              <Field label={t.v.policeNum}>
                 <TextInput value={report.vehicle.policeReportNumber} onChange={v => upV('policeReportNumber', v)} readOnly={readOnly} />
               </Field>
             )}
-            <Field label="Description des dommages">
+            <Field label={t.v.damageDesc}>
               <Textarea value={report.vehicle.damageDescription} onChange={v => upV('damageDescription', v)} readOnly={readOnly} rows={3} />
             </Field>
           </div>
@@ -1744,25 +1875,25 @@ function VehicleSection({ report, onChange, readOnly }: {
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <Building2 size={18} className="text-red-500" />
-          <h2 className="text-base font-semibold text-gray-800">Dommages matériels</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.v.propTitle}</h2>
           <Toggle
             checked={report.propertyDamageInvolved}
             onChange={v => onChange(r => ({ ...r, propertyDamageInvolved: v }))}
-            label={report.propertyDamageInvolved ? 'Oui' : 'Non'}
+            label={report.propertyDamageInvolved ? t.v.yes : t.v.no}
             disabled={readOnly}
           />
         </div>
 
         {report.propertyDamageInvolved && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Field label="Localisation des dommages">
+            <Field label={t.v.propLoc}>
               <TextInput value={report.propertyDamage.location} onChange={v => upP('location', v)} readOnly={readOnly} />
             </Field>
-            <Field label="Coût estimé ($)">
+            <Field label={t.v.estCost}>
               <TextInput value={report.propertyDamage.estimatedCost} onChange={v => upP('estimatedCost', v)} placeholder="0.00" readOnly={readOnly} />
             </Field>
             <div className="md:col-span-2">
-              <Field label="Description des dommages">
+              <Field label={t.v.damageDesc}>
                 <Textarea value={report.propertyDamage.description} onChange={v => upP('description', v)} readOnly={readOnly} rows={3} />
               </Field>
             </div>
@@ -1778,6 +1909,8 @@ function AnalysisSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1794,9 +1927,9 @@ function AnalysisSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
           <Search size={18} className="text-red-500" />
-          Méthode des 5 Pourquoi
+          {t.an.fiveWhy}
         </h2>
-        <p className="text-xs text-gray-500 mb-4">Remonter la chaîne causale jusqu'à la cause racine en répondant à chaque «Pourquoi».</p>
+        <p className="text-xs text-gray-500 mb-4">{t.an.fiveWhyHelp}</p>
 
         {report.whyAnalysis.map((why, idx) => (
           <div key={idx} className="mb-3">
@@ -1807,11 +1940,11 @@ function AnalysisSection({ report, onChange, readOnly }: {
                 {idx + 1}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-700 mb-1">{why.question}</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">{tl(lang, why.question)}</div>
                 <Textarea
                   value={why.answer}
                   onChange={v => updateWhy(idx, v)}
-                  placeholder="Réponse…"
+                  placeholder={t.an.answerPh}
                   readOnly={readOnly}
                   rows={2}
                 />
@@ -1825,11 +1958,11 @@ function AnalysisSection({ report, onChange, readOnly }: {
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Cause racine identifiée</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-3">{t.an.rootTitle}</h2>
         <Textarea
           value={report.rootCause}
           onChange={v => up('rootCause', v)}
-          placeholder="Suite à l'analyse des 5 Pourquoi, la cause racine est…"
+          placeholder={t.an.rootPh}
           readOnly={readOnly}
           rows={3}
         />
@@ -1850,10 +1983,12 @@ function ActionsSection({ report, onChange, readOnly }: {
     }));
   }
 
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const statusOpts = [
-    { value: 'pending',     label: 'En attente' },
-    { value: 'in_progress', label: 'En cours' },
-    { value: 'completed',   label: 'Complété' },
+    { value: 'pending',     label: tl(lang, 'En attente') },
+    { value: 'in_progress', label: tl(lang, 'En cours') },
+    { value: 'completed',   label: tl(lang, 'Complété') },
   ];
 
   const statusColors: Record<string, string> = {
@@ -1867,7 +2002,7 @@ function ActionsSection({ report, onChange, readOnly }: {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
           <CheckSquare size={18} className="text-red-500" />
-          Actions correctives
+          {t.ac.title}
         </h2>
         {!readOnly && (
           <button
@@ -1875,35 +2010,35 @@ function ActionsSection({ report, onChange, readOnly }: {
             className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg"
           >
             <Plus size={14} />
-            Ajouter
+            {t.ac.add}
           </button>
         )}
       </div>
 
       {report.correctiveActions.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">Aucune action corrective enregistrée</p>
+        <p className="text-sm text-gray-400 text-center py-4">{t.ac.none}</p>
       )}
 
       {report.correctiveActions.map((action, idx) => (
         <div key={action.id} className="border border-gray-200 rounded-lg p-3 mb-2 grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
           <div className="md:col-span-2">
-            <div className="text-xs text-gray-500 mb-1">Action #{idx + 1}</div>
+            <div className="text-xs text-gray-500 mb-1">{t.ac.actionN} #{idx + 1}</div>
             <Textarea
               value={action.description}
               onChange={v => updateAction(action.id, a => ({ ...a, description: v }))}
-              placeholder="Décrire l'action corrective…"
+              placeholder={t.ac.describePh}
               readOnly={readOnly}
               rows={2}
             />
           </div>
           <div>
-            <div className="text-xs text-gray-500 mb-1">Responsable</div>
+            <div className="text-xs text-gray-500 mb-1">{t.ac.responsible}</div>
             <TextInput value={action.responsible} onChange={v => updateAction(action.id, a => ({ ...a, responsible: v }))} readOnly={readOnly} />
-            <div className="text-xs text-gray-500 mb-1 mt-2">Échéance</div>
+            <div className="text-xs text-gray-500 mb-1 mt-2">{t.ac.dueDate}</div>
             <TextInput type="date" value={action.dueDate} onChange={v => updateAction(action.id, a => ({ ...a, dueDate: v }))} readOnly={readOnly} />
           </div>
           <div className="flex flex-col gap-2">
-            <div className="text-xs text-gray-500">Statut</div>
+            <div className="text-xs text-gray-500">{t.ac.status}</div>
             <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${statusColors[action.status]}`}>
               {statusOpts.find(s => s.value === action.status)?.label}
             </div>
@@ -1922,7 +2057,7 @@ function ActionsSection({ report, onChange, readOnly }: {
                 className="text-red-400 hover:text-red-600 text-xs flex items-center gap-1"
               >
                 <Trash2 size={12} />
-                Retirer
+                {t.ac.remove}
               </button>
             )}
           </div>
@@ -1937,6 +2072,8 @@ function ComplianceSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1953,10 +2090,10 @@ function ComplianceSection({ report, onChange, readOnly }: {
                 {info.authority} — {info.name}
               </div>
               <div className="text-xs font-semibold text-red-700 mb-1">
-                Délai de déclaration : {info.deadline}
+                {t.c.declDelay} : {info.deadline}
               </div>
               <div className="text-xs text-red-700 mb-2">
-                Formulaire : {info.form}
+                {t.c.formLabel} : {info.form}
               </div>
               <ul className="space-y-1">
                 {info.requirements.map((r, i) => (
@@ -1974,23 +2111,23 @@ function ComplianceSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Scale size={18} className="text-red-500" />
-          Notification réglementaire
+          {t.c.notifTitle}
         </h2>
         <div className="flex items-center gap-3 mb-4">
           <Toggle
             checked={report.regulatoryNotified}
             onChange={v => up('regulatoryNotified', v)}
-            label={report.regulatoryNotified ? 'Autorité notifiée' : 'Autorité non encore notifiée'}
+            label={report.regulatoryNotified ? t.c.notifiedYes : t.c.notifiedNo}
             disabled={readOnly}
           />
         </div>
         {report.regulatoryNotified && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Field label="Date de notification">
+            <Field label={t.c.notifDate}>
               <TextInput type="date" value={report.regulatoryNotifiedDate} onChange={v => up('regulatoryNotifiedDate', v)} readOnly={readOnly} />
             </Field>
-            <Field label="Numéro de référence">
-              <TextInput value={report.regulatoryReferenceNumber} onChange={v => up('regulatoryReferenceNumber', v)} placeholder="Ex : CNESST-2026-XXXXX" readOnly={readOnly} />
+            <Field label={t.c.refNum}>
+              <TextInput value={report.regulatoryReferenceNumber} onChange={v => up('regulatoryReferenceNumber', v)} placeholder={t.c.refNumPh} readOnly={readOnly} />
             </Field>
           </div>
         )}
@@ -2004,6 +2141,8 @@ function ApprovalSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -2015,16 +2154,16 @@ function ApprovalSection({ report, onChange, readOnly }: {
   }
 
   const signatories: Signatory[] = [
-    { nameKey: 'supervisorName', dateKey: 'supervisorDate', signedKey: 'supervisorSigned', label: 'Superviseur immédiat' },
-    { nameKey: 'hseReviewerName', dateKey: 'hseReviewerDate', signedKey: 'hseReviewerSigned', label: 'Responsable HSE' },
-    { nameKey: 'managementName', dateKey: 'managementDate', signedKey: 'managementSigned', label: 'Direction' },
+    { nameKey: 'supervisorName', dateKey: 'supervisorDate', signedKey: 'supervisorSigned', label: t.ap.supervisor },
+    { nameKey: 'hseReviewerName', dateKey: 'hseReviewerDate', signedKey: 'hseReviewerSigned', label: t.ap.hse },
+    { nameKey: 'managementName', dateKey: 'managementDate', signedKey: 'managementSigned', label: t.ap.mgmt },
   ];
 
   return (
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-5 flex items-center gap-2">
         <PenLine size={18} className="text-red-500" />
-        Approbation
+        {t.ap.title}
       </h2>
 
       <div className="space-y-4">
@@ -2039,16 +2178,16 @@ function ApprovalSection({ report, onChange, readOnly }: {
                   <Toggle
                     checked={signed}
                     onChange={v => up(s.signedKey, v)}
-                    label={signed ? 'Approuvé' : 'En attente'}
+                    label={signed ? t.ap.approved : t.ap.pending}
                     disabled={readOnly}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                <Field label="Nom">
+                <Field label={t.ap.name}>
                   <TextInput value={report[s.nameKey] as string} onChange={v => up(s.nameKey, v)} readOnly={readOnly} />
                 </Field>
-                <Field label="Date">
+                <Field label={t.ap.date}>
                   <TextInput type="date" value={report[s.dateKey] as string} onChange={v => up(s.dateKey, v)} readOnly={readOnly} />
                 </Field>
               </div>
