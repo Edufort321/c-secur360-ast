@@ -17,7 +17,7 @@
 - **Agent 1 (Planner)** : ✅#34, ✅#6 mergés · reste **#52** (calendrier: mois=tâches dessous / grille=retirer du dessus), **#53** (traduction FR/EN), **#60** (révision vue mobile calendrier + mode jour/nuit + responsive vue grille).
 - **Agent 2 (UI/Modules)** : ✅#49 mergé · reste **#54** (mobile inventaire débordements), **#55** (sync/mémoire inventaire), **#56** (scan QR : sans app=fiche/prix vendant/qté ; avec app=+/- ajuste stock), **#58** (min/max + champs écrasables), **#61** (inventaire bilingue connecté header), **#62** (permis espace clos: timer reprise gaz réglable).
 - **Agent 3 (Affiliation)** : ✅#51 mergé · reste **#63** (contrat actif dans fiche vendeur + tableau de bord paiements de commission à venir: échéance+client affilié).
-- **Agent 4 (Incidents)** : ✅ module near-miss + sévérité/filtres/CSV mergés.
+- **Agent 4 (Incidents)** : ✅ near-miss + sévérité/filtres/CSV mergés · reste **#67** (module Accidents/Incidents complet : accidents/véhicule/propriété/médical, enquête, mobile, bilingue, temps réel). Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`.
 - **Patron** : #46 (en cours), #45, #47, #57 (permissions), **#64** (header: toggle FR/EN au clic), **#65** (feuille de temps mobile + fonctions manquantes), **#66** (admin vue mobile), #59 (temps réel — propager), #17/#19 (✅ analyse+verrou 124 mergés, finaliser). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
