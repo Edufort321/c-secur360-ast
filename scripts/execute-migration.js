@@ -5,7 +5,7 @@ const path = require('path');
 
 // Configuration Supabase
 const supabaseUrl = 'https://nzjjgcccxlqhbtpitmpo.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ampnY2NjeGxxaGJ0cGl0bXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNDM2NDA2MywiZXhwIjoyMDM5OTQwMDYzfQ.AzZ9XU8ByNq4L2bJHMH1Q6YyF8v12fhY6XPg-cXQfmw'; // Placeholder - utiliser la vraie clé
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Placeholder - utiliser la vraie clé
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

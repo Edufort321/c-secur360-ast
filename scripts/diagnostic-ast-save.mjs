@@ -5,8 +5,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://nzjjgcccxlqhbtpitmpo.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ampnY2NjeGxxaGJ0cGl0bXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUwNzEyNzMsImV4cCI6MjA1MDY0NzI3M30.yXrJcNEanEb7MmT4fJTqM15vf1KOxZR_LpQ6XEOhQ2U';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ampnY2NjeGxxaGJ0cGl0bXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTA3MTI3MywiZXhwIjoyMDUwNjQ3MjczfQ.H4Tf-_Uz5tqF5BLOF4H0UYfhwbQWBQu4V93fHl9oLYk';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 console.log('🔍 DIAGNOSTIC PROBLÈME SAUVEGARDE AST');
 console.log('=' .repeat(60));

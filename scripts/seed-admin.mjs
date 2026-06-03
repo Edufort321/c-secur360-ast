@@ -5,7 +5,7 @@
 //   NEXT_PUBLIC_SUPABASE_URL  (requis)
 //   SUPABASE_SERVICE_ROLE_KEY (recommandé ; sinon NEXT_PUBLIC_SUPABASE_ANON_KEY)
 //   ADMIN_EMAIL    (def: eric.dufort@cerdia.ai)
-//   ADMIN_PASSWORD (def: 321Eduf!$)
+//   ADMIN_PASSWORD (REQUIS — aucun mot de passe par defaut)
 //   ADMIN_ROLE     (def: super_admin)
 //   ADMIN_TENANT_ID(def: 1er tenant trouvé)
 // =====================================================

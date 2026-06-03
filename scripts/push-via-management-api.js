@@ -8,7 +8,7 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 // Informations de connexion Supabase
 const supabaseProjectId = 'nzjjgcccxlqhbtpitmpo';
 const supabaseUrl = 'https://nzjjgcccxlqhbtpitmpo.supabase.co';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ampnY2NjeGxxaGJ0cGl0bXBvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTU4MzU5MywiZXhwIjoyMDY3MTU5NTkzfQ.I3W3ajS-DTVU_EUJRf2PwmZotVBPCY7mLkpBI4BeTDk';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 console.log('🚀 PUSH TABLES VIA MANAGEMENT API');
 console.log('=' .repeat(60));

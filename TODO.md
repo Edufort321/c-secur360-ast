@@ -2,9 +2,26 @@
 
 > Branches : `feat/modular-foundation` (mirror `main`). Build avant chaque push : `npx tsc --noEmit` (TSC=0) **puis** `npx next build`. **Stop `next dev` (port 3000) avant tout build** (sinon `.next` se corrompt). Messages de commit ASCII sans accents ni guillemets doubles internes. Commit + push sur **les 2 branches** après chaque tâche.
 
-## 🔀 Répartition 2 agents (zéro conflit de fichiers)
-- **Agent PLANNER** — UNIQUEMENT `components/planner/**`. Tâches : **#34 (R14)**, **#6 (P5)**. Ne touche PAS `app/[tenant]/admin/**`, `app/[tenant]/timesheets/**`, `lib/**`, `supabase/**`. Travaille dans un **worktree séparé** (`.next` + git isolés).
-- **Agent PRINCIPAL** — `app/[tenant]/timesheets/**`, `app/[tenant]/admin/**`, `lib/**`, `supabase/migrations/**`. Tâches : **#44, #45, #46, #47, #49, #35, #17, #19**.
+## 🔀 Répartition 3 agents (zéro conflit de fichiers — chacun son worktree/branche)
+- **Agent PRINCIPAL (patron / intégrateur)** — `app/[tenant]/timesheets/**`, `app/[tenant]/admin/**`, `lib/**`, `supabase/migrations/**`. Tâches : **#45, #46, #47, #35, #17, #19** + #49 (parties timesheets/admin). Merge les branches des autres agents dans `feat/modular-foundation` + `main`.
+- **Agent PLANNER** (branche `agent-planner`) — UNIQUEMENT `components/planner/**`. Tâches : **#34 (R14)**, **#6 (P5)**.
+- **Agent UI/MODULES** (branche `agent-ui`) — `components/BackButton.tsx` (nouveau), `app/[tenant]/projects/**`, `app/[tenant]/clients/**`, `components/steps/**` (AST), `components/inventory/**`, `components/soumissions/**`, `components/bons/**`. Tâche : **#49** (composant Retour partagé + application dans CES pages). Ne touche PAS planner, timesheets, `admin/page.tsx`, `lib/**`, `supabase/**`.
+
+### 📌 Suivi d'avancement (maj continue par le patron)
+| # | Tâche | Agent | Statut |
+|---|---|---|---|
+| 42 | Masquer $ employé + taux user | Principal | ✅ |
+| 48 | Taux dérivé évaluation | Principal | ✅ |
+| 43 | 7 jours | Principal | ✅ |
+| 44 | Dépenses + reçu | Principal | ✅ |
+| 45 | Dépenses → compta/taxes | Principal | ⏳ en cours |
+| 46 | Conditions de grille | Principal | ⏯️ à faire |
+| 47 | Paie par poste + GL | Principal | ⏯️ bloqué par 45,46 |
+| 35 | R15 Transactions | Principal | ⏯️ à faire |
+| 17/19 | Sécurité RLS / service-role | Principal | ⏯️ avant prod |
+| 34 | R14 Optimiseur IA | Planner | ⏯️ assigné |
+| 6 | P5 Nettoyage planner | Planner | ⏯️ assigné |
+| 49 | Bouton Retour (zone modules) | UI/Modules | ⏯️ assigné |
 
 ---
 

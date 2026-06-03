@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Configuration directe (temporaire pour validation)
 const supabaseUrl = 'https://nzjjgcccxlqhbtpitmpo.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ampnY2NjeGxxaGJ0cGl0bXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUwNzEyNzMsImV4cCI6MjA1MDY0NzI3M30.yXrJcNEanEb7MmT4fJTqM15vf1KOxZR_LpQ6XEOhQ2U';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
