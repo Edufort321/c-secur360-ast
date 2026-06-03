@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
+import { BackButton } from '@/components/BackButton';
 
 type Client = { id: string; name: string; contact_name: string; contact_phone: string; email: string; address: string; city: string; province: string };
 
@@ -197,6 +198,7 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <PortalHeader tenant={tenant} />
       <div className="w-full px-4 py-8 lg:px-6">
+        <BackButton fallback={`/${tenant}/modules`} className="mb-4" />
         {/* En-tête */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
