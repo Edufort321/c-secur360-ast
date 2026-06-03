@@ -9,6 +9,7 @@ export type TransactionItem = {
 };
 export type Transaction = {
   id?: string; transaction_number: string; vendor_id?: string | null; vendor_name?: string | null;
+  txn_type?: 'expense' | 'revenue'; // 'expense' = depense/achat (defaut) ; 'revenue' = revenu/vente
   txn_date: string; province: string; payment_method: 'cash' | 'on_account';
   status: 'draft' | 'posted' | 'paid' | 'cancelled';
   subtotal: number; gst_rate: number; qst_rate: number; pst_rate: number;
@@ -59,7 +60,7 @@ export async function saveTransaction(tenant: string, header: Transaction, items
   const totals = computeTransactionTotals(items, header.province);
   const payload: any = {
     tenant_id: tenant, transaction_number: header.transaction_number, vendor_id: header.vendor_id ?? null,
-    vendor_name: header.vendor_name ?? null, txn_date: header.txn_date, province: header.province,
+    vendor_name: header.vendor_name ?? null, txn_type: header.txn_type || 'expense', txn_date: header.txn_date, province: header.province,
     payment_method: header.payment_method, status: header.status, receipt_url: header.receipt_url ?? null,
     notes: header.notes ?? null, gl_entry_id: header.gl_entry_id ?? null, ...totals, updated_at: new Date().toISOString(),
   };
