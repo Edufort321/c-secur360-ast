@@ -7,9 +7,14 @@ import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
   CheckSquare, Scale, PenLine, ArrowLeft, Save, Send, Plus,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Shield,
-  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer,
+  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer, ClipboardCheck,
 } from 'lucide-react';
 import { useLanguage, type Lang } from '@/contexts/LanguageContext';
+import {
+  listActionsByIncident, createIncidentAction, updateIncidentAction, deleteIncidentAction,
+  isActionOverdue, ACTION_STATUSES, ACTION_PRIORITIES,
+  type IncidentAction, type IncidentActionStatus,
+} from '@/lib/incidentActions';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -406,7 +411,7 @@ const COLLISION_TYPES = [
   'Dommages au stationnement', 'Autre',
 ];
 
-type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'compliance' | 'approval';
+type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'capa' | 'compliance' | 'approval';
 
 // ── i18n (connecte au header FR/EN via useLanguage) ──────────────────────────
 // Les valeurs stockees restent en FR (canoniques) ; on traduit seulement l'AFFICHAGE.
@@ -474,7 +479,7 @@ const TR = {
     back: 'Retour', draft: 'Brouillon', submittedRO: 'Soumis — lecture seule', closed: 'Fermé',
     saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder', submit: 'Soumettre',
     confirmSubmit: 'Confirmer la soumission ?', yes: 'Oui', cancel: 'Annuler',
-    nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', compliance: 'Réglementation', approval: 'Approbation' },
+    nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', capa: 'Suivi CAPA', compliance: 'Réglementation', approval: 'Approbation' },
     g: {
       title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
       dateIncident: "Date de l'incident", timeIncident: "Heure de l'incident", dateReport: 'Date du rapport',
@@ -497,12 +502,21 @@ const TR = {
     c: { notifTitle: 'Notification réglementaire', declDelay: 'Délai de déclaration', formLabel: 'Formulaire', notifiedYes: 'Autorité notifiée', notifiedNo: 'Autorité non encore notifiée', notifDate: 'Date de notification', refNum: 'Numéro de référence', refNumPh: 'Ex : CNESST-2026-XXXXX' },
     ap: { title: 'Approbation', supervisor: 'Superviseur immédiat', hse: 'Responsable HSE', mgmt: 'Direction', approved: 'Approuvé', pending: 'En attente', name: 'Nom', date: 'Date' },
     pr: { btn: 'Imprimer / PDF', docTitle: "Rapport d'incident", generated: 'Document généré le', reqTitle: 'Exigences réglementaires', notifiedOn: 'Autorité notifiée le', refLabel: 'Référence', signatures: 'Signatures', signedOn: 'Signé le', notSigned: 'Non signé', none: '—', popupBlocked: 'Veuillez autoriser les fenetres contextuelles pour imprimer.' },
+    cp: {
+      title: 'Actions correctives (CAPA)', help: 'Actions suivies (responsable, échéance, statut) liées à cet incident.',
+      saveFirst: "Enregistrez d'abord le rapport pour ajouter des actions de suivi.",
+      add: 'Ajouter une action', none: 'Aucune action de suivi', descPh: "Décrire l'action…",
+      description: 'Description', assignee: 'Responsable', assigneePh: 'Prénom Nom', dueDate: 'Échéance',
+      priority: 'Priorité', status: 'Statut', save: 'Ajouter', cancel: 'Annuler', overdue: 'En retard',
+      statusLabel: { a_faire: 'A faire', en_cours: 'En cours', fait: 'Fait', verifie: 'Verifie' } as Record<string, string>,
+      priorityLabel: { basse: 'Basse', normale: 'Normale', haute: 'Haute', critique: 'Critique' } as Record<string, string>,
+    },
   },
   en: {
     back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
     saving: 'Saving…', saved: 'Saved', save: 'Save', submit: 'Submit',
     confirmSubmit: 'Confirm submission?', yes: 'Yes', cancel: 'Cancel',
-    nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', compliance: 'Regulations', approval: 'Approval' },
+    nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', capa: 'CAPA tracking', compliance: 'Regulations', approval: 'Approval' },
     g: {
       title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
       dateIncident: 'Incident date', timeIncident: 'Incident time', dateReport: 'Report date',
@@ -525,6 +539,15 @@ const TR = {
     c: { notifTitle: 'Regulatory notification', declDelay: 'Reporting deadline', formLabel: 'Form', notifiedYes: 'Authority notified', notifiedNo: 'Authority not yet notified', notifDate: 'Notification date', refNum: 'Reference number', refNumPh: 'e.g. CNESST-2026-XXXXX' },
     ap: { title: 'Approval', supervisor: 'Immediate supervisor', hse: 'HSE manager', mgmt: 'Management', approved: 'Approved', pending: 'Pending', name: 'Name', date: 'Date' },
     pr: { btn: 'Print / PDF', docTitle: 'Incident report', generated: 'Document generated on', reqTitle: 'Regulatory requirements', notifiedOn: 'Authority notified on', refLabel: 'Reference', signatures: 'Signatures', signedOn: 'Signed on', notSigned: 'Not signed', none: '—', popupBlocked: 'Please allow pop-ups to print.' },
+    cp: {
+      title: 'Corrective actions (CAPA)', help: 'Tracked actions (assignee, due date, status) linked to this incident.',
+      saveFirst: 'Save the report first to add tracked actions.',
+      add: 'Add action', none: 'No tracked action', descPh: 'Describe the action…',
+      description: 'Description', assignee: 'Assignee', assigneePh: 'First Last', dueDate: 'Due date',
+      priority: 'Priority', status: 'Status', save: 'Add', cancel: 'Cancel', overdue: 'Overdue',
+      statusLabel: { a_faire: 'To do', en_cours: 'In progress', fait: 'Done', verifie: 'Verified' } as Record<string, string>,
+      priorityLabel: { basse: 'Low', normale: 'Normal', haute: 'High', critique: 'Critical' } as Record<string, string>,
+    },
   },
 } as const;
 
@@ -1296,6 +1319,7 @@ export default function IncidentReportForm({
     { id: 'vehicle',     label: tr.nav.vehicle,     icon: <Truck size={16} /> },
     { id: 'analysis',    label: tr.nav.analysis,    icon: <Search size={16} /> },
     { id: 'actions',     label: tr.nav.actions,     icon: <CheckSquare size={16} /> },
+    { id: 'capa',        label: tr.nav.capa,        icon: <ClipboardCheck size={16} /> },
     { id: 'compliance',  label: tr.nav.compliance,  icon: <Scale size={16} /> },
     { id: 'approval',    label: tr.nav.approval,    icon: <PenLine size={16} /> },
   ];
@@ -1310,6 +1334,7 @@ export default function IncidentReportForm({
       case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
       case 'compliance':  return <ComplianceSection  report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'approval':    return <ApprovalSection    report={report} onChange={updateReport} readOnly={readOnly} />;
     }
@@ -2330,6 +2355,144 @@ function ApprovalSection({ report, onChange, readOnly }: {
           );
         })}
       </div>
+    </Card>
+  );
+}
+
+// ── #80 CAPA : panneau d'actions correctives suivies, lie a l'incident ───────
+const CAPA_STATUS_COLOR: Record<IncidentActionStatus, string> = {
+  a_faire: 'bg-gray-100 text-gray-600', en_cours: 'bg-blue-100 text-blue-700',
+  fait: 'bg-green-100 text-green-700', verifie: 'bg-emerald-100 text-emerald-700',
+};
+const CAPA_PRIORITY_COLOR: Record<string, string> = {
+  basse: 'bg-gray-100 text-gray-500', normale: 'bg-slate-100 text-slate-600',
+  haute: 'bg-orange-100 text-orange-700', critique: 'bg-red-100 text-red-700',
+};
+
+function CapaPanel({ tenant, incidentId, lang, readOnly }: {
+  tenant: string; incidentId: string | null; lang: Lang; readOnly: boolean;
+}) {
+  const t = TR[lang].cp;
+  const [actions, setActions] = useState<IncidentAction[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ description: '', assignee: '', due_date: '', priority: 'normale', status: 'a_faire' });
+
+  const load = useCallback(async () => {
+    if (!incidentId) { setActions([]); return; }
+    setActions(await listActionsByIncident(tenant, incidentId));
+  }, [tenant, incidentId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addAction() {
+    if (!incidentId || !draft.description.trim()) return;
+    await createIncidentAction({
+      tenant_id: tenant, incident_id: incidentId,
+      description: draft.description.trim(), assignee: draft.assignee.trim() || null,
+      due_date: draft.due_date || null,
+      priority: draft.priority as IncidentAction['priority'], status: draft.status as IncidentActionStatus,
+    });
+    setDraft({ description: '', assignee: '', due_date: '', priority: 'normale', status: 'a_faire' });
+    setShowForm(false);
+    load();
+  }
+  async function setStatus(id: string, status: IncidentActionStatus) {
+    setActions(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    await updateIncidentAction(id, { status });
+  }
+  async function remove(id: string) {
+    setActions(prev => prev.filter(a => a.id !== id));
+    await deleteIncidentAction(id);
+  }
+
+  if (!incidentId) {
+    return (
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <ClipboardCheck size={18} className="text-red-500" />
+          {t.title}
+        </h2>
+        <p className="text-sm text-gray-400 py-6 text-center">{t.saveFirst}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+          <ClipboardCheck size={18} className="text-red-500" />
+          {t.title}
+        </h2>
+        {!readOnly && (
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg">
+            <Plus size={14} />{t.add}
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 mb-4">{t.help}</p>
+
+      {showForm && !readOnly && (
+        <div className="border border-gray-200 rounded-lg p-4 mb-4 space-y-3 bg-gray-50">
+          <Field label={t.description} required>
+            <Textarea value={draft.description} onChange={v => setDraft(d => ({ ...d, description: v }))} placeholder={t.descPh} rows={2} />
+          </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <Field label={t.assignee}>
+              <TextInput value={draft.assignee} onChange={v => setDraft(d => ({ ...d, assignee: v }))} placeholder={t.assigneePh} />
+            </Field>
+            <Field label={t.dueDate}>
+              <TextInput type="date" value={draft.due_date} onChange={v => setDraft(d => ({ ...d, due_date: v }))} />
+            </Field>
+            <Field label={t.priority}>
+              <SelectInput value={draft.priority} onChange={v => setDraft(d => ({ ...d, priority: v }))}
+                options={ACTION_PRIORITIES.map(p => ({ value: p, label: t.priorityLabel[p] }))} />
+            </Field>
+            <Field label={t.status}>
+              <SelectInput value={draft.status} onChange={v => setDraft(d => ({ ...d, status: v }))}
+                options={ACTION_STATUSES.map(s => ({ value: s, label: t.statusLabel[s] }))} />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addAction} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">{t.save}</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600">{t.cancel}</button>
+          </div>
+        </div>
+      )}
+
+      {actions.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">{t.none}</p>
+      ) : (
+        <div className="space-y-2">
+          {actions.map(a => {
+            const overdue = isActionOverdue(a);
+            return (
+              <div key={a.id} className="border border-gray-200 rounded-lg p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${CAPA_PRIORITY_COLOR[a.priority] ?? 'bg-slate-100 text-slate-600'}`}>{t.priorityLabel[a.priority] ?? a.priority}</span>
+                    {overdue && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1"><AlertTriangle size={11} />{t.overdue}</span>}
+                  </div>
+                  <p className="text-sm text-gray-900 break-words">{a.description}</p>
+                  <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-3 flex-wrap">
+                    <span>{t.assignee}: {a.assignee || '—'}</span>
+                    {a.due_date && <span className={`flex items-center gap-1 ${overdue ? 'text-red-600 font-medium' : ''}`}><Clock size={12} />{t.dueDate}: {a.due_date}</span>}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <select value={a.status} onChange={e => setStatus(a.id, e.target.value as IncidentActionStatus)}
+                    disabled={readOnly}
+                    className={`text-xs px-2 py-1 rounded-lg border-0 font-medium ${CAPA_STATUS_COLOR[a.status]}`} aria-label={t.status}>
+                    {ACTION_STATUSES.map(s => <option key={s} value={s}>{t.statusLabel[s]}</option>)}
+                  </select>
+                  {!readOnly && <button onClick={() => remove(a.id)} className="text-red-400 hover:text-red-600" aria-label="Supprimer"><Trash2 size={15} /></button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
