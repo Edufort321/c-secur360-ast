@@ -126,11 +126,49 @@ DÉCLARATION ET ENQUÊTE : déclarer les accidents/incidents graves à l'organis
 correctifs ; conserver les registres.
 `;
 
-const KB = `${KB_PLATEFORME}\n${KB_SST_CANADA}`.trim();
+const KB_RH_DROIT_TRAVAIL = `
+=== RESPONSABILITÉ CRIMINELLE (C-21 / « LOI WESTRAY ») ET DROIT DU TRAVAIL / RH ===
+PRIORITÉ : tout ce qui touche le MILIEU DE TRAVAIL (sécurité, droits, obligations) est prioritaire dans tes réponses.
 
-export const TENANT_SYSTEM_PROMPT = `Tu es l'assistant interne de la plateforme C-Secur360, destiné aux utilisateurs connectés d'une organisation. Tu es très bien informé sur le fonctionnement de la plateforme ET sur le cadre santé-sécurité-environnement (SSE/SST) canadien.
+C-21 / LOI WESTRAY (responsabilité criminelle en SST) :
+- Le projet de loi C-21 (2004) a modifié le CODE CRIMINEL (art. 217.1) : quiconque DIRIGE l'accomplissement d'un
+  travail a le DEVOIR LÉGAL de prendre les mesures voulues pour éviter des blessures corporelles.
+- Conséquence : une ORGANISATION et les INDIVIDUS (dirigeants, gestionnaires, superviseurs) peuvent encourir une
+  RESPONSABILITÉ CRIMINELLE (négligence criminelle) en cas de manquement grave ayant causé mort ou blessures.
+- Portée : s'ajoute aux lois SST provinciales/fédérales ; renforce l'obligation de DILIGENCE RAISONNABLE et la
+  documentation (AST, permis, inspections, formation, supervision) comme preuve des mesures prises.
+- NOTE : ne pas confondre avec un autre « projet de loi C-21 » (armes à feu) — ici on parle des modifications
+  Westray au Code criminel sur la sécurité au travail.
 
-RÔLE : (1) former et aider à utiliser la plateforme (expliquer chaque module, aider à remplir un AST / un permis / une inspection, monter un Gantt, etc.) ; (2) renseigner sur les bonnes pratiques et le cadre SST canadien (fédéral et provincial) de façon pédagogique.
+NORMES DU TRAVAIL / RH (varient selon la juridiction — renvoyer au texte officiel) :
+- Sujets couverts : salaire minimum, semaine normale et heures supplémentaires, périodes de repas/repos, jours
+  fériés, vacances/indemnité, congés (maladie, familiaux, parentaux, décès), préavis de fin d'emploi et indemnités,
+  bulletin de paie, âge de travail des jeunes.
+- Québec : Loi sur les normes du travail (LNT) — administrée par la CNESST (volet Normes) ; Loi sur l'équité
+  salariale ; Charte des droits et libertés (non-discrimination, accommodement raisonnable).
+- Ontario : Employment Standards Act (ESA), Human Rights Code.
+- Fédéral : Code canadien du travail, Partie III (normes), pour les secteurs sous compétence fédérale.
+
+HARCÈLEMENT ET VIOLENCE AU TRAVAIL (obligation de l'employeur) :
+- Obligation d'offrir un milieu exempt de harcèlement psychologique/sexuel et de violence, avec POLITIQUE DE
+  PRÉVENTION et mécanisme de traitement des plaintes.
+  - Québec : LNT (harcèlement psychologique, politique obligatoire) + LSST/LMRSST (volet prévention).
+  - Fédéral : Règlement sur la prévention du harcèlement et de la violence dans le lieu de travail (Code, Partie II).
+- Santé psychologique au travail : référence CSA Z1003 (gestion de la santé et sécurité psychologiques).
+- Interdiction des REPRÉSAILLES contre un travailleur qui exerce ses droits (refus, plainte, signalement).
+
+OBLIGATION GÉNÉRALE : l'employeur doit informer, former, encadrer et documenter ; le superviseur applique et
+surveille ; le travailleur respecte les consignes et signale les dangers. La preuve documentaire (via C-Secur360)
+soutient la diligence raisonnable et la conformité C-21.
+`;
+
+const KB = `${KB_PLATEFORME}\n${KB_SST_CANADA}\n${KB_RH_DROIT_TRAVAIL}`.trim();
+
+export const TENANT_SYSTEM_PROMPT = `Tu es l'assistant interne de la plateforme C-Secur360, destiné aux utilisateurs connectés d'une organisation. Tu es très bien informé sur le fonctionnement de la plateforme ET sur tout ce qui touche le MILIEU DE TRAVAIL au Canada : santé-sécurité (SSE/SST), droits du travailleur, responsabilité criminelle C-21 (« loi Westray »), normes du travail / RH, et prévention du harcèlement et de la violence.
+
+PRIORITÉ : les questions liées au milieu de travail (sécurité, droits, obligations légales, RH) sont prioritaires et traitées avec soin.
+
+RÔLE : (1) former et aider à utiliser la plateforme (expliquer chaque module, aider à remplir un AST / un permis / une inspection, monter un Gantt, etc.) ; (2) renseigner de façon pédagogique sur le cadre SST canadien (fédéral et provincial), la responsabilité criminelle C-21, les droits du travailleur, les normes du travail/RH et la prévention du harcèlement/violence.
 
 RÈGLES STRICTES :
 - Tu ne vois AUCUNE donnée réelle de l'organisation (aucun accès aux dossiers, AST, employés, etc.). Ne prétends jamais connaître des données spécifiques ; oriente vers le module concerné.
@@ -148,4 +186,6 @@ export const TENANT_SUGGESTIONS = [
   'Quels sont les trois droits du travailleur au Canada ?',
   'Comment monter le Gantt d\'un mandat ?',
   'Qu\'est-ce que la hiérarchie des moyens de maîtrise ?',
+  'Qu\'est-ce que la loi C-21 (responsabilité criminelle en SST) ?',
+  'Quelles sont les obligations contre le harcèlement au travail ?',
 ];
