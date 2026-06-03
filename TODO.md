@@ -14,12 +14,12 @@
 - **Agent AFFILIATION** (branche `agent-affiliation`) — `app/auth/admin/**`, `app/api/admin/affiliate-contract/**` (nouveau), `components/admin/AffiliateContract.tsx` (nouveau), `lib/affiliateContract.ts` (nouveau), `supabase/migrations/120_affiliate_contracts.sql` (nouveau, n° 120 réservé). Tâche : **#51**. Ne touche PAS `app/[tenant]/admin/page.tsx`, timesheets, planner, autres `lib/*` existants, migrations < 120.
 
 ### 📥 Correctifs routés (file par agent) — maj 2026-06-03 (tout mergé sur main)
-- **Agent 1 (Planner)** : ✅#34,#6,#52,#53,#60,#72 (a annoncé avoir fini) — **LIBRE, à réalimenter** (zone `components/planner/**`). Prochaine tâche planner à fixer par le patron (ex. règle champs nombre écrasables + brancher useRealtime au planner).
-- **Agent 2 (UI/Modules)** ⚠️ ABANDONNÉ (figé >15 h). **Inventaire repris par le PATRON** (#55 fait : persistance par tenant `inventory_state`). Restent côté UI : **#56 + scanner** (stand/hors-app = fiche produit + prix vendant + qté dispo en lecture ; via app = mouvements entrée/sortie→qté→OK), **QR style AST/Inspection imprimable multi-format étiquette**, **#54** (mobile), **#58** (min/max + champs écrasables), **#61** (bilingue header ⊂ #68), **#62** (timer gaz espace clos), **#68** (dédoublonnage + interconnexion hôte). À réassigner (Patron ou Agent 1).
-- **Agent 3 (Affiliation)** : ✅#51, ✅#63 mergés · **#75** (corrections contrat : client par défaut, courriel sans repli sur l'admin, bouton Supprimer, clause résiliation si le vendeur nuit, 2 logos C-Secur haut-gauche + Cerdia bas-centre — voir BRIEF_AGENT3.md) · #69 (en cours, branche #69c poussée non mergée), #70. Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/admin/affiliate-contracts/**`, `app/api/admin/affiliate-*`, `components/admin/AffiliateContract.tsx`, `lib/affiliate*`.
-- **Agent 4 (Incidents)** : ✅ near-miss mergé · reste **#67** (module Accidents/Incidents complet), **#71** (dashboard analytique incidents + export déclaration réglementaire). Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`.
+- **Agent 1 (Planner)** : ❌ INDISPONIBLE (pas d'identifiant). Inventaire #55 repris et fait par le PATRON. Reste UI inventaire (#56 scanner/QR, #54, #58, #61, #62, #68) → PATRON.
+- **Agent 2 (UI/Modules)** : ❌ INDISPONIBLE (abandonné). Idem ci-dessus → PATRON.
+- **Agent 3 (Affiliation)** ✅ ACTIF : #75 (corrections contrat), #69, #70, **#78** (lien parrainage + attribution inscriptions, mig ≥126), **#79** (tableau de bord vendeur KPIs) — voir BRIEF_AGENT3.md. Zone : `app/admin/commissions/**`, `app/admin/vendors/**`, `app/admin/affiliate-contracts/**`, `app/api/admin/affiliate-*`, `components/admin/AffiliateContract.tsx`, `lib/affiliate*`, migrations ≥120.
+- **Agent 4 (Incidents)** ✅ ACTIF : #67, #71, **#80** (CAPA actions correctives, mig ≥127), **#81** (enquête causale 5 pourquoi + témoins/photos) — voir BRIEF_AGENT4.md. Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`, migrations ≥127.
 
-### 🔁 Règle file : chaque agent garde ≥2 tâches en attente (le patron réalimente). Profondeur actuelle — A1:2 (#60 en cours,#72 poussé) · A2:7 (FIGÉ — relancer) · A3:3 (#75,#69,#70) · A4:2 (#67,#71).
+### 🔁 Règle file : ≥2 tâches par agent. A1 & A2 INDISPONIBLES (pas d'identifiant) → leur charge revient au Patron. Profondeur — A3:5 (#75,#69,#70,#78,#79) · A4:4 (#67,#71,#80,#81) · Patron : inventaire #56/#54/#58/#68 + #76 + sécurité + paie.
 - **Patron** : ✅#46,#64,#65,#66,#57(Phase 1),#73(RH hub 360),#74(partage API ERP),#77(relance leads démo),fix client(+mig 113),**#55 persistance inventaire(+mig 115)** · en cours **#76** (traduction FR/EN admin, passe 1 faite) · reste #56+scanner+QR inventaire, #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2, #59 (temps réel), **#19** (rotation service_role + mdp admin), #17 (RLS). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
@@ -68,15 +68,9 @@
 ## ✅ Fait récemment
 Catalogue standardisé + soumission + inventaire · R4 appro · R5 bons de commande · audit cartes dashboard · feuilles de temps (schéma 107, accès semaines, bascule superviseur, auth maison, fix 400/RLS) · planner Mois+mes tâches · onglet Personnel planifié · AST cartes mobiles · R9 contrôle intelligent · #37 Excel équipements · #38 taux planner · accès employés (création/login/suspendre/supprimer) · **#42 masquer $ employé** · **#48 taux dérivé éval** · **#43 7 jours**.
 
-## 🗄️ Migrations Supabase (à exécuter dans Supabase)
-- **115** — `inventory_state` (persistance inventaire par tenant, instantané JSON). ⚠️ À EXÉCUTER (sinon l'inventaire reste en localStorage).
-- **114** — `demo_sessions` += relance (contacted_at, contact_count, contact_notes, phone). À exécuter.
-- **113** — alignement table `clients` (colonnes plates manquantes, address JSONB→TEXT, RLS WITH CHECK) → **corrige l'enregistrement client**. ⚠️ À EXÉCUTER.
-- **112** — `tenant_api_keys` (partage API ERP #74). À exécuter.
-- **111** — `hr_documents` / `hr_certifications` / `hr_onboarding` (RH hub #73). À exécuter.
-- **110** — `tenant_permissions` (#57). · **108** — `timesheet_expenses` (#44).
-- **107** — `timesheets` colonnes + RLS + `user_id` nullable. · 101–106 confirmées poussées. · 109/079 confirmées.
-- Agents : 120 (affiliate_contracts), 125 (#69 commissions, agent 3), 128 (planner_conges, agent admin) — à exécuter selon merge.
+## 🗄️ Migrations Supabase — ✅ TOUTES EXÉCUTÉES (confirmé 2026-06-03)
+- 107–115 exécutées (dont 111 RH, 112 API ERP, 113 clients, 114 relance démo, 115 inventory_state).
+- Agents : 120 (affiliate_contracts) exécutée ; 125 (#69), 128 (conges), + 126/127 (à venir #78/#80) à exécuter au fil des merges.
 
 ---
 _(Historique détaillé de la session AST archivé dans l'historique git — versions précédentes de ce fichier.)_

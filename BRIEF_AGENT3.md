@@ -20,4 +20,12 @@ Fichier principal : `components/admin/AffiliateContract.tsx` + `lib/affiliateCon
 
 ### #69, #70 (déjà en cours) — terminer puis pousser.
 
-Après #75 : prévenir le patron « Agent 3 a terminé #75 » pour merge.
+### #78 — Lien de parrainage unique par vendeur + attribution des inscriptions
+- Code/lien de parrainage unique par co-vendeur (ex. `?ref=<code>` ou `/signup?ref=`). Migration ≥126 : colonne `referral_code` (unique) sur la table vendeurs + `referred_by` sur tenants (ou table d'attribution).
+- À la création d'un tenant via ce lien, attribuer automatiquement le tenant au vendeur (referrer) → la commission récurrente du vendeur s'applique à ce tenant.
+- Afficher la liste des inscriptions attribuées dans la fiche vendeur.
+
+### #79 — Tableau de bord vendeur (KPIs) dans `app/admin/vendors/[id]`
+- KPIs : nb clients référés, MRR généré, commissions cumulées / à venir / payées, taux de rétention, prochaine échéance. Graphiques simples. Réutiliser `lib/affiliateCommissions`.
+
+Après chaque tâche : prévenir le patron « Agent 3 a terminé #X » pour merge. Garde ≥2 tâches en file.
