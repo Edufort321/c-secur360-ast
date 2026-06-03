@@ -114,7 +114,14 @@ interface IncidentReportData {
     location: string;
   };
   whyAnalysis: Array<{ question: string; answer: string }>;
+  immediateCauses: string;          // #81 causes immediates
+  basicCauses: string;              // #81 causes fondamentales / sous-jacentes
   rootCause: string;
+  photos: Array<{ url: string; name: string }>;   // #81 pieces jointes (Storage)
+  investigatorName: string;         // #81 signature enqueteur
+  investigatorSignedAt: string;     // horodatage ISO
+  invSupervisorName: string;        // #81 signature superviseur d'enquete
+  invSupervisorSignedAt: string;
   correctiveActions: CorrectiveAction[];
   regulatoryNotified: boolean;
   regulatoryNotifiedDate: string;
@@ -497,7 +504,10 @@ const TR = {
     b: { title: 'Schéma corporel', none: "Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.", clickA: 'Cliquer sur les zones blessées pour ', injuredN: 'Blessé' },
     d: { title: "Description de l'événement", workType: "Type de travail effectué au moment de l'incident", workTypePh: 'Entretien, installation, conduite, manutention…', narration: "Narration de l'incident", narrationPh: "Décrire chronologiquement et précisément les événements. Inclure ce qui s'est passé, comment et où…", immediate: 'Actions immédiates prises', immediatePh: "Premiers secours, évacuation, mise hors service de l'équipement, appel d'urgence…", factors: 'Facteurs contributifs' },
     v: { vehTitle: 'Véhicule impliqué', yes: 'Oui', no: 'Non', plate: "Plaque d'immatriculation", make: 'Marque', model: 'Modèle', year: 'Année', km: 'Kilométrage au moment', collisionType: 'Type de collision', otherVeh: 'Autre véhicule impliqué', policeReport: 'Rapport de police', otherVehDesc: "Description de l'autre véhicule", policeNum: 'Numéro du rapport de police', damageDesc: 'Description des dommages', propTitle: 'Dommages matériels', propLoc: 'Localisation des dommages', estCost: 'Coût estimé ($)' },
-    an: { fiveWhy: 'Méthode des 5 Pourquoi', fiveWhyHelp: 'Remonter la chaîne causale jusqu\'à la cause racine en répondant à chaque «Pourquoi».', answerPh: 'Réponse…', rootTitle: 'Cause racine identifiée', rootPh: "Suite à l'analyse des 5 Pourquoi, la cause racine est…" },
+    an: { fiveWhy: 'Méthode des 5 Pourquoi', fiveWhyHelp: 'Remonter la chaîne causale jusqu\'à la cause racine en répondant à chaque «Pourquoi».', answerPh: 'Réponse…', rootTitle: 'Cause racine identifiée', rootPh: "Suite à l'analyse des 5 Pourquoi, la cause racine est…",
+      enqTitle: 'Enquête causale', causesTitle: 'Causes', immediate: 'Causes immédiates', immediatePh: 'Conditions/actes ayant directement mené à l\'incident…', basic: 'Causes fondamentales', basicPh: 'Causes sous-jacentes / systémiques (gestion, formation, procédures)…',
+      photos: 'Pièces jointes (photos)', addPhoto: 'Ajouter des photos', uploading: 'Téléversement…', photoErr: 'Échec du téléversement (bucket incident-photos requis).',
+      sigTitle: "Signatures d'enquête", investigator: 'Enquêteur', invSup: 'Superviseur', sign: 'Signer', signedOn: 'Signé le', notSigned: 'Non signé', clearSig: 'Effacer' },
     ac: { title: 'Actions correctives', add: 'Ajouter', none: 'Aucune action corrective enregistrée', actionN: 'Action', describePh: "Décrire l'action corrective…", responsible: 'Responsable', dueDate: 'Échéance', status: 'Statut', remove: 'Retirer' },
     c: { notifTitle: 'Notification réglementaire', declDelay: 'Délai de déclaration', formLabel: 'Formulaire', notifiedYes: 'Autorité notifiée', notifiedNo: 'Autorité non encore notifiée', notifDate: 'Date de notification', refNum: 'Numéro de référence', refNumPh: 'Ex : CNESST-2026-XXXXX' },
     ap: { title: 'Approbation', supervisor: 'Superviseur immédiat', hse: 'Responsable HSE', mgmt: 'Direction', approved: 'Approuvé', pending: 'En attente', name: 'Nom', date: 'Date' },
@@ -534,7 +544,10 @@ const TR = {
     b: { title: 'Body diagram', none: 'No injured person — add a person in the "Injured" tab to locate injuries.', clickA: 'Click the injured zones for ', injuredN: 'Injured' },
     d: { title: 'Event description', workType: 'Type of work performed at the time of the incident', workTypePh: 'Maintenance, installation, driving, handling…', narration: 'Incident narrative', narrationPh: 'Describe the events chronologically and precisely. Include what happened, how and where…', immediate: 'Immediate actions taken', immediatePh: 'First aid, evacuation, equipment lockout, emergency call…', factors: 'Contributing factors' },
     v: { vehTitle: 'Vehicle involved', yes: 'Yes', no: 'No', plate: 'License plate', make: 'Make', model: 'Model', year: 'Year', km: 'Mileage at time', collisionType: 'Collision type', otherVeh: 'Other vehicle involved', policeReport: 'Police report', otherVehDesc: 'Other vehicle description', policeNum: 'Police report number', damageDesc: 'Damage description', propTitle: 'Property damage', propLoc: 'Damage location', estCost: 'Estimated cost ($)' },
-    an: { fiveWhy: '5 Whys method', fiveWhyHelp: 'Trace the causal chain to the root cause by answering each "Why".', answerPh: 'Answer…', rootTitle: 'Identified root cause', rootPh: 'Following the 5 Whys analysis, the root cause is…' },
+    an: { fiveWhy: '5 Whys method', fiveWhyHelp: 'Trace the causal chain to the root cause by answering each "Why".', answerPh: 'Answer…', rootTitle: 'Identified root cause', rootPh: 'Following the 5 Whys analysis, the root cause is…',
+      enqTitle: 'Causal investigation', causesTitle: 'Causes', immediate: 'Immediate causes', immediatePh: 'Conditions/acts that directly led to the incident…', basic: 'Basic causes', basicPh: 'Underlying / systemic causes (management, training, procedures)…',
+      photos: 'Attachments (photos)', addPhoto: 'Add photos', uploading: 'Uploading…', photoErr: 'Upload failed (incident-photos bucket required).',
+      sigTitle: 'Investigation signatures', investigator: 'Investigator', invSup: 'Supervisor', sign: 'Sign', signedOn: 'Signed on', notSigned: 'Not signed', clearSig: 'Clear' },
     ac: { title: 'Corrective actions', add: 'Add', none: 'No corrective action recorded', actionN: 'Action', describePh: 'Describe the corrective action…', responsible: 'Responsible', dueDate: 'Due date', status: 'Status', remove: 'Remove' },
     c: { notifTitle: 'Regulatory notification', declDelay: 'Reporting deadline', formLabel: 'Form', notifiedYes: 'Authority notified', notifiedNo: 'Authority not yet notified', notifDate: 'Notification date', refNum: 'Reference number', refNumPh: 'e.g. CNESST-2026-XXXXX' },
     ap: { title: 'Approval', supervisor: 'Immediate supervisor', hse: 'HSE manager', mgmt: 'Management', approved: 'Approved', pending: 'Pending', name: 'Name', date: 'Date' },
@@ -653,9 +666,14 @@ function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: 
   ${sec(t.d.title, row(t.d.workType, report.workType) + row(t.d.narration, report.description) + row(t.d.immediate, report.immediateAction) + (report.contributingFactors?.length ? row(t.d.factors, report.contributingFactors.map(f => tl(lang, f)).join(', ')) : ''))}
   ${vehicleSec}
   ${propSec}
-  ${(whys || report.rootCause) ? sec(t.an.fiveWhy, whys + (report.rootCause ? row(t.an.rootTitle, report.rootCause) : '')) : ''}
+  ${(report.immediateCauses || report.basicCauses || whys || report.rootCause) ? sec(t.an.enqTitle,
+    (report.immediateCauses ? row(t.an.immediate, report.immediateCauses) : '') +
+    (report.basicCauses ? row(t.an.basic, report.basicCauses) : '') +
+    whys + (report.rootCause ? row(t.an.rootTitle, report.rootCause) : '')) : ''}
+  ${(report.photos?.length) ? sec(t.an.photos, `<div class="row"><span class="val">${esc(report.photos.map(p => p.name).join(', '))}</span></div>`) : ''}
   ${actions ? sec(t.ac.title, actions) : ''}
   ${reqs ? sec(t.c.notifTitle, reqs) : ''}
+  ${sec(t.an.sigTitle, `<div class="sigs">${sig(t.an.investigator, report.investigatorName, report.investigatorSignedAt, !!report.investigatorSignedAt)}${sig(t.an.invSup, report.invSupervisorName, report.invSupervisorSignedAt, !!report.invSupervisorSignedAt)}</div>`)}
   ${sec(t.pr.signatures, signatures)}
   <div class="foot">${esc(t.pr.generated)} ${esc(generatedOn)} · ${esc(t.pr.docTitle)} ${esc(reportNumber)}</div>
   <script>window.onload=function(){window.focus();window.print();}</script>
@@ -1142,7 +1160,14 @@ function emptyReport(defaultType: IncidentType = 'accident', defaultProvince: Pr
       { question: 'Pourquoi ce facteur systémique ?', answer: '' },
       { question: 'Cause racine ultime ?', answer: '' },
     ],
+    immediateCauses: '',
+    basicCauses: '',
     rootCause: '',
+    photos: [],
+    investigatorName: '',
+    investigatorSignedAt: '',
+    invSupervisorName: '',
+    invSupervisorSignedAt: '',
     correctiveActions: [],
     regulatoryNotified: false,
     regulatoryNotifiedDate: '',
@@ -1217,7 +1242,8 @@ export default function IncidentReportForm({
       setDbId(data.id);
       setReportNumber(data.report_number);
       setStatus(data.status);
-      setReport(data.data as IncidentReportData);
+      // Fusionne avec les defauts pour que les rapports anterieurs aient les champs #81 (photos, causes, signatures).
+      setReport({ ...emptyReport(data.incident_type, data.province), ...(data.data as Partial<IncidentReportData>) });
     }
   }
 
@@ -1332,7 +1358,7 @@ export default function IncidentReportForm({
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'description': return <DescriptionSection report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} tenant={tenant} reportNumber={reportNumber} lang={lang} />;
       case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
       case 'compliance':  return <ComplianceSection  report={report} onChange={updateReport} readOnly={readOnly} />;
@@ -2064,13 +2090,17 @@ function VehicleSection({ report, onChange, readOnly }: {
   );
 }
 
-function AnalysisSection({ report, onChange, readOnly }: {
+function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lang }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  tenant: string;
+  reportNumber: string;
+  lang: Lang;
 }) {
-  const { lang } = useLanguage();
   const t = TR[lang];
+  const [uploading, setUploading] = useState(false);
+  const [photoErr, setPhotoErr] = useState(false);
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -2082,8 +2112,58 @@ function AnalysisSection({ report, onChange, readOnly }: {
     });
   }
 
+  async function onPhotos(files: FileList | null) {
+    if (!files || !files.length || !supabase) return;
+    setUploading(true); setPhotoErr(false);
+    const added: { url: string; name: string }[] = [];
+    for (const file of Array.from(files)) {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${tenant}/${reportNumber}/${Date.now()}-${safe}`;
+      const { error } = await supabase.storage.from('incident-photos').upload(path, file, { upsert: false });
+      if (error) { setPhotoErr(true); continue; }
+      const { data } = supabase.storage.from('incident-photos').getPublicUrl(path);
+      added.push({ url: data.publicUrl, name: file.name });
+    }
+    if (added.length) onChange(r => ({ ...r, photos: [...(r.photos ?? []), ...added] }));
+    setUploading(false);
+  }
+  const removePhoto = (url: string) => onChange(r => ({ ...r, photos: (r.photos ?? []).filter(p => p.url !== url) }));
+
+  const InvSig = ({ label, nameKey, dateKey }: { label: string; nameKey: keyof IncidentReportData; dateKey: keyof IncidentReportData }) => {
+    const signedAt = report[dateKey] as string;
+    return (
+      <div className={`border rounded-lg p-3 ${signedAt ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+        <div className="text-xs text-gray-500 mb-1">{label}</div>
+        <TextInput value={report[nameKey] as string} onChange={v => up(nameKey, v)} placeholder={t.g.namePh} readOnly={readOnly} />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-gray-500">
+            {signedAt ? `${t.an.signedOn} ${new Date(signedAt).toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA')}` : t.an.notSigned}
+          </span>
+          {!readOnly && (signedAt
+            ? <button onClick={() => up(dateKey, '')} className="text-xs text-gray-500 hover:text-red-600">{t.an.clearSig}</button>
+            : <button onClick={() => up(dateKey, new Date().toISOString())} disabled={!(report[nameKey] as string)}
+                className="text-xs px-3 py-1 bg-red-600 text-white rounded-lg font-medium disabled:opacity-40">{t.an.sign}</button>)}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
+      {/* Causes immediates / fondamentales */}
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <Search size={18} className="text-red-500" />
+          {t.an.enqTitle} — {t.an.causesTitle}
+        </h2>
+        <Field label={t.an.immediate}>
+          <Textarea value={report.immediateCauses} onChange={v => up('immediateCauses', v)} placeholder={t.an.immediatePh} readOnly={readOnly} rows={2} />
+        </Field>
+        <Field label={t.an.basic}>
+          <Textarea value={report.basicCauses} onChange={v => up('basicCauses', v)} placeholder={t.an.basicPh} readOnly={readOnly} rows={2} />
+        </Field>
+      </Card>
+
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
           <Search size={18} className="text-red-500" />
@@ -2126,6 +2206,51 @@ function AnalysisSection({ report, onChange, readOnly }: {
           readOnly={readOnly}
           rows={3}
         />
+      </Card>
+
+      {/* Pieces jointes photos (Storage) */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-800">{t.an.photos}</h2>
+          {!readOnly && (
+            <label className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg cursor-pointer">
+              <Plus size={14} />{uploading ? t.an.uploading : t.an.addPhoto}
+              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+                onChange={e => { onPhotos(e.target.files); e.target.value = ''; }} />
+            </label>
+          )}
+        </div>
+        {photoErr && <p className="text-xs text-red-600 mb-2">{t.an.photoErr}</p>}
+        {(report.photos ?? []).length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">{t.pr.none}</p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {(report.photos ?? []).map(p => (
+              <div key={p.url} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt={p.name} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                {!readOnly && (
+                  <button onClick={() => removePhoto(p.url)} title={p.name}
+                    className="absolute top-1 right-1 bg-white/90 rounded-full p-1 text-red-500 hover:text-red-700 shadow">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Signatures d'enquete */}
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <PenLine size={18} className="text-red-500" />
+          {t.an.sigTitle}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InvSig label={t.an.investigator} nameKey="investigatorName" dateKey="investigatorSignedAt" />
+          <InvSig label={t.an.invSup} nameKey="invSupervisorName" dateKey="invSupervisorSignedAt" />
+        </div>
       </Card>
     </div>
   );
