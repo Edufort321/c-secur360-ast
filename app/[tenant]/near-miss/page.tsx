@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
-  ArrowLeft, Plus, Shield, Clock, Search, ChevronRight,
+  ArrowLeft, Plus, Shield, Clock, Search, ChevronRight, Download,
 } from 'lucide-react';
 import IncidentReportForm, { DaySafetyCounter, type IncidentType, type DayCounter } from '../../../components/IncidentReport';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -111,6 +111,31 @@ export default function NearMissPage() {
       (b.data?.severityLevel ?? 0) - (a.data?.severityLevel ?? 0) ||
       String(b.created_at).localeCompare(String(a.created_at)),
     );
+
+  function exportCsv() {
+    const cell = (v: unknown) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const headers = ['No', 'Severite', 'Statut', 'Date incident', 'Declarant', 'Adresse', 'Description'];
+    const lines = filtered.map(r => [
+      r.report_number,
+      r.data?.severityLevel ?? '',
+      STATUS_LABEL[r.status],
+      r.data?.incidentDate ?? '',
+      r.data?.reportedBy ?? '',
+      r.data?.address ?? '',
+      r.data?.description ?? '',
+    ].map(cell).join(','));
+    // BOM pour qu'Excel ouvre l'UTF-8 correctement
+    const csv = '﻿' + [headers.map(cell).join(','), ...lines].join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `presque-accidents-${tenant}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -253,6 +278,16 @@ export default function NearMissPage() {
                   <option value="submitted">Soumis</option>
                   <option value="closed">Fermé</option>
                 </select>
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  disabled={filtered.length === 0}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Exporter la liste filtrée en CSV"
+                >
+                  <Download size={15} />
+                  CSV
+                </button>
               </div>
 
               {loading ? (
