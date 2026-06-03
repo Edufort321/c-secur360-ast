@@ -48,6 +48,8 @@ export default function NearMissPage() {
   const [counter, setCounter] = useState<DayCounter | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [severityFilter, setSeverityFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'submitted' | 'closed'>('all');
   const [activeReport, setActiveReport] = useState<string | null | 'new'>(null);
   const [resetConfirm, setResetConfirm] = useState(false);
 
@@ -92,15 +94,23 @@ export default function NearMissPage() {
     load();
   }
 
-  const filtered = reports.filter(r => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      r.report_number.toLowerCase().includes(q) ||
-      (r.data?.description ?? '').toLowerCase().includes(q) ||
-      (r.data?.reportedBy ?? '').toLowerCase().includes(q)
+  const filtered = reports
+    .filter(r => {
+      if (severityFilter !== 'all' && String(r.data?.severityLevel ?? '') !== severityFilter) return false;
+      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        r.report_number.toLowerCase().includes(q) ||
+        (r.data?.description ?? '').toLowerCase().includes(q) ||
+        (r.data?.reportedBy ?? '').toLowerCase().includes(q)
+      );
+    })
+    // Tri : severite decroissante (critique d'abord), puis date decroissante
+    .sort((a, b) =>
+      (b.data?.severityLevel ?? 0) - (a.data?.severityLevel ?? 0) ||
+      String(b.created_at).localeCompare(String(a.created_at)),
     );
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -207,8 +217,8 @@ export default function NearMissPage() {
 
             {/* Search + list */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="border-b border-gray-100 px-4 py-3">
-                <div className="relative">
+              <div className="border-b border-gray-100 px-4 py-3 flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
@@ -218,6 +228,30 @@ export default function NearMissPage() {
                     className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   />
                 </div>
+                <select
+                  value={severityFilter}
+                  onChange={e => setSeverityFilter(e.target.value as typeof severityFilter)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  aria-label="Filtrer par sévérité"
+                >
+                  <option value="all">Toutes sévérités</option>
+                  <option value="5">5 · Critique</option>
+                  <option value="4">4 · Grave</option>
+                  <option value="3">3 · Modéré</option>
+                  <option value="2">2 · Faible</option>
+                  <option value="1">1 · Mineur</option>
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  aria-label="Filtrer par statut"
+                >
+                  <option value="all">Tous statuts</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="submitted">Soumis</option>
+                  <option value="closed">Fermé</option>
+                </select>
               </div>
 
               {loading ? (
@@ -226,9 +260,9 @@ export default function NearMissPage() {
                 <div className="py-16 text-center">
                   <Shield size={40} className="mx-auto text-gray-300 mb-3" />
                   <p className="text-sm text-gray-400">
-                    {search ? 'Aucun résultat' : 'Aucun signalement enregistré'}
+                    {(search || severityFilter !== 'all' || statusFilter !== 'all') ? 'Aucun résultat' : 'Aucun signalement enregistré'}
                   </p>
-                  {!search && (
+                  {!search && severityFilter === 'all' && statusFilter === 'all' && (
                     <button
                       onClick={() => setActiveReport('new')}
                       className="mt-4 text-sm text-orange-600 hover:underline"
