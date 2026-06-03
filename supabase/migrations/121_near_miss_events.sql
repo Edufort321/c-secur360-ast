@@ -27,15 +27,20 @@ select
       then (ir.data->>'incidentDate')::date
     else null
   end                                                                   as incident_date,
-  -- severite numerique derivee du type (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident)
-  case ir.incident_type
-    when 'accident' then 5
-    when 'medical'  then 5
-    when 'vehicle'  then 4
-    when 'property' then 4
-    when 'near_miss' then 2
-    else 3
-  end                                                                   as severity_level,
+  -- severite (1=mineur .. 5=grave ; 1-3 = passe-proche, 4-5 = incident) :
+  -- valeur explicite saisie dans le formulaire (data.severityLevel) sinon derivee du type.
+  coalesce(
+    case when ir.data->>'severityLevel' ~ '^[1-5]$'
+      then (ir.data->>'severityLevel')::int end,
+    case ir.incident_type
+      when 'accident' then 5
+      when 'medical'  then 5
+      when 'vehicle'  then 4
+      when 'property' then 4
+      when 'near_miss' then 2
+      else 3
+    end
+  )                                                                     as severity_level,
   ir.incident_type                                                      as type,
   ir.status,
   nullif(ir.data->>'description', '')                                   as description,
