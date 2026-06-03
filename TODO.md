@@ -20,7 +20,7 @@
 - **Agent 4 (Incidents)** : ✅ near-miss mergé · reste **#67** (module Accidents/Incidents complet), **#71** (dashboard analytique incidents + export déclaration réglementaire). Zone : `app/[tenant]/accidents/**`, `app/[tenant]/near-miss/**`, `components/IncidentReport/**`.
 
 ### 🔁 Règle file : chaque agent garde ≥2 tâches en attente (le patron réalimente). Profondeur actuelle — A1:3 · A2:6 · A3:2 (#69,#70) · A4:2 (#67,#71).
-- **Patron** : #46 (en cours), #45, #47, #57 (permissions), **#64** (header: toggle FR/EN au clic), **#65** (feuille de temps mobile + fonctions manquantes), **#66** (admin vue mobile), #59 (temps réel — propager), #17/#19 (✅ analyse+verrou 124 mergés, finaliser). #35/#50 ✅.
+- **Patron** : ✅#46,#64,#65,#66,#57(Phase 1) · reste **#73** (module RH complet — dossier/docs/certifs/onboarding/ATS, type BambooHR adapté SST), #45 (dépenses→compta), #47 (paie par poste), #57 Phase 2 (câblage gates+self-edit), #59 (propager temps réel), #17/#19 (durcir). #35/#50 ✅.
 
 ### 📌 Suivi d'avancement (maj continue par le patron)
 | # | Tâche | Agent | Statut |
