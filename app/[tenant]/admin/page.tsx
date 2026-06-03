@@ -14,6 +14,7 @@ import { ARC_2026 } from '@/lib/constants/arc';
 import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBalance, createEntry, reverseEntry, ACCOUNT_TYPE_LABELS, type GLAccount, type GLTaxCode } from '@/lib/accounting';
 import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
+import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
@@ -6009,8 +6010,12 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
 // ============================================================
 function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: string, e: string) => string; canEdit: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [view, setView] = useState<'list' | 'edit'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'bank'>('list');
   const [txns, setTxns] = useState<Transaction[]>([]);
+  // Rapprochement bancaire (#35)
+  const [bankLines, setBankLines] = useState<BankLine[]>([]);
+  const [importText, setImportText] = useState('');
+  const [bankBusy, setBankBusy] = useState(false);
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [migMissing, setMigMissing] = useState(false);
@@ -6137,6 +6142,38 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     try { await deleteTransaction(tenant, t.id!); await load(); } catch (e: any) { setNotice(e?.message); }
   }
 
+  // ── Rapprochement bancaire (#35) ──────────────────────────────────────────
+  async function openBank() {
+    setView('bank'); setNotice(null); setBankBusy(true);
+    try { setBankLines(await getBankLines(tenant)); }
+    catch { setNotice(tr('Exécutez la migration 123, puis rechargez.', 'Run migration 123, then reload.')); }
+    setBankBusy(false);
+  }
+  async function doImportBank() {
+    const parsed = parseBankCsv(importText);
+    if (!parsed.length) { setNotice(tr('Aucune ligne détectée dans le CSV.', 'No line detected in the CSV.')); return; }
+    setBankBusy(true); setNotice(null);
+    try {
+      await insertBankLines(tenant, parsed); setImportText('');
+      setBankLines(await getBankLines(tenant));
+      setNotice(`${parsed.length} ${tr('lignes importées.', 'lines imported.')}`);
+    } catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
+    setBankBusy(false);
+  }
+  async function matchBankLine(id: string, transactionId: string) {
+    const patch = { matched_transaction_id: transactionId || null, reconciled: !!transactionId };
+    setBankLines(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b));
+    try { await updateBankLine(tenant, id, patch); } catch (e: any) { setNotice(e?.message); }
+  }
+  async function toggleReconciled(id: string, reconciled: boolean) {
+    setBankLines(prev => prev.map(b => b.id === id ? { ...b, reconciled } : b));
+    try { await updateBankLine(tenant, id, { reconciled }); } catch (e: any) { setNotice(e?.message); }
+  }
+  async function removeBankLine(id: string) {
+    setBankLines(prev => prev.filter(b => b.id !== id));
+    try { await deleteBankLine(tenant, id); } catch (e: any) { setNotice(e?.message); }
+  }
+
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
   if (migMissing) return (<div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200"><p className="font-semibold">{tr('Module transactions non initialisé', 'Transactions module not initialized')}</p><p className="mt-1 text-sm">{tr('Exécutez la migration 087 dans Supabase, puis rechargez.', 'Run migration 087 in Supabase, then reload.')}</p></div>);
 
@@ -6148,10 +6185,12 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-gray-500">{tr('Transactions (revenus & dépenses)', 'Transactions (revenue & expenses)')}</h2>
-        {view === 'list' && canEdit && <div className="flex gap-2">
+        {view === 'list' && canEdit && <div className="flex flex-wrap gap-2">
           <button onClick={() => newTxn('revenue')} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">+ {tr('Revenu', 'Revenue')}</button>
           <button onClick={() => newTxn('expense')} className="rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">+ {tr('Dépense', 'Expense')}</button>
+          <button onClick={openBank} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Rapprochement bancaire', 'Bank reconciliation')}</button>
         </div>}
+        {view === 'bank' && <button onClick={() => { setView('list'); setNotice(null); }} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">← {tr('Retour aux transactions', 'Back to transactions')}</button>}
       </div>
       {notice && <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
@@ -6203,6 +6242,55 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
           <div className="mt-3 flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Annuler', 'Cancel')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
+          </div>
+        </div>
+      ) : view === 'bank' ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">{tr('Importer un relevé bancaire (CSV)', 'Import a bank statement (CSV)')}</div>
+            <p className="mb-2 text-xs text-gray-400">{tr('Colonnes détectées automatiquement : date, description, montant (ou débit/crédit). Collez le CSV ou choisissez un fichier.', 'Columns auto-detected: date, description, amount (or debit/credit). Paste the CSV or pick a file.')}</p>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4} placeholder={tr('Collez ici les lignes CSV…', 'Paste CSV lines here…')} className={`w-full font-mono text-xs ${inputCls}`} />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
+                {tr('Choisir un fichier CSV', 'Pick a CSV file')}
+                <input type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={async e => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); }} />
+              </label>
+              <button onClick={doImportBank} disabled={bankBusy || !importText.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{bankBusy ? <Loader2 size={15} className="inline animate-spin" /> : tr('Importer', 'Import')}</button>
+              {importText.trim() && <span className="text-xs text-gray-400">{parseBankCsv(importText).length} {tr('lignes détectées', 'lines detected')}</span>}
+            </div>
+          </div>
+          {bankLines.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-gray-800 dark:text-gray-100">{bankLines.length}</div><div className="text-xs text-gray-500">{tr('Lignes', 'Lines')}</div></div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-emerald-600">{bankLines.filter(b => b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('Rapprochées', 'Reconciled')}</div></div>
+              <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"><div className="text-lg font-bold text-amber-600">{bankLines.filter(b => !b.reconciled).length}</div><div className="text-xs text-gray-500">{tr('À rapprocher', 'To reconcile')}</div></div>
+            </div>
+          )}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <table className="mobile-cards w-full text-sm">
+              <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400">
+                <th className="px-4 py-2">{tr('Date', 'Date')}</th><th className="px-4">{tr('Description', 'Description')}</th>
+                <th className="px-4 text-right">{tr('Montant', 'Amount')}</th><th className="px-4">{tr('Transaction rapprochée', 'Matched transaction')}</th><th className="px-4">{tr('Rappr.', 'Recon.')}</th><th className="px-4"></th>
+              </tr></thead>
+              <tbody>
+                {bankLines.map(b => (
+                  <tr key={b.id} className="border-t border-gray-50 dark:border-gray-700/50">
+                    <td className="px-4 py-2" data-label={tr('Date', 'Date')}>{b.stmt_date}</td>
+                    <td className="px-4 py-2" data-label={tr('Description', 'Description')}>{b.description}</td>
+                    <td className={`px-4 py-2 text-right font-medium ${b.amount < 0 ? 'text-rose-600' : 'text-emerald-600'}`} data-label={tr('Montant', 'Amount')}>{mny(b.amount)}</td>
+                    <td className="px-4 py-2" data-label={tr('Transaction rapprochée', 'Matched transaction')}>
+                      <select value={b.matched_transaction_id || ''} onChange={e => matchBankLine(b.id!, e.target.value)} className={inputCls}>
+                        <option value="">{tr('— Aucune —', '— None —')}</option>
+                        {txns.map(t => <option key={t.id} value={t.id}>{t.transaction_number} · {mny(t.total)}{t.vendor_name ? ` · ${t.vendor_name}` : ''}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-4 py-2" data-label={tr('Rappr.', 'Recon.')}><input type="checkbox" checked={!!b.reconciled} onChange={e => toggleReconciled(b.id!, e.target.checked)} /></td>
+                    <td className="px-4 py-2 text-right" data-label=""><button onClick={() => removeBankLine(b.id!)} className="text-xs text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button></td>
+                  </tr>
+                ))}
+                {bankLines.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">{bankBusy ? '…' : tr('Aucune ligne bancaire importée.', 'No bank line imported.')}</td></tr>}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (
