@@ -8,6 +8,7 @@ import {
   AlertCircle, DollarSign, Loader2, Calendar, User, Send,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useRealtime } from '@/lib/useRealtime';
 import { PortalHeader } from '@/components/PortalHeader';
 
 type Sheet = {
@@ -104,6 +105,8 @@ export default function TimesheetsPage() {
   }
 
   useEffect(() => { load(); }, [tenant, isSupervisor, currentUserId]); // eslint-disable-line
+  // Synchro temps réel : la liste se met à jour quand une feuille change (soumise/approuvée par un autre).
+  useRealtime(['timesheets'], tenant, () => load()); // eslint-disable-line
 
   // Auto-generate next week's draft 7 days in advance
   useEffect(() => {

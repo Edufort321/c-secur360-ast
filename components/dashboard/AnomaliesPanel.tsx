@@ -3,10 +3,11 @@
 // Panneau « Non-conformités & anomalies » — vue d'ensemble agrégée de tous les modules.
 // Visibilité : coordination et plus voient TOUT ; sinon l'utilisateur voit seulement
 // les items où SON NOM (ou courriel) apparaît dans le formulaire.
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ShieldAlert, Wrench, FileWarning, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useRealtime } from '@/lib/useRealtime';
 
 type Severity = 'red' | 'orange';
 type Item = {
@@ -19,9 +20,9 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [canSeeAll, setCanSeeAll] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
+  const load = useCallback(async () => {
+    {
+      const active = true;
       setLoading(true);
       // 1. Identité + niveau d'accès
       let myName = '', myEmail = '', role = '';
@@ -109,9 +110,12 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
       // Tri : rouge d'abord, puis par date desc
       filtered.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'red' ? -1 : 1) || String(b.date || '').localeCompare(String(a.date || '')));
       if (active) { setItems(filtered); setLoading(false); }
-    })();
-    return () => { active = false; };
+    }
   }, [tenant]);
+
+  useEffect(() => { load(); }, [load]);
+  // Synchro temps réel : recharge le panneau quand un module change (migration 109 requise).
+  useRealtime(['ast_permits', 'equipment_inspections', 'incident_reports'], tenant, load);
 
   const ICON = { ast: ShieldAlert, inspection: Wrench, incident: FileWarning };
 
