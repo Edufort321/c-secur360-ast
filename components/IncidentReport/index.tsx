@@ -7,8 +7,14 @@ import {
   FileText, MapPin, User, Heart, AlignLeft, Truck, Search,
   CheckSquare, Scale, PenLine, ArrowLeft, Save, Send, Plus,
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Shield,
-  RotateCcw, CheckCircle, Clock, Car, Building2, Activity,
+  RotateCcw, CheckCircle, Clock, Car, Building2, Activity, Printer, ClipboardCheck,
 } from 'lucide-react';
+import { useLanguage, type Lang } from '@/contexts/LanguageContext';
+import {
+  listActionsByIncident, createIncidentAction, updateIncidentAction, deleteIncidentAction,
+  isActionOverdue, ACTION_STATUSES, ACTION_PRIORITIES,
+  type IncidentAction, type IncidentActionStatus,
+} from '@/lib/incidentActions';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -108,7 +114,14 @@ interface IncidentReportData {
     location: string;
   };
   whyAnalysis: Array<{ question: string; answer: string }>;
+  immediateCauses: string;          // #81 causes immediates
+  basicCauses: string;              // #81 causes fondamentales / sous-jacentes
   rootCause: string;
+  photos: Array<{ url: string; name: string }>;   // #81 pieces jointes (Storage)
+  investigatorName: string;         // #81 signature enqueteur
+  investigatorSignedAt: string;     // horodatage ISO
+  invSupervisorName: string;        // #81 signature superviseur d'enquete
+  invSupervisorSignedAt: string;
   correctiveActions: CorrectiveAction[];
   regulatoryNotified: boolean;
   regulatoryNotifiedDate: string;
@@ -405,7 +418,267 @@ const COLLISION_TYPES = [
   'Dommages au stationnement', 'Autre',
 ];
 
-type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'compliance' | 'approval';
+type SectionId = 'general' | 'location' | 'persons' | 'body' | 'description' | 'vehicle' | 'analysis' | 'actions' | 'capa' | 'compliance' | 'approval';
+
+// ── i18n (connecte au header FR/EN via useLanguage) ──────────────────────────
+// Les valeurs stockees restent en FR (canoniques) ; on traduit seulement l'AFFICHAGE.
+const EN_LABEL: Record<string, string> = {
+  // Types d'incident
+  'Accident de travail': 'Workplace accident',
+  'Passé proche': 'Near miss',
+  'Passé proche (sans blessure)': 'Near miss (no injury)',
+  'Accident de véhicule': 'Vehicle accident',
+  'Dommages matériels': 'Property damage',
+  'Maladie professionnelle': 'Occupational illness',
+  // Traitement medical
+  'Aucun traitement': 'No treatment',
+  'Premiers soins sur place': 'On-site first aid',
+  'Clinique / médecin': 'Clinic / physician',
+  'Hospitalisation': 'Hospitalization',
+  'Urgence / ambulance': 'Emergency / ambulance',
+  // Statut action corrective
+  'En attente': 'Pending',
+  'En cours': 'In progress',
+  'Complété': 'Completed',
+  // Eclairage
+  'Bon éclairage': 'Good lighting',
+  'Éclairage insuffisant': 'Insufficient lighting',
+  'Absence de lumière': 'No light',
+  'Lumière naturelle seulement': 'Natural light only',
+  'Éblouissement': 'Glare',
+  // Facteurs contributifs
+  'Comportement / acte dangereux': 'Unsafe behavior / act',
+  "Défaillance d'équipement / outil": 'Equipment / tool failure',
+  'Conditions environnementales': 'Environmental conditions',
+  'Procédure absente ou non suivie': 'Missing or unfollowed procedure',
+  'Formation insuffisante': 'Insufficient training',
+  'Équipement de protection manquant': 'Missing protective equipment',
+  'Fatigue / stress': 'Fatigue / stress',
+  'Pression de temps': 'Time pressure',
+  'Communication déficiente': 'Poor communication',
+  'Entretien préventif insuffisant': 'Insufficient preventive maintenance',
+  'Autre': 'Other',
+  // Types de blessure
+  'Fracture': 'Fracture', 'Entorse / Foulure': 'Sprain / Strain', 'Lacération / Coupure': 'Laceration / Cut', 'Contusion': 'Contusion',
+  'Brûlure thermique': 'Thermal burn', 'Brûlure chimique': 'Chemical burn', 'Choc électrique': 'Electric shock', 'Commotion cérébrale': 'Concussion',
+  'Dislocation': 'Dislocation', 'Hernie': 'Hernia', 'Intoxication / Empoisonnement': 'Intoxication / Poisoning', 'Corps étranger': 'Foreign body',
+  'Écrasement': 'Crush injury', 'Amputation': 'Amputation', 'Égratignure / Abrasion': 'Scratch / Abrasion',
+  // Meteo
+  'Clair / ensoleillé': 'Clear / sunny', 'Nuageux': 'Cloudy', 'Pluie': 'Rain', 'Neige': 'Snow', 'Verglas': 'Black ice',
+  'Brouillard': 'Fog', 'Vent fort': 'Strong wind', 'Chaleur extrême': 'Extreme heat', 'Froid extrême': 'Extreme cold', 'Intérieur': 'Indoor',
+  // Types de collision
+  'Collision frontale': 'Head-on collision', 'Collision arrière': 'Rear-end collision', 'Collision latérale': 'Side collision',
+  'Renversement / tonneau': 'Rollover', 'Collision avec piéton': 'Pedestrian collision', 'Collision avec objet fixe': 'Collision with fixed object',
+  'Dommages au stationnement': 'Parking damage',
+  // Questions des 5 Pourquoi (stockees dans le rapport)
+  "Pourquoi l'incident s'est-il produit ?": 'Why did the incident occur?',
+  "Pourquoi cette cause existe-t-elle ?": 'Why does this cause exist?',
+  'Pourquoi cette cause fondamentale ?': 'Why this fundamental cause?',
+  'Pourquoi ce facteur systémique ?': 'Why this systemic factor?',
+  'Cause racine ultime ?': 'Ultimate root cause?',
+};
+
+// Traduit une valeur FR canonique pour l'affichage selon la langue.
+const tl = (lang: Lang, fr: string) => (lang === 'en' ? (EN_LABEL[fr] ?? fr) : fr);
+
+const TR = {
+  fr: {
+    back: 'Retour', draft: 'Brouillon', submittedRO: 'Soumis — lecture seule', closed: 'Fermé',
+    saving: 'Enregistrement…', saved: 'Enregistré', save: 'Sauvegarder', submit: 'Soumettre',
+    confirmSubmit: 'Confirmer la soumission ?', yes: 'Oui', cancel: 'Annuler',
+    nav: { general: 'Général', location: 'Lieu', persons: 'Blessés', body: 'Schéma corporel', description: 'Description', vehicle: 'Véhicule', analysis: 'Analyse', actions: 'Actions', capa: 'Suivi CAPA', compliance: 'Réglementation', approval: 'Approbation' },
+    g: {
+      title: 'Informations générales', type: "Type d'incident", province: 'Province / territoire', severity: 'Sévérité',
+      dateIncident: "Date de l'incident", timeIncident: "Heure de l'incident", dateReport: 'Date du rapport',
+      responsible: 'Responsable du rapport', name: 'Nom', namePh: 'Prénom Nom', titlePost: 'Titre / Poste', titlePostPh: 'Contremaître, HSE...', phone: 'Téléphone',
+      sev: ['1 — Mineur (presque-accident)', '2 — Faible (presque-accident)', '3 — Modéré (presque-accident)', '4 — Grave (incident)', '5 — Critique (incident)'],
+      declDelay: 'Délai de déclaration', requiredForm: 'Formulaire requis',
+    },
+    loc: { title: "Lieu de l'incident", address: 'Adresse complète', addressPh: '123, rue Principale, Ville, QC', dept: 'Département / Unité', deptPh: 'Atelier, Chantier A, Bureau...', exact: 'Emplacement précis', exactPh: 'Escalier nord, zone de chargement...', weather: 'Conditions météo', lighting: 'Éclairage' },
+    p: {
+      injured: 'Personnes blessées', add: 'Ajouter', noneNear: 'Aucune blessure (passé proche)', noneInjured: 'Aucune personne blessée enregistrée', injuredN: 'Blessé',
+      fullName: 'Nom complet', jobTitle: 'Titre / Poste', employer: 'Employeur', empId: '# Employé', phone: 'Téléphone', injuryType: 'Type de blessure', treatment: 'Traitement médical',
+      injuryDesc: 'Description de la blessure', injuryDescPh: 'Décrire la nature et la localisation de la blessure…', lostTime: 'Perte de temps', daysPh: 'Jours', daysAbsence: "jours d'absence",
+      witnesses: 'Témoins', noWitness: 'Aucun témoin enregistré', witnessN: 'Témoin', wName: 'Nom', wPost: 'Poste', statement: 'Déclaration', statementPh: 'Déclaration du témoin…',
+    },
+    b: { title: 'Schéma corporel', none: "Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.", clickA: 'Cliquer sur les zones blessées pour ', injuredN: 'Blessé' },
+    d: { title: "Description de l'événement", workType: "Type de travail effectué au moment de l'incident", workTypePh: 'Entretien, installation, conduite, manutention…', narration: "Narration de l'incident", narrationPh: "Décrire chronologiquement et précisément les événements. Inclure ce qui s'est passé, comment et où…", immediate: 'Actions immédiates prises', immediatePh: "Premiers secours, évacuation, mise hors service de l'équipement, appel d'urgence…", factors: 'Facteurs contributifs' },
+    v: { vehTitle: 'Véhicule impliqué', yes: 'Oui', no: 'Non', plate: "Plaque d'immatriculation", make: 'Marque', model: 'Modèle', year: 'Année', km: 'Kilométrage au moment', collisionType: 'Type de collision', otherVeh: 'Autre véhicule impliqué', policeReport: 'Rapport de police', otherVehDesc: "Description de l'autre véhicule", policeNum: 'Numéro du rapport de police', damageDesc: 'Description des dommages', propTitle: 'Dommages matériels', propLoc: 'Localisation des dommages', estCost: 'Coût estimé ($)' },
+    an: { fiveWhy: 'Méthode des 5 Pourquoi', fiveWhyHelp: 'Remonter la chaîne causale jusqu\'à la cause racine en répondant à chaque «Pourquoi».', answerPh: 'Réponse…', rootTitle: 'Cause racine identifiée', rootPh: "Suite à l'analyse des 5 Pourquoi, la cause racine est…",
+      enqTitle: 'Enquête causale', causesTitle: 'Causes', immediate: 'Causes immédiates', immediatePh: 'Conditions/actes ayant directement mené à l\'incident…', basic: 'Causes fondamentales', basicPh: 'Causes sous-jacentes / systémiques (gestion, formation, procédures)…',
+      photos: 'Pièces jointes (photos)', addPhoto: 'Ajouter des photos', uploading: 'Téléversement…', photoErr: 'Échec du téléversement (bucket incident-photos requis).',
+      sigTitle: "Signatures d'enquête", investigator: 'Enquêteur', invSup: 'Superviseur', sign: 'Signer', signedOn: 'Signé le', notSigned: 'Non signé', clearSig: 'Effacer' },
+    ac: { title: 'Actions correctives', add: 'Ajouter', none: 'Aucune action corrective enregistrée', actionN: 'Action', describePh: "Décrire l'action corrective…", responsible: 'Responsable', dueDate: 'Échéance', status: 'Statut', remove: 'Retirer' },
+    c: { notifTitle: 'Notification réglementaire', declDelay: 'Délai de déclaration', formLabel: 'Formulaire', notifiedYes: 'Autorité notifiée', notifiedNo: 'Autorité non encore notifiée', notifDate: 'Date de notification', refNum: 'Numéro de référence', refNumPh: 'Ex : CNESST-2026-XXXXX' },
+    ap: { title: 'Approbation', supervisor: 'Superviseur immédiat', hse: 'Responsable HSE', mgmt: 'Direction', approved: 'Approuvé', pending: 'En attente', name: 'Nom', date: 'Date' },
+    pr: { btn: 'Imprimer / PDF', docTitle: "Rapport d'incident", generated: 'Document généré le', reqTitle: 'Exigences réglementaires', notifiedOn: 'Autorité notifiée le', refLabel: 'Référence', signatures: 'Signatures', signedOn: 'Signé le', notSigned: 'Non signé', none: '—', popupBlocked: 'Veuillez autoriser les fenetres contextuelles pour imprimer.' },
+    cp: {
+      title: 'Actions correctives (CAPA)', help: 'Actions suivies (responsable, échéance, statut) liées à cet incident.',
+      saveFirst: "Enregistrez d'abord le rapport pour ajouter des actions de suivi.",
+      add: 'Ajouter une action', none: 'Aucune action de suivi', descPh: "Décrire l'action…",
+      description: 'Description', assignee: 'Responsable', assigneePh: 'Prénom Nom', dueDate: 'Échéance',
+      priority: 'Priorité', status: 'Statut', save: 'Ajouter', cancel: 'Annuler', overdue: 'En retard',
+      statusLabel: { a_faire: 'A faire', en_cours: 'En cours', fait: 'Fait', verifie: 'Verifie' } as Record<string, string>,
+      priorityLabel: { basse: 'Basse', normale: 'Normale', haute: 'Haute', critique: 'Critique' } as Record<string, string>,
+    },
+  },
+  en: {
+    back: 'Back', draft: 'Draft', submittedRO: 'Submitted — read only', closed: 'Closed',
+    saving: 'Saving…', saved: 'Saved', save: 'Save', submit: 'Submit',
+    confirmSubmit: 'Confirm submission?', yes: 'Yes', cancel: 'Cancel',
+    nav: { general: 'General', location: 'Location', persons: 'Injured', body: 'Body diagram', description: 'Description', vehicle: 'Vehicle', analysis: 'Analysis', actions: 'Actions', capa: 'CAPA tracking', compliance: 'Regulations', approval: 'Approval' },
+    g: {
+      title: 'General information', type: 'Incident type', province: 'Province / territory', severity: 'Severity',
+      dateIncident: 'Incident date', timeIncident: 'Incident time', dateReport: 'Report date',
+      responsible: 'Report author', name: 'Name', namePh: 'First Last', titlePost: 'Title / Position', titlePostPh: 'Foreman, HSE...', phone: 'Phone',
+      sev: ['1 — Minor (near miss)', '2 — Low (near miss)', '3 — Moderate (near miss)', '4 — Serious (incident)', '5 — Critical (incident)'],
+      declDelay: 'Reporting deadline', requiredForm: 'Required form',
+    },
+    loc: { title: 'Incident location', address: 'Full address', addressPh: '123 Main St, City, QC', dept: 'Department / Unit', deptPh: 'Shop, Site A, Office...', exact: 'Exact location', exactPh: 'North stairwell, loading area...', weather: 'Weather conditions', lighting: 'Lighting' },
+    p: {
+      injured: 'Injured persons', add: 'Add', noneNear: 'No injury (near miss)', noneInjured: 'No injured person recorded', injuredN: 'Injured',
+      fullName: 'Full name', jobTitle: 'Title / Position', employer: 'Employer', empId: 'Employee #', phone: 'Phone', injuryType: 'Injury type', treatment: 'Medical treatment',
+      injuryDesc: 'Injury description', injuryDescPh: 'Describe the nature and location of the injury…', lostTime: 'Lost time', daysPh: 'Days', daysAbsence: 'days off',
+      witnesses: 'Witnesses', noWitness: 'No witness recorded', witnessN: 'Witness', wName: 'Name', wPost: 'Position', statement: 'Statement', statementPh: 'Witness statement…',
+    },
+    b: { title: 'Body diagram', none: 'No injured person — add a person in the "Injured" tab to locate injuries.', clickA: 'Click the injured zones for ', injuredN: 'Injured' },
+    d: { title: 'Event description', workType: 'Type of work performed at the time of the incident', workTypePh: 'Maintenance, installation, driving, handling…', narration: 'Incident narrative', narrationPh: 'Describe the events chronologically and precisely. Include what happened, how and where…', immediate: 'Immediate actions taken', immediatePh: 'First aid, evacuation, equipment lockout, emergency call…', factors: 'Contributing factors' },
+    v: { vehTitle: 'Vehicle involved', yes: 'Yes', no: 'No', plate: 'License plate', make: 'Make', model: 'Model', year: 'Year', km: 'Mileage at time', collisionType: 'Collision type', otherVeh: 'Other vehicle involved', policeReport: 'Police report', otherVehDesc: 'Other vehicle description', policeNum: 'Police report number', damageDesc: 'Damage description', propTitle: 'Property damage', propLoc: 'Damage location', estCost: 'Estimated cost ($)' },
+    an: { fiveWhy: '5 Whys method', fiveWhyHelp: 'Trace the causal chain to the root cause by answering each "Why".', answerPh: 'Answer…', rootTitle: 'Identified root cause', rootPh: 'Following the 5 Whys analysis, the root cause is…',
+      enqTitle: 'Causal investigation', causesTitle: 'Causes', immediate: 'Immediate causes', immediatePh: 'Conditions/acts that directly led to the incident…', basic: 'Basic causes', basicPh: 'Underlying / systemic causes (management, training, procedures)…',
+      photos: 'Attachments (photos)', addPhoto: 'Add photos', uploading: 'Uploading…', photoErr: 'Upload failed (incident-photos bucket required).',
+      sigTitle: 'Investigation signatures', investigator: 'Investigator', invSup: 'Supervisor', sign: 'Sign', signedOn: 'Signed on', notSigned: 'Not signed', clearSig: 'Clear' },
+    ac: { title: 'Corrective actions', add: 'Add', none: 'No corrective action recorded', actionN: 'Action', describePh: 'Describe the corrective action…', responsible: 'Responsible', dueDate: 'Due date', status: 'Status', remove: 'Remove' },
+    c: { notifTitle: 'Regulatory notification', declDelay: 'Reporting deadline', formLabel: 'Form', notifiedYes: 'Authority notified', notifiedNo: 'Authority not yet notified', notifDate: 'Notification date', refNum: 'Reference number', refNumPh: 'e.g. CNESST-2026-XXXXX' },
+    ap: { title: 'Approval', supervisor: 'Immediate supervisor', hse: 'HSE manager', mgmt: 'Management', approved: 'Approved', pending: 'Pending', name: 'Name', date: 'Date' },
+    pr: { btn: 'Print / PDF', docTitle: 'Incident report', generated: 'Document generated on', reqTitle: 'Regulatory requirements', notifiedOn: 'Authority notified on', refLabel: 'Reference', signatures: 'Signatures', signedOn: 'Signed on', notSigned: 'Not signed', none: '—', popupBlocked: 'Please allow pop-ups to print.' },
+    cp: {
+      title: 'Corrective actions (CAPA)', help: 'Tracked actions (assignee, due date, status) linked to this incident.',
+      saveFirst: 'Save the report first to add tracked actions.',
+      add: 'Add action', none: 'No tracked action', descPh: 'Describe the action…',
+      description: 'Description', assignee: 'Assignee', assigneePh: 'First Last', dueDate: 'Due date',
+      priority: 'Priority', status: 'Status', save: 'Add', cancel: 'Cancel', overdue: 'Overdue',
+      statusLabel: { a_faire: 'To do', en_cours: 'In progress', fait: 'Done', verifie: 'Verified' } as Record<string, string>,
+      priorityLabel: { basse: 'Low', normale: 'Normal', haute: 'High', critique: 'Critical' } as Record<string, string>,
+    },
+  },
+} as const;
+
+const TREATMENT_LABEL: Record<string, string> = {
+  none: 'Aucun traitement', first_aid: 'Premiers soins sur place', clinic: 'Clinique / médecin',
+  hospital: 'Hospitalisation', emergency: 'Urgence / ambulance',
+};
+const ACTION_STATUS_LABEL: Record<string, string> = {
+  pending: 'En attente', in_progress: 'En cours', completed: 'Complété',
+};
+
+// ── #71 Export reglementaire : document imprimable (print -> PDF navigateur) ──
+function buildPrintHtml(report: IncidentReportData, reportNumber: string, lang: Lang, generatedOn: string): string {
+  const t = TR[lang];
+  const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+  const none = t.pr.none;
+  const v = (s: unknown) => { const e = esc(s); return e || none; };
+  const typeLabel = report.incidentType === 'near_miss' ? tl(lang, 'Passé proche')
+    : tl(lang, { accident: 'Accident de travail', vehicle: 'Accident de véhicule', property: 'Dommages matériels', medical: 'Maladie professionnelle' }[report.incidentType] ?? report.incidentType);
+  const sev = t.g.sev[(report.severityLevel || 3) - 1] ?? String(report.severityLevel ?? '');
+  const row = (label: string, value: unknown) => `<div class="row"><span class="lbl">${esc(label)}</span><span class="val">${v(value)}</span></div>`;
+  const sec = (title: string, body: string) => body ? `<section><h2>${esc(title)}</h2>${body}</section>` : '';
+
+  // Personnes blessees
+  const persons = (report.injuredPersons ?? []).map((p, i) => `
+    <div class="card"><div class="card-h">${esc(t.p.injuredN)} #${i + 1} — ${v(p.name)}</div>
+      ${row(t.p.jobTitle, p.jobTitle)}${row(t.p.employer, p.company)}${row(t.p.empId, p.employeeId)}${row(t.p.phone, p.phone)}
+      ${row(t.p.injuryType, p.injuryType ? tl(lang, p.injuryType) : '')}${row(t.p.treatment, TREATMENT_LABEL[p.medicalTreatment] ? tl(lang, TREATMENT_LABEL[p.medicalTreatment]) : '')}
+      ${row(t.p.injuryDesc, p.injuryDescription)}${p.lostTime ? row(t.p.lostTime, `${p.lostTimeDays} ${t.p.daysAbsence}`) : ''}
+    </div>`).join('');
+
+  // Temoins
+  const witnesses = (report.witnesses ?? []).map((w, i) => `
+    <div class="card"><div class="card-h">${esc(t.p.witnessN)} #${i + 1} — ${v(w.name)}</div>
+      ${row(t.p.wPost, w.jobTitle)}${row(t.p.phone, w.phone)}${row(t.p.statement, w.statement)}
+    </div>`).join('');
+
+  // 5 pourquoi + cause racine
+  const whys = (report.whyAnalysis ?? []).filter(w => w.answer).map((w, i) => `${row(`${i + 1}. ${tl(lang, w.question)}`, w.answer)}`).join('');
+
+  // Actions correctives
+  const actions = (report.correctiveActions ?? []).map((a, i) => `
+    <div class="card"><div class="card-h">${esc(t.ac.actionN)} #${i + 1}</div>
+      ${row(t.ac.title, a.description)}${row(t.ac.responsible, a.responsible)}${row(t.ac.dueDate, a.dueDate)}
+      ${row(t.ac.status, ACTION_STATUS_LABEL[a.status] ? tl(lang, ACTION_STATUS_LABEL[a.status]) : a.status)}
+    </div>`).join('');
+
+  // Reglementation (PROVINCE_INFO)
+  const info = PROVINCE_INFO[report.province];
+  const reqs = info ? `
+    ${row(info.authority, info.name)}${row(t.c.declDelay, info.deadline)}${row(t.c.formLabel, info.form)}
+    <div class="row"><span class="lbl">${esc(t.pr.reqTitle)}</span><span class="val"><ul>${info.requirements.map(r => `<li>${esc(r)}</li>`).join('')}</ul></span></div>
+    ${report.regulatoryNotified ? row(t.pr.notifiedOn, report.regulatoryNotifiedDate) + row(t.pr.refLabel, report.regulatoryReferenceNumber) : row(t.c.notifTitle, t.c.notifiedNo)}` : '';
+
+  // Signatures
+  const sig = (label: string, name: unknown, date: unknown, signed: boolean) =>
+    `<div class="sig"><div class="sig-l">${esc(label)}</div><div class="sig-n">${v(name)}</div><div class="sig-d">${signed ? `${esc(t.pr.signedOn)} ${v(date)}` : esc(t.pr.notSigned)}</div></div>`;
+  const signatures = `<div class="sigs">
+    ${sig(t.ap.supervisor, report.supervisorName, report.supervisorDate, report.supervisorSigned)}
+    ${sig(t.ap.hse, report.hseReviewerName, report.hseReviewerDate, report.hseReviewerSigned)}
+    ${sig(t.ap.mgmt, report.managementName, report.managementDate, report.managementSigned)}
+  </div>`;
+
+  const vehicleSec = report.vehicleInvolved ? sec(t.v.vehTitle,
+    row(t.v.plate, report.vehicle.licensePlate) + row(t.v.make, report.vehicle.make) + row(t.v.model, report.vehicle.model) +
+    row(t.v.year, report.vehicle.year) + row(t.v.km, report.vehicle.kmAtIncident) +
+    row(t.v.collisionType, report.vehicle.collisionType ? tl(lang, report.vehicle.collisionType) : '') + row(t.v.damageDesc, report.vehicle.damageDescription)) : '';
+  const propSec = report.propertyDamageInvolved ? sec(t.v.propTitle,
+    row(t.v.propLoc, report.propertyDamage.location) + row(t.v.estCost, report.propertyDamage.estimatedCost) + row(t.v.damageDesc, report.propertyDamage.description)) : '';
+
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
+  <title>${esc(t.pr.docTitle)} ${esc(reportNumber)}</title>
+  <style>
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #1f2937; font-size: 12px; line-height: 1.45; margin: 0; }
+    .doc-h { border-bottom: 3px solid #dc2626; padding-bottom: 10px; margin-bottom: 14px; }
+    .doc-h h1 { font-size: 20px; margin: 0 0 4px; color: #111827; }
+    .doc-h .meta { font-size: 12px; color: #6b7280; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #fee2e2; color: #b91c1c; font-weight: 600; font-size: 11px; margin-left: 6px; }
+    section { margin: 12px 0; page-break-inside: avoid; }
+    section > h2 { font-size: 13px; color: #dc2626; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .row { display: flex; gap: 10px; padding: 2px 0; }
+    .row .lbl { width: 38%; color: #6b7280; }
+    .row .val { width: 62%; font-weight: 500; }
+    .row .val ul { margin: 0; padding-left: 16px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; margin: 6px 0; page-break-inside: avoid; }
+    .card-h { font-weight: 600; margin-bottom: 4px; }
+    .sigs { display: flex; gap: 14px; margin-top: 6px; }
+    .sig { flex: 1; border-top: 1px solid #9ca3af; padding-top: 4px; }
+    .sig-l { color: #6b7280; font-size: 11px; } .sig-n { font-weight: 600; min-height: 16px; } .sig-d { font-size: 11px; color: #6b7280; }
+    .foot { margin-top: 16px; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+    @media print { .noprint { display: none; } }
+  </style></head><body>
+  <div class="doc-h">
+    <h1>${esc(t.pr.docTitle)} — ${esc(typeLabel)}<span class="badge">${esc(reportNumber)}</span></h1>
+    <div class="meta">${esc(t.g.severity)}: ${esc(sev)} · ${esc(t.g.dateIncident)}: ${v(report.incidentDate)} ${esc(report.incidentTime || '')}</div>
+  </div>
+  ${sec(t.g.title, row(t.g.type, typeLabel) + row(t.g.province, report.province) + row(t.g.dateReport, report.reportedDate) + row(t.g.responsible, report.reportedBy) + row(t.g.titlePost, report.reportedByTitle) + row(t.g.phone, report.reportedByPhone))}
+  ${sec(t.loc.title, row(t.loc.address, report.address) + row(t.loc.dept, report.department) + row(t.loc.exact, report.exactLocation) + row(t.loc.weather, report.weatherConditions ? tl(lang, report.weatherConditions) : '') + row(t.loc.lighting, report.lighting ? tl(lang, report.lighting) : ''))}
+  ${persons ? sec(t.p.injured, persons) : ''}
+  ${witnesses ? sec(t.p.witnesses, witnesses) : ''}
+  ${sec(t.d.title, row(t.d.workType, report.workType) + row(t.d.narration, report.description) + row(t.d.immediate, report.immediateAction) + (report.contributingFactors?.length ? row(t.d.factors, report.contributingFactors.map(f => tl(lang, f)).join(', ')) : ''))}
+  ${vehicleSec}
+  ${propSec}
+  ${(report.immediateCauses || report.basicCauses || whys || report.rootCause) ? sec(t.an.enqTitle,
+    (report.immediateCauses ? row(t.an.immediate, report.immediateCauses) : '') +
+    (report.basicCauses ? row(t.an.basic, report.basicCauses) : '') +
+    whys + (report.rootCause ? row(t.an.rootTitle, report.rootCause) : '')) : ''}
+  ${(report.photos?.length) ? sec(t.an.photos, `<div class="row"><span class="val">${esc(report.photos.map(p => p.name).join(', '))}</span></div>`) : ''}
+  ${actions ? sec(t.ac.title, actions) : ''}
+  ${reqs ? sec(t.c.notifTitle, reqs) : ''}
+  ${sec(t.an.sigTitle, `<div class="sigs">${sig(t.an.investigator, report.investigatorName, report.investigatorSignedAt, !!report.investigatorSignedAt)}${sig(t.an.invSup, report.invSupervisorName, report.invSupervisorSignedAt, !!report.invSupervisorSignedAt)}</div>`)}
+  ${sec(t.pr.signatures, signatures)}
+  <div class="foot">${esc(t.pr.generated)} ${esc(generatedOn)} · ${esc(t.pr.docTitle)} ${esc(reportNumber)}</div>
+  <script>window.onload=function(){window.focus();window.print();}</script>
+  </body></html>`;
+}
 
 // ── Shared UI ────────────────────────────────────────────────────────────────
 
@@ -433,6 +706,8 @@ function TextInput({ value, onChange, placeholder, readOnly, type = 'text', clas
       type={type}
       value={value}
       onChange={e => onChange(e.target.value)}
+      // Champ numerique : selection au clic pour ecraser directement (un 0 par defaut ne bloque pas la saisie).
+      onFocus={type === 'number' ? e => e.currentTarget.select() : undefined}
       placeholder={placeholder}
       readOnly={readOnly}
       className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent ${readOnly ? 'bg-gray-50 cursor-default' : 'bg-white'} ${className}`}
@@ -446,6 +721,7 @@ function SelectInput({ value, onChange, options, readOnly }: {
   options: { value: string; label: string }[];
   readOnly?: boolean;
 }) {
+  const { lang } = useLanguage();
   return (
     <select
       value={value}
@@ -453,7 +729,7 @@ function SelectInput({ value, onChange, options, readOnly }: {
       disabled={readOnly}
       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white disabled:bg-gray-50"
     >
-      <option value="">— Sélectionner —</option>
+      <option value="">{lang === 'en' ? '— Select —' : '— Sélectionner —'}</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
@@ -884,7 +1160,14 @@ function emptyReport(defaultType: IncidentType = 'accident', defaultProvince: Pr
       { question: 'Pourquoi ce facteur systémique ?', answer: '' },
       { question: 'Cause racine ultime ?', answer: '' },
     ],
+    immediateCauses: '',
+    basicCauses: '',
     rootCause: '',
+    photos: [],
+    investigatorName: '',
+    investigatorSignedAt: '',
+    invSupervisorName: '',
+    invSupervisorSignedAt: '',
     correctiveActions: [],
     regulatoryNotified: false,
     regulatoryNotifiedDate: '',
@@ -913,6 +1196,8 @@ export default function IncidentReportForm({
   onSaved,
   embedded = false,
 }: IncidentReportFormProps) {
+  const { lang } = useLanguage();
+  const tr = TR[lang];
   const [section, setSection] = useState<SectionId>('general');
   const [report, setReport] = useState<IncidentReportData>(emptyReport(defaultType, defaultProvince));
   const [dbId, setDbId] = useState<string | null>(reportId ?? null);
@@ -957,7 +1242,8 @@ export default function IncidentReportForm({
       setDbId(data.id);
       setReportNumber(data.report_number);
       setStatus(data.status);
-      setReport(data.data as IncidentReportData);
+      // Fusionne avec les defauts pour que les rapports anterieurs aient les champs #81 (photos, causes, signatures).
+      setReport({ ...emptyReport(data.incident_type, data.province), ...(data.data as Partial<IncidentReportData>) });
     }
   }
 
@@ -1051,16 +1337,17 @@ export default function IncidentReportForm({
   }
 
   const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode }[] = [
-    { id: 'general',     label: 'Général',        icon: <FileText size={16} /> },
-    { id: 'location',    label: 'Lieu',            icon: <MapPin size={16} /> },
-    { id: 'persons',     label: 'Blessés',         icon: <User size={16} /> },
-    { id: 'body',        label: 'Schéma corporel', icon: <Heart size={16} /> },
-    { id: 'description', label: 'Description',     icon: <AlignLeft size={16} /> },
-    { id: 'vehicle',     label: 'Véhicule',        icon: <Truck size={16} /> },
-    { id: 'analysis',    label: 'Analyse',         icon: <Search size={16} /> },
-    { id: 'actions',     label: 'Actions',         icon: <CheckSquare size={16} /> },
-    { id: 'compliance',  label: 'Réglementation',  icon: <Scale size={16} /> },
-    { id: 'approval',    label: 'Approbation',     icon: <PenLine size={16} /> },
+    { id: 'general',     label: tr.nav.general,     icon: <FileText size={16} /> },
+    { id: 'location',    label: tr.nav.location,    icon: <MapPin size={16} /> },
+    { id: 'persons',     label: tr.nav.persons,     icon: <User size={16} /> },
+    { id: 'body',        label: tr.nav.body,        icon: <Heart size={16} /> },
+    { id: 'description', label: tr.nav.description, icon: <AlignLeft size={16} /> },
+    { id: 'vehicle',     label: tr.nav.vehicle,     icon: <Truck size={16} /> },
+    { id: 'analysis',    label: tr.nav.analysis,    icon: <Search size={16} /> },
+    { id: 'actions',     label: tr.nav.actions,     icon: <CheckSquare size={16} /> },
+    { id: 'capa',        label: tr.nav.capa,        icon: <ClipboardCheck size={16} /> },
+    { id: 'compliance',  label: tr.nav.compliance,  icon: <Scale size={16} /> },
+    { id: 'approval',    label: tr.nav.approval,    icon: <PenLine size={16} /> },
   ];
 
   function renderSection() {
@@ -1071,19 +1358,20 @@ export default function IncidentReportForm({
       case 'body':        return <BodySection        report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'description': return <DescriptionSection report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'vehicle':     return <VehicleSection     report={report} onChange={updateReport} readOnly={readOnly} />;
-      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'analysis':    return <AnalysisSection    report={report} onChange={updateReport} readOnly={readOnly} tenant={tenant} reportNumber={reportNumber} lang={lang} />;
       case 'actions':     return <ActionsSection     report={report} onChange={updateReport} readOnly={readOnly} />;
+      case 'capa':        return <CapaPanel          tenant={tenant} incidentId={dbId} lang={lang} readOnly={readOnly} />;
       case 'compliance':  return <ComplianceSection  report={report} onChange={updateReport} readOnly={readOnly} />;
       case 'approval':    return <ApprovalSection    report={report} onChange={updateReport} readOnly={readOnly} />;
     }
   }
 
   const typeLabels: Record<IncidentType, string> = {
-    accident:  'Accident de travail',
-    near_miss: 'Passé proche',
-    vehicle:   'Accident de véhicule',
-    property:  'Dommages matériels',
-    medical:   'Maladie professionnelle',
+    accident:  tl(lang, 'Accident de travail'),
+    near_miss: tl(lang, 'Passé proche'),
+    vehicle:   tl(lang, 'Accident de véhicule'),
+    property:  tl(lang, 'Dommages matériels'),
+    medical:   tl(lang, 'Maladie professionnelle'),
   };
 
   const typeColors: Record<IncidentType, string> = {
@@ -1094,6 +1382,17 @@ export default function IncidentReportForm({
     medical:   'bg-yellow-100 text-yellow-700 border-yellow-200',
   };
 
+  // #71 : ouvre un document imprimable (impression -> PDF du navigateur), bilingue + reglementaire.
+  function printReport() {
+    const stamp = new Date().toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA');
+    const html = buildPrintHtml(report, reportNumber, lang, stamp);
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) { alert(tr.pr.popupBlocked); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1103,7 +1402,7 @@ export default function IncidentReportForm({
             {onClose && (
               <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
                 <ArrowLeft size={16} />
-                Retour
+                {tr.back}
               </button>
             )}
             <div className="min-w-0">
@@ -1112,21 +1411,30 @@ export default function IncidentReportForm({
                   {typeLabels[report.incidentType]}
                 </h1>
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeColors[report.incidentType]}`}>
-                  {report.incidentType === 'near_miss' ? 'Passé proche' : report.incidentType.toUpperCase()}
+                  {report.incidentType === 'near_miss' ? tl(lang, 'Passé proche') : report.incidentType.toUpperCase()}
                 </span>
                 <span className="text-xs text-gray-400">{reportNumber}</span>
               </div>
               <div className="text-xs text-gray-400 mt-0.5">
-                {status === 'draft' && 'Brouillon'}
-                {status === 'submitted' && 'Soumis — lecture seule'}
-                {status === 'closed' && 'Fermé'}
+                {status === 'draft' && tr.draft}
+                {status === 'submitted' && tr.submittedRO}
+                {status === 'closed' && tr.closed}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} />Enregistrement…</span>}
-            {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />Enregistré</span>}
+            {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={12} />{tr.saving}</span>}
+            {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle size={12} />{tr.saved}</span>}
+
+            <button
+              onClick={printReport}
+              title={tr.pr.btn}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
+            >
+              <Printer size={15} />
+              <span className="hidden sm:inline">{tr.pr.btn}</span>
+            </button>
 
             {!readOnly && (
               <>
@@ -1135,7 +1443,7 @@ export default function IncidentReportForm({
                   className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
                 >
                   <Save size={15} />
-                  Sauvegarder
+                  {tr.save}
                 </button>
 
                 {!submitConfirm ? (
@@ -1144,18 +1452,18 @@ export default function IncidentReportForm({
                     className="flex items-center gap-1.5 text-sm px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
                   >
                     <Send size={15} />
-                    Soumettre
+                    {tr.submit}
                   </button>
                 ) : (
                   <div className="flex items-center gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-1.5">
-                    <span className="text-xs text-red-700 font-medium">Confirmer la soumission ?</span>
+                    <span className="text-xs text-red-700 font-medium">{tr.confirmSubmit}</span>
                     <button
                       onClick={() => { doSave(report, true); setSubmitConfirm(false); }}
                       className="text-xs px-2 py-0.5 bg-red-600 text-white rounded font-medium"
                     >
-                      Oui
+                      {tr.yes}
                     </button>
-                    <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500">Annuler</button>
+                    <button onClick={() => setSubmitConfirm(false)} className="text-xs text-gray-500">{tr.cancel}</button>
                   </div>
                 )}
               </>
@@ -1165,15 +1473,15 @@ export default function IncidentReportForm({
       </div>
 
       {/* Body */}
-      <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
-        {/* Sidebar */}
-        <div className="w-48 shrink-0">
-          <nav className={`sticky space-y-1 ${embedded ? 'top-36' : 'top-20'}`}>
+      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-4 md:gap-6">
+        {/* Sidebar (desktop) / barre d'onglets horizontale defilante (mobile) */}
+        <div className="md:w-48 md:shrink-0">
+          <nav className={`flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 md:sticky ${embedded ? 'md:top-36' : 'md:top-20'}`}>
             {SECTIONS.map(s => (
               <button
                 key={s.id}
                 onClick={() => setSection(s.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                className={`shrink-0 md:w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left whitespace-nowrap transition-colors ${
                   section === s.id
                     ? 'bg-red-600 text-white font-medium'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -1202,15 +1510,17 @@ function GeneralSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
   const incidentTypes = [
-    { value: 'accident',  label: 'Accident de travail' },
-    { value: 'near_miss', label: 'Passé proche (sans blessure)' },
-    { value: 'vehicle',   label: 'Accident de véhicule' },
-    { value: 'property',  label: 'Dommages matériels' },
-    { value: 'medical',   label: 'Maladie professionnelle' },
+    { value: 'accident',  label: tl(lang, 'Accident de travail') },
+    { value: 'near_miss', label: tl(lang, 'Passé proche (sans blessure)') },
+    { value: 'vehicle',   label: tl(lang, 'Accident de véhicule') },
+    { value: 'property',  label: tl(lang, 'Dommages matériels') },
+    { value: 'medical',   label: tl(lang, 'Maladie professionnelle') },
   ];
 
   const provinces: { value: Province; label: string; group?: string }[] = [
@@ -1236,10 +1546,10 @@ function GeneralSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <FileText size={18} className="text-red-500" />
-          Informations générales
+          {t.g.title}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <Field label="Type d'incident" required>
+          <Field label={t.g.type} required>
             <SelectInput
               value={report.incidentType}
               onChange={v => up('incidentType', v as IncidentType)}
@@ -1247,7 +1557,7 @@ function GeneralSection({ report, onChange, readOnly }: {
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Province / territoire" required>
+          <Field label={t.g.province} required>
             <SelectInput
               value={report.province}
               onChange={v => up('province', v as Province)}
@@ -1255,42 +1565,42 @@ function GeneralSection({ report, onChange, readOnly }: {
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Sévérité" required>
+          <Field label={t.g.severity} required>
             <SelectInput
               value={String(report.severityLevel ?? 3)}
               onChange={v => up('severityLevel', Number(v))}
               options={[
-                { value: '1', label: '1 — Mineur (presque-accident)' },
-                { value: '2', label: '2 — Faible (presque-accident)' },
-                { value: '3', label: '3 — Modéré (presque-accident)' },
-                { value: '4', label: '4 — Grave (incident)' },
-                { value: '5', label: '5 — Critique (incident)' },
+                { value: '1', label: t.g.sev[0] },
+                { value: '2', label: t.g.sev[1] },
+                { value: '3', label: t.g.sev[2] },
+                { value: '4', label: t.g.sev[3] },
+                { value: '5', label: t.g.sev[4] },
               ]}
               readOnly={readOnly}
             />
           </Field>
-          <Field label="Date de l'incident" required>
+          <Field label={t.g.dateIncident} required>
             <TextInput type="date" value={report.incidentDate} onChange={v => up('incidentDate', v)} readOnly={readOnly} />
           </Field>
-          <Field label="Heure de l'incident">
+          <Field label={t.g.timeIncident}>
             <TextInput type="time" value={report.incidentTime} onChange={v => up('incidentTime', v)} readOnly={readOnly} />
           </Field>
-          <Field label="Date du rapport">
+          <Field label={t.g.dateReport}>
             <TextInput type="date" value={report.reportedDate} onChange={v => up('reportedDate', v)} readOnly={readOnly} />
           </Field>
         </div>
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-4">Responsable du rapport</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-4">{t.g.responsible}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-          <Field label="Nom" required>
-            <TextInput value={report.reportedBy} onChange={v => up('reportedBy', v)} placeholder="Prénom Nom" readOnly={readOnly} />
+          <Field label={t.g.name} required>
+            <TextInput value={report.reportedBy} onChange={v => up('reportedBy', v)} placeholder={t.g.namePh} readOnly={readOnly} />
           </Field>
-          <Field label="Titre / Poste">
-            <TextInput value={report.reportedByTitle} onChange={v => up('reportedByTitle', v)} placeholder="Contremaître, HSE..." readOnly={readOnly} />
+          <Field label={t.g.titlePost}>
+            <TextInput value={report.reportedByTitle} onChange={v => up('reportedByTitle', v)} placeholder={t.g.titlePostPh} readOnly={readOnly} />
           </Field>
-          <Field label="Téléphone">
+          <Field label={t.g.phone}>
             <TextInput value={report.reportedByPhone} onChange={v => up('reportedByPhone', v)} placeholder="514-xxx-xxxx" readOnly={readOnly} />
           </Field>
         </div>
@@ -1303,9 +1613,9 @@ function GeneralSection({ report, onChange, readOnly }: {
             <AlertTriangle size={18} className="text-blue-600 mt-0.5 shrink-0" />
             <div>
               <div className="text-sm font-semibold text-blue-800 mb-1">
-                {PROVINCE_INFO[report.province].authority} — Délai de déclaration : {PROVINCE_INFO[report.province].deadline}
+                {PROVINCE_INFO[report.province].authority} — {t.g.declDelay} : {PROVINCE_INFO[report.province].deadline}
               </div>
-              <div className="text-xs text-blue-700">Formulaire requis : {PROVINCE_INFO[report.province].form}</div>
+              <div className="text-xs text-blue-700">{t.g.requiredForm} : {PROVINCE_INFO[report.province].form}</div>
             </div>
           </div>
         </div>
@@ -1319,39 +1629,38 @@ function LocationSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
-  const weatherOpts = WEATHER_CONDITIONS.map(w => ({ value: w, label: w }));
+  const weatherOpts = WEATHER_CONDITIONS.map(w => ({ value: w, label: tl(lang, w) }));
   const lightingOpts = [
-    { value: 'Bon éclairage', label: 'Bon éclairage' },
-    { value: 'Éclairage insuffisant', label: 'Éclairage insuffisant' },
-    { value: 'Absence de lumière', label: 'Absence de lumière' },
-    { value: 'Lumière naturelle seulement', label: 'Lumière naturelle seulement' },
-    { value: 'Éblouissement', label: 'Éblouissement' },
-  ];
+    'Bon éclairage', 'Éclairage insuffisant', 'Absence de lumière',
+    'Lumière naturelle seulement', 'Éblouissement',
+  ].map(o => ({ value: o, label: tl(lang, o) }));
 
   return (
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <MapPin size={18} className="text-red-500" />
-        Lieu de l'incident
+        {t.loc.title}
       </h2>
       <div className="space-y-0">
-        <Field label="Adresse complète" required>
-          <TextInput value={report.address} onChange={v => up('address', v)} placeholder="123, rue Principale, Ville, QC" readOnly={readOnly} />
+        <Field label={t.loc.address} required>
+          <TextInput value={report.address} onChange={v => up('address', v)} placeholder={t.loc.addressPh} readOnly={readOnly} />
         </Field>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-          <Field label="Département / Unité">
-            <TextInput value={report.department} onChange={v => up('department', v)} placeholder="Atelier, Chantier A, Bureau..." readOnly={readOnly} />
+          <Field label={t.loc.dept}>
+            <TextInput value={report.department} onChange={v => up('department', v)} placeholder={t.loc.deptPh} readOnly={readOnly} />
           </Field>
-          <Field label="Emplacement précis">
-            <TextInput value={report.exactLocation} onChange={v => up('exactLocation', v)} placeholder="Escalier nord, zone de chargement..." readOnly={readOnly} />
+          <Field label={t.loc.exact}>
+            <TextInput value={report.exactLocation} onChange={v => up('exactLocation', v)} placeholder={t.loc.exactPh} readOnly={readOnly} />
           </Field>
-          <Field label="Conditions météo">
+          <Field label={t.loc.weather}>
             <SelectInput value={report.weatherConditions} onChange={v => up('weatherConditions', v)} options={weatherOpts} readOnly={readOnly} />
           </Field>
-          <Field label="Éclairage">
+          <Field label={t.loc.lighting}>
             <SelectInput value={report.lighting} onChange={v => up('lighting', v)} options={lightingOpts} readOnly={readOnly} />
           </Field>
         </div>
@@ -1387,15 +1696,17 @@ function PersonsSection({ report, onChange, readOnly }: {
     }));
   }
 
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const treatmentOpts = [
-    { value: 'none',       label: 'Aucun traitement' },
-    { value: 'first_aid',  label: 'Premiers soins sur place' },
-    { value: 'clinic',     label: 'Clinique / médecin' },
-    { value: 'hospital',   label: 'Hospitalisation' },
-    { value: 'emergency',  label: 'Urgence / ambulance' },
+    { value: 'none',       label: tl(lang, 'Aucun traitement') },
+    { value: 'first_aid',  label: tl(lang, 'Premiers soins sur place') },
+    { value: 'clinic',     label: tl(lang, 'Clinique / médecin') },
+    { value: 'hospital',   label: tl(lang, 'Hospitalisation') },
+    { value: 'emergency',  label: tl(lang, 'Urgence / ambulance') },
   ];
 
-  const injuryOpts = INJURY_TYPES.map(t => ({ value: t, label: t }));
+  const injuryOpts = INJURY_TYPES.map(iv => ({ value: iv, label: tl(lang, iv) }));
 
   return (
     <div className="space-y-4">
@@ -1404,26 +1715,26 @@ function PersonsSection({ report, onChange, readOnly }: {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
             <User size={18} className="text-red-500" />
-            Personnes blessées
+            {t.p.injured}
           </h2>
           {!readOnly && (
             <button onClick={addPerson} className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg">
               <Plus size={14} />
-              Ajouter
+              {t.p.add}
             </button>
           )}
         </div>
 
         {report.injuredPersons.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">
-            {report.incidentType === 'near_miss' ? 'Aucune blessure (passé proche)' : 'Aucune personne blessée enregistrée'}
+            {report.incidentType === 'near_miss' ? t.p.noneNear : t.p.noneInjured}
           </p>
         )}
 
         {report.injuredPersons.map((person, idx) => (
           <div key={person.id} className="border border-gray-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">Blessé #{idx + 1}</span>
+              <span className="text-sm font-medium text-gray-700">{t.p.injuredN} #{idx + 1}</span>
               {!readOnly && (
                 <button onClick={() => removePerson(person.id)} className="text-red-400 hover:text-red-600">
                   <Trash2 size={15} />
@@ -1431,36 +1742,36 @@ function PersonsSection({ report, onChange, readOnly }: {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-              <Field label="Nom complet" required>
-                <TextInput value={person.name} onChange={v => updatePerson(person.id, p => ({ ...p, name: v }))} placeholder="Prénom Nom" readOnly={readOnly} />
+              <Field label={t.p.fullName} required>
+                <TextInput value={person.name} onChange={v => updatePerson(person.id, p => ({ ...p, name: v }))} placeholder={t.g.namePh} readOnly={readOnly} />
               </Field>
-              <Field label="Titre / Poste">
+              <Field label={t.p.jobTitle}>
                 <TextInput value={person.jobTitle} onChange={v => updatePerson(person.id, p => ({ ...p, jobTitle: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Employeur">
+              <Field label={t.p.employer}>
                 <TextInput value={person.company} onChange={v => updatePerson(person.id, p => ({ ...p, company: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="# Employé">
+              <Field label={t.p.empId}>
                 <TextInput value={person.employeeId} onChange={v => updatePerson(person.id, p => ({ ...p, employeeId: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Téléphone">
+              <Field label={t.p.phone}>
                 <TextInput value={person.phone} onChange={v => updatePerson(person.id, p => ({ ...p, phone: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Type de blessure">
+              <Field label={t.p.injuryType}>
                 <SelectInput value={person.injuryType} onChange={v => updatePerson(person.id, p => ({ ...p, injuryType: v }))} options={injuryOpts} readOnly={readOnly} />
               </Field>
-              <Field label="Traitement médical">
+              <Field label={t.p.treatment}>
                 <SelectInput value={person.medicalTreatment} onChange={v => updatePerson(person.id, p => ({ ...p, medicalTreatment: v as InjuredPerson['medicalTreatment'] }))} options={treatmentOpts} readOnly={readOnly} />
               </Field>
             </div>
-            <Field label="Description de la blessure">
-              <Textarea value={person.injuryDescription} onChange={v => updatePerson(person.id, p => ({ ...p, injuryDescription: v }))} placeholder="Décrire la nature et la localisation de la blessure…" readOnly={readOnly} rows={2} />
+            <Field label={t.p.injuryDesc}>
+              <Textarea value={person.injuryDescription} onChange={v => updatePerson(person.id, p => ({ ...p, injuryDescription: v }))} placeholder={t.p.injuryDescPh} readOnly={readOnly} rows={2} />
             </Field>
             <div className="flex items-center gap-4 mt-2">
               <Toggle
                 checked={person.lostTime}
                 onChange={v => updatePerson(person.id, p => ({ ...p, lostTime: v }))}
-                label="Perte de temps"
+                label={t.p.lostTime}
                 disabled={readOnly}
               />
               {person.lostTime && (
@@ -1469,11 +1780,11 @@ function PersonsSection({ report, onChange, readOnly }: {
                     type="number"
                     value={String(person.lostTimeDays)}
                     onChange={v => updatePerson(person.id, p => ({ ...p, lostTimeDays: parseInt(v) || 0 }))}
-                    placeholder="Jours"
+                    placeholder={t.p.daysPh}
                     readOnly={readOnly}
                     className="w-20"
                   />
-                  <span className="text-xs text-gray-500">jours d'absence</span>
+                  <span className="text-xs text-gray-500">{t.p.daysAbsence}</span>
                   <TextInput
                     type="date"
                     value={person.returnToWorkDate}
@@ -1491,24 +1802,24 @@ function PersonsSection({ report, onChange, readOnly }: {
       {/* Witnesses */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-800">Témoins</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.p.witnesses}</h2>
           {!readOnly && (
             <button
               onClick={() => onChange(r => ({ ...r, witnesses: [...r.witnesses, emptyWitness()] }))}
               className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-lg"
             >
               <Plus size={14} />
-              Ajouter
+              {t.p.add}
             </button>
           )}
         </div>
         {report.witnesses.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-4">Aucun témoin enregistré</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t.p.noWitness}</p>
         )}
         {report.witnesses.map((w, idx) => (
           <div key={w.id} className="border border-gray-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">Témoin #{idx + 1}</span>
+              <span className="text-sm font-medium text-gray-700">{t.p.witnessN} #{idx + 1}</span>
               {!readOnly && (
                 <button onClick={() => onChange(r => ({ ...r, witnesses: r.witnesses.filter(x => x.id !== w.id) }))} className="text-red-400 hover:text-red-600">
                   <Trash2 size={15} />
@@ -1516,18 +1827,18 @@ function PersonsSection({ report, onChange, readOnly }: {
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 mb-2">
-              <Field label="Nom">
+              <Field label={t.p.wName}>
                 <TextInput value={w.name} onChange={v => updateWitness(w.id, x => ({ ...x, name: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Poste">
+              <Field label={t.p.wPost}>
                 <TextInput value={w.jobTitle} onChange={v => updateWitness(w.id, x => ({ ...x, jobTitle: v }))} readOnly={readOnly} />
               </Field>
-              <Field label="Téléphone">
+              <Field label={t.p.phone}>
                 <TextInput value={w.phone} onChange={v => updateWitness(w.id, x => ({ ...x, phone: v }))} readOnly={readOnly} />
               </Field>
             </div>
-            <Field label="Déclaration">
-              <Textarea value={w.statement} onChange={v => updateWitness(w.id, x => ({ ...x, statement: v }))} placeholder="Déclaration du témoin…" readOnly={readOnly} rows={2} />
+            <Field label={t.p.statement}>
+              <Textarea value={w.statement} onChange={v => updateWitness(w.id, x => ({ ...x, statement: v }))} placeholder={t.p.statementPh} readOnly={readOnly} rows={2} />
             </Field>
           </div>
         ))}
@@ -1541,6 +1852,8 @@ function BodySection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const [personIdx, setPersonIdx] = useState(0);
 
   if (report.injuredPersons.length === 0) {
@@ -1548,10 +1861,10 @@ function BodySection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Heart size={18} className="text-red-500" />
-          Schéma corporel
+          {t.b.title}
         </h2>
         <p className="text-sm text-gray-400 text-center py-8">
-          Aucune personne blessée — ajoutez une personne dans l'onglet «Blessés» pour localiser les blessures.
+          {t.b.none}
         </p>
       </Card>
     );
@@ -1564,7 +1877,7 @@ function BodySection({ report, onChange, readOnly }: {
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <Heart size={18} className="text-red-500" />
-        Schéma corporel
+        {t.b.title}
       </h2>
 
       {report.injuredPersons.length > 1 && (
@@ -1577,7 +1890,7 @@ function BodySection({ report, onChange, readOnly }: {
                 personIdx === i ? 'bg-red-600 text-white border-red-600' : 'border-gray-300 text-gray-600 hover:border-red-300'
               }`}
             >
-              {p.name || `Blessé #${i + 1}`}
+              {p.name || `${t.b.injuredN} #${i + 1}`}
             </button>
           ))}
         </div>
@@ -1585,7 +1898,7 @@ function BodySection({ report, onChange, readOnly }: {
 
       <div className="flex flex-col items-center">
         <p className="text-sm text-gray-600 mb-4 text-center">
-          Cliquer sur les zones blessées pour <strong>{person.name || `Blessé #${safeIdx + 1}`}</strong>
+          {t.b.clickA}<strong>{person.name || `${t.b.injuredN} #${safeIdx + 1}`}</strong>
         </p>
         <BodyDiagram
           selected={person.bodyRegions}
@@ -1607,6 +1920,8 @@ function DescriptionSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1624,25 +1939,25 @@ function DescriptionSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <AlignLeft size={18} className="text-red-500" />
-          Description de l'événement
+          {t.d.title}
         </h2>
-        <Field label="Type de travail effectué au moment de l'incident">
-          <TextInput value={report.workType} onChange={v => up('workType', v)} placeholder="Entretien, installation, conduite, manutention…" readOnly={readOnly} />
+        <Field label={t.d.workType}>
+          <TextInput value={report.workType} onChange={v => up('workType', v)} placeholder={t.d.workTypePh} readOnly={readOnly} />
         </Field>
-        <Field label="Narration de l'incident" required>
+        <Field label={t.d.narration} required>
           <Textarea
             value={report.description}
             onChange={v => up('description', v)}
-            placeholder="Décrire chronologiquement et précisément les événements. Inclure ce qui s'est passé, comment et où…"
+            placeholder={t.d.narrationPh}
             readOnly={readOnly}
             rows={6}
           />
         </Field>
-        <Field label="Actions immédiates prises">
+        <Field label={t.d.immediate}>
           <Textarea
             value={report.immediateAction}
             onChange={v => up('immediateAction', v)}
-            placeholder="Premiers secours, évacuation, mise hors service de l'équipement, appel d'urgence…"
+            placeholder={t.d.immediatePh}
             readOnly={readOnly}
             rows={3}
           />
@@ -1650,7 +1965,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Facteurs contributifs</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-3">{t.d.factors}</h2>
         <div className="flex flex-wrap gap-2">
           {CONTRIBUTING_FACTORS.map(f => {
             const active = report.contributingFactors.includes(f);
@@ -1662,7 +1977,7 @@ function DescriptionSection({ report, onChange, readOnly }: {
                   active ? 'bg-red-100 border-red-400 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-400'
                 } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
               >
-                {f}
+                {tl(lang, f)}
               </button>
             );
           })}
@@ -1677,23 +1992,25 @@ function VehicleSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const upV = <K extends keyof IncidentReportData['vehicle']>(k: K, v: IncidentReportData['vehicle'][K]) =>
     onChange(r => ({ ...r, vehicle: { ...r.vehicle, [k]: v } }));
   const upP = <K extends keyof IncidentReportData['propertyDamage']>(k: K, v: IncidentReportData['propertyDamage'][K]) =>
     onChange(r => ({ ...r, propertyDamage: { ...r.propertyDamage, [k]: v } }));
 
-  const collisionOpts = COLLISION_TYPES.map(c => ({ value: c, label: c }));
+  const collisionOpts = COLLISION_TYPES.map(c => ({ value: c, label: tl(lang, c) }));
 
   return (
     <div className="space-y-4">
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <Truck size={18} className="text-red-500" />
-          <h2 className="text-base font-semibold text-gray-800">Véhicule impliqué</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.v.vehTitle}</h2>
           <Toggle
             checked={report.vehicleInvolved}
             onChange={v => onChange(r => ({ ...r, vehicleInvolved: v }))}
-            label={report.vehicleInvolved ? 'Oui' : 'Non'}
+            label={report.vehicleInvolved ? t.v.yes : t.v.no}
             disabled={readOnly}
           />
         </div>
@@ -1701,40 +2018,40 @@ function VehicleSection({ report, onChange, readOnly }: {
         {report.vehicleInvolved && (
           <div className="space-y-0">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
-              <Field label="Plaque d'immatriculation">
+              <Field label={t.v.plate}>
                 <TextInput value={report.vehicle.licensePlate} onChange={v => upV('licensePlate', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Marque">
+              <Field label={t.v.make}>
                 <TextInput value={report.vehicle.make} onChange={v => upV('make', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Modèle">
+              <Field label={t.v.model}>
                 <TextInput value={report.vehicle.model} onChange={v => upV('model', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Année">
+              <Field label={t.v.year}>
                 <TextInput value={report.vehicle.year} onChange={v => upV('year', v)} readOnly={readOnly} />
               </Field>
-              <Field label="Kilométrage au moment">
+              <Field label={t.v.km}>
                 <TextInput value={report.vehicle.kmAtIncident} onChange={v => upV('kmAtIncident', v)} placeholder="km" readOnly={readOnly} />
               </Field>
-              <Field label="Type de collision">
+              <Field label={t.v.collisionType}>
                 <SelectInput value={report.vehicle.collisionType} onChange={v => upV('collisionType', v)} options={collisionOpts} readOnly={readOnly} />
               </Field>
             </div>
             <div className="flex flex-wrap gap-3 mt-2 mb-3">
-              <Toggle checked={report.vehicle.otherVehicle} onChange={v => upV('otherVehicle', v)} label="Autre véhicule impliqué" disabled={readOnly} />
-              <Toggle checked={report.vehicle.policeReport} onChange={v => upV('policeReport', v)} label="Rapport de police" disabled={readOnly} />
+              <Toggle checked={report.vehicle.otherVehicle} onChange={v => upV('otherVehicle', v)} label={t.v.otherVeh} disabled={readOnly} />
+              <Toggle checked={report.vehicle.policeReport} onChange={v => upV('policeReport', v)} label={t.v.policeReport} disabled={readOnly} />
             </div>
             {report.vehicle.otherVehicle && (
-              <Field label="Description de l'autre véhicule">
+              <Field label={t.v.otherVehDesc}>
                 <TextInput value={report.vehicle.otherVehicleDesc} onChange={v => upV('otherVehicleDesc', v)} readOnly={readOnly} />
               </Field>
             )}
             {report.vehicle.policeReport && (
-              <Field label="Numéro du rapport de police">
+              <Field label={t.v.policeNum}>
                 <TextInput value={report.vehicle.policeReportNumber} onChange={v => upV('policeReportNumber', v)} readOnly={readOnly} />
               </Field>
             )}
-            <Field label="Description des dommages">
+            <Field label={t.v.damageDesc}>
               <Textarea value={report.vehicle.damageDescription} onChange={v => upV('damageDescription', v)} readOnly={readOnly} rows={3} />
             </Field>
           </div>
@@ -1744,25 +2061,25 @@ function VehicleSection({ report, onChange, readOnly }: {
       <Card>
         <div className="flex items-center gap-3 mb-4">
           <Building2 size={18} className="text-red-500" />
-          <h2 className="text-base font-semibold text-gray-800">Dommages matériels</h2>
+          <h2 className="text-base font-semibold text-gray-800">{t.v.propTitle}</h2>
           <Toggle
             checked={report.propertyDamageInvolved}
             onChange={v => onChange(r => ({ ...r, propertyDamageInvolved: v }))}
-            label={report.propertyDamageInvolved ? 'Oui' : 'Non'}
+            label={report.propertyDamageInvolved ? t.v.yes : t.v.no}
             disabled={readOnly}
           />
         </div>
 
         {report.propertyDamageInvolved && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Field label="Localisation des dommages">
+            <Field label={t.v.propLoc}>
               <TextInput value={report.propertyDamage.location} onChange={v => upP('location', v)} readOnly={readOnly} />
             </Field>
-            <Field label="Coût estimé ($)">
+            <Field label={t.v.estCost}>
               <TextInput value={report.propertyDamage.estimatedCost} onChange={v => upP('estimatedCost', v)} placeholder="0.00" readOnly={readOnly} />
             </Field>
             <div className="md:col-span-2">
-              <Field label="Description des dommages">
+              <Field label={t.v.damageDesc}>
                 <Textarea value={report.propertyDamage.description} onChange={v => upP('description', v)} readOnly={readOnly} rows={3} />
               </Field>
             </div>
@@ -1773,11 +2090,17 @@ function VehicleSection({ report, onChange, readOnly }: {
   );
 }
 
-function AnalysisSection({ report, onChange, readOnly }: {
+function AnalysisSection({ report, onChange, readOnly, tenant, reportNumber, lang }: {
   report: IncidentReportData;
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
+  tenant: string;
+  reportNumber: string;
+  lang: Lang;
 }) {
+  const t = TR[lang];
+  const [uploading, setUploading] = useState(false);
+  const [photoErr, setPhotoErr] = useState(false);
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1789,14 +2112,64 @@ function AnalysisSection({ report, onChange, readOnly }: {
     });
   }
 
+  async function onPhotos(files: FileList | null) {
+    if (!files || !files.length || !supabase) return;
+    setUploading(true); setPhotoErr(false);
+    const added: { url: string; name: string }[] = [];
+    for (const file of Array.from(files)) {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${tenant}/${reportNumber}/${Date.now()}-${safe}`;
+      const { error } = await supabase.storage.from('incident-photos').upload(path, file, { upsert: false });
+      if (error) { setPhotoErr(true); continue; }
+      const { data } = supabase.storage.from('incident-photos').getPublicUrl(path);
+      added.push({ url: data.publicUrl, name: file.name });
+    }
+    if (added.length) onChange(r => ({ ...r, photos: [...(r.photos ?? []), ...added] }));
+    setUploading(false);
+  }
+  const removePhoto = (url: string) => onChange(r => ({ ...r, photos: (r.photos ?? []).filter(p => p.url !== url) }));
+
+  const InvSig = ({ label, nameKey, dateKey }: { label: string; nameKey: keyof IncidentReportData; dateKey: keyof IncidentReportData }) => {
+    const signedAt = report[dateKey] as string;
+    return (
+      <div className={`border rounded-lg p-3 ${signedAt ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+        <div className="text-xs text-gray-500 mb-1">{label}</div>
+        <TextInput value={report[nameKey] as string} onChange={v => up(nameKey, v)} placeholder={t.g.namePh} readOnly={readOnly} />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-gray-500">
+            {signedAt ? `${t.an.signedOn} ${new Date(signedAt).toLocaleString(lang === 'fr' ? 'fr-CA' : 'en-CA')}` : t.an.notSigned}
+          </span>
+          {!readOnly && (signedAt
+            ? <button onClick={() => up(dateKey, '')} className="text-xs text-gray-500 hover:text-red-600">{t.an.clearSig}</button>
+            : <button onClick={() => up(dateKey, new Date().toISOString())} disabled={!(report[nameKey] as string)}
+                className="text-xs px-3 py-1 bg-red-600 text-white rounded-lg font-medium disabled:opacity-40">{t.an.sign}</button>)}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
+      {/* Causes immediates / fondamentales */}
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <Search size={18} className="text-red-500" />
+          {t.an.enqTitle} — {t.an.causesTitle}
+        </h2>
+        <Field label={t.an.immediate}>
+          <Textarea value={report.immediateCauses} onChange={v => up('immediateCauses', v)} placeholder={t.an.immediatePh} readOnly={readOnly} rows={2} />
+        </Field>
+        <Field label={t.an.basic}>
+          <Textarea value={report.basicCauses} onChange={v => up('basicCauses', v)} placeholder={t.an.basicPh} readOnly={readOnly} rows={2} />
+        </Field>
+      </Card>
+
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
           <Search size={18} className="text-red-500" />
-          Méthode des 5 Pourquoi
+          {t.an.fiveWhy}
         </h2>
-        <p className="text-xs text-gray-500 mb-4">Remonter la chaîne causale jusqu'à la cause racine en répondant à chaque «Pourquoi».</p>
+        <p className="text-xs text-gray-500 mb-4">{t.an.fiveWhyHelp}</p>
 
         {report.whyAnalysis.map((why, idx) => (
           <div key={idx} className="mb-3">
@@ -1807,11 +2180,11 @@ function AnalysisSection({ report, onChange, readOnly }: {
                 {idx + 1}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-700 mb-1">{why.question}</div>
+                <div className="text-sm font-medium text-gray-700 mb-1">{tl(lang, why.question)}</div>
                 <Textarea
                   value={why.answer}
                   onChange={v => updateWhy(idx, v)}
-                  placeholder="Réponse…"
+                  placeholder={t.an.answerPh}
                   readOnly={readOnly}
                   rows={2}
                 />
@@ -1825,14 +2198,59 @@ function AnalysisSection({ report, onChange, readOnly }: {
       </Card>
 
       <Card>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Cause racine identifiée</h2>
+        <h2 className="text-base font-semibold text-gray-800 mb-3">{t.an.rootTitle}</h2>
         <Textarea
           value={report.rootCause}
           onChange={v => up('rootCause', v)}
-          placeholder="Suite à l'analyse des 5 Pourquoi, la cause racine est…"
+          placeholder={t.an.rootPh}
           readOnly={readOnly}
           rows={3}
         />
+      </Card>
+
+      {/* Pieces jointes photos (Storage) */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-800">{t.an.photos}</h2>
+          {!readOnly && (
+            <label className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg cursor-pointer">
+              <Plus size={14} />{uploading ? t.an.uploading : t.an.addPhoto}
+              <input type="file" accept="image/*" multiple className="hidden" disabled={uploading}
+                onChange={e => { onPhotos(e.target.files); e.target.value = ''; }} />
+            </label>
+          )}
+        </div>
+        {photoErr && <p className="text-xs text-red-600 mb-2">{t.an.photoErr}</p>}
+        {(report.photos ?? []).length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">{t.pr.none}</p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {(report.photos ?? []).map(p => (
+              <div key={p.url} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt={p.name} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                {!readOnly && (
+                  <button onClick={() => removePhoto(p.url)} title={p.name}
+                    className="absolute top-1 right-1 bg-white/90 rounded-full p-1 text-red-500 hover:text-red-700 shadow">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Signatures d'enquete */}
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <PenLine size={18} className="text-red-500" />
+          {t.an.sigTitle}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InvSig label={t.an.investigator} nameKey="investigatorName" dateKey="investigatorSignedAt" />
+          <InvSig label={t.an.invSup} nameKey="invSupervisorName" dateKey="invSupervisorSignedAt" />
+        </div>
       </Card>
     </div>
   );
@@ -1850,10 +2268,12 @@ function ActionsSection({ report, onChange, readOnly }: {
     }));
   }
 
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const statusOpts = [
-    { value: 'pending',     label: 'En attente' },
-    { value: 'in_progress', label: 'En cours' },
-    { value: 'completed',   label: 'Complété' },
+    { value: 'pending',     label: tl(lang, 'En attente') },
+    { value: 'in_progress', label: tl(lang, 'En cours') },
+    { value: 'completed',   label: tl(lang, 'Complété') },
   ];
 
   const statusColors: Record<string, string> = {
@@ -1867,7 +2287,7 @@ function ActionsSection({ report, onChange, readOnly }: {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
           <CheckSquare size={18} className="text-red-500" />
-          Actions correctives
+          {t.ac.title}
         </h2>
         {!readOnly && (
           <button
@@ -1875,35 +2295,35 @@ function ActionsSection({ report, onChange, readOnly }: {
             className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg"
           >
             <Plus size={14} />
-            Ajouter
+            {t.ac.add}
           </button>
         )}
       </div>
 
       {report.correctiveActions.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">Aucune action corrective enregistrée</p>
+        <p className="text-sm text-gray-400 text-center py-4">{t.ac.none}</p>
       )}
 
       {report.correctiveActions.map((action, idx) => (
         <div key={action.id} className="border border-gray-200 rounded-lg p-3 mb-2 grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
           <div className="md:col-span-2">
-            <div className="text-xs text-gray-500 mb-1">Action #{idx + 1}</div>
+            <div className="text-xs text-gray-500 mb-1">{t.ac.actionN} #{idx + 1}</div>
             <Textarea
               value={action.description}
               onChange={v => updateAction(action.id, a => ({ ...a, description: v }))}
-              placeholder="Décrire l'action corrective…"
+              placeholder={t.ac.describePh}
               readOnly={readOnly}
               rows={2}
             />
           </div>
           <div>
-            <div className="text-xs text-gray-500 mb-1">Responsable</div>
+            <div className="text-xs text-gray-500 mb-1">{t.ac.responsible}</div>
             <TextInput value={action.responsible} onChange={v => updateAction(action.id, a => ({ ...a, responsible: v }))} readOnly={readOnly} />
-            <div className="text-xs text-gray-500 mb-1 mt-2">Échéance</div>
+            <div className="text-xs text-gray-500 mb-1 mt-2">{t.ac.dueDate}</div>
             <TextInput type="date" value={action.dueDate} onChange={v => updateAction(action.id, a => ({ ...a, dueDate: v }))} readOnly={readOnly} />
           </div>
           <div className="flex flex-col gap-2">
-            <div className="text-xs text-gray-500">Statut</div>
+            <div className="text-xs text-gray-500">{t.ac.status}</div>
             <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${statusColors[action.status]}`}>
               {statusOpts.find(s => s.value === action.status)?.label}
             </div>
@@ -1922,7 +2342,7 @@ function ActionsSection({ report, onChange, readOnly }: {
                 className="text-red-400 hover:text-red-600 text-xs flex items-center gap-1"
               >
                 <Trash2 size={12} />
-                Retirer
+                {t.ac.remove}
               </button>
             )}
           </div>
@@ -1937,6 +2357,8 @@ function ComplianceSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -1953,10 +2375,10 @@ function ComplianceSection({ report, onChange, readOnly }: {
                 {info.authority} — {info.name}
               </div>
               <div className="text-xs font-semibold text-red-700 mb-1">
-                Délai de déclaration : {info.deadline}
+                {t.c.declDelay} : {info.deadline}
               </div>
               <div className="text-xs text-red-700 mb-2">
-                Formulaire : {info.form}
+                {t.c.formLabel} : {info.form}
               </div>
               <ul className="space-y-1">
                 {info.requirements.map((r, i) => (
@@ -1974,23 +2396,23 @@ function ComplianceSection({ report, onChange, readOnly }: {
       <Card>
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
           <Scale size={18} className="text-red-500" />
-          Notification réglementaire
+          {t.c.notifTitle}
         </h2>
         <div className="flex items-center gap-3 mb-4">
           <Toggle
             checked={report.regulatoryNotified}
             onChange={v => up('regulatoryNotified', v)}
-            label={report.regulatoryNotified ? 'Autorité notifiée' : 'Autorité non encore notifiée'}
+            label={report.regulatoryNotified ? t.c.notifiedYes : t.c.notifiedNo}
             disabled={readOnly}
           />
         </div>
         {report.regulatoryNotified && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <Field label="Date de notification">
+            <Field label={t.c.notifDate}>
               <TextInput type="date" value={report.regulatoryNotifiedDate} onChange={v => up('regulatoryNotifiedDate', v)} readOnly={readOnly} />
             </Field>
-            <Field label="Numéro de référence">
-              <TextInput value={report.regulatoryReferenceNumber} onChange={v => up('regulatoryReferenceNumber', v)} placeholder="Ex : CNESST-2026-XXXXX" readOnly={readOnly} />
+            <Field label={t.c.refNum}>
+              <TextInput value={report.regulatoryReferenceNumber} onChange={v => up('regulatoryReferenceNumber', v)} placeholder={t.c.refNumPh} readOnly={readOnly} />
             </Field>
           </div>
         )}
@@ -2004,6 +2426,8 @@ function ApprovalSection({ report, onChange, readOnly }: {
   onChange: (u: (p: IncidentReportData) => IncidentReportData) => void;
   readOnly: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TR[lang];
   const up = <K extends keyof IncidentReportData>(k: K, v: IncidentReportData[K]) =>
     onChange(p => ({ ...p, [k]: v }));
 
@@ -2015,16 +2439,16 @@ function ApprovalSection({ report, onChange, readOnly }: {
   }
 
   const signatories: Signatory[] = [
-    { nameKey: 'supervisorName', dateKey: 'supervisorDate', signedKey: 'supervisorSigned', label: 'Superviseur immédiat' },
-    { nameKey: 'hseReviewerName', dateKey: 'hseReviewerDate', signedKey: 'hseReviewerSigned', label: 'Responsable HSE' },
-    { nameKey: 'managementName', dateKey: 'managementDate', signedKey: 'managementSigned', label: 'Direction' },
+    { nameKey: 'supervisorName', dateKey: 'supervisorDate', signedKey: 'supervisorSigned', label: t.ap.supervisor },
+    { nameKey: 'hseReviewerName', dateKey: 'hseReviewerDate', signedKey: 'hseReviewerSigned', label: t.ap.hse },
+    { nameKey: 'managementName', dateKey: 'managementDate', signedKey: 'managementSigned', label: t.ap.mgmt },
   ];
 
   return (
     <Card>
       <h2 className="text-base font-semibold text-gray-800 mb-5 flex items-center gap-2">
         <PenLine size={18} className="text-red-500" />
-        Approbation
+        {t.ap.title}
       </h2>
 
       <div className="space-y-4">
@@ -2039,16 +2463,16 @@ function ApprovalSection({ report, onChange, readOnly }: {
                   <Toggle
                     checked={signed}
                     onChange={v => up(s.signedKey, v)}
-                    label={signed ? 'Approuvé' : 'En attente'}
+                    label={signed ? t.ap.approved : t.ap.pending}
                     disabled={readOnly}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                <Field label="Nom">
+                <Field label={t.ap.name}>
                   <TextInput value={report[s.nameKey] as string} onChange={v => up(s.nameKey, v)} readOnly={readOnly} />
                 </Field>
-                <Field label="Date">
+                <Field label={t.ap.date}>
                   <TextInput type="date" value={report[s.dateKey] as string} onChange={v => up(s.dateKey, v)} readOnly={readOnly} />
                 </Field>
               </div>
@@ -2056,6 +2480,144 @@ function ApprovalSection({ report, onChange, readOnly }: {
           );
         })}
       </div>
+    </Card>
+  );
+}
+
+// ── #80 CAPA : panneau d'actions correctives suivies, lie a l'incident ───────
+const CAPA_STATUS_COLOR: Record<IncidentActionStatus, string> = {
+  a_faire: 'bg-gray-100 text-gray-600', en_cours: 'bg-blue-100 text-blue-700',
+  fait: 'bg-green-100 text-green-700', verifie: 'bg-emerald-100 text-emerald-700',
+};
+const CAPA_PRIORITY_COLOR: Record<string, string> = {
+  basse: 'bg-gray-100 text-gray-500', normale: 'bg-slate-100 text-slate-600',
+  haute: 'bg-orange-100 text-orange-700', critique: 'bg-red-100 text-red-700',
+};
+
+function CapaPanel({ tenant, incidentId, lang, readOnly }: {
+  tenant: string; incidentId: string | null; lang: Lang; readOnly: boolean;
+}) {
+  const t = TR[lang].cp;
+  const [actions, setActions] = useState<IncidentAction[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState({ description: '', assignee: '', due_date: '', priority: 'normale', status: 'a_faire' });
+
+  const load = useCallback(async () => {
+    if (!incidentId) { setActions([]); return; }
+    setActions(await listActionsByIncident(tenant, incidentId));
+  }, [tenant, incidentId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addAction() {
+    if (!incidentId || !draft.description.trim()) return;
+    await createIncidentAction({
+      tenant_id: tenant, incident_id: incidentId,
+      description: draft.description.trim(), assignee: draft.assignee.trim() || null,
+      due_date: draft.due_date || null,
+      priority: draft.priority as IncidentAction['priority'], status: draft.status as IncidentActionStatus,
+    });
+    setDraft({ description: '', assignee: '', due_date: '', priority: 'normale', status: 'a_faire' });
+    setShowForm(false);
+    load();
+  }
+  async function setStatus(id: string, status: IncidentActionStatus) {
+    setActions(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    await updateIncidentAction(id, { status });
+  }
+  async function remove(id: string) {
+    setActions(prev => prev.filter(a => a.id !== id));
+    await deleteIncidentAction(id);
+  }
+
+  if (!incidentId) {
+    return (
+      <Card>
+        <h2 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
+          <ClipboardCheck size={18} className="text-red-500" />
+          {t.title}
+        </h2>
+        <p className="text-sm text-gray-400 py-6 text-center">{t.saveFirst}</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+          <ClipboardCheck size={18} className="text-red-500" />
+          {t.title}
+        </h2>
+        {!readOnly && (
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-1.5 text-sm text-red-600 border border-red-300 hover:bg-red-50 px-3 py-1.5 rounded-lg">
+            <Plus size={14} />{t.add}
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 mb-4">{t.help}</p>
+
+      {showForm && !readOnly && (
+        <div className="border border-gray-200 rounded-lg p-4 mb-4 space-y-3 bg-gray-50">
+          <Field label={t.description} required>
+            <Textarea value={draft.description} onChange={v => setDraft(d => ({ ...d, description: v }))} placeholder={t.descPh} rows={2} />
+          </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <Field label={t.assignee}>
+              <TextInput value={draft.assignee} onChange={v => setDraft(d => ({ ...d, assignee: v }))} placeholder={t.assigneePh} />
+            </Field>
+            <Field label={t.dueDate}>
+              <TextInput type="date" value={draft.due_date} onChange={v => setDraft(d => ({ ...d, due_date: v }))} />
+            </Field>
+            <Field label={t.priority}>
+              <SelectInput value={draft.priority} onChange={v => setDraft(d => ({ ...d, priority: v }))}
+                options={ACTION_PRIORITIES.map(p => ({ value: p, label: t.priorityLabel[p] }))} />
+            </Field>
+            <Field label={t.status}>
+              <SelectInput value={draft.status} onChange={v => setDraft(d => ({ ...d, status: v }))}
+                options={ACTION_STATUSES.map(s => ({ value: s, label: t.statusLabel[s] }))} />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addAction} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">{t.save}</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600">{t.cancel}</button>
+          </div>
+        </div>
+      )}
+
+      {actions.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">{t.none}</p>
+      ) : (
+        <div className="space-y-2">
+          {actions.map(a => {
+            const overdue = isActionOverdue(a);
+            return (
+              <div key={a.id} className="border border-gray-200 rounded-lg p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${CAPA_PRIORITY_COLOR[a.priority] ?? 'bg-slate-100 text-slate-600'}`}>{t.priorityLabel[a.priority] ?? a.priority}</span>
+                    {overdue && <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1"><AlertTriangle size={11} />{t.overdue}</span>}
+                  </div>
+                  <p className="text-sm text-gray-900 break-words">{a.description}</p>
+                  <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-3 flex-wrap">
+                    <span>{t.assignee}: {a.assignee || '—'}</span>
+                    {a.due_date && <span className={`flex items-center gap-1 ${overdue ? 'text-red-600 font-medium' : ''}`}><Clock size={12} />{t.dueDate}: {a.due_date}</span>}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <select value={a.status} onChange={e => setStatus(a.id, e.target.value as IncidentActionStatus)}
+                    disabled={readOnly}
+                    className={`text-xs px-2 py-1 rounded-lg border-0 font-medium ${CAPA_STATUS_COLOR[a.status]}`} aria-label={t.status}>
+                    {ACTION_STATUSES.map(s => <option key={s} value={s}>{t.statusLabel[s]}</option>)}
+                  </select>
+                  {!readOnly && <button onClick={() => remove(a.id)} className="text-red-400 hover:text-red-600" aria-label="Supprimer"><Trash2 size={15} /></button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
