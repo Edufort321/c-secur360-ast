@@ -10,13 +10,14 @@ import { BackButton } from '@/components/BackButton';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useModuleEnabled } from '@/lib/modules/useModuleEnabled';
 import { supabase } from '@/lib/supabase';
-import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
+import { diagnoseFull, estimateDP, paperState, type GasInput } from '@/lib/dga/diagnose';
 import {
   EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
   saveMeasure, deleteMeasure, dueStatus, matchDossier, type Dossier, type Measure,
 } from '@/lib/dga/dossiers';
 import { FlaskConical, Lock, Loader2, Save, Plus, Search, Upload, Activity, Trash2, ArrowLeft, FileText, Sparkles } from 'lucide-react';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
+import { Trends } from '@/components/dga/Trends';
 import { generateDgaReport } from '@/lib/dga/report';
 
 const COND_COLOR: Record<number, string> = {
@@ -33,6 +34,8 @@ const GASES: { key: keyof GasInput; label: string }[] = [
   { key: 'c2h4', label: 'C₂H₄' }, { key: 'c2h2', label: 'C₂H₂' }, { key: 'co', label: 'CO' }, { key: 'co2', label: 'CO₂' },
 ];
 const emptyDraft = (): Dossier => { const o: any = { ident: '', flag: '' }; EQUIP_FIELDS.forEach(f => { if (o[f.key] === undefined) o[f.key] = ''; }); return o; };
+// Auto-flag selon l'analyseur : condition/sévérité 4 -> critique, 3 -> surveillance, sinon ok.
+const autoFlag = (c?: number) => (c === 4 ? 'critique' : c === 3 ? 'surveillance' : 'ok');
 
 export default function DgaPage() {
   const params = useParams<{ tenant: string }>();
@@ -263,13 +266,32 @@ function Fiche(p: any) {
   const [measures, setMeasures] = useState<Measure[]>([]);
   const [gas, setGas] = useState<GasInput>({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 });
   const [sampleDate, setSampleDate] = useState('');
+  const [oilQ, setOilQ] = useState<any>({});
+  const [reportType, setReportType] = useState<'full' | 'dga' | 'summary'>('full');
   const [aiBusy, setAiBusy] = useState(false);
   const [ai, setAi] = useState<any>(null);
+  const [aiText, setAiText] = useState('');   // commentaire IA éditable
+  const [aiSaved, setAiSaved] = useState(false);
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
-  const live = useMemo(() => diagnoseFull(gas), [gas]);
+  // Gaz tracés : le formulaire si saisi, sinon la dernière mesure du dossier (-> le point Duval s'affiche).
+  const hasInput = (gas.h2 + gas.ch4 + gas.c2h6 + gas.c2h4 + gas.c2h2 + gas.co + gas.co2) > 0;
+  const shown: GasInput = useMemo(() => {
+    if (hasInput) return gas;
+    const lm = measures[measures.length - 1];
+    if (lm) return { h2: +(lm.h2 || 0), ch4: +(lm.ch4 || 0), c2h6: +(lm.c2h6 || 0), c2h4: +(lm.c2h4 || 0), c2h2: +(lm.c2h2 || 0), co: +(lm.co || 0), co2: +(lm.co2 || 0) };
+    return gas;
+  }, [gas, hasInput, measures]);
+  const live = useMemo(() => diagnoseFull(shown), [shown]);
 
   useEffect(() => { setForm(draft || selected || { ident: '' }); }, [draft, selected]);
-  useEffect(() => { (async () => { if (selected?.id) setMeasures(await listMeasures(tenant, selected.id)); else setMeasures([]); })(); }, [selected, tenant]);
+  useEffect(() => { (async () => { if (selected?.id) { const ms = await listMeasures(tenant, selected.id); setMeasures(ms); const lm = ms[ms.length - 1]; if (lm?.ai_summary) { setAiText(lm.ai_summary); setAiSaved(true); } else { setAiText(''); } } else { setMeasures([]); setAiText(''); } setAi(null); })(); }, [selected, tenant]);
+  async function saveAiComment() {
+    if (!selected?.id || measures.length === 0) return;
+    const lastM = measures[measures.length - 1];
+    if (!lastM?.id) return;
+    await saveMeasure(tenant, selected.id, { ...lastM, ai_summary: aiText });
+    setAiSaved(true); setMeasures(await listMeasures(tenant, selected.id));
+  }
 
   async function save() {
     if (!form.ident.trim()) { setNotice(tr('L’identification est requise.', 'Identification is required.')); return; }
@@ -283,10 +305,13 @@ function Fiche(p: any) {
   }
   async function addMeasure() {
     if (!selected?.id) { setNotice(tr('Enregistrez d’abord le dossier.', 'Save the dossier first.')); return; }
-    const dg = live;
-    const res = await saveMeasure(tenant, selected.id, { sample_date: sampleDate || null, ...gas, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'manual' });
+    const dg = diagnoseFull(gas);
+    const res = await saveMeasure(tenant, selected.id, { sample_date: sampleDate || null, ...gas, oil_quality: oilQ, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'manual' });
     if (res.error) { setNotice('Erreur : ' + res.error); return; }
-    setGas({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 }); setSampleDate('');
+    setGas({ h2: 0, ch4: 0, c2h6: 0, c2h4: 0, c2h2: 0, co: 0, co2: 0 }); setSampleDate(''); setOilQ({});
+    // Auto-flag selon l'analyseur (la dernière condition la plus défavorable).
+    const fl = autoFlag(dg.condition);
+    if (fl !== form.flag) { const nf = { ...form, flag: fl }; setForm(nf); await saveDossier(tenant, nf); }
     setMeasures(await listMeasures(tenant, selected.id)); reload();
   }
   async function runAI() {
@@ -297,8 +322,14 @@ function Fiche(p: any) {
       const j = await resp.json();
       if (!resp.ok || j.error) throw new Error(j.error || 'IA');
       setAi(j.analysis);
+      const txt = tr(j.analysis.summaryFr, j.analysis.summaryEn);
+      setAiText(txt); setAiSaved(false);
       const lastM = measures[measures.length - 1];
-      if (lastM?.id) await saveMeasure(tenant, selected.id, { ...lastM, ai_summary: tr(j.analysis.summaryFr, j.analysis.summaryEn) });
+      if (lastM?.id) await saveMeasure(tenant, selected.id, { ...lastM, ai_summary: txt });
+      // Auto-flag du dossier selon la sévérité de l'analyseur.
+      const fl = autoFlag(Number(j.analysis.severity));
+      if (fl !== form.flag) { const nf = { ...form, flag: fl }; setForm(nf); await saveDossier(tenant, nf); }
+      reload();
     } catch (e: any) { setNotice(tr('Analyse IA impossible : ', 'AI analysis failed: ') + (e?.message || e)); }
     finally { setAiBusy(false); }
   }
@@ -307,7 +338,7 @@ function Fiche(p: any) {
   async function exportReport() {
     let logoUrl: string | null = '/c-secur360-logo.png';
     try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) logoUrl = data.logo_url; } catch { /* défaut */ }
-    await generateDgaReport({ dossier: form, measures, ai, logoUrl, lang });
+    await generateDgaReport({ dossier: form, measures, ai, logoUrl, lang, reportType });
   }
 
   const setG = (k: keyof GasInput, v: string) => setGas(g => ({ ...g, [k]: v === '' ? 0 : Number(v) }));
@@ -317,7 +348,12 @@ function Fiche(p: any) {
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-600 hover:underline dark:text-gray-300"><ArrowLeft size={15} /> {tr('Liste', 'List')}</button>
         <div className="flex gap-2">
-          {!isNew && <button onClick={exportReport} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><FileText size={14} /> {tr('Rapport PDF', 'PDF report')}</button>}
+          {!isNew && <select value={reportType} onChange={e => setReportType(e.target.value as any)} className="rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm dark:border-gray-600">
+            <option value="full">{tr('Rapport complet', 'Full report')}</option>
+            <option value="dga">{tr('DGA seulement', 'DGA only')}</option>
+            <option value="summary">{tr('Sommaire', 'Summary')}</option>
+          </select>}
+          {!isNew && <button onClick={exportReport} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><FileText size={14} /> {tr('Exporter PDF', 'Export PDF')}</button>}
           {!isNew && <button onClick={delDossier} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>}
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}</button>
         </div>
@@ -349,6 +385,25 @@ function Fiche(p: any) {
                 {GASES.map(g => <label key={g.key} className="block"><span className="mb-1 block text-[11px] text-gray-500">{g.label} (ppm)</span>
                   <input type="number" min="0" className={inp} value={gas[g.key] === 0 ? '' : gas[g.key]} placeholder="0" onFocus={e => e.target.select()} onChange={e => setG(g.key, e.target.value)} /></label>)}
               </div>
+              {/* Qualité d'huile (avancé) */}
+              <details className="mt-3 rounded-lg border border-gray-100 p-2 dark:border-gray-700">
+                <summary className="cursor-pointer text-xs font-semibold text-gray-600 dark:text-gray-300">{tr('Qualité d’huile (avancé)', 'Oil quality (advanced)')}</summary>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { k: 'moisture', fr: 'Eau (ppm)', en: 'Moisture (ppm)' }, { k: 'acid', fr: 'Acidité (mgKOH/g)', en: 'Acidity (mgKOH/g)' },
+                    { k: 'ift', fr: 'IFT (mN/m)', en: 'IFT (mN/m)' }, { k: 'dielectric', fr: 'Rigidité D1816 (kV)', en: 'Dielectric D1816 (kV)' },
+                    { k: 'dbd877', fr: 'Rigidité D877 (kV)', en: 'Dielectric D877 (kV)' }, { k: 'color', fr: 'Couleur (ASTM)', en: 'Color (ASTM)' },
+                    { k: 'pf25', fr: 'PF 25°C (%)', en: 'PF 25°C (%)' }, { k: 'pf100', fr: 'PF 100°C (%)', en: 'PF 100°C (%)' },
+                    { k: 'f_2fal', fr: '2-FAL (ppm)', en: '2-FAL (ppm)' },
+                  ].map(o => (
+                    <label key={o.k} className="block"><span className="mb-1 block text-[10px] text-gray-500">{tr(o.fr, o.en)}</span>
+                      <input type="number" className={inp} value={oilQ[o.k] ?? ''} onFocus={e => e.target.select()} onChange={e => setOilQ((s: any) => ({ ...s, [o.k]: e.target.value === '' ? undefined : Number(e.target.value) }))} /></label>
+                  ))}
+                </div>
+                {estimateDP(oilQ.f_2fal) != null && (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">{tr('DP estimé (papier)', 'Estimated DP (paper)')} : <b>{estimateDP(oilQ.f_2fal)}</b> — {tr(paperState(estimateDP(oilQ.f_2fal))?.fr || '', paperState(estimateDP(oilQ.f_2fal))?.en || '')}</p>
+                )}
+              </details>
               <button onClick={addMeasure} className="mt-3 inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"><Plus size={14} /> {tr('Ajouter', 'Add')}</button>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -357,7 +412,7 @@ function Fiche(p: any) {
               <div className="my-2 text-center"><span className={`rounded-full px-3 py-1 text-sm font-bold ${COND_COLOR[live.condition]}`}>IEEE {live.condition}/4</span></div>
               <div className="text-center text-lg font-extrabold text-rose-600 dark:text-rose-400">{live.duval}</div>
               <div className="text-center text-xs text-gray-600 dark:text-gray-300">{tr(live.fault.fr, live.fault.en)}</div>
-              <div className="mt-2 text-gray-500"><DuvalTriangle ch4={gas.ch4} c2h2={gas.c2h2} c2h4={gas.c2h4} zone={live.duval} /></div>
+              <div className="mt-2 text-gray-500"><DuvalTriangle ch4={shown.ch4} c2h2={shown.c2h2} c2h4={shown.c2h4} zone={live.duval} /></div>
             </div>
           </div>
 
@@ -367,19 +422,35 @@ function Fiche(p: any) {
               <h3 className="flex items-center gap-1.5 text-sm font-bold"><Sparkles size={15} className="text-violet-500" /> {tr('Analyse IA experte', 'Expert AI analysis')}</h3>
               <button onClick={runAI} disabled={aiBusy} className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">{aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {tr('Analyser', 'Analyze')}</button>
             </div>
-            {ai ? (
-              <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm">
+              {ai && (
                 <div className="flex flex-wrap gap-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${COND_COLOR[ai.severity] || COND_COLOR[1]}`}>{tr('Sévérité', 'Severity')} {ai.severity}/4</span>
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{ai.faultType}</span>
                   <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{tr('Tendance', 'Trend')}: {ai.trend}</span>
                   {ai.retestMonths != null && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{tr('Re-test', 'Re-test')}: {ai.retestMonths} {tr('mois', 'mo')}</span>}
                 </div>
-                <p className="text-gray-700 dark:text-gray-200">{tr(ai.summaryFr, ai.summaryEn)}</p>
-                <ul className="list-disc pl-5 text-gray-600 dark:text-gray-300">{(lang === 'fr' ? ai.recommendationsFr : ai.recommendationsEn || []).map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
-              </div>
-            ) : <p className="text-xs text-gray-400">{tr('Lance l’analyse pour obtenir un diagnostic expert basé sur l’historique et les normes.', 'Run analysis for an expert diagnosis based on history and norms.')}</p>}
+              )}
+              {(aiText || ai) ? (
+                <>
+                  <textarea className="w-full rounded-lg border border-gray-300 bg-transparent p-2 text-sm dark:border-gray-600" rows={5} value={aiText} onChange={e => { setAiText(e.target.value); setAiSaved(false); }} placeholder={tr('Commentaire (éditable)…', 'Comment (editable)…')} />
+                  <div className="flex items-center gap-2">
+                    <button onClick={saveAiComment} className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">{tr('Enregistrer le commentaire', 'Save comment')}</button>
+                    {aiSaved && <span className="text-xs text-emerald-600">✓ {tr('enregistré', 'saved')}</span>}
+                  </div>
+                  {ai && <ul className="list-disc pl-5 text-gray-600 dark:text-gray-300">{((lang === 'fr' ? ai.recommendationsFr : ai.recommendationsEn) || []).map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>}
+                </>
+              ) : <p className="text-xs text-gray-400">{tr('Lance l’analyse pour un diagnostic basé sur l’historique et les normes (commentaire ensuite éditable).', 'Run analysis for a history- and norm-based diagnosis (comment is then editable).')}</p>}
+            </div>
           </div>
+
+          {/* Tendances */}
+          {measures.length >= 2 && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr('Tendances (gaz / TDCG)', 'Trends (gas / TDCG)')}</h3>
+              <Trends measures={measures} tr={tr} />
+            </div>
+          )}
 
           {/* Historique */}
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">

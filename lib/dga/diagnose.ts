@@ -147,6 +147,22 @@ export function gasRatePerDay(prevTdcg: number, prevDateIso: string, curTdcg: nu
   return days > 0 ? (curTdcg - prevTdcg) / days : null;
 }
 
+// Estimation du degré de polymérisation (DP) du papier depuis le furanne 2-FAL (ppm).
+// Modèle de Chendong (indicatif) : DP = (1.51 - log10(2FAL_ppm)) / 0.0035.
+export function estimateDP(fal2ppm?: number | null): number | null {
+  const v = Number(fal2ppm);
+  if (!v || v <= 0) return null;
+  return Math.max(0, Math.round((1.51 - Math.log10(v)) / 0.0035));
+}
+// État du papier selon le DP (indicatif).
+export function paperState(dp: number | null): { fr: string; en: string } | null {
+  if (dp == null) return null;
+  if (dp >= 700) return { fr: 'Papier sain', en: 'Healthy paper' };
+  if (dp >= 450) return { fr: 'Vieillissement normal', en: 'Normal aging' };
+  if (dp >= 250) return { fr: 'Vieillissement avancé', en: 'Advanced aging' };
+  return { fr: 'Fin de vie du papier', en: 'End of paper life' };
+}
+
 // Synthèse multi-méthodes.
 export function diagnoseFull(g: GasInput) {
   return { ...diagnose(g), methods: [keyGas(g), rogers(g), iec60599(g)] };
