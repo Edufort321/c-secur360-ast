@@ -16,6 +16,8 @@ import {
   saveMeasure, deleteMeasure, dueStatus, type Dossier, type Measure,
 } from '@/lib/dga/dossiers';
 import { FlaskConical, Lock, Loader2, Save, Plus, Search, Upload, Activity, Trash2, ArrowLeft, FileText, Sparkles } from 'lucide-react';
+import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
+import { generateDgaReport } from '@/lib/dga/report';
 
 const COND_COLOR: Record<number, string> = {
   1: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -192,11 +194,9 @@ function ListView(p: any) {
         <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">{tr('Choisir un fichier', 'Choose file')}</button>
       </div>
 
-      {/* Recherche + filtres + nouveau */}
+      {/* Barre de recherche unique : équipement + client + n° de série */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[12rem]"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full pl-7`} placeholder={tr('Rechercher (nom, client, série…)', 'Search (name, client, serial…)')} value={query} onChange={e => setQuery(e.target.value)} /></div>
-        <input className={inp} placeholder={tr('Filtre client', 'Client filter')} value={fClient} onChange={e => setFClient(e.target.value)} />
-        <input className={inp} placeholder={tr('Filtre n° série', 'Serial filter')} value={fSerie} onChange={e => setFSerie(e.target.value)} />
+        <div className="relative flex-1 min-w-[14rem]"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full pl-7`} placeholder={tr('Rechercher : équipement, client ou n° de série', 'Search: equipment, client or serial no.')} value={query} onChange={e => setQuery(e.target.value)} /></div>
         <button onClick={newDossier} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700"><Plus size={15} /> {tr('Nouveau', 'New')}</button>
       </div>
 
@@ -277,6 +277,11 @@ function Fiche(p: any) {
   }
   async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(id); if (selected?.id) setMeasures(await listMeasures(tenant, selected.id)); reload(); }
   async function delDossier() { if (!selected?.id) return; if (!confirm(tr('Supprimer ce dossier et ses mesures ?', 'Delete this dossier and its measures?'))) return; await deleteDossier(selected.id); onBack(); }
+  async function exportReport() {
+    let logoUrl: string | null = '/c-secur360-logo.png';
+    try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) logoUrl = data.logo_url; } catch { /* défaut */ }
+    await generateDgaReport({ dossier: form, measures, ai, logoUrl, lang });
+  }
 
   const setG = (k: keyof GasInput, v: string) => setGas(g => ({ ...g, [k]: v === '' ? 0 : Number(v) }));
 
@@ -285,6 +290,7 @@ function Fiche(p: any) {
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-600 hover:underline dark:text-gray-300"><ArrowLeft size={15} /> {tr('Liste', 'List')}</button>
         <div className="flex gap-2">
+          {!isNew && <button onClick={exportReport} className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200"><FileText size={14} /> {tr('Rapport PDF', 'PDF report')}</button>}
           {!isNew && <button onClick={delDossier} className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>}
           <button onClick={save} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {tr('Enregistrer', 'Save')}</button>
         </div>
@@ -324,6 +330,7 @@ function Fiche(p: any) {
               <div className="my-2 text-center"><span className={`rounded-full px-3 py-1 text-sm font-bold ${COND_COLOR[live.condition]}`}>IEEE {live.condition}/4</span></div>
               <div className="text-center text-lg font-extrabold text-rose-600 dark:text-rose-400">{live.duval}</div>
               <div className="text-center text-xs text-gray-600 dark:text-gray-300">{tr(live.fault.fr, live.fault.en)}</div>
+              <div className="mt-2 text-gray-500"><DuvalTriangle ch4={gas.ch4} c2h2={gas.c2h2} c2h4={gas.c2h4} zone={live.duval} /></div>
             </div>
           </div>
 
