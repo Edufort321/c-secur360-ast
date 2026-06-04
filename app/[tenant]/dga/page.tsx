@@ -233,7 +233,7 @@ function ListView(p: any) {
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-xs text-gray-500 dark:bg-gray-900/40"><tr>
-            <th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('Client', 'Client')}</th><th className="px-3 py-2">{tr('N° série', 'Serial')}</th>
+            <th className="px-3 py-2">{tr('Client', 'Client')}</th><th className="px-3 py-2">{tr('Équipement', 'Equipment')}</th><th className="px-3 py-2">{tr('N° série', 'Serial')}</th>
             <th className="px-3 py-2">{tr('Dernier', 'Last')}</th><th className="px-3 py-2">IEEE</th><th className="px-3 py-2">{tr('Échéance', 'Due')}</th><th className="px-3 py-2">Flag</th>
           </tr></thead>
           <tbody>
@@ -243,7 +243,7 @@ function ListView(p: any) {
               const st = dueStatus(last?.sample_date, last?.condition);
               return (
                 <tr key={d.id} onClick={() => openFiche(d)} className="cursor-pointer border-t border-gray-100 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
-                  <td className="px-3 py-2 font-medium">{d.ident}</td><td className="px-3 py-2 text-gray-500">{d.client || '—'}</td><td className="px-3 py-2 text-gray-500">{d.serie || '—'}</td>
+                  <td className="px-3 py-2 font-medium">{d.client || '—'}</td><td className="px-3 py-2">{d.ident}</td><td className="px-3 py-2 text-gray-500">{d.serie || '—'}</td>
                   <td className="px-3 py-2 text-gray-500">{last?.sample_date || '—'}</td>
                   <td className="px-3 py-2">{last?.condition ? <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${COND_COLOR[last.condition]}`}>{last.condition}</span> : '—'}</td>
                   <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${DUE_COLOR[st]}`}>{tr({ overdue: 'En retard', soon: 'Bientôt', uptodate: 'À jour', none: '—' }[st], { overdue: 'Overdue', soon: 'Soon', uptodate: 'OK', none: '—' }[st])}</span></td>

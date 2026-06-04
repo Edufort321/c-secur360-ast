@@ -6,7 +6,7 @@ export interface Dossier {
   company?: string; contact?: string; email?: string; sample_id?: string; report_id?: string; po_no?: string;
   client?: string; ident: string; serie?: string; equip_no?: string; apparatus?: string; description?: string;
   alarm?: string; kv?: number | null; mva?: number | null; oil_vol?: number | null; oil_type?: string;
-  manufacturer?: string; year?: string; extra?: any; flag?: string; notes?: string;
+  manufacturer?: string; year?: string; phone?: string; extra?: any; flag?: string; notes?: string;
   created_at?: string; updated_at?: string;
 }
 export interface Measure {
@@ -17,15 +17,11 @@ export interface Measure {
 }
 
 // Champs équipement (ordre + libellés) — repris fidèlement de l'app d'origine.
-export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip'; fr: string; en: string; ph?: string; num?: boolean }[] = [
-  { key: 'company', group: 'order', fr: 'Compagnie', en: 'Company', ph: 'ex. CDU06' },
-  { key: 'contact', group: 'order', fr: 'Contact', en: 'Contact' },
-  { key: 'email', group: 'order', fr: 'Courriel', en: 'Email' },
-  { key: 'sample_id', group: 'order', fr: 'ID échantillon', en: 'Sample ID' },
-  { key: 'report_id', group: 'order', fr: 'ID rapport', en: 'Report ID' },
-  { key: 'po_no', group: 'order', fr: 'N° de BC', en: 'PO No.' },
-  { key: 'client', group: 'equip', fr: 'Localisation / Sous-station', en: 'Location / Substation', ph: 'ex. NEW RICHMOND' },
-  { key: 'ident', group: 'equip', fr: 'Équipement (Nom) *', en: 'Equipment (Name) *', ph: 'ex. NEW RICHMOND TG1' },
+// Ordre d'affichage : Client / Équipement / N° série en haut, puis infos techniques,
+// puis info de commande, puis CONTACT/COURRIEL/TÉL en fin (groupe 'contact' = exclu du rapport).
+export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip' | 'contact'; fr: string; en: string; ph?: string; num?: boolean }[] = [
+  { key: 'client', group: 'equip', fr: 'Client / Localisation', en: 'Client / Location', ph: 'ex. NEW RICHMOND' },
+  { key: 'ident', group: 'equip', fr: "Nom d'équipement *", en: 'Equipment name *', ph: 'ex. NEW RICHMOND TG1' },
   { key: 'serie', group: 'equip', fr: 'N° de série', en: 'Serial No.' },
   { key: 'equip_no', group: 'equip', fr: "N° d'équipement", en: 'Equipment No.' },
   { key: 'apparatus', group: 'equip', fr: "Type d'appareil", en: 'Apparatus type' },
@@ -37,6 +33,14 @@ export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip'; fr: s
   { key: 'oil_type', group: 'equip', fr: "Type d'huile", en: 'Oil type' },
   { key: 'manufacturer', group: 'equip', fr: 'Fabricant', en: 'Manufacturer' },
   { key: 'year', group: 'equip', fr: 'Année', en: 'Year' },
+  { key: 'company', group: 'order', fr: 'Compagnie', en: 'Company', ph: 'ex. CDU06' },
+  { key: 'sample_id', group: 'order', fr: 'ID échantillon', en: 'Sample ID' },
+  { key: 'report_id', group: 'order', fr: 'ID rapport', en: 'Report ID' },
+  { key: 'po_no', group: 'order', fr: 'N° de BC', en: 'PO No.' },
+  // Coordonnées du client — N'APPARAISSENT PAS dans le rapport.
+  { key: 'contact', group: 'contact', fr: 'Contact (client)', en: 'Contact (client)' },
+  { key: 'email', group: 'contact', fr: 'Courriel (client)', en: 'Email (client)' },
+  { key: 'phone', group: 'contact', fr: 'Téléphone (client)', en: 'Phone (client)' },
 ];
 
 export async function listDossiers(tenant: string): Promise<Dossier[]> {
@@ -54,12 +58,20 @@ export async function listMeasures(tenant: string, dossierId: string): Promise<M
 export async function saveDossier(tenant: string, d: Dossier): Promise<{ data?: Dossier; error?: string }> {
   const payload: any = { ...d, tenant_id: tenant, updated_at: new Date().toISOString() };
   delete payload.id;
-  if (d.id) {
-    const { data, error } = await supabase.from('dga_dossiers').update(payload).eq('id', d.id).select().single();
-    return error ? { error: error.message } : { data: data as Dossier };
+  // Strip-retry : retire toute colonne absente du schéma (ex. phone avant migration 118) pour ne jamais bloquer l'enregistrement.
+  const attempt = (p: any) => d.id
+    ? supabase.from('dga_dossiers').update(p).eq('id', d.id).select().single()
+    : supabase.from('dga_dossiers').insert(p).select().single();
+  let res: any = await attempt(payload);
+  let guard = 0;
+  while (res.error && guard < 12) {
+    const msg = res.error.message || '';
+    const m = msg.match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+    const col = m ? (m[1] || m[2] || m[3]) : null;
+    if (col && col in payload && col !== 'ident' && col !== 'tenant_id') { delete payload[col]; res = await attempt(payload); guard++; }
+    else break;
   }
-  const { data, error } = await supabase.from('dga_dossiers').insert(payload).select().single();
-  return error ? { error: error.message } : { data: data as Dossier };
+  return res.error ? { error: res.error.message } : { data: res.data as Dossier };
 }
 export async function deleteDossier(id: string) { await supabase.from('dga_dossiers').delete().eq('id', id); }
 
