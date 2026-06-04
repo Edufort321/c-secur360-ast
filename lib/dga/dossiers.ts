@@ -83,6 +83,28 @@ export async function savePhotos(id: string, photos: { id: string; data: string;
   const { error } = await supabase.from('dga_dossiers').update({ photos }).eq('id', id);
   return error ? { error: error.message } : {};
 }
+
+// ── Rapport d'anomalie : anomalies / recommandations par transformateur (colonne séparée, lazy) ──
+export interface AnomalyPhoto { id: string; data: string; name?: string }
+export interface Anomaly {
+  id: string;
+  kind: 'anomalie' | 'reco';            // anomalie ou recommandation
+  status: 'a_corriger' | 'corrige';      // à corriger -> corrigé
+  archived?: boolean;                    // archivé (sorti de la liste active)
+  title?: string;
+  desc?: string;
+  photos?: AnomalyPhoto[];               // photos custom (base64 compressé)
+  created_at?: string;
+}
+export async function getAnomalies(id: string): Promise<Anomaly[]> {
+  const { data, error } = await supabase.from('dga_dossiers').select('anomalies').eq('id', id).maybeSingle();
+  if (error || !data) return [];
+  return ((data as any).anomalies as Anomaly[]) || [];
+}
+export async function saveAnomalies(id: string, anomalies: Anomaly[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ anomalies }).eq('id', id);
+  return error ? { error: error.message } : {};
+}
 export async function listAllMeasures(tenant: string): Promise<Measure[]> {
   const { data } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).order('sample_date', { ascending: true });
   return (data || []) as Measure[];

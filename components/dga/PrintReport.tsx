@@ -8,10 +8,11 @@
 // Clés adaptées au module (equip_no, oil_type, sample_id… ; huile/furanes dans oil_quality).
 // ============================================================================
 import React from 'react';
-import type { Dossier, Measure } from '@/lib/dga/dossiers';
+import type { Dossier, Measure, Anomaly } from '@/lib/dga/dossiers';
 import { GAS_FIELDS, COMBUSTIBLE, OIL_FIELDS, FURAN_FIELDS, IEEE_LIMITS, gl, fl, COND_LABELS, COND_COLORS, numOrNull, type Lang } from '@/lib/dga/fields';
 import { ZONE_COLORS } from '@/lib/dga/duval';
 import { voltageClass } from '@/lib/dga/oil';
+import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 
 const SP: Record<string, React.CSSProperties> = {
   wrap: { fontFamily: 'Arial, Helvetica, sans-serif', color: '#1a1a1a' },
@@ -95,10 +96,12 @@ export function PrintReport(props: {
   items: { lvl: string; txt: string }[]; reco: { title: string; steps: string[] };
   oilEval: { status: string; txt: string }[]; furan: any; trendA: any; rogers: Record<string, number>;
   globalNote: string; manualReco: string; nextDate: string | null; due: any;
-  projectNo: string; pages: { titlePage: boolean; cover: boolean; results: boolean; analysis: boolean; trends: boolean; coverChart: boolean };
+  projectNo: string; pages: { titlePage: boolean; cover: boolean; results: boolean; analysis: boolean; trends: boolean; coverChart: boolean; photos: boolean; anomalies: boolean };
   logoUrl: string | null; lang: Lang; fal2ppb: number | null;
+  photos?: { id: string; data: string; name?: string }[]; anomalies?: Anomaly[];
 }) {
-  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, lang } = props;
+  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, lang, photos = [], anomalies = [] } = props;
+  const anomReport = anomalies.filter(a => !a.archived);
   const EN = lang === 'en';
   const L = (fr: string, en: string) => (EN ? en : fr);
   const today = new Date().toISOString().slice(0, 10);
@@ -240,7 +243,7 @@ export function PrintReport(props: {
 
       {/* PAGE ANALYSE & INTERPRÉTATION */}
       {pages.analysis && (
-        <section style={SP.page} className="rpt-page rpt-break rpt-avoid">
+        <section style={SP.page} className="rpt-page rpt-break">
           <div style={SP.sectionBar}>{L('Analyse & interprétation', 'Analysis & interpretation')}</div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
             <div style={{ ...SP.condBig, background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</div>
@@ -260,6 +263,10 @@ export function PrintReport(props: {
               <div style={SP.reco}><b style={{ color: '#ffd166' }}>{reco.title}</b><ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>{reco.steps.map((s, i) => <li key={i} style={{ fontSize: 10, marginBottom: 3 }}>{s}</li>)}</ul></div>
             </div>
             <div style={{ flex: 1 }}>
+              <div style={SP.h3}>{L('Triangle de Duval 1', 'Duval Triangle 1')}</div>
+              <div style={{ maxWidth: 240, margin: '0 auto 8px' }}>
+                <DuvalTriangle points={data.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined }))} selIdx={data.indexOf(cur)} lang={lang} />
+              </div>
               {oilEval.length > 0 && (<><div style={SP.h3}>🛢️ {L('Interprétation qualité huile', 'Oil quality interpretation')}{dossier.kv ? ` (${voltageClass(dossier.kv, lang).label})` : ''}</div>
                 {oilEval.map((it, i) => <div key={i} style={{ ...SP.interp, ...oilStyle(it.status) }}>{it.txt}</div>)}</>)}
               {furan && (<><div style={SP.h3}>{L("État de l'isolation papier", 'Paper insulation condition')}</div>
@@ -287,6 +294,49 @@ export function PrintReport(props: {
               {oilChart.map(f => <SvgTrend key={f.key} items={datedItems(m => numOrNull(m.oil_quality?.[f.key]))} title={fl(f, lang)} color="#277da1" />)}
             </div>
           </>)}
+        </section>
+      )}
+
+      {/* PAGE PHOTOS */}
+      {pages.photos && photos.length > 0 && (
+        <section style={SP.page} className="rpt-page rpt-break">
+          <div style={SP.sectionBar}>{L('Photos du transformateur', 'Transformer photos')}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {photos.map(ph => (
+              <div key={ph.id} style={{ breakInside: 'avoid' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ph.data} alt={ph.name || ''} style={{ width: '100%', borderRadius: 6, border: '1px solid #ddd' }} />
+                {ph.name && <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>{ph.name}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* PAGE RAPPORT D'ANOMALIE */}
+      {pages.anomalies && anomReport.length > 0 && (
+        <section style={SP.page} className="rpt-page rpt-break">
+          <div style={SP.sectionBar}>{L("Rapport d'anomalie", 'Anomaly report')}</div>
+          {anomReport.map(a => {
+            const isAnom = a.kind === 'anomalie';
+            const done = a.status === 'corrige';
+            return (
+              <div key={a.id} style={{ breakInside: 'avoid', border: '1px solid #e2e2e2', borderLeft: `4px solid ${isAnom ? '#e63946' : '#277da1'}`, borderRadius: 6, padding: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: 11, color: isAnom ? '#9d0208' : '#277da1' }}>{isAnom ? '🔧 ' + L('Anomalie', 'Anomaly') : '💡 ' + L('Recommandation', 'Recommendation')}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: done ? '#dcfce7' : '#fef3c7', color: done ? '#15803d' : '#b45309' }}>{done ? L('Corrigé', 'Corrected') : L('À corriger', 'To fix')}</span>
+                </div>
+                {a.title && <div style={{ fontWeight: 700, fontSize: 12 }}>{a.title}</div>}
+                {a.desc && <div style={{ fontSize: 11, lineHeight: 1.4, marginTop: 2, whiteSpace: 'pre-wrap' }}>{a.desc}</div>}
+                {a.photos && a.photos.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 6 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {a.photos.map(ph => <img key={ph.id} src={ph.data} alt={ph.name || ''} style={{ width: '100%', borderRadius: 4, border: '1px solid #ddd' }} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </section>
       )}
         </div>

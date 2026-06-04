@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { getPhotos, savePhotos, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure } from '@/lib/dga/dossiers';
+import { getPhotos, savePhotos, getAnomalies, saveAnomalies, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly } from '@/lib/dga/dossiers';
 import {
   GAS_FIELDS, COMBUSTIBLE, IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl,
   ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, type Lang,
@@ -25,6 +25,7 @@ import {
   ANALYSIS_CATALOG, ANALYSIS_GROUPS, INTERVAL_OPTIONS, al, addInterval, addMonths, autoNextDate, dueStatusByDate,
 } from '@/lib/dga/catalog';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
+import { AnomalySection } from '@/components/dga/AnomalySection';
 import { PrintReport } from '@/components/dga/PrintReport';
 
 const CARD = 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800';
@@ -71,13 +72,14 @@ export function TransfoView(props: {
   const [selIdx, setSelIdx] = useState(Math.max(0, data.length - 1));
   const [visible, setVisible] = useState<Record<string, boolean>>(() => COMBUSTIBLE.reduce((a, k) => ({ ...a, [k]: true }), {}));
   const [showExport, setShowExport] = useState(false);
-  const [pages, setPages] = useState({ titlePage: true, cover: true, results: true, analysis: true, trends: true, coverChart: true });
+  const [pages, setPages] = useState({ titlePage: true, cover: true, results: true, analysis: true, trends: true, coverChart: true, photos: false, anomalies: false });
   const [globalNote, setGlobalNote] = useState('');
   const [projectNo, setProjectNo] = useState(extra.project_no || '');
   const [recoDraft, setRecoDraft] = useState(extra.manual_reco || '');
   const [dateDraft, setDateDraft] = useState(extra.next_date_manual || '');
   const [aiBusy, setAiBusy] = useState(false);
   const [photos, setPhotos] = useState<{ id: string; data: string; name?: string }[]>([]);
+  const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState<Dossier>(dossier);
@@ -87,9 +89,10 @@ export function TransfoView(props: {
   useEffect(() => { setSelIdx(Math.max(0, data.length - 1)); }, [data.length]);
   useEffect(() => {
     setForm(dossier); setRecoDraft(extra.manual_reco || ''); setDateDraft(extra.next_date_manual || ''); setProjectNo(extra.project_no || '');
-    if (dossier.id) getPhotos(dossier.id).then(setPhotos); else setPhotos([]);
+    if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); } else { setPhotos([]); setAnomalies([]); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dossier.id]);
+  const updateAnomalies = (next: Anomaly[]) => { setAnomalies(next); if (dossier.id) saveAnomalies(dossier.id, next); };
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
@@ -200,7 +203,20 @@ export function TransfoView(props: {
     finally { setAiBusy(false); }
   }
 
-  function doExport() { setShowExport(false); setTimeout(() => window.print(), 300); }
+  // Export : nom de fichier PDF par défaut = DGA-{n° série} (sinon ident). Le titre du document
+  // pilote aussi le libellé de l'en-tête navigateur ; restauré après impression.
+  function doExport() {
+    setShowExport(false);
+    const base = (dossier.serie || dossier.ident || 'rapport').toString().trim().replace(/[^\w.-]+/g, '_');
+    const name = `DGA-${base}`;
+    const prev = document.title;
+    setTimeout(() => {
+      document.title = name;
+      const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
+      window.addEventListener('afterprint', restore);
+      window.print();
+    }, 300);
+  }
 
   return (
     <div className="space-y-4">
@@ -470,6 +486,9 @@ export function TransfoView(props: {
             </section>
           </div>
         </div>
+
+        {/* RAPPORT D'ANOMALIE (pleine largeur) */}
+        <AnomalySection anomalies={anomalies} onChange={updateAnomalies} lang={lang} tr={tr} setNotice={setNotice} />
       </div>
 
       {/* MODALE ÉDITION DES INFOS (commande / équipement / échantillonnage + n° projet) */}
@@ -489,7 +508,7 @@ export function TransfoView(props: {
           <div className="w-full max-w-md rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
             <h2 className="mb-2 text-lg font-bold">{tr('Exporter le rapport', 'Export report')}</h2>
             <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Pages à inclure', 'Pages to include')}</div>
-            {([['titlePage', tr('Page de garde', 'Title page')], ['cover', tr('Page de présentation', 'Cover page')], ['results', tr('Résultats (mesures)', 'Results (measurements)')], ['analysis', tr('Analyse & interprétation', 'Analysis & interpretation')], ['trends', tr('Graphiques de tendances', 'Trend charts')]] as [string, string][]).map(([k, lbl]) => (
+            {([['titlePage', tr('Page de garde', 'Title page')], ['cover', tr('Page de présentation', 'Cover page')], ['results', tr('Résultats (mesures)', 'Results (measurements)')], ['analysis', tr('Analyse & interprétation', 'Analysis & interpretation')], ['trends', tr('Graphiques de tendances', 'Trend charts')], ['photos', tr('Photos', 'Photos') + (photos.length ? ` (${photos.length})` : '')], ['anomalies', tr("Rapport d'anomalie", 'Anomaly report') + (anomalies.filter(a => !a.archived).length ? ` (${anomalies.filter(a => !a.archived).length})` : '')]] as [string, string][]).map(([k, lbl]) => (
               <label key={k} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
                 <input type="checkbox" className="accent-rose-600" checked={(pages as any)[k]} onChange={() => setPages(p => ({ ...p, [k]: !(p as any)[k] }))} />{lbl}
               </label>
@@ -525,6 +544,7 @@ export function TransfoView(props: {
           items={items} reco={reco} oilEval={oilEval} furan={furan} trendA={trendA} rogers={rogers}
           globalNote={globalNote} manualReco={recoDraft} nextDate={effNext} due={due}
           projectNo={projectNo} pages={pages} logoUrl={logoUrl} lang={lang} fal2ppb={fal2ppb}
+          photos={photos} anomalies={anomalies}
         />, document.body)}
     </div>
   );
