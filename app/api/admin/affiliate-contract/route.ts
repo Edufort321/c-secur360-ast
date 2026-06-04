@@ -88,3 +88,16 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.res;
+
+  const tenantId = req.nextUrl.searchParams.get('tenantId');
+  if (!tenantId) return NextResponse.json({ error: 'tenantId requis' }, { status: 400 });
+
+  const { error } = await supabaseAdmin
+    .from('tenant_affiliate_contracts').delete().eq('tenant_id', tenantId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

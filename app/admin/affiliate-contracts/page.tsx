@@ -4,9 +4,9 @@
 // Liste tous les contrats enregistres ; clic sur une ligne -> ouvre l'apercu/edition (composant partage).
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, FileSignature, CheckCircle2, Ban, FileText, Wallet } from 'lucide-react';
+import { ArrowLeft, Loader2, FileSignature, CheckCircle2, Ban, FileText, Wallet, Trash2 } from 'lucide-react';
 import { PortalHeader } from '@/components/PortalHeader';
-import { listContracts, type AffiliateContractRow } from '@/lib/affiliateContract';
+import { listContracts, deleteContract, type AffiliateContractRow } from '@/lib/affiliateContract';
 import { AffiliateContract } from '@/components/admin/AffiliateContract';
 
 const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -22,6 +22,7 @@ export default function AffiliateContractsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<{ tenantId: string; tenantName?: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null);
@@ -34,6 +35,19 @@ export default function AffiliateContractsPage() {
     }
   }
   useEffect(() => { load(); }, []);
+
+  async function remove(row: AffiliateContractRow) {
+    if (!confirm(`Supprimer definitivement le contrat de ${row.tenant_name || row.tenant_id} ? Cette action est irreversible (distincte de « resilier »).`)) return;
+    setDeletingId(row.tenant_id); setError(null);
+    try {
+      await deleteContract(row.tenant_id);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Erreur de suppression');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const signedCount = rows.filter(r => r.status === 'signe').length;
 
@@ -80,6 +94,7 @@ export default function AffiliateContractsPage() {
                     <th className="px-4 py-2">Debut</th>
                     <th className="px-4 py-2 text-center">Statut</th>
                     <th className="px-4 py-2">Signe le</th>
+                    <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -100,6 +115,15 @@ export default function AffiliateContractsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-400">{fmtDate(r.signed_at)}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          <button
+                            onClick={e => { e.stopPropagation(); remove(r); }}
+                            disabled={deletingId === r.tenant_id}
+                            title="Supprimer definitivement le contrat"
+                            className="rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10">
+                            {deletingId === r.tenant_id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}

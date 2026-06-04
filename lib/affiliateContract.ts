@@ -57,7 +57,9 @@ export function defaultClauses(c: Partial<AffiliateContract>): string {
     ``,
     `8. NON-SOLLICITATION. Pendant la duree du contrat et pour une periode de douze (12) mois suivant sa terminaison, le Vendeur s'engage a ne pas solliciter ni detourner les clients de CERDIA references dans le cadre du present partenariat.`,
     ``,
-    `9. JURIDICTION. Le present contrat est regi par les lois de la province de Quebec et les lois du Canada qui y sont applicables. Tout litige releve de la competence exclusive des tribunaux du district judiciaire competent au Quebec.`,
+    `9. RESILIATION POUR FAUTE. CERDIA peut resilier le present contrat avec effet immediat, sans preavis ni indemnite, et cesser tout versement futur de commission, si le Vendeur nuit a l'entreprise, notamment par concurrence deloyale, denigrement, manquement a ses obligations, atteinte a la reputation de CERDIA ou non-respect des clauses du present contrat. Les commissions echues avant la date de resiliation pour faute demeurent dues, sauf en cas de faute lourde du Vendeur, auquel cas CERDIA peut suspendre tout versement.`,
+    ``,
+    `10. JURIDICTION. Le present contrat est regi par les lois de la province de Quebec et les lois du Canada qui y sont applicables. Tout litige releve de la competence exclusive des tribunaux du district judiciaire competent au Quebec.`,
   ].join('\n');
 }
 
@@ -111,4 +113,10 @@ export async function saveContract(c: AffiliateContract): Promise<AffiliateContr
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || "Erreur d'enregistrement du contrat");
   return res.json();
+}
+
+/** Supprime definitivement le contrat d'un tenant (distinct de « resilier » qui conserve l'historique). */
+export async function deleteContract(tenantId: string): Promise<void> {
+  const res = await fetch(`/api/admin/affiliate-contract?tenantId=${encodeURIComponent(tenantId)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error || 'Erreur de suppression du contrat');
 }

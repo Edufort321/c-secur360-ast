@@ -3,7 +3,7 @@
 // avec fetch simule. Aucune dependance serveur/DB. Lancer : npm test
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  defaultContract, defaultClauses, getContract, saveContract, listContracts,
+  defaultContract, defaultClauses, getContract, saveContract, listContracts, deleteContract,
   type AffiliateContract,
 } from './affiliateContract';
 
@@ -45,14 +45,22 @@ describe('defaultClauses', () => {
     expect(txt.toLowerCase()).toContain('quebec');
   });
 
-  it('couvre les 9 clauses standard', () => {
+  it('couvre les 10 clauses standard', () => {
     const txt = defaultClauses({});
     for (const heading of [
       '1. OBJET', '2. COMMISSION', '3. RECURRENCE', '4. RENOUVELLEMENT', '5. RESILIATION',
-      '6. MODALITES DE PAIEMENT', '7. CONFIDENTIALITE', '8. NON-SOLLICITATION', '9. JURIDICTION',
+      '6. MODALITES DE PAIEMENT', '7. CONFIDENTIALITE', '8. NON-SOLLICITATION',
+      '9. RESILIATION POUR FAUTE', '10. JURIDICTION',
     ]) {
       expect(txt).toContain(heading);
     }
+  });
+
+  it('la clause de resiliation pour faute permet de cesser les commissions si le vendeur nuit a l\'entreprise', () => {
+    const txt = defaultClauses({});
+    expect(txt).toContain('RESILIATION POUR FAUTE');
+    expect(txt.toLowerCase()).toContain('nuit a l\'entreprise');
+    expect(txt.toLowerCase()).toContain('cesser tout versement futur de commission');
   });
 
   it('formule l\'indexation differemment selon l\'inflation', () => {
@@ -115,5 +123,21 @@ describe('listContracts', () => {
     const res = await listContracts();
     expect(res).toEqual(rows);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/admin/affiliate-contract');
+  });
+});
+
+describe('deleteContract', () => {
+  it('appelle DELETE avec le tenantId encode', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ ok: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+    await deleteContract('a b');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/admin/affiliate-contract?tenantId=a%20b');
+    expect(init.method).toBe('DELETE');
+  });
+
+  it('propage l\'erreur serveur', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({ error: 'refus' }) }));
+    await expect(deleteContract('x')).rejects.toThrow('refus');
   });
 });

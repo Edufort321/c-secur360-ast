@@ -16,6 +16,21 @@ const fmtDateLong = (d?: string | null) =>
 const fmtDateTime = (d?: string | null) =>
   d ? new Date(d).toLocaleString('fr-CA', { dateStyle: 'long', timeStyle: 'short' }) : '—';
 
+/** Charge une image (chemin public) en data URL pour jsPDF. Retourne null si indisponible. */
+async function loadDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise(resolve => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result as string);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
 export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId: string; tenantName?: string; onClose: () => void }) {
   const [c, setC] = useState<AffiliateContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,12 +96,17 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
   async function exportPdf() {
     if (!c) return;
     const { default: jsPDF } = await import('jspdf');
+    const [headerLogo, footerLogo] = await Promise.all([
+      loadDataUrl('/c-secur360-logo.png'),
+      loadDataUrl('/logo-cerdia3.png'),
+    ]);
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
     const M = 48;
-    let y = 56;
-    const ensure = (h: number) => { if (y + h > H - 56) { doc.addPage(); y = 56; } };
+    const TOP = headerLogo ? 92 : 56;   // reserve l'espace du logo d'en-tete
+    let y = TOP;
+    const ensure = (h: number) => { if (y + h > H - 72) { doc.addPage(); y = TOP; } };
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(20);
     doc.text("CONTRAT D'AFFILIATION — CO-VENDEUR", M, y); y += 22;
@@ -116,6 +136,23 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
     doc.setFontSize(10); doc.setTextColor(60);
     doc.text(`${c.signataire_name || ''}${c.signataire_title ? ', ' + c.signataire_title : ''}`, M, y); y += 14;
     doc.text(c.signed_at ? `Signe le ${fmtDateTime(c.signed_at)}` : 'Non signe', M, y);
+
+    // Logos sur chaque page : C-Secur360 en haut a gauche, Cerdia centre en bas.
+    const stamp = (data: string, x: number, yy: number, w: number) => {
+      try {
+        const p = doc.getImageProperties(data);
+        doc.addImage(data, 'PNG', x, yy, w, w * p.height / p.width, undefined, 'FAST');
+      } catch { /* image illisible -> ignore */ }
+    };
+    const pages = doc.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i);
+      if (headerLogo) stamp(headerLogo, M, 28, 120);
+      if (footerLogo) {
+        const fw = 110;
+        stamp(footerLogo, (W - fw) / 2, H - 50, fw);
+      }
+    }
 
     doc.save(`contrat-affiliation-${c.tenant_id}.pdf`);
   }
@@ -160,11 +197,20 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error || 'Contrat indisponible.'}</div>
           ) : (
             <>
+              {/* Logo C-Secur360 (haut a gauche) — aperçu, repris dans le PDF */}
+              <div className="mb-3 flex items-center">
+                <img src="/c-secur360-logo.png" alt="C-Secur360" className="h-9 w-auto" />
+              </div>
+
               {notice && <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">{notice}</div>}
               {error && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
               {/* Parametres */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Client</span>
+                  <input className={`${inputCls} text-gray-500`} value={tenantName || tenantId} readOnly title="Client vendu (nom du compte)" />
+                </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Vendeur (co-vendeur)</span>
                   <input className={inputCls} value={c.vendor_name} onChange={e => set({ vendor_name: e.target.value })} placeholder="Nom du vendeur" disabled={locked} />
@@ -235,6 +281,11 @@ export function AffiliateContract({ tenantId, tenantName, onClose }: { tenantId:
                     {saving ? <Loader2 size={15} className="animate-spin" /> : <PenLine size={15} />} Signer le contrat
                   </button>
                 )}
+              </div>
+
+              {/* Logo Cerdia (centre en bas) — aperçu, repris au pied du PDF */}
+              <div className="mt-5 flex justify-center">
+                <img src="/logo-cerdia3.png" alt="Cerdia" className="h-8 w-auto opacity-90" />
               </div>
             </>
           )}
