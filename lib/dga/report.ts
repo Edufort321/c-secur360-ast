@@ -50,7 +50,8 @@ export async function generateDgaReport(opts: { dossier: Dossier; measures: Meas
   const logo = await loadLogo(opts.logoUrl || '/c-secur360-logo.png');
 
   const header = () => {
-    if (logo) { try { doc.addImage(logo, 'PNG', M, 24, 80, 24); } catch { /* ignore */ } }
+    // Largeur = 0 -> jsPDF conserve le ratio du logo (pas d'écrasement).
+    if (logo) { try { doc.addImage(logo, 'PNG', M, 22, 0, 24); } catch { /* ignore */ } }
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(60);
     doc.text(`Equipement: ${d.ident || '—'}   No de serie: ${d.serie || '—'}   No d'equip.: ${d.equip_no || '—'}`, W - M, 30, { align: 'right' });
     doc.setFont('helvetica', 'normal');

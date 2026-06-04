@@ -21,6 +21,8 @@ import { Trends } from '@/components/dga/Trends';
 import { generateDgaReport } from '@/lib/dga/report';
 import { evalOil, furanInterpret, trendAnalysis } from '@/lib/dga/oil';
 import { ANALYSIS_CATALOG, ANALYSIS_GROUPS, al, INTERVAL_OPTIONS, addInterval, autoNextDate, dueStatusByDate } from '@/lib/dga/catalog';
+import { interpret, globalAnalysis } from '@/lib/dga/interpret';
+import { duvalPct, duvalZone } from '@/lib/dga/duval';
 
 const COND_COLOR: Record<number, string> = {
   1: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -289,6 +291,10 @@ function Fiche(p: any) {
   const oilEval = useMemo(() => (lastM ? evalOil(lastM.oil_quality || {}, form.kv, lang) : []), [lastM, form.kv, lang]);
   const furan = useMemo(() => (lastM ? furanInterpret(lastM.oil_quality?.f_2fal, lang) : null), [lastM, lang]);
   const trendA = useMemo(() => trendAnalysis(measures.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang), [measures, lang]);
+  const worstIdx = lastM ? Math.max(0, (lastM.condition || 1) - 1) : 0;
+  const zoneObj = lastM ? duvalZone(duvalPct({ ch4: +(lastM.ch4 || 0), c2h4: +(lastM.c2h4 || 0), c2h2: +(lastM.c2h2 || 0) }), lang) : { code: '—', label: '' };
+  const interp = useMemo(() => (lastM ? interpret(lastM, measures[measures.length - 2] || null, zoneObj, worstIdx, lang) : null), [lastM, measures, zoneObj, worstIdx, lang]);
+  const gAna = useMemo(() => (lastM ? globalAnalysis(lastM, oilEval, furan, worstIdx, lang) : null), [lastM, oilEval, furan, worstIdx, lang]);
 
   useEffect(() => { setForm(draft || selected || { ident: '' }); }, [draft, selected]);
   useEffect(() => { (async () => { if (selected?.id) { const ms = await listMeasures(tenant, selected.id); setMeasures(ms); const lm = ms[ms.length - 1]; if (lm?.ai_summary) { setAiText(lm.ai_summary); setAiSaved(true); } else { setAiText(''); } } else { setMeasures([]); setAiText(''); } setAi(null); })(); }, [selected, tenant]);
@@ -539,6 +545,31 @@ function Fiche(p: any) {
               <p className="mt-2 text-xs text-gray-700 dark:text-gray-300">{trendA.txt}</p>
             </div>
           </div>
+
+          {/* Interprétation DGA + Note globale */}
+          {interp && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr('Interprétation', 'Interpretation')}</h3>
+              <ul className="space-y-1">
+                {interp.items.map((it, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <span className={`mt-0.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full ${it.lvl === 'crit' ? 'bg-red-500' : it.lvl === 'warn' ? 'bg-amber-500' : 'bg-blue-400'}`} />
+                    <span className="text-gray-700 dark:text-gray-300">{it.txt}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-900/40">
+                <div className="text-xs font-bold text-gray-800 dark:text-gray-100">{interp.reco.title}</div>
+                <ul className="mt-1 list-disc pl-5 text-xs text-gray-600 dark:text-gray-300">{interp.reco.steps.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+              {gAna && (
+                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100">
+                  <div className="mb-0.5 text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">{tr('Analyse globale', 'Global analysis')}</div>
+                  {gAna.main}{gAna.anti ? <> {gAna.anti}</> : null}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tendances */}
           {measures.length >= 2 && (
