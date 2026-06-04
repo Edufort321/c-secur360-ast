@@ -88,10 +88,17 @@ export function TransfoView(props: {
 
   useEffect(() => { setSelIdx(Math.max(0, data.length - 1)); }, [data.length]);
   useEffect(() => {
-    setForm(dossier); setRecoDraft(extra.manual_reco || ''); setDateDraft(extra.next_date_manual || ''); setProjectNo(extra.project_no || '');
+    setForm(dossier); setDateDraft(extra.next_date_manual || ''); setProjectNo(extra.project_no || '');
+    setRecoDraft(extra['manual_reco_' + lang] ?? extra.manual_reco ?? '');
     if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); } else { setPhotos([]); setAnomalies([]); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dossier.id]);
+  // La reco IA est stockée par langue (manual_reco_fr/en) -> on rafraîchit le texte affiché au changement de langue.
+  useEffect(() => {
+    const ex = dossier.extra || {};
+    setRecoDraft(ex['manual_reco_' + lang] ?? ex.manual_reco ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
   const updateAnomalies = (next: Anomaly[]) => {
     setAnomalies(next);
     if (dossier.id) saveAnomalies(dossier.id, next).then(r => { if (r.error) setNotice(tr('Anomalies non sauvegardées (migration 121 « anomalies » manquante ?) : ', 'Anomalies not saved (missing migration 121 "anomalies"?): ') + r.error); });
@@ -187,11 +194,12 @@ export function TransfoView(props: {
       const j = await resp.json();
       if (!resp.ok || j.error) throw new Error(j.error || 'IA');
       const a = j.analysis;
-      const interpTxt = tr(a.summaryFr || a.summary || '', a.summaryEn || a.summary || '');
       const just = a.recheckJustification ? `\n\n— ${a.recheckJustification}` : '';
-      const full = interpTxt + just;
-      setRecoDraft(full);
-      const patch: any = { manual_reco: full };
+      // Stockage bilingue : le rapport/écran affiche la langue courante et se traduit au toggle FR/EN.
+      const fullFr = (a.summaryFr || a.summary || '') + just;
+      const fullEn = (a.summaryEn || a.summary || '') + just;
+      setRecoDraft(lang === 'en' ? fullEn : fullFr);
+      const patch: any = { manual_reco_fr: fullFr, manual_reco_en: fullEn, manual_reco: lang === 'en' ? fullEn : fullFr };
       if (a.targetedMonths && lastMeasure) {
         const td = addMonths(lastMeasure.sample_date || '', Math.round(a.targetedMonths));
         if (td) { patch.next_date_manual = td; patch.interval_id = 'custom'; setDateDraft(td); }
@@ -211,17 +219,24 @@ export function TransfoView(props: {
 
   // Export : nom de fichier PDF par défaut = DGA-{n° série} (sinon ident). Le titre du document
   // pilote aussi le libellé de l'en-tête navigateur ; restauré après impression.
-  function doExport() {
+  // IMPORTANT : on précharge/décode les images (photos transfo + photos d'anomalie) AVANT
+  // d'imprimer — le rapport est en display:none (portail) et Chrome peut sinon imprimer avant
+  // d'avoir décodé les photos base64 (les graphes SVG, eux, sortent toujours).
+  async function doExport() {
     setShowExport(false);
     const base = (dossier.serie || dossier.ident || 'rapport').toString().trim().replace(/[^\w.-]+/g, '_');
     const name = `DGA-${base}`;
     const prev = document.title;
-    setTimeout(() => {
-      document.title = name;
-      const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
-      window.addEventListener('afterprint', restore);
-      window.print();
-    }, 300);
+    const urls = [
+      ...(pages.photos ? photos.map(p => p.data) : []),
+      ...(pages.anomalies ? anomalies.filter(a => !a.archived).flatMap(a => (a.photos || []).map(p => p.data)) : []),
+    ];
+    await Promise.all(urls.map(u => new Promise<void>(res => { const im = new Image(); im.onload = () => res(); im.onerror = () => res(); im.src = u; })));
+    document.title = name;
+    const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    // petit délai pour laisser le portail refléter pages/photos avant le rendu d'impression
+    setTimeout(() => window.print(), 150);
   }
 
   return (
@@ -489,7 +504,7 @@ export function TransfoView(props: {
                 <h2 className={H2 + ' !mb-0'}>✍️ {tr('Recommandation manuelle', 'Manual recommendation')}</h2>
                 <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} disabled={aiBusy} onClick={runAI}>{aiBusy ? tr('Génération…', 'Generating…') : '✨ ' + tr("Générer avec l'IA", 'Generate with AI')}</button>
               </div>
-              <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => updateExtra({ manual_reco: recoDraft })} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
+              <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => updateExtra({ ['manual_reco_' + lang]: recoDraft, manual_reco: recoDraft })} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
             </section>
           </div>
         </div>
