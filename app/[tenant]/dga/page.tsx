@@ -234,7 +234,7 @@ export default function DgaPage() {
 
   return (
     <Shell tenant={tenant}>
-      <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className={`mx-auto px-4 py-6 ${view === 'fiche' ? 'max-w-screen-2xl' : 'max-w-6xl'}`}>
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-600 text-white"><FlaskConical size={18} /></span>

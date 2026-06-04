@@ -92,7 +92,10 @@ export function TransfoView(props: {
     if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); } else { setPhotos([]); setAnomalies([]); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dossier.id]);
-  const updateAnomalies = (next: Anomaly[]) => { setAnomalies(next); if (dossier.id) saveAnomalies(dossier.id, next); };
+  const updateAnomalies = (next: Anomaly[]) => {
+    setAnomalies(next);
+    if (dossier.id) saveAnomalies(dossier.id, next).then(r => { if (r.error) setNotice(tr('Anomalies non sauvegardées (migration 121 « anomalies » manquante ?) : ', 'Anomalies not saved (missing migration 121 "anomalies"?): ') + r.error); });
+  };
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
@@ -165,7 +168,10 @@ export function TransfoView(props: {
       try { const data = await compressImage(f); next.push({ id: 'p_' + Date.now() + Math.random().toString(36).slice(2, 6), data, name: f.name }); }
       catch { setNotice(tr('Image trop volumineuse.', 'Image too large.')); }
     }
-    setPhotos(next); await savePhotos(dossier.id, next);
+    setPhotos(next);
+    const r = await savePhotos(dossier.id, next);
+    if (r.error) setNotice(tr('Photos non sauvegardées (migration 120 « photos » manquante ?) : ', 'Photos not saved (missing migration 120 "photos"?): ') + r.error);
+    else setNotice(null);
   }
   async function delPhoto(id: string) {
     if (!dossier.id || !confirm(tr('Supprimer cette photo ?', 'Delete this photo?'))) return;
@@ -262,35 +268,36 @@ export function TransfoView(props: {
           <div className="mt-2 flex flex-wrap gap-1.5">{trendA.detail.map((d, i) => <span key={i} className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">{d}</span>)}</div>
         </section>
 
+        {/* ÉVOLUTION DES GAZ — PLEINE LARGEUR */}
+        {data.length > 1 && (
+          <section className={CARD}>
+            <h2 className={H2}>{tr('Évolution des gaz combustibles', 'Combustible gas evolution')}</h2>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {GAS_FIELDS.filter(g => COMBUSTIBLE.includes(g.key)).map(g => (
+                <button key={g.u} onClick={() => setVisible(v => ({ ...v, [g.key]: !v[g.key as string] }))}
+                  className="rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                  style={{ borderColor: g.color, background: visible[g.key as string] ? g.color : 'transparent', color: visible[g.key as string] ? '#fff' : g.color }}>
+                  {gl(g.u, lang)}
+                </button>
+              ))}
+            </div>
+            <ResponsiveContainer width="100%" height={360}>
+              <LineChart data={chartData} margin={{ top: 10, right: 24, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8ddd0" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} /><Legend wrapperStyle={{ fontSize: 11 }} />
+                {GAS_FIELDS.filter(g => COMBUSTIBLE.includes(g.key) && visible[g.key as string]).map(g => (
+                  <Line key={g.u} type="monotone" dataKey={g.key as string} name={gl(g.u, lang)} stroke={g.color} strokeWidth={2} dot={{ r: 3 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </section>
+        )}
+
         {/* GRILLE 2 COLONNES */}
         <div className="grid gap-4 lg:grid-cols-2">
           {/* ── COLONNE GAUCHE ── */}
           <div className="space-y-4">
-            {data.length > 1 && (
-              <section className={CARD}>
-                <h2 className={H2}>{tr('Évolution des gaz combustibles', 'Combustible gas evolution')}</h2>
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {GAS_FIELDS.filter(g => COMBUSTIBLE.includes(g.key)).map(g => (
-                    <button key={g.u} onClick={() => setVisible(v => ({ ...v, [g.key]: !v[g.key as string] }))}
-                      className="rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                      style={{ borderColor: g.color, background: visible[g.key as string] ? g.color : 'transparent', color: visible[g.key as string] ? '#fff' : g.color }}>
-                      {gl(g.u, lang)}
-                    </button>
-                  ))}
-                </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e8ddd0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} /><Legend wrapperStyle={{ fontSize: 11 }} />
-                    {GAS_FIELDS.filter(g => COMBUSTIBLE.includes(g.key) && visible[g.key as string]).map(g => (
-                      <Line key={g.u} type="monotone" dataKey={g.key as string} name={gl(g.u, lang)} stroke={g.color} strokeWidth={2} dot={{ r: 3 }} />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </section>
-            )}
-
             {/* TABLEAU IEEE (Δ% + condition) */}
             <section className={CARD}>
               <div className="flex items-center justify-between">
