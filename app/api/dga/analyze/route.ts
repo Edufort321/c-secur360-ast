@@ -26,11 +26,18 @@ normes et les résultats, sans dramatiser. Évite les mots à charge émotive ("
 (IEEE 1-4), de type de défaut probable et de tendance, puis des recommandations concrètes et proportionnées.
 Le ton doit rester professionnel d'ingénieur, neutre, orienté action.
 
+SUIVI CIBLÉ vs SUIVI COMPLET : ne pas tout refaire si le problème est localisé. Si seuls les GAZ dérivent -> suivi ciblé ["DGA"] ; si l'HUILE se dégrade (humidité, acidité, IFT, rigidité) -> ["physico-chimique"] ; si le PAPIER (furanes/DP) -> ["furanes"]. Le suivi complet (toutes analyses) reste au cycle annuel.
+Intervalles réalistes (IEEE C57.104 / IEC 60422) ET selon la tendance : défaut actif ou gaz en forte hausse -> ciblé 1 à 3 mois ; dérive modérée -> 3 à 6 mois ; tout stable -> pas de suivi ciblé (targetedMonths=null), suivi complet 12 mois.
+
 Donne une analyse claire, priorisée, actionnable. Réponds en JSON STRICT, sans texte autour :
 {"severity": 1|2|3|4, "faultType": "...", "trend": "stable|hausse|hausse rapide|baisse",
  "summaryFr": "...", "summaryEn": "...",
  "recommendationsFr": ["..."], "recommendationsEn": ["..."],
- "retestMonths": number}`;
+ "retestMonths": number,
+ "targetedMonths": <entier mois avant suivi ciblé rapproché, ou null si non nécessaire>,
+ "targetedAnalyses": ["parmi: DGA, furanes, physico-chimique, facteur de puissance, antioxydant"],
+ "fullMonths": <entier mois avant suivi complet, généralement 12>,
+ "recheckJustification": "1 phrase justifiant les intervalles selon les normes et la tendance"}`;
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;

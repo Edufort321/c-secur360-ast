@@ -6,7 +6,14 @@ export interface Dossier {
   company?: string; contact?: string; email?: string; sample_id?: string; report_id?: string; po_no?: string;
   client?: string; ident: string; serie?: string; equip_no?: string; apparatus?: string; description?: string;
   alarm?: string; kv?: number | null; mva?: number | null; oil_vol?: number | null; oil_type?: string;
-  manufacturer?: string; year?: string; phone?: string; extra?: any; flag?: string; notes?: string;
+  manufacturer?: string; year?: string; phone?: string;
+  preservation?: string; paper_at?: string; category?: string; cooling?: string;
+  sample_point?: string; reason?: string; authorized_by?: string; analyzed_by?: string;
+  // extra (jsonb) — suivi par transformateur, repris du prototype : analyses (string[]),
+  // interval_id, next_date_manual, targeted_analyses (string[]), targeted_months, full_next_date,
+  // project_no, manual_reco, global_note.
+  extra?: any; flag?: string; notes?: string;
+  photos?: { id: string; data: string; name?: string }[]; // base64 compressé (colonne séparée)
   created_at?: string; updated_at?: string;
 }
 export interface Measure {
@@ -17,11 +24,25 @@ export interface Measure {
 }
 
 // Champs équipement (ordre + libellés) — repris fidèlement de l'app d'origine.
-// Ordre d'affichage : Client / Équipement / N° série en haut, puis infos techniques,
-// puis info de commande, puis CONTACT/COURRIEL/TÉL en fin (groupe 'contact' = exclu du rapport).
-export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip' | 'contact'; fr: string; en: string; ph?: string; num?: boolean }[] = [
-  { key: 'client', group: 'equip', fr: 'Client / Localisation', en: 'Client / Location', ph: 'ex. NEW RICHMOND' },
-  { key: 'ident', group: 'equip', fr: "Nom d'équipement *", en: 'Equipment name *', ph: 'ex. NEW RICHMOND TG1' },
+// Ordre et groupes IDENTIQUES au prototype dga-oil-app (EQUIP_FIELDS / EQUIP_GROUPS).
+// contact/courriel/téléphone restent EXCLUS du rapport PDF (filtrés à l'export).
+export const EQUIP_GROUPS: { id: 'order' | 'equip' | 'sampling'; fr: string; en: string }[] = [
+  { id: 'order', fr: 'Information de la commande', en: 'Order information' },
+  { id: 'equip', fr: "Information de l'équipement", en: 'Equipment information' },
+  { id: 'sampling', fr: 'Échantillonnage', en: 'Sampling' },
+];
+export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip' | 'sampling'; fr: string; en: string; ph?: string; num?: boolean }[] = [
+  // — Information de la commande —
+  { key: 'company', group: 'order', fr: 'Compagnie', en: 'Company', ph: 'ex. CDU06' },
+  { key: 'contact', group: 'order', fr: 'Contact', en: 'Contact', ph: 'ex. Emmanuelle Schott' },
+  { key: 'email', group: 'order', fr: 'Courriel', en: 'Email' },
+  { key: 'phone', group: 'order', fr: 'Téléphone', en: 'Phone' },
+  { key: 'sample_id', group: 'order', fr: 'ID échantillon', en: 'Sample ID' },
+  { key: 'report_id', group: 'order', fr: 'ID rapport', en: 'Report ID' },
+  { key: 'po_no', group: 'order', fr: 'N° de BC', en: 'PO No.' },
+  // — Information de l'équipement —
+  { key: 'client', group: 'equip', fr: 'Localisation / Sous-station', en: 'Location / Substation', ph: 'ex. NEW RICHMOND' },
+  { key: 'ident', group: 'equip', fr: 'Équipement (Nom) *', en: 'Equipment (Name) *', ph: 'ex. NEW RICHMOND TG1' },
   { key: 'serie', group: 'equip', fr: 'N° de série', en: 'Serial No.' },
   { key: 'equip_no', group: 'equip', fr: "N° d'équipement", en: 'Equipment No.' },
   { key: 'apparatus', group: 'equip', fr: "Type d'appareil", en: 'Apparatus type' },
@@ -33,19 +54,34 @@ export const EQUIP_FIELDS: { key: keyof Dossier; group: 'order' | 'equip' | 'con
   { key: 'oil_type', group: 'equip', fr: "Type d'huile", en: 'Oil type' },
   { key: 'manufacturer', group: 'equip', fr: 'Fabricant', en: 'Manufacturer' },
   { key: 'year', group: 'equip', fr: 'Année', en: 'Year' },
-  { key: 'company', group: 'order', fr: 'Compagnie', en: 'Company', ph: 'ex. CDU06' },
-  { key: 'sample_id', group: 'order', fr: 'ID échantillon', en: 'Sample ID' },
-  { key: 'report_id', group: 'order', fr: 'ID rapport', en: 'Report ID' },
-  { key: 'po_no', group: 'order', fr: 'N° de BC', en: 'PO No.' },
-  // Coordonnées du client — N'APPARAISSENT PAS dans le rapport.
-  { key: 'contact', group: 'contact', fr: 'Contact (client)', en: 'Contact (client)' },
-  { key: 'email', group: 'contact', fr: 'Courriel (client)', en: 'Email (client)' },
-  { key: 'phone', group: 'contact', fr: 'Téléphone (client)', en: 'Phone (client)' },
+  { key: 'preservation', group: 'equip', fr: 'Préservation', en: 'Preservation' },
+  { key: 'paper_at', group: 'equip', fr: 'Papier A.T.', en: 'A.T. paper' },
+  { key: 'category', group: 'equip', fr: 'Catégorie', en: 'Category' },
+  { key: 'cooling', group: 'equip', fr: 'Refroidissement', en: 'Cooling' },
+  // — Échantillonnage —
+  { key: 'sample_point', group: 'sampling', fr: "Point d'échantillonnage", en: 'Sampling point' },
+  { key: 'reason', group: 'sampling', fr: 'Raison', en: 'Reason' },
+  { key: 'authorized_by', group: 'sampling', fr: 'Autorisé par', en: 'Authorized by' },
+  { key: 'analyzed_by', group: 'sampling', fr: 'Analysé par', en: 'Analyzed by' },
 ];
 
+// Colonnes de la liste — on EXCLUT `photos` (base64 volumineux) pour garder la liste légère.
+// Repli sur '*' si une colonne récente (migrations 119/120) n'est pas encore appliquée.
+const LIST_COLS = 'id,tenant_id,company,contact,email,sample_id,report_id,po_no,client,ident,serie,equip_no,apparatus,description,alarm,kv,mva,oil_vol,oil_type,manufacturer,year,phone,preservation,paper_at,category,cooling,sample_point,reason,authorized_by,analyzed_by,extra,flag,notes,created_at,updated_at';
 export async function listDossiers(tenant: string): Promise<Dossier[]> {
-  const { data } = await supabase.from('dga_dossiers').select('*').eq('tenant_id', tenant).order('ident');
-  return (data || []) as Dossier[];
+  let res = await supabase.from('dga_dossiers').select(LIST_COLS).eq('tenant_id', tenant).order('ident');
+  if (res.error) res = await supabase.from('dga_dossiers').select('*').eq('tenant_id', tenant).order('ident');
+  return (res.data || []) as Dossier[];
+}
+// Photos chargées à la demande (à l'ouverture de la fiche), jamais dans la liste.
+export async function getPhotos(id: string): Promise<{ id: string; data: string; name?: string }[]> {
+  const { data, error } = await supabase.from('dga_dossiers').select('photos').eq('id', id).maybeSingle();
+  if (error || !data) return [];
+  return ((data as any).photos as any[]) || [];
+}
+export async function savePhotos(id: string, photos: { id: string; data: string; name?: string }[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ photos }).eq('id', id);
+  return error ? { error: error.message } : {};
 }
 export async function listAllMeasures(tenant: string): Promise<Measure[]> {
   const { data } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).order('sample_date', { ascending: true });
