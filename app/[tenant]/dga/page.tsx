@@ -20,6 +20,7 @@ import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { Trends } from '@/components/dga/Trends';
 import { generateDgaReport } from '@/lib/dga/report';
 import { evalOil, furanInterpret, trendAnalysis } from '@/lib/dga/oil';
+import { ANALYSIS_CATALOG, ANALYSIS_GROUPS, al, INTERVAL_OPTIONS, addInterval, autoNextDate, dueStatusByDate } from '@/lib/dga/catalog';
 
 const COND_COLOR: Record<number, string> = {
   1: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -377,6 +378,67 @@ function Fiche(p: any) {
             <select className={inp} value={form.flag || ''} onChange={e => setForm(s => ({ ...s, flag: e.target.value }))}>
               <option value="">—</option><option value="surveillance">{tr('En surveillance', 'Monitoring')}</option><option value="critique">{tr('Critique', 'Critical')}</option><option value="ok">OK</option>
             </select></label>
+        </div>
+      </div>
+
+      {/* Catalogue d'analyses + intervalle de reprise */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-2 text-sm font-bold">{tr("Catalogue d'analyses", 'Analysis catalog')}</h3>
+          {ANALYSIS_GROUPS.map(grp => (
+            <div key={grp.id} className="mb-2">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{al(grp, lang)}</div>
+              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                {ANALYSIS_CATALOG.filter(a => a.group === grp.id).map(a => {
+                  const chosen: string[] = form.extra?.analyses || [];
+                  const on = chosen.includes(a.key);
+                  return (
+                    <label key={a.key} className="flex items-center gap-2 text-xs">
+                      <input type="checkbox" checked={on} className="accent-rose-600" onChange={() => setForm(s => { const cur: string[] = s.extra?.analyses || []; const next = on ? cur.filter(k => k !== a.key) : [...cur, a.key]; return { ...s, extra: { ...(s.extra || {}), analyses: next } }; })} />
+                      <span className="text-gray-700 dark:text-gray-300">{al(a, lang)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-2 text-sm font-bold">{tr('Prochaine analyse (reprise)', 'Next analysis (recheck)')}</h3>
+          {(() => {
+            const last = measures[measures.length - 1];
+            const auto = last ? autoNextDate(last.sample_date, last.condition ? last.condition - 1 : 0) : null;
+            const next = form.extra?.next_date || auto;
+            const due = dueStatusByDate(next);
+            const DUE: Record<string, string> = { overdue: 'bg-red-100 text-red-700', soon: 'bg-amber-100 text-amber-700', ok: 'bg-emerald-100 text-emerald-700', none: 'bg-gray-100 text-gray-500' };
+            return (
+              <div className="space-y-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-gray-500">{tr('Intervalle', 'Interval')} :</span>
+                  <select className={`${inp} w-40`} value={form.extra?.interval_id || 'auto'} onChange={e => setForm(s => {
+                    const id = e.target.value; const opt = INTERVAL_OPTIONS.find(o => o.id === id);
+                    const nd = id === 'auto' ? null : (last && opt && opt.id !== 'custom' ? addInterval(last.sample_date || '', opt) : (s.extra?.next_date || null));
+                    return { ...s, extra: { ...(s.extra || {}), interval_id: id, next_date: nd } };
+                  })}>
+                    <option value="auto">{tr('Auto (selon condition)', 'Auto (by condition)')}</option>
+                    {INTERVAL_OPTIONS.map(o => <option key={o.id} value={o.id}>{al(o, lang)}</option>)}
+                  </select>
+                </div>
+                {form.extra?.interval_id === 'custom' && (
+                  <input type="date" className={`${inp} w-44`} value={form.extra?.next_date || ''} onChange={e => setForm(s => ({ ...s, extra: { ...(s.extra || {}), next_date: e.target.value } }))} />
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-700 dark:text-gray-200">{tr('Prochaine', 'Next')} : <b>{next || '—'}</b></span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${DUE[due.code]}`}>
+                    {due.code === 'overdue' ? tr(`En retard (${Math.abs(due.days || 0)} j)`, `Overdue (${Math.abs(due.days || 0)}d)`)
+                      : due.code === 'soon' ? tr(`Bientôt (${due.days} j)`, `Soon (${due.days}d)`)
+                        : due.code === 'ok' ? tr(`À jour (${due.days} j)`, `OK (${due.days}d)`) : '—'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400">{tr('Auto : Cond.1→12 mois, 2→6, 3→3, 4→1.', 'Auto: Cond.1→12 mo, 2→6, 3→3, 4→1.')}</p>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
