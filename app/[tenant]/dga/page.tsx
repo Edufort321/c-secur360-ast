@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import {
   EQUIP_FIELDS, listDossiers, listAllMeasures, listMeasures, saveDossier, deleteDossier,
-  saveMeasure, deleteMeasure, dueStatus, type Dossier, type Measure,
+  saveMeasure, deleteMeasure, dueStatus, matchDossier, type Dossier, type Measure,
 } from '@/lib/dga/dossiers';
 import { FlaskConical, Lock, Loader2, Save, Plus, Search, Upload, Activity, Trash2, ArrowLeft, FileText, Sparkles } from 'lucide-react';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
@@ -108,17 +108,32 @@ export default function DgaPage() {
       const j = await resp.json();
       if (!resp.ok || j.error) throw new Error(j.error || 'extraction');
       const eq = j.equipment || {};
-      const dossier: Dossier = {
+      // Assemblage intelligent : rattacher au dossier existant (n° série / nom) sinon créer.
+      const match = matchDossier(dossiers, eq);
+      const fields: Dossier = {
         ident: eq.identification || eq.equipment || file.name.replace(/\.pdf$/i, ''), client: eq.location || '', serie: eq.serialNo || '',
         company: eq.company || '', contact: eq.contact || '', email: eq.email || '', equip_no: eq.equipNo || '', apparatus: eq.apparatusType || '',
         description: eq.description || '', kv: eq.kvClass ? Number(eq.kvClass) : null, mva: eq.maxMVA ? Number(eq.maxMVA) : null,
         oil_vol: eq.oilVolumeL ? Number(eq.oilVolumeL) : null, oil_type: eq.oilType || '', manufacturer: eq.manufacturer || '', year: eq.year ? String(eq.year) : '',
       };
-      const saved = await saveDossier(tenant, dossier);
-      if (saved.error || !saved.data?.id) throw new Error(saved.error || 'enregistrement dossier');
-      const did = saved.data.id;
+      let did: string;
+      if (match?.id) {
+        did = match.id;
+        // Compléter uniquement les champs vides du dossier existant (ne pas écraser).
+        const patch: any = { ...match };
+        for (const k of Object.keys(fields) as (keyof Dossier)[]) { if ((match as any)[k] == null || (match as any)[k] === '') (patch as any)[k] = (fields as any)[k]; }
+        await saveDossier(tenant, patch);
+      } else {
+        const saved = await saveDossier(tenant, fields);
+        if (saved.error || !saved.data?.id) throw new Error(saved.error || 'enregistrement dossier');
+        did = saved.data.id;
+      }
+      // Dédoublonnage par date d'échantillon (fusion des rapports en un seul historique).
+      const existingDates = new Set(allMeasures.filter(m => m.dossier_id === did && m.sample_date).map(m => m.sample_date));
       const num = (v: any) => (v == null || v === '' ? 0 : Number(v) || 0);
+      let added = 0;
       for (const mm of (j.measurements || [])) {
+        if (mm.date && existingDates.has(mm.date)) continue; // déjà présent
         const gas: GasInput = { h2: num(mm.H2), ch4: num(mm.CH4), c2h6: num(mm.C2H6), c2h4: num(mm.C2H4), c2h2: num(mm.C2H2), co: num(mm.CO), co2: num(mm.CO2) };
         const dg = diagnoseFull(gas);
         await saveMeasure(tenant, did, {
@@ -126,9 +141,21 @@ export default function DgaPage() {
           oil_quality: { moisture: mm.moisture, ift: mm.ift, acid: mm.acid, color: mm.color, dielectric: mm.dielectric, dbd877: mm.dbd877, pf25: mm.pf25, pf100: mm.pf100, f_2fal: mm.f_2fal },
           tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf',
         });
+        added++;
       }
+      // Analyse IA automatique sur l'historique assemblé (l'IA "suit" le dossier).
+      try {
+        const hist = await listMeasures(tenant, did);
+        if (hist.length) {
+          const ar = await fetch('/api/dga/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dossier: { ...fields }, measures: hist }) });
+          const aj = await ar.json();
+          if (ar.ok && aj.analysis) { const lastM = hist[hist.length - 1]; if (lastM?.id) await saveMeasure(tenant, did, { ...lastM, ai_summary: tr(aj.analysis.summaryFr, aj.analysis.summaryEn) }); }
+        }
+      } catch { /* analyse best-effort */ }
       await reload(); setSelId(did); setDraft(null); setView('fiche');
-      setNotice(tr(`Importé : ${(j.measurements || []).length} mesure(s).`, `Imported: ${(j.measurements || []).length} measure(s).`));
+      setNotice(match
+        ? tr(`Rapport assemblé au dossier existant « ${match.ident} » : ${added} nouvelle(s) mesure(s).`, `Report merged into existing dossier "${match.ident}": ${added} new measure(s).`)
+        : tr(`Nouveau dossier créé : ${added} mesure(s).`, `New dossier created: ${added} measure(s).`));
     } catch (e: any) { setNotice(tr('Import PDF impossible : ', 'PDF import failed: ') + (e?.message || e)); }
     finally { setImporting(false); }
   }

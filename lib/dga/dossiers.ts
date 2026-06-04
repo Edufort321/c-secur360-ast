@@ -75,6 +75,16 @@ export async function saveMeasure(tenant: string, dossierId: string, m: Measure)
 }
 export async function deleteMeasure(id: string) { await supabase.from('dga_measures').delete().eq('id', id); }
 
+// Assemblage intelligent : retrouve un dossier existant correspondant (par n° série, sinon par nom).
+export function matchDossier(dossiers: Dossier[], eq: { serialNo?: string; identification?: string; equipment?: string }): Dossier | null {
+  const norm = (s?: string) => (s || '').trim().toLowerCase();
+  const serie = norm(eq.serialNo);
+  if (serie) { const bySerie = dossiers.find(d => norm(d.serie) === serie); if (bySerie) return bySerie; }
+  const name = norm(eq.identification || eq.equipment);
+  if (name) { const byName = dossiers.find(d => norm(d.ident) === name); if (byName) return byName; }
+  return null;
+}
+
 // Statut de suivi : échéance de re-test selon la dernière condition.
 export type DueStatus = 'overdue' | 'soon' | 'uptodate' | 'none';
 export function retestMonthsFor(condition?: number): number {
