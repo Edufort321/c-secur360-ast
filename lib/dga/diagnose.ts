@@ -46,16 +46,16 @@ function condFor(value: number, limits: [number, number, number]): 1 | 2 | 3 | 4
 export function duvalTriangle1(ch4: number, c2h2: number, c2h4: number): DuvalZone {
   const tot = ch4 + c2h2 + c2h4;
   if (tot <= 0) return 'N';
-  const m = (100 * ch4) / tot;   // %CH4
-  const a = (100 * c2h2) / tot;  // %C2H2
-  const e = (100 * c2h4) / tot;  // %C2H4
-  if (m >= 98) return 'PD';                          // décharges partielles
-  if (a >= 13 && e <= 23) return 'D1';               // décharges faible énergie
-  if (a >= 13 && e > 23) return 'D2';                // décharges forte énergie (arc)
-  if (a < 4 && e < 20) return 'T1';                  // thermique < 300 °C
-  if (a < 4 && e >= 20 && e < 50) return 'T2';       // thermique 300-700 °C
-  if (a < 15 && e >= 50) return 'T3';                // thermique > 700 °C
-  return 'DT';                                       // mélange électrique/thermique
+  // Frontières identiques au prototype dga-oil-app (duvalZone). NE PAS approximer.
+  const pCH4 = (100 * ch4) / tot, pC2H4 = (100 * c2h4) / tot, pC2H2 = (100 * c2h2) / tot;
+  if (pCH4 >= 98) return 'PD';
+  if (pC2H2 <= 4 && pC2H4 <= 20) return 'T1';
+  if (pC2H2 <= 4 && pC2H4 <= 50) return 'T2';
+  if (pC2H2 <= 15 && pC2H4 >= 50) return 'T3';
+  if (pC2H2 >= 13 && pC2H2 <= 29 && pC2H4 <= 50) return 'D1';
+  if (pC2H2 > 29) return 'D2';
+  if (pC2H2 >= 13 && pC2H2 <= 29 && pC2H4 > 50) return 'D2';
+  return 'DT';
 }
 
 const ZONE_TEXT: Record<DuvalZone, { fr: string; en: string }> = {

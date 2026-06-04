@@ -1,96 +1,54 @@
 // ============================================================================
-// TRIANGLE DE DUVAL 1 (huile minérale) — moteur rigoureux.
-//
-// SOURCES des frontières de zones :
-//   - M. Duval, "A review of faults detectable by gas-in-oil analysis in
-//     transformers", IEEE Electrical Insulation Magazine, 2002.
-//   - IEC 60599 (interprétation des gaz dissous) ; IEEE C57.104-2019, annexe Duval.
-//   Les frontières sont définies par les droites %CH4=98 ; %C2H4=20 et 50 ;
-//   %C2H2=4 et 13 ; %C2H4=23 et 40 ; %C2H2=29. Les coordonnées exactes des
-//   sommets varient légèrement selon les implémentations — À VÉRIFIER contre la
-//   source faisant autorité (le réviseur l'a explicitement demandé).
-//
-// Représentation : chaque zone est un polygone dans le plan (%C2H2, %C2H4) ;
-// %CH4 = 100 - %C2H2 - %C2H4 est implicite. La détection se fait par
-// point-dans-polygone (ray casting) en priorité PD>T1>T2>T3>D1>D2>DT.
+// TRIANGLE DE DUVAL 1 — logique reprise À L'IDENTIQUE du prototype dga-oil-app.jsx
+// (duvalPct ~l.310, duvalZone ~l.311, ZONE_COLORS ~l.304, triCoords ~l.618).
+// Seule la syntaxe est adaptée (TS, clés de gaz en minuscules) ; AUCUNE frontière modifiée.
+// Disposition des sommets identique au prototype : CH4 en haut, C2H4 bas-gauche, C2H2 bas-droite.
+// Cas de validation : CH4=7,C2H2=0,C2H4=2 -> %CH4≈77.8,%C2H4≈22.2,%C2H2=0 -> zone T2.
 // ============================================================================
 
-export type DuvalZone = 'PD' | 'T1' | 'T2' | 'T3' | 'D1' | 'D2' | 'DT';
+export type DuvalZoneCode = 'PD' | 'T1' | 'T2' | 'T3' | 'D1' | 'D2' | 'DT' | '—';
 
-// Sommets en [%C2H2, %C2H4]. (Ordre des zones = ordre de test.)
-export const DUVAL1_ZONES: { code: DuvalZone; poly: [number, number][] }[] = [
-  { code: 'PD', poly: [[0, 0], [2, 0], [0, 2]] },                                  // %CH4 >= 98
-  { code: 'T1', poly: [[2, 0], [4, 20], [0, 20], [0, 2]] },                        // %C2H2<4, %C2H4<20
-  { code: 'T2', poly: [[0, 20], [4, 20], [4, 50], [0, 50]] },                      // %C2H4 20-50
-  { code: 'T3', poly: [[0, 50], [4, 50], [15, 85], [0, 100]] },                    // %C2H4 >= 50
-  { code: 'D1', poly: [[13, 0], [100, 0], [77, 23], [13, 23]] },                   // %C2H2>=13, %C2H4<=23
-  { code: 'D2', poly: [[13, 23], [77, 23], [71, 29], [29, 40], [13, 40]] },        // %C2H2 fort, %C2H4 23-40
-  { code: 'DT', poly: [[4, 20], [13, 23], [13, 40], [29, 40], [15, 85], [4, 50]] },// zone mixte centrale
-];
-
-export const ZONE_COLOR: Record<DuvalZone, string> = {
-  PD: '#60a5fa', T1: '#fde047', T2: '#fbbf24', T3: '#f97316', D1: '#f87171', D2: '#dc2626', DT: '#c084fc',
-};
-export const ZONE_LABEL: Record<DuvalZone, { fr: string; en: string }> = {
-  PD: { fr: 'Décharges partielles', en: 'Partial discharge' },
-  T1: { fr: 'Thermique < 300 °C', en: 'Thermal < 300 °C' },
-  T2: { fr: 'Thermique 300-700 °C', en: 'Thermal 300-700 °C' },
-  T3: { fr: 'Thermique > 700 °C', en: 'Thermal > 700 °C' },
-  D1: { fr: 'Décharges faible énergie', en: 'Low-energy discharge' },
-  D2: { fr: 'Décharges forte énergie (arc)', en: 'High-energy discharge (arc)' },
-  DT: { fr: 'Mélange thermique/électrique', en: 'Thermal + electrical mix' },
+export const ZONE_COLORS: Record<string, string> = {
+  PD: '#8ecae6', D1: '#fb8500', D2: '#9d0208', T1: '#ffb703', T2: '#fd9e02', T3: '#bb3e03', DT: '#6a4c93', '—': '#999',
 };
 
-// Seuil de gaz de défaut (somme CH4+C2H2+C2H4, ppm) sous lequel la méthode n'est
-// pas appliquée. IEC 60599 recommande de ne classer qu'au-dessus des valeurs
-// typiques ; ce seuil est paramétrable (défaut bas pour permettre la classification).
-export const DUVAL_MIN_PPM = 1;
+export interface DuvalPct { pCH4: number; pC2H4: number; pC2H2: number; }
 
-export interface DuvalResult { zone: DuvalZone | null; insufficient: boolean; pct: { ch4: number; c2h2: number; c2h4: number }; }
-
-// Pourcentages relatifs.
-export function duvalPercents(ch4: number, c2h2: number, c2h4: number) {
-  const t = (ch4 || 0) + (c2h2 || 0) + (c2h4 || 0);
-  if (t <= 0) return { ch4: 0, c2h2: 0, c2h4: 0, total: 0 };
-  return { ch4: (100 * ch4) / t, c2h2: (100 * c2h2) / t, c2h4: (100 * c2h4) / t, total: t };
+// duvalPct(d) — coordonnées barycentriques (identique au prototype).
+export function duvalPct(d: { ch4?: number; c2h4?: number; c2h2?: number }): DuvalPct | null {
+  const CH4 = d.ch4 || 0, C2H4 = d.c2h4 || 0, C2H2 = d.c2h2 || 0;
+  const s = CH4 + C2H4 + C2H2;
+  if (!s) return null;
+  return { pCH4: (CH4 / s) * 100, pC2H4: (C2H4 / s) * 100, pC2H2: (C2H2 / s) * 100 };
 }
 
-// Point-dans-polygone (ray casting) dans le plan (%C2H2, %C2H4).
-function inPoly(x: number, y: number, poly: [number, number][]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i], [xj, yj] = poly[j];
-    if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-
-export function classifyDuval1(ch4: number, c2h2: number, c2h4: number, minPpm = DUVAL_MIN_PPM): DuvalResult {
-  const p = duvalPercents(ch4, c2h2, c2h4);
-  if (p.total < minPpm) return { zone: null, insufficient: true, pct: { ch4: p.ch4, c2h2: p.c2h2, c2h4: p.c2h4 } };
-  const x = p.c2h2, y = p.c2h4;
-  for (const z of DUVAL1_ZONES) if (inPoly(x, y, z.poly)) return { zone: z.code, insufficient: false, pct: { ch4: p.ch4, c2h2: p.c2h2, c2h4: p.c2h4 } };
-  // Repli : zone la plus proche (centroïde) si le point tombe sur une frontière/un trou.
-  let best: DuvalZone = 'DT', bestD = Infinity;
-  for (const z of DUVAL1_ZONES) {
-    const cx = z.poly.reduce((s, q) => s + q[0], 0) / z.poly.length;
-    const cy = z.poly.reduce((s, q) => s + q[1], 0) / z.poly.length;
-    const dd = (cx - x) ** 2 + (cy - y) ** 2; if (dd < bestD) { bestD = dd; best = z.code; }
-  }
-  return { zone: best, insufficient: false, pct: { ch4: p.ch4, c2h2: p.c2h2, c2h4: p.c2h4 } };
-}
-
-// Conversion barycentrique (%CH4 sommet haut, %C2H2 bas-gauche, %C2H4 bas-droite)
-// vers cartésien dans un triangle équilatéral de côté `side`, origine en haut-gauche
-// du cadre, avec marge `pad`. Retourne {x,y} en unités SVG.
-export function baryToCartesian(pctC2h2: number, pctC2h4: number, side: number, pad: number) {
-  const pctCh4 = 100 - pctC2h2 - pctC2h4;
-  const h = (Math.sqrt(3) / 2) * side;
-  const top = { x: pad + side / 2, y: pad };
-  const bl = { x: pad, y: pad + h };
-  const br = { x: pad + side, y: pad + h };
-  return {
-    x: (pctCh4 / 100) * top.x + (pctC2h2 / 100) * bl.x + (pctC2h4 / 100) * br.x,
-    y: (pctCh4 / 100) * top.y + (pctC2h2 / 100) * bl.y + (pctC2h4 / 100) * br.y,
+// duvalZone(p) — détection de zone (frontières identiques au prototype).
+export function duvalZone(p: DuvalPct | null, lang: 'fr' | 'en' = 'fr'): { code: DuvalZoneCode; label: string } {
+  const EN = lang === 'en';
+  if (!p) return { code: '—', label: EN ? 'Insufficient data' : 'Données insuffisantes' };
+  const { pCH4, pC2H4, pC2H2 } = p;
+  const L: Record<string, string> = {
+    PD: EN ? 'Partial discharges' : 'Décharges partielles',
+    T1: EN ? 'Thermal fault < 300 °C' : 'Défaut thermique < 300 °C',
+    T2: EN ? 'Thermal fault 300–700 °C' : 'Défaut thermique 300–700 °C',
+    T3: EN ? 'Thermal fault > 700 °C' : 'Défaut thermique > 700 °C',
+    D1: EN ? 'Low-energy discharges' : 'Décharges faible énergie',
+    D2: EN ? 'High-energy discharges (arc)' : 'Décharges forte énergie (arc)',
+    DT: EN ? 'Mixed thermal + electrical' : 'Mélange thermique + décharges',
   };
+  if (pCH4 >= 98) return { code: 'PD', label: L.PD };
+  if (pC2H2 <= 4 && pC2H4 <= 20) return { code: 'T1', label: L.T1 };
+  if (pC2H2 <= 4 && pC2H4 <= 50) return { code: 'T2', label: L.T2 };
+  if (pC2H2 <= 15 && pC2H4 >= 50) return { code: 'T3', label: L.T3 };
+  if (pC2H2 >= 13 && pC2H2 <= 29 && pC2H4 <= 50) return { code: 'D1', label: L.D1 };
+  if (pC2H2 > 29) return { code: 'D2', label: L.D2 };
+  if (pC2H2 >= 13 && pC2H2 <= 29 && pC2H4 > 50) return { code: 'D2', label: L.D2 };
+  return { code: 'DT', label: L.DT };
+}
+
+// triCoords(p,size,pad) — A=CH4 (haut), B=C2H4 (bas-gauche), C=C2H2 (bas-droite). Identique au prototype.
+export function triCoords(p: DuvalPct, size: number, pad: number) {
+  const A = { x: pad + size / 2, y: pad }, B = { x: pad, y: pad + size * 0.866 }, C = { x: pad + size, y: pad + size * 0.866 };
+  const a = p.pCH4 / 100, b = p.pC2H4 / 100, c = p.pC2H2 / 100;
+  return { x: a * A.x + b * B.x + c * C.x, y: a * A.y + b * B.y + c * C.y };
 }
