@@ -1,58 +1,67 @@
 'use client';
 
-// Triangle de Duval 1 (huile minérale) — SVG avec zones colorées + point tracé.
-// Sommets : CH4 (haut), C2H2 (bas-gauche), C2H4 (bas-droite). Affiche « Quantité de gaz insuffisante »
-// si les gaz de défaut (CH4+C2H2+C2H4) sont trop bas pour appliquer la méthode (cohérent IEC 60599).
+// Triangle de Duval 1 rigoureux (SVG) — 7 zones réelles (polygones barycentriques), point positionné
+// précisément, trajectoire temporelle (points reliés, dernier mis en évidence), gestion gaz insuffisant.
+// Style épuré cohérent avec l'app (fond rosé clair, lignes fines, typo sobre). Voir sources dans lib/dga/duval.ts.
 import React from 'react';
+import { DUVAL1_ZONES, ZONE_COLOR, ZONE_LABEL, classifyDuval1, baryToCartesian, duvalPercents, type DuvalZone } from '@/lib/dga/duval';
 
-const ZONE_FILL: Record<string, string> = {
-  PD: '#93c5fd', D1: '#fca5a5', D2: '#ef4444', T1: '#fde68a', T2: '#fcd34d', T3: '#fb923c', DT: '#d8b4fe',
-};
+type Pt = { ch4: number; c2h2: number; c2h4: number; date?: string };
 
-export function DuvalTriangle({ ch4, c2h2, c2h4, zone, size = 240 }: { ch4: number; c2h2: number; c2h4: number; zone?: string; size?: number }) {
-  const tot = (ch4 || 0) + (c2h2 || 0) + (c2h4 || 0);
-  const insufficient = tot < 1; // gaz de défaut trop bas
-  const m = tot > 0 ? (100 * ch4) / tot : 0;
-  const a = tot > 0 ? (100 * c2h2) / tot : 0;
-  const e = tot > 0 ? (100 * c2h4) / tot : 0;
+export function DuvalTriangle({ ch4, c2h2, c2h4, points, size = 300, lang = 'fr' }: {
+  ch4?: number; c2h2?: number; c2h4?: number; points?: Pt[]; size?: number; lang?: 'fr' | 'en';
+}) {
+  const series: Pt[] = (points && points.length ? points : (ch4 != null ? [{ ch4: ch4 || 0, c2h2: c2h2 || 0, c2h4: c2h4 || 0 }] : []));
+  const pad = 30, side = size - 2 * pad;
+  const h = (Math.sqrt(3) / 2) * side;
+  const W = size, H = h + 2 * pad;
+  const top = { x: pad + side / 2, y: pad }, bl = { x: pad, y: pad + h }, br = { x: pad + side, y: pad + h };
+  const toXY = (p: Pt) => { const pc = duvalPercents(p.ch4, p.c2h2, p.c2h4); return baryToCartesian(pc.c2h2, pc.c2h4, side, pad); };
 
-  const pad = 26;
-  const W = size, H = size * 0.92;
-  const top = { x: W / 2, y: pad };
-  const bl = { x: pad, y: H - pad };
-  const br = { x: W - pad, y: H - pad };
-  // Barycentrique (CH4, C2H2, C2H4) -> écran
-  const bary = (mm: number, aa: number, ee: number) => ({ x: (mm / 100) * top.x + (aa / 100) * bl.x + (ee / 100) * br.x, y: (mm / 100) * top.y + (aa / 100) * bl.y + (ee / 100) * br.y });
-  const P = (mm: number, aa: number, ee: number) => { const p = bary(mm, aa, ee); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; };
-  const px = bary(m, a, e);
-
-  // Zones approximatives (Duval Triangle 1). Polygones en coordonnées (%CH4,%C2H2,%C2H4).
-  const zones: { code: string; pts: string }[] = [
-    { code: 'PD', pts: `${P(100, 0, 0)} ${P(98, 0, 2)} ${P(98, 2, 0)}` },
-    { code: 'T1', pts: `${P(98, 0, 2)} ${P(98, 2, 0)} ${P(76, 4, 20)} ${P(80, 0, 20)}` },
-    { code: 'T2', pts: `${P(80, 0, 20)} ${P(76, 4, 20)} ${P(46, 4, 50)} ${P(50, 0, 50)}` },
-    { code: 'T3', pts: `${P(50, 0, 50)} ${P(46, 4, 50)} ${P(0, 15, 85)} ${P(0, 0, 100)}` },
-    { code: 'D1', pts: `${P(98, 2, 0)} ${P(0, 87, 13)} ${P(0, 100, 0)}` },
-    { code: 'D2', pts: `${P(98, 2, 0)} ${P(76, 4, 20)} ${P(46, 4, 50)} ${P(0, 23, 77)} ${P(0, 87, 13)}` },
-    { code: 'DT', pts: `${P(46, 4, 50)} ${P(0, 15, 85)} ${P(0, 23, 77)}` },
-  ];
+  // Dernier point exploitable (pour la classification affichée).
+  const lastUsable = [...series].reverse().find(p => (p.ch4 + p.c2h2 + p.c2h4) >= 1) || series[series.length - 1];
+  const cls = lastUsable ? classifyDuval1(lastUsable.ch4, lastUsable.c2h2, lastUsable.c2h4) : null;
+  const traj = series.filter(p => (p.ch4 + p.c2h2 + p.c2h4) >= 1).map(toXY);
 
   return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto block w-full max-w-[260px]">
-        {zones.map(z => <polygon key={z.code} points={z.pts} fill={ZONE_FILL[z.code]} fillOpacity="0.55" stroke="#fff" strokeWidth="0.5" />)}
-        <polygon points={`${top.x},${top.y} ${bl.x},${bl.y} ${br.x},${br.y}`} fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.5" />
-        <text x={top.x} y={top.y - 8} textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor">CH₄</text>
-        <text x={bl.x - 4} y={bl.y + 14} textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor">C₂H₂</text>
-        <text x={br.x + 2} y={br.y + 14} textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor">C₂H₄</text>
-        {!insufficient && (
-          <g>
-            <circle cx={px.x} cy={px.y} r="6" fill="#111827" stroke="#fff" strokeWidth="2" />
-            {zone && <text x={px.x + 9} y={px.y + 4} fontSize="12" fontWeight="800" fill="#111827">{zone}</text>}
-          </g>
-        )}
+    <div className="text-gray-500">
+      <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto block w-full" style={{ maxWidth: size }}>
+        {/* Zones */}
+        {DUVAL1_ZONES.map(z => {
+          const pts = z.poly.map(([a, e]) => { const xy = baryToCartesian(a, e, side, pad); return `${xy.x.toFixed(1)},${xy.y.toFixed(1)}`; }).join(' ');
+          return <polygon key={z.code} points={pts} fill={ZONE_COLOR[z.code]} fillOpacity="0.5" stroke="#fff" strokeWidth="0.6" />;
+        })}
+        {/* Contour + graduations */}
+        <polygon points={`${top.x},${top.y} ${bl.x},${bl.y} ${br.x},${br.y}`} fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1" />
+        {[20, 40, 60, 80].map((f, i) => {
+          const L = (A: any, B: any) => ({ x: A.x + (B.x - A.x) * (f / 100), y: A.y + (B.y - A.y) * (f / 100) });
+          const a = L(top, bl), b = L(top, br);
+          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="currentColor" strokeOpacity="0.1" />;
+        })}
+        {/* Étiquettes sommets */}
+        <text x={top.x} y={top.y - 8} textAnchor="middle" fontSize="12" fontWeight="700" fill="currentColor">CH₄</text>
+        <text x={bl.x - 2} y={bl.y + 14} textAnchor="middle" fontSize="12" fontWeight="700" fill="currentColor">C₂H₂</text>
+        <text x={br.x + 2} y={br.y + 14} textAnchor="middle" fontSize="12" fontWeight="700" fill="currentColor">C₂H₄</text>
+        {/* Trajectoire */}
+        {traj.length > 1 && <polyline points={traj.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} fill="none" stroke="#111827" strokeWidth="1.5" strokeDasharray="3 2" />}
+        {traj.map((p, i) => {
+          const isLast = i === traj.length - 1;
+          return <circle key={i} cx={p.x} cy={p.y} r={isLast ? 6 : 3.5} fill={isLast ? '#111827' : '#6b7280'} stroke="#fff" strokeWidth={isLast ? 2 : 1} />;
+        })}
+        {traj.length > 0 && cls?.zone && <text x={traj[traj.length - 1].x + 9} y={traj[traj.length - 1].y + 4} fontSize="13" fontWeight="800" fill="#111827">{cls.zone}</text>}
       </svg>
-      {insufficient && <p className="mt-1 text-center text-[11px] font-semibold text-gray-400">Quantité de gaz insuffisante</p>}
+
+      {cls?.insufficient && <p className="mt-1 text-center text-[11px] font-semibold text-gray-400">{lang === 'fr' ? 'Quantité de gaz insuffisante' : 'Insufficient gas'}</p>}
+
+      {/* Légende */}
+      <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+        {DUVAL1_ZONES.map(z => (
+          <span key={z.code} className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: ZONE_COLOR[z.code] }} />
+            <b className="text-gray-700 dark:text-gray-300">{z.code}</b> {lang === 'fr' ? ZONE_LABEL[z.code].fr : ZONE_LABEL[z.code].en}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

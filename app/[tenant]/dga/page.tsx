@@ -412,7 +412,7 @@ function Fiche(p: any) {
               <div className="my-2 text-center"><span className={`rounded-full px-3 py-1 text-sm font-bold ${COND_COLOR[live.condition]}`}>IEEE {live.condition}/4</span></div>
               <div className="text-center text-lg font-extrabold text-rose-600 dark:text-rose-400">{live.duval}</div>
               <div className="text-center text-xs text-gray-600 dark:text-gray-300">{tr(live.fault.fr, live.fault.en)}</div>
-              <div className="mt-2 text-gray-500"><DuvalTriangle ch4={shown.ch4} c2h2={shown.c2h2} c2h4={shown.c2h4} zone={live.duval} /></div>
+              <div className="mt-2"><DuvalTriangle points={[...measures.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined })), ...(hasInput ? [{ ch4: gas.ch4, c2h2: gas.c2h2, c2h4: gas.c2h4 }] : [])]} lang={lang} /></div>
             </div>
           </div>
 
