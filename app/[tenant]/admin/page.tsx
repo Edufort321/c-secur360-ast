@@ -18,6 +18,7 @@ import { seedAccountingDefaults, getAccounts, getTaxCodes, getLedger, getTrialBa
 import { syncPayrollEntries, postTransactionPurchase, postTransactionPayment } from '@/lib/accountingAuto';
 import { getTransactions, getTransactionItems, saveTransaction, setTransactionStatus, deleteTransaction, nextTransactionNumber, computeTransactionTotals, uploadReceipt, type Transaction, type TransactionItem } from '@/lib/transactions';
 import { parseBankCsv, getBankLines, insertBankLines, updateBankLine, deleteBankLine, type BankLine } from '@/lib/bankReconciliation';
+import { useRealtime } from '@/lib/useRealtime';
 import { getInvoices, getInvoiceItems, getCompanySettings, saveCompanySettings, saveInvoice, setInvoiceStatus, nextInvoiceNumber, computeInvoiceTotals, TAX_BY_PROVINCE, PROVINCES, type Invoice, type InvoiceItem, type CompanySettings } from '@/lib/invoicing';
 import { exportInvoicePdf } from '@/lib/invoicePdf';
 import { exportTrialBalanceCsv, exportTrialBalancePdf, exportLedgerCsv, exportLedgerPdf, exportStatementsCsv, exportStatementsPdf } from '@/lib/accountingExports';
@@ -237,29 +238,40 @@ export default function AdminPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { perms, niveauAcces, userEmail } = useCurrentAccess(tenant);
 
-  const tabs: { k: TabKey; label: string; icon: any }[] = [
+  // #57 : chaque onglet peut exiger une permission (matrice PERMS). Sans `need`, l'onglet est
+  // toujours visible. Les onglets sensibles (finance/paie/abonnement/RH) sont masqués si le
+  // niveau d'accès ne l'autorise pas (direction/super_user conservent tout).
+  const allTabs: { k: TabKey; label: string; icon: any; need?: (p: typeof perms) => boolean }[] = [
     { k: 'sitesdepts',  label: tr('Sites / Dépts', 'Sites / Depts'),       icon: MapPin },
-    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat },
+    { k: 'employes',    label: tr('Employés & Accès', 'Employees & Access'), icon: HardHat, need: p => p.viewEmployees },
     { k: 'permissions', label: tr('Permissions', 'Permissions'),             icon: Settings },
     { k: 'vehicules',   label: tr('Véhicules', 'Vehicles'),                  icon: Car },
     { k: 'logbook',     label: tr('Carnet de bord', 'Logbook'),              icon: BookOpen },
     { k: 'ressources',  label: tr('Ressources', 'Resources'),                icon: Wrench },
     { k: 'clients',     label: tr('Clients', 'Clients'),                     icon: Building2 },
     { k: 'feuilles',    label: tr('Feuilles de temps', 'Timesheets'),        icon: Clock },
-    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote },
-    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog },
-    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard },
-    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings },
-    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt },
+    { k: 'paie',        label: tr('Paie & Avantages', 'Pay & Benefits'),     icon: Banknote, need: p => p.viewSalary },
+    { k: 'rh',          label: tr('RH', 'HR'),                               icon: UserCog, need: p => p.viewSalary || p.manageAll },
+    { k: 'abonnement',  label: tr('Abonnement', 'Subscription'),             icon: CreditCard, need: p => p.manageAll },
+    { k: 'facturation', label: tr('Facturation', 'Billing'),                 icon: Settings, need: p => p.manageAll },
+    { k: 'factures',    label: tr('Factures', 'Invoices'),                    icon: Receipt, need: p => p.viewSalary },
     { k: 'soumissions', label: tr('Catalogue de taux', 'Rate catalogue'),       icon: FileText },
     { k: 'bons-commande', label: tr('Bons de commande', 'Purchase orders'),    icon: ClipboardList },
-    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart },
-    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers },
-    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText },
-    { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink },
+    { k: 'transactions', label: tr('Transactions', 'Transactions'),           icon: ShoppingCart, need: p => p.viewSalary },
+    { k: 'comptabilite', label: tr('Comptabilité', 'Accounting'),            icon: Layers, need: p => p.viewSalary },
+    { k: 'fiscal',      label: tr('Rapports fiscaux', 'Tax reports'),         icon: FileText, need: p => p.viewSalary },
+    { k: 'integrations', label: tr('Intégration ERP / API', 'ERP / API'),     icon: ExternalLink, need: p => p.manageAll },
   ];
+  const tabs = allTabs.filter(t => !t.need || t.need(perms));
 
   const activeTab = tabs.find(t => t.k === tab);
+
+  // Si l'onglet courant n'est pas (ou plus) accessible au niveau de l'utilisateur, basculer sur le 1er visible.
+  const visibleKeys = tabs.map(t => t.k).join(',');
+  useEffect(() => {
+    if (tabs.length && !tabs.some(t => t.k === tab)) setTab(tabs[0].k);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKeys]);
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -1796,7 +1808,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-blue-200 dark:border-blue-500/30">
                     <div className="bg-blue-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime A — Bail', 'Regime A — Lease')} · {tr('800 $/mois · 12 mois · taux 43 %', '$800/mo · 12 mo · 43% tax')}
                     </div>
@@ -1850,7 +1862,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ...r, total, impot, parPaie: Math.round(impot / 26), elig };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-violet-200 dark:border-violet-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-violet-200 dark:border-violet-500/30">
                     <div className="bg-violet-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime A — Acheté', 'Regime A — Purchased')} · {tr('35 000 $ · 12 mois · DPA Cat. 10', '$35,000 · 12 mo · CCA Cl. 10')}
                     </div>
@@ -1944,7 +1956,7 @@ function VehiculeSimulateur({ tr }: { tr: (f: string, e: string) => string }) {
                   return { ka, remb, parMois: Math.round(remb / 12) };
                 });
                 return (
-                  <div className="overflow-hidden rounded-xl border border-emerald-200 dark:border-emerald-500/30">
+                  <div className="overflow-x-auto rounded-xl border border-emerald-200 dark:border-emerald-500/30">
                     <div className="bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
                       {tr('Régime B — Véhicule personnel', 'Regime B — Personal vehicle')} · {tr('Taux ARC 2026 : 0,73 $ / 0,67 $', 'CRA 2026: $0.73 / $0.67')}
                     </div>
@@ -5569,6 +5581,13 @@ function AccountingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: str
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
+  // #59 Temps réel : rafraîchit silencieusement le grand livre quand une écriture change (migration 127).
+  useRealtime(['gl_entries'], tenant, () => {
+    Promise.all([getAccounts(tenant), getTaxCodes(tenant), getLedger(tenant), getTrialBalance(tenant)])
+      .then(([acc, tc, led, tb]) => { setAccounts(acc); setTaxCodes(tc); setLedger(led); setBal(tb); })
+      .catch(() => { /* noop */ });
+  });
+
   async function init() {
     setNotice(null);
     try { await seedAccountingDefaults(tenant); setNotice(tr('Plan comptable initialisé.', 'Chart of accounts initialized.')); await load(); }
@@ -5883,6 +5902,9 @@ function InvoicingModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: stri
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
+  // #59 Temps réel : rafraîchit silencieusement la liste des factures (commerce_invoices, publié en 109).
+  useRealtime(['commerce_invoices'], tenant, () => { getInvoices(tenant).then(setInvoices).catch(() => { /* noop */ }); });
+
   const totals = computeInvoiceTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;
 
@@ -6123,6 +6145,13 @@ function TransactionsModule({ tenant, tr, canEdit }: { tenant: string; tr: (f: s
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
+
+  // #59 Temps réel : rafraîchit silencieusement (sans spinner) sur changement des transactions
+  // ou des lignes bancaires (collaboratif multi-utilisateur). Migrations 109 + 126 (publication).
+  useRealtime(['commerce_transactions', 'bank_statement_lines'], tenant, () => {
+    getTransactions(tenant).then(setTxns).catch(() => { /* noop */ });
+    if (view === 'bank') getBankLines(tenant).then(setBankLines).catch(() => { /* noop */ });
+  });
 
   const totals = computeTransactionTotals(items, hdr.province);
   const taxInfo = TAX_BY_PROVINCE[hdr.province] || TAX_BY_PROVINCE.QC;

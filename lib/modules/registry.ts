@@ -2,9 +2,9 @@
 // REGISTRE DES MODULES — source unique pour la navigation, le gating et le pricing.
 // Ajouter un module futur = une entrée ici (+ ses pages sous app/[tenant]/<basePath>/).
 // =====================================================
-import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, type LucideIcon } from 'lucide-react';
+import { Shield, CalendarRange, Package, FolderKanban, FileCheck, AlertTriangle, AlertOctagon, ClipboardCheck, ListChecks, Settings, CalendarClock, Car, FlaskConical, Plane, type LucideIcon } from 'lucide-react';
 
-export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga';
+export type ModuleKey = 'admin' | 'projects' | 'ast' | 'permits' | 'accidents' | 'near_miss' | 'planner' | 'inventory' | 'equipment' | 'inspections' | 'timesheets' | 'logbook' | 'todo' | 'dga' | 'conges';
 export type ModuleStatus = 'available' | 'soon';
 
 export interface ModuleDef {
@@ -111,6 +111,13 @@ export const MODULES: ModuleDef[] = [
     descFr: 'Analyse de gaz dissous (huile de transformateur) : IEEE C57.104 + Triangle de Duval, historique.',
     descEn: 'Dissolved gas analysis (transformer oil): IEEE C57.104 + Duval Triangle, history.',
     icon: FlaskConical, basePath: 'dga', color: 'text-rose-600', accent: 'bg-rose-600', status: 'available',
+  },
+  {
+    key: 'conges',
+    labelFr: 'Congés', labelEn: 'Time off',
+    descFr: 'Demandes de congés (vacances, maladie, formation), approbation superviseur, soldes.',
+    descEn: 'Time-off requests (vacation, sick, training), supervisor approval, balances.',
+    icon: Plane, basePath: 'conges', color: 'text-violet-600', accent: 'bg-violet-600', status: 'available',
   },
 ];
 
