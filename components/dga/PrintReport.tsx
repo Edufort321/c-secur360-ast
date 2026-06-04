@@ -133,8 +133,8 @@ export function PrintReport(props: {
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: 3, color: '#277da1', marginBottom: 8 }}>{L("RAPPORT D'ANALYSE DE LABORATOIRE", 'LABORATORY ANALYSIS REPORT')}</div>
           <h1 style={{ fontWeight: 900, fontSize: 32, margin: '0 0 18px', lineHeight: 1.1, maxWidth: 600, color: '#1a1a1a' }}>{dossier.ident || L("RAPPORT D'ANALYSE", 'ANALYSIS REPORT')}</h1>
           <div style={{ fontSize: 13, color: '#333', lineHeight: 2, borderTop: '2px solid #277da1', paddingTop: 18, marginTop: 8, minWidth: 280 }}>
-            {eqVal('client') !== '—' && <div><b>{L('Client', 'Client')} :</b> {eqVal('client')}</div>}
-            {eqVal('company') !== '—' && <div><b>{L('Compagnie', 'Company')} :</b> {eqVal('company')}</div>}
+            {eqVal('company') !== '—' && <div><b>{L('Client', 'Client')} :</b> {eqVal('company')}</div>}
+            {eqVal('client') !== '—' && <div><b>{L('Localisation / Sous-station', 'Location / Substation')} :</b> {eqVal('client')}</div>}
             {projectNo && <div><b>{L('N° de projet', 'Project No.')} :</b> {projectNo}</div>}
             {cur?.sample_date && <div><b>{L("Date d'analyse", 'Analysis date')} :</b> {cur.sample_date}</div>}
             {dossier.serie && <div><b>{L('N° série', 'Serial No.')} :</b> {dossier.serie}</div>}

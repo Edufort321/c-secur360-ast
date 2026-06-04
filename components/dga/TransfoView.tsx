@@ -629,7 +629,7 @@ function EditInfoModal({ dossier, lang, tr, onSave, onClose }: { dossier: Dossie
             <div className="grid gap-2 sm:grid-cols-2">
               {EQUIP_FIELDS.filter(f => f.group === g.id).map(f => (
                 <label key={f.key as string} className="block"><span className="mb-1 block text-[11px] text-gray-500">{lang === 'en' ? f.en : f.fr}</span>
-                  <input className={INP} type={f.num ? 'number' : 'text'} value={d[f.key as string] ?? ''} placeholder={f.ph || ''} onChange={e => set(f.key as string, e.target.value)} /></label>
+                  <input className={INP} type={f.num ? 'number' : 'text'} value={d[f.key as string] ?? ''} onChange={e => set(f.key as string, e.target.value)} /></label>
               ))}
             </div>
           </div>
