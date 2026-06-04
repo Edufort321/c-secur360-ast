@@ -54,6 +54,8 @@ export default function DgaPage() {
   const [importPreview, setImportPreview] = useState<any>(null);
   const [dragOver, setDragOver] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>('/c-secur360-logo.png');
+  // Confirmation in-app (window.confirm() est supprimé dans une PWA installée -> suppression sans avertissement).
+  const [confirmAsk, setConfirmAsk] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function reload() {
@@ -121,7 +123,16 @@ export default function DgaPage() {
     setMeasures(await listMeasures(tenant, selId)); setView('fiche');
   }
   async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(id); if (selId) setMeasures(await listMeasures(tenant, selId)); reload(); }
-  async function delDossier() { if (!selId) return; if (!confirm(tr('Supprimer ce transformateur et ses mesures ?', 'Delete this transformer and its measurements?'))) return; await deleteDossier(selId); setSelId(null); setView('list'); reload(); }
+  function delDossier() {
+    if (!selId) return;
+    const d = dossiers.find(x => x.id === selId);
+    setConfirmAsk({
+      title: tr('Supprimer le transformateur', 'Delete transformer'),
+      message: tr(`Supprimer « ${d?.ident || ''} » et toutes ses mesures ? Action irréversible.`, `Delete "${d?.ident || ''}" and all its measurements? This cannot be undone.`),
+      confirmLabel: tr('Supprimer', 'Delete'),
+      onConfirm: async () => { await deleteDossier(selId); setSelId(null); setView('list'); reload(); },
+    });
+  }
 
   // ── Nouveau transformateur ──
   function startNewT() { const o: any = { ident: '' }; EQUIP_FIELDS.forEach(f => { o[f.key] = ''; }); setNewT(o); }
@@ -140,13 +151,24 @@ export default function DgaPage() {
     if (allOn) { setSelected({}); return; }
     const all: Record<string, boolean> = {}; filtered.forEach(x => { all[x.id!] = true; }); setSelected(all);
   }
-  async function onDeleteOne(id: string) { if (!confirm(tr('Supprimer ce transformateur ?', 'Delete this transformer?'))) return; await deleteDossier(id); reload(); }
-  async function deleteSelected() {
+  function onDeleteOne(id: string) {
+    const d = dossiers.find(x => x.id === id);
+    setConfirmAsk({
+      title: tr('Supprimer le transformateur', 'Delete transformer'),
+      message: tr(`Supprimer « ${d?.ident || ''} » et ses mesures ? Action irréversible.`, `Delete "${d?.ident || ''}" and its measurements? This cannot be undone.`),
+      confirmLabel: tr('Supprimer', 'Delete'),
+      onConfirm: async () => { await deleteDossier(id); reload(); },
+    });
+  }
+  function deleteSelected() {
     const ids = Object.keys(selected).filter(k => selected[k]);
     if (!ids.length) { exitDelMode(); return; }
-    if (!confirm(tr(`Supprimer ${ids.length} transformateur(s) ? Action irréversible.`, `Delete ${ids.length} transformer(s)? This cannot be undone.`))) return;
-    for (const id of ids) await deleteDossier(id);
-    exitDelMode(); reload();
+    setConfirmAsk({
+      title: tr('Supprimer la sélection', 'Delete selection'),
+      message: tr(`Supprimer ${ids.length} transformateur(s) et leurs mesures ? Action irréversible.`, `Delete ${ids.length} transformer(s) and their measurements? This cannot be undone.`),
+      confirmLabel: tr('Supprimer', 'Delete'),
+      onConfirm: async () => { for (const id of ids) await deleteDossier(id); exitDelMode(); reload(); },
+    });
   }
 
   // ── Import PDF (drag/bouton) → aperçu de fusion ──
@@ -244,6 +266,20 @@ export default function DgaPage() {
         <Modal onClose={() => setImportErr(null)}><h2 className="mb-2 text-lg font-bold text-red-600">{tr("Échec de l'import :", 'Import failed:')}</h2><p className="break-words text-sm">{importErr}</p><div className="mt-3"><button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setImportErr(null)}>{tr('Fermer', 'Close')}</button></div></Modal>
       )}
       {importPreview && <ImportPreview {...{ tr, lang, importPreview, setImportPreview, applyImport }} />}
+
+      {/* CONFIRMATION DE SUPPRESSION (in-app — fiable même en PWA) */}
+      {confirmAsk && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4" onClick={() => setConfirmAsk(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
+            <div className="mb-1 flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-red-100 text-red-600"><Trash2 size={16} /></span><h2 className="text-base font-bold">{confirmAsk.title}</h2></div>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{confirmAsk.message}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setConfirmAsk(null)}>{tr('Annuler', 'Cancel')}</button>
+              <button className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700" onClick={() => { const fn = confirmAsk.onConfirm; setConfirmAsk(null); fn(); }}>{confirmAsk.confirmLabel}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
