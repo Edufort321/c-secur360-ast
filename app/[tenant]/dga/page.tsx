@@ -19,6 +19,7 @@ import { FlaskConical, Lock, Loader2, Save, Plus, Search, Upload, Activity, Tras
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { Trends } from '@/components/dga/Trends';
 import { generateDgaReport } from '@/lib/dga/report';
+import { evalOil, furanInterpret, trendAnalysis } from '@/lib/dga/oil';
 
 const COND_COLOR: Record<number, string> = {
   1: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -282,6 +283,11 @@ function Fiche(p: any) {
     return gas;
   }, [gas, hasInput, measures]);
   const live = useMemo(() => diagnoseFull(shown), [shown]);
+  // Analyses reprises du prototype : qualité d'huile (IEEE C57.106), furanes (DP Chendong), tendance.
+  const lastM = measures[measures.length - 1];
+  const oilEval = useMemo(() => (lastM ? evalOil(lastM.oil_quality || {}, form.kv, lang) : []), [lastM, form.kv, lang]);
+  const furan = useMemo(() => (lastM ? furanInterpret(lastM.oil_quality?.f_2fal, lang) : null), [lastM, lang]);
+  const trendA = useMemo(() => trendAnalysis(measures.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang), [measures, lang]);
 
   useEffect(() => { setForm(draft || selected || { ident: '' }); }, [draft, selected]);
   useEffect(() => { (async () => { if (selected?.id) { const ms = await listMeasures(tenant, selected.id); setMeasures(ms); const lm = ms[ms.length - 1]; if (lm?.ai_summary) { setAiText(lm.ai_summary); setAiSaved(true); } else { setAiText(''); } } else { setMeasures([]); setAiText(''); } setAi(null); })(); }, [selected, tenant]);
@@ -441,6 +447,34 @@ function Fiche(p: any) {
                   {ai && <ul className="list-disc pl-5 text-gray-600 dark:text-gray-300">{((lang === 'fr' ? ai.recommendationsFr : ai.recommendationsEn) || []).map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>}
                 </>
               ) : <p className="text-xs text-gray-400">{tr('Lance l’analyse pour un diagnostic basé sur l’historique et les normes (commentaire ensuite éditable).', 'Run analysis for a history- and norm-based diagnosis (comment is then editable).')}</p>}
+            </div>
+          </div>
+
+          {/* Qualité d'huile + Furanes + Tendance */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr("Qualité d'huile", 'Oil quality')} {form.kv ? <span className="text-xs font-normal text-gray-400">({tr('classe', 'class')} {form.kv} kV)</span> : null}</h3>
+              {oilEval.length === 0 ? <p className="text-xs text-gray-400">{tr('Renseignez la qualité d’huile dans une mesure.', 'Enter oil quality in a measure.')}</p>
+                : <ul className="space-y-1">{oilEval.map((o, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs">
+                    <span className={`mt-0.5 inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full ${o.status === 'good' ? 'bg-emerald-500' : o.status === 'fair' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                    <span className="text-gray-700 dark:text-gray-300">{o.txt}</span>
+                  </li>))}</ul>}
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr('Furanes → DP papier', 'Furans → paper DP')}</h3>
+              {furan ? (
+                <div className="text-sm">
+                  <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">DP ≈ {furan.dp}</div>
+                  <div className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${furan.lvl === 'good' ? 'bg-emerald-100 text-emerald-700' : furan.lvl === 'fair' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{furan.state}</div>
+                  <div className="mt-1 text-[11px] text-gray-400">2-FAL : {furan.fal} ppm — {tr('modèle de Chendong', 'Chendong model')}</div>
+                </div>
+              ) : <p className="text-xs text-gray-400">{tr('Saisir le 2-FAL (qualité d’huile) pour estimer le DP.', 'Enter 2-FAL (oil quality) to estimate DP.')}</p>}
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-2 text-sm font-bold">{tr('Tendance', 'Trend')}</h3>
+              <div className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${trendA.lvl === 'good' ? 'bg-emerald-100 text-emerald-700' : trendA.lvl === 'fair' ? 'bg-amber-100 text-amber-700' : trendA.lvl === 'crit' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{trendA.verdict}</div>
+              <p className="mt-2 text-xs text-gray-700 dark:text-gray-300">{trendA.txt}</p>
             </div>
           </div>
 
