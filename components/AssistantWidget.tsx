@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent, CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // Assistant TENANT (dashboard). Ne s'affiche que pour un utilisateur connecté.
@@ -15,6 +16,12 @@ const SUGGESTIONS = [
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
+// Bulle deplacable : dimensions (px) pour le calcul de position + cle de persistance.
+const FAB_SIZE = 56;  // h-14 w-14
+const PANEL_W = 352;  // w-[22rem]
+const PANEL_H = 448;  // h-[28rem]
+const POS_KEY = 'cs-assistant-pos';
+
 export function AssistantWidget() {
   const [authed, setAuthed] = useState(false);
   const [open, setOpen] = useState(false);
@@ -24,6 +31,12 @@ export function AssistantWidget() {
   const endRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
+
+  // Position de la bulle (coin haut-gauche, px). null = pas encore initialisee.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef(false);
+  const movedRef = useRef(false);
+  const startRef = useRef({ px: 0, py: 0, x: 0, y: 0 });
 
   useEffect(() => {
     let active = true;
@@ -57,6 +70,69 @@ export function AssistantWidget() {
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
+  // ── Bulle deplacable (clic maintenu + glisser), position memorisee ─────────
+  const clampPos = (x: number, y: number) => {
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
+    return {
+      x: Math.max(8, Math.min(vw - FAB_SIZE - 8, x)),
+      y: Math.max(8, Math.min(vh - FAB_SIZE - 8, y)),
+    };
+  };
+
+  useEffect(() => {
+    let saved: { x: number; y: number } | null = null;
+    try { saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); } catch { /* ignore */ }
+    setPos(
+      saved && typeof saved.x === 'number' && typeof saved.y === 'number'
+        ? clampPos(saved.x, saved.y)
+        : clampPos(window.innerWidth - FAB_SIZE - 20, window.innerHeight - FAB_SIZE - 20)
+    );
+    const onResize = () => setPos(p => (p ? clampPos(p.x, p.y) : p));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onFabPointerDown = (e: ReactPointerEvent) => {
+    const cur = pos ?? clampPos(window.innerWidth - FAB_SIZE - 20, window.innerHeight - FAB_SIZE - 20);
+    draggingRef.current = true;
+    movedRef.current = false;
+    startRef.current = { px: e.clientX, py: e.clientY, x: cur.x, y: cur.y };
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  };
+  const onFabPointerMove = (e: ReactPointerEvent) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - startRef.current.px;
+    const dy = e.clientY - startRef.current.py;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedRef.current = true;
+    setPos(clampPos(startRef.current.x + dx, startRef.current.y + dy));
+  };
+  const onFabPointerUp = (e: ReactPointerEvent) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    if (movedRef.current && pos) {
+      try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch { /* ignore */ }
+    }
+  };
+  const onFabClick = () => {
+    // Si on vient de glisser la bulle, on ne (de)clenche pas l'ouverture du chat.
+    if (movedRef.current) { movedRef.current = false; return; }
+    setOpen(o => !o);
+  };
+
+  // Panneau de chat ancre pres de la bulle, maintenu dans l'ecran.
+  const panelStyle = (): CSSProperties => {
+    if (!pos || typeof window === 'undefined') return { right: 20, bottom: 96 };
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const left = Math.max(8, Math.min(pos.x, vw - PANEL_W - 8));
+    const top = pos.y > vh / 2
+      ? Math.max(8, pos.y - PANEL_H - 8)
+      : Math.max(8, Math.min(vh - PANEL_H - 8, pos.y + FAB_SIZE + 8));
+    return { left, top };
+  };
+
   async function send(text: string) {
     const content = text.trim();
     if (!content || loading) return;
@@ -84,15 +160,20 @@ export function AssistantWidget() {
     <>
       <button
         ref={fabRef}
-        onClick={() => setOpen(o => !o)}
-        aria-label="Assistant C-Secur360"
-        className="fixed bottom-5 right-5 z-[60] grid h-14 w-14 place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a]"
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
+        onClick={onFabClick}
+        aria-label="Assistant C-Secur360 — glisser pour déplacer"
+        title="Glissez pour déplacer la bulle"
+        style={pos ? { left: pos.x, top: pos.y, touchAction: 'none' } : { right: 20, bottom: 20, touchAction: 'none' }}
+        className="fixed z-[60] grid h-14 w-14 cursor-grab touch-none select-none place-items-center rounded-full bg-[#0D1F3C] text-2xl text-white shadow-lg ring-2 ring-orange-500/60 transition hover:bg-[#16294a] active:cursor-grabbing"
       >
         {open ? '×' : '💬'}
       </button>
 
       {open && (
-        <div ref={panelRef} className="fixed bottom-24 right-5 z-[60] flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div ref={panelRef} style={panelStyle()} className="fixed z-[60] flex h-[28rem] max-h-[calc(100vh-2rem)] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
           <div className="flex items-center gap-2 bg-[#0D1F3C] px-4 py-3 text-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />

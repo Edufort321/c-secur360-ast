@@ -158,7 +158,7 @@ export function UserLoginModal({
             {/* Modal avec header noir personnalisé */}
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[95vh] flex flex-col">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[95vh] flex flex-col">
                         {/* Header noir comme le principal */}
                         <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-900 rounded-t-xl">
                             <div className="flex items-center gap-4">
@@ -178,7 +178,7 @@ export function UserLoginModal({
                 {etapeLogin === 'nom' && (
                     <form onSubmit={handleNomSubmit} className="space-y-4">
                         <div className="relative">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                                 <Icon name="user" size={16} className="inline mr-2" />
                                 Nom d'utilisateur
                             </label>
@@ -191,7 +191,7 @@ export function UserLoginModal({
                                     onKeyDown={handleKeyDown}
                                     onFocus={() => setShowDropdown(filteredPersonnel.length > 0 && loginForm.nom.length > 0)}
                                     placeholder="Tapez pour rechercher ou cliquez pour voir la liste..."
-                                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                                    className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                                     autoFocus
                                     autoComplete="off"
                                 />
@@ -205,7 +205,7 @@ export function UserLoginModal({
                                             setShowDropdown(!showDropdown);
                                         }
                                     }}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors"
                                 >
                                     <Icon name={showDropdown ? "chevronUp" : "chevronDown"} size={20} />
                                 </button>
@@ -215,7 +215,7 @@ export function UserLoginModal({
                             {showDropdown && filteredPersonnel.length > 0 && (
                                 <div
                                     ref={dropdownRef}
-                                    className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+                                    className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
                                 >
                                     {filteredPersonnel.map((person) => (
                                         <button
@@ -228,13 +228,13 @@ export function UserLoginModal({
                                                 {person.nom.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1">
-                                                <div className="font-medium text-gray-900">{person.nom}</div>
-                                                <div className="text-sm text-gray-600">{person.poste}</div>
+                                                <div className="font-medium text-gray-900 dark:text-gray-100">{person.nom}</div>
+                                                <div className="text-sm text-gray-600 dark:text-gray-300">{person.poste}</div>
                                                 {person.succursale && (
-                                                    <div className="text-xs text-gray-500">{person.succursale}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">{person.succursale}</div>
                                                 )}
                                             </div>
-                                            <Icon name="chevronRight" size={16} className="text-gray-400" />
+                                            <Icon name="chevronRight" size={16} className="text-gray-400 dark:text-gray-500" />
                                         </button>
                                     ))}
                                 </div>
@@ -242,7 +242,7 @@ export function UserLoginModal({
 
                             {/* Message si aucun résultat */}
                             {showDropdown && filteredPersonnel.length === 0 && loginForm.nom.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 text-center text-gray-500">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 p-4 text-center text-gray-500 dark:text-gray-400">
                                     Aucun utilisateur trouvé pour "{loginForm.nom}"
                                 </div>
                             )}
@@ -269,9 +269,9 @@ export function UserLoginModal({
                                     <Icon name="user" size={20} className="text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-gray-900">{utilisateurIdentifie.nom}</h3>
-                                    <p className="text-sm text-gray-600">{utilisateurIdentifie.poste}</p>
-                                    <p className="text-xs text-gray-500">{utilisateurIdentifie.succursale}</p>
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{utilisateurIdentifie.nom}</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-300">{utilisateurIdentifie.poste}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{utilisateurIdentifie.succursale}</p>
                                 </div>
                             </div>
                         </div>
@@ -279,7 +279,7 @@ export function UserLoginModal({
                         {/* Formulaire mot de passe */}
                         <form onSubmit={handlePasswordSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                                     <Icon name="key" size={16} className="inline mr-2" />
                                     Mot de passe
                                 </label>
@@ -289,14 +289,14 @@ export function UserLoginModal({
                                         value={motDePasseLocal}
                                         onChange={(e) => setMotDePasseLocal(e.target.value)}
                                         placeholder="Entrez votre mot de passe..."
-                                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                                        className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                                         autoFocus
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors"
                                         title={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                                     >
                                         <Icon name={showPassword ? "eye_off" : "eye"} size={20} />
@@ -308,7 +308,7 @@ export function UserLoginModal({
                                 <button
                                     type="button"
                                     onClick={retourEtapeNom}
-                                    className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                 >
                                     <Icon name="chevronLeft" size={20} className="inline mr-2" />
                                     Retour
@@ -334,7 +334,7 @@ export function UserLoginModal({
                 )}
 
                 {/* Footer avec version */}
-                <div className="text-center text-xs text-gray-400 border-t pt-4">
+                <div className="text-center text-xs text-gray-400 dark:text-gray-500 border-t pt-4">
                     C-Secur360 Planificateur V6.7 • {new Date().getFullYear()}
                 </div>
                             </div>

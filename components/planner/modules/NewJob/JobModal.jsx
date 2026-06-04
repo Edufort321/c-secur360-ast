@@ -2838,7 +2838,7 @@ export function JobModal({
     return (
         <div className="job-modal-wrapper">
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden">
                     {/* Header */}
                     <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700 rounded-t-xl">
                         <div className="flex items-center gap-4">
@@ -2854,7 +2854,7 @@ export function JobModal({
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg p-2 transition-colors"
+                            className="text-gray-400 dark:text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg p-2 transition-colors"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2874,7 +2874,7 @@ export function JobModal({
                             { id: 'teams', label: `${L('⚙️ Mode avancé', '⚙️ Advanced')}${(currentConflicts && currentConflicts.length) ? ` ⚠️${currentConflicts.length}` : ''}` },
                         ];
                         return (
-                            <div className="flex-shrink-0 border-b bg-gray-50">
+                            <div className="flex-shrink-0 border-b bg-gray-50 dark:bg-gray-700/50">
                                 {/* Desktop large (>=1024px) : tous les onglets, defilement horizontal si besoin */}
                                 <div className="hidden lg:flex overflow-x-auto">
                                     {TABS.map(tab => (
@@ -2883,8 +2883,8 @@ export function JobModal({
                                             onClick={() => setActiveTab(tab.id)}
                                             className={`px-6 py-3 font-medium transition-colors whitespace-nowrap ${
                                                 activeTab === tab.id
-                                                    ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                                                    : 'text-gray-600 hover:text-gray-900'
+                                                    ? 'text-purple-600 border-b-2 border-purple-600 bg-white dark:bg-gray-800'
+                                                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                                             }`}
                                         >
                                             {tab.label}
@@ -2896,7 +2896,7 @@ export function JobModal({
                                     <button
                                         type="button"
                                         onClick={() => setTabMenuOpen(o => !o)}
-                                        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-gray-300 bg-white font-semibold text-purple-700 hover:bg-purple-50"
+                                        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 font-semibold text-purple-700 hover:bg-purple-50"
                                         aria-expanded={tabMenuOpen}
                                     >
                                         <span className="truncate">{TABS.find(t => t.id === activeTab)?.label || 'Onglets'}</span>
@@ -2905,14 +2905,14 @@ export function JobModal({
                                     {tabMenuOpen && (
                                         <>
                                             <div className="fixed inset-0 z-40" onClick={() => setTabMenuOpen(false)} aria-hidden />
-                                            <div className="absolute left-2 right-2 z-50 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                                            <div className="absolute left-2 right-2 z-50 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
                                                 {TABS.map(tab => (
                                                     <button
                                                         key={tab.id}
                                                         type="button"
                                                         onClick={() => { setActiveTab(tab.id); setTabMenuOpen(false); }}
                                                         className={`block w-full px-4 py-3 text-left text-sm font-medium ${
-                                                            activeTab === tab.id ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'
+                                                            activeTab === tab.id ? 'bg-purple-50 text-purple-700' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                                                         }`}
                                                     >
                                                         {tab.label}
@@ -3147,21 +3147,21 @@ export function JobModal({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* 1. # projet */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('# Projet', '# Project')}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('# Projet', '# Project')}</label>
                                             <input
                                                 type="text"
                                                 value={formData.numeroJob}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, numeroJob: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Ex: CS26001P / G25-0101"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder={L('Ex: CS26001P / G25-0101', 'E.g.: CS26001P / G25-0101')}
                                             />
                                         </div>
 
                                         {/* 2. Nom du client (autocomplete clients + projets) */}
                                         <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Nom du client', 'Client name')}
-                                                {clientSearching && <span className="ml-2 text-xs text-gray-400">{L('Recherche…', 'Searching…')}</span>}
+                                                {clientSearching && <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{L('Recherche…', 'Searching…')}</span>}
                                             </label>
                                             <input
                                                 type="text"
@@ -3171,24 +3171,24 @@ export function JobModal({
                                                     searchClientsAndProjects(e.target.value);
                                                 }}
                                                 onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du client ou projet…"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder={L('Nom du client ou projet…', 'Client or project name…')}
                                                 autoComplete="off"
                                             />
                                             {clientSuggestions.length > 0 && (
-                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                                <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-64 overflow-y-auto">
                                                     {/* Clients */}
                                                     {clientSuggestions.filter(s => s._type === 'client').length > 0 && (
                                                         <>
-                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0">
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 sticky top-0">
                                                                 👥 Clients
                                                             </div>
                                                             {clientSuggestions.filter(s => s._type === 'client').map(c => (
                                                                 <button key={c.id} type="button" onMouseDown={() => applyClientSuggestion(c)}
                                                                     className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm flex items-center gap-2">
-                                                                    <span className="font-medium text-gray-800">{c.name}</span>
-                                                                    {c.city && <span className="text-xs text-gray-400">{c.city}</span>}
-                                                                    {c.contact_name && <span className="text-xs text-gray-400 ml-auto">{c.contact_name}</span>}
+                                                                    <span className="font-medium text-gray-800 dark:text-gray-100">{c.name}</span>
+                                                                    {c.city && <span className="text-xs text-gray-400 dark:text-gray-500">{c.city}</span>}
+                                                                    {c.contact_name && <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{c.contact_name}</span>}
                                                                 </button>
                                                             ))}
                                                         </>
@@ -3196,21 +3196,21 @@ export function JobModal({
                                                     {/* Projets */}
                                                     {clientSuggestions.filter(s => s._type === 'project').length > 0 && (
                                                         <>
-                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide bg-gray-50 sticky top-0 border-t border-gray-100">
+                                                            <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 sticky top-0 border-t border-gray-100">
                                                                 📁 Projets — cliquer pour remplir le formulaire
                                                             </div>
                                                             {clientSuggestions.filter(s => s._type === 'project').map(p => (
                                                                 <button key={p.id} type="button" onMouseDown={() => applyClientSuggestion(p)}
                                                                     className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm flex items-start gap-2 border-t border-gray-50">
                                                                     <div className="flex-1 min-w-0">
-                                                                        <div className="font-medium text-gray-800 truncate">{p.title}</div>
-                                                                        <div className="text-xs text-gray-400 flex gap-2 mt-0.5">
+                                                                        <div className="font-medium text-gray-800 dark:text-gray-100 truncate">{p.title}</div>
+                                                                        <div className="text-xs text-gray-400 dark:text-gray-500 flex gap-2 mt-0.5">
                                                                             {p.client_name && <span>{p.client_name}</span>}
                                                                             {p.project_number && <span className="font-mono">#{p.project_number}</span>}
                                                                             {p.location && <span>📍 {p.location}</span>}
                                                                         </div>
                                                                     </div>
-                                                                    <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-semibold ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                                    <span className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 font-semibold ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                                                                         {p.status || 'projet'}
                                                                     </span>
                                                                 </button>
@@ -3223,27 +3223,27 @@ export function JobModal({
 
                                         {/* 3. Nom du mandat */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('Nom du mandat', 'Mandate name')}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('Nom du mandat', 'Mandate name')}</label>
                                             <input
                                                 type="text"
                                                 value={formData.nom}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Nom du mandat"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder={L('Nom du mandat', 'Job name')}
                                                 required
                                             />
                                         </div>
 
                                         {/* 4. Lieu des travaux (autocomplete d'adresse + carte + meteo) */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('📍 Lieu des travaux', '📍 Work location')}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('📍 Lieu des travaux', '📍 Work location')}</label>
                                             <input
                                                 ref={attachLieuAutocomplete}
                                                 type="text"
                                                 value={formData.lieu}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, lieu: e.target.value, lieuLat: null, lieuLng: null }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                placeholder="Adresse / lieu d'intervention"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                placeholder={L("Adresse / lieu d'intervention", 'Address / work site')}
                                                 autoComplete="off"
                                             />
                                             {formData.lieuLat != null && formData.lieuLng != null && (
@@ -3264,8 +3264,8 @@ export function JobModal({
                                                     {/* Carte integree (API Embed) — s'affiche si la cle NEXT_PUBLIC_GOOGLE_MAPS_API_KEY est configuree */}
                                                     {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
                                                         <iframe
-                                                            title="Carte de l'endroit des travaux"
-                                                            className="mt-2 w-full rounded-lg border border-gray-200"
+                                                            title={L("Carte de l'endroit des travaux", 'Map of the work site')}
+                                                            className="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-700"
                                                             height="200"
                                                             style={{ border: 0 }}
                                                             loading="lazy"
@@ -3284,11 +3284,11 @@ export function JobModal({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Site (succursale) — provient des sites admin ; sinon sélection manuelle */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('🏢 Site', '🏢 Site')}</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('🏢 Site', '🏢 Site')}</label>
                                             <select
                                                 value={formData.succursaleEnCharge || formData.bureau || ''}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, succursaleEnCharge: e.target.value, bureau: e.target.value, departementId: '' }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             >
                                                 <option value="">{L('— Sélectionner un site —', '— Select a site —')}</option>
                                                 {(succursales || []).map(s => (
@@ -3298,12 +3298,12 @@ export function JobModal({
                                         </div>
                                         {/* Département (optionnel, si configuré) */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">{L('Département', 'Department')} <span className="text-xs text-gray-400">{L('(optionnel)', '(optional)')}</span></label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{L('Département', 'Department')} <span className="text-xs text-gray-400 dark:text-gray-500">{L('(optionnel)', '(optional)')}</span></label>
                                             <select
                                                 value={formData.departementId || ''}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, departementId: e.target.value }))}
                                                 disabled={(departements || []).length === 0}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100 disabled:text-gray-400"
                                             >
                                                 <option value="">{(departements || []).length ? '— Aucun —' : 'Aucun département configuré'}</option>
                                                 {(departements || []).map(d => (
@@ -3313,20 +3313,20 @@ export function JobModal({
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Description', 'Description')}
                                             </label>
                                             <textarea
                                                 value={formData.description}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 rows={3}
                                                 placeholder={L('Description du travail à effectuer', 'Description of the work to perform')}
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Date de début', 'Start date')}
                                             </label>
                                             <input
@@ -3350,27 +3350,27 @@ export function JobModal({
                                                     }
                                                     return { ...prev, dateDebut: newDebut, dateFin: newFin };
                                                 })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 required
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Date de fin', 'End date')}
                                             </label>
                                             <input
                                                 type="date"
                                                 value={formData.dateFin}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, dateFin: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>
 
                                         {/* HEURES TOTALES = contenu de travail -> pilote la date de fin (auto).
                                             Heure début/fin = fenêtre horaire QUOTIDIENNE. nb personnes pris en compte. */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Heures totales (h)', 'Total hours (h)')}
                                             </label>
                                             <input
@@ -3378,25 +3378,25 @@ export function JobModal({
                                                 value={formData.heuresPlanifiees ?? ''}
                                                 onFocus={(e) => e.target.select()}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, heuresPlanifiees: e.target.value }))}
-                                                placeholder="Ex: 36"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                title="Heures totales de travail -> la date de fin se calcule : heures / (heures par jour x nb de personnes)"
+                                                placeholder={L('Ex: 36', 'E.g.: 36')}
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                title={L('Heures totales de travail -> la date de fin se calcule : heures / (heures par jour x nb de personnes)', 'Total work hours -> the end date is computed: hours / (hours per day x number of people)')}
                                             />
-                                            <p className="mt-1 text-[11px] text-gray-500">{L('Pilote la date de fin (selon heures/jour et nb de personnes).', 'Drives the end date (per daily window and headcount).')}</p>
+                                            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{L('Pilote la date de fin (selon heures/jour et nb de personnes).', 'Drives the end date (per daily window and headcount).')}</p>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Heure de début (jour)', 'Start time (day)')}
                                             </label>
                                             <input
                                                 type="time"
                                                 value={formData.heureDebut || '08:00'}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 {L('Heure de fin (jour)', 'End time (day)')}
                                             </label>
                                             <input
@@ -3404,34 +3404,34 @@ export function JobModal({
                                                 value={formData.heureFin || '17:00'}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
                                                 disabled={formData.modeContinu}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100"
                                             />
                                         </div>
 
                                         {/* Mode 24/24 (continu) : travail en continu, la fin (date+heure) = début + heures totales */}
                                         <div className="md:col-span-2">
-                                            <label className="flex items-center gap-2 text-sm text-gray-700">
+                                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                                                 <input
                                                     type="checkbox"
                                                     checked={!!formData.modeContinu}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, modeContinu: e.target.checked }))}
-                                                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                                    className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
                                                 />
                                                 <span>🕛 {L('Travail 24/24 (continu)', '24/7 (continuous) work')}</span>
                                             </label>
-                                            <p className="ml-6 text-[11px] text-gray-500">{L('La fin (date + heure) = début + heures totales, sans fenêtre quotidienne. Ex. 36 h dès 7:00 → 19:00 le lendemain.', 'End (date + time) = start + total hours, no daily window. E.g. 36 h from 7:00 → 19:00 next day.')}</p>
+                                            <p className="ml-6 text-[11px] text-gray-500 dark:text-gray-400">{L('La fin (date + heure) = début + heures totales, sans fenêtre quotidienne. Ex. 36 h dès 7:00 → 19:00 le lendemain.', 'End (date + time) = start + total hours, no daily window. E.g. 36 h from 7:00 → 19:00 next day.')}</p>
                                         </div>
 
                                         {/* Responsable de l'evenement (designe par le coordonnateur ; monte le Gantt) */}
                                         <div className="md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                 👤 Responsable de l'événement
                                             </label>
                                             {estCoordonnateur ? (
                                                 <select
                                                     value={formData.responsableId || ''}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, responsableId: e.target.value }))}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 >
                                                     <option value="">{L('— Sélectionner un responsable —', '— Select a manager —')}</option>
                                                     {(personnel || []).map(p => (
@@ -3441,14 +3441,14 @@ export function JobModal({
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                                                <div className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-200">
                                                     {(() => {
                                                         const r = (personnel || []).find(p => String(p.id) === String(formData.responsableId));
                                                         return r ? (r.nom || r.name || [r.prenom, r.nomFamille].filter(Boolean).join(' ') || r.email || r.id) : '— Non assigné —';
                                                     })()}
                                                 </div>
                                             )}
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                 Le responsable monte le Gantt et l'exécution. {estCoordonnateur ? 'Défini par le coordonnateur.' : 'Assigné par le coordonnateur.'}
                                             </p>
                                         </div>
@@ -3459,10 +3459,10 @@ export function JobModal({
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                         {L('Heures', 'Hours')}
                                                     </label>
-                                                    <p className="text-xs text-gray-500 mb-2">{L('Saisies via « Heures totales » en haut. Total actuel : ', 'Set via “Total hours” above. Current total: ')}<strong>{formData.heuresPlanifiees || 0} h</strong></p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{L('Saisies via « Heures totales » en haut. Total actuel : ', 'Set via “Total hours” above. Current total: ')}<strong>{formData.heuresPlanifiees || 0} h</strong></p>
 
                                                     {/* Remplir auto depuis les étapes créées (heures + date de fin) */}
                                                     <button
@@ -3482,16 +3482,16 @@ export function JobModal({
                                                                 type="checkbox"
                                                                 checked={formData.includeWeekendsInDuration}
                                                                 onChange={(e) => setFormData(prev => ({ ...prev, includeWeekendsInDuration: e.target.checked }))}
-                                                                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
+                                                                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"
                                                             />
-                                                            <span className="text-gray-700">📅 Inclure les fins de semaine</span>
+                                                            <span className="text-gray-700 dark:text-gray-200">📅 Inclure les fins de semaine</span>
                                                         </label>
-                                                        <p className="text-xs text-gray-500 ml-6">Active le travail samedi et dimanche</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 ml-6">Active le travail samedi et dimanche</p>
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                         Mode horaire
                                                     </label>
                                                     <select
@@ -3505,7 +3505,7 @@ export function JobModal({
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                         Personnel requis (calculé)
                                                     </label>
                                                     <div className="p-3 bg-green-100 border border-green-300 rounded-lg text-center">
@@ -3529,7 +3529,7 @@ export function JobModal({
                                             {formData.modeHoraire === 'heures-jour' && (
                                                 <div className="grid grid-cols-2 gap-4 mt-4">
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                             Heure début journée
                                                         </label>
                                                         <input
@@ -3540,7 +3540,7 @@ export function JobModal({
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                             Heure fin journée
                                                         </label>
                                                         <input
@@ -3579,7 +3579,7 @@ export function JobModal({
                                     {/* P4 : liens d'interconnexion actifs (modules reliés au mandat) */}
                                     {(formData.projectId || formData.clientId || formData.astId) && (
                                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                                            <span className="font-semibold text-gray-500">🔗 Liens :</span>
+                                            <span className="font-semibold text-gray-500 dark:text-gray-400">🔗 Liens :</span>
                                             {formData.projectId && (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700">
                                                     Projet {formData.numeroJob ? `#${formData.numeroJob}` : ''}
@@ -3605,13 +3605,13 @@ export function JobModal({
 
                                     {/* Notes */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                             Notes
                                         </label>
                                         <textarea
                                             value={formData.notes}
                                             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                             rows={3}
                                             placeholder={L('Notes supplémentaires', 'Additional notes')}
                                         />
@@ -3620,7 +3620,7 @@ export function JobModal({
                                     {/* Section Étapes du projet avec scroll */}
                                     <div
                                         className={`p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-300 ${
-                                            expandedSections.etapes ? 'fixed inset-4 z-50 bg-white shadow-2xl' : ''
+                                            expandedSections.etapes ? 'fixed inset-4 z-50 bg-white dark:bg-gray-800 shadow-2xl' : ''
                                         }`}
                                     >
                                         <h4 className={`font-medium text-blue-800 flex items-center gap-2 mb-3 ${expandedSections.etapes ? 'text-lg' : ''}`}>
@@ -3635,7 +3635,7 @@ export function JobModal({
                                                             etapes: false
                                                         }));
                                                     }}
-                                                    className="ml-auto text-gray-500 hover:text-gray-700 text-2xl"
+                                                    className="ml-auto text-gray-500 dark:text-gray-400 hover:text-gray-700 text-2xl"
                                                 >
                                                     ×
                                                 </button>
@@ -3663,7 +3663,7 @@ export function JobModal({
                                                             }));
                                                         }}
                                                         className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
-                                                        title="Agrandir la section"
+                                                        title={L('Agrandir la section', 'Expand section')}
                                                     >
                                                         <Icon name="chevronDown" size={14} />
                                                     </button>
@@ -3677,8 +3677,8 @@ export function JobModal({
                                                 <input
                                                     value={projectSearch}
                                                     onChange={(e) => setProjectSearch(e.target.value)}
-                                                    placeholder="N° de projet (ex. CS26001P)"
-                                                    className="w-44 rounded border border-gray-300 px-2 py-1"
+                                                    placeholder={L('N° de projet (ex. CS26001P)', 'Project no. (e.g. CS26001P)')}
+                                                    className="w-44 rounded border border-gray-300 dark:border-gray-600 px-2 py-1"
                                                 />
                                                 <button
                                                     type="button"
@@ -3690,11 +3690,11 @@ export function JobModal({
                                                     {prefilling ? '…' : '⤵ Pré-remplir depuis soumission'}
                                                 </button>
                                             </div>
-                                            <div className="ml-auto flex items-center gap-1 text-xs text-gray-600">
+                                            <div className="ml-auto flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                                                 <span>{L('Mode :', 'Mode:')}</span>
-                                                <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">{L('En suite', 'Sequential')}</button>
-                                                <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">{L('Parallèle', 'Parallel')}</button>
-                                                <button type="button" onClick={() => applyBuildMode('custom')} className="rounded border border-gray-300 px-2 py-1 hover:bg-gray-100">Custom</button>
+                                                <button type="button" onClick={() => applyBuildMode('suite')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">{L('En suite', 'Sequential')}</button>
+                                                <button type="button" onClick={() => applyBuildMode('parallele')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">{L('Parallèle', 'Parallel')}</button>
+                                                <button type="button" onClick={() => applyBuildMode('custom')} className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700">Custom</button>
                                             </div>
                                         </div>
 
@@ -3705,7 +3705,7 @@ export function JobModal({
                                                 {/* Colonne gauche - Étapes */}
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="font-medium text-gray-700">📝 Configuration</span>
+                                                        <span className="font-medium text-gray-700 dark:text-gray-200">📝 Configuration</span>
                                                         <button
                                                             type="button"
                                                             onClick={() => addEtape()}
@@ -3715,7 +3715,7 @@ export function JobModal({
                                                             Ajouter
                                                         </button>
                                                     </div>
-                                                    <div className="flex-1 min-h-[400px] max-h-[60vh] overflow-y-auto border border-gray-300 rounded bg-white p-3">
+                                                    <div className="flex-1 min-h-[400px] max-h-[60vh] overflow-y-auto border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 p-3">
                                                         {(() => {
                                                             // Fonction pour rendre les étapes avec structure WBS
                                                             // Filtrer et organiser les étapes selon la hiérarchie WBS
@@ -3732,10 +3732,10 @@ export function JobModal({
                                                                             <div key={etape.id}>
                                                                                 {/* Étape principale */}
                                                                                 <div
-                                                                                    className={`group flex items-center gap-2 p-2 bg-white rounded border hover:shadow-md transition-all ${
+                                                                                    className={`group flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border hover:shadow-md transition-all ${
                                                                                         expandedSections.etapes ? 'p-3 mb-2' : 'mb-1'
                                                                                     } ${
-                                                                                        isCritical ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                                                                                        isCritical ? 'border-red-400 bg-red-50' : 'border-gray-200 dark:border-gray-700'
                                                                                     }`}
                                                                                     style={{ marginLeft: level * 20 }}
                                                                                 >
@@ -3744,7 +3744,7 @@ export function JobModal({
                                                                                         <button
                                                                                             type="button"
                                                                                             onClick={() => toggleEtapeCollapse(etape.id)}
-                                                                                            className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                                                                                            className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-300"
                                                                                         >
                                                                                             <Icon name={etape.isCollapsed ? "chevronRight" : "chevronDown"} size={12} />
                                                                                         </button>
@@ -3804,7 +3804,7 @@ export function JobModal({
                                                                                             }`}
                                                                                             title={etape.autoCalculated ? "Durée calculée automatiquement depuis les sous-tâches" : "Durée en heures (clic = tout sélectionner)"}
                                                                                         />
-                                                                                        <span className="text-xs text-gray-500">h</span>
+                                                                                        <span className="text-xs text-gray-500 dark:text-gray-400">h</span>
                                                                                         {etape.autoCalculated && (
                                                                                             <span
                                                                                                 className="text-xs text-blue-600"
@@ -3827,7 +3827,7 @@ export function JobModal({
                                                                                                     className="w-14 p-1 border rounded text-sm focus:ring-2 focus:ring-green-500"
                                                                                                     title={L('% complété', '% complete')}
                                                                                                 />
-                                                                                                <span className="text-xs text-gray-500">%</span>
+                                                                                                <span className="text-xs text-gray-500 dark:text-gray-400">%</span>
                                                                                             </div>
                                                                                             <div className="w-16 bg-gray-200 rounded-full h-2">
                                                                                                 <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${etape.progress || 0}%` }}></div>
@@ -3878,7 +3878,7 @@ export function JobModal({
 
                                                                                             {/* Chemin critique */}
                                                                                             {isCritical && (
-                                                                                                <span className="text-xs bg-red-100 text-red-800 px-1 rounded" title="Chemin critique">
+                                                                                                <span className="text-xs bg-red-100 text-red-800 px-1 rounded" title={L('Chemin critique', 'Critical path')}>
                                                                                                     🎯
                                                                                                 </span>
                                                                                             )}
@@ -3945,12 +3945,12 @@ export function JobModal({
                                                     {formData.etapes && formData.etapes.length > 0 ? (
                                                         <div className="jsx-fragment-wrapper">
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <span className="font-medium text-gray-700">📊 {L('Aperçu Gantt', 'Gantt preview')}</span>
-                                                                <div className="text-xs text-gray-500">
+                                                                <span className="font-medium text-gray-700 dark:text-gray-200">📊 {L('Aperçu Gantt', 'Gantt preview')}</span>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
                                                                     {formData.etapes.length} étape{formData.etapes.length > 1 ? 's' : ''}
                                                                 </div>
                                                             </div>
-                                                            <div className="flex-1 min-w-0 max-h-96 overflow-x-auto overflow-y-auto border border-gray-300 rounded bg-white">
+                                                            <div className="flex-1 min-w-0 max-h-96 overflow-x-auto overflow-y-auto border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                                                                 <div className="space-y-1 p-2">
                                                                     {(() => {
                                                                         const hierarchicalTasks = generateHierarchicalGanttData();
@@ -3961,20 +3961,20 @@ export function JobModal({
                                                                             <div className="jsx-fragment-wrapper">
                                                                                 {/* En-tête mini échelle avec vraies heures/dates */}
                                                                                 {timeScale.length > 0 && (
-                                                                                    <div className="flex text-xs text-gray-500 mb-1 bg-gray-100 sticky top-0 z-20 py-1 border-b">
-                                                                                        <div className="w-32 flex-shrink-0 text-left font-medium bg-gray-100 border-r border-gray-400 pr-2">{L('Tâche', 'Task')}</div>
+                                                                                    <div className="flex text-xs text-gray-500 dark:text-gray-400 mb-1 bg-gray-100 dark:bg-gray-700 sticky top-0 z-20 py-1 border-b">
+                                                                                        <div className="w-32 flex-shrink-0 text-left font-medium bg-gray-100 dark:bg-gray-700 border-r border-gray-400 pr-2">{L('Tâche', 'Task')}</div>
                                                                                         <div className="flex-1 flex border-l border-gray-400">
                                                                                             {timeScale.map(period => (
                                                                                                 <div
                                                                                                     key={period.key}
-                                                                                                    className="flex-1 min-w-0 truncate text-center border-r border-gray-300 py-0.5 font-medium"
+                                                                                                    className="flex-1 min-w-0 truncate text-center border-r border-gray-300 dark:border-gray-600 py-0.5 font-medium"
                                                                                                     title={currentViewMode === 'weeks' && period.longLabel ? period.longLabel : period.label}
                                                                                                 >
                                                                                                     {period.label}
                                                                                                 </div>
                                                                                             ))}
                                                                                         </div>
-                                                                                        <div className="w-12 flex-shrink-0 text-center font-medium bg-gray-100 border-l border-gray-400 pl-1">Dur</div>
+                                                                                        <div className="w-12 flex-shrink-0 text-center font-medium bg-gray-100 dark:bg-gray-700 border-l border-gray-400 pl-1">Dur</div>
                                                                                     </div>
                                                                                 )}
 
@@ -3987,19 +3987,19 @@ export function JobModal({
                                                                                             className="flex items-center text-xs hover:bg-blue-50 transition-colors py-0.5"
                                                                                         >
                                                                                             <div
-                                                                                                className="w-32 flex-shrink-0 truncate text-left bg-white border-r border-gray-300 pr-2"
+                                                                                                className="w-32 flex-shrink-0 truncate text-left bg-white dark:bg-gray-800 border-r border-gray-300 dark:border-gray-600 pr-2"
                                                                                                 style={{ paddingLeft: `${task.level * 8}px` }}
                                                                                                 title={task.displayName || task.text || `Étape ${index + 1}`}
                                                                                             >
                                                                                                 <span className="mr-1">
                                                                                                     {task.hasChildren ? '📁' : '📄'}
                                                                                                 </span>
-                                                                                                <span className={`${task.isCritical ? 'text-red-600 font-medium' : 'text-gray-700'} ${task.hasChildren ? 'font-semibold' : ''}`}>
+                                                                                                <span className={`${task.isCritical ? 'text-red-600 font-medium' : 'text-gray-700 dark:text-gray-200'} ${task.hasChildren ? 'font-semibold' : ''}`}>
                                                                                                     {(task.displayName || task.text || `Étape ${index + 1}`).substring(0, 10)}
                                                                                                 </span>
                                                                                             </div>
 
-                                                                                            <div className="flex-1 relative h-4 bg-gray-100 border-l border-gray-400">
+                                                                                            <div className="flex-1 relative h-4 bg-gray-100 dark:bg-gray-700 border-l border-gray-400">
                                                                                                 {(() => {
                                                                                                     // Utiliser la même logique que le Gantt complet qui fonctionne
                                                                                                     const projectStart = new Date(formData.dateDebut || new Date());
@@ -4073,7 +4073,7 @@ export function JobModal({
                                                                                                 })()}
                                                                                             </div>
 
-                                                                                            <div className="w-12 flex-shrink-0 text-center text-gray-600 font-mono bg-white border-l border-gray-300 pl-1">
+                                                                                            <div className="w-12 flex-shrink-0 text-center text-gray-600 dark:text-gray-300 font-mono bg-white dark:bg-gray-800 border-l border-gray-300 dark:border-gray-600 pl-1">
                                                                                                 {task.duration}h
                                                                                             </div>
                                                                                         </div>
@@ -4081,7 +4081,7 @@ export function JobModal({
                                                                                 })}
 
                                                                                 {hierarchicalTasks.length > 10 && (
-                                                                                    <div className="text-center text-xs text-gray-500 py-2 border-t bg-gray-50 mt-2 sticky bottom-0">
+                                                                                    <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-2 border-t bg-gray-50 dark:bg-gray-700/50 mt-2 sticky bottom-0">
                                                                                         Total: {hierarchicalTasks.length} étapes |
                                                                                         Durée totale: {hierarchicalTasks.reduce((sum, task) => sum + (task.duration || 0), 0)}h |
                                                                                         Critiques: {hierarchicalTasks.filter(task => task.isCritical).length}
@@ -4146,7 +4146,7 @@ export function JobModal({
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex-1 flex items-center justify-center text-gray-500 border border-gray-300 rounded bg-gray-50">
+                                                        <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/50">
                                                             <div className="text-center">
                                                                 <div className="text-2xl mb-2">📊</div>
                                                                 <div className="text-sm">{L("L'aperçu Gantt", 'The Gantt preview')}</div>
@@ -4158,7 +4158,7 @@ export function JobModal({
                                             </div>
                                         ) : (
                                             /* Vue compacte normale avec scroll adaptatif */
-                                            <div className="max-h-96 overflow-y-auto space-y-2 mb-3 border rounded-lg p-3 bg-gray-50">
+                                            <div className="max-h-96 overflow-y-auto space-y-2 mb-3 border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
                                                 {(() => {
                                                     // Fonction pour rendre les étapes avec structure WBS
                                                     const renderEtapes = (parentId = null, level = 0) => {
@@ -4173,8 +4173,8 @@ export function JobModal({
                                                                 return (
                                                                     <div key={etape.id}>
                                                                         <div
-                                                                            className={`group flex items-center gap-2 p-2 bg-white rounded border hover:shadow-md transition-all mb-1 ${
-                                                                                isCritical ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                                                                            className={`group flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border hover:shadow-md transition-all mb-1 ${
+                                                                                isCritical ? 'border-red-400 bg-red-50' : 'border-gray-200 dark:border-gray-700'
                                                                             }`}
                                                                             style={{ marginLeft: level * 20 }}
                                                                         >
@@ -4221,7 +4221,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Section Préparation et matériel */}
-                                    <div className={`p-4 bg-orange-50 rounded-lg border border-orange-200 transition-all duration-300 ${expandedSections.preparation ? 'fixed inset-4 z-50 bg-white shadow-2xl overflow-auto' : ''}`}>
+                                    <div className={`p-4 bg-orange-50 rounded-lg border border-orange-200 transition-all duration-300 ${expandedSections.preparation ? 'fixed inset-4 z-50 bg-white dark:bg-gray-800 shadow-2xl overflow-auto' : ''}`}>
                                         {/* En-tête */}
                                         <div className="flex items-center gap-2 mb-3 flex-wrap">
                                             <h4 className={`font-medium text-orange-800 flex items-center gap-2 ${expandedSections.preparation ? 'text-lg' : ''}`}>
@@ -4300,7 +4300,7 @@ export function JobModal({
                                                         value={prepSearch}
                                                         onChange={e => setPrepSearch(e.target.value)}
                                                         placeholder={prepSource === 'ressource' ? 'Rechercher une ressource…' : 'Rechercher dans l\'inventaire…'}
-                                                        className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
+                                                        className="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:outline-none focus:border-blue-400"
                                                         autoFocus
                                                     />
                                                 </div>
@@ -4318,23 +4318,23 @@ export function JobModal({
                                                                     key={equip.id}
                                                                     type="button"
                                                                     onClick={() => addFromRessource(equip)}
-                                                                    className="w-full text-left px-3 py-1.5 bg-white rounded border border-blue-100 hover:bg-blue-100 text-sm flex items-center gap-2 transition-colors"
+                                                                    className="w-full text-left px-3 py-1.5 bg-white dark:bg-gray-800 rounded border border-blue-100 hover:bg-blue-100 text-sm flex items-center gap-2 transition-colors"
                                                                 >
                                                                     <span className="text-blue-500">🔧</span>
                                                                     <span className="flex-1 font-medium">{equip.name || equip.nom}</span>
-                                                                    {equip.type && <span className="text-xs text-gray-400">{equip.type}</span>}
-                                                                    {equip.serial_number && <span className="text-xs text-gray-400">#{equip.serial_number}</span>}
+                                                                    {equip.type && <span className="text-xs text-gray-400 dark:text-gray-500">{equip.type}</span>}
+                                                                    {equip.serial_number && <span className="text-xs text-gray-400 dark:text-gray-500">#{equip.serial_number}</span>}
                                                                 </button>
                                                             ))
                                                         }
                                                         {(equipements || []).length === 0 && (
-                                                            <p className="text-xs text-gray-400 text-center py-2">Aucune ressource disponible</p>
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Aucune ressource disponible</p>
                                                         )}
                                                     </div>
                                                 )}
                                                 {prepSource === 'inventaire' && (
                                                     <div className="max-h-40 overflow-y-auto space-y-1">
-                                                        {inventaireLoading && <p className="text-xs text-gray-400 text-center py-2">Chargement…</p>}
+                                                        {inventaireLoading && <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Chargement…</p>}
                                                         {!inventaireLoading && inventaireItems
                                                             .filter(it => {
                                                                 const s = prepSearch.toLowerCase();
@@ -4345,17 +4345,17 @@ export function JobModal({
                                                                     key={item.id}
                                                                     type="button"
                                                                     onClick={() => addFromInventaire(item)}
-                                                                    className="w-full text-left px-3 py-1.5 bg-white rounded border border-emerald-100 hover:bg-emerald-100 text-sm flex items-center gap-2 transition-colors"
+                                                                    className="w-full text-left px-3 py-1.5 bg-white dark:bg-gray-800 rounded border border-emerald-100 hover:bg-emerald-100 text-sm flex items-center gap-2 transition-colors"
                                                                 >
                                                                     <span className="text-emerald-500">📦</span>
                                                                     <span className="flex-1 font-medium">{item.name}</span>
-                                                                    {item.code && <span className="text-xs text-gray-400">{item.code}</span>}
-                                                                    {item.unit && <span className="text-xs text-gray-400">{item.unit}</span>}
+                                                                    {item.code && <span className="text-xs text-gray-400 dark:text-gray-500">{item.code}</span>}
+                                                                    {item.unit && <span className="text-xs text-gray-400 dark:text-gray-500">{item.unit}</span>}
                                                                 </button>
                                                             ))
                                                         }
                                                         {!inventaireLoading && inventaireItems.length === 0 && (
-                                                            <p className="text-xs text-gray-400 text-center py-2">Aucun article dans l'inventaire</p>
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Aucun article dans l'inventaire</p>
                                                         )}
                                                     </div>
                                                 )}
@@ -4367,7 +4367,7 @@ export function JobModal({
                                             style={expandedSections.preparation ? { maxHeight: 'calc(100vh - 280px)' } : {}}>
                                             {formData.preparation.map((item, index) => (
                                                 <div key={item.id || index}
-                                                    className="group flex items-center gap-2 p-2 bg-white rounded border hover:shadow-sm transition-all"
+                                                    className="group flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border hover:shadow-sm transition-all"
                                                 >
                                                     {/* Badge type */}
                                                     <span className="shrink-0 text-base" title={item.type === 'ressource' ? 'Ressource' : item.type === 'inventaire' ? 'Inventaire' : 'Texte libre'}>
@@ -4393,7 +4393,7 @@ export function JobModal({
                                                             item.approStatut === 'commande' ? 'bg-amber-50 text-amber-700 border-amber-300' :
                                                             item.approStatut === 'livraison' ? 'bg-blue-50 text-blue-700 border-blue-300' :
                                                             item.approStatut === 'recu' ? 'bg-green-50 text-green-700 border-green-300' :
-                                                            'text-gray-400'
+                                                            'text-gray-400 dark:text-gray-500'
                                                         }`}
                                                     >
                                                         <option value="">{L('Appro —', 'Supply —')}</option>
@@ -4422,7 +4422,7 @@ export function JobModal({
                                                             className="w-14 p-1 border rounded text-xs text-center"
                                                             placeholder={L('Qté', 'Qty')}
                                                         />
-                                                        <span className="text-xs text-gray-400 w-10 truncate" title={item.unite}>{item.unite || 'u.'}</span>
+                                                        <span className="text-xs text-gray-400 dark:text-gray-500 w-10 truncate" title={item.unite}>{item.unite || 'u.'}</span>
                                                     </div>
                                                     {/* Supprimer */}
                                                     <button
@@ -4435,7 +4435,7 @@ export function JobModal({
                                                 </div>
                                             ))}
                                             {formData.preparation.length === 0 && (
-                                                <p className="text-xs text-center text-gray-400 py-3">
+                                                <p className="text-xs text-center text-gray-400 dark:text-gray-500 py-3">
                                                     Aucun item — utilisez les boutons ci-dessus pour ajouter des ressources, articles d'inventaire ou texte libre.
                                                 </p>
                                             )}
@@ -4467,7 +4467,7 @@ export function JobModal({
                             <div className="h-full overflow-y-auto p-4 sm:p-6">
                                 <div className="space-y-4">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                        <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
                                             👤 {L('Personnel planifié', 'Planned staff')}
                                             <span className="rounded-full bg-blue-100 px-2 py-0.5 text-sm font-semibold text-blue-700">{formData.personnel?.length || 0}</span>
                                         </h3>
@@ -4482,7 +4482,7 @@ export function JobModal({
                                         const respId = formData.responsable != null ? String(formData.responsable) : null;
                                         if (list.length === 0) {
                                             return (
-                                                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-500">
+                                                <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-8 text-center text-gray-500 dark:text-gray-400">
                                                     {L('Aucun personnel assigné. Cliquez « Modifier l\'assignation » pour en ajouter.', 'No staff assigned. Click "Edit assignment" to add some.')}
                                                 </div>
                                             );
@@ -4495,11 +4495,11 @@ export function JobModal({
                                                     const isResp = respId && String(person.id) === respId;
                                                     const initiales = `${(person.prenom || '')[0] || ''}${(person.nom || person.name || '')[0] || ''}`.toUpperCase() || '?';
                                                     return (
-                                                        <div key={person.id} className={`flex items-center gap-3 rounded-xl border bg-white p-3 shadow-sm ${isResp ? 'border-blue-300 ring-2 ring-blue-100' : 'border-gray-200'}`}>
+                                                        <div key={person.id} className={`flex items-center gap-3 rounded-xl border bg-white dark:bg-gray-800 p-3 shadow-sm ${isResp ? 'border-blue-300 ring-2 ring-blue-100' : 'border-gray-200 dark:border-gray-700'}`}>
                                                             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">{initiales}</div>
                                                             <div className="min-w-0 flex-1">
-                                                                <div className="truncate font-semibold text-gray-900">{person.prenom ? `${person.prenom} ` : ''}{person.nom || person.name || L('Sans nom', 'No name')}</div>
-                                                                <div className="truncate text-xs text-gray-500">{person.poste || person.role || '—'}{person.telephone || person.phone ? ` · ${person.telephone || person.phone}` : ''}</div>
+                                                                <div className="truncate font-semibold text-gray-900 dark:text-gray-100">{person.prenom ? `${person.prenom} ` : ''}{person.nom || person.name || L('Sans nom', 'No name')}</div>
+                                                                <div className="truncate text-xs text-gray-500 dark:text-gray-400">{person.poste || person.role || '—'}{person.telephone || person.phone ? ` · ${person.telephone || person.phone}` : ''}</div>
                                                             </div>
                                                             {isResp && <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">{L('Responsable', 'Lead')}</span>}
                                                         </div>
@@ -4514,7 +4514,7 @@ export function JobModal({
 
                         {/* Onglet Gantt */}
                         {activeTab === 'gantt' && (
-                            <div className={`${ganttFullscreen ? 'fixed inset-0 z-50 bg-white overflow-auto p-6' : 'h-full overflow-y-auto p-6'}`}>
+                            <div className={`${ganttFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-800 overflow-auto p-6' : 'h-full overflow-y-auto p-6'}`}>
                                 <div className="space-y-6">
                                     {/* Header Gantt */}
                                     <div className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg">
@@ -4529,14 +4529,14 @@ export function JobModal({
                                         </div>
                                         <button
                                             onClick={() => setGanttFullscreen(!ganttFullscreen)}
-                                            className="text-gray-400 hover:text-white transition-colors"
+                                            className="text-gray-400 dark:text-gray-500 hover:text-white transition-colors"
                                         >
                                             {ganttFullscreen ? '🗗' : '🗖'}
                                         </button>
                                     </div>
 
                                     {/* Contrôles Gantt — barre compacte + menu Actions (hamburger) */}
-                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <button
                                                 onClick={() => addEtape()}
@@ -4546,8 +4546,8 @@ export function JobModal({
                                             </button>
 
                                             {/* Sélecteur de vue (unique) */}
-                                            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1">
-                                                <span className="text-xs text-gray-500 px-1">Vue</span>
+                                            <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400 px-1">Vue</span>
                                                 {['6h', '12h', '24h', 'day', 'week', 'month'].map(mode => (
                                                     <button
                                                         key={mode}
@@ -4555,36 +4555,36 @@ export function JobModal({
                                                         className={`px-2 py-1 text-xs rounded ${
                                                             (formData.ganttViewMode || getDefaultViewMode()) === mode
                                                                 ? 'bg-purple-600 text-white'
-                                                                : 'text-gray-600 hover:bg-gray-100'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                                         }`}
                                                     >
                                                         {mode === 'day' ? 'Jour' : mode === 'week' ? 'Semaine' : mode === 'month' ? 'Mois' : mode}
                                                     </button>
                                                 ))}
                                             </div>
-                                            <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 px-2 py-1 rounded">
                                                 Auto: {getDefaultViewMode()} ({formData.etapes.reduce((sum, etape) => sum + (etape.duration || 0), 0)}h)
                                             </span>
 
                                             {/* Zoom horizontal du Gantt */}
-                                            <div className="flex items-center rounded border border-gray-300 overflow-hidden" title={L('Zoom du diagramme', 'Chart zoom')}>
+                                            <div className="flex items-center rounded border border-gray-300 dark:border-gray-600 overflow-hidden" title={L('Zoom du diagramme', 'Chart zoom')}>
                                                 <button type="button" onClick={() => setGanttZoom(z => Math.max(0.5, Math.round((z - 0.25) * 100) / 100))}
                                                     disabled={ganttZoom <= 0.5}
-                                                    className="px-2 py-1.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40">−</button>
-                                                <span className="px-2 py-1.5 text-xs font-semibold text-gray-700 tabular-nums select-none" style={{ minWidth: 44, textAlign: 'center' }}>{Math.round(ganttZoom * 100)}%</span>
+                                                    className="px-2 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 disabled:opacity-40">−</button>
+                                                <span className="px-2 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums select-none" style={{ minWidth: 44, textAlign: 'center' }}>{Math.round(ganttZoom * 100)}%</span>
                                                 <button type="button" onClick={() => setGanttZoom(z => Math.min(3, Math.round((z + 0.25) * 100) / 100))}
                                                     disabled={ganttZoom >= 3}
-                                                    className="px-2 py-1.5 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40">+</button>
+                                                    className="px-2 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 disabled:opacity-40">+</button>
                                                 <button type="button" onClick={() => setGanttZoom(1)}
-                                                    className="px-2 py-1.5 text-xs bg-white text-gray-500 hover:bg-gray-100 border-l border-gray-300" title={L('Réinitialiser le zoom', 'Reset zoom')}>⊘</button>
+                                                    className="px-2 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-l border-gray-300 dark:border-gray-600" title={L('Réinitialiser le zoom', 'Reset zoom')}>⊘</button>
                                             </div>
 
                                             {/* Toggles rapides */}
                                             <button
                                                 type="button"
                                                 onClick={() => setGanttCompactMode(!ganttCompactMode)}
-                                                className={`px-3 py-1.5 text-sm rounded ${ganttCompactMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                                                title="Mode compact pour l'impression"
+                                                className={`px-3 py-1.5 text-sm rounded ${ganttCompactMode ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-700 dark:text-gray-200 hover:bg-gray-300'}`}
+                                                title={L("Mode compact pour l'impression", 'Compact mode for printing')}
                                             >
                                                 📄 {ganttCompactMode ? 'Normale' : 'Compact'}
                                             </button>
@@ -4610,33 +4610,33 @@ export function JobModal({
                                                 {ganttMenuOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-40" onClick={() => setGanttMenuOpen(false)} aria-hidden />
-                                                        <div className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
-                                                            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Analyse</div>
+                                                        <div className="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl">
+                                                            <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">Analyse</div>
                                                             <button type="button" onClick={() => {
                                                                 const criticalPath = calculateCriticalPath(formData.etapes);
                                                                 setFormData(prev => ({ ...prev, criticalPath, etapes: prev.etapes.map(task => ({ ...task, isCritical: criticalPath.includes(task.id) })) }));
                                                                 addNotification?.(`Chemin critique calculé: ${criticalPath.length} tâche(s) critique(s)`, 'info');
                                                                 setGanttMenuOpen(false);
-                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🎯 Calculer le chemin critique</button>
-                                                            <button type="button" onClick={() => { updateField('showCriticalPath', !formData.showCriticalPath); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🚨 {formData.showCriticalPath ? 'Masquer' : 'Afficher'} le chemin critique</button>
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">🎯 Calculer le chemin critique</button>
+                                                            <button type="button" onClick={() => { updateField('showCriticalPath', !formData.showCriticalPath); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">🚨 {formData.showCriticalPath ? 'Masquer' : 'Afficher'} le chemin critique</button>
                                                             <button type="button" onClick={() => {
                                                                 const validation = validateWBSStructure();
                                                                 if (validation.isValid) addNotification?.('Structure WBS valide ✅', 'success');
                                                                 else addNotification?.(`Problèmes WBS: ${validation.issues.join(', ')}`, 'error');
                                                                 setGanttMenuOpen(false);
-                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">✅ Valider la structure WBS</button>
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">✅ Valider la structure WBS</button>
                                                             <button type="button" onClick={() => {
                                                                 const report = generateWorkPackageReport();
                                                                 alert(`📊 Rapport WBS:\n- ${report.totalTasks} tâches totales\n- ${report.workPackages} paquets de travail\n- ${report.totalEffort}h d'effort total\n- ${report.skillsRequired.length} compétences requises`);
                                                                 setGanttMenuOpen(false);
-                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">📊 Rapport WBS</button>
+                                                            }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">📊 Rapport WBS</button>
 
-                                                            <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">Enregistrer / Exporter</div>
-                                                            <button type="button" onClick={() => { saveBaseline(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">💾 Sauver la baseline</button>
-                                                            <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">🖨️ {L('Imprimer le rapport', 'Print report')}</button>
-                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {ganttPdfBusy ? L('Génération…', 'Generating…') : L('PDF Gantt — A4 paysage', 'Gantt PDF — A4 landscape')}</button>
-                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('p', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {L('PDF Gantt — A4 portrait', 'Gantt PDF — A4 portrait')}</button>
-                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'letter'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">📄 {L('PDF Gantt — Letter paysage', 'Gantt PDF — Letter landscape')}</button>
+                                                            <div className="mt-1 border-t border-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">Enregistrer / Exporter</div>
+                                                            <button type="button" onClick={() => { saveBaseline(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">💾 Sauver la baseline</button>
+                                                            <button type="button" onClick={() => { printGanttAndForms(); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">🖨️ {L('Imprimer le rapport', 'Print report')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">📄 {ganttPdfBusy ? L('Génération…', 'Generating…') : L('PDF Gantt — A4 paysage', 'Gantt PDF — A4 landscape')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('p', 'a4'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">📄 {L('PDF Gantt — A4 portrait', 'Gantt PDF — A4 portrait')}</button>
+                                                            <button type="button" disabled={ganttPdfBusy || formData.etapes.length === 0} onClick={() => { downloadGanttPdf('l', 'letter'); setGanttMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">📄 {L('PDF Gantt — Letter paysage', 'Gantt PDF — Letter landscape')}</button>
                                                         </div>
                                                     </>
                                                 )}
@@ -4645,13 +4645,13 @@ export function JobModal({
                                     </div>
 
                                     {/* Liste éditable des tâches — édition directe dans l'onglet Gantt */}
-                                    <div className="bg-white border rounded-lg p-3">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg p-3">
                                         <div className="mb-2 flex items-center justify-between">
-                                            <span className="text-sm font-semibold text-gray-700">📝 {L('Tâches du projet (édition directe)', 'Project tasks (direct edit)')}</span>
+                                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">📝 {L('Tâches du projet (édition directe)', 'Project tasks (direct edit)')}</span>
                                             <button type="button" onClick={() => addEtape()} className="rounded bg-purple-600 px-2 py-1 text-xs font-semibold text-white hover:bg-purple-700">➕ Ajouter</button>
                                         </div>
                                         {formData.etapes.length === 0 ? (
-                                            <p className="py-3 text-center text-sm text-gray-400">{L('Aucune tâche. Cliquez « Ajouter » pour commencer.', 'No task. Click "Add" to start.')}</p>
+                                            <p className="py-3 text-center text-sm text-gray-400 dark:text-gray-500">{L('Aucune tâche. Cliquez « Ajouter » pour commencer.', 'No task. Click "Add" to start.')}</p>
                                         ) : (
                                             <div className="space-y-1 max-h-72 overflow-y-auto">
                                                 {(() => {
@@ -4685,7 +4685,7 @@ export function JobModal({
                                                                 className={`w-16 rounded border px-1 py-1 text-sm ${etape.autoCalculated ? 'bg-blue-50 text-blue-700' : 'focus:ring-2 focus:ring-blue-500'}`}
                                                                 title={etape.autoCalculated ? 'Durée auto (sous-tâches)' : 'Durée (h)'}
                                                             />
-                                                            <span className="text-xs text-gray-400">h</span>
+                                                            <span className="text-xs text-gray-400 dark:text-gray-500">h</span>
                                                         </div>
                                                         <div className="flex items-center gap-1">
                                                             <input
@@ -4696,7 +4696,7 @@ export function JobModal({
                                                                 className="w-14 rounded border px-1 py-1 text-sm focus:ring-2 focus:ring-green-500"
                                                                 title={L('% complété', '% complete')}
                                                             />
-                                                            <span className="text-xs text-gray-400">%</span>
+                                                            <span className="text-xs text-gray-400 dark:text-gray-500">%</span>
                                                         </div>
                                                         <select
                                                             value={etape.responsableId || ''}
@@ -4742,9 +4742,9 @@ export function JobModal({
                                     </div>
 
                                     {/* Vue Gantt avancée avec hiérarchie - VERSION OLD COMPLÈTE */}
-                                    <div ref={ganttCaptureRef} className={`bg-white border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
+                                    <div ref={ganttCaptureRef} className={`bg-white dark:bg-gray-800 border rounded-lg p-4 overflow-x-auto ${ganttFullscreen ? 'min-h-screen' : 'min-h-96'} ${ganttCompactMode ? 'max-h-screen overflow-auto print:overflow-visible print:max-h-none' : ''}`}>
                                         {formData.etapes.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500">
+                                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                 <div className="text-5xl mb-4 opacity-50">📊</div>
                                                 <p>{L('Ajoutez des étapes au projet pour voir le diagramme de Gantt', 'Add steps to the project to see the Gantt chart')}</p>
                                             </div>
@@ -4760,10 +4760,10 @@ export function JobModal({
                                                 <div className="space-y-1" style={{ minWidth: `${ganttMinW}px` }}>
                                                     {/* En-tête du timeline */}
                                                     <div className="flex items-center mb-4 pb-2 border-b">
-                                                        <div className="flex-shrink-0 sticky left-0 z-20 bg-white font-medium text-gray-700" style={{ width: G_NAME_W }}>
+                                                        <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-gray-800 font-medium text-gray-700 dark:text-gray-200" style={{ width: G_NAME_W }}>
                                                             Tâches hiérarchiques
                                                         </div>
-                                                        <div className="flex-1 text-center font-medium text-gray-700">
+                                                        <div className="flex-1 text-center font-medium text-gray-700 dark:text-gray-200">
                                                             Timeline ({(() => {
                                                                 const mode = formData.ganttViewMode || getDefaultViewMode();
                                                                 const modeLabels = {
@@ -4778,7 +4778,7 @@ export function JobModal({
                                                                 return modeLabels[mode] || mode;
                                                             })()})
                                                         </div>
-                                                        <div className="w-20 text-center font-medium text-gray-700">
+                                                        <div className="w-20 text-center font-medium text-gray-700 dark:text-gray-200">
                                                             Durée
                                                         </div>
                                                     </div>
@@ -4789,13 +4789,13 @@ export function JobModal({
                                                         const timeScale = generateTimeScale(currentViewMode);
                                                         if (timeScale.length > 0) {
                                                             return (
-                                                                <div className="flex items-center mb-2 text-xs text-gray-600 border-b pb-1">
-                                                                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white" style={{ width: G_NAME_W }}></div>
+                                                                <div className="flex items-center mb-2 text-xs text-gray-600 dark:text-gray-300 border-b pb-1">
+                                                                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-gray-800" style={{ width: G_NAME_W }}></div>
                                                                     <div className="flex-1 flex">
                                                                         {timeScale.map(period => (
                                                                             <div
                                                                                 key={period.key}
-                                                                                className="flex-shrink-0 truncate text-center border-r border-gray-200 py-1"
+                                                                                className="flex-shrink-0 truncate text-center border-r border-gray-200 dark:border-gray-700 py-1"
                                                                                 style={{ width: G_PERIOD_W }}
                                                                                 title={currentViewMode === 'weeks' && period.longLabel ? period.longLabel : period.label}
                                                                             >
@@ -4865,14 +4865,14 @@ export function JobModal({
                                                         {hierarchicalTasks.map((task, index) => (
                                                             <div
                                                                 key={task.id}
-                                                                className={`flex items-center ${ganttCompactMode ? 'py-1' : 'py-2'} border-b hover:bg-gray-50 transition-all ${
+                                                                className={`flex items-center ${ganttCompactMode ? 'py-1' : 'py-2'} border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition-all ${
                                                                     task.isCritical ? 'bg-red-50 border-red-200' : ''
                                                                 }`}
                                                                 style={{ height: ganttCompactMode ? '24px' : '38px' }}
                                                             >
                                                                 {/* Nom de la tâche avec hiérarchie (colonne figée) */}
                                                                 <div
-                                                                    className={`flex-shrink-0 sticky left-0 z-10 bg-white ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium truncate flex items-center`}
+                                                                    className={`flex-shrink-0 sticky left-0 z-10 bg-white dark:bg-gray-800 ${ganttCompactMode ? 'text-xs' : 'text-sm'} font-medium truncate flex items-center`}
                                                                     style={{ width: G_NAME_W, paddingLeft: `${task.indent}px` }}
                                                                 >
                                                                     <span className={`${ganttCompactMode ? 'mr-1 text-xs' : 'mr-2'}`}>
@@ -4898,7 +4898,7 @@ export function JobModal({
                                                                 </div>
 
                                                                 {/* Barre de Gantt avec échelle de temps réaliste */}
-                                                                <div className={`flex-1 relative ${ganttCompactMode ? 'h-4' : 'h-6'} bg-gray-100 rounded-sm border`}>
+                                                                <div className={`flex-1 relative ${ganttCompactMode ? 'h-4' : 'h-6'} bg-gray-100 dark:bg-gray-700 rounded-sm border`}>
                                                                     {(() => {
                                                                         // Calcul simple basé sur les dates calculées
                                                                         const projectStart = new Date(formData.dateDebut || new Date());
@@ -5005,12 +5005,12 @@ export function JobModal({
                                                                 </div>
 
                                                                 {/* Durée */}
-                                                                <div className="flex-shrink-0 text-xs text-gray-600 text-center" style={{ width: G_DUR_W }}>
+                                                                <div className="flex-shrink-0 text-xs text-gray-600 dark:text-gray-300 text-center" style={{ width: G_DUR_W }}>
                                                                     <div className={task.autoCalculated ? 'text-blue-600 font-medium' : ''}>
                                                                         {task.duration}h
                                                                     </div>
                                                                     {task.hasChildren && !ganttCompactMode && (
-                                                                        <div className="text-xs text-gray-400">
+                                                                        <div className="text-xs text-gray-400 dark:text-gray-500">
                                                                             ({formData.etapes.filter(e => e.parentId === task.id).length} sous-tâches)
                                                                         </div>
                                                                     )}
@@ -5159,7 +5159,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Personnel */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-blue-50 p-4 border-b">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="font-medium text-blue-800 flex items-center gap-2">
@@ -5203,7 +5203,7 @@ export function JobModal({
                                                                     isSelected
                                                                         ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200'
                                                                         : isAvailable
-                                                                            ? 'bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-300'
+                                                                            ? 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 hover:bg-blue-50 hover:border-blue-300'
                                                                             : 'bg-amber-50 border-amber-300 hover:bg-amber-100'
                                                                 }`}
                                                                 title={!isAvailable ? 'Déjà assigné/en congé sur cette période — sélectionnable, mais signalé en conflit d\'horaire' : ''}
@@ -5213,8 +5213,8 @@ export function JobModal({
                                                                         <div className="font-medium text-sm">
                                                                             {person.prenom ? `${person.prenom} ${person.nom}` : person.nom}
                                                                         </div>
-                                                                        <div className="text-xs text-gray-600 mt-1">{person.poste}</div>
-                                                                        <div className="text-xs text-gray-500">{person.succursale}</div>
+                                                                        <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{person.poste}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{person.succursale}</div>
                                                                         {!isAvailable && (
                                                                             <div className="mt-1 inline-flex items-center gap-1 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
                                                                                 ⚠️ Conflit d'horaire
@@ -5227,7 +5227,7 @@ export function JobModal({
                                                                                 <span className="text-white text-xs">✓</span>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
+                                                                            <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded-full"></div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -5236,7 +5236,7 @@ export function JobModal({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                     <div className="text-4xl mb-2">👤</div>
                                                     <p>Aucun personnel disponible</p>
                                                 </div>
@@ -5245,7 +5245,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Équipements */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-green-50 p-4 border-b">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="font-medium text-green-800 flex items-center gap-2">
@@ -5289,15 +5289,15 @@ export function JobModal({
                                                                     isSelected
                                                                         ? 'bg-green-50 border-green-300 ring-2 ring-green-200'
                                                                         : isAvailable
-                                                                            ? 'bg-gray-50 border-gray-200 hover:bg-green-50 hover:border-green-300'
+                                                                            ? 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 hover:bg-green-50 hover:border-green-300'
                                                                             : 'bg-red-50 border-red-200 opacity-60'
                                                                 }`}
                                                             >
                                                                 <div className="flex items-start justify-between">
                                                                     <div className="flex-1">
                                                                         <div className="font-medium text-sm">{equipment.nom}</div>
-                                                                        <div className="text-xs text-gray-600 mt-1">{equipment.type}</div>
-                                                                        <div className="text-xs text-gray-500">{equipment.succursale}</div>
+                                                                        <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{equipment.type}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{equipment.succursale}</div>
                                                                     </div>
                                                                     <div className="ml-2">
                                                                         {isSelected ? (
@@ -5305,7 +5305,7 @@ export function JobModal({
                                                                                 <span className="text-white text-xs">✓</span>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
+                                                                            <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded-full"></div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -5314,7 +5314,7 @@ export function JobModal({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                     <div className="text-4xl mb-2">🔧</div>
                                                     <p>{L('Aucun équipement disponible', 'No equipment available')}</p>
                                                 </div>
@@ -5323,7 +5323,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Sous-traitants */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-purple-50 p-4 border-b">
                                             <h4 className="font-medium text-purple-800 flex items-center gap-2">
                                                 🏢 Sous-traitants ({formData.sousTraitants?.length || 0} assigné{(formData.sousTraitants?.length || 0) > 1 ? 's' : ''})
@@ -5331,14 +5331,14 @@ export function JobModal({
                                         </div>
                                         <div className="p-4">
                                             {/* Ajouter nouveau sous-traitant */}
-                                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                                 <div className="flex gap-2 mb-2">
                                                     <input
                                                         type="text"
                                                         value={newSousTraitant}
                                                         onChange={(e) => setNewSousTraitant(e.target.value)}
-                                                        placeholder="Nom du nouveau sous-traitant"
-                                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                        placeholder={L('Nom du nouveau sous-traitant', 'New subcontractor name')}
+                                                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                         onKeyPress={(e) => e.key === 'Enter' && handleAddSousTraitant()}
                                                     />
                                                     <button
@@ -5384,14 +5384,14 @@ export function JobModal({
                                                                 className={`p-3 border rounded-lg cursor-pointer transition-all ${
                                                                     isSelected
                                                                         ? 'bg-purple-50 border-purple-300 ring-2 ring-purple-200'
-                                                                        : 'bg-gray-50 border-gray-200 hover:bg-purple-50 hover:border-purple-300'
+                                                                        : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 hover:bg-purple-50 hover:border-purple-300'
                                                                 }`}
                                                             >
                                                                 <div className="flex items-start justify-between">
                                                                     <div className="flex-1">
                                                                         <div className="font-medium text-sm">{sousTraitant.nom}</div>
-                                                                        <div className="text-xs text-gray-600 mt-1">{sousTraitant.specialite}</div>
-                                                                        <div className="text-xs text-gray-500">{sousTraitant.contact}</div>
+                                                                        <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{sousTraitant.specialite}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{sousTraitant.contact}</div>
                                                                     </div>
                                                                     <div className="ml-2">
                                                                         {isSelected ? (
@@ -5399,7 +5399,7 @@ export function JobModal({
                                                                                 <span className="text-white text-xs">✓</span>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
+                                                                            <div className="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded-full"></div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -5408,7 +5408,7 @@ export function JobModal({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                     <div className="text-4xl mb-2">🏢</div>
                                                     <p>Aucun sous-traitant disponible</p>
                                                     <p className="text-sm mt-1">Ajoutez-en un ci-dessus</p>
@@ -5418,7 +5418,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Gestion des Équipes */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-orange-50 p-4 border-b">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="font-medium text-orange-800 flex items-center gap-2">
@@ -5481,19 +5481,19 @@ export function JobModal({
 
                                                                 {/* Membres de l'équipe */}
                                                                 <div className="space-y-2">
-                                                                    <h6 className="text-sm font-medium text-gray-700">{L("Membres de l'équipe:", 'Team members:')}</h6>
+                                                                    <h6 className="text-sm font-medium text-gray-700 dark:text-gray-200">{L("Membres de l'équipe:", 'Team members:')}</h6>
                                                                     {membresEquipe.length > 0 ? (
                                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                                             {membresEquipe.map(membre => (
                                                                                 <div
                                                                                     key={membre.id}
-                                                                                    className="flex items-center justify-between p-2 bg-white border rounded"
+                                                                                    className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 border rounded"
                                                                                 >
                                                                                     <div>
                                                                                         <div className="font-medium text-sm">
                                                                                             {membre.prenom ? `${membre.prenom} ${membre.nom}` : membre.nom}
                                                                                         </div>
-                                                                                        <div className="text-xs text-gray-600">{membre.poste}</div>
+                                                                                        <div className="text-xs text-gray-600 dark:text-gray-300">{membre.poste}</div>
                                                                                     </div>
                                                                                     <button
                                                                                         onClick={() => removePersonnelFromTeam(equipe.id, membre.id)}
@@ -5506,13 +5506,13 @@ export function JobModal({
                                                                             ))}
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-sm text-gray-500 italic">{L('Aucun membre assigné', 'No member assigned')}</div>
+                                                                        <div className="text-sm text-gray-500 dark:text-gray-400 italic">{L('Aucun membre assigné', 'No member assigned')}</div>
                                                                     )}
 
                                                                     {/* Ajouter du personnel à l'équipe */}
                                                                     {personnel && personnel.length > 0 && (
                                                                         <div className="mt-3">
-                                                                            <h6 className="text-sm font-medium text-gray-600 mb-2">Ajouter du personnel:</h6>
+                                                                            <h6 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Ajouter du personnel:</h6>
                                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                                                 {personnel
                                                                                     .filter(person => !equipe.membres.includes(person.id))
@@ -5520,16 +5520,16 @@ export function JobModal({
                                                                                         <div
                                                                                             key={person.id}
                                                                                             onClick={() => addPersonnelToTeam(equipe.id, person.id)}
-                                                                                            className="flex items-center justify-between p-2 bg-gray-50 border rounded cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                                                                                            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 border rounded cursor-pointer hover:bg-orange-50 hover:border-orange-300 transition-colors"
                                                                                             title={L("Cliquer pour ajouter à l'équipe", 'Click to add to the team')}
                                                                                         >
                                                                                             <div>
                                                                                                 <div className="font-medium text-sm">
                                                                                                     {person.prenom ? `${person.prenom} ${person.nom}` : person.nom}
                                                                                                 </div>
-                                                                                                <div className="text-xs text-gray-600">{person.poste}</div>
+                                                                                                <div className="text-xs text-gray-600 dark:text-gray-300">{person.poste}</div>
                                                                                             </div>
-                                                                                            <div className="text-gray-400">+</div>
+                                                                                            <div className="text-gray-400 dark:text-gray-500">+</div>
                                                                                         </div>
                                                                                     ))
                                                                                 }
@@ -5542,7 +5542,7 @@ export function JobModal({
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-8 text-gray-500">
+                                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                     <div className="text-4xl mb-2">💼</div>
                                                     <p>{L('Aucune équipe créée', 'No team created')}</p>
                                                     <p className="text-sm mt-1">{L('Cliquez sur "Nouvelle équipe" pour commencer', 'Click "New team" to start')}</p>
@@ -5554,7 +5554,7 @@ export function JobModal({
 {/* Section Horaires par jour */}
                                 <div className="md:col-span-2">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-semibold text-gray-900">📅 {t('form.schedulesByDay', 'Horaires par jour')}</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📅 {t('form.schedulesByDay', 'Horaires par jour')}</h3>
                                         <button
                                             type="button"
                                             onClick={() => setShowDailySchedules(!showDailySchedules)}
@@ -5575,29 +5575,29 @@ export function JobModal({
                                                 {(() => {
                                                     const stats = getPersonnelStats();
                                                     return (
-                                                        <div className="bg-white border border-purple-200 rounded-lg p-3 mb-4">
-                                                            <h4 className="font-medium text-gray-900 mb-2">📊 {t('form.personnelStatistics', 'Statistiques du personnel')}</h4>
+                                                        <div className="bg-white dark:bg-gray-800 border border-purple-200 rounded-lg p-3 mb-4">
+                                                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">📊 {t('form.personnelStatistics', 'Statistiques du personnel')}</h4>
 
                                                             {/* Vue globale */}
                                                             <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
                                                                 <div className="text-center">
                                                                     <div className="font-semibold text-blue-600">{stats.total}</div>
-                                                                    <div className="text-gray-600">{t('form.total', 'Total')}</div>
+                                                                    <div className="text-gray-600 dark:text-gray-300">{t('form.total', 'Total')}</div>
                                                                 </div>
                                                                 <div className="text-center">
                                                                     <div className="font-semibold text-green-600">{stats.selected}</div>
-                                                                    <div className="text-gray-600">{t('form.planned', 'Planifiés')}</div>
+                                                                    <div className="text-gray-600 dark:text-gray-300">{t('form.planned', 'Planifiés')}</div>
                                                                 </div>
                                                                 <div className="text-center">
-                                                                    <div className="font-semibold text-gray-600">{stats.available}</div>
-                                                                    <div className="text-gray-600">{t('form.available', 'Disponibles')}</div>
+                                                                    <div className="font-semibold text-gray-600 dark:text-gray-300">{stats.available}</div>
+                                                                    <div className="text-gray-600 dark:text-gray-300">{t('form.available', 'Disponibles')}</div>
                                                                 </div>
                                                             </div>
 
                                                             {/* Par departement */}
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                 <div>
-                                                                    <h5 className="font-medium text-gray-700 mb-1">{t('form.byDepartment', 'Par département/succursale')}:</h5>
+                                                                    <h5 className="font-medium text-gray-700 dark:text-gray-200 mb-1">{t('form.byDepartment', 'Par département/succursale')}:</h5>
                                                                     <div className="space-y-1 text-xs">
                                                                         {Object.entries(stats['byDépartement/Succursale']).map(([departement, data]) => (
                                                                             <div key={departement} className="flex justify-between">
@@ -5609,7 +5609,7 @@ export function JobModal({
                                                                 </div>
 
                                                                 <div>
-                                                                    <h5 className="font-medium text-gray-700 mb-1">{t('form.byPosition', 'Par poste')}:</h5>
+                                                                    <h5 className="font-medium text-gray-700 dark:text-gray-200 mb-1">{t('form.byPosition', 'Par poste')}:</h5>
                                                                     <div className="space-y-1 text-xs">
                                                                         {Object.entries(stats.byPoste).map(([poste, data]) => (
                                                                             <div key={poste} className="flex justify-between">
@@ -5662,7 +5662,7 @@ export function JobModal({
                                                         className={`px-4 py-2 font-medium transition-colors ${
                                                             dailyPersonnelTab === 'horaires'
                                                                 ? 'border-b-2 border-purple-600 text-purple-600'
-                                                                : 'text-gray-600 hover:text-gray-900'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                                                         }`}
                                                     >
                                                         🕐 Horaires par jour
@@ -5673,7 +5673,7 @@ export function JobModal({
                                                         className={`px-4 py-2 font-medium transition-colors ${
                                                             dailyPersonnelTab === 'personnel'
                                                                 ? 'border-b-2 border-purple-600 text-purple-600'
-                                                                : 'text-gray-600 hover:text-gray-900'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                                                         }`}
                                                     >
                                                         👥 Personnel par jour
@@ -5684,7 +5684,7 @@ export function JobModal({
                                                         className={`px-4 py-2 font-medium transition-colors ${
                                                             dailyPersonnelTab === 'equipement'
                                                                 ? 'border-b-2 border-purple-600 text-purple-600'
-                                                                : 'text-gray-600 hover:text-gray-900'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                                                         }`}
                                                     >
                                                         🔧 Équipement par jour
@@ -5695,7 +5695,7 @@ export function JobModal({
                                                         className={`px-4 py-2 font-medium transition-colors ${
                                                             dailyPersonnelTab === 'succursales'
                                                                 ? 'border-b-2 border-purple-600 text-purple-600'
-                                                                : 'text-gray-600 hover:text-gray-900'
+                                                                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
                                                         }`}
                                                     >
                                                         🏢 Horaires par département/succursale
@@ -5744,7 +5744,7 @@ export function JobModal({
                                                                     key={dateString}
                                                                     className={`border rounded-lg p-3 transition-all cursor-pointer ${
                                                                         !included
-                                                                            ? 'bg-gray-100 border-gray-300 opacity-60'
+                                                                            ? 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 opacity-60'
                                                                             : is24h
                                                                                 ? 'bg-orange-50 border-orange-400'
                                                                                 : isWeekend
@@ -5783,7 +5783,7 @@ export function JobModal({
                                                                                         className={`text-xs px-2 py-1 rounded transition-colors ${
                                                                                             is24h
                                                                                                 ? 'bg-orange-500 text-white hover:bg-orange-600'
-                                                                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                                                                : 'bg-gray-200 text-gray-700 dark:text-gray-200 hover:bg-gray-300'
                                                                                         }`}
                                                                                         title={is24h ? "Revenir au mode jour" : "Mode 24h/24"}
                                                                                     >
@@ -5796,17 +5796,17 @@ export function JobModal({
                                                                                             excludeDay(dateString);
                                                                                         }}
                                                                                         className="text-xs px-2 py-1 bg-red-200 text-red-700 rounded hover:bg-red-300 transition-colors"
-                                                                                        title="Exclure ce jour"
+                                                                                        title={L('Exclure ce jour', 'Exclude this day')}
                                                                                     >
                                                                                         ✕
                                                                                     </button>
                                                                                 </div>
                                                                             )}
                                                                         </div>
-                                                                        <div className="text-xs text-gray-500">{dateString}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{dateString}</div>
                                                                         {included && (
                                                                             <div className="mt-2">
-                                                                                <div className="text-xs text-gray-600 mb-2">
+                                                                                <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
                                                                                     👥 {dayStats.personnelPlanifie} planifié{dayStats.personnelPlanifie > 1 ? 's' : ''} • {getAssignedEquipementForDay(dateString).length} équipement{getAssignedEquipementForDay(dateString).length > 1 ? 's' : ''}
                                                                                 </div>
                                                                                 <div className="flex gap-1">
@@ -5850,11 +5850,11 @@ export function JobModal({
                                                                                 )}
                                                                                 onClick={(e) => e.stopPropagation()}
                                                                                 className={`w-20 text-sm p-1 border rounded focus:ring-1 focus:ring-purple-500 ${
-                                                                                    hasCustomSchedule ? 'bg-white' : 'bg-gray-50'
+                                                                                    hasCustomSchedule ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/50'
                                                                                 }`}
                                                                                 placeholder={formData.heureDebut}
                                                                             />
-                                                                            <span className="text-xs text-gray-400">{L('à', 'to')}</span>
+                                                                            <span className="text-xs text-gray-400 dark:text-gray-500">{L('à', 'to')}</span>
                                                                             <input
                                                                                 type="time"
                                                                                 value={schedule?.heureFin || formData.heureFin}
@@ -5866,12 +5866,12 @@ export function JobModal({
                                                                                 )}
                                                                                 onClick={(e) => e.stopPropagation()}
                                                                                 className={`w-20 text-sm p-1 border rounded focus:ring-1 focus:ring-purple-500 ${
-                                                                                    hasCustomSchedule ? 'bg-white' : 'bg-gray-50'
+                                                                                    hasCustomSchedule ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700/50'
                                                                                 }`}
                                                                                 placeholder={formData.heureFin}
                                                                             />
                                                                             {!hasCustomSchedule && (
-                                                                                <span className="text-xs text-gray-500 ml-1">(global)</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">(global)</span>
                                                                             )}
                                                                         </div>
                                                                     )}
@@ -5886,7 +5886,7 @@ export function JobModal({
                                                                     )}
 
                                                                     {!included && (
-                                                                        <div className="text-center text-gray-500">
+                                                                        <div className="text-center text-gray-500 dark:text-gray-400">
                                                                             <div className="text-sm">
                                                                                 {isExplicitlyExcluded ? 'Jour exclu' : (isWeekend ? 'Fin de semaine' : 'Jour exclu')}
                                                                             </div>
@@ -5909,7 +5909,7 @@ export function JobModal({
                                                     {!selectedDay ? (
                                                         // Vue générale : sélection du jour
                                                         <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">{L('Sélectionnez un jour pour gérer son personnel', 'Select a day to manage its personnel')}</h4>
+                                                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{L('Sélectionnez un jour pour gérer son personnel', 'Select a day to manage its personnel')}</h4>
                                                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                                                                 {getAllDays().filter(day => day.included).map(({ date: dateString, dayName, dayNumber, isWeekend }) => {
                                                                     const dayStats = getDayStats(dateString);
@@ -5918,12 +5918,12 @@ export function JobModal({
                                                                             key={dateString}
                                                                             type="button"
                                                                             onClick={() => setSelectedDay(dateString)}
-                                                                            className={`p-3 border rounded-lg hover:bg-gray-50 transition-all text-left ${
+                                                                            className={`p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-left ${
                                                                                 isWeekend ? 'bg-purple-50 border-purple-300' : 'bg-blue-50 border-blue-300'
                                                                             }`}
                                                                         >
                                                                             <div className="font-medium text-sm">{dayName} {dayNumber}</div>
-                                                                            <div className="text-xs text-gray-500">{dateString}</div>
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">{dateString}</div>
                                                                             <div className="text-xs text-green-600 mt-1">
                                                                                 👥 {dayStats.personnelPlanifie} assigné{dayStats.personnelPlanifie > 1 ? 's' : ''}
                                                                             </div>
@@ -5936,29 +5936,29 @@ export function JobModal({
                                                         // Vue détaillée : gestion du personnel pour le jour sélectionné
                                                         <div>
                                                             <div className="flex items-center justify-between mb-4">
-                                                                <h4 className="font-medium text-gray-900">
+                                                                <h4 className="font-medium text-gray-900 dark:text-gray-100">
                                                                     👥 Personnel pour {localizedDateString(new Date(selectedDay), currentLanguage, { weekday: 'long', day: 'numeric', month: 'long' })}
                                                                 </h4>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setSelectedDay(null)}
-                                                                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                                                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 transition-colors"
                                                                 >
                                                                     ← Retour
                                                                 </button>
                                                             </div>
 
                                                             {/* Filtres */}
-                                                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                                                            <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                                     <div>
-                                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                                             Poste
                                                                         </label>
                                                                         <select
                                                                             value={personnelFilters.poste}
                                                                             onChange={(e) => setPersonnelFilters(prev => ({ ...prev, poste: e.target.value }))}
-                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                         >
                                                                             <option value="tous">👔 Tous les postes</option>
                                                                             {[...new Set(personnel.map(p => p.poste).filter(Boolean))].sort().map(poste => (
@@ -5968,13 +5968,13 @@ export function JobModal({
                                                                     </div>
 
                                                                     <div>
-                                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                                             Département/Succursale
                                                                         </label>
                                                                         <select
                                                                             value={personnelFilters.succursale}
                                                                             onChange={(e) => setPersonnelFilters(prev => ({ ...prev, departement: e.target.value }))}
-                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                         >
                                                                             <option value="global">🌐 {L('Tous les départements/succursales', 'All departments/offices')}</option>
                                                                             {[...new Set(personnel.map(p => p.departement).filter(Boolean))].sort().map(departement => (
@@ -5989,9 +5989,9 @@ export function JobModal({
                                                                                 type="checkbox"
                                                                                 checked={personnelFilters.showAll}
                                                                                 onChange={(e) => setPersonnelFilters(prev => ({ ...prev, showAll: e.target.checked }))}
-                                                                                className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-200"
+                                                                                className="rounded border-gray-300 dark:border-gray-600 text-purple-600 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-200"
                                                                             />
-                                                                            <span className="text-gray-700">Afficher tout le personnel</span>
+                                                                            <span className="text-gray-700 dark:text-gray-200">Afficher tout le personnel</span>
                                                                         </label>
                                                                     </div>
                                                                 </div>
@@ -6000,13 +6000,13 @@ export function JobModal({
                                                             {/* Personnel assigné */}
                                                             <div className="mb-4">
                                                                 <div className="flex items-center justify-between mb-2">
-                                                                    <h5 className="font-medium text-gray-900">✅ Personnel assigné ({getAssignedPersonnelForDay(selectedDay).length})</h5>
+                                                                    <h5 className="font-medium text-gray-900 dark:text-gray-100">✅ Personnel assigné ({getAssignedPersonnelForDay(selectedDay).length})</h5>
                                                                     <div className="flex gap-2">
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => setShowPersonnelQuickActions(!showPersonnelQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6112,14 +6112,14 @@ export function JobModal({
                                                                             key={person.id}
                                                                             onClick={() => togglePersonnelForDay(selectedDay, person.id)}
                                                                             className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                                                                            title="Cliquer pour retirer de ce jour"
+                                                                            title={L('Cliquer pour retirer de ce jour', 'Click to remove from this day')}
                                                                         >
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium text-sm">
                                                                                     {person.prenom ? `${person.prenom} ${person.nom}` : person.nom}
                                                                                 </div>
-                                                                                <div className="text-xs text-gray-600">{person.poste}</div>
-                                                                                <div className="text-xs text-gray-500">{person.succursale}</div>
+                                                                                <div className="text-xs text-gray-600 dark:text-gray-300">{person.poste}</div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400">{person.succursale}</div>
                                                                             </div>
                                                                             <div className="flex items-center gap-2">
                                                                                 <button
@@ -6129,7 +6129,7 @@ export function JobModal({
                                                                                         openScheduleModal('personnel', person.id, person);
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                                                                                    title="Personnaliser l'horaire"
+                                                                                    title={L("Personnaliser l'horaire", 'Customize schedule')}
                                                                                 >
                                                                                     🕐
                                                                                 </button>
@@ -6141,7 +6141,7 @@ export function JobModal({
                                                                     ))}
                                                                 </div>
                                                                 {getAssignedPersonnelForDay(selectedDay).length === 0 && (
-                                                                    <div className="text-center text-gray-500 py-4">
+                                                                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                                                         Aucun personnel assigné pour ce jour
                                                                     </div>
                                                                 )}
@@ -6150,7 +6150,7 @@ export function JobModal({
                                                             {/* Personnel disponible */}
                                                             <div>
                                                                 <div className="flex items-center justify-between mb-2">
-                                                                    <h5 className="font-medium text-gray-900">
+                                                                    <h5 className="font-medium text-gray-900 dark:text-gray-100">
                                                                         🟢 Personnel {personnelFilters.showAll ? 'disponible' : 'libre'} ({filterPersonnelByDay(selectedDay, personnel).filter(p => !formData.personnel.includes(p.id)).length})
                                                                     </h5>
                                                                     <div className="flex gap-2">
@@ -6158,7 +6158,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowAvailablePersonnelQuickActions(!showAvailablePersonnelQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6225,7 +6225,7 @@ export function JobModal({
                                                                                             ? 'bg-red-50 border-red-200 cursor-not-allowed opacity-60'
                                                                                             : hasConflicts
                                                                                                 ? 'bg-red-50 border-red-200 hover:bg-red-100'
-                                                                                                : 'bg-gray-50 border-gray-200 hover:bg-green-50 hover:border-green-300'
+                                                                                                : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 hover:bg-green-50 hover:border-green-300'
                                                                                     }`}
                                                                                     title={hasConflicts && !personnelFilters.showAll
                                                                                         ? 'Personnel en conflit - non disponible'
@@ -6238,8 +6238,8 @@ export function JobModal({
                                                                                         <div className="font-medium text-sm">
                                                                                             {person.prenom ? `${person.prenom} ${person.nom}` : person.nom}
                                                                                         </div>
-                                                                                        <div className="text-xs text-gray-600">{person.poste}</div>
-                                                                                        <div className="text-xs text-gray-500">{person.succursale}</div>
+                                                                                        <div className="text-xs text-gray-600 dark:text-gray-300">{person.poste}</div>
+                                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{person.succursale}</div>
                                                                                         {hasConflicts && (
                                                                                             <div className="text-xs text-red-600 mt-1">
                                                                                                 ⚠️ Conflit avec {conflicts.length} événement{conflicts.length > 1 ? 's' : ''}
@@ -6248,7 +6248,7 @@ export function JobModal({
                                                                                     </div>
                                                                                     <div className={`text-lg ${
                                                                                         hasConflicts && !personnelFilters.showAll
-                                                                                            ? 'text-gray-400'
+                                                                                            ? 'text-gray-400 dark:text-gray-500'
                                                                                             : hasConflicts
                                                                                                 ? 'text-orange-600'
                                                                                                 : 'text-green-600'
@@ -6260,7 +6260,7 @@ export function JobModal({
                                                                         })}
                                                                 </div>
                                                                 {filterPersonnelByDay(selectedDay, personnel).filter(p => !formData.personnel.includes(p.id)).length === 0 && (
-                                                                    <div className="text-center text-gray-500 py-4">
+                                                                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                                                         Aucun personnel disponible avec les filtres actuels
                                                                     </div>
                                                                 )}
@@ -6276,7 +6276,7 @@ export function JobModal({
                                                     {!selectedDay ? (
                                                         // Vue générale : sélection du jour
                                                         <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">{L('Sélectionnez un jour pour gérer ses équipements', 'Select a day to manage its equipment')}</h4>
+                                                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{L('Sélectionnez un jour pour gérer ses équipements', 'Select a day to manage its equipment')}</h4>
                                                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                                                                 {getAllDays().filter(day => day.included).map(({ date: dateString, dayName, dayNumber, isWeekend }) => {
                                                                     const equipementsAssignes = getAssignedEquipementForDay(dateString).length;
@@ -6285,12 +6285,12 @@ export function JobModal({
                                                                             key={dateString}
                                                                             type="button"
                                                                             onClick={() => setSelectedDay(dateString)}
-                                                                            className={`p-3 border rounded-lg hover:bg-gray-50 transition-all text-left ${
+                                                                            className={`p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-left ${
                                                                                 isWeekend ? 'bg-purple-50 border-purple-300' : 'bg-blue-50 border-blue-300'
                                                                             }`}
                                                                         >
                                                                             <div className="font-medium text-sm">{dayName} {dayNumber}</div>
-                                                                            <div className="text-xs text-gray-500">{dateString}</div>
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">{dateString}</div>
                                                                             <div className="text-xs text-green-600 mt-1">
                                                                                 🔧 {equipementsAssignes} équipement{equipementsAssignes > 1 ? 's' : ''}
                                                                             </div>
@@ -6303,29 +6303,29 @@ export function JobModal({
                                                         // Vue détaillée : gestion des équipements pour le jour sélectionné
                                                         <div>
                                                             <div className="flex items-center justify-between mb-4">
-                                                                <h4 className="font-medium text-gray-900">
+                                                                <h4 className="font-medium text-gray-900 dark:text-gray-100">
                                                                     🔧 Équipements pour {localizedDateString(new Date(selectedDay), currentLanguage, { weekday: 'long', day: 'numeric', month: 'long' })}
                                                                 </h4>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setSelectedDay(null)}
-                                                                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                                                    className="px-3 py-1 text-sm bg-gray-200 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 transition-colors"
                                                                 >
                                                                     ← Retour
                                                                 </button>
                                                             </div>
 
                                                             {/* Filtres */}
-                                                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                                                            <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 mb-4">
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                     <div>
-                                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                                             Département/Succursale
                                                                         </label>
                                                                         <select
                                                                             value={personnelFilters.succursale}
                                                                             onChange={(e) => setPersonnelFilters(prev => ({ ...prev, departement: e.target.value }))}
-                                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                                         >
                                                                             <option value="global">🌐 {L('Tous les départements/succursales', 'All departments/offices')}</option>
                                                                             {[...new Set(equipements.map(e => e.departement).filter(Boolean))].sort().map(departement => (
@@ -6340,9 +6340,9 @@ export function JobModal({
                                                                                 type="checkbox"
                                                                                 checked={personnelFilters.showAll}
                                                                                 onChange={(e) => setPersonnelFilters(prev => ({ ...prev, showAll: e.target.checked }))}
-                                                                                className="rounded border-gray-300 text-purple-600 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-200"
+                                                                                className="rounded border-gray-300 dark:border-gray-600 text-purple-600 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-200"
                                                                             />
-                                                                            <span className="text-gray-700">{L('Afficher tous les équipements', 'Show all equipment')}</span>
+                                                                            <span className="text-gray-700 dark:text-gray-200">{L('Afficher tous les équipements', 'Show all equipment')}</span>
                                                                         </label>
                                                                     </div>
                                                                 </div>
@@ -6351,13 +6351,13 @@ export function JobModal({
                                                             {/* Équipements assignés */}
                                                             <div className="mb-4">
                                                                 <div className="flex items-center justify-between mb-2">
-                                                                    <h5 className="font-medium text-gray-900">✅ Équipements assignés ({getAssignedEquipementForDay(selectedDay).length})</h5>
+                                                                    <h5 className="font-medium text-gray-900 dark:text-gray-100">✅ Équipements assignés ({getAssignedEquipementForDay(selectedDay).length})</h5>
                                                                     <div className="flex gap-2">
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => setShowEquipementQuickActions(!showEquipementQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6463,13 +6463,13 @@ export function JobModal({
                                                                             key={equipement.id}
                                                                             onClick={() => toggleEquipementForDay(selectedDay, equipement.id)}
                                                                             className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                                                                            title="Cliquer pour retirer de ce jour"
+                                                                            title={L('Cliquer pour retirer de ce jour', 'Click to remove from this day')}
                                                                         >
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium text-sm">{equipement.nom}</div>
-                                                                                <div className="text-xs text-gray-600">{equipement.type}</div>
-                                                                                <div className="text-xs text-gray-500">{equipement.succursale}</div>
-                                                                                <div className="text-xs text-gray-500">Statut: {equipement.statut}</div>
+                                                                                <div className="text-xs text-gray-600 dark:text-gray-300">{equipement.type}</div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400">{equipement.succursale}</div>
+                                                                                <div className="text-xs text-gray-500 dark:text-gray-400">Statut: {equipement.statut}</div>
                                                                             </div>
                                                                             <div className="flex gap-1">
                                                                                 <button
@@ -6479,7 +6479,7 @@ export function JobModal({
                                                                                         openScheduleModal('equipement', equipement.id, equipement);
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
-                                                                                    title="Personnaliser l'horaire"
+                                                                                    title={L("Personnaliser l'horaire", 'Customize schedule')}
                                                                                 >
                                                                                     🕐
                                                                                 </button>
@@ -6488,7 +6488,7 @@ export function JobModal({
                                                                     ))}
                                                                 </div>
                                                                 {getAssignedEquipementForDay(selectedDay).length === 0 && (
-                                                                    <div className="text-center text-gray-500 py-4">
+                                                                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                                                         Aucun équipement assigné pour ce jour
                                                                     </div>
                                                                 )}
@@ -6497,7 +6497,7 @@ export function JobModal({
                                                             {/* Équipements disponibles */}
                                                             <div>
                                                                 <div className="flex items-center justify-between mb-2">
-                                                                    <h5 className="font-medium text-gray-900">
+                                                                    <h5 className="font-medium text-gray-900 dark:text-gray-100">
                                                                         🟢 Équipements {personnelFilters.showAll ? 'disponibles' : 'libres'} ({filterEquipementByDay(selectedDay, equipements).filter(e => !formData.equipements.includes(e.id)).length})
                                                                     </h5>
                                                                     <div className="flex gap-2">
@@ -6505,7 +6505,7 @@ export function JobModal({
                                                                             type="button"
                                                                             onClick={() => setShowAvailableEquipementQuickActions(!showAvailableEquipementQuickActions)}
                                                                             className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                                                            title="Actions rapides"
+                                                                            title={L('Actions rapides', 'Quick actions')}
                                                                         >
                                                                             ⚡ Actions rapides
                                                                         </button>
@@ -6570,14 +6570,14 @@ export function JobModal({
                                                                                     className={`flex items-center justify-between p-3 border rounded-lg transition-all cursor-pointer ${
                                                                                         hasConflicts && !personnelFilters.showAll
                                                                                             ? 'bg-red-50 border-red-200 cursor-not-allowed opacity-60'
-                                                                                            : 'bg-gray-50 border-gray-200 hover:bg-green-50 hover:border-green-300'
+                                                                                            : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-700 hover:bg-green-50 hover:border-green-300'
                                                                                     }`}
                                                                                 >
                                                                                     <div>
                                                                                         <div className="font-medium text-sm">{equipement.nom}</div>
-                                                                                        <div className="text-xs text-gray-600">{equipement.type}</div>
-                                                                                        <div className="text-xs text-gray-500">{equipement.succursale}</div>
-                                                                                        <div className="text-xs text-gray-500">Statut: {equipement.statut}</div>
+                                                                                        <div className="text-xs text-gray-600 dark:text-gray-300">{equipement.type}</div>
+                                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{equipement.succursale}</div>
+                                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Statut: {equipement.statut}</div>
                                                                                         {hasConflicts && (
                                                                                             <div className="text-xs text-red-600 mt-1">
                                                                                                 ⚠️ Conflit avec {conflicts.length} événement{conflicts.length > 1 ? 's' : ''}
@@ -6586,7 +6586,7 @@ export function JobModal({
                                                                                     </div>
                                                                                     <div className={`px-2 py-1 text-xs rounded transition-colors ${
                                                                                         hasConflicts && !personnelFilters.showAll
-                                                                                            ? 'bg-gray-200 text-gray-500'
+                                                                                            ? 'bg-gray-200 text-gray-500 dark:text-gray-400'
                                                                                             : 'bg-green-100 text-green-700'
                                                                                     }`}>
                                                                                         {hasConflicts && !personnelFilters.showAll ? '🔒' : '✓'}
@@ -6596,7 +6596,7 @@ export function JobModal({
                                                                         })}
                                                                 </div>
                                                                 {filterEquipementByDay(selectedDay, equipements).filter(e => !formData.equipements.includes(e.id)).length === 0 && (
-                                                                    <div className="text-center text-gray-500 py-4">
+                                                                    <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                                                         Aucun équipement disponible avec les filtres actuels
                                                                     </div>
                                                                 )}
@@ -6610,8 +6610,8 @@ export function JobModal({
                                             {dailyPersonnelTab === 'succursales' && (
                                                 <div>
                                                     <div className="mb-4">
-                                                        <h4 className="font-medium text-gray-900 mb-3">🏢 {L('Horaires par département/succursale', 'Schedules by department/office')}</h4>
-                                                        <p className="text-sm text-gray-600 mb-4">
+                                                        <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">🏢 {L('Horaires par département/succursale', 'Schedules by department/office')}</h4>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                                                             Configurez des horaires globaux ou personnalisés par jour pour chaque département/succursale.
                                                         </p>
                                                     </div>
@@ -6620,7 +6620,7 @@ export function JobModal({
                                                     {/* Vue en grille - Tous les jours visibles */}
                                                     <div className="space-y-4">
                                                         {!formData.dateDebut || !formData.dateFin ? (
-                                                            <div className="text-center text-gray-500 py-4">
+                                                            <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                                                 📅 Veuillez d'abord définir les dates de début et fin de l'événement
                                                             </div>
                                                         ) : (() => {
@@ -6631,11 +6631,11 @@ export function JobModal({
 
                                                             if (succursales.length === 0) {
                                                                 return (
-                                                                    <div className="text-center text-gray-500 py-8">
+                                                                    <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                                                                         <div className="text-4xl mb-4">🏢</div>
                                                                         <p className="text-lg font-medium mb-2">{L('Aucun département/succursale trouvé', 'No department/office found')}</p>
                                                                         <p className="text-sm">{L('Assurez-vous que votre personnel et/ou équipements ont une succursale définie', 'Make sure your personnel and/or equipment have an office set')}</p>
-                                                                        <div className="mt-4 text-xs text-gray-600">
+                                                                        <div className="mt-4 text-xs text-gray-600 dark:text-gray-300">
                                                                             Personnel disponible: {personnel.length} | Équipements disponibles: {equipements.length}
                                                                         </div>
                                                                     </div>
@@ -6645,11 +6645,11 @@ export function JobModal({
                                                             const allDays = getAllDays().filter(day => day.included);
 
                                                             return succursales.map(departement => (
-                                                                <div key={departement} className="border border-gray-200 rounded-lg p-4">
+                                                                <div key={departement} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                                                                     <div className="flex items-center justify-between mb-4">
                                                                         <div>
-                                                                            <h5 className="font-medium text-gray-900">🏢 {departement}</h5>
-                                                                            <p className="text-xs text-gray-600">
+                                                                            <h5 className="font-medium text-gray-900 dark:text-gray-100">🏢 {departement}</h5>
+                                                                            <p className="text-xs text-gray-600 dark:text-gray-300">
                                                                                 {personnel.filter(p => p.succursale === departement).length} personne{personnel.filter(p => p.succursale === departement).length > 1 ? 's' : ''}
                                                                                 {equipements.filter(e => e.succursale === departement).length > 0 && (
                                                                                     <span> • {equipements.filter(e => e.succursale === departement).length} équipement{equipements.filter(e => e.succursale === departement).length > 1 ? 's' : ''}</span>
@@ -6658,12 +6658,12 @@ export function JobModal({
 
                                                                             {/* Sélection du personnel et équipement */}
                                                                             <div className="mt-2">
-                                                                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                                                     {t('job.selectResources', 'Sélectionner les ressources')}:
                                                                                 </label>
                                                                                 <div className="space-y-2">
                                                                                     <select
-                                                                                        className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500"
+                                                                                        className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500"
                                                                                         onChange={(e) => {
                                                                                             const value = e.target.value;
                                                                                             if (value === 'global') {
@@ -6735,7 +6735,7 @@ export function JobModal({
                                                                                         className={`w-full text-xs px-2 py-1 rounded transition-colors ${
                                                                                             formData.resourcesPersonnaliseeParJour?.[departement]
                                                                                                 ? 'bg-purple-600 text-white'
-                                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200'
                                                                                         }`}
                                                                                     >
                                                                                         📅 {formData.resourcesPersonnaliseeParJour?.[departement]
@@ -6749,7 +6749,7 @@ export function JobModal({
 
                                                                         {/* Horaires globaux */}
                                                                         <div className="flex items-center gap-3">
-                                                                            <div className="text-xs text-gray-600">Horaires globaux:</div>
+                                                                            <div className="text-xs text-gray-600 dark:text-gray-300">Horaires globaux:</div>
                                                                             <div className="flex items-center gap-2">
                                                                                 <input
                                                                                     type="time"
@@ -6769,9 +6769,9 @@ export function JobModal({
                                                                                             }
                                                                                         }));
                                                                                     }}
-                                                                                    className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                                    className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                                                                 />
-                                                                                <span className="text-xs text-gray-500">{L('à', 'to')}</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400">{L('à', 'to')}</span>
                                                                                 <input
                                                                                     type="time"
                                                                                     value={formData.horairesDepartements.global?.[departement]?.heureFin || formData.heureFin}
@@ -6790,7 +6790,7 @@ export function JobModal({
                                                                                             }
                                                                                         }));
                                                                                     }}
-                                                                                    className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                                    className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                                                                 />
                                                                             </div>
                                                                         </div>
@@ -6816,10 +6816,10 @@ export function JobModal({
                                                                                             ? 'border-purple-300 bg-purple-50'
                                                                                             : isWeekend
                                                                                                 ? 'border-orange-200 bg-orange-50'
-                                                                                                : 'border-gray-200 bg-white'
+                                                                                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                                                                                     }`}
                                                                                 >
-                                                                                    <div className="text-xs font-medium text-gray-900 mb-2">
+                                                                                    <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2">
                                                                                         {dayName} {dayNumber}
                                                                                     </div>
 
@@ -6844,7 +6844,7 @@ export function JobModal({
                                                                                                         }
                                                                                                     }));
                                                                                                 }}
-                                                                                                className="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                                                className="w-full px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                                                                             />
                                                                                         </div>
 
@@ -6868,7 +6868,7 @@ export function JobModal({
                                                                                                         }
                                                                                                     }));
                                                                                                 }}
-                                                                                                className="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                                                className="w-full px-1 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                                                                                             />
                                                                                         </div>
 
@@ -6890,8 +6890,8 @@ export function JobModal({
                                                                                                         };
                                                                                                     });
                                                                                                 }}
-                                                                                                className="w-full px-1 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                                                                                                title="Revenir aux horaires globaux"
+                                                                                                className="w-full px-1 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 transition-colors"
+                                                                                                title={L('Revenir aux horaires globaux', 'Back to global schedules')}
                                                                                             >
                                                                                                 🔄 Global
                                                                                             </button>
@@ -6902,7 +6902,7 @@ export function JobModal({
                                                                                         {hasCustomSchedule ? (
                                                                                             <span className="text-purple-600 font-medium">✅ {L('Personnalisé', 'Custom')}</span>
                                                                                         ) : (
-                                                                                            <span className="text-gray-500">🔄 Global</span>
+                                                                                            <span className="text-gray-500 dark:text-gray-400">🔄 Global</span>
                                                                                         )}
                                                                                     </div>
                                                                                 </div>
@@ -6923,20 +6923,20 @@ export function JobModal({
 
                                     {/* Résumé des ressources */}
                                     {(formData.personnel?.length > 0 || formData.equipements?.length > 0 || formData.sousTraitants?.length > 0) && (
-                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-800 mb-3">📊 {L('Résumé des ressources assignées', 'Summary of assigned resources')}</h4>
+                                        <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-800 dark:text-gray-100 mb-3">📊 {L('Résumé des ressources assignées', 'Summary of assigned resources')}</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-blue-600">{formData.personnel?.length || 0}</div>
-                                                    <div className="text-gray-600">Personnel</div>
+                                                    <div className="text-gray-600 dark:text-gray-300">Personnel</div>
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-green-600">{formData.equipements?.length || 0}</div>
-                                                    <div className="text-gray-600">{L('Équipements', 'Equipment')}</div>
+                                                    <div className="text-gray-600 dark:text-gray-300">{L('Équipements', 'Equipment')}</div>
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-purple-600">{formData.sousTraitants?.length || 0}</div>
-                                                    <div className="text-gray-600">{L('Sous-traitants', 'Subcontractors')}</div>
+                                                    <div className="text-gray-600 dark:text-gray-300">{L('Sous-traitants', 'Subcontractors')}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -6963,7 +6963,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Documents */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-blue-50 p-4 border-b">
                                             <h4 className="font-medium text-blue-800 flex items-center gap-2">
                                                 📄 Documents ({formData.documents?.length || 0})
@@ -6987,7 +6987,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Photos */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-green-50 p-4 border-b">
                                             <h4 className="font-medium text-green-800 flex items-center gap-2">
                                                 📷 Photos ({formData.photos?.length || 0})
@@ -7012,16 +7012,16 @@ export function JobModal({
 
                                     {/* Résumé des fichiers */}
                                     {((formData.documents?.length || 0) + (formData.photos?.length || 0)) > 0 && (
-                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-800 mb-3">📊 {L('Résumé des fichiers', 'Files summary')}</h4>
+                                        <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-800 dark:text-gray-100 mb-3">📊 {L('Résumé des fichiers', 'Files summary')}</h4>
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-blue-600">{formData.documents?.length || 0}</div>
-                                                    <div className="text-gray-600">Documents</div>
+                                                    <div className="text-gray-600 dark:text-gray-300">Documents</div>
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-2xl font-bold text-green-600">{formData.photos?.length || 0}</div>
-                                                    <div className="text-gray-600">Photos</div>
+                                                    <div className="text-gray-600 dark:text-gray-300">Photos</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -7047,7 +7047,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Activation de la récurrence */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-purple-50 p-4 border-b">
                                             <h4 className="font-medium text-purple-800 flex items-center gap-2">
                                                 ⚡ Activation de la Récurrence
@@ -7068,7 +7068,7 @@ export function JobModal({
                                                     }))}
                                                     className="w-5 h-5 text-purple-600 rounded"
                                                 />
-                                                <label htmlFor="recurrence-active" className="text-lg font-medium text-gray-900">
+                                                <label htmlFor="recurrence-active" className="text-lg font-medium text-gray-900 dark:text-gray-100">
                                                     Activer la récurrence automatique
                                                 </label>
                                             </div>
@@ -7086,7 +7086,7 @@ export function JobModal({
                                     {formData.recurrence?.active && (
                                         <>
                                             {/* Type de récurrence */}
-                                            <div className="bg-white border rounded-lg overflow-hidden">
+                                            <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                                 <div className="bg-blue-50 p-4 border-b">
                                                     <h4 className="font-medium text-blue-800 flex items-center gap-2">
                                                         📅 Type de Récurrence
@@ -7105,7 +7105,7 @@ export function JobModal({
                                                                 className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
                                                                     formData.recurrence?.type === type.value
                                                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                                                        : 'border-gray-200 hover:border-gray-300'
+                                                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                                                                 }`}
                                                             >
                                                                 <input
@@ -7131,7 +7131,7 @@ export function JobModal({
                                             </div>
 
                                             {/* Intervalle et paramètres */}
-                                            <div className="bg-white border rounded-lg overflow-hidden">
+                                            <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                                 <div className="bg-orange-50 p-4 border-b">
                                                     <h4 className="font-medium text-orange-800 flex items-center gap-2">
                                                         ⚙️ Paramètres de Récurrence
@@ -7140,7 +7140,7 @@ export function JobModal({
                                                 <div className="p-6 space-y-4">
                                                     {/* Intervalle */}
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                             Intervalle - Répéter tous les {formData.recurrence?.intervalle || 1} {
                                                                 formData.recurrence?.type === 'quotidienne' ? 'jour(s)' :
                                                                 formData.recurrence?.type === 'hebdomadaire' ? 'semaine(s)' :
@@ -7161,13 +7161,13 @@ export function JobModal({
                                                                     intervalle: parseInt(e.target.value) || 1
                                                                 }
                                                             }))}
-                                                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                            className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                                         />
                                                     </div>
 
                                                     {/* Condition de fin */}
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                                             Condition de fin
                                                         </label>
                                                         <div className="space-y-3">
@@ -7200,7 +7200,7 @@ export function JobModal({
                                                                                 dateFinRecurrence: e.target.value
                                                                             }
                                                                         }))}
-                                                                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                                                     />
                                                                 </div>
                                                             )}
@@ -7237,9 +7237,9 @@ export function JobModal({
                                                                                 nombreOccurrences: parseInt(e.target.value) || 10
                                                                             }
                                                                         }))}
-                                                                        className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                                        className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                                                     />
-                                                                    <span className="text-sm text-gray-600">occurrences</span>
+                                                                    <span className="text-sm text-gray-600 dark:text-gray-300">occurrences</span>
                                                                 </div>
                                                             )}
 
@@ -7266,16 +7266,16 @@ export function JobModal({
                                             </div>
 
                                             {/* Aperçu de la récurrence */}
-                                            <div className="bg-white border rounded-lg overflow-hidden">
+                                            <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                                 <div className="bg-green-50 p-4 border-b">
                                                     <h4 className="font-medium text-green-800 flex items-center gap-2">
                                                         👁️ Aperçu de la Récurrence
                                                     </h4>
                                                 </div>
                                                 <div className="p-6">
-                                                    <div className="bg-gray-50 rounded-lg p-4">
-                                                        <div className="text-sm text-gray-600 mb-2">Configuration actuelle :</div>
-                                                        <div className="font-medium text-gray-900">
+                                                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                                        <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">Configuration actuelle :</div>
+                                                        <div className="font-medium text-gray-900 dark:text-gray-100">
                                                             Répéter tous les {formData.recurrence?.intervalle || 1} {
                                                                 formData.recurrence?.type === 'quotidienne' ? 'jour(s)' :
                                                                 formData.recurrence?.type === 'hebdomadaire' ? 'semaine(s)' :
@@ -7331,7 +7331,7 @@ export function JobModal({
                                             </div>
 
                                             {/* Options avancées */}
-                                            <div className="bg-white border rounded-lg overflow-hidden">
+                                            <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                                 <div className="bg-yellow-50 p-4 border-b">
                                                     <h4 className="font-medium text-yellow-800 flex items-center gap-2">
                                                         🔧 Options Avancées
@@ -7340,7 +7340,7 @@ export function JobModal({
                                                 <div className="p-6 space-y-4">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <div>
-                                                            <h5 className="font-medium text-gray-700 mb-3">Gestion des ressources</h5>
+                                                            <h5 className="font-medium text-gray-700 dark:text-gray-200 mb-3">Gestion des ressources</h5>
                                                             <div className="space-y-2">
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" defaultChecked />
@@ -7358,7 +7358,7 @@ export function JobModal({
                                                         </div>
 
                                                         <div>
-                                                            <h5 className="font-medium text-gray-700 mb-3">Notifications</h5>
+                                                            <h5 className="font-medium text-gray-700 dark:text-gray-200 mb-3">Notifications</h5>
                                                             <div className="space-y-2">
                                                                 <label className="flex items-center gap-2">
                                                                     <input type="checkbox" className="w-4 h-4 text-purple-600" defaultChecked />
@@ -7382,10 +7382,10 @@ export function JobModal({
 
                                     {/* Message si récurrence désactivée */}
                                     {!formData.recurrence?.active && (
-                                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                                        <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-6 text-center">
                                             <div className="text-4xl mb-4">🔄</div>
-                                            <h3 className="text-lg font-medium text-gray-700 mb-2">{L('Récurrence désactivée', 'Recurrence disabled')}</h3>
-                                            <p className="text-gray-600 mb-4">
+                                            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">{L('Récurrence désactivée', 'Recurrence disabled')}</h3>
+                                            <p className="text-gray-600 dark:text-gray-300 mb-4">
                                                 Activez la récurrence pour programmer automatiquement cette tâche à des intervalles réguliers.
                                             </p>
                                             <button
@@ -7442,7 +7442,7 @@ export function JobModal({
                                     )}
 
                                     {/* Actions Rapides */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-emerald-50 p-4 border-b">
                                             <h4 className="font-medium text-emerald-800 flex items-center gap-2">
                                                 ⚡ Actions Rapides
@@ -7488,7 +7488,7 @@ export function JobModal({
 
                                     {/* #34 — Scores des suggestions (evaluations reelles) */}
                                     {optimizationSummary && optimizationSummary.length > 0 && (
-                                        <div className="bg-white border rounded-lg overflow-hidden">
+                                        <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                             <div className="bg-indigo-50 p-4 border-b">
                                                 <h4 className="font-medium text-indigo-800 flex items-center gap-2">
                                                     🧠 {L('Scores des suggestions (évaluations réelles)', 'Suggestion scores (real evaluations)')}
@@ -7498,7 +7498,7 @@ export function JobModal({
                                                 <ul className="space-y-1">
                                                     {optimizationSummary.map(s => (
                                                         <li key={s.id} className="flex items-center justify-between gap-3 text-sm">
-                                                            <span className="text-gray-800">{s.name}</span>
+                                                            <span className="text-gray-800 dark:text-gray-100">{s.name}</span>
                                                             <span className="flex items-center gap-2">
                                                                 <span className="inline-block h-1.5 w-24 overflow-hidden rounded bg-gray-200">
                                                                     <span className="block h-full bg-indigo-500" style={{ width: `${Math.max(0, Math.min(100, s.score))}%` }} />
@@ -7508,13 +7508,13 @@ export function JobModal({
                                                         </li>
                                                     ))}
                                                 </ul>
-                                                <p className="mt-2 text-xs text-gray-500">{L('Score = compétences évaluées pondérées par la grille du poste (repli: évaluation enregistrée).', 'Score = evaluated skills weighted by the role grid (fallback: saved evaluation).')}</p>
+                                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{L('Score = compétences évaluées pondérées par la grille du poste (repli: évaluation enregistrée).', 'Score = evaluated skills weighted by the role grid (fallback: saved evaluation).')}</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* Sélection de Jour */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-teal-50 p-4 border-b">
                                             <h4 className="font-medium text-teal-800 flex items-center gap-2">
                                                 📅 Sélection de Jour
@@ -7523,7 +7523,7 @@ export function JobModal({
                                         <div className="p-6">
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                         Jour sélectionné:
                                                     </label>
                                                     <input
@@ -7532,7 +7532,7 @@ export function JobModal({
                                                         min={formData.dateDebut}
                                                         max={formData.dateFin}
                                                         onChange={(e) => setSelectedDay(e.target.value)}
-                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                                                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                                                     />
                                                 </div>
 
@@ -7548,7 +7548,7 @@ export function JobModal({
                                                                     ? 'bg-teal-600 text-white'
                                                                     : day.isWeekend
                                                                         ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200'
                                                             }`}
                                                         >
                                                             {day.dayName.slice(0, 3)} {day.dayNumber}
@@ -7560,7 +7560,7 @@ export function JobModal({
                                     </div>
 
                                     {/* Gestion Personnel pour le Jour Sélectionné */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
                                         <div className="bg-purple-50 p-4 border-b flex items-center justify-between">
                                             <h4 className="font-medium text-purple-800 flex items-center gap-2">
                                                 👥 Personnel du {new Date(selectedDay).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -7656,7 +7656,7 @@ export function JobModal({
                                                         ).map(person => (
                                                             <div
                                                                 key={person.id}
-                                                                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                                                className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                                             >
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium">
@@ -7664,7 +7664,7 @@ export function JobModal({
                                                                     </div>
                                                                     <div>
                                                                         <div className="font-medium text-sm">{person.nom}</div>
-                                                                        <div className="text-xs text-gray-500">{person.poste}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-gray-400">{person.poste}</div>
                                                                     </div>
                                                                 </div>
                                                                 <button
@@ -7683,9 +7683,9 @@ export function JobModal({
                                     </div>
 
                                     {/* Statistiques */}
-                                    <div className="bg-white border rounded-lg overflow-hidden">
-                                        <div className="bg-gray-50 p-4 border-b">
-                                            <h4 className="font-medium text-gray-800 flex items-center gap-2">
+                                    <div className="bg-white dark:bg-gray-800 border rounded-lg overflow-hidden">
+                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-4 border-b">
+                                            <h4 className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
                                                 📊 Statistiques du Projet
                                             </h4>
                                         </div>
@@ -7730,7 +7730,7 @@ export function JobModal({
                         </div>
                     )}
 
-                    <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-50 border-t">
+                    <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-50 dark:bg-gray-700/50 border-t">
                         <div className="flex gap-2">
                             {job && peutModifier && (
                                 <button
@@ -7744,7 +7744,7 @@ export function JobModal({
                         <div className="flex gap-2">
                             <button
                                 onClick={onClose}
-                                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                                className="px-4 py-2 bg-gray-200 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 transition-colors"
                             >
                                 {L('Annuler', 'Cancel')}
                             </button>

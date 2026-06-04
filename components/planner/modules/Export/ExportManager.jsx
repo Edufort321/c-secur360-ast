@@ -180,40 +180,40 @@ export function ExportPanel({ data, onExport }) {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Export des Données</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                     onClick={() => handleExport('csv')}
-                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                     <Icon name="file" size={24} className="mr-3 text-green-600" />
                     <div className="text-left">
                         <div className="font-medium">Export CSV</div>
-                        <div className="text-sm text-gray-500">Données tabulaires</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Données tabulaires</div>
                     </div>
                 </button>
 
                 <button
                     onClick={() => handleExport('json')}
-                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                     <Icon name="code" size={24} className="mr-3 text-blue-600" />
                     <div className="text-left">
                         <div className="font-medium">Export JSON</div>
-                        <div className="text-sm text-gray-500">Format structuré</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Format structuré</div>
                     </div>
                 </button>
 
                 <button
                     onClick={() => handleExport('pdf')}
-                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-center p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                     <Icon name="printer" size={24} className="mr-3 text-red-600" />
                     <div className="text-left">
                         <div className="font-medium">Export PDF</div>
-                        <div className="text-sm text-gray-500">Rapport imprimable</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Rapport imprimable</div>
                     </div>
                 </button>
             </div>

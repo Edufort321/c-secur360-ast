@@ -67,7 +67,7 @@ export function MetricsCard({
                         {trend && (
                             <div className={`flex items-center text-sm ${
                                 trend.direction === 'up' ? 'text-green-600' :
-                                trend.direction === 'down' ? 'text-red-600' : 'text-gray-600'
+                                trend.direction === 'down' ? 'text-red-600' : 'text-gray-600 dark:text-gray-300'
                             }`}>
                                 <Icon
                                     name={trend.direction === 'up' ? 'chevronUp' :
@@ -79,7 +79,7 @@ export function MetricsCard({
                         )}
                     </div>
                     {subtitle && (
-                        <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
                     )}
                 </div>
                 <div className={`text-3xl ${classes.icon}`}>

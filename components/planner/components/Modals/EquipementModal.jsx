@@ -7,6 +7,7 @@ import { Icon } from '../UI/Icon';
 import { Logo } from '../UI/Logo';
 import { DropZone } from '../UI/DropZone';
 import { BUREAU_COLORS } from '@/components/planner/config/constants.js';
+import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
 export function EquipementModal({
     isOpen,
@@ -20,6 +21,9 @@ export function EquipementModal({
     estCoordonnateur = false,
     succursalesDisponibles = []
 }) {
+    const { currentLanguage } = useLanguage();
+    const tr = (fr, en) => (currentLanguage === 'fr' ? fr : en);
+
     // ===== ÉTATS PRINCIPAUX =====
     const [formData, setFormData] = useState({
         id: null,
@@ -266,7 +270,7 @@ export function EquipementModal({
     // ===== GESTION DES MAINTENANCES =====
     const ajouterMaintenance = () => {
         if (!nouvelleMaintenance.date || !nouvelleMaintenance.type || !nouvelleMaintenance.description) {
-            addNotification('Veuillez remplir tous les champs obligatoires', 'error');
+            addNotification(tr('Veuillez remplir tous les champs obligatoires', 'Please fill in all required fields'), 'error');
             return;
         }
 
@@ -379,17 +383,17 @@ export function EquipementModal({
     // ===== VALIDATION =====
     const validerFormulaire = () => {
         if (!formData.nom.trim()) {
-            addNotification('Le nom de l\'équipement est requis', 'error');
+            addNotification(tr("Le nom de l'équipement est requis", 'Equipment name is required'), 'error');
             return false;
         }
 
         if (!formData.type) {
-            addNotification('Le département de l\'équipement est requis', 'error');
+            addNotification(tr("Le département de l'équipement est requis", 'Equipment department is required'), 'error');
             return false;
         }
 
         if (!formData.succursale) {
-            addNotification('La succursale de l\'équipement est requise', 'error');
+            addNotification(tr("La succursale de l'équipement est requise", 'Equipment branch is required'), 'error');
             return false;
         }
 
@@ -423,7 +427,7 @@ export function EquipementModal({
             onClose();
         } catch (error) {
             console.error('Erreur lors de la sauvegarde:', error);
-            addNotification('Erreur lors de la sauvegarde', 'error');
+            addNotification(tr('Erreur lors de la sauvegarde', 'Error while saving'), 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -433,11 +437,11 @@ export function EquipementModal({
     const handleDelete = async () => {
         try {
             await onDelete(equipement.id);
-            addNotification(`Équipement supprimé: ${equipement.nom}`, 'success');
+            addNotification(`${tr('Équipement supprimé', 'Equipment deleted')}: ${equipement.nom}`, 'success');
             onClose();
         } catch (error) {
             console.error('Erreur lors de la suppression:', error);
-            addNotification('Erreur lors de la suppression', 'error');
+            addNotification(tr('Erreur lors de la suppression', 'Error while deleting'), 'error');
         }
         setShowDeleteConfirm(false);
     };
@@ -451,7 +455,7 @@ export function EquipementModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b bg-gray-900">
                     <div className="flex items-center gap-4">
@@ -459,9 +463,9 @@ export function EquipementModal({
                         <div>
                             <h2 className="text-xl font-bold text-white flex items-center">
                                 <Icon name="wrench" className="mr-2" size={24} />
-                                {equipement ? 'Modifier l\'Équipement' : 'Nouvel Équipement'}
+                                {equipement ? tr("Modifier l'Équipement", 'Edit Equipment') : tr('Nouvel Équipement', 'New Equipment')}
                             </h2>
-                            <p className="text-sm text-gray-300">Gestion des équipements C-Secur360</p>
+                            <p className="text-sm text-gray-300">{tr('Gestion des équipements C-Secur360', 'C-Secur360 equipment management')}</p>
                         </div>
                     </div>
                     <button
@@ -504,7 +508,7 @@ export function EquipementModal({
                 )}
 
                 {/* Onglets */}
-                <div className="border-b border-gray-200">
+                <div className="border-b border-gray-200 dark:border-gray-700">
                     <nav className="flex space-x-8">
                         {[
                             { id: 'general', label: 'Général', icon: 'wrench' },
@@ -519,7 +523,7 @@ export function EquipementModal({
                                 className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === tab.id
                                         ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'
                                 }`}
                             >
                                 <Icon name={tab.icon} size={16} />
@@ -537,30 +541,30 @@ export function EquipementModal({
                             {/* Informations de base */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Nom de l'équipement *
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr("Nom de l'équipement *", 'Equipment name *')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.nom}
                                         onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Nom de l'équipement..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr("Nom de l'équipement...", 'Equipment name...')}
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Département *
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Département *', 'Department *')}
                                     </label>
                                     <select
                                         value={formData.type}
                                         onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
-                                        <option value="">Sélectionner un département...</option>
+                                        <option value="">{tr('Sélectionner un département...', 'Select a department...')}</option>
                                         {typesEquipements.map(type => (
                                             <option key={type.value} value={type.value}>
                                                 {type.label}
@@ -570,16 +574,16 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Succursale *
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Succursale *', 'Branch *')}
                                     </label>
                                     <select
                                         value={formData.succursale}
                                         onChange={(e) => setFormData(prev => ({ ...prev, succursale: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
-                                        <option value="">Sélectionner une succursale...</option>
+                                        <option value="">{tr('Sélectionner une succursale...', 'Select a branch...')}</option>
                                         {succursalesOptions.map(succursale => (
                                             <option key={succursale} value={succursale}>{succursale}</option>
                                         ))}
@@ -590,54 +594,54 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Marque
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Marque', 'Brand')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.marque}
                                         onChange={(e) => setFormData(prev => ({ ...prev, marque: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Marque..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Marque...', 'Brand...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Modèle
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Modèle', 'Model')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.modele}
                                         onChange={(e) => setFormData(prev => ({ ...prev, modele: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Modèle..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Modèle...', 'Model...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Numéro de série
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Numéro de série', 'Serial number')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.numeroSerie}
                                         onChange={(e) => setFormData(prev => ({ ...prev, numeroSerie: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Numéro de série..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Numéro de série...', 'Serial number...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Année d'acquisition
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr("Année d'acquisition", 'Acquisition year')}
                                     </label>
                                     <input
                                         type="number"
                                         onFocus={(e) => e.target.select()}
                                         value={formData.anneeAcquisition}
                                         onChange={(e) => setFormData(prev => ({ ...prev, anneeAcquisition: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         min="1900"
                                         max={new Date().getFullYear()}
                                     />
@@ -647,13 +651,13 @@ export function EquipementModal({
                             {/* Statut, succursale et emplacement */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Statut
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Statut', 'Status')}
                                     </label>
                                     <select
                                         value={formData.statut}
                                         onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         {statutsEquipement.map(statut => (
                                             <option key={statut.value} value={statut.value}>
@@ -665,28 +669,28 @@ export function EquipementModal({
 
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Emplacement
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Emplacement', 'Location')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.emplacement}
                                         onChange={(e) => setFormData(prev => ({ ...prev, emplacement: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: Entrepôt A, Étagère 3..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: Entrepôt A, Étagère 3...', 'E.g.: Warehouse A, Shelf 3...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Département
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Département', 'Department')}
                                     </label>
                                     <input
                                         type="text"
                                         value={formData.departement}
                                         onChange={(e) => setFormData(prev => ({ ...prev, departement: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: Transformateur, Opérations..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: Transformateur, Opérations...', 'E.g.: Transformer, Operations...')}
                                     />
                                 </div>
                             </div>
@@ -694,29 +698,29 @@ export function EquipementModal({
                             {/* Valeurs financières */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prix d'achat ($)
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr("Prix d'achat ($)", 'Purchase price ($)')}
                                     </label>
                                     <input
                                         type="number"
                                         onFocus={(e) => e.target.select()}
                                         value={formData.prixAchat}
                                         onChange={(e) => setFormData(prev => ({ ...prev, prixAchat: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         step="0.01"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Valeur actuelle ($)
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Valeur actuelle ($)', 'Current value ($)')}
                                     </label>
                                     <input
                                         type="number"
                                         onFocus={(e) => e.target.select()}
                                         value={formData.valeurActuelle}
                                         onChange={(e) => setFormData(prev => ({ ...prev, valeurActuelle: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         step="0.01"
                                     />
                                 </div>
@@ -724,15 +728,15 @@ export function EquipementModal({
 
                             {/* Commentaires */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Commentaires
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                    {tr('Commentaires', 'Comments')}
                                 </label>
                                 <textarea
                                     value={formData.commentaires}
                                     onChange={(e) => setFormData(prev => ({ ...prev, commentaires: e.target.value }))}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Notes, commentaires..."
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder={tr('Notes, commentaires...', 'Notes, comments...')}
                                 />
                             </div>
 
@@ -749,14 +753,14 @@ export function EquipementModal({
                                 </label>
 
                                 <div className="flex items-center gap-2">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Couleur:
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        {tr('Couleur:', 'Color:')}
                                     </label>
                                     <input
                                         type="color"
                                         value={formData.couleurCalendrier}
                                         onChange={(e) => setFormData(prev => ({ ...prev, couleurCalendrier: e.target.value }))}
-                                        className="w-8 h-8 border border-gray-300 rounded"
+                                        className="w-8 h-8 border border-gray-300 dark:border-gray-600 rounded"
                                     />
                                 </div>
                             </div>
@@ -766,12 +770,12 @@ export function EquipementModal({
                     {/* ONGLET SPÉCIFICATIONS */}
                     {activeTab === 'specifications' && (
                         <div className="space-y-6">
-                            <h3 className="font-medium text-gray-900 mb-4">Caractéristiques techniques</h3>
+                            <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">{tr('Caractéristiques techniques', 'Technical specifications')}</h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Puissance
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Puissance', 'Power')}
                                     </label>
                                     <input
                                         type="text"
@@ -780,13 +784,13 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, puissance: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 500W, 2kW..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: 500W, 2kW...', 'E.g.: 500W, 2kW...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                         Voltage
                                     </label>
                                     <input
@@ -796,14 +800,14 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, voltage: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 120V, 240V..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: 120V, 240V...', 'E.g.: 120V, 240V...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Poids
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Poids', 'Weight')}
                                     </label>
                                     <input
                                         type="text"
@@ -812,13 +816,13 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, poids: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 5kg, 25lbs..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: 5kg, 25lbs...', 'E.g.: 5kg, 25lbs...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                         Dimensions
                                     </label>
                                     <input
@@ -828,14 +832,14 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, dimensions: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 30x20x15cm..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: 30x20x15cm...', 'E.g.: 30x20x15cm...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Capacité
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Capacité', 'Capacity')}
                                     </label>
                                     <input
                                         type="text"
@@ -844,14 +848,14 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, capacite: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: 100A, 50L..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: 100A, 50L...', 'E.g.: 100A, 50L...')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Précision
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Précision', 'Accuracy')}
                                     </label>
                                     <input
                                         type="text"
@@ -860,14 +864,14 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, precision: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: ±0.1%, ±5V..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: ±0.1%, ±5V...', 'E.g.: ±0.1%, ±5V...')}
                                     />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Plage de température
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Plage de température', 'Temperature range')}
                                     </label>
                                     <input
                                         type="text"
@@ -876,15 +880,15 @@ export function EquipementModal({
                                             ...prev,
                                             specifications: { ...prev.specifications, plageTemperature: e.target.value }
                                         }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Ex: -20°C à +60°C..."
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder={tr('Ex: -20°C à +60°C...', 'E.g.: -20°C to +60°C...')}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Autres spécifications
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                    {tr('Autres spécifications', 'Other specifications')}
                                 </label>
                                 <textarea
                                     value={formData.specifications.autres}
@@ -893,22 +897,22 @@ export function EquipementModal({
                                         specifications: { ...prev.specifications, autres: e.target.value }
                                     }))}
                                     rows={4}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Autres caractéristiques techniques..."
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder={tr('Autres caractéristiques techniques...', 'Other technical specifications...')}
                                 />
                             </div>
 
                             {/* Accessoires et consommables */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Accessoires</h4>
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Accessoires', 'Accessories')}</h4>
                                     <div className="flex gap-2 mb-3">
                                         <input
                                             type="text"
                                             value={nouvelAccessoire}
                                             onChange={(e) => setNouvelAccessoire(e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ajouter un accessoire..."
+                                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder={tr('Ajouter un accessoire...', 'Add an accessory...')}
                                             onKeyPress={(e) => e.key === 'Enter' && ajouterAccessoire()}
                                         />
                                         <button
@@ -920,7 +924,7 @@ export function EquipementModal({
                                     </div>
                                     <div className="space-y-1">
                                         {formData.accessoires.map(accessoire => (
-                                            <div key={accessoire} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                            <div key={accessoire} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
                                                 <span className="text-sm">{accessoire}</span>
                                                 <button
                                                     onClick={() => supprimerAccessoire(accessoire)}
@@ -934,14 +938,14 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Consommables</h4>
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Consommables', 'Consumables')}</h4>
                                     <div className="flex gap-2 mb-3">
                                         <input
                                             type="text"
                                             value={nouveauConsommable}
                                             onChange={(e) => setNouveauConsommable(e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ajouter un consommable..."
+                                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder={tr('Ajouter un consommable...', 'Add a consumable...')}
                                             onKeyPress={(e) => e.key === 'Enter' && ajouterConsommable()}
                                         />
                                         <button
@@ -953,7 +957,7 @@ export function EquipementModal({
                                     </div>
                                     <div className="space-y-1">
                                         {formData.consommables.map(consommable => (
-                                            <div key={consommable} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                            <div key={consommable} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
                                                 <span className="text-sm">{consommable}</span>
                                                 <button
                                                     onClick={() => supprimerConsommable(consommable)}
@@ -975,54 +979,54 @@ export function EquipementModal({
                             {/* Planning de maintenance */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prochaine maintenance
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Prochaine maintenance', 'Next maintenance')}
                                     </label>
                                     <input
                                         type="date"
                                         value={formData.prochaineMaintenance}
                                         onChange={(e) => setFormData(prev => ({ ...prev, prochaineMaintenance: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Fréquence (jours)
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Fréquence (jours)', 'Frequency (days)')}
                                     </label>
                                     <input
                                         type="number"
                                         onFocus={(e) => e.target.select()}
                                         value={formData.frequenceMaintenanceJours}
                                         onChange={(e) => setFormData(prev => ({ ...prev, frequenceMaintenanceJours: parseInt(e.target.value) || 365 }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         min="1"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prochain étalonnage
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                        {tr('Prochain étalonnage', 'Next calibration')}
                                     </label>
                                     <input
                                         type="date"
                                         value={formData.prochainEtalonnage}
                                         onChange={(e) => setFormData(prev => ({ ...prev, prochainEtalonnage: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
                             </div>
 
                             {/* Ajouter une maintenance */}
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="font-medium text-gray-900 mb-3">Ajouter une maintenance</h4>
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Ajouter une maintenance', 'Add maintenance')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3">
                                     <div>
                                         <input
                                             type="date"
                                             value={nouvelleMaintenance.date}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, date: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
                                             required
                                         />
                                     </div>
@@ -1030,14 +1034,14 @@ export function EquipementModal({
                                         <select
                                             value={nouvelleMaintenance.type}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, type: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
                                             required
                                         >
-                                            <option value="">Type...</option>
-                                            <option value="preventive">Préventive</option>
-                                            <option value="corrective">Corrective</option>
-                                            <option value="etalonnage">Étalonnage</option>
-                                            <option value="reparation">Réparation</option>
+                                            <option value="">{tr('Type...', 'Type...')}</option>
+                                            <option value="preventive">{tr('Préventive', 'Preventive')}</option>
+                                            <option value="corrective">{tr('Corrective', 'Corrective')}</option>
+                                            <option value="etalonnage">{tr('Étalonnage', 'Calibration')}</option>
+                                            <option value="reparation">{tr('Réparation', 'Repair')}</option>
                                         </select>
                                     </div>
                                     <div>
@@ -1045,8 +1049,8 @@ export function EquipementModal({
                                             type="text"
                                             value={nouvelleMaintenance.description}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, description: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                            placeholder="Description..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
+                                            placeholder={tr('Description...', 'Description...')}
                                             required
                                         />
                                     </div>
@@ -1056,8 +1060,8 @@ export function EquipementModal({
                                             onFocus={(e) => e.target.select()}
                                             value={nouvelleMaintenance.cout}
                                             onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, cout: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                            placeholder="Coût ($)"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
+                                            placeholder={tr('Coût ($)', 'Cost ($)')}
                                             step="0.01"
                                         />
                                     </div>
@@ -1066,7 +1070,7 @@ export function EquipementModal({
                                             onClick={ajouterMaintenance}
                                             className="w-full px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
                                         >
-                                            Ajouter
+                                            {tr('Ajouter', 'Add')}
                                         </button>
                                     </div>
                                 </div>
@@ -1074,17 +1078,17 @@ export function EquipementModal({
                                     type="text"
                                     value={nouvelleMaintenance.technicien}
                                     onChange={(e) => setNouvelleMaintenance(prev => ({ ...prev, technicien: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                    placeholder="Technicien responsable..."
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
+                                    placeholder={tr('Technicien responsable...', 'Responsible technician...')}
                                 />
                             </div>
 
                             {/* Historique des maintenances */}
                             <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Historique des maintenances</h4>
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Historique des maintenances', 'Maintenance history')}</h4>
                                 <div className="space-y-2">
                                     {formData.maintenances.length === 0 ? (
-                                        <p className="text-gray-500 text-sm">Aucune maintenance enregistrée</p>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">{tr('Aucune maintenance enregistrée', 'No maintenance recorded')}</p>
                                     ) : (
                                         formData.maintenances
                                             .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -1099,19 +1103,19 @@ export function EquipementModal({
                                                             maintenance.type === 'preventive' ? 'bg-green-100 text-green-800' :
                                                             maintenance.type === 'corrective' ? 'bg-red-100 text-red-800' :
                                                             maintenance.type === 'etalonnage' ? 'bg-blue-100 text-blue-800' :
-                                                            'bg-gray-100 text-gray-800'
+                                                            'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100'
                                                         }`}>
                                                             {maintenance.type}
                                                         </span>
                                                         {maintenance.cout > 0 && (
-                                                            <span className="text-sm text-gray-600">
+                                                            <span className="text-sm text-gray-600 dark:text-gray-300">
                                                                 {maintenance.cout.toFixed(2)}$
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-600 mt-1">{maintenance.description}</p>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{maintenance.description}</p>
                                                     {maintenance.technicien && (
-                                                        <p className="text-xs text-gray-500">Par: {maintenance.technicien}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">Par: {maintenance.technicien}</p>
                                                     )}
                                                 </div>
                                                 <button
@@ -1133,12 +1137,12 @@ export function EquipementModal({
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-blue-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-blue-900 mb-2">Heures d'utilisation</h4>
+                                    <h4 className="font-medium text-blue-900 mb-2">{tr("Heures d'utilisation", 'Hours of use')}</h4>
                                     <p className="text-2xl font-bold text-blue-700">{formData.heuresUtilisation}h</p>
                                 </div>
 
                                 <div className="bg-green-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-green-900 mb-2">Dernière utilisation</h4>
+                                    <h4 className="font-medium text-green-900 mb-2">{tr('Dernière utilisation', 'Last use')}</h4>
                                     <p className="text-sm text-green-700">
                                         {formData.derniereUtilisation
                                             ? new Date(formData.derniereUtilisation).toLocaleDateString()
@@ -1148,7 +1152,7 @@ export function EquipementModal({
                                 </div>
 
                                 <div className="bg-yellow-50 rounded-lg p-4">
-                                    <h4 className="font-medium text-yellow-900 mb-2">Utilisateur actuel</h4>
+                                    <h4 className="font-medium text-yellow-900 mb-2">{tr('Utilisateur actuel', 'Current user')}</h4>
                                     <p className="text-sm text-yellow-700">
                                         {formData.utilisateurActuel || 'Non assigné'}
                                     </p>
@@ -1156,9 +1160,9 @@ export function EquipementModal({
                             </div>
 
                             <div>
-                                <h4 className="font-medium text-gray-900 mb-3">Historique d'utilisation</h4>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-600">
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr("Historique d'utilisation", 'Usage history')}</h4>
+                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                    <p className="text-sm text-gray-600 dark:text-gray-300">
                                         L'historique d'utilisation sera automatiquement rempli lors de l'assignation de l'équipement aux jobs.
                                     </p>
                                 </div>
@@ -1170,12 +1174,12 @@ export function EquipementModal({
                     {activeTab === 'documents' && (
                         <div className="space-y-6">
                             {/* Garantie */}
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <h4 className="font-medium text-gray-900 mb-3">Informations de garantie</h4>
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Informations de garantie', 'Warranty information')}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Date d'expiration
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            {tr("Date d'expiration", 'Expiration date')}
                                         </label>
                                         <input
                                             type="date"
@@ -1184,12 +1188,12 @@ export function EquipementModal({
                                                 ...prev,
                                                 garantie: { ...prev.garantie, dateExpiration: e.target.value }
                                             }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Fournisseur
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            {tr('Fournisseur', 'Supplier')}
                                         </label>
                                         <input
                                             type="text"
@@ -1198,13 +1202,13 @@ export function EquipementModal({
                                                 ...prev,
                                                 garantie: { ...prev.garantie, fournisseur: e.target.value }
                                             }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Nom du fournisseur..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder={tr('Nom du fournisseur...', 'Supplier name...')}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Numéro de contrat
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            {tr('Numéro de contrat', 'Contract number')}
                                         </label>
                                         <input
                                             type="text"
@@ -1213,13 +1217,13 @@ export function EquipementModal({
                                                 ...prev,
                                                 garantie: { ...prev.garantie, numeroContrat: e.target.value }
                                             }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Numéro de contrat..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder={tr('Numéro de contrat...', 'Contract number...')}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Couverture
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                                            {tr('Couverture', 'Coverage')}
                                         </label>
                                         <input
                                             type="text"
@@ -1228,8 +1232,8 @@ export function EquipementModal({
                                                 ...prev,
                                                 garantie: { ...prev.garantie, couverture: e.target.value }
                                             }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ex: Pièces et main d'oeuvre..."
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder={tr("Ex: Pièces et main d'oeuvre...", 'E.g.: Parts and labor...')}
                                         />
                                     </div>
                                 </div>
@@ -1238,7 +1242,7 @@ export function EquipementModal({
                             {/* Upload de fichiers */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Manuels</h4>
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Manuels', 'Manuals')}</h4>
                                     <DropZone
                                         onFilesAdded={(files) => handleFilesAdded(files, 'manuels')}
                                         acceptedTypes=".pdf,.doc,.docx"
@@ -1247,7 +1251,7 @@ export function EquipementModal({
                                     />
                                     <div className="mt-3 space-y-1">
                                         {formData.manuels.map(manuel => (
-                                            <div key={manuel.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                            <div key={manuel.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-sm">
                                                 <span>{manuel.name}</span>
                                                 <button
                                                     onClick={() => supprimerFichier(manuel.id, 'manuels')}
@@ -1261,7 +1265,7 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Certificats</h4>
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{tr('Certificats', 'Certificates')}</h4>
                                     <DropZone
                                         onFilesAdded={(files) => handleFilesAdded(files, 'certificats')}
                                         acceptedTypes=".pdf,.jpg,.jpeg,.png"
@@ -1270,7 +1274,7 @@ export function EquipementModal({
                                     />
                                     <div className="mt-3 space-y-1">
                                         {formData.certificats.map(certificat => (
-                                            <div key={certificat.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                            <div key={certificat.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-sm">
                                                 <span>{certificat.name}</span>
                                                 <button
                                                     onClick={() => supprimerFichier(certificat.id, 'certificats')}
@@ -1284,7 +1288,7 @@ export function EquipementModal({
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-900 mb-3">Photos</h4>
+                                    <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Photos</h4>
                                     <DropZone
                                         onFilesAdded={(files) => handleFilesAdded(files, 'photos')}
                                         acceptedTypes="image/*"
@@ -1322,7 +1326,7 @@ export function EquipementModal({
                                 onClick={() => setShowDeleteConfirm(true)}
                                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                             >
-                                Supprimer
+                                {tr('Supprimer', 'Delete')}
                             </button>
                         )}
                     </div>
@@ -1330,9 +1334,9 @@ export function EquipementModal({
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
-                            Annuler
+                            {tr('Annuler', 'Cancel')}
                         </button>
 
                         {peutModifier && (
@@ -1341,7 +1345,7 @@ export function EquipementModal({
                                 disabled={isSubmitting}
                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                             >
-                                {isSubmitting ? 'Sauvegarde...' : (equipement ? 'Modifier' : 'Créer')}
+                                {isSubmitting ? tr('Sauvegarde...', 'Saving...') : (equipement ? tr('Modifier', 'Edit') : tr('Créer', 'Create'))}
                             </button>
                         )}
                     </div>
@@ -1353,25 +1357,25 @@ export function EquipementModal({
                 {/* Modal de confirmation de suppression */}
                 {showDeleteConfirm && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">
-                                Confirmer la suppression
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                                {tr('Confirmer la suppression', 'Confirm deletion')}
                             </h3>
-                            <p className="text-sm text-gray-600 mb-6">
-                                Êtes-vous sûr de vouloir supprimer {equipement?.nom} ? Cette action est irréversible.
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                                {tr('Êtes-vous sûr de vouloir supprimer', 'Are you sure you want to delete')} {equipement?.nom} ? {tr('Cette action est irréversible.', 'This action cannot be undone.')}
                             </p>
                             <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
-                                    Annuler
+                                    {tr('Annuler', 'Cancel')}
                                 </button>
                                 <button
                                     onClick={handleDelete}
                                     className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                                 >
-                                    Supprimer
+                                    {tr('Supprimer', 'Delete')}
                                 </button>
                             </div>
                         </div>

@@ -340,7 +340,7 @@ export function AnalyticsDashboard({
                     <span className="text-lg font-bold" style={{ color }}>{value}%</span>
                 </div>
             </div>
-            <p className="text-sm font-medium text-gray-700">{title}</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{title}</p>
         </div>
     );
 
@@ -356,13 +356,13 @@ export function AnalyticsDashboard({
     return (
         <div className="space-y-6">
             {/* En-tête avec filtres */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             📊 Dashboard Analytique
                         </h2>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 dark:text-gray-300">
                             Analyse de performance et achalandage - {filterBureau === 'tous' ? 'Tous les bureaux' : filterBureau}
                         </p>
                     </div>
@@ -394,7 +394,7 @@ export function AnalyticsDashboard({
                             className={`px-4 py-2 border-b-2 font-medium transition-colors ${
                                 activeTab === tab.id
                                     ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'
                             }`}
                         >
                             <Icon name={tab.icon} size={16} className="inline mr-2" />
@@ -473,8 +473,8 @@ export function AnalyticsDashboard({
             {activeTab === 'performance' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Performance — timeline composee (evenements + travailleurs actifs + occupation %) */}
-                    <div className="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Performance (30 derniers jours)</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 lg:col-span-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📈 Performance (30 derniers jours)</h3>
                         <ResponsiveContainer width="100%" height={320}>
                             <ComposedChart data={analyticsData.tendances}>
                                 <defs>
@@ -501,8 +501,8 @@ export function AnalyticsDashboard({
                     </div>
 
                     {/* Répartition par statut */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Répartition par Statut</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📊 Répartition par Statut</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
@@ -527,8 +527,8 @@ export function AnalyticsDashboard({
             {activeTab === 'achalandage' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Heures par jour */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">⏰ Heures par Jour</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">⏰ Heures par Jour</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={analyticsData.tendances}>
                                 <defs>
@@ -547,8 +547,8 @@ export function AnalyticsDashboard({
                     </div>
 
                     {/* Répartition par priorité */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">🚨 Répartition par Priorité</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🚨 Répartition par Priorité</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
@@ -575,8 +575,8 @@ export function AnalyticsDashboard({
             {activeTab === 'comparatif' && (
                 <div className="space-y-6">
                     {/* Comparatif par bureau */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 Performance par Bureau</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🏢 Performance par Bureau</h3>
                         <ResponsiveContainer width="100%" height={400}>
                             <BarChart data={analyticsData.repartitionBureau}>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -592,41 +592,41 @@ export function AnalyticsDashboard({
                     </div>
 
                     {/* Tableau détaillé */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                            <h3 className="text-lg font-semibold text-gray-900">📊 Détails par Bureau</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📊 Détails par Bureau</h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                                <thead className="bg-gray-50 dark:bg-gray-700/50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bureau</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Événements</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heures</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personnel Dispo</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Personnel Assigné</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux Utilisation</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bureau</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Événements</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Heures</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Personnel Dispo</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Personnel Assigné</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Taux Utilisation</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
                                     {analyticsData.repartitionBureau.map((bureau, index) => (
-                                        <tr key={index} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                                 {bureau.bureau}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {bureau.jobs}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {bureau.heures}h
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {bureau.personnelDispo}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {bureau.personnelAssigne}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 <div className="flex items-center">
                                                     <div className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                                         bureau.tauxUtilisation >= 80 ? 'bg-green-100 text-green-800' :
@@ -649,19 +649,19 @@ export function AnalyticsDashboard({
             {activeTab === 'individuel' && (
                 <div className="space-y-6">
                     {/* Sélecteurs pour l'analyse individuelle */}
-                    <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">👤 Sélection pour Analyse Individuelle</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">👤 Sélection pour Analyse Individuelle</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* Type d'analyse */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Type d'analyse</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Type d'analyse</label>
                                 <select
                                     value={analyseType}
                                     onChange={(e) => {
                                         setAnalyseType(e.target.value);
                                         setSelectedIndividu('');
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="personnel">Personnel</option>
                                     <option value="equipement">Équipement</option>
@@ -670,13 +670,13 @@ export function AnalyticsDashboard({
 
                             {/* Sélection de l'individu */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     {analyseType === 'personnel' ? 'Sélectionner un employé' : 'Sélectionner un équipement'}
                                 </label>
                                 <select
                                     value={selectedIndividu}
                                     onChange={(e) => setSelectedIndividu(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">
                                         {analyseType === 'personnel' ? 'Choisir un employé...' : 'Choisir un équipement...'}
@@ -761,8 +761,8 @@ export function AnalyticsDashboard({
                             {/* Graphiques individuels */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Tendances individuelles */}
-                                <div className="bg-white rounded-lg shadow-sm p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                         📈 Tendances - {analyseIndividuelle.nom}
                                     </h3>
                                     <ResponsiveContainer width="100%" height={300}>
@@ -778,8 +778,8 @@ export function AnalyticsDashboard({
                                 </div>
 
                                 {/* Répartition des statuts individuels */}
-                                <div className="bg-white rounded-lg shadow-sm p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                         📊 Répartition par Statut - {analyseIndividuelle.nom}
                                     </h3>
                                     {analyseIndividuelle.repartitionStatut.length > 0 ? (
@@ -801,7 +801,7 @@ export function AnalyticsDashboard({
                                             </PieChart>
                                         </ResponsiveContainer>
                                     ) : (
-                                        <div className="flex items-center justify-center h-64 text-gray-500">
+                                        <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
                                             <div className="text-center">
                                                 <Icon name="calendar" size={48} className="mx-auto mb-2 text-gray-300" />
                                                 <p>Aucun événement assigné</p>
@@ -812,22 +812,22 @@ export function AnalyticsDashboard({
                             </div>
 
                             {/* Détails des événements */}
-                            <div className="bg-white rounded-lg shadow-sm p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                                     📋 Événements Assignés - {analyseIndividuelle.nom}
                                 </h3>
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
+                                        <thead className="bg-gray-50 dark:bg-gray-700/50">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Événement</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heures</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bureau</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Événement</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Statut</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Heures</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bureau</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
                                             {jobs
                                                 .filter(job => {
                                                     if (analyseType === 'personnel') {
@@ -839,14 +839,14 @@ export function AnalyticsDashboard({
                                                 .filter(job => filterBureau === 'tous' || job.bureau === filterBureau)
                                                 .slice(0, 10)
                                                 .map((job, index) => (
-                                                    <tr key={index} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                                             {job.title || job.nomJob || 'Événement sans nom'}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                             {new Date(job.dateDebut).toLocaleDateString('fr-CA')}
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                                                 job.statut === 'planifie' ? 'bg-blue-100 text-blue-800' :
                                                                 job.statut === 'en-cours' ? 'bg-green-100 text-green-800' :
@@ -861,10 +861,10 @@ export function AnalyticsDashboard({
                                                                  'Terminé'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                             {job.heuresPlanifiees || 0}h
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                             {job.bureau}
                                                         </td>
                                                     </tr>
@@ -875,14 +875,14 @@ export function AnalyticsDashboard({
                             </div>
                         </>
                     ) : (
-                        <div className="bg-white rounded-lg shadow-sm p-12">
-                            <div className="text-center text-gray-500">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12">
+                            <div className="text-center text-gray-500 dark:text-gray-400">
                                 <Icon name="user" size={64} className="mx-auto mb-4 text-gray-300" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">Analyse Individuelle</h3>
-                                <p className="text-gray-600 mb-4">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Analyse Individuelle</h3>
+                                <p className="text-gray-600 dark:text-gray-300 mb-4">
                                     Sélectionnez un {analyseType === 'personnel' ? 'employé' : 'équipement'} pour voir son analyse détaillée
                                 </p>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
                                     <p>• Tendances de performance</p>
                                     <p>• Répartition des événements</p>
                                     <p>• Charge de travail</p>

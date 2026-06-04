@@ -291,7 +291,7 @@ export function ResourcesModal({
             {/* Modal avec header noir personnalisé */}
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col">
                         {/* Header noir comme le principal */}
                         <div className="flex-shrink-0 flex items-center justify-between p-6 bg-gray-900 rounded-t-xl">
                             <div className="flex items-center gap-4">
@@ -335,14 +335,14 @@ export function ResourcesModal({
                     {peutAccederRessources() && (
                         <>
                             {/* Onglets et contrôles */}
-                            <div className="border-b border-gray-200 space-y-4">
+                            <div className="border-b border-gray-200 dark:border-gray-700 space-y-4">
                                 <nav className="-mb-px flex space-x-8">
                                     <button
                                         onClick={() => handleTabChange('succursales')}
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${
                                             activeTab === 'succursales'
                                                 ? 'border-blue-600 text-blue-700'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                     >
                                         <Icon name="building" size={16} className="inline mr-2" />
@@ -353,7 +353,7 @@ export function ResourcesModal({
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${
                                             activeTab === 'equipements'
                                                 ? 'border-orange-500 text-orange-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                     >
                                         <Icon name="tool" size={16} className="inline mr-2" />
@@ -364,7 +364,7 @@ export function ResourcesModal({
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${
                                             activeTab === 'postes'
                                                 ? 'border-indigo-500 text-indigo-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                     >
                                         <Icon name="briefcase" size={16} className="inline mr-2" />
@@ -375,7 +375,7 @@ export function ResourcesModal({
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${
                                             activeTab === 'filtres'
                                                 ? 'border-purple-500 text-purple-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                     >
                                         <Icon name="filter" size={16} className="inline mr-2" />
@@ -385,10 +385,10 @@ export function ResourcesModal({
 
                                 {/* Filtres et contrôles de vue - seulement pour Équipements */}
                                 {activeTab === 'equipements' && (
-                                    <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                                    <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                     {/* Mode de vue */}
                                     <div className="flex items-center gap-2">
-                                        <label className="text-sm font-medium text-gray-700">{t('filter.view')}:</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('filter.view')}:</label>
                                         <select
                                             value={viewMode}
                                             onChange={(e) => setViewMode(e.target.value)}
@@ -401,7 +401,7 @@ export function ResourcesModal({
 
                                     {/* Filtre par bureau */}
                                     <div className="flex items-center gap-2">
-                                        <label className="text-sm font-medium text-gray-700">{t('filter.office')}:</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('filter.office')}:</label>
                                         <select
                                             value={filtres.bureau}
                                             onChange={(e) => updateFiltre('bureau', e.target.value)}
@@ -417,7 +417,7 @@ export function ResourcesModal({
                                     {/* Filtre par type (équipements seulement) */}
                                     {activeTab === 'equipements' && (
                                         <div className="flex items-center gap-2">
-                                            <label className="text-sm font-medium text-gray-700">{t('filter.type')}:</label>
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('filter.type')}:</label>
                                             <select
                                                 value={filtres.type}
                                                 onChange={(e) => updateFiltre('type', e.target.value)}
@@ -433,7 +433,7 @@ export function ResourcesModal({
 
                                     {/* Filtre par disponibilité */}
                                     <div className="flex items-center gap-2">
-                                        <label className="text-sm font-medium text-gray-700">{t('admin.filter.availability')}:</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('admin.filter.availability')}:</label>
                                         <select
                                             value={filtres.disponibilite}
                                             onChange={(e) => updateFiltre('disponibilite', e.target.value)}
@@ -447,7 +447,7 @@ export function ResourcesModal({
 
                                     {/* Recherche */}
                                     <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                                        <label className="text-sm font-medium text-gray-700">{t('form.search')}:</label>
+                                        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t('form.search')}:</label>
                                         <input
                                             type="text"
                                             value={filtres.recherche}
@@ -460,7 +460,7 @@ export function ResourcesModal({
                                     {/* Bouton reset */}
                                     <button
                                         onClick={resetFiltres}
-                                        className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                        className="px-3 py-1 text-sm bg-gray-200 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 transition-colors"
                                         title={t('admin.filter.reset')}
                                     >
                                         <Icon name="refresh" size={16} />
@@ -473,7 +473,7 @@ export function ResourcesModal({
                             {activeTab === 'equipements' && (
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-lg font-semibold text-gray-900">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                             {t('admin.equipment.management')}
                                             {viewMode === 'individual' && selectedResource && (
                                                 <span className="ml-3 text-base font-normal text-orange-600">
@@ -485,7 +485,7 @@ export function ResourcesModal({
                                             {viewMode === 'individual' && selectedResource && (
                                                 <button
                                                     onClick={() => setSelectedResource(null)}
-                                                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                                    className="px-3 py-2 bg-gray-200 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
                                                 >
                                                     <Icon name="arrow-left" size={16} className="mr-1" />
                                                     {t('admin.view.backToList')}
@@ -506,7 +506,7 @@ export function ResourcesModal({
 
                                     {viewMode === 'individual' && selectedResource ? (
                                         // Vue individuelle équipement
-                                        <div className="bg-white border rounded-lg p-6">
+                                        <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
                                             <div className="flex items-center gap-4 mb-6">
                                                 <div
                                                     className="w-16 h-16 rounded-full flex items-center justify-center text-white"
@@ -515,9 +515,9 @@ export function ResourcesModal({
                                                     <Icon name="tool" size={24} />
                                                 </div>
                                                 <div>
-                                                    <h2 className="text-2xl font-bold text-gray-900">{selectedResource.nom}</h2>
-                                                    <p className="text-lg text-gray-600">{selectedResource.type}</p>
-                                                    <p className="text-sm text-gray-500">{selectedResource.succursale}</p>
+                                                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedResource.nom}</h2>
+                                                    <p className="text-lg text-gray-600 dark:text-gray-300">{selectedResource.type}</p>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedResource.succursale}</p>
                                                 </div>
                                                 <div className="ml-auto">
                                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -570,7 +570,7 @@ export function ResourcesModal({
                                             {filtrerEquipements().map((equipement) => (
                                                 <div
                                                     key={equipement.id}
-                                                    className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                                                    className="bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                                                     onClick={() => {
                                                         if (viewMode === 'individual') {
                                                             setSelectedResource(equipement);
@@ -588,14 +588,14 @@ export function ResourcesModal({
                                                             <Icon name="tool" size={16} />
                                                         </div>
                                                         <div className="flex-1">
-                                                            <h4 className="font-medium text-gray-900">{equipement.nom}</h4>
-                                                            <p className="text-sm text-gray-600">{equipement.type}</p>
+                                                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{equipement.nom}</h4>
+                                                            <p className="text-sm text-gray-600 dark:text-gray-300">{equipement.type}</p>
                                                         </div>
                                                         {viewMode === 'individual' && (
-                                                            <Icon name="eye" size={16} className="text-gray-400" />
+                                                            <Icon name="eye" size={16} className="text-gray-400 dark:text-gray-500" />
                                                         )}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 flex justify-between">
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex justify-between">
                                                         <span>{equipement.succursale}</span>
                                                         <span className={`px-2 py-1 rounded text-xs ${
                                                             equipement.disponible !== false
@@ -611,7 +611,7 @@ export function ResourcesModal({
                                     )}
 
                                     {filtrerEquipements().length === 0 && (
-                                        <div className="text-center py-8 text-gray-500">
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                             <Icon name="tool" size={48} className="mx-auto mb-4 opacity-50" />
                                             <p>{t('admin.equipment.noResults')}</p>
                                         </div>
@@ -623,7 +623,7 @@ export function ResourcesModal({
                             {activeTab === 'filtres' && (
                                 <div className="space-y-6">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-lg font-semibold text-gray-900">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                             {t('admin.filter.management')}
                                         </h3>
                                         <div className="flex items-center gap-3">
@@ -665,7 +665,7 @@ export function ResourcesModal({
                                             <h4 className="font-semibold text-slate-800 mb-3">{t('admin.filter.createNew')}</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         {t('admin.filter.name')} *
                                                     </label>
                                                     <input
@@ -677,7 +677,7 @@ export function ResourcesModal({
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                         {t('admin.filter.description')}
                                                     </label>
                                                     <input
@@ -690,8 +690,8 @@ export function ResourcesModal({
                                                 </div>
                                             </div>
 
-                                            <div className="bg-white p-3 rounded border mb-4">
-                                                <p className="text-sm text-gray-600 mb-2">{t('admin.filter.currentCriteria')}:</p>
+                                            <div className="bg-white dark:bg-gray-800 p-3 rounded border mb-4">
+                                                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{t('admin.filter.currentCriteria')}:</p>
                                                 <div className="flex flex-wrap gap-2">
                                                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
                                                         {t('admin.filter.tab')}: {activeTab === 'personnel' ? t('resource.personnel') : t('resource.equipment')}
@@ -729,7 +729,7 @@ export function ResourcesModal({
                                                 </button>
                                                 <button
                                                     onClick={() => setShowNewFilterForm(false)}
-                                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                                    className="px-4 py-2 bg-gray-200 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
                                                 >
                                                     {t('action.cancel')}
                                                 </button>
@@ -739,10 +739,10 @@ export function ResourcesModal({
 
                                     {/* Liste des filtres sauvegardés */}
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-3">{t('admin.filter.savedFilters')} ({filtresSauvegardes.length})</h4>
+                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('admin.filter.savedFilters')} ({filtresSauvegardes.length})</h4>
 
                                         {filtresSauvegardes.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500">
+                                            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                                 <Icon name="filter" size={48} className="mx-auto mb-4 opacity-50" />
                                                 <p className="mb-2">{t('admin.filter.noSavedFilters')}</p>
                                                 <p className="text-sm">{t('admin.filter.configureHint')}</p>
@@ -750,12 +750,12 @@ export function ResourcesModal({
                                         ) : (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {filtresSauvegardes.map((filtre) => (
-                                                    <div key={filtre.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                                    <div key={filtre.id} className="bg-white dark:bg-gray-800 border rounded-lg p-4 hover:shadow-md transition-shadow">
                                                         <div className="flex items-start justify-between mb-3">
                                                             <div>
-                                                                <h5 className="font-medium text-gray-900">{filtre.nom}</h5>
+                                                                <h5 className="font-medium text-gray-900 dark:text-gray-100">{filtre.nom}</h5>
                                                                 {filtre.description && (
-                                                                    <p className="text-sm text-gray-600 mt-1">{filtre.description}</p>
+                                                                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{filtre.description}</p>
                                                                 )}
                                                             </div>
                                                             <button
@@ -788,7 +788,7 @@ export function ResourcesModal({
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-xs text-gray-500">{t('admin.filter.createdOn')} {filtre.dateCreation}</p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.filter.createdOn')} {filtre.dateCreation}</p>
                                                         </div>
 
                                                         <button
@@ -810,7 +810,7 @@ export function ResourcesModal({
                             {activeTab === 'postes' && (
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-lg font-semibold text-gray-900">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                             {t('admin.position.management')}
                                         </h3>
                                         <button
@@ -829,7 +829,7 @@ export function ResourcesModal({
                                         {postes.map((poste) => (
                                             <div
                                                 key={poste.id}
-                                                className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
+                                                className="bg-white dark:bg-gray-800 border rounded-lg p-6 hover:shadow-md transition-shadow"
                                             >
                                                 <div className="flex items-start justify-between mb-4">
                                                     <div className="flex items-center gap-3">
@@ -837,8 +837,8 @@ export function ResourcesModal({
                                                             <Icon name="briefcase" size={20} />
                                                         </div>
                                                         <div>
-                                                            <h4 className="font-semibold text-gray-900">{poste.nom}</h4>
-                                                            <p className="text-sm text-gray-600">{poste.departement}</p>
+                                                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">{poste.nom}</h4>
+                                                            <p className="text-sm text-gray-600 dark:text-gray-300">{poste.departement}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-1">
@@ -847,14 +847,14 @@ export function ResourcesModal({
                                                                 setSelectedPoste(poste);
                                                                 setShowPosteModal(true);
                                                             }}
-                                                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                                                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
                                                             title={t('action.edit')}
                                                         >
                                                             <Icon name="edit" size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => supprimerPoste(poste.id)}
-                                                            className="p-2 text-gray-400 hover:text-slate-700 hover:bg-slate-200 rounded transition-colors"
+                                                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-slate-700 hover:bg-slate-200 rounded transition-colors"
                                                             title="Supprimer"
                                                         >
                                                             <Icon name="trash" size={16} />
@@ -862,7 +862,7 @@ export function ResourcesModal({
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2 text-sm text-gray-600">
+                                                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                                                     <div className="flex items-center gap-2">
                                                         <Icon name="dollar" size={14} />
                                                         <span>{t('admin.position.salary')}: {poste.salaireMin}$ - {poste.salaireMax}$</span>
@@ -875,7 +875,7 @@ export function ResourcesModal({
 
                                                 {poste.description && (
                                                     <div className="mt-4 pt-4 border-t border-gray-100">
-                                                        <p className="text-sm text-gray-600">{poste.description}</p>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300">{poste.description}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -883,7 +883,7 @@ export function ResourcesModal({
                                     </div>
 
                                     {postes.length === 0 && (
-                                        <div className="text-center py-8 text-gray-500">
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                             <Icon name="briefcase" size={48} className="mx-auto mb-4 opacity-50" />
                                             <p>{t('admin.position.noPositions')}</p>
                                             <p className="text-sm mt-2">{t('admin.position.createHint')}</p>
@@ -896,7 +896,7 @@ export function ResourcesModal({
                             {activeTab === 'succursales' && (
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-lg font-semibold text-gray-900">
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                             {t('admin.branch.management')}
                                         </h3>
                                         <button
@@ -915,7 +915,7 @@ export function ResourcesModal({
                                         {succursales.map((succursale) => (
                                             <div
                                                 key={succursale.id}
-                                                className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow"
+                                                className="bg-white dark:bg-gray-800 border rounded-lg p-6 hover:shadow-md transition-shadow"
                                             >
                                                 <div className="flex items-start justify-between mb-4">
                                                     <div className="flex items-center gap-3">
@@ -923,7 +923,7 @@ export function ResourcesModal({
                                                             <Icon name="building" size={20} />
                                                         </div>
                                                         <div>
-                                                            <h4 className="font-semibold text-gray-900">{succursale.nom}</h4>
+                                                            <h4 className="font-semibold text-gray-900 dark:text-gray-100">{succursale.nom}</h4>
                                                             <span className={`px-2 py-1 rounded text-xs ${
                                                                 succursale.actif
                                                                     ? 'bg-blue-100 text-blue-800'
@@ -939,14 +939,14 @@ export function ResourcesModal({
                                                                 setSelectedSuccursale(succursale);
                                                                 setShowSuccursaleModal(true);
                                                             }}
-                                                            className="p-2 text-gray-400 hover:text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                                                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-700 hover:bg-blue-200 rounded transition-colors"
                                                             title={t('action.edit')}
                                                         >
                                                             <Icon name="edit" size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => supprimerSuccursale(succursale.id)}
-                                                            className="p-2 text-gray-400 hover:text-slate-700 hover:bg-slate-200 rounded transition-colors"
+                                                            className="p-2 text-gray-400 dark:text-gray-500 hover:text-slate-700 hover:bg-slate-200 rounded transition-colors"
                                                             title="Supprimer"
                                                         >
                                                             <Icon name="trash" size={16} />
@@ -954,7 +954,7 @@ export function ResourcesModal({
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-2 text-sm text-gray-600">
+                                                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                                                     <div className="flex items-center gap-2">
                                                         <Icon name="location" size={14} />
                                                         <span className="text-xs">{succursale.adresse}</span>
@@ -971,13 +971,13 @@ export function ResourcesModal({
 
                                                 <div className="mt-4 pt-4 border-t border-gray-100">
                                                     <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-500">{t('resource.personnel')}:</span>
+                                                        <span className="text-gray-500 dark:text-gray-400">{t('resource.personnel')}:</span>
                                                         <span className="font-medium">
                                                             {personnel.filter(p => p.succursale === succursale.nom).length}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
-                                                        <span className="text-gray-500">{t('resource.equipment')}:</span>
+                                                        <span className="text-gray-500 dark:text-gray-400">{t('resource.equipment')}:</span>
                                                         <span className="font-medium">
                                                             {equipements.filter(e => e.succursale === succursale.nom).length}
                                                         </span>
@@ -988,7 +988,7 @@ export function ResourcesModal({
                                     </div>
 
                                     {succursales.length === 0 && (
-                                        <div className="text-center py-8 text-gray-500">
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                                             <Icon name="building" size={48} className="mx-auto mb-4 opacity-50" />
                                             <p>{t('admin.branch.noBranches')}</p>
                                         </div>

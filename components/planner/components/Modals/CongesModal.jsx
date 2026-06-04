@@ -237,7 +237,7 @@ export function CongesModal({
         >
             <div className="space-y-6">
                 {/* Onglets */}
-                <div className="border-b border-gray-200">
+                <div className="border-b border-gray-200 dark:border-gray-700">
                     <nav className="flex space-x-8">
                         {[
                             { id: 'general', label: 'Général', icon: 'calendar' },
@@ -250,7 +250,7 @@ export function CongesModal({
                                 className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === tab.id
                                         ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'
                                 }`}
                             >
                                 <Icon name={tab.icon} size={16} />
@@ -268,13 +268,13 @@ export function CongesModal({
                             {/* Informations de base */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                         Employé *
                                     </label>
                                     <select
                                         value={formData.personnelId}
                                         onChange={(e) => setFormData(prev => ({ ...prev, personnelId: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
                                         <option value="">Sélectionner un employé...</option>
@@ -287,7 +287,7 @@ export function CongesModal({
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                         Type de congé *
                                     </label>
                                     <select
@@ -300,7 +300,7 @@ export function CongesModal({
                                                 paye: type?.paye || false
                                             }));
                                         }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         required
                                     >
                                         {typesConges.map(type => (
@@ -329,7 +329,7 @@ export function CongesModal({
                                         <select
                                             value={formData.typeDemiJournee}
                                             onChange={(e) => setFormData(prev => ({ ...prev, typeDemiJournee: e.target.value }))}
-                                            className="px-3 py-1 border border-gray-300 rounded text-sm"
+                                            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm"
                                         >
                                             <option value="matin">🌅 Matin</option>
                                             <option value="apres_midi">🌇 Après-midi</option>
@@ -339,20 +339,20 @@ export function CongesModal({
 
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                             Date début *
                                         </label>
                                         <input
                                             type="date"
                                             value={formData.dateDebut}
                                             onChange={(e) => setFormData(prev => ({ ...prev, dateDebut: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                             required
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                             {formData.demiJournee ? 'Même date' : 'Date fin *'}
                                         </label>
                                         <input
@@ -362,33 +362,33 @@ export function CongesModal({
                                                 ...prev,
                                                 dateFin: formData.demiJournee ? prev.dateDebut : e.target.value
                                             }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                             disabled={formData.demiJournee}
                                             required={!formData.demiJournee}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                             Heure début
                                         </label>
                                         <input
                                             type="time"
                                             value={formData.heureDebut}
                                             onChange={(e) => setFormData(prev => ({ ...prev, heureDebut: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                             Heure fin
                                         </label>
                                         <input
                                             type="time"
                                             value={formData.heureFin}
                                             onChange={(e) => setFormData(prev => ({ ...prev, heureFin: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -420,28 +420,28 @@ export function CongesModal({
 
                             {/* Raison et commentaires */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                     Raison du congé *
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.raison}
                                     onChange={(e) => setFormData(prev => ({ ...prev, raison: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Ex: Vacances en famille, Rendez-vous médical..."
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                     Commentaires additionnels
                                 </label>
                                 <textarea
                                     value={formData.commentaires}
                                     onChange={(e) => setFormData(prev => ({ ...prev, commentaires: e.target.value }))}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Informations supplémentaires..."
                                 />
                             </div>
@@ -489,15 +489,15 @@ export function CongesModal({
                     {/* ONGLET APPROBATION */}
                     {activeTab === 'approbation' && (
                         <div className="space-y-4">
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <h3 className="font-medium text-gray-900 mb-3">Statut de la demande</h3>
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Statut de la demande</h3>
 
                                 <div className="flex items-center gap-3 mb-4">
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                                         formData.statut === 'en_attente' ? 'bg-yellow-100 text-yellow-800' :
                                         formData.statut === 'approuve' ? 'bg-green-100 text-green-800' :
                                         formData.statut === 'refuse' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'
+                                        'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100'
                                     }`}>
                                         {formData.statut === 'en_attente' && '⏳ En attente'}
                                         {formData.statut === 'approuve' && '✅ Approuvé'}
@@ -506,14 +506,14 @@ export function CongesModal({
                                     </span>
 
                                     {formData.dateApprobation && (
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-gray-600 dark:text-gray-300">
                                             le {new Date(formData.dateApprobation).toLocaleDateString()}
                                         </span>
                                     )}
                                 </div>
 
                                 {formData.approuvePar && (
-                                    <p className="text-sm text-gray-600 mb-3">
+                                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                                         Traité par: {personnel.find(p => p.id === formData.approuvePar)?.nom || 'Inconnu'}
                                     </p>
                                 )}
@@ -522,14 +522,14 @@ export function CongesModal({
                                 {estCoordonnateur && formData.statut === 'en_attente' && (
                                     <div className="space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                                                 Commentaires d'approbation
                                             </label>
                                             <textarea
                                                 value={formData.commentairesApprobation}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, commentairesApprobation: e.target.value }))}
                                                 rows={3}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                                 placeholder="Commentaires sur la décision..."
                                             />
                                         </div>
@@ -566,13 +566,13 @@ export function CongesModal({
                     {activeTab === 'remplacement' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     Remplaçant désigné
                                 </label>
                                 <select
                                     value={formData.remplacant || ''}
                                     onChange={(e) => setFormData(prev => ({ ...prev, remplacant: e.target.value || null }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">Aucun remplaçant</option>
                                     {personnel
@@ -586,7 +586,7 @@ export function CongesModal({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                     Tâches à transférer
                                 </label>
                                 <textarea
@@ -596,7 +596,7 @@ export function CongesModal({
                                         tachesTransferees: e.target.value.split('\n').filter(t => t.trim())
                                     }))}
                                     rows={5}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Liste des tâches (une par ligne)..."
                                 />
                             </div>
@@ -628,7 +628,7 @@ export function CongesModal({
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                             Annuler
                         </button>
@@ -648,17 +648,17 @@ export function CongesModal({
                 {/* Modal de confirmation de suppression */}
                 {showDeleteConfirm && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
                                 Confirmer la suppression
                             </h3>
-                            <p className="text-sm text-gray-600 mb-6">
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                                 Êtes-vous sûr de vouloir supprimer ce congé ? Cette action est irréversible.
                             </p>
                             <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
                                 >
                                     Annuler
                                 </button>

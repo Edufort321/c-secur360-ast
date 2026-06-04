@@ -78,17 +78,17 @@ export function Modal({
                 {/* Contenu du modal */}
                 <div
                     className={`
-                        inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all
+                        inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all
                         sm:my-8 sm:align-middle w-full ${sizeClasses[size]} ${className}
                     `}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
                     {(title || showCloseButton) && (
-                        <div className="bg-gray-50 px-4 py-3 sm:px-6 border-b border-gray-200">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 border-b border-gray-200 dark:border-gray-700">
                             <div className="flex items-center justify-between">
                                 {title && (
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
                                         {title}
                                     </h3>
                                 )}
@@ -96,7 +96,7 @@ export function Modal({
                                     <button
                                         onClick={onClose}
                                         className="
-                                            text-gray-400 hover:text-gray-600 transition-colors
+                                            text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors
                                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                                             rounded-md p-1
                                         "
@@ -110,7 +110,7 @@ export function Modal({
                     )}
 
                     {/* Contenu */}
-                    <div className="bg-white">
+                    <div className="bg-white dark:bg-gray-800">
                         {children}
                     </div>
                 </div>
@@ -138,7 +138,7 @@ export function ModalBody({ children, className = '' }) {
 
 export function ModalFooter({ children, className = '' }) {
     return (
-        <div className={`bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 ${className}`}>
+        <div className={`bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-gray-700 ${className}`}>
             {children}
         </div>
     );

@@ -666,11 +666,11 @@ export function PlanificateurFinal({
         const layerHeight = Math.floor(usableH / jobLayers.length);
 
         return (
-            <div className="relative w-full h-20 bg-gray-50 border border-gray-200 rounded">
+            <div className="relative w-full h-20 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded">
                 {/* Grille d'heures en arrière-plan */}
                 <div className="absolute inset-0 flex opacity-25">
                     {Array.from({length: 12}, (_, i) => (
-                        <div key={i} className="flex-1 border-r border-gray-300 last:border-r-0"></div>
+                        <div key={i} className="flex-1 border-r border-gray-300 dark:border-gray-600 last:border-r-0"></div>
                     ))}
                 </div>
 
@@ -768,7 +768,7 @@ export function PlanificateurFinal({
                 )}
 
                 {/* Indicateurs d'heures */}
-                <div className="absolute inset-x-0 bottom-0 h-3 flex text-xs text-gray-500 opacity-70 pointer-events-none">
+                <div className="absolute inset-x-0 bottom-0 h-3 flex text-xs text-gray-500 dark:text-gray-400 opacity-70 pointer-events-none">
                     <div className="text-center text-[9px]">0h</div>
                     <div className="flex-1"></div>
                     <div className="text-center text-[9px]">6h</div>
@@ -841,11 +841,11 @@ export function PlanificateurFinal({
                         {/* Actions rapides */}
                         <div className="flex flex-wrap gap-2">
                             {/* Bascule Grille (ressources) / Mois (calendrier classique) — masquee en mobile (dans le hamburger) */}
-                            <div className="hidden md:flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                            <div className="hidden md:flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                                 <button onClick={() => setCalendarMode('grid')}
-                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>📊 Grille</button>
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📊 Grille</button>
                                 <button onClick={() => setCalendarMode('month')}
-                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>📅 Mois</button>
+                                    className={`px-3 py-1.5 text-xs font-semibold ${calendarMode === 'month' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📅 Mois</button>
                             </div>
                             {onCreateEvent && (
                                 <button onClick={onCreateEvent}
@@ -855,7 +855,7 @@ export function PlanificateurFinal({
                             )}
                             {onManageConges && (
                                 <button onClick={onManageConges}
-                                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                                    className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <Icon name="calendar" size={13} /> {tr('Congés', 'Time off')}
                                 </button>
                             )}
@@ -928,15 +928,15 @@ export function PlanificateurFinal({
                         <div className="relative date-search-container">
                             <button
                                 onClick={() => setShowDateSearch(!showDateSearch)}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                                 title={tr('Aller à une date', 'Go to a date')}
                             >
                                 <Icon name="calendar" size={20} />
                             </button>
 
                             {showDateSearch && (
-                                <div className="absolute top-full mt-1 right-0 bg-white border rounded-lg shadow-lg p-3 z-50 min-w-[250px]">
-                                    <h4 className="text-sm font-medium text-gray-700 mb-2">{tr('Aller à une date', 'Go to a date')}</h4>
+                                <div className="absolute top-full mt-1 right-0 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-3 z-50 min-w-[250px]">
+                                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{tr('Aller à une date', 'Go to a date')}</h4>
                                     <div className="flex gap-2">
                                         <input
                                             type="date"
@@ -952,7 +952,7 @@ export function PlanificateurFinal({
                                             {tr('Aller', 'Go')}
                                         </button>
                                     </div>
-                                    <div className="mt-2 text-xs text-gray-500">
+                                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                         {tr('Sélectionnez une date pour y naviguer rapidement', 'Pick a date to jump to it quickly')}
                                     </div>
                                 </div>
@@ -1030,7 +1030,7 @@ export function PlanificateurFinal({
                                                 {/* Onglet Type de vue */}
                                                 {activeFilterTab === 'type' && (
                                                     <div className="space-y-2">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                                             {t('filter.selectViewType')}
                                                         </label>
                                                         {[
@@ -1052,7 +1052,7 @@ export function PlanificateurFinal({
                                                                 className={`w-full text-left px-3 py-3 rounded-lg transition-colors ${
                                                                     filterType === type.value
                                                                         ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                                                        : 'hover:bg-gray-100 text-gray-700 border border-transparent'
+                                                                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-transparent'
                                                                 }`}
                                                             >
                                                                 <div className="flex items-center gap-2">
@@ -1061,7 +1061,7 @@ export function PlanificateurFinal({
                                                                         <span className="ml-auto text-blue-600">✓</span>
                                                                     )}
                                                                 </div>
-                                                                <div className="text-xs text-gray-500 mt-1">{type.desc}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{type.desc}</div>
                                                             </button>
                                                         ))}
                                                     </div>
@@ -1070,7 +1070,7 @@ export function PlanificateurFinal({
                                                 {/* Onglet Bureau */}
                                                 {activeFilterTab === 'bureau' && (
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                                             {t('filter.filterByOffice')}
                                                         </label>
                                                         <select
@@ -1082,7 +1082,7 @@ export function PlanificateurFinal({
                                                                 <option key={bureau.value} value={bureau.value}>{bureau.label}</option>
                                                             )}
                                                         </select>
-                                                        <p className="text-xs text-gray-500 mt-2">
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                             {t('filter.selectOfficeResource')}
                                                         </p>
                                                     </div>
@@ -1093,7 +1093,7 @@ export function PlanificateurFinal({
                                                     <div>
                                                         {(filterType === 'personnel' || filterType === 'global') ? (
                                                             <>
-                                                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
                                                                     {t('filter.filterByPosition')}
                                                                 </label>
                                                                 <select
@@ -1105,7 +1105,7 @@ export function PlanificateurFinal({
                                                                         <option key={poste.value} value={poste.value}>{poste.label}</option>
                                                                     )}
                                                                 </select>
-                                                                <p className="text-xs text-gray-500 mt-2">
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                                                     {t('filter.showPersonnelPosition')}
                                                                 </p>
                                                             </>
@@ -1126,9 +1126,9 @@ export function PlanificateurFinal({
                                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t('calendar.display') || 'Affichage'}</label>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <button onClick={() => setCalendarMode('grid')}
-                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>📊 Grille</button>
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📊 Grille</button>
                                                                 <button onClick={() => setCalendarMode('month')}
-                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>📅 Mois</button>
+                                                                    className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${calendarMode === 'month' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>📅 Mois</button>
                                                             </div>
                                                         </div>
 
@@ -1167,7 +1167,7 @@ export function PlanificateurFinal({
 
                                                         {/* Mode couleur */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                                 {tr('Mode de couleur', 'Color mode')}
                                                             </label>
                                                             <div className="space-y-2">
@@ -1176,7 +1176,7 @@ export function PlanificateurFinal({
                                                                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                                                                         colorMode === 'priorite'
                                                                             ? 'bg-orange-100 text-orange-800 border border-orange-300'
-                                                                            : 'hover:bg-gray-100 text-gray-700 border border-transparent'
+                                                                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-transparent'
                                                                     }`}
                                                                 >
                                                                     🎯 {tr('Couleur par priorité', 'Color by priority')}
@@ -1186,7 +1186,7 @@ export function PlanificateurFinal({
                                                                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                                                                         colorMode === 'succursale'
                                                                             ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                                                                            : 'hover:bg-gray-100 text-gray-700 border border-transparent'
+                                                                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-transparent'
                                                                     }`}
                                                                 >
                                                                     🏢 {tr('Couleur par bureau', 'Color by office')}
@@ -1197,7 +1197,7 @@ export function PlanificateurFinal({
                                                         {/* Vue individuelle */}
                                                         {(filterType === 'personnel' || filterType === 'global') && (
                                                             <div>
-                                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                                                                     <input
                                                                         type="checkbox"
                                                                         checked={modeVueIndividuel}
@@ -1253,7 +1253,7 @@ export function PlanificateurFinal({
                             <Icon
                                 name="search"
                                 size={18}
-                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                             />
                             <input
                                 type="text"
@@ -1367,10 +1367,10 @@ export function PlanificateurFinal({
                     />
                 ) : filterType === 'dashboard-old' ? (
                     /* Ancien Dashboard Simple */
-                    <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                         <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">📊 Dashboard C-Secur360</h2>
-                            <p className="text-gray-600">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">📊 Dashboard C-Secur360</h2>
+                            <p className="text-gray-600 dark:text-gray-300">
                                 Vue d'ensemble des activités sur {dashboardStats.periode} jours
                                 {dashboardFilter === 'personnel' && ' - Focus Personnel'}
                                 {dashboardFilter === 'equipements' && ' - Focus Équipements'}
@@ -1422,19 +1422,19 @@ export function PlanificateurFinal({
 
                         {/* Section planification personnel */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            <div className="bg-white border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">👥 Planification Personnel</h3>
+                            <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">👥 Planification Personnel</h3>
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Personnel requis:</span>
+                                        <span className="text-gray-600 dark:text-gray-300">Personnel requis:</span>
                                         <span className="font-semibold">{dashboardStats.totalPersonnelRequis}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Personnel planifié:</span>
+                                        <span className="text-gray-600 dark:text-gray-300">Personnel planifié:</span>
                                         <span className="font-semibold">{dashboardStats.personnelPlanifie}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Taux de planification:</span>
+                                        <span className="text-gray-600 dark:text-gray-300">Taux de planification:</span>
                                         <span className={`font-semibold ${
                                             dashboardStats.pourcentagePlanification >= 80 ? 'text-green-600' :
                                             dashboardStats.pourcentagePlanification >= 60 ? 'text-yellow-600' : 'text-red-600'
@@ -1454,8 +1454,8 @@ export function PlanificateurFinal({
                                 </div>
                             </div>
 
-                            <div className="bg-white border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Répartition par Priorité</h3>
+                            <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">📊 Répartition par Priorité</h3>
                                 <div className="space-y-3">
                                     {Object.entries(dashboardStats.parPriorite).map(([priorite, count]) => (
                                         <div key={priorite} className="flex justify-between items-center">
@@ -1477,12 +1477,12 @@ export function PlanificateurFinal({
 
                         {/* Section par bureau */}
                         {Object.keys(dashboardStats.parBureau).length > 1 && (
-                            <div className="bg-white border rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">🏢 Répartition par Bureau</h3>
+                            <div className="bg-white dark:bg-gray-800 border rounded-lg p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🏢 Répartition par Bureau</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {Object.entries(dashboardStats.parBureau).map(([bureau, count]) => (
-                                        <div key={bureau} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                            <span className="font-medium text-gray-700">{bureau || 'Non défini'}:</span>
+                                        <div key={bureau} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                            <span className="font-medium text-gray-700 dark:text-gray-200">{bureau || 'Non défini'}:</span>
                                             <span className="font-semibold text-blue-600">{count}</span>
                                         </div>
                                     ))}
@@ -1496,7 +1496,7 @@ export function PlanificateurFinal({
                     {/* Agenda mobile (vue verticale déroulante) — événements groupés par jour, lisible sur petit écran.
                         Remplace la grille (cachée < lg) qui est illisible en demi-écran/mobile. */}
                     <div className="lg:hidden space-y-2">
-                        <div className="px-1 text-xs font-semibold text-gray-500">📅 {tr("Agenda — touchez un événement pour l'ouvrir", 'Agenda — tap an event to open it')}</div>
+                        <div className="px-1 text-xs font-semibold text-gray-500 dark:text-gray-400">📅 {tr("Agenda — touchez un événement pour l'ouvrir", 'Agenda — tap an event to open it')}</div>
                         {(() => {
                             const byDay = {};
                             (jobs || []).forEach(j => {
@@ -1506,11 +1506,11 @@ export function PlanificateurFinal({
                             });
                             const days = Object.keys(byDay).sort();
                             if (days.length === 0) {
-                                return <div className="rounded-lg border border-gray-200 bg-white p-4 text-center text-sm text-gray-400">{tr('Aucun événement planifié.', 'No event scheduled.')}</div>;
+                                return <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 text-center text-sm text-gray-400 dark:text-gray-500">{tr('Aucun événement planifié.', 'No event scheduled.')}</div>;
                             }
                             return days.map(d => (
-                                <div key={d} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-                                    <div className="border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-bold capitalize text-gray-600">
+                                <div key={d} className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                    <div className="border-b border-gray-100 bg-gray-50 dark:bg-gray-700/50 px-3 py-1.5 text-xs font-bold capitalize text-gray-600 dark:text-gray-300">
                                         {new Date(`${d}T12:00:00`).toLocaleDateString(currentLanguage === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', day: 'numeric', month: 'long' })} · {byDay[d].length} {tr('évén.', 'evt')}
                                     </div>
                                     <div className="divide-y divide-gray-100">
@@ -1518,8 +1518,8 @@ export function PlanificateurFinal({
                                             <button key={j.id} type="button" onClick={() => setSelectedJob(j)}
                                                 className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-blue-50">
                                                 <span className="shrink-0 text-xs font-bold text-blue-700">{j.numeroJob || `Job-${j.id}`}</span>
-                                                <span className="flex-1 truncate text-sm text-gray-800">{j.client || j.nom || '—'}</span>
-                                                <span className="shrink-0 text-xs text-gray-500">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
+                                                <span className="flex-1 truncate text-sm text-gray-800 dark:text-gray-100">{j.client || j.nom || '—'}</span>
+                                                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{j.heureDebut || '08:00'}–{j.heureFin || '17:00'}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -1530,10 +1530,10 @@ export function PlanificateurFinal({
 
                     {/* Dashboard résumé en haut de la vue globale */}
                     {filterType === 'global' && (
-                        <div className="bg-white rounded-lg shadow-sm p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">📊 {tr("Vue d'ensemble", 'Overview')} - {dashboardStats.periode} {tr('jours', 'days')}</h3>
-                                <div className="text-sm text-gray-600">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">📊 {tr("Vue d'ensemble", 'Overview')} - {dashboardStats.periode} {tr('jours', 'days')}</h3>
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
                                     {tr('Taux de planification', 'Planning rate')}: <span className={`font-semibold ${
                                         dashboardStats.pourcentagePlanification >= 80 ? 'text-green-600' :
                                         dashboardStats.pourcentagePlanification >= 60 ? 'text-yellow-600' : 'text-red-600'
@@ -1563,10 +1563,10 @@ export function PlanificateurFinal({
                         </div>
                     )}
 
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
                     <div className="flex">
                         {/* Colonnes fixes pour noms et postes */}
-                        <div className="flex-shrink-0 border-r-2 border-gray-300">
+                        <div className="flex-shrink-0 border-r-2 border-gray-300 dark:border-gray-600">
                             <table className="border-collapse w-full">
                                 <thead className="bg-gray-900 sticky top-0">
                                     <tr className="h-20">
@@ -1587,11 +1587,11 @@ export function PlanificateurFinal({
                                 </thead>
                                 <tbody>
                                     {filteredResources.map((resource) => (
-                                        <tr key={resource.id} className={`border-b hover:bg-gray-50 ${
-                                            continuousDays.some(d => d.isToday) ? 'bg-gray-100' : ''
+                                        <tr key={resource.id} className={`border-b hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                            continuousDays.some(d => d.isToday) ? 'bg-gray-100 dark:bg-gray-700' : ''
                                         }`} style={{ height: '89px' }}>
                                             <td className={`px-3 py-4 font-medium border-r ${isMobile ? 'w-[120px]' : 'w-[180px]'} ${
-                                                continuousDays.some(d => d.isToday) ? 'bg-gray-100' : 'bg-white'
+                                                continuousDays.some(d => d.isToday) ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'
                                             }`}>
                                                 <div className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold flex items-center gap-2 leading-tight`}>
                                                     {/* Pastille couleur succursale */}
@@ -1612,13 +1612,13 @@ export function PlanificateurFinal({
                                                          `${resource.nom}${resource.prenom ? ', ' + resource.prenom : ''}`}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-500 leading-tight">
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
                                                     {resource.succursale}
                                                 </div>
                                             </td>
                                             {!isMobile && (
                                                 <td className={`px-2 py-4 text-xs w-[100px] ${
-                                                    continuousDays.some(d => d.isToday) ? 'bg-gray-100' : 'bg-white'
+                                                    continuousDays.some(d => d.isToday) ? 'bg-gray-100 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'
                                                 }`}>
                                                     {filterType === 'global' ?
                                                         (resource.type === 'personnel' ?
@@ -1663,7 +1663,7 @@ export function PlanificateurFinal({
 
                                 <tbody>
                                     {filteredResources.map((resource) => (
-                                        <tr key={`dates-${resource.id}`} className="border-b hover:bg-gray-50 h-20">
+                                        <tr key={`dates-${resource.id}`} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700" style={{ height: '89px' }}>
                                             {continuousDays.map((day, dayIndex) => {
                                                 const allJobs = getAllJobsForCell(resource.id, day, resource.type);
 
@@ -1672,7 +1672,7 @@ export function PlanificateurFinal({
                                                         key={dayIndex}
                                                         className={`relative p-1 border-r w-20 cursor-pointer hover:bg-blue-50 ${
                                                             day.isToday ? 'bg-gray-300' :
-                                                            day.isWeekend ? 'bg-gray-200' : 'bg-white'
+                                                            day.isWeekend ? 'bg-gray-200' : 'bg-white dark:bg-gray-800'
                                                         }`}
                                                         onClick={() => handleCellClick(resource.id, day, resource.type)}
                                                     >
@@ -1685,7 +1685,7 @@ export function PlanificateurFinal({
                                                                 resourceType={resource.type}
                                                             />
                                                         ) : (
-                                                            <div className="w-full h-20 flex items-center justify-center text-gray-400 text-xs">
+                                                            <div className="w-full h-20 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
                                                                 {/* Cellule vide */}
                                                             </div>
                                                         )}
@@ -1736,11 +1736,11 @@ export function PlanificateurFinal({
                         {/* Modal de conflit à droite */}
                         <div className="w-1/2 max-w-3xl pointer-events-auto">
                             <div className="h-full bg-black bg-opacity-50 flex items-center justify-center p-4">
-                                <div className="bg-white rounded-xl shadow-2xl w-full max-h-[95vh] flex flex-col border-4 border-orange-300">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-h-[95vh] flex flex-col border-4 border-orange-300">
                                     {/* Header spécial pour le conflit */}
                                     <div className="flex-shrink-0 flex items-center justify-between p-4 bg-orange-600 rounded-t-xl">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                                            <div className="w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center">
                                                 ⚠️
                                             </div>
                                             <div>
@@ -1767,31 +1767,31 @@ export function PlanificateurFinal({
                                             {/* Informations de base */}
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">{tr('Date début', 'Start date')}</label>
-                                                    <div className="mt-1 text-sm text-gray-900">{conflictJob.dateDebut}</div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Date début', 'Start date')}</label>
+                                                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflictJob.dateDebut}</div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">{tr('Date fin', 'End date')}</label>
-                                                    <div className="mt-1 text-sm text-gray-900">{conflictJob.dateFin}</div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Date fin', 'End date')}</label>
+                                                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflictJob.dateFin}</div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">{tr('Heure début', 'Start time')}</label>
-                                                    <div className="mt-1 text-sm text-gray-900">{conflictJob.heureDebut}</div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Heure début', 'Start time')}</label>
+                                                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflictJob.heureDebut}</div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">{tr('Heure fin', 'End time')}</label>
-                                                    <div className="mt-1 text-sm text-gray-900">{conflictJob.heureFin}</div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">{tr('Heure fin', 'End time')}</label>
+                                                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{conflictJob.heureFin}</div>
                                                 </div>
                                             </div>
 
                                             {/* Ressources assignées */}
                                             <div>
-                                                <h3 className="font-medium text-gray-900 mb-2">{t('event.assignedResources')}</h3>
+                                                <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{t('event.assignedResources')}</h3>
                                                 <div className="space-y-2">
                                                     {conflictJob.personnel?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700">👥 {t('resource.personnel')}:</span>
-                                                            <div className="mt-1 text-sm text-gray-600">
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">👥 {t('resource.personnel')}:</span>
+                                                            <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.personnel.map(id => {
                                                                     const person = personnel.find(p => p.id === id);
                                                                     return person ? `${person.prenom ? `${person.prenom} ${person.nom}` : person.nom}` : id;
@@ -1801,8 +1801,8 @@ export function PlanificateurFinal({
                                                     )}
                                                     {conflictJob.equipements?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700">🔧 {t('resource.equipment')}:</span>
-                                                            <div className="mt-1 text-sm text-gray-600">
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🔧 {t('resource.equipment')}:</span>
+                                                            <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.equipements.map(id => {
                                                                     const equipement = equipements.find(e => e.id === id);
                                                                     return equipement ? equipement.nom : id;
@@ -1812,8 +1812,8 @@ export function PlanificateurFinal({
                                                     )}
                                                     {conflictJob.sousTraitants?.length > 0 && (
                                                         <div>
-                                                            <span className="text-sm font-medium text-gray-700">🏢 {tr('Sous-traitants', 'Subcontractors')}:</span>
-                                                            <div className="mt-1 text-sm text-gray-600">
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🏢 {tr('Sous-traitants', 'Subcontractors')}:</span>
+                                                            <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                                                                 {conflictJob.sousTraitants.map(id => {
                                                                     const sousTraitant = sousTraitants.find(s => s.id === id);
                                                                     return sousTraitant ? sousTraitant.nom : id;
@@ -1827,8 +1827,8 @@ export function PlanificateurFinal({
                                             {/* Description */}
                                             {conflictJob.description && (
                                                 <div>
-                                                    <h3 className="font-medium text-gray-900 mb-2">{t('analytics.description')}</h3>
-                                                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                                                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">{t('analytics.description')}</h3>
+                                                    <div className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
                                                         {conflictJob.description}
                                                     </div>
                                                 </div>
@@ -1837,7 +1837,7 @@ export function PlanificateurFinal({
                                     </div>
 
                                     {/* Footer */}
-                                    <div className="flex-shrink-0 flex justify-between items-center p-4 border-t bg-gray-50">
+                                    <div className="flex-shrink-0 flex justify-between items-center p-4 border-t bg-gray-50 dark:bg-gray-700/50">
                                         <div className="text-sm text-orange-600 font-medium">
                                             ⚠️ {t('event.conflictWarning')}
                                         </div>

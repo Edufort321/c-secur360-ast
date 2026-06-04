@@ -98,7 +98,7 @@ export function DropZone({ onFilesSelected, accept = "image/*", multiple = true,
             className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
                 isDragOver
                     ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
             } ${className}`}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -118,12 +118,12 @@ export function DropZone({ onFilesSelected, accept = "image/*", multiple = true,
                 {isUploading ? (
                     <>
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                        <p className="text-gray-600">Traitement des fichiers...</p>
+                        <p className="text-gray-600 dark:text-gray-300">Traitement des fichiers...</p>
                     </>
                 ) : (
                     <>
                         <div className={`p-3 rounded-full ${
-                            isDragOver ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                            isDragOver ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
                         }`}>
                             <Icon name="upload" size={32} />
                         </div>
@@ -134,14 +134,14 @@ export function DropZone({ onFilesSelected, accept = "image/*", multiple = true,
                             </p>
                         ) : (
                             <>
-                                <p className="text-gray-600">
+                                <p className="text-gray-600 dark:text-gray-300">
                                     Glissez-déposez vos fichiers ici ou{' '}
                                     <span className="text-blue-600 font-medium cursor-pointer hover:underline">
                                         cliquez pour sélectionner
                                     </span>
                                 </p>
 
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
                                     {accept === "image/*" && (
                                         <p>Images acceptées : JPG, PNG, GIF, WebP</p>
                                     )}
