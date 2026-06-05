@@ -22,7 +22,7 @@ import {
 import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { duvalPct, duvalZone } from '@/lib/dga/duval';
 import { dueStatusByDate } from '@/lib/dga/catalog';
-import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, COND_LABELS, COND_COLORS, worstCondition, effectiveNextDate } from '@/lib/dga/fields';
+import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, COND_LABELS, COND_COLORS, worstCondition, effectiveNextDate, pcbStatus, latestPcb } from '@/lib/dga/fields';
 import { voltageClass } from '@/lib/dga/oil';
 import { TransfoView } from '@/components/dga/TransfoView';
 import { SampleEntry, type SamplePayload } from '@/components/dga/SampleEntry';
@@ -418,6 +418,8 @@ function ListView(p: any) {
           const insp = inspNext ? dueStatusByDate(inspNext) : null;
           const inspColor = !insp ? '#999' : insp.code === 'overdue' ? '#e63946' : insp.code === 'soon' ? '#f4a261' : '#2a9d8f';
           const inspLabel = !insp ? '' : insp.code === 'overdue' ? tr('Inspection en retard', 'Inspection overdue') : insp.code === 'soon' ? tr('Inspection bientôt', 'Inspection soon') : tr('Inspection à jour', 'Inspection up to date');
+          // BPC : flag de conformité (la valeur ppm la plus récente connue).
+          const pcb = pcbStatus(latestPcb(measuresByDossier?.[d.id!] || (last ? [last] : [])), lang);
           return (
             <div key={d.id} onClick={() => (delMode ? toggleSel(d.id!) : openFiche(d))}
               className={`cursor-pointer rounded-2xl border bg-white p-3 transition dark:bg-gray-800 ${delMode && isSel ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200 dark:border-gray-700'}`}
@@ -435,6 +437,9 @@ function ListView(p: any) {
                 </span>}
                 {inspNext && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: inspColor + '22', color: inspColor, borderColor: inspColor }}>
                   🛠 {inspLabel} · {inspNext}{insp?.days != null ? ` (${insp.days < 0 ? `${-insp.days} ${tr('j. de retard', 'days late')}` : `${insp.days} ${tr('j. restants', 'days left')}`})` : ''}
+                </span>}
+                {pcb.code !== 'unknown' && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: pcb.color + '22', color: pcb.color, borderColor: pcb.color }}>
+                  🧪 {pcb.label}{pcb.value != null ? ` · ${pcb.value} ppm` : ''}
                 </span>}
               </div>
               <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-500">

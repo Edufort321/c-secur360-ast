@@ -9,7 +9,7 @@
 // ============================================================================
 import React from 'react';
 import type { Dossier, Measure, Anomaly, Inspection } from '@/lib/dga/dossiers';
-import { GAS_FIELDS, COMBUSTIBLE, OIL_FIELDS, FURAN_FIELDS, IEEE_LIMITS, gl, fl, COND_LABELS, COND_COLORS, numOrNull, type Lang } from '@/lib/dga/fields';
+import { GAS_FIELDS, COMBUSTIBLE, OIL_FIELDS, FURAN_FIELDS, IEEE_LIMITS, gl, fl, COND_LABELS, COND_COLORS, numOrNull, pcbStatus, latestPcb, type Lang } from '@/lib/dga/fields';
 import { INSPECTION_CHECKLIST, il } from '@/lib/dga/inspection';
 import { ZONE_COLORS } from '@/lib/dga/duval';
 import { voltageClass } from '@/lib/dga/oil';
@@ -124,6 +124,7 @@ export function PrintReport(props: {
     { key: 'co2', u: 'CO2', c: '#277da1', lim: IEEE_LIMITS.co2[1] }, { key: 'tdcg', u: 'TDCG', c: '#9d0208', lim: 1920 },
   ];
   const oilChart = OIL_FIELDS.filter(f => !f.text && data.some(d => d.oil_quality?.[f.key] != null));
+  const pcbV = pcbStatus(latestPcb(data), lang);
   const datedItems = (get: (m: Measure) => number | null) => data.map(m => ({ date: m.sample_date || '', v: get(m) }));
 
   return (
@@ -207,6 +208,12 @@ export function PrintReport(props: {
             <div style={{ ...SP.condBig, background: COND_COLORS[worst], fontSize: 11, padding: '8px 10px' }}>{COND_LABELS[worst]}</div>
             <p style={{ fontSize: 11, lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{globalNote}</p>
           </div>
+          {pcbV.code !== 'unknown' && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '4px 4px' }}>
+              <div style={{ ...SP.condBig, background: pcbV.color, fontSize: 11, padding: '8px 10px' }}>{pcbV.label}</div>
+              <p style={{ fontSize: 11, lineHeight: 1.5, margin: 0 }}>{L('Teneur en BPC', 'PCB content')} : {pcbV.value != null ? `${pcbV.value} ppm` : '—'} — {pcbV.code === 'present' ? L('huile réglementée (≥ 50 ppm).', 'regulated oil (≥ 50 ppm).') : pcbV.code === 'trace' ? L('faible teneur (2–49 ppm).', 'low level (2–49 ppm).') : L('huile non-BPC (< 2 ppm).', 'non-PCB oil (< 2 ppm).')}</p>
+            </div>
+          )}
           {furan && (<><div style={{ ...SP.coverBar, marginTop: 8, background: '#2a9d8f' }}>{L('AUTRE', 'OTHER')}</div>
             <p style={{ fontSize: 11, lineHeight: 1.5, padding: '8px 4px', margin: 0 }}>{L('Isolation papier', 'Paper insulation')} : DP ≈ {furan.dp} — {furan.state}.</p></>)}
           {manualReco && manualReco.trim() && (<><div style={{ ...SP.coverBar, marginTop: 8, background: '#5a6b7a' }}>{L('Recommandation', 'Recommendation')}</div>

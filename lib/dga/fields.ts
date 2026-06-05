@@ -114,6 +114,22 @@ export function parseNum(raw: any): number | null {
 // Lecture numérique souple (pour les graphiques / Δ%).
 export const numOrNull = (v: any) => (v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
 
+// ── BPC / PCB : conformité selon le Règlement sur les BPC (Canada, DORS/2008-273) ──
+// < 2 ppm = aucun (huile non-BPC) ; 2–49 ppm = traces (faible teneur) ; ≥ 50 ppm = BPC présent (réglementé).
+export type PcbCode = 'none' | 'trace' | 'present' | 'unknown';
+export function pcbStatus(v: any, lang: Lang = 'fr'): { code: PcbCode; label: string; color: string; value: number | null } {
+  const n = parseNum(v);
+  if (n == null) return { code: 'unknown', label: lang === 'en' ? 'PCB not tested' : 'BPC non testé', color: '#94a3b8', value: null };
+  if (n < 2)   return { code: 'none',    label: lang === 'en' ? 'No PCB'        : 'Aucun BPC',      color: '#2a9d8f', value: n };
+  if (n < 50)  return { code: 'trace',   label: lang === 'en' ? 'PCB traces'    : 'Traces de BPC',  color: '#e9c46a', value: n };
+  return         { code: 'present', label: lang === 'en' ? 'PCB present'   : 'BPC présent',    color: '#e63946', value: n };
+}
+// Dernière valeur BPC connue d'une série de mesures (la plus récente non vide).
+export function latestPcb(measures: { oil_quality?: any }[]): any {
+  for (let i = measures.length - 1; i >= 0; i--) { const v = measures[i]?.oil_quality?.pcb; if (v != null && String(v).trim() !== '') return v; }
+  return null;
+}
+
 // Date de reprise effective : override manuel (extra.next_date_manual) sinon auto selon la pire
 // condition de la dernière mesure (identique à effectiveNextDate du prototype).
 export function effectiveNextDate(extra: any, lastMeasure?: Measure | null): string | null {

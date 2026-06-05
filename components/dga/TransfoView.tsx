@@ -16,7 +16,7 @@ import {
 import { getPhotos, savePhotos, getAnomalies, saveAnomalies, getDocs, saveDocs, getInspections, saveInspections, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly, type DgaDoc, type Inspection } from '@/lib/dga/dossiers';
 import {
   GAS_FIELDS, COMBUSTIBLE, IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl,
-  ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, type Lang,
+  ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, pcbStatus, latestPcb, type Lang,
 } from '@/lib/dga/fields';
 import { duvalPct, duvalZone, ZONE_COLORS } from '@/lib/dga/duval';
 import { evalOil, furanInterpret, trendAnalysis, voltageClass } from '@/lib/dga/oil';
@@ -170,6 +170,7 @@ export function TransfoView(props: {
   const trendA = trendAnalysis(data.map(m => ({ date: m.sample_date, c2h2: +(m.c2h2 || 0), tdcg: +(m.tdcg || 0) })), lang);
   const gAna = globalAnalysis(cur as any, oilEval, furan, worst, lang);
   const rogers = rogersRatios(cur);
+  const pcbVerdict = pcbStatus(latestPcb(data), lang);
 
   const lastMeasure = data[data.length - 1];
   const autoNext = autoNextDate(lastMeasure.sample_date, worstCondition(lastMeasure));
@@ -283,6 +284,12 @@ export function TransfoView(props: {
                 <span className="text-sm font-extrabold">{COND_LABELS[worst]}</span>
                 <span className="text-[10px] uppercase tracking-wide opacity-90">{tr('DGA GLOBAL', 'DGA OVERALL')}</span>
               </div>
+              {pcbVerdict.code !== 'unknown' && (
+                <div className="flex flex-col items-center rounded-xl px-3 py-1.5 text-white" style={{ background: pcbVerdict.color }}>
+                  <span className="text-sm font-extrabold">{pcbVerdict.label}</span>
+                  <span className="text-[10px] uppercase tracking-wide opacity-90">BPC / PCB{pcbVerdict.value != null ? ` · ${pcbVerdict.value} ppm` : ''}</span>
+                </div>
+              )}
               <button className={BTN_GHOST} onClick={() => setShowEdit(true)}>✎ <span className="hidden sm:inline">{tr('Éditer les infos', 'Edit info')}</span></button>
               <button className={BTN_DARK} onClick={() => setShowExport(true)}>🖨 <span className="hidden sm:inline">{tr('Exporter PDF', 'Export PDF')}</span></button>
               <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ <span className="hidden sm:inline">{tr('Nouveau prélèvement', 'New sample')}</span><span className="sm:hidden">{tr('Prélèv.', 'Sample')}</span></button>
