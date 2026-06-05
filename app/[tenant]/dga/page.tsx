@@ -128,7 +128,17 @@ export default function DgaPage() {
       if (ra.dueKey !== rb.dueKey) return ra.dueKey - rb.dueKey;
       return rb.worst - ra.worst;
     });
-    return arr;
+    // Regroupement : chaque OLTC est placé juste après son transformateur parent (par n° de série).
+    const oltcByParent = new Map<string, Dossier[]>();
+    arr.forEach(d => { if (d.extra?.is_oltc && d.extra?.parent_serie) { const k = String(d.extra.parent_serie); if (!oltcByParent.has(k)) oltcByParent.set(k, []); oltcByParent.get(k)!.push(d); } });
+    const hasParentInList = (d: Dossier) => !!d.extra?.parent_serie && arr.some(x => x.serie === d.extra!.parent_serie && !x.extra?.is_oltc);
+    const grouped: Dossier[] = [];
+    arr.forEach(d => {
+      if (d.extra?.is_oltc && hasParentInList(d)) return; // inséré après son parent
+      grouped.push(d);
+      if (d.serie && oltcByParent.has(d.serie)) grouped.push(...oltcByParent.get(d.serie)!);
+    });
+    return grouped;
   }, [dossiers, query, dueFilter, sortBy, lastByDossier, siteFilter]);
 
   const selected_d = dossiers.find(d => d.id === selId) || null;

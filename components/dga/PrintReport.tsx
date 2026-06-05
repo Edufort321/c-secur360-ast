@@ -125,6 +125,8 @@ export function PrintReport(props: {
   ];
   const oilChart = OIL_FIELDS.filter(f => !f.text && data.some(d => d.oil_quality?.[f.key] != null));
   const pcbV = pcbStatus(latestPcb(data), lang);
+  const isOltc = !!(dossier as any).extra?.is_oltc;
+  const parentSerie = (dossier as any).extra?.parent_serie || '';
   const datedItems = (get: (m: Measure) => number | null) => data.map(m => ({ date: m.sample_date || '', v: get(m) }));
 
   return (
@@ -136,7 +138,9 @@ export function PrintReport(props: {
           {tenantName && <div style={{ fontWeight: 800, fontSize: 16, color: '#1a1a1a', marginBottom: siteText ? 4 : 22 }}>{tenantName}</div>}
           {siteText && <div style={{ fontSize: 12, color: '#277da1', fontWeight: 600, marginBottom: 22 }}>📍 {siteText}</div>}
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: 3, color: '#277da1', marginBottom: 8 }}>{L("RAPPORT D'ANALYSE DE LABORATOIRE", 'LABORATORY ANALYSIS REPORT')}</div>
-          <h1 style={{ fontWeight: 900, fontSize: 32, margin: '0 0 18px', lineHeight: 1.1, maxWidth: 600, color: '#1a1a1a' }}>{dossier.ident || L("RAPPORT D'ANALYSE", 'ANALYSIS REPORT')}</h1>
+          {isOltc && <div style={{ display: 'inline-block', background: '#4f46e5', color: '#fff', fontWeight: 800, fontSize: 11, padding: '3px 10px', borderRadius: 6, marginBottom: 10 }}>{L('CHANGEUR DE PRISES EN CHARGE (OLTC)', 'ON-LOAD TAP CHANGER (OLTC)')}</div>}
+          <h1 style={{ fontWeight: 900, fontSize: 32, margin: '0 0 8px', lineHeight: 1.1, maxWidth: 600, color: '#1a1a1a' }}>{dossier.ident || L("RAPPORT D'ANALYSE", 'ANALYSIS REPORT')}</h1>
+          {isOltc && parentSerie && <div style={{ fontSize: 12, color: '#555', marginBottom: 12 }}>{L('Transformateur parent', 'Parent transformer')} : SN {parentSerie}</div>}
           <div style={{ fontSize: 13, color: '#333', lineHeight: 2, borderTop: '2px solid #277da1', paddingTop: 18, marginTop: 8, minWidth: 280 }}>
             {eqVal('company') !== '—' && <div><b>{L('Client', 'Client')} :</b> {eqVal('company')}</div>}
             {eqVal('client') !== '—' && <div><b>{L('Localisation / Sous-station', 'Location / Substation')} :</b> {eqVal('client')}</div>}
@@ -207,8 +211,8 @@ export function PrintReport(props: {
 
           <div style={{ ...SP.coverBar, marginTop: 14, background: '#277da1' }}>{L('ANALYSE GLOBALE', 'GLOBAL ANALYSIS')}</div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '8px 4px' }}>
-            <div style={{ ...SP.condBig, background: COND_COLORS[worst], fontSize: 11, padding: '8px 10px' }}>{COND_LABELS[worst]}</div>
-            <p style={{ fontSize: 11, lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{globalNote}</p>
+            <div style={{ ...SP.condBig, background: isOltc ? '#4f46e5' : COND_COLORS[worst], fontSize: 11, padding: '8px 10px' }}>{isOltc ? 'OLTC' : COND_LABELS[worst]}</div>
+            <p style={{ fontSize: 11, lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{isOltc ? L("Compartiment changeur de prises — interprétation selon IEEE C57.139 / CIGRE 443 (l'arc de commutation est normal ; voir l'interprétation détaillée).", 'Tap-changer compartment — interpreted per IEEE C57.139 / CIGRE 443 (switching arc is normal; see detailed interpretation).') : globalNote}</p>
           </div>
           {pcbV.code !== 'unknown' && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '4px 4px' }}>
@@ -257,7 +261,7 @@ export function PrintReport(props: {
         <section style={SP.page} className="rpt-page rpt-break">
           <div style={SP.sectionBar}>{L('Analyse & interprétation', 'Analysis & interpretation')}</div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
-            <div style={{ ...SP.condBig, background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</div>
+            <div style={{ ...SP.condBig, background: isOltc ? '#4f46e5' : COND_COLORS[worst] }}>{isOltc ? 'OLTC' : COND_LABELS[worst]}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 900, fontSize: 14 }}>{trendA.verdict}</div>
               <div style={{ fontSize: 11, lineHeight: 1.4, marginTop: 4 }}>{trendA.txt}</div>
