@@ -1374,6 +1374,69 @@ const AddItemModalComponent = React.memo(({
   );
 });
 
+// Modale de connexion — composant de HAUT NIVEAU (stable) : ne se remonte plus à chaque rendu
+// de AppContent (sinon la saisie username/password était perdue). Utilise ses propres hooks.
+function LoginModal({ isOpen, onClose }) {
+  const { t } = useLanguage();
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const result = await login(username, password);
+    if (result.success) { onClose(); setUsername(''); setPassword(''); }
+    else setError(result.error);
+    setLoading(false);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('login')}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>{t('actions.cancel')}</Button>
+          <Button variant="primary" onClick={handleLogin} disabled={loading}>{loading ? t('messages.info.loading') : t('login')}</Button>
+        </>
+      }
+    >
+      <form onSubmit={handleLogin} className="space-y-4">
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 rounded">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} className="text-red-600 flex-shrink-0" />
+              <span className="text-sm text-red-900 dark:text-red-400">{error}</span>
+            </div>
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('administration.users.username')}</label>
+          <input type="text" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('administration.users.password')}</label>
+          <input type="password" className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <p className="font-semibold text-sm text-blue-900 dark:text-blue-400 mb-2">{t('administration.users.title')} :</p>
+          <ul className="space-y-1 text-xs text-blue-800 dark:text-blue-300">
+            <li><strong>admin</strong> / admin - {t('administration.roles.admin')}</li>
+            <li><strong>gestionnaire</strong> / gest123 - {t('administration.roles.manager')}</li>
+            <li><strong>technicien</strong> / tech123 - {t('administration.roles.employee')}</li>
+            <li><strong>viewer</strong> / view123 - {t('administration.roles.viewer')}</li>
+          </ul>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function AppContent() {
   const { t, language } = useLanguage();
   const { currentUser, isAuthenticated, isAdmin, login, logout } = useAuth();
@@ -7200,98 +7263,7 @@ function AppContent() {
   };
 
   // ============== MODAL LOGIN ==============
-  const LoginModal = () => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleLogin = async (e) => {
-      e.preventDefault();
-      setError('');
-      setLoading(true);
-
-      const result = await login(username, password);
-
-      if (result.success) {
-        setShowLoginModal(false);
-        setUsername('');
-        setPassword('');
-      } else {
-        setError(result.error);
-      }
-
-      setLoading(false);
-    };
-
-    return (
-      <Modal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        title={t('login')}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowLoginModal(false)}>
-              {t('actions.cancel')}
-            </Button>
-            <Button variant="primary" onClick={handleLogin} disabled={loading}>
-              {loading ? t('messages.info.loading') : t('login')}
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleLogin} className="space-y-4">
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 rounded">
-              <div className="flex items-start gap-3">
-                <AlertTriangle size={20} className="text-red-600 flex-shrink-0" />
-                <span className="text-sm text-red-900 dark:text-red-400">{error}</span>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              {t('administration.users.username')}
-            </label>
-            <input
-              type="text"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              {t('administration.users.password')}
-            </label>
-            <input
-              type="password"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <p className="font-semibold text-sm text-blue-900 dark:text-blue-400 mb-2">
-              {t('administration.users.title')} :
-            </p>
-            <ul className="space-y-1 text-xs text-blue-800 dark:text-blue-300">
-              <li><strong>admin</strong> / admin - {t('administration.roles.admin')}</li>
-              <li><strong>gestionnaire</strong> / gest123 - {t('administration.roles.manager')}</li>
-              <li><strong>technicien</strong> / tech123 - {t('administration.roles.employee')}</li>
-              <li><strong>viewer</strong> / view123 - {t('administration.roles.viewer')}</li>
-            </ul>
-          </div>
-        </form>
-      </Modal>
-    );
-  };
+  // LoginModal est désormais un composant de haut niveau (défini hors de AppContent) -> plus de remount.
 
   // ============== RENDU PRINCIPAL ==============
   if (isLoading) {
@@ -7463,7 +7435,7 @@ function AppContent() {
         </Modal>
       )}
 
-      <LoginModal />
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       <PrintModal />
       <ScannedItemModal />
       <InstallPWA />
