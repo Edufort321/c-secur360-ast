@@ -200,12 +200,16 @@ export default function DgaPage() {
 
   // ── Import PDF (drag/bouton) → aperçu de fusion ──
   function mapEquip(eq: any): Dossier {
+    // Détection OLTC : flag IA (eq.isOltc) OU heuristique mots-clés sur type/description/identification.
+    const blob = `${eq.apparatusType || ''} ${eq.description || ''} ${eq.identification || ''} ${eq.samplingPoint || ''}`.toLowerCase();
+    const isOltc = eq.isOltc === true || /\boltc\b|\bltc\b|changeur de prise|prise sous charge|tap[\s-]?changer|s[ée]lecteur|diverter|r[ée]gleur en charge|commutateur de prise/.test(blob);
     return {
       ident: eq.identification || eq.equipment || ('Import ' + todayIso()), client: eq.location || '', serie: eq.serialNo || '',
       company: eq.company || '', contact: eq.contact || '', email: eq.email || '', equip_no: eq.equipNo || '', apparatus: eq.apparatusType || '',
       description: eq.description || '', kv: eq.kvClass ? Number(eq.kvClass) : null, mva: eq.maxMVA ? Number(eq.maxMVA) : null,
       oil_vol: eq.oilVolumeL ? Number(eq.oilVolumeL) : null, oil_type: eq.oilType || '', manufacturer: eq.manufacturer || '', year: eq.year ? String(eq.year) : '',
       sample_point: eq.samplingPoint || '',
+      extra: { ...(isOltc ? { is_oltc: true } : {}), ...(eq.parentSerial ? { parent_serie: String(eq.parentSerial) } : {}) },
     };
   }
   function mapMeasure(mm: any): Measure {

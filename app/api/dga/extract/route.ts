@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const EQUIP_SCHEMA = "{company, contact, email, location, identification, serialNo, equipNo, apparatusType, description, kvClass, maxMVA, oilVolumeL, oilType, manufacturer, year, samplingPoint}";
+const EQUIP_SCHEMA = "{company, contact, email, location, identification, serialNo, equipNo, apparatusType, description, kvClass, maxMVA, oilVolumeL, oilType, manufacturer, year, samplingPoint, isOltc:boolean, parentSerial}";
 const MEAS_SCHEMA = "[{date:'YYYY-MM-DD', H2,C2H2,C2H6,C2H4,CH4,CO,CO2,N2,O2,TDCG, moisture,ift,acid,color,dielectric,dbd877,pf25,pf100,sg,dbp,dbpc,pcb, f_2fal,f_ffa,f_5hmf,f_2acf,f_5mef}]";
 
 const PROMPT = `Tu es un extracteur de donnees pour rapports d'analyse d'huile de transformateur (DGA + qualite huile), tous fournisseurs confondus (InsideView/Morgan Schaffer ou autres labos).
@@ -22,6 +22,9 @@ Regles :
 - Champs absents = null. Ne devine pas.
 - Reconnais les synonymes: Acetylene/Acetylene/C2H2, Hydrogene/Hydrogen/H2, etc.
 - dielectric = rigidite D1816 ; dbd877 = rigidite D877.
+- CHANGEUR DE PRISES EN CHARGE (OLTC) : un meme rapport peut contenir l'huile de la CUVE PRINCIPALE et celle du COMPARTIMENT DU CHANGEUR DE PRISES (souvent un n° de serie/equipement distinct). Mets isOltc=true si l'echantillon/equipement designe un changeur de prises (synonymes: changeur de prises, prise sous charge, OLTC, LTC, tap changer, selecteur, diverter, regleur en charge, commutateur de prises). Sinon isOltc=false. L'OLTC reste un transformer distinct dans "transformers".
+- parentSerial : si le rapport relie le changeur a son transformateur (n° de serie/equipement du transformateur parent), mets-le ; sinon null.
+- oilType : capte le type d'huile tel qu'ecrit (mineral, mineral inhibe, silicone, ester naturel/vegetal (FR3), ester synthetique (MIDEL), askarel/BPC, etc.) ; sinon null.
 Retourne le JSON et rien d'autre.`;
 
 export async function POST(req: NextRequest) {
