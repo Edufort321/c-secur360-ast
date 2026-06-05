@@ -292,7 +292,7 @@ export default function DgaPage() {
 
         {view === 'fiche' && selected_d && (
           <TransfoView
-            tenant={tenant} tenantName={tenantName} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl}
+            tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl}
             onSave={saveDossierFromView} onNewMeasure={() => setView('newMeasure')} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
           />
         )}
