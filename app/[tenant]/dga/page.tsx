@@ -73,7 +73,16 @@ export default function DgaPage() {
   useEffect(() => { if (tenant) getSitesTree(tenant).then(setSitesTree); }, [tenant]);
   useEffect(() => {
     if (access !== 'enabled') return;
-    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); if (data?.legal_name) setTenantName(data.legal_name); } catch { /* défaut */ } })();
+    (async () => {
+      try {
+        const { data } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle();
+        if (data?.logo_url) setLogoUrl(data.logo_url);
+        let name = data?.legal_name || '';
+        // Repli sur le nom d'affichage du tenant (table tenants, toujours renseigné) si legal_name est vide.
+        if (!name) { try { const { data: t } = await supabase.from('tenants').select('name').eq('subdomain', tenant).maybeSingle(); name = t?.name || ''; } catch { /* ignore */ } }
+        if (name) setTenantName(name);
+      } catch { /* défaut */ }
+    })();
     const ch = supabase.channel('dga-' + tenant)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_dossiers', filter: `tenant_id=eq.${tenant}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_measures', filter: `tenant_id=eq.${tenant}` }, () => { reload(); if (selId) listMeasures(tenant, selId).then(setMeasures); })

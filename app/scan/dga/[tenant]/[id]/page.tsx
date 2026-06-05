@@ -28,7 +28,9 @@ export default function PublicDgaPage() {
       try {
         const { data: cs } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle();
         if (cs?.logo_url) setLogo(cs.logo_url);
-        if (cs?.legal_name) setTenantName(cs.legal_name);
+        let name = cs?.legal_name || '';
+        if (!name) { try { const { data: t } = await supabase.from('tenants').select('name').eq('subdomain', tenant).maybeSingle(); name = t?.name || ''; } catch { /* ignore */ } }
+        if (name) setTenantName(name);
       } catch { /* défaut */ }
       try { setSites(await getSitesTree(tenant)); } catch { /* défaut */ }
       try {
