@@ -61,6 +61,12 @@
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ===== ANTI-ÉTIREMENT VERTICAL DES GRILLES =====
+   CSS Grid étire par défaut (align-items: stretch) chaque carte à la hauteur de la plus haute
+   de sa rangée -> le contenu s'espace et « s'étire sur la hauteur » partout dans le module.
+   On aligne en haut : les cartes prennent leur hauteur naturelle (ou leur hauteur fixe). */
+.inventory-app .grid { align-items: start; }
+
 /* ===== STYLES D'IMPRESSION ===== */
 @media print {
     /* Cacher tous les éléments sauf le modal de vue */

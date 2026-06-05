@@ -463,36 +463,34 @@ const ArticlesView = React.memo(({
             const locTxt = item.isMultiLocation && item.locations
               ? `${item.locations.length} ${item.locations.length > 1 ? t('common.branches') : t('common.branch')}`
               : (item.location || '—');
+            const photo = (item.photos && item.photos[0]) || item.photo || null;
             return (
-              <div key={item.id} className="flex h-48 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-                <div className={`h-1.5 shrink-0 ${low ? 'bg-red-500' : 'bg-gradient-to-r from-orange-500 to-orange-600'}`}></div>
-                <div className="flex min-h-0 flex-1 flex-col p-3">
-                  <div className="mb-1 flex items-center justify-between gap-1">
-                    <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => toggleItemSelection(item.id)} className="h-4 w-4 rounded text-slate-600 focus:ring-orange-500" />
-                    <StatusBadge quantity={item.quantity} minQuantity={item.minQuantity} maxQuantity={item.maxQuantity} t={t} />
-                  </div>
-                  <h3 className="line-clamp-2 text-sm font-bold leading-tight text-gray-900 dark:text-white">{item.name}</h3>
+              // Tuile galerie à HAUTEUR FIXE : photo (h fixe) + textes tronqués 1 ligne (h déterministe) + actions.
+              <div key={item.id} className="flex h-56 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                <div className="relative h-24 shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-900">
+                  {photo
+                    ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={photo} alt={item.name} className="h-full w-full object-cover" />
+                    : <div className="grid h-full place-items-center text-gray-300 dark:text-gray-600"><Package size={30} /></div>}
+                  <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => toggleItemSelection(item.id)} onClick={e => e.stopPropagation()} className="absolute left-2 top-2 h-4 w-4 rounded accent-slate-700" />
+                  <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${low ? 'bg-red-600' : 'bg-emerald-600'}`}>{qty}{item.unit ? ' ' + item.unit : ''}</span>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col px-3 pt-2">
+                  <h3 className="truncate text-sm font-bold leading-tight text-gray-900 dark:text-white">{item.name}</h3>
                   <p className="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.code}</p>
-                  <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1 truncate text-[11px] text-gray-500 dark:text-gray-400">
                     {item.isMultiLocation ? <Building size={11} className="shrink-0" /> : <MapPin size={11} className="shrink-0" />}
                     <span className="truncate">{locTxt}</span>
                   </div>
-                  <div className="mt-auto flex items-end justify-between gap-1 pt-1">
-                    <div>
-                      <div className="text-[9px] uppercase tracking-wide text-gray-400">{t('common.stock')}</div>
-                      <div className="text-sm font-bold text-gray-900 dark:text-white">{qty}<span className="ml-0.5 text-[10px] font-normal text-gray-400">{item.unit}</span></div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[9px] uppercase tracking-wide text-gray-400">{t('articles.salePrice')}</div>
-                      <div className="text-sm font-bold text-green-600">${(item.salePrice || 0).toFixed(2)}</div>
-                    </div>
+                  <div className="mt-auto flex items-center justify-between pb-1">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400">{t('articles.salePrice')}</span>
+                    <span className="text-sm font-bold text-green-600">${(item.salePrice || 0).toFixed(2)}</span>
                   </div>
-                  <div className="mt-1 flex items-center justify-end gap-0.5 border-t border-gray-100 pt-1 dark:border-gray-700">
-                    <button onClick={() => { setSelectedItemForView(item); setShowViewModal(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.view')}><Eye size={15} /></button>
-                    <button onClick={() => { setEditingItem(item); setShowItemForm(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.edit')}><Edit size={15} /></button>
-                    <button onClick={() => handlePrint(item)} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.printLabel')}><Printer size={15} /></button>
-                    <button onClick={() => deleteItem(item.id)} className="rounded p-1 text-gray-400 transition hover:text-red-600" title={t('actions.delete')}><Trash2 size={15} /></button>
-                  </div>
+                </div>
+                <div className="flex shrink-0 items-center justify-end gap-0.5 border-t border-gray-100 px-2 py-1 dark:border-gray-700">
+                  <button onClick={() => { setSelectedItemForView(item); setShowViewModal(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.view')}><Eye size={15} /></button>
+                  <button onClick={() => { setEditingItem(item); setShowItemForm(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.edit')}><Edit size={15} /></button>
+                  <button onClick={() => handlePrint(item)} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.printLabel')}><Printer size={15} /></button>
+                  <button onClick={() => deleteItem(item.id)} className="rounded p-1 text-gray-400 transition hover:text-red-600" title={t('actions.delete')}><Trash2 size={15} /></button>
                 </div>
               </div>
             );
