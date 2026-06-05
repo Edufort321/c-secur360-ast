@@ -59,6 +59,7 @@ export default function DgaPage() {
   const [importPreview, setImportPreview] = useState<any>(null);
   const [dragOver, setDragOver] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>('/c-secur360-logo.png');
+  const [tenantName, setTenantName] = useState<string>('');
   // Confirmation in-app (window.confirm() est supprimé dans une PWA installée -> suppression sans avertissement).
   const [confirmAsk, setConfirmAsk] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,7 +72,7 @@ export default function DgaPage() {
   useEffect(() => { if (tenant) getSitesTree(tenant).then(setSitesTree); }, [tenant]);
   useEffect(() => {
     if (access !== 'enabled') return;
-    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); } catch { /* défaut */ } })();
+    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url, company_name, name').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); if (data?.company_name || data?.name) setTenantName(data.company_name || data.name); } catch { /* défaut */ } })();
     const ch = supabase.channel('dga-' + tenant)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_dossiers', filter: `tenant_id=eq.${tenant}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_measures', filter: `tenant_id=eq.${tenant}` }, () => { reload(); if (selId) listMeasures(tenant, selId).then(setMeasures); })
@@ -291,7 +292,7 @@ export default function DgaPage() {
 
         {view === 'fiche' && selected_d && (
           <TransfoView
-            tenant={tenant} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl}
+            tenant={tenant} tenantName={tenantName} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl}
             onSave={saveDossierFromView} onNewMeasure={() => setView('newMeasure')} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
           />
         )}

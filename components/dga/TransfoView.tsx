@@ -62,13 +62,13 @@ function compressImage(file: File, maxDim = 1000, quality = 0.7): Promise<string
 }
 
 export function TransfoView(props: {
-  tenant: string; lang: Lang; tr: (fr: string, en: string) => string;
+  tenant: string; tenantName?: string; lang: Lang; tr: (fr: string, en: string) => string;
   dossier: Dossier; measures: Measure[]; logoUrl: string | null;
   onSave: (d: Dossier) => Promise<void> | void;            // enregistre le dossier (équipement + extra)
   onNewMeasure: () => void; onDeleteMeasure: (id?: string) => void; onDeleteDossier: () => void;
   setNotice: (s: string | null) => void;
 }) {
-  const { tenant, lang, tr, dossier, measures, logoUrl, onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
+  const { tenant, tenantName, lang, tr, dossier, measures, logoUrl, onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
@@ -647,7 +647,7 @@ export function TransfoView(props: {
           dossier={dossier} data={data} cur={cur} prev={prev} zone={zone} worst={worst}
           items={items} reco={reco} oilEval={oilEval} furan={furan} trendA={trendA} rogers={rogers}
           globalNote={globalNote} manualReco={recoDraft} nextDate={effNext} due={due}
-          projectNo={projectNo} pages={pages} logoUrl={logoUrl} lang={lang} fal2ppb={fal2ppb}
+          projectNo={projectNo} pages={pages} logoUrl={logoUrl} tenantName={tenantName} lang={lang} fal2ppb={fal2ppb}
           photos={photos} anomalies={anomalies} inspections={inspections}
         />, document.body)}
     </div>

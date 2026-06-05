@@ -98,10 +98,10 @@ export function PrintReport(props: {
   oilEval: { status: string; txt: string }[]; furan: any; trendA: any; rogers: Record<string, number>;
   globalNote: string; manualReco: string; nextDate: string | null; due: any;
   projectNo: string; pages: { titlePage: boolean; cover: boolean; results: boolean; analysis: boolean; trends: boolean; coverChart: boolean; photos: boolean; anomalies: boolean; inspections: boolean };
-  logoUrl: string | null; lang: Lang; fal2ppb: number | null;
+  logoUrl: string | null; tenantName?: string; lang: Lang; fal2ppb: number | null;
   photos?: { id: string; data: string; name?: string }[]; anomalies?: Anomaly[]; inspections?: Inspection[];
 }) {
-  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, lang, photos = [], anomalies = [], inspections = [] } = props;
+  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, tenantName, lang, photos = [], anomalies = [], inspections = [] } = props;
   const anomReport = anomalies.filter(a => !a.archived);
   const lastInspection = inspections[0] || null;
   const EN = lang === 'en';
@@ -132,7 +132,8 @@ export function PrintReport(props: {
       {/* PAGE DE GARDE (titre) — hors table d'en-tête/pied répété */}
       {pages.titlePage && (
         <section className="title-page has-break" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', minHeight: '245mm', boxSizing: 'border-box', padding: '0 16px 30mm' }}>
-          {logoUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={logoUrl} alt="" style={{ maxHeight: 90, maxWidth: 260, objectFit: 'contain', marginBottom: 34 }} />}
+          {logoUrl && /* eslint-disable-next-line @next/next/no-img-element */ <img src={logoUrl} alt="" style={{ maxHeight: 90, maxWidth: 260, objectFit: 'contain', marginBottom: 12 }} />}
+          {tenantName && <div style={{ fontWeight: 800, fontSize: 16, color: '#1a1a1a', marginBottom: 22 }}>{tenantName}</div>}
           <div style={{ fontWeight: 700, fontSize: 12, letterSpacing: 3, color: '#277da1', marginBottom: 8 }}>{L("RAPPORT D'ANALYSE DE LABORATOIRE", 'LABORATORY ANALYSIS REPORT')}</div>
           <h1 style={{ fontWeight: 900, fontSize: 32, margin: '0 0 18px', lineHeight: 1.1, maxWidth: 600, color: '#1a1a1a' }}>{dossier.ident || L("RAPPORT D'ANALYSE", 'ANALYSIS REPORT')}</h1>
           <div style={{ fontSize: 13, color: '#333', lineHeight: 2, borderTop: '2px solid #277da1', paddingTop: 18, marginTop: 8, minWidth: 280 }}>
