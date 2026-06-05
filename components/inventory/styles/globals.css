@@ -100,3 +100,26 @@
         break-inside: avoid;
     }
 }
+
+/* ============== ANTI-DÉBORDEMENT MOBILE (≤ 640px) ============== */
+/* Le module est une app desktop portée : sur petit écran, le texte (noms, codes, emails,
+   emplacements, grosses valeurs) débordait des cases. Filet de sécurité scopé à .inventory-app. */
+@media (max-width: 640px) {
+  .inventory-app { overflow-x: hidden; }
+
+  /* Casser les mots/chaînes longs (codes, courriels, URLs) au lieu de déborder */
+  .inventory-app p,
+  .inventory-app h1, .inventory-app h2, .inventory-app h3, .inventory-app h4, .inventory-app h5,
+  .inventory-app span, .inventory-app a, .inventory-app td, .inventory-app th, .inventory-app label, .inventory-app button {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Permettre aux enfants flex de rétrécir : sinon le texte pousse hors de la case (cause #1 du débordement) */
+  .inventory-app .flex > * { min-width: 0; }
+
+  /* Réduire les très grosses tailles de police sur mobile (valeurs de stats, prix, quantités) */
+  .inventory-app .text-3xl { font-size: 1.375rem; line-height: 1.75rem; }
+  .inventory-app .text-2xl { font-size: 1.15rem;  line-height: 1.6rem; }
+  .inventory-app .text-xl  { font-size: 1.05rem;  line-height: 1.5rem; }
+}
