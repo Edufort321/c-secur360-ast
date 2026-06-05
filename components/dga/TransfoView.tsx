@@ -283,9 +283,9 @@ export function TransfoView(props: {
                 <span className="text-sm font-extrabold">{COND_LABELS[worst]}</span>
                 <span className="text-[10px] uppercase tracking-wide opacity-90">{tr('DGA GLOBAL', 'DGA OVERALL')}</span>
               </div>
-              <button className={BTN_GHOST} onClick={() => setShowEdit(true)}>✎ {tr('Éditer les infos', 'Edit info')}</button>
-              <button className={BTN_DARK} onClick={() => setShowExport(true)}>🖨 {tr('Exporter PDF', 'Export PDF')}</button>
-              <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ {tr('Nouveau prélèvement', 'New sample')}</button>
+              <button className={BTN_GHOST} onClick={() => setShowEdit(true)}>✎ <span className="hidden sm:inline">{tr('Éditer les infos', 'Edit info')}</span></button>
+              <button className={BTN_DARK} onClick={() => setShowExport(true)}>🖨 <span className="hidden sm:inline">{tr('Exporter PDF', 'Export PDF')}</span></button>
+              <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ <span className="hidden sm:inline">{tr('Nouveau prélèvement', 'New sample')}</span><span className="sm:hidden">{tr('Prélèv.', 'Sample')}</span></button>
               <button className={BTN_GHOST + ' !text-red-600 !border-red-300'} onClick={onDeleteDossier}>🗑</button>
             </div>
           </div>
@@ -342,7 +342,7 @@ export function TransfoView(props: {
         {/* GRILLE 2 COLONNES */}
         <div className="grid gap-4 lg:grid-cols-2">
           {/* ── COLONNE GAUCHE ── */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {/* TABLEAU IEEE (Δ% + condition) */}
             <section className={CARD}>
               <div className="flex items-center justify-between">
@@ -384,8 +384,7 @@ export function TransfoView(props: {
             {/* HISTORIQUE EN COLONNES (paramètres × dates) — mode fusion */}
             <section className={CARD}>
               <h2 className={H2}>{tr('Historique complet', 'Full history')}</h2>
-              <div className="overflow-x-auto">
-                <Tbl>
+              <Tbl>
                   <thead><Tr><Th>{tr('Paramètre', 'Parameter')}</Th>{data.map((d, i) => <ThR key={d.id || i}>{d.sample_date}{d.source === 'pdf' ? ' 📄' : ''}</ThR>)}</Tr></thead>
                   <tbody>
                     {GAS_FIELDS.map(g => <Tr key={g.u}><Td>{gl(g.u, lang)}</Td>{data.map((d, i) => <TdR key={d.id || i}>{(d as any)[g.key] ?? '—'}</TdR>)}</Tr>)}
@@ -398,12 +397,11 @@ export function TransfoView(props: {
                     ))}
                   </tbody>
                 </Tbl>
-              </div>
             </section>
           </div>
 
           {/* ── COLONNE DROITE ── */}
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <section className={CARD}>
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
               <DuvalTriangle points={data.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined }))} selIdx={selIdx} lang={lang} />
@@ -700,7 +698,9 @@ function InterpRow({ lvl, txt }: { lvl: 'crit' | 'warn' | 'info' | 'ok'; txt: st
 }
 
 // Tableaux compacts
-const Tbl = ({ children, className = '' }: any) => <table className={`w-full text-sm ${className}`}>{children}</table>;
+// Toujours scrollable horizontalement : sur mobile, un tableau plus large que l'écran scrolle
+// dans sa carte au lieu d'élargir toute la page (sinon la colonne de droite passe hors champ).
+const Tbl = ({ children, className = '' }: any) => <div className={`-mx-1 overflow-x-auto px-1 ${className}`}><table className="w-full min-w-[15rem] text-sm">{children}</table></div>;
 const Tr = ({ children }: any) => <tr className="border-t border-gray-100 dark:border-gray-700/50">{children}</tr>;
 const Th = ({ children }: any) => <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-500">{children}</th>;
 const ThR = ({ children }: any) => <th className="px-2 py-1.5 text-right text-xs font-semibold text-gray-500">{children}</th>;
