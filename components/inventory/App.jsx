@@ -1404,6 +1404,7 @@ function AppContent() {
   };
   const [confirmState, setConfirmState] = useState(null);
   const askConfirm = (opts) => setConfirmState(opts); // { message, title?, confirmLabel?, danger?, onConfirm }
+  const [isLoading, setIsLoading] = useState(true); // 1er chargement des données (spinner au lieu d'un flash vide)
   const [companyLogo, setCompanyLogo] = useState('/c-secur360-logo.png'); // Logo tenant (repli marque) pour la carte QR
   useEffect(() => {
     let active = true;
@@ -1652,6 +1653,7 @@ function AppContent() {
           } catch { /* quota */ }
           console.log('✅ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
           initialLoadDone.current = true;
+          if (alive) setIsLoading(false);
           return;
         }
         // Aucune ligne nuage : on part du local, puis le 1er enregistrement créera la ligne.
@@ -1662,6 +1664,7 @@ function AppContent() {
       if (!alive) return;
       fromLocal();
       initialLoadDone.current = true;
+      if (alive) setIsLoading(false);
     };
 
     initializeData();
@@ -7291,6 +7294,13 @@ function AppContent() {
   };
 
   // ============== RENDU PRINCIPAL ==============
+  if (isLoading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-gray-100 dark:bg-gray-900">
+        <div className="h-9 w-9 animate-spin rounded-full border-2 border-gray-300 border-t-transparent dark:border-gray-600 dark:border-t-transparent" aria-label={language === 'fr' ? 'Chargement' : 'Loading'} />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Navigation du module alignée sur les autres modules (PortalHeader unifié au-dessus) :
