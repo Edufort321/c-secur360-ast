@@ -64,6 +64,13 @@ export default function PublicDgaPage() {
   const dueLabel = due.code === 'overdue' ? 'En retard' : due.code === 'soon' ? 'Bientôt dû' : due.code === 'ok' ? 'À jour' : '—';
   const hasOil = cur && (OIL_FIELDS.some(f => cur.oil_quality?.[f.key] != null) || FURAN_FIELDS.some(f => cur.oil_quality?.[f.key] != null));
   const siteTxt = siteLabel(sites, dossier.extra?.site_id, dossier.extra?.department_id);
+  // Inspection visuelle de routine (extra.next_inspection) + anomalies actives à surveiller (colonne anomalies).
+  const inspNext = dossier.extra?.next_inspection || null;
+  const insp = inspNext ? dueStatusByDate(inspNext) : null;
+  const inspColor = !insp ? '#94a3b8' : insp.code === 'overdue' ? '#e63946' : insp.code === 'soon' ? '#f4a261' : '#2a9d8f';
+  const inspLabel = !insp ? 'Non programmée' : insp.code === 'overdue' ? 'En retard' : insp.code === 'soon' ? 'Bientôt' : 'À jour';
+  const activeAnoms = (((dossier as any).anomalies as any[]) || []).filter(a => !a.archived);
+  const anomCount = activeAnoms.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200 p-4">
@@ -108,6 +115,26 @@ export default function PublicDgaPage() {
               <div className="text-[11px] text-slate-500">Prochaine analyse{nextDate ? ` · ${nextDate}` : ''}</div>
             </div>
           </div>
+
+          {/* Inspection visuelle de routine + anomalies à surveiller */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border-2 p-3 text-center" style={{ borderColor: inspColor, background: inspColor + '14' }}>
+              <div className="text-sm font-extrabold" style={{ color: inspColor }}>🛠 {inspLabel}</div>
+              <div className="text-[11px] text-slate-500">Inspection visuelle{inspNext ? ` · ${inspNext}` : ''}</div>
+            </div>
+            <div className="rounded-xl border-2 p-3 text-center" style={{ borderColor: anomCount ? '#e63946' : '#2a9d8f', background: (anomCount ? '#e63946' : '#2a9d8f') + '14' }}>
+              <div className="text-sm font-extrabold" style={{ color: anomCount ? '#e63946' : '#2a9d8f' }}>{anomCount ? `⚠ ${anomCount}` : '✓ 0'}</div>
+              <div className="text-[11px] text-slate-500">{anomCount ? 'Anomalie(s) à surveiller' : 'Aucune anomalie'}</div>
+            </div>
+          </div>
+          {anomCount > 0 && (
+            <ul className="space-y-1 rounded-xl bg-red-50 p-3 text-[12px] text-red-800">
+              {activeAnoms.slice(0, 6).map((a: any, i: number) => (
+                <li key={a.id || i} className="flex items-start gap-1.5"><span>•</span><span className="font-semibold">{a.title || 'Anomalie'}</span></li>
+              ))}
+              {anomCount > 6 && <li className="text-red-500">+ {anomCount - 6} autre(s)…</li>}
+            </ul>
+          )}
 
           {/* Dernière mesure : gaz + condition IEEE */}
           {cur && (
