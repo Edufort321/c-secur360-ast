@@ -500,6 +500,55 @@ const ArticlesView = React.memo(({
 
       {/* Vue Liste */}
       {articleViewMode === 'list' && (
+        // LISTE compacte en lignes (responsive, mobile-friendly) — remplace le tableau large.
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center gap-3 border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+            <input type="checkbox" checked={selectedItems.length === filteredItems.length && filteredItems.length > 0} onChange={toggleAllItems} className="h-4 w-4 rounded accent-slate-700" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{filteredItems.length} {t('common.article')}</span>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {filteredItems.map(item => {
+              const lqty = item.quantity ?? 0;
+              const llow = item.minQuantity != null && lqty <= item.minQuantity;
+              const lmulti = item.isMultiLocation && item.locations && item.locations.length > 1;
+              const lexp = expandedRows.has(item.id);
+              const lloc = lmulti ? `${item.locations.length} ${t('common.branches')}` : (item.location || item.department || '—');
+              return (
+                <div key={item.id}>
+                  <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                    <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => toggleItemSelection(item.id)} className="h-4 w-4 shrink-0 rounded accent-slate-700" />
+                    {lmulti && <button onClick={() => toggleRow(item.id)} className="shrink-0 text-gray-400">{lexp ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</button>}
+                    <button onClick={() => { setSelectedItemForView(item); setShowViewModal(true); }} className="min-w-0 flex-1 text-left">
+                      <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">{item.name}</div>
+                      <div className="truncate font-mono text-[11px] text-gray-400">{item.code} · {lloc}</div>
+                    </button>
+                    <div className="shrink-0 text-right">
+                      <div className={`text-sm font-bold ${llow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{lqty}<span className="text-[10px] font-normal text-gray-400"> {item.unit}</span></div>
+                      <div className="text-[11px] font-semibold text-green-600">${(item.salePrice || 0).toFixed(2)}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      <button onClick={() => { setEditingItem(item); setShowItemForm(true); }} className="rounded p-1.5 text-gray-400 hover:text-slate-600 dark:hover:text-white" title={t('actions.edit')}><Edit size={15} /></button>
+                      <button onClick={() => handlePrint(item)} className="hidden rounded p-1.5 text-gray-400 hover:text-slate-600 dark:hover:text-white sm:inline-flex" title={t('actions.printLabel')}><Printer size={15} /></button>
+                      <button onClick={() => deleteItem(item.id)} className="rounded p-1.5 text-gray-400 hover:text-red-600" title={t('actions.delete')}><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                  {lmulti && lexp && (
+                    <div className="space-y-1 bg-gray-50 px-3 py-2 dark:bg-gray-900/40">
+                      {item.locations.map((loc, i) => (
+                        <div key={i} className="flex items-center justify-between border-l-2 border-slate-300 pl-3 text-[12px]">
+                          <span className="truncate text-gray-600 dark:text-gray-300">{loc.department || loc.location || '—'}</span>
+                          <span className="font-semibold text-gray-800 dark:text-white">{loc.quantity} {item.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {false && articleViewMode === 'list' && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
