@@ -321,40 +321,29 @@ const ArticlesView = React.memo(({
               />
             </div>
 
-            {/* Sélecteur de vue */}
-            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+            {/* Sélecteur de vue : Galerie (cartes compactes) / Liste (tableau) — style AST */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
               <button
                 onClick={() => setArticleViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${
-                  articleViewMode === 'grid'
-                    ? 'bg-white dark:bg-gray-800 text-slate-600 shadow-md'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  articleViewMode !== 'list'
+                    ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-white shadow-md'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
                 title={t('articles.gridView')}
               >
-                <Grid size={20} />
+                <Grid size={18} /> <span className="hidden sm:inline">{t('common.gallery') || 'Galerie'}</span>
               </button>
               <button
                 onClick={() => setArticleViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                   articleViewMode === 'list'
-                    ? 'bg-white dark:bg-gray-800 text-slate-600 shadow-md'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-white shadow-md'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
                 title={t('articles.listView')}
               >
-                <List size={20} />
-              </button>
-              <button
-                onClick={() => setArticleViewMode('detailed')}
-                className={`p-2 rounded-lg transition-all ${
-                  articleViewMode === 'detailed'
-                    ? 'bg-white dark:bg-gray-800 text-slate-600 shadow-md'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-                title={t('articles.detailedView')}
-              >
-                <Eye size={20} />
+                <List size={18} /> <span className="hidden sm:inline">{t('common.list') || 'Liste'}</span>
               </button>
             </div>
           </div>
@@ -465,126 +454,49 @@ const ArticlesView = React.memo(({
       </div>
 
       {/* Vue Grille */}
-      {articleViewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map(item => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group"
-            >
-              <div className="h-2 bg-gradient-to-r from-orange-500 to-orange-600"></div>
-
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.includes(item.id)}
-                    onChange={() => toggleItemSelection(item.id)}
-                    className="w-5 h-5 text-slate-600 rounded focus:ring-orange-500"
-                  />
-                  <StatusBadge
-                    quantity={item.quantity}
-                    minQuantity={item.minQuantity}
-                    maxQuantity={item.maxQuantity}
-                    t={t}
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handlePrint(item)}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title={t('actions.printLabel')}
-                    >
-                      <Printer size={16} className="text-gray-600 dark:text-gray-400" />
-                    </button>
-                    <ActionButtons
-                      onEdit={() => {
-                        setEditingItem(item);
-                        setShowItemForm(true);
-                      }}
-                      onDelete={() => deleteItem(item.id)}
-                      onView={() => {
-                        setSelectedItemForView(item);
-                        setShowViewModal(true);
-                      }}
-                      onShare={() => {
-                        setSelectedItemForShare(item);
-                        setShowShareModal(true);
-                      }}
-                      t={t}
-                    />
+      {articleViewMode !== 'list' && (
+        // GALERIE : cartes compactes à HAUTEUR FIXE, grille qui remplit la largeur (2 col mobile -> 5 desktop).
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {filteredItems.map(item => {
+            const qty = item.quantity ?? 0;
+            const low = item.minQuantity != null && qty <= item.minQuantity;
+            const locTxt = item.isMultiLocation && item.locations
+              ? `${item.locations.length} ${item.locations.length > 1 ? t('common.branches') : t('common.branch')}`
+              : (item.location || '—');
+            return (
+              <div key={item.id} className="flex h-48 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                <div className={`h-1.5 shrink-0 ${low ? 'bg-red-500' : 'bg-gradient-to-r from-orange-500 to-orange-600'}`}></div>
+                <div className="flex min-h-0 flex-1 flex-col p-3">
+                  <div className="mb-1 flex items-center justify-between gap-1">
+                    <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => toggleItemSelection(item.id)} className="h-4 w-4 rounded text-slate-600 focus:ring-orange-500" />
+                    <StatusBadge quantity={item.quantity} minQuantity={item.minQuantity} maxQuantity={item.maxQuantity} t={t} />
                   </div>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-slate-600 transition-colors">
-                  {item.name}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 font-mono mb-4">{item.code}</p>
-
-                <div className="space-y-3 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-white font-medium">
-                      <Tag size={14} className="flex-shrink-0" />
-                      <span className="truncate">{item.category}</span>
+                  <h3 className="line-clamp-2 text-sm font-bold leading-tight text-gray-900 dark:text-white">{item.name}</h3>
+                  <p className="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400">{item.code}</p>
+                  <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    {item.isMultiLocation ? <Building size={11} className="shrink-0" /> : <MapPin size={11} className="shrink-0" />}
+                    <span className="truncate">{locTxt}</span>
+                  </div>
+                  <div className="mt-auto flex items-end justify-between gap-1 pt-1">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wide text-gray-400">{t('common.stock')}</div>
+                      <div className="text-sm font-bold text-gray-900 dark:text-white">{qty}<span className="ml-0.5 text-[10px] font-normal text-gray-400">{item.unit}</span></div>
                     </div>
-                    {item.subcategory && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 pl-5 mt-1">
-                        {item.subcategory}
-                      </p>
-                    )}
+                    <div className="text-right">
+                      <div className="text-[9px] uppercase tracking-wide text-gray-400">{t('articles.salePrice')}</div>
+                      <div className="text-sm font-bold text-green-600">${(item.salePrice || 0).toFixed(2)}</div>
+                    </div>
                   </div>
-
-                  {/* Si multi-localisation, montrer le total */}
-                  {item.isMultiLocation && item.locations ? (
-                    <>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
-                        <Building size={14} className="flex-shrink-0" />
-                        <span>{item.locations.length} {item.locations.length > 1 ? t('common.branches') : t('common.branch')}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm font-bold text-gray-900 dark:text-white">
-                        <Box size={14} className="flex-shrink-0" />
-                        <span>{t('common.totalWith')} {item.quantity} {item.unit}</span>
-                      </div>
-                      {/* Détails par succursale */}
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                        {item.locations.map((loc, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600 dark:text-gray-400">{loc.department}</span>
-                            <span className="font-semibold text-gray-900 dark:text-white">{loc.quantity} {item.unit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <MapPin size={14} className="flex-shrink-0" />
-                        <span className="truncate">{item.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Box size={14} className="flex-shrink-0" />
-                        <span>{item.quantity} {item.unit}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <ProgressBar value={item.quantity} max={item.maxQuantity} />
-                </div>
-
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('articles.unitCost')}</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">${item.costPrice.toFixed(2)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('articles.salePrice')}</p>
-                    <p className="font-semibold text-green-600">${item.salePrice.toFixed(2)}</p>
+                  <div className="mt-1 flex items-center justify-end gap-0.5 border-t border-gray-100 pt-1 dark:border-gray-700">
+                    <button onClick={() => { setSelectedItemForView(item); setShowViewModal(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.view')}><Eye size={15} /></button>
+                    <button onClick={() => { setEditingItem(item); setShowItemForm(true); }} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.edit')}><Edit size={15} /></button>
+                    <button onClick={() => handlePrint(item)} className="rounded p-1 text-gray-400 transition hover:text-slate-600 dark:hover:text-white" title={t('actions.printLabel')}><Printer size={15} /></button>
+                    <button onClick={() => deleteItem(item.id)} className="rounded p-1 text-gray-400 transition hover:text-red-600" title={t('actions.delete')}><Trash2 size={15} /></button>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
