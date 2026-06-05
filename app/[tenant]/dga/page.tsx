@@ -64,6 +64,16 @@ export default function DgaPage() {
   // Confirmation in-app (window.confirm() est supprimé dans une PWA installée -> suppression sans avertissement).
   const [confirmAsk, setConfirmAsk] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Ouverture directe d'un transformateur via ?open=<id> (lien « Ouvrir dans l'app » du QR public).
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current || typeof window === 'undefined') return;
+    const openId = new URLSearchParams(window.location.search).get('open');
+    if (openId && dossiers.some(d => d.id === openId)) {
+      openedRef.current = true;
+      setSelId(openId); setView('fiche');
+    }
+  }, [dossiers]);
 
   async function reload() {
     const [ds, ms] = await Promise.all([listDossiers(tenant), listAllMeasures(tenant)]);

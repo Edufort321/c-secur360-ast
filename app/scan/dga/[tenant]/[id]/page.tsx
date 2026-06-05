@@ -182,7 +182,7 @@ export default function PublicDgaPage() {
           )}
 
           {/* Édition (réservée aux utilisateurs connectés — sinon redirigé vers la connexion) */}
-          <a href={`/${tenant}/dga`} className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-black">
+          <a href={`/${tenant}/dga?open=${id}`} className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-black">
             <Pencil size={15} /> Ouvrir dans l'application
           </a>
           <p className="text-center text-[11px] text-slate-400">L'édition nécessite un compte. Sans connexion, cette fiche reste en lecture seule.</p>
