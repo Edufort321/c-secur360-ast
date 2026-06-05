@@ -65,10 +65,10 @@ export function TransfoView(props: {
   tenant: string; tenantName?: string; siteText?: string; lang: Lang; tr: (fr: string, en: string) => string;
   dossier: Dossier; measures: Measure[]; logoUrl: string | null; allDossiers?: Dossier[];
   onSave: (d: Dossier) => Promise<void> | void;            // enregistre le dossier (équipement + extra)
-  onNewMeasure: () => void; onDeleteMeasure: (id?: string) => void; onDeleteDossier: () => void;
+  onNewMeasure: () => void; onEditMeasure?: (m: Measure) => void; onDeleteMeasure: (id?: string) => void; onDeleteDossier: () => void;
   setNotice: (s: string | null) => void;
 }) {
-  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, allDossiers = [], onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
+  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, allDossiers = [], onSave, onNewMeasure, onEditMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
@@ -379,7 +379,10 @@ export function TransfoView(props: {
             <section className={CARD}>
               <div className="flex items-center justify-between">
                 <h2 className={H2}>{tr('DGA ·', 'DGA ·')} {cur.sample_date} {tr('· statut IEEE', '· IEEE status')}</h2>
-                <button className="text-xs text-gray-400 hover:text-red-500" onClick={() => onDeleteMeasure(cur.id)}>{tr('Suppr. mesure', 'Delete measurement')}</button>
+                <div className="flex items-center gap-3">
+                  {onEditMeasure && <button className="text-xs text-cyan-600 hover:text-cyan-800" onClick={() => onEditMeasure(cur)}>✎ {tr('Éditer', 'Edit')}</button>}
+                  <button className="text-xs text-gray-400 hover:text-red-500" onClick={() => onDeleteMeasure(cur.id)}>{tr('Suppr. mesure', 'Delete measurement')}</button>
+                </div>
               </div>
               <Tbl>
                 <thead><Tr><Th>{tr('Gaz', 'Gas')}</Th><ThR>ppm</ThR><ThR>{tr('Δ préc.', 'Δ prev.')}</ThR><Th>{tr('Condition', 'Condition')}</Th></Tr></thead>

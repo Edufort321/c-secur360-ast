@@ -126,7 +126,8 @@ export default function ModulesPage() {
             const last = lastBy[d.id];
             const st = dueStatusByDate(effectiveNextDate(d.extra, last)).code;
             if (st === 'overdue') dga.overdue += 1; else if (st === 'soon') dga.soon += 1; else if (st === 'ok') dga.ok += 1;
-            if (last && worstCondition(last) >= 3) dga.critical += 1; // niveau 4 (Condition 4)
+            // OLTC exclu du compteur critique : ses gaz d'arc de commutation sont normaux (seuils de cuve non applicables).
+            if (last && !d.extra?.is_oltc && worstCondition(last) >= 3) dga.critical += 1; // niveau 4 (Condition 4)
             if (d.extra?.next_inspection && d.extra.next_inspection <= today) dga.inspDue += 1; // inspection de routine due
           });
         } catch { /* dégradé */ }

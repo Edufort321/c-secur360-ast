@@ -45,6 +45,7 @@ export default function DgaPage() {
   const [view, setView] = useState<'list' | 'fiche' | 'newMeasure'>('list');
   const [selId, setSelId] = useState<string | null>(null);
   const [newT, setNewT] = useState<Dossier | null>(null);
+  const [editMeasure, setEditMeasure] = useState<Measure | null>(null); // mesure en cours d'édition (null = nouveau prélèvement)
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<'all' | 'overdue' | 'soon' | 'ok'>('all');
   const [sortBy, setSortBy] = useState<'due' | 'alert'>('due'); // défaut : reprise à venir
@@ -153,10 +154,13 @@ export default function DgaPage() {
     if (!selId) return;
     const dg = diagnoseFull(p.gas);
     const res = await saveMeasure(tenant, selId, {
+      ...(editMeasure?.id ? { id: editMeasure.id } : {}), // id présent = mise à jour (édition manuelle), sinon insertion
       sample_date: p.sample_date, ...p.gas, o2: p.o2, n2: p.n2, oil_quality: p.oil_quality,
-      tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'manual',
+      tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods,
+      source: editMeasure?.source || 'manual',
     });
     if (res.error) { setNotice('Erreur : ' + res.error); return; }
+    setEditMeasure(null);
     setMeasures(await listMeasures(tenant, selId)); setView('fiche');
   }
   async function delMeasure(id?: string) { if (!id) return; await deleteMeasure(id); if (selId) setMeasures(await listMeasures(tenant, selId)); reload(); }
@@ -307,12 +311,12 @@ export default function DgaPage() {
         {view === 'fiche' && selected_d && (
           <TransfoView
             tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl} allDossiers={dossiers}
-            onSave={saveDossierFromView} onNewMeasure={() => setView('newMeasure')} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
+            onSave={saveDossierFromView} onNewMeasure={() => { setEditMeasure(null); setView('newMeasure'); }} onEditMeasure={(m: Measure) => { setEditMeasure(m); setView('newMeasure'); }} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
           />
         )}
 
         {view === 'newMeasure' && selected_d && (
-          <SampleEntry lang={lang} tr={tr} dossierIdent={selected_d.ident} onSave={onNewMeasureSave} onCancel={() => setView('fiche')} />
+          <SampleEntry lang={lang} tr={tr} dossierIdent={selected_d.ident} initial={editMeasure} onSave={onNewMeasureSave} onCancel={() => { setEditMeasure(null); setView('fiche'); }} />
         )}
       </div>
 

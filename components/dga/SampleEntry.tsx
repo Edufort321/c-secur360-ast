@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, parseNum, type Lang } from '@/lib/dga/fields';
 import type { GasInput } from '@/lib/dga/diagnose';
+import type { Measure } from '@/lib/dga/dossiers';
 
 const INP = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
 
@@ -15,13 +16,21 @@ export interface SamplePayload { sample_date: string | null; gas: GasInput; o2: 
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export function SampleEntry({ lang, tr, dossierIdent, onSave, onCancel }: {
+export function SampleEntry({ lang, tr, dossierIdent, initial, onSave, onCancel }: {
   lang: Lang; tr: (fr: string, en: string) => string; dossierIdent: string;
+  initial?: Measure | null; // si fourni -> mode ÉDITION (pré-rempli)
   onSave: (p: SamplePayload) => void; onCancel: () => void;
 }) {
+  const isEdit = !!initial?.id;
   const [tab, setTab] = useState<'gas' | 'oil' | 'furan'>('gas');
-  const [date, setDate] = useState(todayIso());
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [date, setDate] = useState(initial?.sample_date || todayIso());
+  const [draft, setDraft] = useState<Record<string, string>>(() => {
+    if (!initial) return {};
+    const d: Record<string, string> = {};
+    GAS_FIELDS.forEach(g => { const v = (initial as any)[g.key]; if (v != null) d[g.key as string] = String(v); });
+    [...OIL_FIELDS, ...FURAN_FIELDS].forEach(f => { const v = initial.oil_quality?.[f.key]; if (v != null && v !== '') d[f.key] = String(v); });
+    return d;
+  });
   const set = (k: string, v: string) => setDraft(s => ({ ...s, [k]: v }));
 
   function save() {
@@ -40,7 +49,7 @@ export function SampleEntry({ lang, tr, dossierIdent, onSave, onCancel }: {
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <h2 className="mb-3 text-lg font-bold">{tr('Nouveau prélèvement —', 'New sample —')} {dossierIdent}</h2>
+      <h2 className="mb-3 text-lg font-bold">{isEdit ? tr('Éditer le prélèvement —', 'Edit sample —') : tr('Nouveau prélèvement —', 'New sample —')} {dossierIdent}</h2>
       <label className="mb-3 block w-52"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Date du prélèvement', 'Sampling date')}</span>
         <input type="date" className={INP} value={date} onChange={e => setDate(e.target.value)} /></label>
 
@@ -80,7 +89,7 @@ export function SampleEntry({ lang, tr, dossierIdent, onSave, onCancel }: {
 
       <p className="mt-3 text-[11px] text-gray-400">{tr('« <1 » / « <5 » accepté (traité comme moitié du seuil). Vide = non mesuré.', '"<1" / "<5" accepted (treated as half the threshold). Empty = not measured.')}</p>
       <div className="mt-3 flex gap-2">
-        <button onClick={save} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{tr('Analyser & enregistrer', 'Analyze & save')}</button>
+        <button onClick={save} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{isEdit ? tr('Enregistrer les modifications', 'Save changes') : tr('Analyser & enregistrer', 'Analyze & save')}</button>
         <button onClick={onCancel} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{tr('Annuler', 'Cancel')}</button>
       </div>
     </div>
