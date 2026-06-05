@@ -107,7 +107,12 @@ export const INSPECTION_CHECKLIST: InspCategory[] = [
           { value: 'radiateurs', label: 'Radiateurs', en: 'Radiators' }, { value: 'echangeur', label: 'Échangeur', en: 'Heat exchanger' },
         ] }],
       },
-      { key: 'tank_valves', label: 'Position des valves', en: 'Valve positions' },
+      {
+        key: 'tank_valves', label: 'Position des valves', en: 'Valve positions',
+        inputs: [{ key: 'position', label: 'Position', en: 'Position', kind: 'select', choices: [
+          { value: 'ouvert', label: 'Ouvert', en: 'Open' }, { value: 'ferme', label: 'Fermé', en: 'Closed' },
+        ] }],
+      },
     ],
   },
   {
