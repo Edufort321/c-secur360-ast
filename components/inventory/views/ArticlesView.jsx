@@ -456,7 +456,7 @@ const ArticlesView = React.memo(({
       {/* Vue Grille */}
       {articleViewMode !== 'list' && (
         // GALERIE : cartes compactes à HAUTEUR FIXE, grille qui remplit la largeur (2 col mobile -> 5 desktop).
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {filteredItems.map(item => {
             const qty = item.quantity ?? 0;
             const low = item.minQuantity != null && qty <= item.minQuantity;
