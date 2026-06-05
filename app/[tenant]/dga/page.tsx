@@ -45,6 +45,7 @@ export default function DgaPage() {
   const [newT, setNewT] = useState<Dossier | null>(null);
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<'all' | 'overdue' | 'soon' | 'ok'>('all');
+  const [sortBy, setSortBy] = useState<'due' | 'alert'>('due'); // défaut : reprise à venir
   const [delMode, setDelMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -97,12 +98,31 @@ export default function DgaPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return dossiers.filter(d => {
+    // Clé de tri par dossier : pire condition (0..3, -1 si aucune mesure) + urgence de reprise.
+    const rank = (d: Dossier) => {
+      const last = d.id ? lastByDossier[d.id] : undefined;
+      const worst = last ? worstCondition(last) : -1;
+      const due = dueStatusByDate(effectiveNextDate(d.extra, last));
+      const dueKey = due.code === 'none' ? Infinity : (due.days ?? Infinity); // plus en retard / plus tôt = plus petit
+      return { worst, dueKey };
+    };
+    const arr = dossiers.filter(d => {
       if (q && ![d.ident, d.client, d.serie, d.apparatus, d.description, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q))) return false;
       if (dueFilter !== 'all') { const last = d.id ? lastByDossier[d.id] : undefined; if (dueStatusByDate(effectiveNextDate(d.extra, last)).code !== dueFilter) return false; }
       return true;
     });
-  }, [dossiers, query, dueFilter, lastByDossier]);
+    arr.sort((a, b) => {
+      const ra = rank(a), rb = rank(b);
+      if (sortBy === 'alert') { // du pire au mieux, puis reprise
+        if (rb.worst !== ra.worst) return rb.worst - ra.worst;
+        return ra.dueKey - rb.dueKey;
+      }
+      // 'due' : reprise à venir (plus en retard / plus tôt d'abord), puis pire condition
+      if (ra.dueKey !== rb.dueKey) return ra.dueKey - rb.dueKey;
+      return rb.worst - ra.worst;
+    });
+    return arr;
+  }, [dossiers, query, dueFilter, sortBy, lastByDossier]);
 
   const selected_d = dossiers.find(d => d.id === selId) || null;
 
@@ -246,7 +266,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -294,7 +314,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   const filterTabs: [string, string, number, string][] = [
@@ -330,12 +350,19 @@ function ListView(p: any) {
 
       {/* Recherche + filtres */}
       <div className="relative"><Search size={14} className="absolute left-2 top-2.5 text-gray-400" /><input className={`${inp} w-full max-w-lg pl-7`} placeholder={tr('Rechercher (N° série, client, identification)…', 'Search (serial no., client, identification)…')} value={query} onChange={e => setQuery(e.target.value)} /></div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {filterTabs.map(([k, lbl, cnt, col]) => (
           <button key={k} onClick={() => setDueFilter(k)} className="rounded-full border px-3 py-1 text-xs font-semibold" style={dueFilter === k ? { background: col, color: '#fff', borderColor: col } : { color: col, borderColor: col }}>
             {lbl} <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span>
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-gray-500">{tr('Trier par', 'Sort by')} :</span>
+          <select className={inp} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="due">{tr('Reprise à venir', 'Upcoming recheck')}</option>
+            <option value="alert">{tr("Niveau d'alerte (pire → mieux)", 'Alert level (worst → best)')}</option>
+          </select>
+        </div>
       </div>
 
       {/* Formulaire nouveau transformateur */}

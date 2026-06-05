@@ -105,6 +105,27 @@ export async function saveAnomalies(id: string, anomalies: Anomaly[]): Promise<{
   const { error } = await supabase.from('dga_dossiers').update({ anomalies }).eq('id', id);
   return error ? { error: error.message } : {};
 }
+
+// ── Documents : documentation technique + rapports d'essais (PDF importé ou hyperlien) ──
+export interface DgaDoc {
+  id: string;
+  category: 'tech' | 'essais';   // documentation technique / rapport d'essais
+  kind: 'file' | 'link';          // PDF importé (data) ou hyperlien (url)
+  name: string;
+  url?: string;                   // si kind=link
+  data?: string;                  // base64 dataURL si kind=file
+  mime?: string;
+  created_at?: string;
+}
+export async function getDocs(id: string): Promise<DgaDoc[]> {
+  const { data, error } = await supabase.from('dga_dossiers').select('docs').eq('id', id).maybeSingle();
+  if (error || !data) return [];
+  return ((data as any).docs as DgaDoc[]) || [];
+}
+export async function saveDocs(id: string, docs: DgaDoc[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ docs }).eq('id', id);
+  return error ? { error: error.message } : {};
+}
 export async function listAllMeasures(tenant: string): Promise<Measure[]> {
   const { data } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).order('sample_date', { ascending: true });
   return (data || []) as Measure[];

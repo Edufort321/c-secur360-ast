@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { getPhotos, savePhotos, getAnomalies, saveAnomalies, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly } from '@/lib/dga/dossiers';
+import { getPhotos, savePhotos, getAnomalies, saveAnomalies, getDocs, saveDocs, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly, type DgaDoc } from '@/lib/dga/dossiers';
 import {
   GAS_FIELDS, COMBUSTIBLE, IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl,
   ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, type Lang,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/dga/catalog';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { AnomalySection } from '@/components/dga/AnomalySection';
+import { DocsSection } from '@/components/dga/DocsSection';
 import { PrintReport } from '@/components/dga/PrintReport';
 
 const CARD = 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800';
@@ -78,8 +79,10 @@ export function TransfoView(props: {
   const [recoDraft, setRecoDraft] = useState(extra.manual_reco || '');
   const [dateDraft, setDateDraft] = useState(extra.next_date_manual || '');
   const [aiBusy, setAiBusy] = useState(false);
+  const [autoTrans, setAutoTrans] = useState(false); // mode traduction auto FR<->EN du texte IA
   const [photos, setPhotos] = useState<{ id: string; data: string; name?: string }[]>([]);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
+  const [docs, setDocs] = useState<DgaDoc[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState<Dossier>(dossier);
@@ -90,9 +93,13 @@ export function TransfoView(props: {
   useEffect(() => {
     setForm(dossier); setDateDraft(extra.next_date_manual || ''); setProjectNo(extra.project_no || '');
     setRecoDraft(extra['manual_reco_' + lang] ?? extra.manual_reco ?? '');
-    if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); } else { setPhotos([]); setAnomalies([]); }
+    if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); getDocs(dossier.id).then(setDocs); } else { setPhotos([]); setAnomalies([]); setDocs([]); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dossier.id]);
+  const updateDocs = (next: DgaDoc[]) => {
+    setDocs(next);
+    if (dossier.id) saveDocs(dossier.id, next).then(r => { if (r.error) setNotice(tr('Documents non sauvegardés (migration 122 « docs » manquante ?) : ', 'Documents not saved (missing migration 122 "docs"?): ') + r.error); });
+  };
   // La reco IA est stockée par langue (manual_reco_fr/en) -> on rafraîchit le texte affiché au changement de langue.
   useEffect(() => {
     const ex = dossier.extra || {};
@@ -183,6 +190,18 @@ export function TransfoView(props: {
   async function delPhoto(id: string) {
     if (!dossier.id || !confirm(tr('Supprimer cette photo ?', 'Delete this photo?'))) return;
     const next = photos.filter(p => p.id !== id); setPhotos(next); await savePhotos(dossier.id, next);
+  }
+
+  // Traduit le texte courant vers l'autre langue et enregistre les deux versions (mode auto).
+  async function translateOther(currentText: string) {
+    const other = lang === 'fr' ? 'en' : 'fr';
+    if (!currentText.trim() || !dossier.id) return;
+    try {
+      const r = await fetch('/api/dga/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: currentText, target: other }) });
+      const j = await r.json();
+      if (r.ok && typeof j.text === 'string') updateExtra({ ['manual_reco_' + lang]: currentText, ['manual_reco_' + other]: j.text, manual_reco: currentText });
+      else if (j.error) setNotice(tr('Traduction impossible : ', 'Translation failed: ') + j.error);
+    } catch (e: any) { setNotice(tr('Traduction impossible : ', 'Translation failed: ') + (e?.message || e)); }
   }
 
   // Analyse IA serveur → reco éditable + suivi ciblé/complet.
@@ -500,17 +519,27 @@ export function TransfoView(props: {
 
             {/* RECOMMANDATION / IA */}
             <section className={CARD}>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className={H2 + ' !mb-0'}>✍️ {tr('Recommandation manuelle', 'Manual recommendation')}</h2>
-                <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} disabled={aiBusy} onClick={runAI}>{aiBusy ? tr('Génération…', 'Generating…') : '✨ ' + tr("Générer avec l'IA", 'Generate with AI')}</button>
+                <div className="flex items-center gap-2">
+                  <label className="flex cursor-pointer items-center gap-1 text-[11px] text-gray-500" title={tr('Traduit automatiquement le texte dans l’autre langue (selon le header)', 'Auto-translate the text into the other language (per header)')}>
+                    <input type="checkbox" className="accent-violet-600" checked={autoTrans} onChange={() => { const v = !autoTrans; setAutoTrans(v); if (v) translateOther(recoDraft); }} />
+                    🌐 {tr('Trad. auto', 'Auto-translate')}
+                  </label>
+                  <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} disabled={aiBusy} onClick={runAI}>{aiBusy ? tr('Génération…', 'Generating…') : '✨ ' + tr("Générer avec l'IA", 'Generate with AI')}</button>
+                </div>
               </div>
-              <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => updateExtra({ ['manual_reco_' + lang]: recoDraft, manual_reco: recoDraft })} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
+              <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => { updateExtra({ ['manual_reco_' + lang]: recoDraft, manual_reco: recoDraft }); if (autoTrans) translateOther(recoDraft); }} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
+              {autoTrans && <p className="mt-1 text-[11px] text-violet-500">🌐 {tr('Traduction auto activée : le texte sera traduit dans l’autre langue à l’enregistrement.', 'Auto-translate on: text will be translated to the other language on save.')}</p>}
             </section>
           </div>
         </div>
 
         {/* RAPPORT D'ANOMALIE (pleine largeur) */}
         <AnomalySection anomalies={anomalies} onChange={updateAnomalies} lang={lang} tr={tr} setNotice={setNotice} />
+
+        {/* DOCUMENTS : documentation technique + rapports d'essais (PDF ou lien) */}
+        <DocsSection docs={docs} onChange={updateDocs} lang={lang} tr={tr} setNotice={setNotice} />
       </div>
 
       {/* MODALE ÉDITION DES INFOS (commande / équipement / échantillonnage + n° projet) */}
