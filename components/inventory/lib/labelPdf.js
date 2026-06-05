@@ -92,28 +92,41 @@ export async function generateLabelsPdf(labels, opts = {}) {
     const y = fmt.marginTop + row * fmt.pitchY;
     const pad = 6;
     const isSmall = fmt.labelH <= 1.05 * IN;     // 1 po de haut -> compact
-    const qrSize = Math.min(fmt.labelH - 2 * pad, isSmall ? fmt.labelH - 2 * pad : fmt.labelW * 0.42);
-    // QR à gauche
-    const qrImg = await qrFor(label.url);
-    if (qrImg) doc.addImage(qrImg, 'PNG', x + pad, y + pad, qrSize, qrSize);
+    // Cadre « carte » (comme la carte QR Équipement) : léger rectangle arrondi autour de l'étiquette.
+    doc.setDrawColor(203); doc.setLineWidth(0.7);
+    doc.roundedRect(x + 1.5, y + 1.5, fmt.labelW - 3, fmt.labelH - 3, 6, 6, 'S');
 
-    const tx = x + pad + qrSize + 6;
+    const qrBox = Math.min(fmt.labelH - 2 * pad, isSmall ? fmt.labelH - 2 * pad : fmt.labelW * 0.42);
+    const qrInner = 4; // marge intérieure de la boîte QR
+    const qrSize = qrBox - 2 * qrInner;
+    // Boîte blanche bordée autour du QR (style Équipement)
+    doc.setDrawColor(180); doc.setLineWidth(0.6);
+    doc.roundedRect(x + pad, y + pad, qrBox, qrBox, 3, 3, 'S');
+    const qrImg = await qrFor(label.url);
+    if (qrImg) doc.addImage(qrImg, 'PNG', x + pad + qrInner, y + pad + qrInner, qrSize, qrSize);
+
+    const tx = x + pad + qrBox + 8;
     const tw = x + fmt.labelW - pad - tx;
-    let ty = y + pad + 9;
+    let ty = y + pad + 10;
     // Logo en haut a droite (si place et grande etiquette)
     if (logo && !isSmall) {
       try { doc.addImage(logo, 'PNG', x + fmt.labelW - pad - 46, y + pad, 46, 14); } catch { /* ignore */ }
     }
-    doc.setTextColor(20);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(isSmall ? 8 : 11);
-    doc.text(truncate(doc, label.name, tw), tx, ty); ty += isSmall ? 9 : 13;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(isSmall ? 7 : 9); doc.setTextColor(80);
-    if (label.code) { doc.text(truncate(doc, 'Code: ' + label.code, tw), tx, ty); ty += isSmall ? 8 : 11; }
+    doc.setTextColor(17, 24, 39);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(isSmall ? 8.5 : 12);
+    doc.text(truncate(doc, label.name, tw), tx, ty); ty += isSmall ? 9.5 : 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(isSmall ? 7 : 9); doc.setTextColor(107, 114, 128);
+    if (label.code) { doc.text(truncate(doc, 'Code : ' + label.code, tw), tx, ty); ty += isSmall ? 8.5 : 12; }
+    if (label.location) { doc.text(truncate(doc, 'Emplacement : ' + label.location, tw), tx, ty); ty += isSmall ? 8.5 : 12; }
     const mm = [];
     if (label.min != null && label.min !== '') mm.push('Min ' + label.min);
     if (label.max != null && label.max !== '') mm.push('Max ' + label.max);
-    if (mm.length) { doc.text(truncate(doc, mm.join('  ·  '), tw), tx, ty); ty += isSmall ? 8 : 11; }
-    if (label.location) { doc.text(truncate(doc, '📍 ' + label.location, tw), tx, ty); ty += isSmall ? 8 : 11; }
+    if (mm.length) {
+      // Pastille min/max façon badge
+      doc.setTextColor(37, 99, 235); doc.setFont('helvetica', 'bold');
+      doc.text(truncate(doc, mm.join('   ·   '), tw), tx, ty); ty += isSmall ? 8.5 : 12;
+      doc.setFont('helvetica', 'normal');
+    }
   };
 
   while (i < labels.length) {

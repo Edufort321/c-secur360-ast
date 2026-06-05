@@ -346,6 +346,7 @@ const AddItemModalComponent = React.memo(({
   setAddItemMode,
   newItemData,
   onFieldChange,
+  onLocationFieldChange,
   categories,
   departments,
   storageUnits,
@@ -575,14 +576,7 @@ const AddItemModalComponent = React.memo(({
                                 type="text"
                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900"
                                 value={locationData?.customCode || ''}
-                                onChange={(e) => {
-                                  const currentLocations = newItemData.locations || [];
-                                  onFieldChange('locations', currentLocations.map(loc =>
-                                    loc.department === dept.name
-                                      ? { ...loc, customCode: e.target.value }
-                                      : loc
-                                  ));
-                                }}
+                                onChange={(e) => onLocationFieldChange(dept.name, 'customCode', e.target.value)}
                                 placeholder={`${newItemData.code || 'EPI-001'}-${dept.code}`}
                               />
                             </div>
@@ -594,14 +588,7 @@ const AddItemModalComponent = React.memo(({
                                 department={dept}
                                 storageUnits={storageUnits}
                                 value={locationData?.location || ''}
-                                onChange={(newLocation) => {
-                                  const currentLocations = newItemData.locations || [];
-                                  onFieldChange('locations', currentLocations.map(loc =>
-                                    loc.department === dept.name
-                                      ? { ...loc, location: newLocation }
-                                      : loc
-                                  ));
-                                }}
+                                onChange={(newLocation) => onLocationFieldChange(dept.name, 'location', newLocation)}
                                 onDepartmentUpdate={(updatedDept) => {
                                   // Cette fonction sera appelée pour mettre à jour les compteurs
                                   updateDepartment(dept.id, updatedDept);
@@ -619,14 +606,7 @@ const AddItemModalComponent = React.memo(({
                                 value={locationData?.quantity === 0 ? '' : (locationData?.quantity || '')}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  if (val === '' || /^\d+$/.test(val)) {
-                                    const currentLocations = newItemData.locations || [];
-                                    onFieldChange('locations', currentLocations.map(loc =>
-                                      loc.department === dept.name
-                                        ? { ...loc, quantity: val === '' ? 0 : parseInt(val) }
-                                        : loc
-                                    ));
-                                  }
+                                  if (val === '' || /^\d+$/.test(val)) onLocationFieldChange(dept.name, 'quantity', val === '' ? 0 : parseInt(val));
                                 }}
                                 placeholder="0"
                               />
@@ -645,14 +625,7 @@ const AddItemModalComponent = React.memo(({
                                     value={locationData?.minQuantity === 0 ? '' : (locationData?.minQuantity || '')}
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      if (val === '' || /^\d+$/.test(val)) {
-                                        const currentLocations = newItemData.locations || [];
-                                        onFieldChange('locations', currentLocations.map(loc =>
-                                          loc.department === dept.name
-                                            ? { ...loc, minQuantity: val === '' ? 0 : parseInt(val) }
-                                            : loc
-                                        ));
-                                      }
+                                      if (val === '' || /^\d+$/.test(val)) onLocationFieldChange(dept.name, 'minQuantity', val === '' ? 0 : parseInt(val));
                                     }}
                                     placeholder="0"
                                   />
@@ -668,14 +641,7 @@ const AddItemModalComponent = React.memo(({
                                     value={locationData?.maxQuantity === 0 ? '' : (locationData?.maxQuantity || '')}
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      if (val === '' || /^\d+$/.test(val)) {
-                                        const currentLocations = newItemData.locations || [];
-                                        onFieldChange('locations', currentLocations.map(loc =>
-                                          loc.department === dept.name
-                                            ? { ...loc, maxQuantity: val === '' ? 0 : parseInt(val) }
-                                            : loc
-                                        ));
-                                      }
+                                      if (val === '' || /^\d+$/.test(val)) onLocationFieldChange(dept.name, 'maxQuantity', val === '' ? 0 : parseInt(val));
                                     }}
                                     placeholder="100"
                                   />
@@ -1378,7 +1344,7 @@ const AddItemModalComponent = React.memo(({
 });
 
 function AppContent() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { currentUser, isAuthenticated, isAdmin, login, logout } = useAuth();
 
   // Hook de synchronisation Supabase - DOIT être appelé avant tout return
@@ -1398,6 +1364,9 @@ function AppContent() {
   const tenantId = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
   const initialLoadDone = useRef(false);   // n'enregistre PAS dans le nuage tant que le chargement initial n'est pas fini
   const cloudSaveTimer = useRef(null);
+  // Verrou d'édition : id de l'article en cours d'édition (ou '__new__') tant que la modale est ouverte.
+  // Empêche le temps réel d'écraser l'article édité et l'effet de reset du formulaire (bug « les champs sautent »).
+  const editingLockRef = useRef(null);
 
   // États principaux - DOIVENT être appelés avant tout return
   const [view, setView] = useState('dashboard');
@@ -1531,6 +1500,15 @@ function AppContent() {
   // Handler pour les changements dans le formulaire d'ajout
   const handleNewItemChange = useCallback((field, value) => {
     setNewItemData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Mise à jour d'un champ d'un emplacement (par département) de façon FONCTIONNELLE (depuis prev),
+  // pour éviter toute course/perte de saisie sur Quantité/Min/Max/Code/Emplacement.
+  const handleLocationFieldChange = useCallback((deptName, field, value) => {
+    setNewItemData(prev => ({
+      ...prev,
+      locations: (prev.locations || []).map(loc => (loc.department === deptName ? { ...loc, [field]: value } : loc)),
+    }));
   }, []);
 
   // Gestion des photos
@@ -1734,6 +1712,10 @@ function AppContent() {
           }
           return currentItems;
         } else if (type === 'UPDATE') {
+          // Ne pas écraser l'article que l'utilisateur est en train d'éditer (la modale gère sa propre sauvegarde).
+          if (editingLockRef.current && item.id === editingLockRef.current) {
+            return currentItems;
+          }
           if (index !== -1) {
             console.log('✅ Item mis à jour:', item.name);
             const updated = [...currentItems];
@@ -1826,7 +1808,14 @@ function AppContent() {
     };
   }, [isAuthenticated, subscribeToItems, subscribeToDepartments, subscribeToCategories]);
 
-  // Charger les données de l'article en cours d'édition
+  // Verrou pendant que la modale d'ajout/édition est ouverte (anti-écrasement temps réel/reset).
+  useEffect(() => {
+    editingLockRef.current = showItemForm ? (editingItem?.id || '__new__') : null;
+  }, [showItemForm, editingItem?.id]);
+
+  // Charger les données de l'article en cours d'édition.
+  // Dépend UNIQUEMENT de editingItem?.id : ne PAS se relancer si baseEbitda/targetEbitda ou
+  // l'identité de l'objet editingItem changent pendant la saisie (sinon le formulaire se réinitialise).
   useEffect(() => {
     if (editingItem) {
       setNewItemData({
@@ -1862,7 +1851,8 @@ function AppContent() {
         storageLocation: editingItem.storageLocation || null
       });
     }
-  }, [editingItem, baseEbitda, targetEbitda]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingItem?.id]);
 
   // Mettre à jour dynamiquement la couleur de la barre d'état PWA
   useEffect(() => {
@@ -2937,11 +2927,22 @@ function AppContent() {
       html5QrcodeRef.current = html5QrCode;
     }, [items, t]);
 
-    // Démarrer le scan
+    // Démarrer le scan — appelé DANS le gestionnaire de tap (geste utilisateur requis par iOS).
+    // Démarrage SYNCHRONE (pas de setTimeout) pour rester dans le contexte du geste, sinon la
+    // caméra est bloquée sur cellulaire.
     const startScanning = () => {
-      setIsScanning(true);
       setScannerError('');
-      setTimeout(() => initScanner(), 100);
+      setIsScanning(true);
+      try {
+        initScanner();
+      } catch (e) {
+        setIsScanning(false);
+        setScannerError(
+          (e && e.name === 'NotAllowedError')
+            ? t('scanner.cameraDenied') || "Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur, puis réessaie."
+            : (t('scanner.cameraError') || "Impossible d'ouvrir la caméra. Vérifie les permissions ou utilise la recherche manuelle ci-dessous.")
+        );
+      }
     };
 
     // Arrêter le scan
@@ -2960,18 +2961,10 @@ function AppContent() {
       }
     }, [globalInventoryMode.active]);
 
-    // Démarrer automatiquement le scanner quand on arrive sur la page
+    // PAS de démarrage automatique : iOS/Safari exige un GESTE utilisateur (tap) pour accéder à la
+    // caméra. L'utilisateur démarre via le bouton « Démarrer le scan ». On nettoie au démontage.
     useEffect(() => {
-      // Attendre un peu pour que le DOM soit prêt
-      const timer = setTimeout(() => {
-        startScanning();
-      }, 300);
-
-      // Cleanup: arrêter le scanner quand on quitte la page
-      return () => {
-        clearTimeout(timer);
-        stopScanning();
-      };
+      return () => { stopScanning(); };
     }, []); // Seulement au mount
 
     // Recherche manuelle
@@ -7448,6 +7441,7 @@ function AppContent() {
         setAddItemMode={setAddItemMode}
         newItemData={newItemData}
         onFieldChange={handleNewItemChange}
+        onLocationFieldChange={handleLocationFieldChange}
         categories={categories}
         departments={departments}
         storageUnits={storageUnits}
@@ -7612,26 +7606,53 @@ function AppContent() {
                 </div>
               </div>
 
-              {/* Code QR */}
-              <div className="flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  {selectedItemForView.name}: {selectedItemForView.code}
-                </h3>
-                <QRCodeSVG
-                  value={selectedItemForView.code}
-                  size={256}
-                  level="Q"
-                  includeMargin={true}
-                  marginSize={4}
-                  imageSettings={{
-                    excavate: true
-                  }}
-                  className="bg-white p-6 rounded-lg shadow-lg"
-                />
-                <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
-                  {t('actions.scanToView')}
-                </p>
-              </div>
+              {/* Carte Code QR (style fiche Équipement) — QR vers la page PUBLIQUE (+ succursale) */}
+              {(() => {
+                const qrUrl = getScanUrl(selectedItemForView.id, selectedItemForView.code, selectedItemForView.departmentCode);
+                return (
+                  <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-teal-700 dark:text-teal-400">
+                      <QrCode size={15} /> {language === 'fr' ? "Code QR de l'article" : 'Item QR code'}
+                    </div>
+                    <p className="mb-3 max-w-xs text-center text-xs text-gray-500">
+                      {language === 'fr'
+                        ? "Imprimez ce code et collez-le sur l'article. Au scan (sans app), il ouvre la fiche publique (prix + quantité disponible)."
+                        : 'Print and stick this code on the item. Scanning (no app) opens the public sheet (price + available stock).'}
+                    </p>
+                    <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm">
+                      <QRCodeSVG id="inv-qr-svg" value={qrUrl} size={200} level="M" includeMargin={false} />
+                    </div>
+                    <div className="mt-3 text-center">
+                      <div className="text-base font-bold text-gray-900 dark:text-white">{selectedItemForView.name}</div>
+                      <div className="text-xs text-gray-500">Code : {selectedItemForView.code}</div>
+                      {selectedItemForView.location && <div className="text-xs text-gray-500">📍 {selectedItemForView.location}</div>}
+                      {(selectedItemForView.minQuantity != null || selectedItemForView.maxQuantity != null) && (
+                        <div className="mt-0.5 text-xs font-semibold text-blue-600">Min {selectedItemForView.minQuantity ?? '—'} · Max {selectedItemForView.maxQuantity ?? '—'}</div>
+                      )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => { try { navigator.clipboard.writeText(qrUrl); } catch { /* ignore */ } }}
+                        className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                        📋 {language === 'fr' ? 'Copier le lien' : 'Copy link'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const svg = document.getElementById('inv-qr-svg'); if (!svg) return;
+                          const xml = new XMLSerializer().serializeToString(svg);
+                          const blob = new Blob([xml], { type: 'image/svg+xml' });
+                          const a = document.createElement('a');
+                          a.href = URL.createObjectURL(blob);
+                          a.download = `qr-${selectedItemForView.code || selectedItemForView.id}.svg`;
+                          a.click(); URL.revokeObjectURL(a.href);
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                        ⬇ {language === 'fr' ? 'Télécharger' : 'Download'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="mt-6 flex gap-3 justify-end print:hidden">
