@@ -346,10 +346,9 @@ export function TransfoView(props: {
           </section>
         )}
 
-        {/* GRILLE 2 COLONNES */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* ── COLONNE GAUCHE ── */}
-          <div className="min-w-0 space-y-4">
+        {/* CARTES ANALYTIQUES — flux multi-colonnes équilibré : remplit l'espace sur desktop
+            (1 col mobile · 2 col ≥lg · 3 col ≥xl), au lieu de 2 colonnes fixes déséquilibrées. */}
+        <div className="gap-4 [column-fill:balance] columns-1 lg:columns-2 xl:columns-3 [&>section]:mb-4 [&>section]:break-inside-avoid">
             {/* TABLEAU IEEE (Δ% + condition) */}
             <section className={CARD}>
               <div className="flex items-center justify-between">
@@ -405,10 +404,7 @@ export function TransfoView(props: {
                   </tbody>
                 </Tbl>
             </section>
-          </div>
 
-          {/* ── COLONNE DROITE ── */}
-          <div className="min-w-0 space-y-4">
             <section className={CARD}>
               <h2 className={H2}>{tr('Triangle de Duval 1', 'Duval Triangle 1')}</h2>
               <DuvalTriangle points={data.map(m => ({ ch4: +(m.ch4 || 0), c2h2: +(m.c2h2 || 0), c2h4: +(m.c2h4 || 0), date: m.sample_date || undefined }))} selIdx={selIdx} lang={lang} />
@@ -548,7 +544,6 @@ export function TransfoView(props: {
               <textarea className={INP + ' mt-2'} rows={5} value={recoDraft} onChange={e => setRecoDraft(e.target.value)} onBlur={() => { updateExtra({ ['manual_reco_' + lang]: recoDraft, manual_reco: recoDraft }); if (autoTrans) translateOther(recoDraft); }} placeholder={tr('Ajoute ta recommandation ici…', 'Add your recommendation here…')} />
               {autoTrans && <p className="mt-1 text-[11px] text-violet-500">🌐 {tr('Traduction auto activée : le texte sera traduit dans l’autre langue à l’enregistrement.', 'Auto-translate on: text will be translated to the other language on save.')}</p>}
             </section>
-          </div>
         </div>
 
         {/* INSPECTION DE ROUTINE (au-dessus des anomalies) */}
