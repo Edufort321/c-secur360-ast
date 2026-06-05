@@ -308,27 +308,27 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900 bg-opacity-75" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-y-auto bg-gray-900 bg-opacity-75 sm:p-4" onClick={onClose}>
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col m-4"
+        className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-          <div className="bg-white dark:bg-gray-800 px-6 pt-5 pb-4 flex-shrink-0">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+          <div className="bg-white dark:bg-gray-800 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 flex-shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{title}</h3>
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
           </div>
-          <div className="overflow-y-auto flex-1 px-6 pb-4">
+          <div className="overflow-y-auto flex-1 px-4 sm:px-6 pb-4">
             {children}
           </div>
           {footer && (
-            <div className="bg-gray-50 dark:bg-gray-900 px-6 py-4 flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-end gap-2 sm:gap-3 flex-shrink-0">
               {footer}
             </div>
           )}
@@ -7316,7 +7316,7 @@ function AppContent() {
       <div className="flex">
         <Sidebar />
 
-        <main className="flex-1 overflow-x-hidden" key={view}>
+        <main className="flex-1 overflow-x-hidden pb-20 lg:pb-0" key={view}>
           {view === 'dashboard' && <DashboardView
             key="dashboard-view"
             t={t}
@@ -7390,6 +7390,31 @@ function AppContent() {
           {view === 'admin' && <AdminView />}
         </main>
       </div>
+
+      {/* Navigation mobile en bas (accès au pouce) — masquée sur desktop (lg+) */}
+      <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-200 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {[
+          { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
+          { id: 'articles', icon: Package, label: t('nav.articles') },
+          { id: 'scanner', icon: Camera, label: t('nav.scanner') },
+          { id: 'movements', icon: TrendingUp, label: t('nav.movements') },
+          { id: 'reports', icon: FileText, label: t('nav.reports') },
+          { id: 'admin', icon: Settings, label: t('nav.administration') },
+        ].map(it => {
+          const Icon = it.icon;
+          const active = view === it.id;
+          return (
+            <button
+              key={it.id}
+              onClick={() => { setView(it.id); setSidebarCollapsed(true); }}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${active ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}
+            >
+              <Icon size={20} className={active ? '' : 'opacity-80'} />
+              <span className="max-w-full truncate px-0.5">{it.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       <LoginModal />
       <PrintModal />
