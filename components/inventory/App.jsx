@@ -94,13 +94,17 @@ import { getScanUrl } from './config/app';
 import { generateLabelsPdf, LABEL_FORMATS } from './lib/labelPdf';
 
 // Hooks
-import { useSupabaseSync } from './hooks/useSupabaseSync';
 import { supabase } from './lib/supabase';
 
 // Catalogue materiel standardise (partage avec Soumissions/Admin)
 import { getCatalogues } from '@/lib/soumissions';
 
 // Styles
+
+// Écriture localStorage sûre (ignore les erreurs : mode privé Safari / quota dépassé).
+function saveLS(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+}
 
 // ============== COMPOSANTS UI RÉUTILISABLES ==============
 
@@ -1347,17 +1351,9 @@ function AppContent() {
   const { t, language } = useLanguage();
   const { currentUser, isAuthenticated, isAdmin, login, logout } = useAuth();
 
-  // Hook de synchronisation Supabase - DOIT être appelé avant tout return
-  const {
-    loadFromSupabase,
-    syncItemToSupabase,
-    syncDepartmentToSupabase,
-    syncCategoryToSupabase,
-    syncMovementToSupabase,
-    subscribeToItems,
-    subscribeToDepartments,
-    subscribeToCategories
-  } = useSupabaseSync();
+  // Source unique de vérité = snapshot inventory_state (voir effets de chargement/sauvegarde ci-dessous).
+  // L'ancien hook useSupabaseSync (écritures normalisées + realtime) a été retiré : il dupliquait la
+  // donnée dans des tables jamais relues et corrompait l'état via le realtime.
 
   // #55 — Persistance par tenant via un instantané JSON (table inventory_state).
   // Le tenant provient du 1er segment d'URL (cohérent avec importFromCatalogue).
@@ -1371,6 +1367,7 @@ function AppContent() {
   // États principaux - DOIVENT être appelés avant tout return
   const [view, setView] = useState('dashboard');
   const [navMenuOpen, setNavMenuOpen] = useState(false); // Menu de navigation mobile (déroulant, façon autres modules)
+  const [saveError, setSaveError] = useState(null); // Erreur de sauvegarde cloud remontée à l'écran (fini les échecs silencieux)
   const [companyLogo, setCompanyLogo] = useState('/c-secur360-logo.png'); // Logo tenant (repli marque) pour la carte QR
   useEffect(() => {
     let active = true;
@@ -1673,9 +1670,11 @@ function AppContent() {
           data: { items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'tenant_id' });
-        if (error) console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message);
+        if (error) { console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
+        else setSaveError(null);
       } catch (e) {
         console.warn('⚠️ Sauvegarde inventory_state échouée:', e?.message || e);
+        setSaveError(e?.message || String(e));
       }
     }, 800);
     return () => { if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current); };
@@ -1801,19 +1800,13 @@ function AppContent() {
       });
     };
 
-    // S'abonner aux changements
-    const unsubscribeItems = subscribeToItems(handleItemChange);
-    const unsubscribeDepartments = subscribeToDepartments(handleDepartmentChange);
-    const unsubscribeCategories = subscribeToCategories(handleCategoryChange);
-
-    // Nettoyage: se désabonner lors du démontage
-    return () => {
-      console.log('🔕 Désabonnement des changements temps réel');
-      unsubscribeItems();
-      unsubscribeDepartments();
-      unsubscribeCategories();
-    };
-  }, [isAuthenticated, subscribeToItems, subscribeToDepartments, subscribeToCategories]);
+    // Realtime DÉSACTIVÉ sur les tables normalisées (items/departments/categories) : ces lignes
+    // (snake_case, sans filtre tenant) étaient fusionnées dans le modèle local camelCase, corrompant
+    // l'état avant réécriture dans le snapshot. La source unique est désormais inventory_state ; la
+    // synchro multi-appareil se fait au rechargement. Handlers conservés mais inactifs (réf. void pour le lint).
+    void handleItemChange; void handleDepartmentChange; void handleCategoryChange;
+    return undefined;
+  }, [isAuthenticated]);
 
   // Verrou pendant que la modale d'ajout/édition est ouverte (anti-écrasement temps réel/reset).
   useEffect(() => {
@@ -1988,7 +1981,7 @@ function AppContent() {
       createdAt: new Date().toISOString(),
       createdBy: currentUser?.username || 'system'
     };
-    setItems([...items, newItem]);
+    setItems(prev => [...prev, newItem]);
     addMovement({
       type: 'entry',
       itemId: newItem.id,
@@ -2046,99 +2039,50 @@ function AppContent() {
     }
   };
 
+  // MAJ fonctionnelle (anti lost-update : on lit `prev`, pas l'`items` capturé). Source unique = snapshot.
   const updateItem = (itemId, updates) => {
-    const updatedItem = {
-      ...items.find(i => i.id === itemId),
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentUser?.username
-    };
-
-    setItems(items.map(item =>
-      item.id === itemId ? updatedItem : item
+    setItems(prev => prev.map(item =>
+      item.id === itemId
+        ? { ...item, ...updates, updatedAt: new Date().toISOString(), updatedBy: currentUser?.username }
+        : item
     ));
-
-    // Synchroniser avec Supabase
-    syncItemToSupabase(updatedItem, 'update').catch(err => {
-      console.error('Erreur synchronisation update:', err);
-    });
   };
 
   const deleteItem = (itemId) => {
     if (window.confirm(t('messages.confirm.delete'))) {
-      const itemToDelete = items.find(i => i.id === itemId);
-
-      setItems(items.filter(item => item.id !== itemId));
-
-      // Synchroniser avec Supabase
-      if (itemToDelete) {
-        syncItemToSupabase(itemToDelete, 'delete').catch(err => {
-          console.error('Erreur synchronisation delete:', err);
-        });
-      }
+      setItems(prev => prev.filter(item => item.id !== itemId));
     }
   };
 
-  // Gestion des départements
+  // Gestion des départements (MAJ fonctionnelles ; localStorage calculé depuis prev ; source unique = snapshot)
   const addDepartment = (deptData) => {
-    const newDept = {
-      id: Date.now().toString(),
-      ...deptData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    setDepartments([...departments, newDept]);
-    localStorage.setItem('c-secur360-departments', JSON.stringify([...departments, newDept]));
-    syncDepartmentToSupabase(newDept, 'create').catch(err => console.error('Erreur sync department:', err));
+    const newDept = { id: Date.now().toString(), ...deptData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    setDepartments(prev => { const next = [...prev, newDept]; saveLS('c-secur360-departments', next); return next; });
   };
 
   const updateDepartment = (deptId, updates) => {
-    const updatedDept = { ...departments.find(d => d.id === deptId), ...updates, updated_at: new Date().toISOString() };
-    setDepartments(departments.map(dept => dept.id === deptId ? updatedDept : dept));
-    localStorage.setItem('c-secur360-departments', JSON.stringify(departments.map(dept => dept.id === deptId ? updatedDept : dept)));
-    syncDepartmentToSupabase(updatedDept, 'update').catch(err => console.error('Erreur sync department:', err));
+    setDepartments(prev => { const next = prev.map(dept => dept.id === deptId ? { ...dept, ...updates, updated_at: new Date().toISOString() } : dept); saveLS('c-secur360-departments', next); return next; });
   };
 
   const deleteDepartment = (deptId) => {
     if (window.confirm(t('messages.confirm.delete'))) {
-      const deptToDelete = departments.find(d => d.id === deptId);
-      setDepartments(departments.filter(dept => dept.id !== deptId));
-      localStorage.setItem('c-secur360-departments', JSON.stringify(departments.filter(dept => dept.id !== deptId)));
-      if (deptToDelete) {
-        syncDepartmentToSupabase(deptToDelete, 'delete').catch(err => console.error('Erreur sync department:', err));
-      }
+      setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS('c-secur360-departments', next); return next; });
     }
   };
 
   // Gestion des catégories
   const addCategory = (catData) => {
-    const newCat = {
-      id: Date.now().toString(),
-      ...catData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    setCategories([...categories, newCat]);
-    localStorage.setItem('c-secur360-categories', JSON.stringify([...categories, newCat]));
-    syncCategoryToSupabase(newCat, 'create').catch(err => console.error('Erreur sync category:', err));
+    const newCat = { id: Date.now().toString(), ...catData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    setCategories(prev => { const next = [...prev, newCat]; saveLS('c-secur360-categories', next); return next; });
   };
 
   const updateCategory = (catId, updates) => {
-    const updatedCat = { ...categories.find(c => c.id === catId), ...updates, updated_at: new Date().toISOString() };
-    const updatedCategories = categories.map(cat => cat.id === catId ? updatedCat : cat);
-    setCategories(updatedCategories);
-    localStorage.setItem('c-secur360-categories', JSON.stringify(updatedCategories));
-    syncCategoryToSupabase(updatedCat, 'update').catch(err => console.error('Erreur sync category:', err));
+    setCategories(prev => { const next = prev.map(cat => cat.id === catId ? { ...cat, ...updates, updated_at: new Date().toISOString() } : cat); saveLS('c-secur360-categories', next); return next; });
   };
 
   const deleteCategory = (catId) => {
     if (window.confirm(t('messages.confirm.delete'))) {
-      const catToDelete = categories.find(c => c.id === catId);
-      setCategories(categories.filter(cat => cat.id !== catId));
-      localStorage.setItem('c-secur360-categories', JSON.stringify(categories.filter(cat => cat.id !== catId)));
-      if (catToDelete) {
-        syncCategoryToSupabase(catToDelete, 'delete').catch(err => console.error('Erreur sync category:', err));
-      }
+      setCategories(prev => { const next = prev.filter(cat => cat.id !== catId); saveLS('c-secur360-categories', next); return next; });
     }
   };
 
@@ -2330,12 +2274,12 @@ function AppContent() {
 
   const addMovement = (movementData) => {
     const newMovement = {
-      id: Date.now().toString(),
+      id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), // évite la collision d'id en scans rapprochés
       ...movementData,
       timestamp: new Date().toISOString(),
       user: currentUser?.username || 'system'
     };
-    setMovements([newMovement, ...movements]);
+    setMovements(prev => [newMovement, ...prev]); // fonctionnel : ne perd pas un mouvement concurrent
   };
 
   // ============== FONCTIONS IMPORT/EXPORT EXCEL ==============
@@ -6148,11 +6092,6 @@ function AppContent() {
 
     addItem(newItem);
 
-    // Synchroniser avec Supabase
-    syncItemToSupabase(newItem, 'create').catch(err => {
-      console.error('Erreur synchronisation Supabase:', err);
-    });
-
     setShowItemForm(false);
     setNewItemData({
       code: '',
@@ -7312,6 +7251,15 @@ function AppContent() {
       {/* Navigation du module alignée sur les autres modules (PortalHeader unifié au-dessus) :
           barre d'onglets en pilules sur desktop + menu déroulant sur mobile (plus de sidebar verticale). */}
       <div className="mx-auto max-w-7xl px-4 py-4">
+        {saveError && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+            <span>⚠️</span>
+            <div className="flex-1">
+              <b>{language === 'fr' ? 'Sauvegarde cloud échouée' : 'Cloud save failed'}</b> — {saveError}. {language === 'fr' ? 'Vos modifications ne sont pas encore enregistrées en ligne (réessai automatique à la prochaine modification).' : 'Your changes are not yet saved online (auto-retry on next change).'}
+            </div>
+            <button onClick={() => setSaveError(null)} className="text-red-500 hover:text-red-700">✕</button>
+          </div>
+        )}
         {(() => {
           const NAV_ITEMS = [
             { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), badge: null },
