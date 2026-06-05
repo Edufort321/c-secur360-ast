@@ -72,7 +72,7 @@ export default function DgaPage() {
   useEffect(() => { if (tenant) getSitesTree(tenant).then(setSitesTree); }, [tenant]);
   useEffect(() => {
     if (access !== 'enabled') return;
-    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url, company_name, name').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); if (data?.company_name || data?.name) setTenantName(data.company_name || data.name); } catch { /* défaut */ } })();
+    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); if (data?.legal_name) setTenantName(data.legal_name); } catch { /* défaut */ } })();
     const ch = supabase.channel('dga-' + tenant)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_dossiers', filter: `tenant_id=eq.${tenant}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dga_measures', filter: `tenant_id=eq.${tenant}` }, () => { reload(); if (selId) listMeasures(tenant, selId).then(setMeasures); })

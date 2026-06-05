@@ -35,9 +35,9 @@ export default function PublicScanPage() {
     (async () => {
       // Logo + nom du tenant (best-effort).
       try {
-        const { data: cs } = await supabase.from('company_settings').select('logo_url, company_name, name').eq('tenant_id', tenant).maybeSingle();
+        const { data: cs } = await supabase.from('company_settings').select('logo_url, legal_name').eq('tenant_id', tenant).maybeSingle();
         if (cs?.logo_url) setLogo(cs.logo_url);
-        if (cs?.company_name || cs?.name) setTenantName(cs.company_name || cs.name);
+        if (cs?.legal_name) setTenantName(cs.legal_name);
       } catch { /* défaut */ }
       // Article depuis l'instantané inventaire.
       try {
