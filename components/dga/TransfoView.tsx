@@ -10,6 +10,7 @@
 // ============================================================================
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -67,7 +68,6 @@ export function TransfoView(props: {
   setNotice: (s: string | null) => void;
 }) {
   const { tenant, lang, tr, dossier, measures, logoUrl, onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
-  void tenant;
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
@@ -171,6 +171,23 @@ export function TransfoView(props: {
   const gAna = globalAnalysis(cur as any, oilEval, furan, worst, lang);
   const rogers = rogersRatios(cur);
   const pcbVerdict = pcbStatus(latestPcb(data), lang);
+
+  // QR public du transformateur (lecture seule hors connexion ; édition si connecté).
+  const publicUrl = mounted && dossier.id ? `${window.location.origin}/scan/dga/${tenant}/${dossier.id}` : '';
+  const esc = (s: string) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+  const copyQR = () => { if (publicUrl) navigator.clipboard?.writeText(publicUrl).then(() => setNotice(tr('Lien copié.', 'Link copied.')), () => {}); };
+  const printQR = () => {
+    const svg = document.getElementById('dga-qr-svg');
+    if (!svg) return;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const sub = [dossier.client, dossier.serie ? 'SN ' + dossier.serie : '', dossier.kv ? dossier.kv + ' kV' : ''].filter(Boolean).join(' · ');
+    const pcbBadge = pcbVerdict.code !== 'unknown'
+      ? `<div style="display:inline-block;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:13px;margin-top:12px;background:${pcbVerdict.color}">BPC : ${esc(pcbVerdict.label)}${pcbVerdict.value != null ? ' (' + pcbVerdict.value + ' ppm)' : ''}</div>` : '';
+    const w = window.open('', '_blank', 'width=420,height=600');
+    if (!w) { setNotice(tr('Autorise les fenêtres pop-up pour imprimer.', 'Allow pop-ups to print.')); return; }
+    w.document.write(`<html><head><title>QR ${esc(dossier.ident)}</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:28px;margin:0}.name{font-size:19px;font-weight:800;margin:6px 0 2px}.sub{font-size:12px;color:#555;margin-bottom:14px}.hint{font-size:11px;color:#888;margin-top:14px}</style></head><body><div class="name">${esc(dossier.ident)}</div><div class="sub">${esc(sub)}</div>${xml}${pcbBadge}<div class="hint">${esc(tr('Scannez pour la fiche du transformateur', 'Scan for the transformer sheet'))}</div></body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 350);
+  };
 
   const lastMeasure = data[data.length - 1];
   const autoNext = autoNextDate(lastMeasure.sample_date, worstCondition(lastMeasure));
@@ -527,6 +544,22 @@ export function TransfoView(props: {
                     <button className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/60 text-xs text-white" onClick={() => delPhoto(ph.id)}>×</button>
                   </div>
                 ))}</div>}
+            </section>
+
+            {/* QR PUBLIC DU TRANSFORMATEUR */}
+            <section className={CARD}>
+              <h2 className={H2}>🔳 {tr('QR public du transformateur', 'Transformer public QR')}</h2>
+              {dossier.id ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="rounded-xl bg-white p-3"><QRCodeSVG id="dga-qr-svg" value={publicUrl || ' '} size={148} level="M" /></div>
+                  <div className="break-all text-center text-[11px] text-gray-500">{publicUrl}</div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button className={BTN_GHOST + ' !px-3 !py-1.5 text-xs'} onClick={copyQR}>📋 {tr('Copier le lien', 'Copy link')}</button>
+                    <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} onClick={printQR}>🖨 {tr("Imprimer l'étiquette", 'Print label')}</button>
+                  </div>
+                  <p className="text-center text-[11px] text-gray-400">{tr('Scanné sans compte : fiche en lecture seule (BPC en premier). Connecté : édition.', 'Scanned without an account: read-only sheet (PCB first). Logged in: editing.')}</p>
+                </div>
+              ) : <p className="text-xs text-gray-400">{tr('Enregistre le transformateur pour générer le QR.', 'Save the transformer to generate the QR.')}</p>}
             </section>
 
             {/* RECOMMANDATION / IA */}
