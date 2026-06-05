@@ -2790,10 +2790,18 @@ function AppContent() {
     const [scannerUser, setScannerUser] = useState(currentUser?.username || ''); // Utilisateur qui scanne
     const scannerRef = useRef(null);
     const html5QrcodeRef = useRef(null);
+    const handledRef = useRef(false); // anti double-décodage : la caméra décode ~15x/s, on ne traite qu'une fois par scan
 
     // Traiter un code détecté (QR URL publique, JSON, ou code simple).
     const handleDecoded = (decodedText) => {
-      const pauseCam = () => { try { html5QrcodeRef.current?.pause(true); } catch { /* ignore */ } };
+      if (handledRef.current) return; // déjà traité ce scan -> on ignore les frames suivantes
+      // Ouvre la modale sur l'article trouvé, met la caméra en pause et arme le garde.
+      const onHit = (item, departmentCode) => {
+        handledRef.current = true;
+        setSelectedItem(departmentCode != null ? { ...item, scannedDepartmentCode: departmentCode } : item);
+        setShowScannedModal(true);
+        try { html5QrcodeRef.current?.pause(true); } catch { /* ignore */ }
+      };
       try {
         const url = new URL(decodedText);
         let itemId = url.searchParams.get('id');
@@ -2805,20 +2813,17 @@ function AppContent() {
         const itemCode = url.searchParams.get('code');
         const departmentCode = url.searchParams.get('dept');
         const item = items.find(i => i.id === itemId || i.code === itemCode);
-        if (item) { setSelectedItem({ ...item, scannedDepartmentCode: departmentCode }); setShowScannedModal(true); pauseCam(); }
-        else setScannerError(t('scanner.itemNotFound'));
+        if (item) onHit(item, departmentCode); else setScannerError(t('scanner.itemNotFound'));
       } catch (e) {
         try {
           const qrData = JSON.parse(decodedText);
           if (qrData.type === 'C-Secur360-Inventory') {
             const item = items.find(i => i.id === qrData.id || i.code === qrData.code);
-            if (item) { setSelectedItem({ ...item, scannedDepartmentCode: qrData.departmentCode }); setShowScannedModal(true); pauseCam(); }
-            else setScannerError(t('scanner.itemNotFound'));
-          }
+            if (item) onHit(item, qrData.departmentCode); else setScannerError(t('scanner.itemNotFound'));
+          } else setScannerError(t('scanner.itemNotFound')); // QR JSON non reconnu : feedback au lieu du silence
         } catch (e2) {
           const item = items.find(i => i.code === decodedText);
-          if (item) { setSelectedItem(item); setShowScannedModal(true); pauseCam(); }
-          else setScannerError(t('scanner.itemNotFound'));
+          if (item) onHit(item, null); else setScannerError(t('scanner.itemNotFound'));
         }
       }
     };
@@ -2828,7 +2833,7 @@ function AppContent() {
     const initScanner = () => {
       if (html5QrcodeRef.current) return;
       if (!document.getElementById('qr-reader')) return;
-      const h = new Html5Qrcode('qr-reader', { useBarCodeDetectorIfSupported: true });
+      const h = new Html5Qrcode('qr-reader', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
       html5QrcodeRef.current = h;
       h.start(
         { facingMode: 'environment' }, // caméra arrière
@@ -2851,6 +2856,7 @@ function AppContent() {
     // Démarrer le scan — appelé DANS le tap (geste utilisateur requis par iOS pour la caméra).
     const startScanning = () => {
       setScannerError('');
+      handledRef.current = false;
       setIsScanning(true);
       initScanner();
     };
@@ -2878,6 +2884,15 @@ function AppContent() {
     useEffect(() => {
       return () => { stopScanning(); };
     }, []); // Seulement au mount
+
+    // À la fermeture de la modale d'article scanné : reprendre la caméra et ré-armer le garde
+    // (sinon la vidéo reste figée après un scan et l'utilisateur est bloqué).
+    useEffect(() => {
+      if (!showScannedModal && isScanning && html5QrcodeRef.current) {
+        handledRef.current = false;
+        try { html5QrcodeRef.current.resume(); } catch { /* ignore */ }
+      }
+    }, [showScannedModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Recherche manuelle
     const handleManualSearch = () => {
@@ -4956,14 +4971,16 @@ function AppContent() {
     const handleQuickAction = (actionType) => {
       if (!selectedItem) return;
 
+      const deptCode = selectedItem.scannedDepartmentCode || null; // cible la succursale scannée (multi-emplacement)
+      const who = currentUser?.username || 'system';
       if (actionType === 'add') {
-        updateQuantity(selectedItem.id, quantity, 'entry', reason || t('scanner.addStock'));
+        updateQuantity(selectedItem.id, quantity, 'entry', reason || t('scanner.addStock'), deptCode, null, who);
         setShowScannedModal(false);
         setSelectedItem(null);
         setQuantity(1);
         setReason('');
       } else if (actionType === 'remove') {
-        updateQuantity(selectedItem.id, -quantity, 'exit', reason || t('scanner.removeStock'));
+        updateQuantity(selectedItem.id, -quantity, 'exit', reason || t('scanner.removeStock'), deptCode, null, who);
         setShowScannedModal(false);
         setSelectedItem(null);
         setQuantity(1);
