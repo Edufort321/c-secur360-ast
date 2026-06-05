@@ -1558,7 +1558,7 @@ function AppContent() {
 
     files.forEach(file => {
       if (!file.type.startsWith('image/')) {
-        alert('Veuillez sélectionner uniquement des images');
+        notify(language === 'fr' ? 'Veuillez sélectionner uniquement des images' : 'Please select images only', 'error');
         return;
       }
 
@@ -2039,7 +2039,7 @@ function AppContent() {
       const cats = await getCatalogues(tenant);
       const active = cats.find(c => c.preferred && c.status === 'active') || cats.find(c => c.status === 'active') || cats[0];
       const mats = (active && active.materials) || [];
-      if (!mats.length) { window.alert('Aucun matériel dans le catalogue standardisé (créez-le dans Admin > Catalogue de taux).'); return; }
+      if (!mats.length) { notify(language === 'fr' ? 'Aucun matériel dans le catalogue standardisé (créez-le dans Admin > Catalogue de taux).' : 'No material in the standardized catalog (create it in Admin > Rate catalog).', 'error'); return; }
       const existingCodes = new Set(items.map(i => (i.code || '').trim()).filter(Boolean));
       const existingNames = new Set(items.map(i => (i.name || '').trim().toLowerCase()));
       const stamp = Date.now();
@@ -2066,12 +2066,12 @@ function AppContent() {
           createdBy: currentUser?.username || 'catalogue',
         });
       });
-      if (!toAdd.length) { window.alert('Tous les articles du catalogue sont déjà dans l’inventaire.'); return; }
+      if (!toAdd.length) { notify(language === 'fr' ? 'Tous les articles du catalogue sont déjà dans l’inventaire.' : 'All catalog items are already in the inventory.', 'info'); return; }
       setItems(prev => [...prev, ...toAdd]);
-      window.alert(`${toAdd.length} article(s) importé(s) du catalogue standardisé (quantité à 0 — ajustez le stock).`);
+      notify(language === 'fr' ? `${toAdd.length} article(s) importé(s) du catalogue standardisé (quantité à 0 — ajustez le stock).` : `${toAdd.length} item(s) imported from the standardized catalog (quantity 0 — adjust stock).`);
     } catch (e) {
       console.error('Import catalogue:', e);
-      window.alert('Import du catalogue impossible : ' + (e?.message || e));
+      notify((language === 'fr' ? 'Import du catalogue impossible : ' : 'Catalog import failed: ') + (e?.message || e), 'error');
     }
   };
 
@@ -2154,7 +2154,7 @@ function AppContent() {
       );
 
       if (locationIndex === -1) {
-        alert(`Succursale ${departmentCode} non trouvée pour cet article`);
+        notify((language === 'fr' ? `Succursale ${departmentCode} introuvable pour cet article` : `Branch ${departmentCode} not found for this item`), 'error');
         return;
       }
 
@@ -2162,7 +2162,7 @@ function AppContent() {
       const newLocationQuantity = location.quantity + quantityChange;
 
       if (newLocationQuantity < 0) {
-        alert(t('messages.error.insufficientStock') + ` (${location.department})`);
+        notify(t('messages.error.insufficientStock') + ` (${location.department})`, 'error');
         return;
       }
 
@@ -2199,7 +2199,7 @@ function AppContent() {
     // Sinon, mise à jour globale (comportement original)
     const newQuantity = item.quantity + quantityChange;
     if (newQuantity < 0) {
-      alert(t('messages.error.insufficientStock'));
+      notify(t('messages.error.insufficientStock'), 'error');
       return;
     }
 
@@ -2221,7 +2221,7 @@ function AppContent() {
   const transferBetweenDepartments = (itemId, quantity, sourceDeptCode, targetDeptCode, reason = '') => {
     const item = items.find(i => i.id === itemId);
     if (!item || !item.isMultiLocation || !item.locations) {
-      alert('Article non trouvé ou ne supporte pas les transferts entre succursales');
+      notify(language === 'fr' ? 'Article introuvable ou ne supporte pas les transferts entre succursales' : 'Item not found or does not support inter-branch transfers', 'error');
       return { success: false };
     }
 
@@ -2237,7 +2237,7 @@ function AppContent() {
     );
 
     if (sourceIndex === -1 || targetIndex === -1) {
-      alert('Succursale source ou destination non trouvée');
+      notify(language === 'fr' ? 'Succursale source ou destination introuvable' : 'Source or destination branch not found', 'error');
       return { success: false };
     }
 
@@ -2246,7 +2246,7 @@ function AppContent() {
 
     // Vérifier stock disponible à la source
     if (sourceLocation.quantity < quantity) {
-      alert(`Stock insuffisant dans ${sourceLocation.department} (disponible: ${sourceLocation.quantity})`);
+      notify(language === 'fr' ? `Stock insuffisant dans ${sourceLocation.department} (disponible : ${sourceLocation.quantity})` : `Insufficient stock in ${sourceLocation.department} (available: ${sourceLocation.quantity})`, 'error');
       return { success: false };
     }
 
@@ -2544,7 +2544,7 @@ function AppContent() {
         setImportErrors(errors);
         setImportStep('preview');
       } catch (error) {
-        alert(t('messages.error.fileRead') + ': ' + error.message);
+        notify(t('messages.error.fileRead') + ': ' + error.message, 'error');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -2928,14 +2928,14 @@ function AppContent() {
         setScannedItem(item);
         setAdjustmentQuantity(0);
       } else {
-        alert(t('scanner.itemNotFound'));
+        notify(t('scanner.itemNotFound'), 'error');
       }
     };
 
     // Confirmer l'inventaire (quantité OK)
     const handleConfirmInventory = () => {
       if (!scannedItem) return;
-      alert(`${t('scanner.inventoryConfirmed')}: ${scannedItem.name} - ${scannedItem.quantity} ${scannedItem.unit || 'unités'}`);
+      notify(`${t('scanner.inventoryConfirmed')}: ${scannedItem.name} — ${scannedItem.quantity} ${scannedItem.unit || (language === 'fr' ? 'unités' : 'units')}`);
       resetScanner();
     };
 
@@ -2945,7 +2945,7 @@ function AppContent() {
 
       // Vérifier que l'utilisateur est identifié
       if (!scannerUser || scannerUser.trim() === '') {
-        alert('Veuillez vous identifier avant d\'effectuer un mouvement');
+        notify(language === 'fr' ? 'Veuillez vous identifier avant d\'effectuer un mouvement' : 'Please identify yourself before making a movement', 'error');
         return;
       }
 
@@ -2954,7 +2954,7 @@ function AppContent() {
         // Pour les retraits de type "projet", le numéro de projet est OBLIGATOIRE
         if (withdrawalType === 'project') {
           if (!projectCode || projectCode.trim() === '') {
-            alert('Numéro de projet obligatoire pour les retraits de type projet');
+            notify(language === 'fr' ? 'Numéro de projet obligatoire pour les retraits de type projet' : 'Project number required for project withdrawals', 'error');
             return;
           }
         }
@@ -2989,7 +2989,7 @@ function AppContent() {
         const locationInfo = result.location ? ` (${result.location})` : '';
         const projectInfo = projectCode ? ` - ${projectCode}` : '';
         const typeInfo = withdrawalType === 'internal' && adjustmentQuantity < 0 ? ' (Consommation interne)' : '';
-        alert(`${t('scanner.quantityAdjusted')}: ${adjustmentQuantity > 0 ? '+' : ''}${adjustmentQuantity}${locationInfo}${projectInfo}${typeInfo}`);
+        notify(`${t('scanner.quantityAdjusted')}: ${adjustmentQuantity > 0 ? '+' : ''}${adjustmentQuantity}${locationInfo}${projectInfo}${typeInfo}`);
         resetScanner();
       }
     };
@@ -3000,13 +3000,13 @@ function AppContent() {
 
       // Vérifier que l'utilisateur est identifié
       if (!scannerUser || scannerUser.trim() === '') {
-        alert('Veuillez vous identifier avant d\'effectuer un contrôle d\'inventaire');
+        notify(language === 'fr' ? 'Veuillez vous identifier avant d\'effectuer un contrôle d\'inventaire' : 'Please identify yourself before an inventory count', 'error');
         return;
       }
 
       const countedQuantity = parseInt(physicalCount);
       if (isNaN(countedQuantity) || countedQuantity < 0) {
-        alert('Veuillez entrer une quantité valide');
+        notify(language === 'fr' ? 'Veuillez entrer une quantité valide' : 'Please enter a valid quantity', 'error');
         return;
       }
 
@@ -3039,7 +3039,7 @@ function AppContent() {
       }
 
       if (difference === 0) {
-        alert(`✅ Inventaire confirmé: ${countedQuantity} ${scannedItem.unit || 'unités'}\n\nAucun ajustement nécessaire.`);
+        notify(language === 'fr' ? `Inventaire confirmé : ${countedQuantity} ${scannedItem.unit || 'unités'} — aucun ajustement nécessaire.` : `Inventory confirmed: ${countedQuantity} ${scannedItem.unit || 'units'} — no adjustment needed.`);
         resetScanner();
         return;
       }
@@ -3059,7 +3059,9 @@ function AppContent() {
 
       if (result && result.success) {
         const locationInfo = result.location ? ` (${result.location})` : '';
-        alert(`✅ Inventaire ajusté${locationInfo}\n\nQuantité système: ${currentQuantity}\nQuantité comptée: ${countedQuantity}\nAjustement: ${difference > 0 ? '+' : ''}${difference}`);
+        notify(language === 'fr'
+          ? `Inventaire ajusté${locationInfo} — Système : ${currentQuantity} · Compté : ${countedQuantity} · Ajustement : ${difference > 0 ? '+' : ''}${difference}`
+          : `Inventory adjusted${locationInfo} — System: ${currentQuantity} · Counted: ${countedQuantity} · Adjustment: ${difference > 0 ? '+' : ''}${difference}`);
         resetScanner();
       }
     };
@@ -3146,7 +3148,7 @@ function AppContent() {
             <button
               onClick={() => {
                 if (globalInventoryMode.active) {
-                  alert(t('scanner.movementModeBlocked').replace('{department}', globalInventoryMode.departmentName));
+                  notify(t('scanner.movementModeBlocked').replace('{department}', globalInventoryMode.departmentName), 'error');
                 } else {
                   setScannerMode('movement');
                 }
@@ -4106,7 +4108,7 @@ function AppContent() {
     // Generate order (placeholder function)
     const generateOrder = () => {
       if (selectedItems.length === 0) {
-        alert(t('messages.error.selectAtLeastOne'));
+        notify(t('messages.error.selectAtLeastOne'), 'error');
         return;
       }
 
@@ -4141,14 +4143,14 @@ function AppContent() {
 
       // Copy to clipboard
       navigator.clipboard.writeText(orderText);
-      alert(`Commande générée pour ${selectedItems.length} article(s) et copiée dans le presse-papier!`);
+      notify(language === 'fr' ? `Commande générée pour ${selectedItems.length} article(s) et copiée dans le presse-papier` : `Order generated for ${selectedItems.length} item(s) and copied to clipboard`);
       deselectAll();
     };
 
     // Send order by email to supplier (without internal Ebeda codes)
     const sendOrderEmail = () => {
       if (selectedItems.length === 0) {
-        alert(t('messages.error.selectAtLeastOne'));
+        notify(t('messages.error.selectAtLeastOne'), 'error');
         return;
       }
 
@@ -4170,7 +4172,7 @@ function AppContent() {
         const { email, items: supplierItems } = data;
 
         if (!email) {
-          alert(`${t('alerts.noSupplierEmail')}: ${supplier}\n${t('alerts.pleaseAddEmail')}`);
+          notify(`${t('alerts.noSupplierEmail')}: ${supplier}\n${t('alerts.pleaseAddEmail')}`, 'error');
           return;
         }
 
@@ -4505,7 +4507,7 @@ function AppContent() {
       localStorage.setItem('app-dateFormat', dateFormat);
       localStorage.setItem('app-baseEbitda', baseEbitda.toString());
       localStorage.setItem('app-targetEbitda', targetEbitda.toString());
-      alert(t('messages.success.saved'));
+      notify(t('messages.success.saved'));
     };
 
     return (
@@ -4817,10 +4819,10 @@ function AppContent() {
                     return new Date(item.nextPriceUpdate) <= now;
                   });
                   if (itemsToUpdate.length === 0) {
-                    alert(t('messages.info.noUpdateNeeded'));
+                    notify(t('messages.info.noUpdateNeeded'), 'info');
                     return;
                   }
-                  alert(`${itemsToUpdate.length} ${t('articles.articlesNeedUpdate')}`);
+                  notify(`${itemsToUpdate.length} ${t('articles.articlesNeedUpdate')}`, 'info');
                 }}
               >
                 {t('administration.viewArticlesToUpdate')}
@@ -4851,7 +4853,7 @@ function AppContent() {
                     return item;
                   }));
 
-                  alert(`${updated} article(s) marqué(s) comme mis à jour`);
+                  notify(language === 'fr' ? `${updated} article(s) marqué(s) comme mis à jour` : `${updated} item(s) marked as updated`);
                 }}
               >
                 {t('administration.markAsUpdated')}
@@ -5021,7 +5023,7 @@ function AppContent() {
           reason: `${t('scanner.reportIssue')}: ${t(`scanner.issues.${issueType}`)} - ${issueDescription}`,
           user: currentUser?.username || 'system'
         });
-        alert(t('messages.success.saved'));
+        notify(t('messages.success.saved'));
         setShowScannedModal(false);
         setSelectedItem(null);
         setIssueDescription('');
@@ -5740,9 +5742,9 @@ function AppContent() {
             location: it.location || it.department || '', url: getScanUrl(it.id, it.code, it.departmentCode),
           });
         });
-        if (!labels.length) { alert('Aucune étiquette à générer.'); return; }
+        if (!labels.length) { notify(language === 'fr' ? 'Aucune étiquette à générer.' : 'No label to generate.', 'error'); return; }
         await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, filename: `etiquettes-${tenantId}.pdf` });
-      } catch (e) { alert('Export PDF impossible : ' + (e?.message || e)); }
+      } catch (e) { notify((language === 'fr' ? 'Export PDF impossible : ' : 'PDF export failed: ') + (e?.message || e), 'error'); }
       finally { setPdfBusy(false); }
     };
 
@@ -6035,13 +6037,13 @@ function AppContent() {
 
     // Validation du nom et de la catégorie (toujours obligatoires)
     if (!newItemData.name || !newItemData.category) {
-      alert(t('messages.error.fillRequired'));
+      notify(t('messages.error.fillRequired'), 'error');
       return;
     }
 
     // Vérifier qu'au moins une succursale est sélectionnée
     if (!newItemData.locations || newItemData.locations.length === 0) {
-      alert(t('messages.error.selectOneBranch'));
+      notify(t('messages.error.selectOneBranch'), 'error');
       return;
     }
 
@@ -6050,13 +6052,13 @@ function AppContent() {
       // Si codes différents: vérifier que chaque location a un code personnalisé
       const missingCodes = newItemData.locations.filter(loc => !loc.customCode || loc.customCode.trim() === '');
       if (missingCodes.length > 0) {
-        alert(t('messages.error.customCodeRequired'));
+        notify(t('messages.error.customCodeRequired'), 'error');
         return;
       }
     } else {
       // Si code unique: vérifier que le code principal est rempli
       if (!newItemData.code || !newItemData.code.trim()) {
-        alert(t('messages.error.codeRequired'));
+        notify(t('messages.error.codeRequired'), 'error');
         return;
       }
     }
@@ -6064,14 +6066,14 @@ function AppContent() {
     // Vérifier code unique (principal ou personnalisés)
     if (!newItemData.differentCodes) {
       if (items.find(item => item.code === newItemData.code)) {
-        alert(t('messages.error.codeExists'));
+        notify(t('messages.error.codeExists'), 'error');
         return;
       }
     } else {
       // Vérifier que les codes personnalisés ne sont pas déjà utilisés
       for (const loc of newItemData.locations) {
         if (items.find(item => item.code === loc.customCode)) {
-          alert(`Le code "${loc.customCode}" existe déjà`);
+          notify((language === 'fr' ? `Le code « ${loc.customCode} » existe déjà` : `Code "${loc.customCode}" already exists`), 'error');
           return;
         }
       }
@@ -6152,7 +6154,7 @@ function AppContent() {
     });
     setAddItemMode('simple');
 
-    alert(`${t('messages.success.articleCreated')} ${newItemData.locations.length} ${t('articles.branches')}!`);
+    notify(`${t('messages.success.articleCreated')} ${newItemData.locations.length} ${t('articles.branches')}`);
   };
 
   const handleCloseAddModal = () => {
