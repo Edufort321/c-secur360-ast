@@ -125,6 +125,25 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
     setResults({}); setAdvice(null); setInspector(''); setOpen(false);
   }
 
+  // Ouvre une nouvelle inspection en repartant de la PRÉCÉDENTE (statuts + mesures pré-remplis,
+  // photos NON reprises — propres à chaque inspection). Sinon formulaire vierge.
+  function openNew() {
+    const prev = inspections[0];
+    if (prev?.results) {
+      const cloned: Record<string, InspResult> = {};
+      Object.entries(prev.results).forEach(([k, r]: any) => {
+        const inputs = { ...(r?.inputs || {}) };
+        delete inputs.__photos; // on ne reprend pas les photos de l'inspection précédente
+        cloned[k] = { status: r?.status || '', inputs, note: r?.note || '' };
+      });
+      setResults(cloned);
+      setInspector(prev.inspector || '');
+    } else {
+      setResults({}); setInspector('');
+    }
+    setAdvice(null); setDate(todayIso()); setOpen(true);
+  }
+
   const StatusBtns = ({ k }: { k: string }) => {
     const st = results[k]?.status || '';
     const btn = (val: InspResult['status'], label: string, on: string) => (
@@ -144,7 +163,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
     <section className={CARD}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">🛠️ {tr('Inspection de routine', 'Routine inspection')}</h3>
-        <button onClick={() => setOpen(o => !o)} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{open ? tr('Fermer', 'Close') : '+ ' + tr('Nouvelle inspection', 'New inspection')}</button>
+        <button onClick={() => (open ? setOpen(false) : openNew())} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{open ? tr('Fermer', 'Close') : '+ ' + tr('Nouvelle inspection', 'New inspection')}</button>
       </div>
 
       {/* Historique */}
@@ -174,6 +193,9 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
                 {REMINDER_OPTIONS.map(o => <option key={o.months} value={o.months}>{lang === 'en' ? o.en : o.fr}</option>)}
               </select></label>
           </div>
+          {inspections[0]?.date && (
+            <p className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">↻ {tr(`Pré-rempli depuis l'inspection du ${inspections[0].date} — ajuste ce qui a changé.`, `Pre-filled from the ${inspections[0].date} inspection — adjust what changed.`)}</p>
+          )}
           <p className="text-[11px] text-gray-400">{tr('C = Conforme · A = Anomalie · N/A = non applicable. Les points « A » sont ajoutés à la section Anomalies.', 'C = Compliant · A = Anomaly · N/A = not applicable. "A" items are added to the Anomalies section.')}</p>
 
           {INSPECTION_CHECKLIST.map(cat => (
@@ -186,7 +208,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
                     <div key={it.key} className="rounded-lg border border-gray-100 p-2 dark:border-gray-700/60">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm text-gray-700 dark:text-gray-200">{il(it, lang)}</span>
-                        {!it.optionOnly && <StatusBtns k={it.key} />}
+                        <StatusBtns k={it.key} />
                       </div>
                       {/* Champs spéciaux (mesures / options) */}
                       {it.inputs && it.inputs.length > 0 && (
