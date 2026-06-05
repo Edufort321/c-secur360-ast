@@ -16,6 +16,25 @@ const INP = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5
 const rid = () => 'insp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+// Compression d'image avant stockage (max ~1000px, JPEG 0.7) — pour les photos d'anomalie.
+function compressImage(file: File, maxDim = 1000, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) { const r = Math.min(maxDim / w, maxDim / h); w = Math.round(w * r); h = Math.round(h * r); }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject; img.src = reader.result as string;
+    };
+    reader.onerror = reject; reader.readAsDataURL(file);
+  });
+}
+
 const REMINDER_OPTIONS = [
   { months: 0, fr: 'Aucun rappel', en: 'No reminder' },
   { months: 6, fr: '6 mois', en: '6 months' },
@@ -42,11 +61,25 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
   const setInput = (key: string, ik: string, v: any) => setResults(p => ({ ...p, [key]: { ...(p[key] || { status: '' }), inputs: { ...(p[key]?.inputs || {}), [ik]: v } } }));
   const setNote = (key: string, note: string) => setResults(p => ({ ...p, [key]: { ...(p[key] || { status: '' }), note } }));
 
-  // Liste des anomalies courantes (points status=anomalie) avec libellé + catégorie.
+  // Photos par point (stockées sous inputs.__photos pour ne pas changer le type InspResult).
+  const itemPhotos = (key: string): { id: string; data: string; name?: string }[] => results[key]?.inputs?.__photos || [];
+  const setItemPhotos = (key: string, photos: any[]) => setResults(p => ({ ...p, [key]: { ...(p[key] || { status: 'anomalie' }), inputs: { ...(p[key]?.inputs || {}), __photos: photos } } }));
+  async function addItemPhotos(key: string, files: FileList | null) {
+    if (!files) return;
+    const next = [...itemPhotos(key)];
+    for (const f of Array.from(files)) {
+      try { const data = await compressImage(f); next.push({ id: rid(), data, name: f.name }); }
+      catch { setNotice(tr('Image trop volumineuse.', 'Image too large.')); }
+    }
+    setItemPhotos(key, next);
+  }
+  const delItemPhoto = (key: string, pid: string) => setItemPhotos(key, itemPhotos(key).filter(ph => ph.id !== pid));
+
+  // Liste des anomalies courantes (points status=anomalie) avec libellé + catégorie + photos.
   const anomalyList = () => {
-    const out: { key: string; label: string; category: string; note?: string }[] = [];
+    const out: { key: string; label: string; category: string; note?: string; photos: any[] }[] = [];
     INSPECTION_CHECKLIST.forEach(cat => cat.items.forEach(it => {
-      if (results[it.key]?.status === 'anomalie') out.push({ key: it.key, label: il(it, lang), category: il(cat, lang), note: results[it.key]?.note });
+      if (results[it.key]?.status === 'anomalie') out.push({ key: it.key, label: il(it, lang), category: il(cat, lang), note: results[it.key]?.note, photos: itemPhotos(it.key) });
     }));
     return out;
   };
@@ -82,7 +115,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
         kind: 'anomalie', status: 'a_corriger',
         title: an.label,
         desc: tr(`Inspection ${date} — ${an.category}`, `Inspection ${date} — ${an.category}`) + (an.note ? `\n${an.note}` : '') + (adviceText ? `\n\n${tr('Aide IA :', 'AI advice:')} ${adviceText}` : ''),
-        photos: [], created_at: new Date().toISOString(),
+        photos: an.photos || [], created_at: new Date().toISOString(),
       } as Anomaly)));
     }
     // Rappel de routine -> dashboard.
@@ -182,7 +215,22 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
                         </div>
                       )}
                       {st === 'anomalie' && (
-                        <input className={INP + ' mt-1.5'} value={results[it.key]?.note || ''} onChange={e => setNote(it.key, e.target.value)} placeholder={tr('Détail de l’anomalie (optionnel)', 'Anomaly detail (optional)')} />
+                        <div className="mt-1.5 space-y-1.5">
+                          <input className={INP} value={results[it.key]?.note || ''} onChange={e => setNote(it.key, e.target.value)} placeholder={tr('Détail de l’anomalie (optionnel)', 'Anomaly detail (optional)')} />
+                          <div className="flex flex-wrap items-center gap-2">
+                            {itemPhotos(it.key).map(ph => (
+                              <div key={ph.id} className="relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={ph.data} alt={ph.name || ''} className="h-14 w-14 rounded-lg object-cover" />
+                                <button type="button" className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-black/60 text-[10px] text-white" onClick={() => delItemPhoto(it.key, ph.id)}>×</button>
+                              </div>
+                            ))}
+                            <label className="grid h-14 w-14 cursor-pointer place-items-center rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-rose-400 dark:border-gray-600" title={tr('Ajouter une photo', 'Add a photo')}>
+                              <span className="text-lg">📷</span>
+                              <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={e => { addItemPhotos(it.key, e.target.files); e.currentTarget.value = ''; }} />
+                            </label>
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
