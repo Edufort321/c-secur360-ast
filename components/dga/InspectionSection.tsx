@@ -5,7 +5,7 @@
 // (Conforme / Anomalie / N/A), champs de mesure, aide technique IA (correctifs).
 // Les points en ANOMALIE sont reversés dans la section Anomalies. Rappel de routine -> dashboard.
 // ============================================================================
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { INSPECTION_CHECKLIST, il, type InspResult } from '@/lib/dga/inspection';
 import { generateInspectionPdf } from '@/lib/dga/inspectionPdf';
 import { addMonths, addDays } from '@/lib/dga/catalog';
@@ -67,10 +67,28 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   const [date, setDate] = useState(todayIso());
   const [inspector, setInspector] = useState('');
   // Séquence de reprise (hors formulaire) : fréquence + prochaine échéance, persistées dans extra.
-  const [intervalId, setIntervalId] = useState<string>(
-    REMINDER_OPTIONS.some(o => o.id === dossier.extra?.insp_interval_id) ? dossier.extra.insp_interval_id : DEFAULT_INTERVAL
-  );
-  const [nextDate, setNextDate] = useState<string>(dossier.extra?.next_inspection || '');
+  const initInterval = REMINDER_OPTIONS.some(o => o.id === dossier.extra?.insp_interval_id) ? dossier.extra.insp_interval_id : DEFAULT_INTERVAL;
+  const [intervalId, setIntervalId] = useState<string>(initInterval);
+  // La date affichée est DÉRIVÉE de la fréquence (base = dernière inspection ou aujourd'hui). On ne garde
+  // la valeur stockée que si elle correspond déjà à la fréquence courante — sinon on évite une date périmée
+  // incohérente (ex. ancien « 12 mois » alors que le défaut est « mensuel »).
+  const [nextDate, setNextDate] = useState<string>(() => {
+    const stored = dossier.extra?.next_inspection || '';
+    const derived = nextFromInterval(initInterval, inspections[0]?.date || todayIso()) || '';
+    return (stored && stored === derived) ? stored : (derived || stored);
+  });
+  // Auto-correction unique du stored périmé (dashboard) : si une inspection existe (base stable) et que la
+  // date stockée ne correspond pas à la fréquence, on persiste la date dérivée une fois.
+  const syncedRef = useRef(false);
+  useEffect(() => {
+    if (syncedRef.current) return;
+    const stored = dossier.extra?.next_inspection || '';
+    if (inspections.length > 0 && nextDate && stored !== nextDate) {
+      syncedRef.current = true;
+      onSetReminder(nextDate, intervalId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspections.length]);
   const [results, setResults] = useState<Record<string, InspResult>>({});
   const [advice, setAdvice] = useState<{ fr?: string; en?: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
