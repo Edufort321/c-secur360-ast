@@ -178,17 +178,43 @@ export function TransfoView(props: {
   const publicUrl = mounted && dossier.id ? `${window.location.origin}/scan/dga/${tenant}/${dossier.id}` : '';
   const esc = (s: string) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
   const copyQR = () => { if (publicUrl) navigator.clipboard?.writeText(publicUrl).then(() => setNotice(tr('Lien copié.', 'Link copied.')), () => {}); };
+  // Affiche QR centrée (copiée de l'AST / inspection d'équipement) : logo en haut, QR dans une boîte
+  // arrondie, légende, site, badge BPC, URL. Le SVG (id dga-qr-svg) est mis à l'échelle à 260px en CSS.
   const printQR = () => {
-    const svg = document.getElementById('dga-qr-svg');
-    if (!svg) return;
-    const xml = new XMLSerializer().serializeToString(svg);
-    const sub = [dossier.client, dossier.serie ? 'SN ' + dossier.serie : '', dossier.kv ? dossier.kv + ' kV' : ''].filter(Boolean).join(' · ');
+    const svgEl = document.getElementById('dga-qr-svg');
+    if (!svgEl) return;
+    const svg = new XMLSerializer().serializeToString(svgEl);
+    const logoSrc = logoUrl || '/c-secur360-logo.png';
+    const sub = [dossier.serie ? 'SN ' + dossier.serie : '', dossier.kv ? dossier.kv + ' kV' : '', dossier.client || ''].filter(Boolean).join(' · ');
     const pcbBadge = pcbVerdict.code !== 'unknown'
-      ? `<div style="display:inline-block;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:13px;margin-top:12px;background:${pcbVerdict.color}">BPC : ${esc(pcbVerdict.label)}${pcbVerdict.value != null ? ' (' + pcbVerdict.value + ' ppm)' : ''}</div>` : '';
-    const w = window.open('', '_blank', 'width=420,height=600');
+      ? `<div class="pcb" style="background:${pcbVerdict.color}">BPC : ${esc(pcbVerdict.label)}${pcbVerdict.value != null ? ' (' + pcbVerdict.value + ' ppm)' : ''}</div>` : '';
+    const w = window.open('', '_blank', 'width=800,height=1000');
     if (!w) { setNotice(tr('Autorise les fenêtres pop-up pour imprimer.', 'Allow pop-ups to print.')); return; }
-    w.document.write(`<html><head><title>QR ${esc(dossier.ident)}</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:28px;margin:0}.name{font-size:19px;font-weight:800;margin:6px 0 2px}.sub{font-size:12px;color:#555;margin-bottom:14px}.hint{font-size:11px;color:#888;margin-top:14px}</style></head><body><div class="name">${esc(dossier.ident)}</div><div class="sub">${esc(sub)}</div>${xml}${pcbBadge}<div class="hint">${esc(tr('Scannez pour la fiche du transformateur', 'Scan for the transformer sheet'))}</div></body></html>`);
-    w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 350);
+    w.document.write(
+      `<!DOCTYPE html><html><head><meta charset="utf-8" /><title>QR — ${esc(dossier.ident)}</title>` +
+      `<style>` +
+      `html,body{height:100%}` +
+      `body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:48px;color:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}` +
+      `.logo{max-height:90px;width:auto;margin-bottom:28px}` +
+      `.qrbox{padding:20px;border:2px solid #e2e8f0;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}` +
+      `.qrbox svg{width:260px;height:260px;display:block}` +
+      `.name{font-size:26px;font-weight:800;margin-top:28px}` +
+      `.sub{margin-top:6px;font-size:14px;color:#475569}` +
+      `.site{margin-top:4px;font-size:13px;color:#0e7490;font-weight:600}` +
+      `.pcb{display:inline-block;margin-top:14px;color:#fff;border-radius:8px;padding:6px 12px;font-weight:700;font-size:14px}` +
+      `.url{margin-top:14px;font-size:13px;color:#64748b;word-break:break-all;max-width:340px}` +
+      `</style></head>` +
+      `<body>` +
+      `<img class="logo" src="${esc(logoSrc)}" alt="logo" />` +
+      `<div class="qrbox">${svg}</div>` +
+      `<div class="name">${esc(dossier.ident)}</div>` +
+      (sub ? `<div class="sub">${esc(sub)}</div>` : '') +
+      (siteText ? `<div class="site">📍 ${esc(siteText)}</div>` : '') +
+      pcbBadge +
+      `<div class="url">${esc(publicUrl)}</div>` +
+      `</body></html>`,
+    );
+    w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 500);
   };
 
   const lastMeasure = data[data.length - 1];
