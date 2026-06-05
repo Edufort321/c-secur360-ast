@@ -2,7 +2,7 @@
 // Application complète de gestion d'inventaire avec design professionnel moderne 2024
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 import {
   LayoutDashboard,
@@ -2840,116 +2840,77 @@ function AppContent() {
     const scannerRef = useRef(null);
     const html5QrcodeRef = useRef(null);
 
-    // Initialiser le scanner
-    const initScanner = useCallback(() => {
-      if (html5QrcodeRef.current || !scannerRef.current) return;
-
-      const html5QrCode = new Html5QrcodeScanner(
-        "qr-reader",
-        {
-          fps: 30, // Augmenté pour une meilleure détection
-          qrbox: { width: 300, height: 300 }, // Taille augmentée pour faciliter la lecture
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          rememberLastUsedCamera: true, // Se souvient de la dernière caméra utilisée
-          supportedScanTypes: [0, 1], // QR Code et Code-barres
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true // Utilise l'API native si disponible
-          },
-          videoConstraints: {
-            facingMode: "environment", // Caméra arrière par défaut
-            advanced: [
-              { focusMode: "continuous" }, // Auto-focus continu
-              { zoom: 1.0 }
-            ]
-          }
-        },
-        false
-      );
-
-      html5QrCode.render(
-        (decodedText, decodedResult) => {
-          try {
-            // Essayer de parser l'URL du QR code
-            const url = new URL(decodedText);
-            let itemId = url.searchParams.get('id');
-            // Nouveau format public : /scan/<tenant>/<id>?code=...
-            if (!itemId) {
-              const seg = url.pathname.split('/').filter(Boolean);
-              const si = seg.indexOf('scan');
-              if (si >= 0 && seg[si + 2]) itemId = decodeURIComponent(seg[si + 2]);
-            }
-            const itemCode = url.searchParams.get('code');
-            const departmentCode = url.searchParams.get('dept'); // Code de la succursale
-
-            const item = items.find(i => i.id === itemId || i.code === itemCode);
-            if (item) {
-              // #84 : un seul affichage propre (la modale). On NE met PAS scannedItem (panneau intégré)
-              // pour éviter le double affichage. Le departmentCode est porté par selectedItem.
-              setSelectedItem({ ...item, scannedDepartmentCode: departmentCode });
-              setShowScannedModal(true);
-              html5QrCode.pause();
-            } else {
-              setScannerError(t('scanner.itemNotFound'));
-            }
-          } catch (e) {
-            // Si ce n'est pas une URL, essayer JSON puis code simple
-            try {
-              const qrData = JSON.parse(decodedText);
-              if (qrData.type === 'C-Secur360-Inventory') {
-                const item = items.find(i => i.id === qrData.id || i.code === qrData.code);
-                if (item) {
-                  setSelectedItem({ ...item, scannedDepartmentCode: qrData.departmentCode });
-                  setShowScannedModal(true);
-                  html5QrCode.pause();
-                } else {
-                  setScannerError(t('scanner.itemNotFound'));
-                }
-              }
-            } catch (e2) {
-              // Si ce n'est pas du JSON, chercher par code (code-barres simple)
-              const item = items.find(i => i.code === decodedText);
-              if (item) {
-                setSelectedItem(item);
-                setShowScannedModal(true);
-                html5QrCode.pause();
-              } else {
-                setScannerError(t('scanner.itemNotFound'));
-              }
-            }
-          }
-        },
-        (error) => {
-          // Ignorer les erreurs de scan normales
-        }
-      );
-
-      html5QrcodeRef.current = html5QrCode;
-    }, [items, t]);
-
-    // Démarrer le scan — appelé DANS le gestionnaire de tap (geste utilisateur requis par iOS).
-    // Démarrage SYNCHRONE (pas de setTimeout) pour rester dans le contexte du geste, sinon la
-    // caméra est bloquée sur cellulaire.
-    const startScanning = () => {
-      setScannerError('');
-      setIsScanning(true);
+    // Traiter un code détecté (QR URL publique, JSON, ou code simple).
+    const handleDecoded = (decodedText) => {
+      const pauseCam = () => { try { html5QrcodeRef.current?.pause(true); } catch { /* ignore */ } };
       try {
-        initScanner();
+        const url = new URL(decodedText);
+        let itemId = url.searchParams.get('id');
+        if (!itemId) {
+          const seg = url.pathname.split('/').filter(Boolean);
+          const si = seg.indexOf('scan');
+          if (si >= 0 && seg[si + 2]) itemId = decodeURIComponent(seg[si + 2]);
+        }
+        const itemCode = url.searchParams.get('code');
+        const departmentCode = url.searchParams.get('dept');
+        const item = items.find(i => i.id === itemId || i.code === itemCode);
+        if (item) { setSelectedItem({ ...item, scannedDepartmentCode: departmentCode }); setShowScannedModal(true); pauseCam(); }
+        else setScannerError(t('scanner.itemNotFound'));
       } catch (e) {
-        setIsScanning(false);
-        setScannerError(
-          (e && e.name === 'NotAllowedError')
-            ? t('scanner.cameraDenied') || "Accès à la caméra refusé. Autorise la caméra dans les réglages du navigateur, puis réessaie."
-            : (t('scanner.cameraError') || "Impossible d'ouvrir la caméra. Vérifie les permissions ou utilise la recherche manuelle ci-dessous.")
-        );
+        try {
+          const qrData = JSON.parse(decodedText);
+          if (qrData.type === 'C-Secur360-Inventory') {
+            const item = items.find(i => i.id === qrData.id || i.code === qrData.code);
+            if (item) { setSelectedItem({ ...item, scannedDepartmentCode: qrData.departmentCode }); setShowScannedModal(true); pauseCam(); }
+            else setScannerError(t('scanner.itemNotFound'));
+          }
+        } catch (e2) {
+          const item = items.find(i => i.code === decodedText);
+          if (item) { setSelectedItem(item); setShowScannedModal(true); pauseCam(); }
+          else setScannerError(t('scanner.itemNotFound'));
+        }
       }
     };
 
-    // Arrêter le scan
-    const stopScanning = () => {
-      if (html5QrcodeRef.current) {
-        html5QrcodeRef.current.clear().catch(() => {});
+    // Initialiser le scanner avec l'API BAS NIVEAU Html5Qrcode : .start() ouvre la caméra
+    // DIRECTEMENT (getUserMedia) — bien plus fiable sur mobile que le widget Html5QrcodeScanner.
+    const initScanner = () => {
+      if (html5QrcodeRef.current) return;
+      if (!document.getElementById('qr-reader')) return;
+      const h = new Html5Qrcode('qr-reader', { useBarCodeDetectorIfSupported: true });
+      html5QrcodeRef.current = h;
+      h.start(
+        { facingMode: 'environment' }, // caméra arrière
+        { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        handleDecoded,
+        () => { /* erreurs de scan par frame : ignorer */ }
+      ).catch(err => {
         html5QrcodeRef.current = null;
+        setIsScanning(false);
+        const denied = err && (err.name === 'NotAllowedError' || /denied|permission|notallowed/i.test(String(err)));
+        const noCam = err && (err.name === 'NotFoundError' || /not ?found|no camera/i.test(String(err)));
+        setScannerError(
+          denied ? "Accès à la caméra refusé. Autorise la caméra (icône cadenas dans la barre d'adresse), puis réessaie."
+            : noCam ? "Aucune caméra détectée sur cet appareil. Utilise la recherche manuelle ci-dessous."
+              : "Impossible d'ouvrir la caméra : " + (err?.message || err) + ". Sur cellulaire, ouvre la page en HTTPS et autorise la caméra."
+        );
+      });
+    };
+
+    // Démarrer le scan — appelé DANS le tap (geste utilisateur requis par iOS pour la caméra).
+    const startScanning = () => {
+      setScannerError('');
+      setIsScanning(true);
+      initScanner();
+    };
+
+    // Arrêter le scan proprement (Html5Qrcode.stop() est asynchrone).
+    const stopScanning = () => {
+      const h = html5QrcodeRef.current;
+      html5QrcodeRef.current = null;
+      if (h) {
+        try { h.stop().then(() => { try { h.clear(); } catch { /* ignore */ } }).catch(() => {}); }
+        catch { /* déjà arrêté */ }
       }
       setIsScanning(false);
     };
