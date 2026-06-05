@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { getPhotos, savePhotos, getAnomalies, saveAnomalies, getDocs, saveDocs, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly, type DgaDoc } from '@/lib/dga/dossiers';
+import { getPhotos, savePhotos, getAnomalies, saveAnomalies, getDocs, saveDocs, getInspections, saveInspections, EQUIP_GROUPS, EQUIP_FIELDS, type Dossier, type Measure, type Anomaly, type DgaDoc, type Inspection } from '@/lib/dga/dossiers';
 import {
   GAS_FIELDS, COMBUSTIBLE, IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl,
   ieeeCondition, worstCondition, rogersRatios, COND_LABELS, COND_COLORS, numOrNull, type Lang,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/dga/catalog';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
 import { AnomalySection } from '@/components/dga/AnomalySection';
+import { InspectionSection } from '@/components/dga/InspectionSection';
 import { DocsSection } from '@/components/dga/DocsSection';
 import { PrintReport } from '@/components/dga/PrintReport';
 
@@ -83,6 +84,7 @@ export function TransfoView(props: {
   const [photos, setPhotos] = useState<{ id: string; data: string; name?: string }[]>([]);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [docs, setDocs] = useState<DgaDoc[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [form, setForm] = useState<Dossier>(dossier);
@@ -93,7 +95,7 @@ export function TransfoView(props: {
   useEffect(() => {
     setForm(dossier); setDateDraft(extra.next_date_manual || ''); setProjectNo(extra.project_no || '');
     setRecoDraft(extra['manual_reco_' + lang] ?? extra.manual_reco ?? '');
-    if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); getDocs(dossier.id).then(setDocs); } else { setPhotos([]); setAnomalies([]); setDocs([]); }
+    if (dossier.id) { getPhotos(dossier.id).then(setPhotos); getAnomalies(dossier.id).then(setAnomalies); getDocs(dossier.id).then(setDocs); getInspections(dossier.id).then(setInspections); } else { setPhotos([]); setAnomalies([]); setDocs([]); setInspections([]); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dossier.id]);
   const updateDocs = (next: DgaDoc[]) => {
@@ -110,6 +112,14 @@ export function TransfoView(props: {
     setAnomalies(next);
     if (dossier.id) saveAnomalies(dossier.id, next).then(r => { if (r.error) setNotice(tr('Anomalies non sauvegardées (migration 121 « anomalies » manquante ?) : ', 'Anomalies not saved (missing migration 121 "anomalies"?): ') + r.error); });
   };
+  const updateInspections = (next: Inspection[]) => {
+    setInspections(next);
+    if (dossier.id) saveInspections(dossier.id, next).then(r => { if (r.error) setNotice(tr('Inspections non sauvegardées (migration 123 « inspections » manquante ?) : ', 'Inspections not saved (missing migration 123 "inspections"?): ') + r.error); });
+  };
+  // Anomalies issues d'une inspection -> ajoutées à la section Anomalies.
+  const addAnomaliesFromInspection = (created: Anomaly[]) => { if (created.length) updateAnomalies([...anomalies, ...created]); };
+  // Rappel de routine -> stocké dans extra (flaggé au dashboard).
+  const setInspectionReminder = (nextDate: string | null) => updateExtra({ next_inspection: nextDate });
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
@@ -534,6 +544,12 @@ export function TransfoView(props: {
             </section>
           </div>
         </div>
+
+        {/* INSPECTION DE ROUTINE (au-dessus des anomalies) */}
+        <InspectionSection
+          dossier={dossier} inspections={inspections} lang={lang} tr={tr}
+          onChange={updateInspections} onCreateAnomalies={addAnomaliesFromInspection} onSetReminder={setInspectionReminder} setNotice={setNotice}
+        />
 
         {/* RAPPORT D'ANOMALIE (pleine largeur) */}
         <AnomalySection anomalies={anomalies} onChange={updateAnomalies} lang={lang} tr={tr} setNotice={setNotice} />

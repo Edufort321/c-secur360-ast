@@ -126,6 +126,26 @@ export async function saveDocs(id: string, docs: DgaDoc[]): Promise<{ error?: st
   const { error } = await supabase.from('dga_dossiers').update({ docs }).eq('id', id);
   return error ? { error: error.message } : {};
 }
+
+// ── Inspections de routine (checklist Conforme/Anomalie/N/A + champs + aide IA) ──
+export interface Inspection {
+  id: string;
+  date?: string;
+  inspector?: string;
+  results: Record<string, { status: string; inputs?: Record<string, any>; note?: string }>;
+  advice?: { fr?: string; en?: string };
+  anomalyCount?: number;
+  created_at?: string;
+}
+export async function getInspections(id: string): Promise<Inspection[]> {
+  const { data, error } = await supabase.from('dga_dossiers').select('inspections').eq('id', id).maybeSingle();
+  if (error || !data) return [];
+  return ((data as any).inspections as Inspection[]) || [];
+}
+export async function saveInspections(id: string, inspections: Inspection[]): Promise<{ error?: string }> {
+  const { error } = await supabase.from('dga_dossiers').update({ inspections }).eq('id', id);
+  return error ? { error: error.message } : {};
+}
 export async function listAllMeasures(tenant: string): Promise<Measure[]> {
   const { data } = await supabase.from('dga_measures').select('*').eq('tenant_id', tenant).order('sample_date', { ascending: true });
   return (data || []) as Measure[];
