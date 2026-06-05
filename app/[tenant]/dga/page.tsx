@@ -296,7 +296,7 @@ export default function DgaPage() {
 
         {view === 'fiche' && selected_d && (
           <TransfoView
-            tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl}
+            tenant={tenant} tenantName={tenantName} siteText={siteLabel(sitesTree, selected_d.extra?.site_id, selected_d.extra?.department_id)} lang={lang} tr={tr} dossier={selected_d} measures={measures} logoUrl={logoUrl} allDossiers={dossiers}
             onSave={saveDossierFromView} onNewMeasure={() => setView('newMeasure')} onDeleteMeasure={delMeasure} onDeleteDossier={delDossier} setNotice={setNotice}
           />
         )}
@@ -436,6 +436,9 @@ function ListView(p: any) {
           const inspLabel = !insp ? '' : insp.code === 'overdue' ? tr('Inspection en retard', 'Inspection overdue') : insp.code === 'soon' ? tr('Inspection bientôt', 'Inspection soon') : tr('Inspection à jour', 'Inspection up to date');
           // BPC : flag de conformité (la valeur ppm la plus récente connue).
           const pcb = pcbStatus(latestPcb(measuresByDossier?.[d.id!] || (last ? [last] : [])), lang);
+          const isOltc = !!d.extra?.is_oltc;
+          const parentSerie = d.extra?.parent_serie || '';
+          const parentName = parentSerie ? (dossiers.find((x: Dossier) => x.serie === parentSerie)?.ident || `SN ${parentSerie}`) : '';
           return (
             <div key={d.id} onClick={() => (delMode ? toggleSel(d.id!) : openFiche(d))}
               className={`cursor-pointer rounded-2xl border bg-white p-3 transition dark:bg-gray-800 ${delMode && isSel ? 'border-rose-500 ring-2 ring-rose-200' : 'border-gray-200 dark:border-gray-700'}`}
@@ -443,9 +446,11 @@ function ListView(p: any) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
                   {delMode && <span className={`mt-0.5 grid h-4 w-4 place-items-center rounded border text-[10px] ${isSel ? 'border-rose-500 bg-rose-500 text-white' : 'border-gray-300'}`}>{isSel ? '✓' : ''}</span>}
-                  <div><div className="font-bold text-gray-900 dark:text-gray-100">{d.ident}</div><div className="text-[11px] text-gray-500">{d.client || '—'}{d.serie ? ` · SN ${d.serie}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>{siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}</div>
+                  <div><div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-gray-100">{isOltc && <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold text-white">OLTC</span>}{d.ident}</div><div className="text-[11px] text-gray-500">{d.client || '—'}{d.serie ? ` · SN ${d.serie}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>{siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}{isOltc && parentName && <div className="text-[11px] text-indigo-500">↳ {tr('Transfo.', 'Xfmr')} {parentName}</div>}</div>
                 </div>
-                {worst != null && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</span>}
+                {isOltc
+                  ? <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">OLTC</span>
+                  : worst != null && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</span>}
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {nextD && <span className="inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ background: dueColor + '22', color: dueColor, borderColor: dueColor }}>

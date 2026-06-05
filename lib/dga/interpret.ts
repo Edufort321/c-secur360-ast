@@ -9,10 +9,42 @@ export interface Zone { code: string; label: string; }
 export interface InterpItem { lvl: 'crit' | 'warn' | 'info'; txt: string; }
 export interface InterpReco { title: string; steps: string[]; }
 
-export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number, lang: 'fr' | 'en' = 'fr'): { items: InterpItem[]; reco: InterpReco } {
+export function interpret(cur: Cur, prev: Cur | null, zone: Zone, worst: number, lang: 'fr' | 'en' = 'fr', isOltc = false): { items: InterpItem[]; reco: InterpReco } {
   const items: InterpItem[] = [];
   const EN = lang === 'en';
   const C2H2 = Number(cur.c2h2) || 0, CO = Number(cur.co) || 0, CO2 = Number(cur.co2) || 0, TDCG = Number(cur.tdcg) || 0;
+
+  // ── CHANGEUR DE PRISES (OLTC) : grille C57.139 / CIGRE 443 — l'arc de commutation est NORMAL,
+  //    on n'applique PAS les seuils de cuve. On juge par ratio C2H2/C2H4, profil thermique (coking) et tendance.
+  if (isOltc) {
+    const C2H4 = Number((cur as any).c2h4) || 0;
+    const ratio = C2H4 > 0 ? C2H2 / C2H4 : null; // < ~0.3 = profil thermique dominant (échauffement/coking)
+    items.push({ lvl: 'info', txt: EN
+      ? 'OLTC compartment: switching-arc gases (C₂H₂, C₂H₄, H₂) are expected here. Interpreted per IEEE C57.139 / CIGRE 443 (ratios + trend per operations), NOT tank thresholds.'
+      : "Compartiment OLTC : les gaz d'arc de commutation (C₂H₂, C₂H₄, H₂) sont attendus. Interprétation selon IEEE C57.139 / CIGRE 443 (ratios + tendance par opérations), PAS les seuils de cuve." });
+    if (C2H4 > 0 && ratio != null && ratio < 0.3 && C2H4 > 100) items.push({ lvl: 'warn', txt: EN
+      ? `Thermal profile dominant (C₂H₂/C₂H₄ ≈ ${ratio.toFixed(2)}, low): possible contact overheating / coking. Recommend internal inspection of contacts and dynamic resistance (DRM).`
+      : `Profil thermique dominant (C₂H₂/C₂H₄ ≈ ${ratio.toFixed(2)}, bas) : possible échauffement / coking des contacts. Inspection interne des contacts et résistance dynamique (DRM) recommandées.` });
+    if (prev) {
+      const pC2H2 = Number(prev.c2h2) || 0, pC2H4 = Number((prev as any).c2h4) || 0;
+      if ((C2H2 - pC2H2) > 200 || (C2H4 - pC2H4) > 200) items.push({ lvl: 'warn', txt: EN
+        ? 'Sharp rise in switching gases beyond the usual per-operation trend — correlate with operation count; investigate if not explained by switching activity.'
+        : "Hausse marquée des gaz de commutation au-delà de la tendance habituelle par opération — corréler au nombre d'opérations ; investiguer si non expliqué par l'activité de commutation." });
+    }
+    if (CO > 570 || CO2 > 4000) items.push({ lvl: 'info', txt: EN
+      ? `CO/CO₂ present (${CO}/${CO2}) — minor cellulose in OLTC; usually less significant than in the tank.`
+      : `CO/CO₂ présents (${CO}/${CO2}) — cellulose limitée dans l'OLTC ; généralement moins significatif que dans la cuve.` });
+    const oltcReco: InterpReco = { title: EN ? 'OLTC — RECOMMENDED ACTION' : 'OLTC — ACTION RECOMMANDÉE', steps: EN ? [
+      'Compare against operation count and the manufacturer maintenance schedule.',
+      'On abnormal thermal/coking signature: internal inspection of selector/diverter contacts + dynamic contact resistance (DRM).',
+      'Check the tank↔OLTC barrier/seal for cross-contamination.',
+      'OLTC oil filtration/replacement and infrared thermography as warranted.'] : [
+      'Comparer au nombre d\'opérations et au programme de maintenance du fabricant.',
+      'Si signature thermique / coking anormale : inspection interne des contacts sélecteur/déviateur + résistance dynamique de contact (DRM).',
+      'Vérifier le joint/barrière cuve↔OLTC (contamination croisée).',
+      'Filtration/remplacement de l\'huile OLTC et thermographie infrarouge au besoin.'] };
+    return { items, reco: oltcReco };
+  }
 
   if (C2H2 > 35) items.push({ lvl: 'crit', txt: EN ? `Acetylene at ${C2H2} ppm — beyond the IEEE critical limit (35 ppm). Signature of a high-energy fault (electrical arc). Dominant anomaly.` : `Acétylène à ${C2H2} ppm — au-delà du seuil critique IEEE (35 ppm). Signature d'un défaut à haute énergie (arc électrique). Anomalie dominante.` });
   else if (C2H2 > 9) items.push({ lvl: 'warn', txt: EN ? `Acetylene at ${C2H2} ppm: discharges present. Monitor.` : `Acétylène à ${C2H2} ppm : présence de décharges. À surveiller.` });

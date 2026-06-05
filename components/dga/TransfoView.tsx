@@ -63,12 +63,12 @@ function compressImage(file: File, maxDim = 1000, quality = 0.7): Promise<string
 
 export function TransfoView(props: {
   tenant: string; tenantName?: string; siteText?: string; lang: Lang; tr: (fr: string, en: string) => string;
-  dossier: Dossier; measures: Measure[]; logoUrl: string | null;
+  dossier: Dossier; measures: Measure[]; logoUrl: string | null; allDossiers?: Dossier[];
   onSave: (d: Dossier) => Promise<void> | void;            // enregistre le dossier (équipement + extra)
   onNewMeasure: () => void; onDeleteMeasure: (id?: string) => void; onDeleteDossier: () => void;
   setNotice: (s: string | null) => void;
 }) {
-  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
+  const { tenant, tenantName, siteText, lang, tr, dossier, measures, logoUrl, allDossiers = [], onSave, onNewMeasure, onDeleteMeasure, onDeleteDossier, setNotice } = props;
   const extra = dossier.extra || {};
 
   const data = measures; // déjà triées asc par date
@@ -153,7 +153,7 @@ export function TransfoView(props: {
           <div className="py-6 text-center text-sm text-gray-400">{tr('Aucune mesure.', 'No measurement.')}</div>
           <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ {tr('Nouveau prélèvement', 'New sample')}</button>
         </div>
-        {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} onSave={onSave} onClose={() => setShowEdit(false)} />}
+        {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} allDossiers={allDossiers} onSave={onSave} onClose={() => setShowEdit(false)} />}
       </div>
     );
   }
@@ -162,7 +162,8 @@ export function TransfoView(props: {
   const prev = selIdx > 0 ? data[selIdx - 1] : null;
   const zone = duvalZone(duvalPct({ ch4: +(cur.ch4 || 0), c2h4: +(cur.c2h4 || 0), c2h2: +(cur.c2h2 || 0) }), lang);
   const worst = worstCondition(cur);
-  const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang);
+  const isOltc = !!dossier.extra?.is_oltc;
+  const { items, reco } = interpret(cur as any, prev as any, zone, worst, lang, isOltc);
   const oilEval = evalOil(cur.oil_quality || {}, dossier.kv, lang);
   // Furanes : saisie en ppb (prototype) → furanInterpret attend des ppm (= ppb/1000).
   const fal2ppb = numOrNull(cur.oil_quality?.f_2fal);
@@ -298,10 +299,17 @@ export function TransfoView(props: {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <TransfoHead dossier={dossier} lang={lang} />
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-col items-center rounded-xl px-3 py-1.5 text-white" style={{ background: COND_COLORS[worst] }}>
-                <span className="text-sm font-extrabold">{COND_LABELS[worst]}</span>
-                <span className="text-[10px] uppercase tracking-wide opacity-90">{tr('DGA GLOBAL', 'DGA OVERALL')}</span>
-              </div>
+              {isOltc ? (
+                <div className="flex flex-col items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-white">
+                  <span className="text-sm font-extrabold">OLTC</span>
+                  <span className="text-[10px] uppercase tracking-wide opacity-90">{tr('Changeur de prises', 'Tap changer')}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center rounded-xl px-3 py-1.5 text-white" style={{ background: COND_COLORS[worst] }}>
+                  <span className="text-sm font-extrabold">{COND_LABELS[worst]}</span>
+                  <span className="text-[10px] uppercase tracking-wide opacity-90">{tr('DGA GLOBAL', 'DGA OVERALL')}</span>
+                </div>
+              )}
               {pcbVerdict.code !== 'unknown' && (
                 <div className="flex flex-col items-center rounded-xl px-3 py-1.5 text-white" style={{ background: pcbVerdict.color }}>
                   <span className="text-sm font-extrabold">{pcbVerdict.label}</span>
@@ -596,7 +604,7 @@ export function TransfoView(props: {
       </div>
 
       {/* MODALE ÉDITION DES INFOS (commande / équipement / échantillonnage + n° projet) */}
-      {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} onSave={onSave} onClose={() => setShowEdit(false)} />}
+      {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} allDossiers={allDossiers} onSave={onSave} onClose={() => setShowEdit(false)} />}
 
       {/* LIGHTBOX */}
       {lightbox && (
@@ -680,7 +688,7 @@ function TransfoHead({ dossier, lang }: { dossier: Dossier; lang: Lang }) {
 
 // Modale d'édition des infos du rapport (commande / équipement / échantillonnage + n° projet + flag).
 // Port fidèle de EditInfoModal (dga-oil-app.jsx) ; projectNo -> extra.project_no ; champs num convertis.
-function EditInfoModal({ dossier, lang, tr, tenant, onSave, onClose }: { dossier: Dossier; lang: Lang; tr: (fr: string, en: string) => string; tenant: string; onSave: (d: Dossier) => void | Promise<void>; onClose: () => void }) {
+function EditInfoModal({ dossier, lang, tr, tenant, allDossiers = [], onSave, onClose }: { dossier: Dossier; lang: Lang; tr: (fr: string, en: string) => string; tenant: string; allDossiers?: Dossier[]; onSave: (d: Dossier) => void | Promise<void>; onClose: () => void }) {
   const [d, setD] = useState<Record<string, any>>(() => {
     const o: Record<string, any> = {};
     EQUIP_FIELDS.forEach(f => { o[f.key as string] = (dossier as any)[f.key] != null ? (dossier as any)[f.key] : ''; });
@@ -692,6 +700,10 @@ function EditInfoModal({ dossier, lang, tr, tenant, onSave, onClose }: { dossier
   const [sites, setSites] = useState<SiteNode[]>([]);
   const [siteId, setSiteId] = useState<string>(dossier.extra?.site_id || '');
   const [departmentId, setDepartmentId] = useState<string>(dossier.extra?.department_id || '');
+  // Type Cuve/OLTC + transformateur parent (par n° de série).
+  const [isOltc, setIsOltc] = useState<boolean>(!!dossier.extra?.is_oltc);
+  const [parentSerie, setParentSerie] = useState<string>(dossier.extra?.parent_serie || '');
+  const parentCandidates = allDossiers.filter(x => x.id !== dossier.id && !x.extra?.is_oltc && x.serie); // cuves avec n° de série
   useEffect(() => { if (tenant) getSitesTree(tenant).then(setSites); }, [tenant]);
   const deptOptions = sites.find(s => s.id === siteId)?.departments ?? [];
   const set = (k: string, v: any) => setD(p => ({ ...p, [k]: v }));
@@ -700,7 +712,7 @@ function EditInfoModal({ dossier, lang, tr, tenant, onSave, onClose }: { dossier
     const patch: any = { ...dossier };
     EQUIP_FIELDS.forEach(f => { const v = d[f.key as string]; patch[f.key] = f.num ? (v === '' || v == null ? null : Number(v)) : v; });
     patch.flag = d.flag;
-    patch.extra = { ...(dossier.extra || {}), project_no: d.projectNo, site_id: siteId || null, department_id: departmentId || null };
+    patch.extra = { ...(dossier.extra || {}), project_no: d.projectNo, site_id: siteId || null, department_id: departmentId || null, is_oltc: isOltc, parent_serie: isOltc ? (parentSerie || null) : null };
     onSave(patch); onClose();
   }
   return (
@@ -720,6 +732,21 @@ function EditInfoModal({ dossier, lang, tr, tenant, onSave, onClose }: { dossier
               <option value="">{tr('— Tout le site —', '— Whole site —')}</option>
               {deptOptions.map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
             </select></label>
+        </div>
+        {/* Type d'équipement : cuve principale ou changeur de prises (OLTC) -> interprétation adaptée */}
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr("Type d'équipement", 'Equipment type')}</span>
+            <select className={INP} value={isOltc ? 'oltc' : 'tank'} onChange={e => setIsOltc(e.target.value === 'oltc')}>
+              <option value="tank">{tr('Cuve principale', 'Main tank')}</option>
+              <option value="oltc">{tr('Changeur de prises (OLTC)', 'Tap changer (OLTC)')}</option>
+            </select></label>
+          {isOltc && (
+            <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Transformateur parent', 'Parent transformer')}</span>
+              <select className={INP} value={parentSerie} onChange={e => setParentSerie(e.target.value)}>
+                <option value="">{tr('— Aucun —', '— None —')}</option>
+                {parentCandidates.map(p => <option key={p.id} value={p.serie}>{p.ident}{p.serie ? ` · SN ${p.serie}` : ''}</option>)}
+              </select></label>
+          )}
         </div>
         {EQUIP_GROUPS.map(g => (
           <div key={g.id} className="mb-3">
