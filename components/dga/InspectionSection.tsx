@@ -129,11 +129,13 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
     setResults({}); setAdvice(null); setInspector(''); setPrefilled(false); setOpen(false);
   }
 
-  // Ouvre une nouvelle inspection VIERGE. L'utilisateur peut ensuite charger la précédente
-  // via le bouton "Repartir de la dernière" (si applicable).
+  // Ouvre une nouvelle inspection en repartant de la PRÉCÉDENTE par défaut (si applicable) ;
+  // l'utilisateur peut basculer en « Vierge » via le bouton. Photos non reprises.
   function openNew() {
-    setResults({}); setInspector(''); setPrefilled(false);
-    setAdvice(null); setDate(todayIso()); setOpen(true);
+    setAdvice(null); setDate(todayIso());
+    if (inspections[0]?.results) loadFromPrevious();
+    else { setResults({}); setInspector(''); setPrefilled(false); }
+    setOpen(true);
   }
   // Charge l'inspection précédente comme base (statuts + mesures ; photos NON reprises).
   function loadFromPrevious() {
