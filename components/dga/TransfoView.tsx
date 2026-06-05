@@ -30,6 +30,7 @@ import { AnomalySection } from '@/components/dga/AnomalySection';
 import { InspectionSection } from '@/components/dga/InspectionSection';
 import { DocsSection } from '@/components/dga/DocsSection';
 import { PrintReport } from '@/components/dga/PrintReport';
+import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 
 const CARD = 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800';
 const H2 = 'mb-2 text-sm font-bold text-gray-900 dark:text-gray-100';
@@ -152,7 +153,7 @@ export function TransfoView(props: {
           <div className="py-6 text-center text-sm text-gray-400">{tr('Aucune mesure.', 'No measurement.')}</div>
           <button className={BTN_PRIMARY} onClick={onNewMeasure}>+ {tr('Nouveau prélèvement', 'New sample')}</button>
         </div>
-        {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} onSave={onSave} onClose={() => setShowEdit(false)} />}
+        {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} onSave={onSave} onClose={() => setShowEdit(false)} />}
       </div>
     );
   }
@@ -595,7 +596,7 @@ export function TransfoView(props: {
       </div>
 
       {/* MODALE ÉDITION DES INFOS (commande / équipement / échantillonnage + n° projet) */}
-      {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} onSave={onSave} onClose={() => setShowEdit(false)} />}
+      {showEdit && <EditInfoModal dossier={dossier} lang={lang} tr={tr} tenant={tenant} onSave={onSave} onClose={() => setShowEdit(false)} />}
 
       {/* LIGHTBOX */}
       {lightbox && (
@@ -679,7 +680,7 @@ function TransfoHead({ dossier, lang }: { dossier: Dossier; lang: Lang }) {
 
 // Modale d'édition des infos du rapport (commande / équipement / échantillonnage + n° projet + flag).
 // Port fidèle de EditInfoModal (dga-oil-app.jsx) ; projectNo -> extra.project_no ; champs num convertis.
-function EditInfoModal({ dossier, lang, tr, onSave, onClose }: { dossier: Dossier; lang: Lang; tr: (fr: string, en: string) => string; onSave: (d: Dossier) => void | Promise<void>; onClose: () => void }) {
+function EditInfoModal({ dossier, lang, tr, tenant, onSave, onClose }: { dossier: Dossier; lang: Lang; tr: (fr: string, en: string) => string; tenant: string; onSave: (d: Dossier) => void | Promise<void>; onClose: () => void }) {
   const [d, setD] = useState<Record<string, any>>(() => {
     const o: Record<string, any> = {};
     EQUIP_FIELDS.forEach(f => { o[f.key as string] = (dossier as any)[f.key] != null ? (dossier as any)[f.key] : ''; });
@@ -687,22 +688,38 @@ function EditInfoModal({ dossier, lang, tr, onSave, onClose }: { dossier: Dossie
     o.projectNo = dossier.extra?.project_no || '';
     return o;
   });
+  // Rattachement Site/Département (source admin planner_succursales), stocké dans extra.
+  const [sites, setSites] = useState<SiteNode[]>([]);
+  const [siteId, setSiteId] = useState<string>(dossier.extra?.site_id || '');
+  const [departmentId, setDepartmentId] = useState<string>(dossier.extra?.department_id || '');
+  useEffect(() => { if (tenant) getSitesTree(tenant).then(setSites); }, [tenant]);
+  const deptOptions = sites.find(s => s.id === siteId)?.departments ?? [];
   const set = (k: string, v: any) => setD(p => ({ ...p, [k]: v }));
   function submit() {
     if (!String(d.ident || '').trim()) { alert(tr("Le nom de l'équipement est requis.", 'Equipment name is required.')); return; }
     const patch: any = { ...dossier };
     EQUIP_FIELDS.forEach(f => { const v = d[f.key as string]; patch[f.key] = f.num ? (v === '' || v == null ? null : Number(v)) : v; });
     patch.flag = d.flag;
-    patch.extra = { ...(dossier.extra || {}), project_no: d.projectNo };
+    patch.extra = { ...(dossier.extra || {}), project_no: d.projectNo, site_id: siteId || null, department_id: departmentId || null };
     onSave(patch); onClose();
   }
   return (
     <div className="dga-screen-only fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
         <h2 className="mb-3 text-lg font-bold">✎ {tr('Informations du rapport', 'Report information')}</h2>
-        <div className="mb-3">
-          <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('N° de projet', 'Project No.')}</div>
-          <input className={INP + ' !w-64'} value={d.projectNo} onChange={e => set('projectNo', e.target.value)} />
+        <div className="mb-3 grid gap-2 sm:grid-cols-3">
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('N° de projet', 'Project No.')}</span>
+            <input className={INP} value={d.projectNo} onChange={e => set('projectNo', e.target.value)} /></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Site', 'Site')}</span>
+            <select className={INP} value={siteId} onChange={e => { setSiteId(e.target.value); setDepartmentId(''); }} disabled={sites.length === 0}>
+              <option value="">{sites.length === 0 ? tr('(Créez des sites dans Admin)', '(Create sites in Admin)') : tr('— Aucun —', '— None —')}</option>
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Département', 'Department')}</span>
+            <select className={INP} value={departmentId} onChange={e => setDepartmentId(e.target.value)} disabled={!siteId || deptOptions.length === 0}>
+              <option value="">{tr('— Tout le site —', '— Whole site —')}</option>
+              {deptOptions.map(dp => <option key={dp.id} value={dp.id}>{dp.name}</option>)}
+            </select></label>
         </div>
         {EQUIP_GROUPS.map(g => (
           <div key={g.id} className="mb-3">

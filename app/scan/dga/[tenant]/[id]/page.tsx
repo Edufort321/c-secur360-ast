@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { AlertTriangle, Loader2, ShieldCheck, Pencil, Droplet } from 'lucide-react';
 import { IEEE_ROWS, OIL_FIELDS, FURAN_FIELDS, gl, fl, ieeeCondition, worstCondition, COND_LABELS, COND_COLORS, pcbStatus, latestPcb, effectiveNextDate } from '@/lib/dga/fields';
 import { dueStatusByDate } from '@/lib/dga/catalog';
+import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 import type { Dossier, Measure } from '@/lib/dga/dossiers';
 
 export default function PublicDgaPage() {
@@ -19,6 +20,7 @@ export default function PublicDgaPage() {
   const [measures, setMeasures] = useState<Measure[]>([]);
   const [logo, setLogo] = useState<string>('/c-secur360-logo.png');
   const [tenantName, setTenantName] = useState<string>('');
+  const [sites, setSites] = useState<SiteNode[]>([]);
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function PublicDgaPage() {
         if (cs?.logo_url) setLogo(cs.logo_url);
         if (cs?.company_name || cs?.name) setTenantName(cs.company_name || cs.name);
       } catch { /* défaut */ }
+      try { setSites(await getSitesTree(tenant)); } catch { /* défaut */ }
       try {
         const { data: d } = await supabase.from('dga_dossiers').select('*').eq('id', id).maybeSingle();
         if (!d) { setState('notfound'); return; }
@@ -60,15 +63,17 @@ export default function PublicDgaPage() {
   const dueColor = due.code === 'overdue' ? '#e63946' : due.code === 'soon' ? '#f4a261' : due.code === 'ok' ? '#2a9d8f' : '#999';
   const dueLabel = due.code === 'overdue' ? 'En retard' : due.code === 'soon' ? 'Bientôt dû' : due.code === 'ok' ? 'À jour' : '—';
   const hasOil = cur && (OIL_FIELDS.some(f => cur.oil_quality?.[f.key] != null) || FURAN_FIELDS.some(f => cur.oil_quality?.[f.key] != null));
+  const siteTxt = siteLabel(sites, dossier.extra?.site_id, dossier.extra?.department_id);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200 p-4">
       <div className="mx-auto max-w-lg">
-        {/* En-tête de marque */}
-        <div className="flex items-center justify-between rounded-t-2xl bg-white px-5 py-4 shadow">
+        {/* En-tête de marque : logo centré, nom du tenant, puis Site/Département (classement) */}
+        <div className="flex flex-col items-center gap-1 rounded-t-2xl bg-white px-5 py-4 shadow">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt="logo" className="h-9 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/c-secur360-logo.png'; }} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{tenantName || tenant}</span>
+          <img src={logo} alt="logo" className="h-11 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/c-secur360-logo.png'; }} />
+          <span className="text-sm font-bold uppercase tracking-wide text-slate-600">{tenantName || tenant}</span>
+          {siteTxt && <span className="text-xs font-semibold text-cyan-700">📍 {siteTxt}</span>}
         </div>
 
         <div className="space-y-4 rounded-b-2xl bg-white px-5 pb-6 pt-3 shadow">

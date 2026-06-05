@@ -23,6 +23,7 @@ import { diagnoseFull, type GasInput } from '@/lib/dga/diagnose';
 import { duvalPct, duvalZone } from '@/lib/dga/duval';
 import { dueStatusByDate } from '@/lib/dga/catalog';
 import { GAS_FIELDS, OIL_FIELDS, FURAN_FIELDS, gl, fl, COND_LABELS, COND_COLORS, worstCondition, effectiveNextDate, pcbStatus, latestPcb } from '@/lib/dga/fields';
+import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 import { voltageClass } from '@/lib/dga/oil';
 import { TransfoView } from '@/components/dga/TransfoView';
 import { SampleEntry, type SamplePayload } from '@/components/dga/SampleEntry';
@@ -47,6 +48,8 @@ export default function DgaPage() {
   const [query, setQuery] = useState('');
   const [dueFilter, setDueFilter] = useState<'all' | 'overdue' | 'soon' | 'ok'>('all');
   const [sortBy, setSortBy] = useState<'due' | 'alert'>('due'); // défaut : reprise à venir
+  const [sitesTree, setSitesTree] = useState<SiteNode[]>([]);
+  const [siteFilter, setSiteFilter] = useState(''); // classer les transfos par site (admin)
   const [delMode, setDelMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -65,6 +68,7 @@ export default function DgaPage() {
     setDossiers(ds); setAllMeasures(ms);
   }
   useEffect(() => { if (access === 'enabled') reload(); /* eslint-disable-next-line */ }, [access, tenant]);
+  useEffect(() => { if (tenant) getSitesTree(tenant).then(setSitesTree); }, [tenant]);
   useEffect(() => {
     if (access !== 'enabled') return;
     (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenant).maybeSingle(); if (data?.logo_url) setLogoUrl(data.logo_url); } catch { /* défaut */ } })();
@@ -108,6 +112,7 @@ export default function DgaPage() {
       return { worst, dueKey };
     };
     const arr = dossiers.filter(d => {
+      if (siteFilter && d.extra?.site_id !== siteFilter) return false;
       if (q && ![d.ident, d.client, d.serie, d.apparatus, d.description, d.company, d.equip_no].some(v => (v || '').toLowerCase().includes(q))) return false;
       if (dueFilter !== 'all') { const last = d.id ? lastByDossier[d.id] : undefined; if (dueStatusByDate(effectiveNextDate(d.extra, last)).code !== dueFilter) return false; }
       return true;
@@ -123,7 +128,7 @@ export default function DgaPage() {
       return rb.worst - ra.worst;
     });
     return arr;
-  }, [dossiers, query, dueFilter, sortBy, lastByDossier]);
+  }, [dossiers, query, dueFilter, sortBy, lastByDossier, siteFilter]);
 
   const selected_d = dossiers.find(d => d.id === selId) || null;
 
@@ -281,7 +286,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -329,7 +334,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   const filterTabs: [string, string, number, string][] = [
@@ -371,6 +376,12 @@ function ListView(p: any) {
             {lbl} <span className="ml-1 rounded-full bg-black/10 px-1.5">{cnt}</span>
           </button>
         ))}
+        {sitesTree.length > 0 && (
+          <select className={inp} value={siteFilter} onChange={e => setSiteFilter(e.target.value)} title={tr('Filtrer par site', 'Filter by site')}>
+            <option value="">{tr('Tous les sites', 'All sites')}</option>
+            {sitesTree.map((s: SiteNode) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
         <div className="ml-auto flex items-center gap-1.5">
           <span className="text-[11px] font-semibold text-gray-500">{tr('Trier par', 'Sort by')} :</span>
           <select className={inp} value={sortBy} onChange={e => setSortBy(e.target.value)}>
@@ -427,7 +438,7 @@ function ListView(p: any) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-2">
                   {delMode && <span className={`mt-0.5 grid h-4 w-4 place-items-center rounded border text-[10px] ${isSel ? 'border-rose-500 bg-rose-500 text-white' : 'border-gray-300'}`}>{isSel ? '✓' : ''}</span>}
-                  <div><div className="font-bold text-gray-900 dark:text-gray-100">{d.ident}</div><div className="text-[11px] text-gray-500">{d.client || '—'}{d.serie ? ` · SN ${d.serie}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div></div>
+                  <div><div className="font-bold text-gray-900 dark:text-gray-100">{d.ident}</div><div className="text-[11px] text-gray-500">{d.client || '—'}{d.serie ? ` · SN ${d.serie}` : ''}{d.kv ? ` · ${d.kv} kV` : ''}</div>{siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id) && <div className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">📍 {siteLabel(sitesTree, d.extra?.site_id, d.extra?.department_id)}</div>}</div>
                 </div>
                 {worst != null && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: COND_COLORS[worst] }}>{COND_LABELS[worst]}</span>}
               </div>
