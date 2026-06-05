@@ -48,7 +48,7 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   logoUrl?: string | null;
   onChange: (next: Inspection[]) => void;
   onCreateAnomalies: (anomalies: Anomaly[]) => void;
-  onSetReminder: (nextDate: string | null) => void;
+  onSetReminder: (nextDate: string | null, intervalMonths?: number) => void;
   setNotice: (s: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +56,9 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   const [prefilled, setPrefilled] = useState(false);
   const [date, setDate] = useState(todayIso());
   const [inspector, setInspector] = useState('');
-  const [reminderMonths, setReminderMonths] = useState(12);
+  // Séquence de reprise (hors formulaire) : intervalle + prochaine échéance, persistés dans extra.
+  const [intervalMonths, setIntervalMonths] = useState<number>(dossier.extra?.insp_interval_months ?? 12);
+  const [nextDate, setNextDate] = useState<string>(dossier.extra?.next_inspection || '');
   const [results, setResults] = useState<Record<string, InspResult>>({});
   const [advice, setAdvice] = useState<{ fr?: string; en?: string } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
@@ -122,8 +124,9 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
         photos: an.photos || [], created_at: new Date().toISOString(),
       } as Anomaly)));
     }
-    // Rappel de routine -> dashboard.
-    onSetReminder(reminderMonths > 0 ? addMonths(date, reminderMonths) : null);
+    // Séquence de reprise -> recalcule la prochaine échéance depuis la date de cette inspection.
+    const due = intervalMonths > 0 ? addMonths(date, intervalMonths) : null;
+    onSetReminder(due, intervalMonths); setNextDate(due || '');
     setNotice(tr(`Inspection enregistrée (${anomalies.length} anomalie(s) reversée(s)).`, `Inspection saved (${anomalies.length} anomaly(ies) added).`));
     // Reset formulaire.
     setResults({}); setAdvice(null); setInspector(''); setPrefilled(false); setOpen(false);
@@ -150,6 +153,15 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
     setResults(cloned); setInspector(prev.inspector || ''); setPrefilled(true);
   }
 
+  // ── Séquence de reprise (panneau autonome, hors formulaire) ──────────────
+  // Base de calcul = date de la dernière inspection (ou aujourd'hui si aucune).
+  const seqBaseDate = inspections[0]?.date || todayIso();
+  function changeInterval(m: number) {
+    const due = m > 0 ? addMonths(seqBaseDate, m) : null;
+    setIntervalMonths(m); setNextDate(due || ''); onSetReminder(due, m);
+  }
+  function changeNextDate(d: string) { setNextDate(d); onSetReminder(d || null, intervalMonths); }
+
   const StatusBtns = ({ k }: { k: string }) => {
     const st = results[k]?.status || '';
     const btn = (val: InspResult['status'], label: string, on: string) => (
@@ -170,6 +182,26 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">🛠️ {tr('Inspection de routine', 'Routine inspection')}</h3>
         <button onClick={() => (open ? setOpen(false) : openNew())} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{open ? tr('Fermer', 'Close') : '+ ' + tr('Nouvelle inspection', 'New inspection')}</button>
+      </div>
+
+      {/* Séquence de reprise d'inspection (autonome, hors formulaire) */}
+      <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
+        <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">🔁 {tr("Séquence de reprise d'inspection", 'Inspection recurrence')}</div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Fréquence', 'Frequency')}</span>
+            <select className={INP} value={intervalMonths} onChange={e => changeInterval(Number(e.target.value))}>
+              {REMINDER_OPTIONS.map(o => <option key={o.months} value={o.months}>{lang === 'en' ? o.en : o.fr}</option>)}
+            </select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Prochaine inspection', 'Next inspection')}</span>
+            <input type="date" className={INP} value={nextDate} onChange={e => changeNextDate(e.target.value)} disabled={intervalMonths === 0} /></label>
+        </div>
+        <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+          {intervalMonths === 0
+            ? tr('Aucun rappel programmé.', 'No reminder scheduled.')
+            : nextDate
+              ? tr(`Prochaine échéance le ${nextDate} (calculée depuis la dernière inspection du ${seqBaseDate}). Ajustable manuellement.`, `Next due on ${nextDate} (computed from the last inspection on ${seqBaseDate}). Adjustable manually.`)
+              : tr('Choisis une fréquence pour programmer la reprise.', 'Pick a frequency to schedule the recurrence.')}
+        </p>
       </div>
 
       {/* Historique consultable */}
@@ -223,15 +255,11 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
 
       {open && (
         <div className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr("Date d'inspection", 'Inspection date')}</span>
               <input type="date" className={INP} value={date} onChange={e => setDate(e.target.value)} /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Inspecteur', 'Inspector')}</span>
               <input className={INP} value={inspector} onChange={e => setInspector(e.target.value)} placeholder={tr('Nom', 'Name')} /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Rappel de routine', 'Routine reminder')}</span>
-              <select className={INP} value={reminderMonths} onChange={e => setReminderMonths(Number(e.target.value))}>
-                {REMINDER_OPTIONS.map(o => <option key={o.months} value={o.months}>{lang === 'en' ? o.en : o.fr}</option>)}
-              </select></label>
           </div>
           {inspections[0]?.date && (
             prefilled ? (

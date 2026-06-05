@@ -118,8 +118,9 @@ export function TransfoView(props: {
   };
   // Anomalies issues d'une inspection -> ajoutées à la section Anomalies.
   const addAnomaliesFromInspection = (created: Anomaly[]) => { if (created.length) updateAnomalies([...anomalies, ...created]); };
-  // Rappel de routine -> stocké dans extra (flaggé au dashboard).
-  const setInspectionReminder = (nextDate: string | null) => updateExtra({ next_inspection: nextDate });
+  // Séquence de reprise (rappel) -> stockée dans extra (flaggée au dashboard) : prochaine échéance + intervalle.
+  const setInspectionReminder = (nextDate: string | null, intervalMonths?: number) =>
+    updateExtra({ next_inspection: nextDate, ...(intervalMonths != null ? { insp_interval_months: intervalMonths } : {}) });
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
