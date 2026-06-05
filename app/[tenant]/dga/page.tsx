@@ -216,37 +216,50 @@ export default function DgaPage() {
       const resp = await fetch('/api/dga/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdfBase64: b64 }) });
       const j = await resp.json();
       if (!resp.ok || j.error) throw new Error(j.error || 'extraction');
-      const eq = j.equipment || {};
-      const measuresN = (j.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
-      const match = matchDossier(dossiers, { serialNo: eq.serialNo, identification: eq.identification, equipment: eq.equipment });
-      let newMeasures = measuresN, dupCount = 0;
-      if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
-      setImportPreview({ rawEq: eq, eq: mapEquip(eq), measures: measuresN, match, newMeasures, dupCount });
+      const transformers: any[] = Array.isArray(j.transformers) && j.transformers.length ? j.transformers : (j.equipment ? [{ equipment: j.equipment, measurements: j.measurements }] : []);
+      if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le PDF.', 'No transformer detected in the PDF.'));
+      // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
+      const items = transformers.map((t: any) => {
+        const rawEq = t.equipment || {};
+        const measuresN = (t.measurements || []).map(mapMeasure).sort((a: Measure, b: Measure) => String(a.sample_date).localeCompare(String(b.sample_date)));
+        const match = matchDossier(dossiers, { serialNo: rawEq.serialNo, identification: rawEq.identification, equipment: rawEq.equipment });
+        let newMeasures = measuresN, dupCount = 0;
+        if (match?.id) { const existing = new Set((measuresByDossier[match.id] || []).filter(m => m.sample_date).map(m => m.sample_date)); newMeasures = measuresN.filter((m: Measure) => !existing.has(m.sample_date)); dupCount = measuresN.length - newMeasures.length; }
+        return { rawEq, eq: mapEquip(rawEq), measures: measuresN, match, newMeasures, dupCount, mode: match ? 'merge' : 'create' };
+      });
+      setImportPreview({ items });
     } catch (e: any) { setImportErr(e?.message || String(e)); }
     finally { setImporting(false); }
   }
   async function applyImport() {
-    if (!importPreview) return;
-    const { eq, match, newMeasures } = importPreview as { eq: Dossier; match: Dossier | null; newMeasures: Measure[] };
+    const items: any[] = importPreview?.items || [];
+    if (!items.length) return;
     try {
-      let did: string;
-      if (match?.id) {
-        did = match.id;
-        const patch: any = { ...match };
-        for (const k of Object.keys(eq) as (keyof Dossier)[]) { if ((match as any)[k] == null || (match as any)[k] === '') (patch as any)[k] = (eq as any)[k]; }
-        await saveDossier(tenant, patch);
-      } else {
-        const saved = await saveDossier(tenant, eq);
-        if (saved.error || !saved.data?.id) throw new Error(saved.error || 'enregistrement');
-        did = saved.data.id;
+      let created = 0, merged = 0, lastId: string | null = null;
+      for (const it of items) {
+        const useMatch = it.mode !== 'create' && it.match?.id;
+        const measuresToAdd: Measure[] = useMatch ? it.newMeasures : it.measures;
+        let did: string;
+        if (useMatch) {
+          did = it.match.id;
+          const patch: any = { ...it.match };
+          for (const k of Object.keys(it.eq) as (keyof Dossier)[]) { if ((it.match as any)[k] == null || (it.match as any)[k] === '') (patch as any)[k] = (it.eq as any)[k]; }
+          await saveDossier(tenant, patch); merged++;
+        } else {
+          const saved = await saveDossier(tenant, it.eq);
+          if (saved.error || !saved.data?.id) throw new Error(saved.error || 'enregistrement');
+          did = saved.data.id; created++;
+        }
+        for (const m of measuresToAdd) {
+          const gas: GasInput = { h2: num(m.h2), ch4: num(m.ch4), c2h6: num(m.c2h6), c2h4: num(m.c2h4), c2h2: num(m.c2h2), co: num(m.co), co2: num(m.co2) };
+          const dg = diagnoseFull(gas);
+          await saveMeasure(tenant, did, { ...m, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf' });
+        }
+        lastId = did;
       }
-      for (const m of newMeasures) {
-        const gas: GasInput = { h2: num(m.h2), ch4: num(m.ch4), c2h6: num(m.c2h6), c2h4: num(m.c2h4), c2h2: num(m.c2h2), co: num(m.co), co2: num(m.co2) };
-        const dg = diagnoseFull(gas);
-        await saveMeasure(tenant, did, { ...m, tdcg: dg.tdcg, condition: dg.condition, duval: dg.duval, fault: tr(dg.fault.fr, dg.fault.en), methods: dg.methods, source: 'pdf' });
-      }
-      setImportPreview(null); await reload(); setSelId(did); setView('fiche');
-      setNotice(match ? tr(`Fusionné au transformateur « ${match.ident} » : ${newMeasures.length} nouvelle(s) mesure(s).`, `Merged into "${match.ident}": ${newMeasures.length} new measurement(s).`) : tr(`Nouveau transformateur créé : ${newMeasures.length} mesure(s).`, `New transformer created: ${newMeasures.length} measurement(s).`));
+      setImportPreview(null); await reload();
+      if (items.length === 1 && lastId) { setSelId(lastId); setView('fiche'); } else { setView('list'); }
+      setNotice(tr(`Import terminé : ${created} créé(s), ${merged} fusionné(s) sur ${items.length} transformateur(s).`, `Import done: ${created} created, ${merged} merged across ${items.length} transformer(s).`));
     } catch (e: any) { setImportErr(e?.message || String(e)); }
   }
 
@@ -429,35 +442,47 @@ function ListView(p: any) {
 
 // ── APERÇU IMPORT (fusion en colonnes) ──
 function ImportPreview({ tr, lang, importPreview, setImportPreview, applyImport }: any) {
-  const { eq, measures, match, newMeasures, dupCount } = importPreview;
-  const isNew = (m: Measure) => !match || newMeasures.some((nm: Measure) => nm.sample_date === m.sample_date);
+  const items: any[] = importPreview.items || [];
+  const multi = items.length > 1;
+  const setMode = (i: number, mode: 'merge' | 'create') => setImportPreview({ ...importPreview, items: items.map((it, idx) => (idx === i ? { ...it, mode } : it)) });
+  const oilRows = (measures: Measure[]) => OIL_FIELDS.filter(f => measures.some(m => m.oil_quality?.[f.key] != null));
+  const furanRows = (measures: Measure[]) => FURAN_FIELDS.filter(f => measures.some(m => m.oil_quality?.[f.key] != null));
   return (
     <Modal onClose={() => setImportPreview(null)}>
-      <h2 className="mb-3 text-lg font-bold">📄 {tr('Vérifie les données extraites avant d\'enregistrer.', 'Review extracted data before saving.')}</h2>
-      {match && (
-        <div className="mb-3 rounded-lg border border-emerald-500 bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
-          <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">🔗 {tr('Transformateur existant trouvé', 'Existing transformer found')}</div>
-          <div className="mt-0.5 text-xs"><b>{match.ident}</b>{match.serie ? ` · SN ${match.serie}` : ''}</div>
-          <div className="mt-1 text-xs">{tr('Les nouvelles mesures seront ajoutées.', 'New measurements will be added.')} <b className="text-emerald-700 dark:text-emerald-300">{newMeasures.length} {tr('nouvelle(s) mesure(s)', 'new measurement(s)')}</b>{dupCount > 0 && <span className="text-amber-600"> · {dupCount} {tr('déjà présente(s), ignorée(s)', 'already present, skipped')}</span>}</div>
-          {newMeasures.length === 0 && <div className="mt-1 text-xs font-semibold text-red-600">{tr('Aucune nouvelle mesure (toutes déjà présentes).', 'No new measurements (all already present).')}</div>}
-        </div>
-      )}
-      <div className="mb-2 text-sm"><b>{eq.ident || '—'}</b>{eq.kv ? ` · ${eq.kv} kV` : ''}{eq.manufacturer ? ` · ${eq.manufacturer}` : ''} <span className="ml-2 text-emerald-600">{measures.length} {tr('mesure(s) trouvée(s)', 'measurement(s) found')}</span></div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead><tr><th className="px-2 py-1 text-left font-semibold">{tr('Paramètre', 'Parameter')}</th>{measures.map((m: Measure, i: number) => <th key={i} className="px-2 py-1 text-right font-semibold" style={{ color: isNew(m) ? '#1e7d6f' : '#b0a290' }}>{m.sample_date}{!isNew(m) ? ' ✓' : ''}</th>)}</tr></thead>
-          <tbody>
-            {GAS_FIELDS.map(g => <tr key={g.u} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1">{gl(g.u, lang)}</td>{measures.map((m: any, i: number) => <td key={i} className="px-2 py-1 text-right">{m[g.key] ?? '—'}</td>)}</tr>)}
-            {OIL_FIELDS.filter(f => measures.some((m: Measure) => m.oil_quality?.[f.key] != null)).map(f => <tr key={f.key} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1 italic">{fl(f, lang)}</td>{measures.map((m: Measure, i: number) => <td key={i} className="px-2 py-1 text-right">{m.oil_quality?.[f.key] ?? '—'}</td>)}</tr>)}
-            {FURAN_FIELDS.filter(f => measures.some((m: Measure) => m.oil_quality?.[f.key] != null)).map(f => <tr key={f.key} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1 italic">{fl(f, lang)}</td>{measures.map((m: Measure, i: number) => <td key={i} className="px-2 py-1 text-right">{m.oil_quality?.[f.key] ?? '—'}</td>)}</tr>)}
-          </tbody>
-        </table>
+      <h2 className="mb-1 text-lg font-bold">📄 {tr("Vérifie les données extraites avant d'enregistrer.", 'Review extracted data before saving.')}</h2>
+      {multi && <p className="mb-3 text-sm font-semibold text-rose-600">{items.length} {tr('transformateurs détectés — séparés ci-dessous (un dossier chacun).', 'transformers detected — separated below (one record each).')}</p>}
+      <div className="space-y-4">
+        {items.map((it, i) => {
+          const merging = it.mode !== 'create' && it.match;
+          const measures: Measure[] = it.measures;
+          return (
+            <div key={i} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm"><b>{it.eq.ident || '—'}</b>{it.eq.serie ? ` · SN ${it.eq.serie}` : ''}{it.eq.kv ? ` · ${it.eq.kv} kV` : ''}{it.eq.manufacturer ? ` · ${it.eq.manufacturer}` : ''} <span className="ml-1 text-emerald-600">{measures.length} {tr('mesure(s)', 'meas.')}</span></div>
+                {it.match && (
+                  <div className="flex gap-1">
+                    <button onClick={() => setMode(i, 'merge')} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${merging ? 'bg-emerald-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`}>🔗 {tr('Fusionner', 'Merge')}</button>
+                    <button onClick={() => setMode(i, 'create')} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${!merging ? 'bg-rose-600 text-white' : 'border border-gray-300 text-gray-600 dark:border-gray-600'}`}>＋ {tr('Créer', 'Create')}</button>
+                  </div>
+                )}
+              </div>
+              {it.match && merging && <div className="mb-2 text-xs text-emerald-700 dark:text-emerald-300">🔗 {tr('Fusion avec', 'Merge with')} <b>{it.match.ident}</b> — <b>{it.newMeasures.length}</b> {tr('nouvelle(s)', 'new')}{it.dupCount > 0 && <span className="text-amber-600"> · {it.dupCount} {tr('déjà présente(s)', 'already present')}</span>}</div>}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr><th className="px-2 py-1 text-left font-semibold">{tr('Paramètre', 'Parameter')}</th>{measures.map((m, k) => <th key={k} className="px-2 py-1 text-right font-semibold">{m.sample_date}</th>)}</tr></thead>
+                  <tbody>
+                    {GAS_FIELDS.map(g => <tr key={g.u} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1">{gl(g.u, lang)}</td>{measures.map((m: any, k) => <td key={k} className="px-2 py-1 text-right">{m[g.key] ?? '—'}</td>)}</tr>)}
+                    {oilRows(measures).map(f => <tr key={f.key} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1 italic">{fl(f, lang)}</td>{measures.map((m, k) => <td key={k} className="px-2 py-1 text-right">{m.oil_quality?.[f.key] ?? '—'}</td>)}</tr>)}
+                    {furanRows(measures).map(f => <tr key={f.key} className="border-t border-gray-100 dark:border-gray-700/50"><td className="px-2 py-1 italic">{fl(f, lang)}</td>{measures.map((m, k) => <td key={k} className="px-2 py-1 text-right">{m.oil_quality?.[f.key] ?? '—'}</td>)}</tr>)}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {match ? (<>
-          <button className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50" disabled={!newMeasures.length} onClick={applyImport}>🔗 {tr('Fusionner', 'Merge')}</button>
-          <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setImportPreview({ ...importPreview, match: null, newMeasures: measures, dupCount: 0 })}>{tr('Créer un nouveau à la place', 'Create a new one instead')}</button>
-        </>) : <button className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white" onClick={applyImport}>{tr('Appliquer', 'Apply')}</button>}
+        <button className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white" onClick={applyImport}>{multi ? tr(`Tout importer (${items.length})`, `Import all (${items.length})`) : tr('Importer', 'Import')}</button>
         <button className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold dark:border-gray-600" onClick={() => setImportPreview(null)}>{tr('Annuler', 'Cancel')}</button>
       </div>
     </Modal>
