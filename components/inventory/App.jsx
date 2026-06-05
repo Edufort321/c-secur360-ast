@@ -309,12 +309,38 @@ const EmptyState = ({ icon: Icon = Package, title, message }) => {
 
 // Modal moderne
 const Modal = ({ isOpen, onClose, title, children, footer }) => {
+  const dialogRef = useRef(null);
+  const prevFocus = useRef(null);
+  // Accessibilité : Escape pour fermer, focus initial dans la modale, piège à Tab, restauration du focus.
+  useEffect(() => {
+    if (!isOpen) return;
+    prevFocus.current = document.activeElement;
+    const el = dialogRef.current;
+    const focusables = () => el ? el.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') : [];
+    setTimeout(() => { const f = focusables(); (f.length ? f[0] : el)?.focus?.(); }, 0);
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onClose?.(); return; }
+      if (e.key === 'Tab') {
+        const f = focusables(); if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => { document.removeEventListener('keydown', onKey, true); try { prevFocus.current?.focus?.(); } catch { /* ignore */ } };
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-y-auto bg-gray-900 bg-opacity-75 sm:p-4" onClick={onClose}>
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col"
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === 'string' ? title : undefined}
+        className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-4xl max-h-[94vh] sm:max-h-[90vh] flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
       >
           <div className="bg-white dark:bg-gray-800 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 flex-shrink-0">
@@ -322,6 +348,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">{title}</h3>
               <button
                 onClick={onClose}
+                aria-label="Fermer"
                 className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X size={20} />
@@ -1368,6 +1395,15 @@ function AppContent() {
   const [view, setView] = useState('dashboard');
   const [navMenuOpen, setNavMenuOpen] = useState(false); // Menu de navigation mobile (déroulant, façon autres modules)
   const [saveError, setSaveError] = useState(null); // Erreur de sauvegarde cloud remontée à l'écran (fini les échecs silencieux)
+  // Feedback non bloquant (toasts) + confirmation in-app (window.confirm est inopérant en PWA installée).
+  const [toasts, setToasts] = useState([]);
+  const notify = (message, type = 'success') => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(x => x.id !== id)), 4200);
+  };
+  const [confirmState, setConfirmState] = useState(null);
+  const askConfirm = (opts) => setConfirmState(opts); // { message, title?, confirmLabel?, danger?, onConfirm }
   const [companyLogo, setCompanyLogo] = useState('/c-secur360-logo.png'); // Logo tenant (repli marque) pour la carte QR
   useEffect(() => {
     let active = true;
@@ -2049,9 +2085,7 @@ function AppContent() {
   };
 
   const deleteItem = (itemId) => {
-    if (window.confirm(t('messages.confirm.delete'))) {
-      setItems(prev => prev.filter(item => item.id !== itemId));
-    }
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setItems(prev => prev.filter(item => item.id !== itemId)) });
   };
 
   // Gestion des départements (MAJ fonctionnelles ; localStorage calculé depuis prev ; source unique = snapshot)
@@ -2065,9 +2099,7 @@ function AppContent() {
   };
 
   const deleteDepartment = (deptId) => {
-    if (window.confirm(t('messages.confirm.delete'))) {
-      setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS('c-secur360-departments', next); return next; });
-    }
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setDepartments(prev => { const next = prev.filter(dept => dept.id !== deptId); saveLS('c-secur360-departments', next); return next; }) });
   };
 
   // Gestion des catégories
@@ -2081,9 +2113,7 @@ function AppContent() {
   };
 
   const deleteCategory = (catId) => {
-    if (window.confirm(t('messages.confirm.delete'))) {
-      setCategories(prev => { const next = prev.filter(cat => cat.id !== catId); saveLS('c-secur360-categories', next); return next; });
-    }
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setCategories(prev => { const next = prev.filter(cat => cat.id !== catId); saveLS('c-secur360-categories', next); return next; }) });
   };
 
   // Gestion des unités de stockage
@@ -2106,10 +2136,7 @@ function AppContent() {
   };
 
   const deleteStorageUnit = (unitId) => {
-    if (window.confirm(t('messages.confirm.delete'))) {
-      setStorageUnits(storageUnits.filter(unit => unit.id !== unitId));
-      localStorage.setItem('c-secur360-storage-units', JSON.stringify(storageUnits.filter(unit => unit.id !== unitId)));
-    }
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setStorageUnits(prev => { const next = prev.filter(unit => unit.id !== unitId); saveLS('c-secur360-storage-units', next); return next; }) });
   };
 
   const updateQuantity = (itemId, quantityChange, type = 'adjustment', reason = '', departmentCode = null, projectCode = null, user = null) => {
@@ -4593,8 +4620,7 @@ function AppContent() {
                 {globalInventoryMode.active && (
                   <button
                     onClick={() => {
-                      if (confirm(t('administration.inventoryMode.confirmEnd'))) {
-                        // TODO: Generate report before ending
+                      askConfirm({ message: t('administration.inventoryMode.confirmEnd'), confirmLabel: t('administration.inventoryMode.endInventory'), onConfirm: () => {
                         setGlobalInventoryMode({
                           active: false,
                           departmentId: null,
@@ -4604,7 +4630,7 @@ function AppContent() {
                           startDate: null,
                           scans: []
                         });
-                      }
+                      } });
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                   >
@@ -4631,7 +4657,7 @@ function AppContent() {
                         const deptId = e.target.value;
                         if (deptId) {
                           const dept = departments.find(d => d.id === deptId);
-                          if (dept && confirm(t('administration.inventoryMode.confirmStart').replace('{department}', dept.name))) {
+                          if (dept) askConfirm({ message: t('administration.inventoryMode.confirmStart').replace('{department}', dept.name), confirmLabel: t('administration.inventoryMode.startInventory'), danger: false, onConfirm: () => {
                             setGlobalInventoryMode({
                               active: true,
                               departmentId: dept.id,
@@ -4641,7 +4667,7 @@ function AppContent() {
                               startDate: new Date().toISOString(),
                               scans: []
                             });
-                          }
+                          } });
                         }
                         e.target.value = '';
                       }}
@@ -7398,6 +7424,32 @@ function AppContent() {
           {view === 'admin' && <AdminView />}
         </main>
       </div>
+
+      {/* Toasts (feedback non bloquant) */}
+      {toasts.length > 0 && (
+        <div className="fixed top-4 right-4 z-[60] flex max-w-[90vw] flex-col gap-2" role="status" aria-live="polite">
+          {toasts.map(x => (
+            <div key={x.id} className={`flex items-start gap-2 rounded-xl px-4 py-3 text-sm shadow-lg ${x.type === 'error' ? 'bg-red-600 text-white' : x.type === 'info' ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white'}`}>
+              <span>{x.type === 'error' ? '⚠️' : x.type === 'info' ? 'ℹ️' : '✓'}</span>
+              <span className="flex-1 whitespace-pre-line">{x.message}</span>
+              <button aria-label="Fermer" className="opacity-70 hover:opacity-100" onClick={() => setToasts(prev => prev.filter(t => t.id !== x.id))}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dialogue de confirmation in-app (remplace window.confirm, inopérant en PWA) */}
+      {confirmState && (
+        <Modal isOpen onClose={() => setConfirmState(null)} title={confirmState.title || (language === 'fr' ? 'Confirmer' : 'Confirm')}>
+          <div className="p-2">
+            <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line">{confirmState.message}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setConfirmState(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">{language === 'fr' ? 'Annuler' : 'Cancel'}</button>
+              <button onClick={() => { const cb = confirmState.onConfirm; setConfirmState(null); cb?.(); }} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${confirmState.danger === false ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}>{confirmState.confirmLabel || (language === 'fr' ? 'Confirmer' : 'Confirm')}</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       <LoginModal />
       <PrintModal />
