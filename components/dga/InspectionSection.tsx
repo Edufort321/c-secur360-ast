@@ -7,6 +7,7 @@
 // ============================================================================
 import React, { useState } from 'react';
 import { INSPECTION_CHECKLIST, il, type InspResult } from '@/lib/dga/inspection';
+import { generateInspectionPdf } from '@/lib/dga/inspectionPdf';
 import { addMonths } from '@/lib/dga/catalog';
 import type { Inspection, Anomaly, Dossier } from '@/lib/dga/dossiers';
 import type { Lang } from '@/lib/dga/fields';
@@ -42,14 +43,17 @@ const REMINDER_OPTIONS = [
   { months: 24, fr: '24 mois', en: '24 months' },
 ];
 
-export function InspectionSection({ dossier, inspections, lang, tr, onChange, onCreateAnomalies, onSetReminder, setNotice }: {
+export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onChange, onCreateAnomalies, onSetReminder, setNotice }: {
   dossier: Dossier; inspections: Inspection[]; lang: Lang; tr: (fr: string, en: string) => string;
+  logoUrl?: string | null;
   onChange: (next: Inspection[]) => void;
   onCreateAnomalies: (anomalies: Anomaly[]) => void;
   onSetReminder: (nextDate: string | null) => void;
   setNotice: (s: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
   const [date, setDate] = useState(todayIso());
   const [inspector, setInspector] = useState('');
   const [reminderMonths, setReminderMonths] = useState(12);
@@ -122,26 +126,26 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
     onSetReminder(reminderMonths > 0 ? addMonths(date, reminderMonths) : null);
     setNotice(tr(`Inspection enregistrée (${anomalies.length} anomalie(s) reversée(s)).`, `Inspection saved (${anomalies.length} anomaly(ies) added).`));
     // Reset formulaire.
-    setResults({}); setAdvice(null); setInspector(''); setOpen(false);
+    setResults({}); setAdvice(null); setInspector(''); setPrefilled(false); setOpen(false);
   }
 
-  // Ouvre une nouvelle inspection en repartant de la PRÉCÉDENTE (statuts + mesures pré-remplis,
-  // photos NON reprises — propres à chaque inspection). Sinon formulaire vierge.
+  // Ouvre une nouvelle inspection VIERGE. L'utilisateur peut ensuite charger la précédente
+  // via le bouton "Repartir de la dernière" (si applicable).
   function openNew() {
-    const prev = inspections[0];
-    if (prev?.results) {
-      const cloned: Record<string, InspResult> = {};
-      Object.entries(prev.results).forEach(([k, r]: any) => {
-        const inputs = { ...(r?.inputs || {}) };
-        delete inputs.__photos; // on ne reprend pas les photos de l'inspection précédente
-        cloned[k] = { status: r?.status || '', inputs, note: r?.note || '' };
-      });
-      setResults(cloned);
-      setInspector(prev.inspector || '');
-    } else {
-      setResults({}); setInspector('');
-    }
+    setResults({}); setInspector(''); setPrefilled(false);
     setAdvice(null); setDate(todayIso()); setOpen(true);
+  }
+  // Charge l'inspection précédente comme base (statuts + mesures ; photos NON reprises).
+  function loadFromPrevious() {
+    const prev = inspections[0];
+    if (!prev?.results) return;
+    const cloned: Record<string, InspResult> = {};
+    Object.entries(prev.results).forEach(([k, r]: any) => {
+      const inputs = { ...(r?.inputs || {}) };
+      delete inputs.__photos;
+      cloned[k] = { status: r?.status || '', inputs, note: r?.note || '' };
+    });
+    setResults(cloned); setInspector(prev.inspector || ''); setPrefilled(true);
   }
 
   const StatusBtns = ({ k }: { k: string }) => {
@@ -166,16 +170,50 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
         <button onClick={() => (open ? setOpen(false) : openNew())} className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-rose-700">{open ? tr('Fermer', 'Close') : '+ ' + tr('Nouvelle inspection', 'New inspection')}</button>
       </div>
 
-      {/* Historique */}
+      {/* Historique consultable */}
       {inspections.length > 0 && (
         <div className="mb-3 space-y-1">
-          {inspections.slice(0, 6).map(ins => (
-            <div key={ins.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 px-2 py-1 text-xs dark:border-gray-700/60">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">{ins.date || '—'}</span>
-              {ins.inspector && <span className="text-gray-500">· {ins.inspector}</span>}
-              <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${ins.anomalyCount ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                {ins.anomalyCount ? `${ins.anomalyCount} ${tr('anomalie(s)', 'anomaly(ies)')}` : tr('Conforme', 'Compliant')}
-              </span>
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{tr('Historique des inspections', 'Inspection history')}</div>
+          {inspections.map(ins => (
+            <div key={ins.id} className="rounded-lg border border-gray-100 dark:border-gray-700/60">
+              <div className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs">
+                <button type="button" onClick={() => setViewId(viewId === ins.id ? null : ins.id)} className="flex items-center gap-1 font-semibold text-gray-700 hover:text-rose-600 dark:text-gray-200">
+                  <span>{viewId === ins.id ? '▾' : '▸'}</span>{ins.date || '—'}
+                </button>
+                {ins.inspector && <span className="text-gray-500">· {ins.inspector}</span>}
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${ins.anomalyCount ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                  {ins.anomalyCount ? `${ins.anomalyCount} ${tr('anomalie(s)', 'anomaly(ies)')}` : tr('Conforme', 'Compliant')}
+                </span>
+                <button type="button" onClick={() => generateInspectionPdf({ dossier, inspection: ins, logoUrl, lang })} className="rounded border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">📄 PDF</button>
+              </div>
+              {/* Détail (lecture seule) */}
+              {viewId === ins.id && (
+                <div className="border-t border-gray-100 px-3 py-2 dark:border-gray-700/60">
+                  {INSPECTION_CHECKLIST.map(cat => {
+                    const rows = cat.items.filter(it => ins.results?.[it.key]?.status);
+                    if (!rows.length) return null;
+                    return (
+                      <div key={cat.id} className="mb-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-400">{il(cat, lang)}</div>
+                        {rows.map(it => {
+                          const r: any = ins.results[it.key];
+                          const stColor = r.status === 'anomalie' ? 'text-red-600' : r.status === 'conforme' ? 'text-emerald-600' : 'text-gray-500';
+                          const stLabel = r.status === 'anomalie' ? tr('Anomalie', 'Anomaly') : r.status === 'conforme' ? tr('Conforme', 'Compliant') : 'N/A';
+                          return (
+                            <div key={it.key} className="flex items-start justify-between gap-2 py-0.5 text-[11px]">
+                              <span className="text-gray-600 dark:text-gray-300">{il(it, lang)}{r.note ? ` — ${r.note}` : ''}</span>
+                              <span className={`flex-shrink-0 font-semibold ${stColor}`}>{stLabel}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  {(lang === 'en' ? ins.advice?.en : ins.advice?.fr) && (
+                    <p className="mt-1 whitespace-pre-wrap rounded bg-violet-50 p-2 text-[11px] text-gray-700 dark:bg-violet-500/10 dark:text-gray-200">🤖 {(lang === 'en' ? ins.advice?.en : ins.advice?.fr)}</p>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -194,7 +232,14 @@ export function InspectionSection({ dossier, inspections, lang, tr, onChange, on
               </select></label>
           </div>
           {inspections[0]?.date && (
-            <p className="text-[11px] font-medium text-cyan-700 dark:text-cyan-400">↻ {tr(`Pré-rempli depuis l'inspection du ${inspections[0].date} — ajuste ce qui a changé.`, `Pre-filled from the ${inspections[0].date} inspection — adjust what changed.`)}</p>
+            prefilled ? (
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-cyan-700 dark:text-cyan-400">
+                <span>↻ {tr(`Repris de l'inspection du ${inspections[0].date} — ajuste ce qui a changé.`, `Based on the ${inspections[0].date} inspection — adjust what changed.`)}</span>
+                <button type="button" onClick={() => { setResults({}); setPrefilled(false); }} className="rounded border border-gray-300 px-2 py-0.5 font-semibold text-gray-600 dark:border-gray-600">{tr('Repartir à vide', 'Start blank')}</button>
+              </div>
+            ) : (
+              <button type="button" onClick={loadFromPrevious} className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300">↻ {tr(`Repartir de la dernière inspection (${inspections[0].date})`, `Start from last inspection (${inspections[0].date})`)}</button>
+            )
           )}
           <p className="text-[11px] text-gray-400">{tr('C = Conforme · A = Anomalie · N/A = non applicable. Les points « A » sont ajoutés à la section Anomalies.', 'C = Compliant · A = Anomaly · N/A = not applicable. "A" items are added to the Anomalies section.')}</p>
 
