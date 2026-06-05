@@ -13,6 +13,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSite } from '@/contexts/SiteContext';
 import { useEntitlements } from '@/lib/entitlements';
 import { supabase } from '@/lib/supabase';
+import { effectiveNextDate, worstCondition } from '@/lib/dga/fields';
+import { dueStatusByDate } from '@/lib/dga/catalog';
 
 const ENABLED_BY_TENANT: Record<string, ModuleKey[]> = {
   cerdia: ['admin', 'projects', 'ast', 'permits', 'accidents', 'near_miss', 'planner', 'inventory', 'inspections', 'timesheets', 'logbook', 'todo', 'dga'],
@@ -40,6 +42,7 @@ export default function ModulesPage() {
   const [userCount, setUserCount] = useState(0);
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
   const [logbookStats, setLogbookStats] = useState({ vehicles: 0, kmWeek: 0, kmYear: 0 });
+  const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0 });
 
   // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
@@ -105,7 +108,23 @@ export default function ModulesPage() {
           kmYear: (lbYear || []).reduce((s: number, r: any) => s + Number(r.km_total || 0), 0),
         };
 
-        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); }
+        // DGA — mêmes compteurs qu'à l'ouverture du module + niveau critique (condition > 3).
+        const dga = { all: 0, overdue: 0, soon: 0, ok: 0, critical: 0 };
+        try {
+          const { data: dgaD } = await supabase.from('dga_dossiers').select('id, extra').eq('tenant_id', tenant);
+          const { data: dgaM } = await supabase.from('dga_measures').select('dossier_id, sample_date, h2, ch4, c2h2, c2h4, c2h6, co, tdcg, condition').eq('tenant_id', tenant).order('sample_date', { ascending: true });
+          const lastBy: Record<string, any> = {};
+          (dgaM || []).forEach((m: any) => { if (m.dossier_id) lastBy[m.dossier_id] = m; });
+          (dgaD || []).forEach((d: any) => {
+            dga.all += 1;
+            const last = lastBy[d.id];
+            const st = dueStatusByDate(effectiveNextDate(d.extra, last)).code;
+            if (st === 'overdue') dga.overdue += 1; else if (st === 'soon') dga.soon += 1; else if (st === 'ok') dga.ok += 1;
+            if (last && worstCondition(last) >= 3) dga.critical += 1; // niveau 4 (Condition 4)
+          });
+        } catch { /* dégradé */ }
+
+        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); }
       } catch { /* dégradé */ } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -126,7 +145,7 @@ export default function ModulesPage() {
   if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: '—', sub: tr('paie · à venir', 'payroll · soon'), available: true });
   if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
-  if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: '⚗︎', sub: tr('analyse gaz dissous', 'dissolved gas analysis'), available: true });
+  if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}`, available: true });
 
   const iconFor = (k: string) => (MODULES.find(m => m.key === k || (k === 'events' && m.key === 'accidents'))?.icon) || LayoutGrid;
 
