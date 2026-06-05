@@ -11,6 +11,7 @@ import {
 import { PortalHeader } from '@/components/PortalHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadPhoto } from '@/lib/utils/photo';
+import { getSitesTree, siteLabel, type SiteNode } from '@/lib/sites';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -25,6 +26,8 @@ export interface EquipmentRow {
   equipment_name: string | null;
   equipment_serial: string | null;
   equipment_location: string | null;
+  site_id: string | null;
+  department_id: string | null;
   equipment_photos: string[];
   inspection_frequency: InspectionFrequency | null;
   inspection_shifts: string[];
@@ -39,6 +42,8 @@ interface FormState {
   equipmentName: string;
   equipmentSerial: string;
   equipmentLocation: string;
+  siteId: string;
+  departmentId: string;
   equipmentPhotos: string[];
   inspectionFrequency: InspectionFrequency | null;
   inspectionShifts: string[];
@@ -51,6 +56,8 @@ const EMPTY: FormState = {
   equipmentName:       '',
   equipmentSerial:     '',
   equipmentLocation:   '',
+  siteId:              '',
+  departmentId:        '',
   equipmentPhotos:     [],
   inspectionFrequency: null,
   inspectionShifts:    [],
@@ -78,6 +85,7 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
   const [currentId, setCurrentId] = useState<string | null>(equipmentId ?? null);
   const [copied,    setCopied]    = useState(false);
   const [lightbox,  setLightbox]  = useState<string | null>(null);
+  const [sites,     setSites]     = useState<SiteNode[]>([]);
 
   // Load logo
   useEffect(() => {
@@ -85,6 +93,11 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
     supabase.from('tenants').select('logo_url').eq('subdomain', tenant).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setLogoUrl(data.logo_url); }, () => {});
   }, [tenant]);
+
+  // Sites/Départements gérés par l'admin (source unique) -> alimente le sélecteur d'emplacement.
+  useEffect(() => { if (tenant) getSitesTree(tenant).then(setSites); }, [tenant]);
+
+  const deptOptions = sites.find(s => s.id === form.siteId)?.departments ?? [];
 
   // Load existing equipment
   useEffect(() => {
@@ -98,6 +111,8 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
           equipmentName:       r.equipment_name ?? '',
           equipmentSerial:     r.equipment_serial ?? '',
           equipmentLocation:   r.equipment_location ?? '',
+          siteId:              r.site_id ?? '',
+          departmentId:        r.department_id ?? '',
           equipmentPhotos:     r.equipment_photos ?? [],
           inspectionFrequency: r.inspection_frequency ?? null,
           inspectionShifts:    r.inspection_shifts ?? [],
@@ -117,7 +132,10 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
         equipment_type:       form.equipmentType,
         equipment_name:       form.equipmentName  || null,
         equipment_serial:     form.equipmentSerial || null,
-        equipment_location:   form.equipmentLocation || null,
+        site_id:              form.siteId || null,
+        department_id:        form.departmentId || null,
+        // Libellé lisible (Site · Département) conservé dans equipment_location pour les vues/listes existantes.
+        equipment_location:   form.siteId ? siteLabel(sites, form.siteId, form.departmentId) : (form.equipmentLocation || null),
         equipment_photos:     form.equipmentPhotos,
         inspection_frequency: form.inspectionFrequency || null,
         inspection_shifts:    form.inspectionFrequency === 'par_quart' ? form.inspectionShifts : [],
@@ -238,11 +256,31 @@ export default function EquipmentForm({ tenant, equipmentId, onClose, onSaved }:
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Emplacement / Chantier' : 'Location / Site'}</label>
-                <input type="text" value={form.equipmentLocation} onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
-                  placeholder={fr ? 'ex. Site A, Zone 3' : 'e.g. Site A, Zone 3'} className={fieldClass} />
+                <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Site' : 'Site'}</label>
+                {sites.length > 0 ? (
+                  <select value={form.siteId}
+                    onChange={e => setForm(f => ({ ...f, siteId: e.target.value, departmentId: '' }))}
+                    className={fieldClass}>
+                    <option value="">{fr ? '— Aucun —' : '— None —'}</option>
+                    {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                ) : (
+                  // Repli : aucun site configuré dans l'admin -> texte libre (rétrocompatible).
+                  <input type="text" value={form.equipmentLocation} onChange={e => setForm(f => ({ ...f, equipmentLocation: e.target.value }))}
+                    placeholder={fr ? 'Créez des sites dans Admin › Sites/Départements' : 'Create sites in Admin › Sites/Departments'} className={fieldClass} />
+                )}
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Département' : 'Department'}</label>
+                <select value={form.departmentId}
+                  onChange={e => setForm(f => ({ ...f, departmentId: e.target.value }))}
+                  disabled={!form.siteId || deptOptions.length === 0}
+                  className={fieldClass + (!form.siteId || deptOptions.length === 0 ? ' opacity-50' : '')}>
+                  <option value="">{fr ? '— Tout le site —' : '— Whole site —'}</option>
+                  {deptOptions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
                 <label className="block text-xs font-medium text-gray-600 mb-1">{fr ? 'Province' : 'Province'}</label>
                 <select
                   value={form.province}

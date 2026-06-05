@@ -72,6 +72,8 @@ interface FormState {
   equipmentName: string;
   equipmentSerial: string;
   equipmentLocation: string;
+  siteId: string;
+  departmentId: string;
   equipmentPhoto: string | null;
   equipmentPhotos: string[];
   inspectorName: string;
@@ -103,6 +105,8 @@ const EMPTY_FORM: FormState = {
   equipmentName: '',
   equipmentSerial: '',
   equipmentLocation: '',
+  siteId: '',
+  departmentId: '',
   equipmentPhoto: null,
   equipmentPhotos: [],
   inspectorName: '',
@@ -408,6 +412,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
           equipmentName:       data.equipment_name ?? '',
           equipmentSerial:     data.equipment_serial ?? '',
           equipmentLocation:   data.equipment_location ?? '',
+          siteId:              data.site_id ?? '',
+          departmentId:        data.department_id ?? '',
           equipmentPhotos:     data.equipment_photos ?? [],
           inspectionFrequency: data.inspection_frequency ?? null,
           inspectionShifts:    data.inspection_shifts ?? [],
@@ -434,6 +440,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
           equipmentName:      row.equipment_name ?? '',
           equipmentSerial:    row.equipment_serial ?? '',
           equipmentLocation:  row.equipment_location ?? '',
+          siteId:             (row as any).site_id ?? '',
+          departmentId:       (row as any).department_id ?? '',
           equipmentPhoto:     row.equipment_photo,
           equipmentPhotos:    row.equipment_photos ?? (row.equipment_photo ? [row.equipment_photo] : []),
           inspectorName:      row.inspector_name ?? '',
@@ -584,6 +592,8 @@ export default function InspectionForm({ tenant, inspectionId, equipmentId, onCl
       equipment_name:       form.equipmentName || null,
       equipment_serial:     form.equipmentSerial || null,
       equipment_location:   form.equipmentLocation || null,
+      site_id:              form.siteId || null,
+      department_id:        form.departmentId || null,
       equipment_photo:      form.equipmentPhotos[0] ?? form.equipmentPhoto ?? null,
       equipment_photos:     form.equipmentPhotos,
       inspector_name:       form.inspectorName || null,

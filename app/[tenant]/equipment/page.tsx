@@ -15,6 +15,7 @@ import {
   type InspectionType, type OverallResult, type InspectionFrequency,
 } from '@/components/InspectionForm/checklists';
 import type { EquipmentRow } from '@/components/EquipmentForm';
+import { getSitesTree, type SiteNode } from '@/lib/sites';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -89,6 +90,10 @@ export default function EquipmentListPage() {
   const [cards,   setCards]   = useState<EquipmentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState('');
+  const [sites,   setSites]   = useState<SiteNode[]>([]);
+  const [siteFilter, setSiteFilter] = useState('');
+
+  useEffect(() => { if (tenant) getSitesTree(tenant).then(setSites); }, [tenant]);
 
   useEffect(() => {
     if (!sb) return;
@@ -128,17 +133,17 @@ export default function EquipmentListPage() {
     })();
   }, [tenant]);
 
-  const filtered = search.trim()
-    ? cards.filter(c => {
-        const q = search.toLowerCase();
-        return (
-          (c.equipment.equipment_name ?? '').toLowerCase().includes(q) ||
-          (c.equipment.equipment_serial ?? '').toLowerCase().includes(q) ||
-          (c.equipment.equipment_location ?? '').toLowerCase().includes(q) ||
-          c.equipment.equipment_type.toLowerCase().includes(q)
-        );
-      })
-    : cards;
+  const filtered = cards.filter(c => {
+    if (siteFilter && c.equipment.site_id !== siteFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (c.equipment.equipment_name ?? '').toLowerCase().includes(q) ||
+      (c.equipment.equipment_serial ?? '').toLowerCase().includes(q) ||
+      (c.equipment.equipment_location ?? '').toLowerCase().includes(q) ||
+      c.equipment.equipment_type.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -157,6 +162,13 @@ export default function EquipmentListPage() {
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
             />
           </div>
+          {sites.length > 0 && (
+            <select value={siteFilter} onChange={e => setSiteFilter(e.target.value)}
+              className="shrink-0 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400">
+              <option value="">{fr ? 'Tous les sites' : 'All sites'}</option>
+              {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
           <Link href={`/${tenant}/equipment/new`}
             className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg shrink-0">
             <Plus size={15} />
