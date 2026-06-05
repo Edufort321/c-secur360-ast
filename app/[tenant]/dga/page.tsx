@@ -268,7 +268,7 @@ export default function DgaPage() {
 
   return (
     <Shell tenant={tenant}>
-      <div className={`mx-auto px-4 py-6 ${view === 'fiche' ? 'max-w-screen-2xl' : 'max-w-6xl'}`}>
+      <div className={`mx-auto px-4 py-6 ${view === 'fiche' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
         {view === 'list' && <BackButton fallback={`/${tenant}/modules`} className="mb-3" />}
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ function ListView(p: any) {
       {dossiers.length === 0 && !newT && <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucun transformateur. Clique « Nouveau transformateur ».', 'No transformer yet. Click "New transformer".')}</div>}
       {dossiers.length > 0 && filtered.length === 0 && <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucun résultat pour cette recherche.', 'No results for this search.')}</div>}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((d: Dossier) => {
           const last = d.id ? lastByDossier[d.id] : undefined;
           const worst = last ? worstCondition(last) : null;

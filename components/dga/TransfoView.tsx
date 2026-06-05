@@ -722,8 +722,9 @@ const PRINT_CSS = `
   .title-page { min-height: 245mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 16px 30mm !important; }
   .title-page.has-break { page-break-after: always; break-after: page; }
   .rpt-content { counter-reset: page 0; }
-  .rpt-page { padding: 0 !important; }
-  .rpt-break:not(:first-child) { page-break-before: always; break-before: page; }
+  /* Les sections s'ENCHAÎNENT pour bien occuper l'espace (pas une page forcée par section).
+     On évite seulement de COUPER une section/tableau en deux. */
+  .rpt-page { padding: 0 !important; margin-top: 12px; }
   .rpt-page table, .rpt-avoid { break-inside: avoid; page-break-inside: avoid; }
   /* Table porteuse : thead/tfoot se répètent ET réservent l'espace (anti-chevauchement) */
   .rpt-runtable { width: 100%; border-collapse: collapse; }
