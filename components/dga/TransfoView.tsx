@@ -118,9 +118,9 @@ export function TransfoView(props: {
   };
   // Anomalies issues d'une inspection -> ajoutées à la section Anomalies.
   const addAnomaliesFromInspection = (created: Anomaly[]) => { if (created.length) updateAnomalies([...anomalies, ...created]); };
-  // Séquence de reprise (rappel) -> stockée dans extra (flaggée au dashboard) : prochaine échéance + intervalle.
-  const setInspectionReminder = (nextDate: string | null, intervalMonths?: number) =>
-    updateExtra({ next_inspection: nextDate, ...(intervalMonths != null ? { insp_interval_months: intervalMonths } : {}) });
+  // Séquence de reprise (rappel) -> stockée dans extra (flaggée au dashboard) : prochaine échéance + fréquence.
+  const setInspectionReminder = (nextDate: string | null, intervalId?: string) =>
+    updateExtra({ next_inspection: nextDate, ...(intervalId != null ? { insp_interval_id: intervalId } : {}) });
   // Note globale par défaut (recalculée ici pour rester AVANT tout retour anticipé — règles des hooks).
   useEffect(() => {
     if (!data.length) { setGlobalNote(''); return; }
@@ -551,8 +551,10 @@ export function TransfoView(props: {
               <h2 className={H2}>🔳 {tr('QR public du transformateur', 'Transformer public QR')}</h2>
               {dossier.id ? (
                 <div className="flex flex-col items-center gap-2">
-                  <div className="rounded-xl bg-white p-3"><QRCodeSVG id="dga-qr-svg" value={publicUrl || ' '} size={148} level="M" /></div>
-                  <div className="break-all text-center text-[11px] text-gray-500">{publicUrl}</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoUrl || '/c-secur360-logo.png'} alt="logo" className="mb-1 h-10 w-auto object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/c-secur360-logo.png'; }} />
+                  <div className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700"><QRCodeSVG id="dga-qr-svg" value={publicUrl || ' '} size={148} level="M" /></div>
+                  <a href={publicUrl || undefined} target="_blank" rel="noopener noreferrer" className="max-w-full break-all text-center text-[11px] font-medium text-rose-600 underline decoration-dotted hover:text-rose-700">{publicUrl}</a>
                   <div className="flex flex-wrap justify-center gap-2">
                     <button className={BTN_GHOST + ' !px-3 !py-1.5 text-xs'} onClick={copyQR}>📋 {tr('Copier le lien', 'Copy link')}</button>
                     <button className={BTN_DARK + ' !px-3 !py-1.5 text-xs'} onClick={printQR}>🖨 {tr("Imprimer l'étiquette", 'Print label')}</button>

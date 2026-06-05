@@ -1370,6 +1370,13 @@ function AppContent() {
 
   // États principaux - DOIVENT être appelés avant tout return
   const [view, setView] = useState('dashboard');
+  const [navMenuOpen, setNavMenuOpen] = useState(false); // Menu de navigation mobile (déroulant, façon autres modules)
+  const [companyLogo, setCompanyLogo] = useState('/c-secur360-logo.png'); // Logo tenant (repli marque) pour la carte QR
+  useEffect(() => {
+    let active = true;
+    (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenantId).maybeSingle(); if (active && data?.logo_url) setCompanyLogo(data.logo_url); } catch { /* défaut */ } })();
+    return () => { active = false; };
+  }, [tenantId]);
   const [activeAdminTab, setActiveAdminTab] = useState('departments'); // Onglet actif dans Admin
   const [activeDepartmentTab, setActiveDepartmentTab] = useState('general'); // Onglet actif dans Département
   const [items, setItems] = useState([]);
@@ -7302,21 +7309,57 @@ function AppContent() {
   // ============== RENDU PRINCIPAL ==============
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Header retiré : PortalHeader unifié de l'hôte. Hamburger module = ouvre la nav inventaire
-          (Dashboard, Articles, Scanner, Mouvements, Rapports, Alertes, Admin → emplacements/types/catégories). */}
-      <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-          title="Menu du module Inventaire"
-        >
-          <Menu size={20} /> Menu inventaire
-        </button>
-      </div>
-      <div className="flex">
-        <Sidebar />
+      {/* Navigation du module alignée sur les autres modules (PortalHeader unifié au-dessus) :
+          barre d'onglets en pilules sur desktop + menu déroulant sur mobile (plus de sidebar verticale). */}
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        {(() => {
+          const NAV_ITEMS = [
+            { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), badge: null },
+            { id: 'articles', icon: Package, label: t('nav.articles'), badge: stats.total || null },
+            { id: 'scanner', icon: Camera, label: t('nav.scanner'), badge: null },
+            { id: 'movements', icon: TrendingUp, label: t('nav.movements'), badge: movements.length || null },
+            { id: 'reports', icon: FileText, label: t('nav.reports'), badge: null },
+            { id: 'admin', icon: Settings, label: t('nav.administration'), badge: stats.lowStock > 0 ? stats.lowStock : null },
+          ];
+          const activeNav = NAV_ITEMS.find(n => n.id === view) || NAV_ITEMS[0];
+          return (
+            <>
+              {/* Mobile / demi-écran (<1024px) : menu déroulant */}
+              <div className="mb-4 lg:hidden">
+                <div className="relative">
+                  <button onClick={() => setNavMenuOpen(o => !o)}
+                    className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                    <span className="flex items-center gap-2">{React.createElement(activeNav.icon, { size: 16 })}{activeNav.label}</span>
+                    <svg className={`h-5 w-5 text-gray-400 transition-transform ${navMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  {navMenuOpen && (
+                    <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                      {NAV_ITEMS.map(it => { const Icon = it.icon; return (
+                        <button key={it.id} onClick={() => { setView(it.id); setNavMenuOpen(false); }}
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold transition ${view === it.id ? 'bg-slate-700 text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                          <Icon size={15} /> <span className="flex-1 text-left">{it.label}</span>
+                          {it.badge != null && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${view === it.id ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>{it.badge}</span>}
+                        </button>
+                      ); })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Desktop (>=1024px) : barre d'onglets pilules */}
+              <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:flex">
+                {NAV_ITEMS.map(it => { const Icon = it.icon; const active = view === it.id; return (
+                  <button key={it.id} onClick={() => setView(it.id)}
+                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${active ? 'bg-slate-700 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}>
+                    <Icon size={15} /> {it.label}
+                    {it.badge != null && <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700'}`}>{it.badge}</span>}
+                  </button>
+                ); })}
+              </div>
+            </>
+          );
+        })()}
 
-        <main className="flex-1 overflow-x-hidden pb-20 lg:pb-0" key={view}>
+        <main className="overflow-x-hidden" key={view}>
           {view === 'dashboard' && <DashboardView
             key="dashboard-view"
             t={t}
@@ -7390,31 +7433,6 @@ function AppContent() {
           {view === 'admin' && <AdminView />}
         </main>
       </div>
-
-      {/* Navigation mobile en bas (accès au pouce) — masquée sur desktop (lg+) */}
-      <nav className="lg:hidden fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-200 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.06)] dark:border-gray-700 dark:bg-gray-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {[
-          { id: 'dashboard', icon: LayoutDashboard, label: t('nav.dashboard') },
-          { id: 'articles', icon: Package, label: t('nav.articles') },
-          { id: 'scanner', icon: Camera, label: t('nav.scanner') },
-          { id: 'movements', icon: TrendingUp, label: t('nav.movements') },
-          { id: 'reports', icon: FileText, label: t('nav.reports') },
-          { id: 'admin', icon: Settings, label: t('nav.administration') },
-        ].map(it => {
-          const Icon = it.icon;
-          const active = view === it.id;
-          return (
-            <button
-              key={it.id}
-              onClick={() => { setView(it.id); setSidebarCollapsed(true); }}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${active ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}
-            >
-              <Icon size={20} className={active ? '' : 'opacity-80'} />
-              <span className="max-w-full truncate px-0.5">{it.label}</span>
-            </button>
-          );
-        })}
-      </nav>
 
       <LoginModal />
       <PrintModal />
@@ -7596,7 +7614,10 @@ function AppContent() {
               {(() => {
                 const qrUrl = getScanUrl(selectedItemForView.id, selectedItemForView.code, selectedItemForView.departmentCode);
                 return (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+                  <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+                    {/* Logo centré (façon fiche publique des autres modules) */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={companyLogo} alt="logo" className="mb-3 h-10 w-auto object-contain" onError={(e) => { e.currentTarget.src = '/c-secur360-logo.png'; }} />
                     <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-teal-700 dark:text-teal-400">
                       <QrCode size={15} /> {language === 'fr' ? "Code QR de l'article" : 'Item QR code'}
                     </div>
@@ -7616,6 +7637,8 @@ function AppContent() {
                         <div className="mt-0.5 text-xs font-semibold text-blue-600">Min {selectedItemForView.minQuantity ?? '—'} · Max {selectedItemForView.maxQuantity ?? '—'}</div>
                       )}
                     </div>
+                    {/* Lien du site public en dessous */}
+                    <a href={qrUrl} target="_blank" rel="noopener noreferrer" className="mt-2 max-w-xs break-all text-center text-[11px] font-medium text-teal-600 underline decoration-dotted hover:text-teal-700">{qrUrl}</a>
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => { try { navigator.clipboard.writeText(qrUrl); } catch { /* ignore */ } }}

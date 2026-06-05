@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { INSPECTION_CHECKLIST, il, type InspResult } from '@/lib/dga/inspection';
 import { generateInspectionPdf } from '@/lib/dga/inspectionPdf';
-import { addMonths } from '@/lib/dga/catalog';
+import { addMonths, addDays } from '@/lib/dga/catalog';
 import type { Inspection, Anomaly, Dossier } from '@/lib/dga/dossiers';
 import type { Lang } from '@/lib/dga/fields';
 
@@ -36,19 +36,29 @@ function compressImage(file: File, maxDim = 1000, quality = 0.7): Promise<string
   });
 }
 
-const REMINDER_OPTIONS = [
-  { months: 0, fr: 'Aucun rappel', en: 'No reminder' },
-  { months: 6, fr: '6 mois', en: '6 months' },
-  { months: 12, fr: '12 mois', en: '12 months' },
-  { months: 24, fr: '24 mois', en: '24 months' },
+// Fréquences de la séquence de reprise d'inspection (défaut : mensuel).
+const REMINDER_OPTIONS: { id: string; fr: string; en: string; days?: number; months?: number }[] = [
+  { id: 'daily', fr: 'Quotidien', en: 'Daily', days: 1 },
+  { id: 'weekly', fr: 'Hebdomadaire', en: 'Weekly', days: 7 },
+  { id: 'monthly', fr: 'Mensuel', en: 'Monthly', months: 1 },
+  { id: 'q3', fr: '3 mois', en: '3 months', months: 3 },
+  { id: 'q6', fr: '6 mois', en: '6 months', months: 6 },
+  { id: 'annual', fr: 'Annuel', en: 'Annual', months: 12 },
 ];
+const DEFAULT_INTERVAL = 'monthly';
+// Prochaine échéance = base + intervalle (jours ou mois selon l'option).
+function nextFromInterval(id: string, baseDate: string): string | null {
+  const o = REMINDER_OPTIONS.find(x => x.id === id);
+  if (!o || !baseDate) return null;
+  return o.days != null ? addDays(baseDate, o.days) : addMonths(baseDate, o.months || 0);
+}
 
 export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onChange, onCreateAnomalies, onSetReminder, setNotice }: {
   dossier: Dossier; inspections: Inspection[]; lang: Lang; tr: (fr: string, en: string) => string;
   logoUrl?: string | null;
   onChange: (next: Inspection[]) => void;
   onCreateAnomalies: (anomalies: Anomaly[]) => void;
-  onSetReminder: (nextDate: string | null, intervalMonths?: number) => void;
+  onSetReminder: (nextDate: string | null, intervalId?: string) => void;
   setNotice: (s: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,8 +66,10 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   const [prefilled, setPrefilled] = useState(false);
   const [date, setDate] = useState(todayIso());
   const [inspector, setInspector] = useState('');
-  // Séquence de reprise (hors formulaire) : intervalle + prochaine échéance, persistés dans extra.
-  const [intervalMonths, setIntervalMonths] = useState<number>(dossier.extra?.insp_interval_months ?? 12);
+  // Séquence de reprise (hors formulaire) : fréquence + prochaine échéance, persistées dans extra.
+  const [intervalId, setIntervalId] = useState<string>(
+    REMINDER_OPTIONS.some(o => o.id === dossier.extra?.insp_interval_id) ? dossier.extra.insp_interval_id : DEFAULT_INTERVAL
+  );
   const [nextDate, setNextDate] = useState<string>(dossier.extra?.next_inspection || '');
   const [results, setResults] = useState<Record<string, InspResult>>({});
   const [advice, setAdvice] = useState<{ fr?: string; en?: string } | null>(null);
@@ -125,8 +137,8 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
       } as Anomaly)));
     }
     // Séquence de reprise -> recalcule la prochaine échéance depuis la date de cette inspection.
-    const due = intervalMonths > 0 ? addMonths(date, intervalMonths) : null;
-    onSetReminder(due, intervalMonths); setNextDate(due || '');
+    const due = nextFromInterval(intervalId, date);
+    onSetReminder(due, intervalId); setNextDate(due || '');
     setNotice(tr(`Inspection enregistrée (${anomalies.length} anomalie(s) reversée(s)).`, `Inspection saved (${anomalies.length} anomaly(ies) added).`));
     // Reset formulaire.
     setResults({}); setAdvice(null); setInspector(''); setPrefilled(false); setOpen(false);
@@ -156,11 +168,11 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
   // ── Séquence de reprise (panneau autonome, hors formulaire) ──────────────
   // Base de calcul = date de la dernière inspection (ou aujourd'hui si aucune).
   const seqBaseDate = inspections[0]?.date || todayIso();
-  function changeInterval(m: number) {
-    const due = m > 0 ? addMonths(seqBaseDate, m) : null;
-    setIntervalMonths(m); setNextDate(due || ''); onSetReminder(due, m);
+  function changeInterval(id: string) {
+    const due = nextFromInterval(id, seqBaseDate);
+    setIntervalId(id); setNextDate(due || ''); onSetReminder(due, id);
   }
-  function changeNextDate(d: string) { setNextDate(d); onSetReminder(d || null, intervalMonths); }
+  function changeNextDate(d: string) { setNextDate(d); onSetReminder(d || null, intervalId); }
 
   const StatusBtns = ({ k }: { k: string }) => {
     const st = results[k]?.status || '';
@@ -189,18 +201,16 @@ export function InspectionSection({ dossier, inspections, lang, tr, logoUrl, onC
         <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">🔁 {tr("Séquence de reprise d'inspection", 'Inspection recurrence')}</div>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Fréquence', 'Frequency')}</span>
-            <select className={INP} value={intervalMonths} onChange={e => changeInterval(Number(e.target.value))}>
-              {REMINDER_OPTIONS.map(o => <option key={o.months} value={o.months}>{lang === 'en' ? o.en : o.fr}</option>)}
+            <select className={INP} value={intervalId} onChange={e => changeInterval(e.target.value)}>
+              {REMINDER_OPTIONS.map(o => <option key={o.id} value={o.id}>{lang === 'en' ? o.en : o.fr}</option>)}
             </select></label>
           <label className="block"><span className="mb-1 block text-[11px] font-semibold text-gray-500">{tr('Prochaine inspection', 'Next inspection')}</span>
-            <input type="date" className={INP} value={nextDate} onChange={e => changeNextDate(e.target.value)} disabled={intervalMonths === 0} /></label>
+            <input type="date" className={INP} value={nextDate} onChange={e => changeNextDate(e.target.value)} /></label>
         </div>
         <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-          {intervalMonths === 0
-            ? tr('Aucun rappel programmé.', 'No reminder scheduled.')
-            : nextDate
-              ? tr(`Prochaine échéance le ${nextDate} (calculée depuis la dernière inspection du ${seqBaseDate}). Ajustable manuellement.`, `Next due on ${nextDate} (computed from the last inspection on ${seqBaseDate}). Adjustable manually.`)
-              : tr('Choisis une fréquence pour programmer la reprise.', 'Pick a frequency to schedule the recurrence.')}
+          {nextDate
+            ? tr(`Prochaine échéance le ${nextDate} (calculée depuis la dernière inspection du ${seqBaseDate}). Ajustable manuellement.`, `Next due on ${nextDate} (computed from the last inspection on ${seqBaseDate}). Adjustable manually.`)
+            : tr('Choisis une fréquence pour programmer la reprise.', 'Pick a frequency to schedule the recurrence.')}
         </p>
       </div>
 
