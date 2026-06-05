@@ -87,7 +87,12 @@ export default function ModulesPage() {
         const pl = { en_cours: 0, planifies: 0 };
         (assigns || []).forEach((x: any) => { if (x.status === 'in_progress') pl.en_cours += 1; if (x.status === 'planned') pl.planifies += 1; });
 
-        const { count: ic } = await supabase.from('inv_items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
+        // Inventaire : la source de vérité du module est le snapshot inventory_state (jsonb),
+        // pas l'ancienne table inv_items. Repli sur la table items si le snapshot est absent.
+        let ic = 0;
+        const { data: invState } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
+        if (Array.isArray(invState?.data?.items)) ic = invState!.data.items.length;
+        else { const { count: itemsCount } = await supabase.from('items').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant); ic = itemsCount ?? 0; }
         // « Utilisateurs » = effectif réel (roster planner_personnel), pas seulement les comptes d'accès (table users).
         const { count: uc } = await supabase.from('planner_personnel').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant);
 
