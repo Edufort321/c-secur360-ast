@@ -8,8 +8,9 @@
 // Clés adaptées au module (equip_no, oil_type, sample_id… ; huile/furanes dans oil_quality).
 // ============================================================================
 import React from 'react';
-import type { Dossier, Measure, Anomaly } from '@/lib/dga/dossiers';
+import type { Dossier, Measure, Anomaly, Inspection } from '@/lib/dga/dossiers';
 import { GAS_FIELDS, COMBUSTIBLE, OIL_FIELDS, FURAN_FIELDS, IEEE_LIMITS, gl, fl, COND_LABELS, COND_COLORS, numOrNull, type Lang } from '@/lib/dga/fields';
+import { INSPECTION_CHECKLIST, il } from '@/lib/dga/inspection';
 import { ZONE_COLORS } from '@/lib/dga/duval';
 import { voltageClass } from '@/lib/dga/oil';
 import { DuvalTriangle } from '@/components/dga/DuvalTriangle';
@@ -96,12 +97,13 @@ export function PrintReport(props: {
   items: { lvl: string; txt: string }[]; reco: { title: string; steps: string[] };
   oilEval: { status: string; txt: string }[]; furan: any; trendA: any; rogers: Record<string, number>;
   globalNote: string; manualReco: string; nextDate: string | null; due: any;
-  projectNo: string; pages: { titlePage: boolean; cover: boolean; results: boolean; analysis: boolean; trends: boolean; coverChart: boolean; photos: boolean; anomalies: boolean };
+  projectNo: string; pages: { titlePage: boolean; cover: boolean; results: boolean; analysis: boolean; trends: boolean; coverChart: boolean; photos: boolean; anomalies: boolean; inspections: boolean };
   logoUrl: string | null; lang: Lang; fal2ppb: number | null;
-  photos?: { id: string; data: string; name?: string }[]; anomalies?: Anomaly[];
+  photos?: { id: string; data: string; name?: string }[]; anomalies?: Anomaly[]; inspections?: Inspection[];
 }) {
-  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, lang, photos = [], anomalies = [] } = props;
+  const { dossier, data, cur, zone, worst, items, reco, oilEval, furan, trendA, rogers, globalNote, manualReco, nextDate, due, projectNo, pages, logoUrl, lang, photos = [], anomalies = [], inspections = [] } = props;
   const anomReport = anomalies.filter(a => !a.archived);
+  const lastInspection = inspections[0] || null;
   const EN = lang === 'en';
   const L = (fr: string, en: string) => (EN ? en : fr);
   const today = new Date().toISOString().slice(0, 10);
@@ -337,6 +339,42 @@ export function PrintReport(props: {
               </div>
             );
           })}
+        </section>
+      )}
+
+      {/* PAGE INSPECTION DE ROUTINE (dernière inspection) */}
+      {pages.inspections && lastInspection && (
+        <section style={SP.page} className="rpt-page rpt-break">
+          <div style={SP.sectionBar}>{L('Inspection de routine', 'Routine inspection')}</div>
+          <div style={{ fontSize: 11, marginBottom: 8 }}>
+            <b>{L("Date d'inspection", 'Inspection date')} :</b> {lastInspection.date || '—'}
+            {lastInspection.inspector ? <>{'   '}<b>{L('Inspecteur', 'Inspector')} :</b> {lastInspection.inspector}</> : null}
+            {'   '}<b>{L('Anomalies', 'Anomalies')} :</b> {lastInspection.anomalyCount || 0}
+          </div>
+          {INSPECTION_CHECKLIST.map(cat => {
+            const rows = cat.items.filter(it => (lastInspection.results || {})[it.key]?.status);
+            if (!rows.length) return null;
+            return (
+              <div key={cat.id} style={{ breakInside: 'avoid', marginBottom: 6 }}>
+                <div style={{ ...SP.subHead }}>{il(cat, lang)}</div>
+                {rows.map(it => {
+                  const r: any = (lastInspection.results || {})[it.key];
+                  const col = r.status === 'anomalie' ? '#dc2626' : r.status === 'conforme' ? '#15803d' : '#777';
+                  const lab = r.status === 'anomalie' ? L('Anomalie', 'Anomaly') : r.status === 'conforme' ? L('Conforme', 'Compliant') : 'N/A';
+                  return (
+                    <div key={it.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 9.5, padding: '2px 4px', borderBottom: '0.5px solid #eee' }}>
+                      <span>{il(it, lang)}{r.note ? ` — ${r.note}` : ''}</span>
+                      <span style={{ fontWeight: 700, color: col, flexShrink: 0 }}>{lab}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+          {(lang === 'en' ? lastInspection.advice?.en : lastInspection.advice?.fr) && (
+            <div style={{ ...SP.reco, background: '#2b2118' }}>{lang === 'en' ? lastInspection.advice?.en : lastInspection.advice?.fr}</div>
+          )}
+          <p style={{ fontSize: 9, color: '#888', marginTop: 6 }}>{L('Les photos des anomalies figurent dans la section « Rapport d\'anomalie ».', 'Anomaly photos are in the "Anomaly report" section.')}</p>
         </section>
       )}
         </div>

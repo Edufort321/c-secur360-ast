@@ -74,7 +74,7 @@ export function TransfoView(props: {
   const [selIdx, setSelIdx] = useState(Math.max(0, data.length - 1));
   const [visible, setVisible] = useState<Record<string, boolean>>(() => COMBUSTIBLE.reduce((a, k) => ({ ...a, [k]: true }), {}));
   const [showExport, setShowExport] = useState(false);
-  const [pages, setPages] = useState({ titlePage: true, cover: true, results: true, analysis: true, trends: true, coverChart: true, photos: false, anomalies: false });
+  const [pages, setPages] = useState({ titlePage: true, cover: true, results: true, analysis: true, trends: true, coverChart: true, photos: false, anomalies: false, inspections: false });
   const [globalNote, setGlobalNote] = useState('');
   const [projectNo, setProjectNo] = useState(extra.project_no || '');
   const [recoDraft, setRecoDraft] = useState(extra.manual_reco || '');
@@ -575,7 +575,7 @@ export function TransfoView(props: {
           <div className="w-full max-w-md rounded-2xl bg-white p-5 dark:bg-gray-800" onClick={e => e.stopPropagation()}>
             <h2 className="mb-2 text-lg font-bold">{tr('Exporter le rapport', 'Export report')}</h2>
             <div className="mb-1 text-[11px] font-semibold text-gray-500">{tr('Pages à inclure', 'Pages to include')}</div>
-            {([['titlePage', tr('Page de garde', 'Title page')], ['cover', tr('Page de présentation', 'Cover page')], ['results', tr('Résultats (mesures)', 'Results (measurements)')], ['analysis', tr('Analyse & interprétation', 'Analysis & interpretation')], ['trends', tr('Graphiques de tendances', 'Trend charts')], ['photos', tr('Photos', 'Photos') + (photos.length ? ` (${photos.length})` : '')], ['anomalies', tr("Rapport d'anomalie", 'Anomaly report') + (anomalies.filter(a => !a.archived).length ? ` (${anomalies.filter(a => !a.archived).length})` : '')]] as [string, string][]).map(([k, lbl]) => (
+            {([['titlePage', tr('Page de garde', 'Title page')], ['cover', tr('Page de présentation', 'Cover page')], ['results', tr('Résultats (mesures)', 'Results (measurements)')], ['analysis', tr('Analyse & interprétation', 'Analysis & interpretation')], ['trends', tr('Graphiques de tendances', 'Trend charts')], ['photos', tr('Photos', 'Photos') + (photos.length ? ` (${photos.length})` : '')], ['anomalies', tr("Rapport d'anomalie", 'Anomaly report') + (anomalies.filter(a => !a.archived).length ? ` (${anomalies.filter(a => !a.archived).length})` : '')], ['inspections', tr('Inspection de routine', 'Routine inspection') + (inspections.length ? ` (${inspections.length})` : '')]] as [string, string][]).map(([k, lbl]) => (
               <label key={k} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
                 <input type="checkbox" className="accent-rose-600" checked={(pages as any)[k]} onChange={() => setPages(p => ({ ...p, [k]: !(p as any)[k] }))} />{lbl}
               </label>
@@ -596,7 +596,7 @@ export function TransfoView(props: {
             </div>
             <p className="mt-2 text-[11px] text-gray-400">{tr("Le PDF s'ouvre via la fenêtre d'impression — choisis « Enregistrer en PDF ».", 'The PDF opens via the print dialog — choose "Save as PDF".')}</p>
             <div className="mt-3 flex gap-2">
-              <button className={BTN_PRIMARY} disabled={!(pages.titlePage || pages.cover || pages.results || pages.analysis || pages.trends)} onClick={doExport}>{tr('Générer le PDF', 'Generate PDF')}</button>
+              <button className={BTN_PRIMARY} disabled={!Object.values(pages).some(Boolean)} onClick={doExport}>{tr('Générer le PDF', 'Generate PDF')}</button>
               <button className={BTN_GHOST} onClick={() => setShowExport(false)}>{tr('Annuler', 'Cancel')}</button>
             </div>
           </div>
@@ -611,7 +611,7 @@ export function TransfoView(props: {
           items={items} reco={reco} oilEval={oilEval} furan={furan} trendA={trendA} rogers={rogers}
           globalNote={globalNote} manualReco={recoDraft} nextDate={effNext} due={due}
           projectNo={projectNo} pages={pages} logoUrl={logoUrl} lang={lang} fal2ppb={fal2ppb}
-          photos={photos} anomalies={anomalies}
+          photos={photos} anomalies={anomalies} inspections={inspections}
         />, document.body)}
     </div>
   );
