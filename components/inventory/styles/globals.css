@@ -113,13 +113,18 @@
 @media (max-width: 640px) {
   .inventory-app { overflow-x: hidden; }
 
-  /* Casser les mots/chaînes longs (codes, courriels, URLs) au lieu de déborder */
+  /* Casser les mots/chaînes longs (codes, courriels, URLs) au lieu de déborder — SAUF dans les
+     cellules de tableau (td/th) où ça causait une coupe caractère-par-caractère -> lignes très hautes. */
   .inventory-app p,
   .inventory-app h1, .inventory-app h2, .inventory-app h3, .inventory-app h4, .inventory-app h5,
-  .inventory-app span, .inventory-app a, .inventory-app td, .inventory-app th, .inventory-app label, .inventory-app button {
+  .inventory-app span, .inventory-app a, .inventory-app label, .inventory-app button {
     overflow-wrap: break-word;
     word-break: break-word;
   }
+
+  /* Cellules de tableau : texte sur UNE seule ligne (plus d'étirement vertical) ; la table prend sa
+     largeur de contenu et défile horizontalement dans son conteneur .overflow-x-auto. */
+  .inventory-app th, .inventory-app td { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
 
   /* Permettre aux enfants flex de rétrécir : sinon le texte pousse hors de la case (cause #1 du débordement) */
   .inventory-app .flex > * { min-width: 0; }
