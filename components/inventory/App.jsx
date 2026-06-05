@@ -1455,7 +1455,7 @@ function AppContent() {
   const editingLockRef = useRef(null);
 
   // États principaux - DOIVENT être appelés avant tout return
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('articles'); // atterrit sur la galerie d'articles (vue principale de travail)
   const [navMenuOpen, setNavMenuOpen] = useState(false); // Menu de navigation mobile (déroulant, façon autres modules)
   const [saveError, setSaveError] = useState(null); // Erreur de sauvegarde cloud remontée à l'écran (fini les échecs silencieux)
   // Feedback non bloquant (toasts) + confirmation in-app (window.confirm est inopérant en PWA installée).
