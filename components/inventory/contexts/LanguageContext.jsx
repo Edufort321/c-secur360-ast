@@ -2129,13 +2129,38 @@ const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    const saved = localStorage.getItem('language');
-    return saved || 'fr';
+    // La langue est piloter par le header principal de l'app : on suit en priorite la cle
+    // de l'hote ('preferred-language' / 'cs-lang'), avec repli sur l'ancienne cle locale.
+    if (typeof window !== 'undefined') {
+      const host = localStorage.getItem('preferred-language') || localStorage.getItem('cs-lang');
+      if (host === 'fr' || host === 'en') return host;
+      const saved = localStorage.getItem('language');
+      if (saved === 'fr' || saved === 'en') return saved;
+    }
+    return 'fr';
   });
 
   useEffect(() => {
     localStorage.setItem('language', language);
   }, [language]);
+
+  // Pont robuste avec le header principal : l'hote (PortalHeader) ecrit 'preferred-language' et
+  // emet l'evenement 'cs-lang-change' a chaque bascule FR/EN. On l'ecoute pour suivre la langue,
+  // independamment du pont par contexte React (double securite contre les soucis de timing/montage).
+  useEffect(() => {
+    const applyFrom = (val) => {
+      const l = val || localStorage.getItem('preferred-language') || localStorage.getItem('cs-lang');
+      if (l === 'fr' || l === 'en') setLanguage(prev => (prev === l ? prev : l));
+    };
+    const onLangEvent = (e) => applyFrom(e?.detail);
+    const onStorage = (e) => { if (!e || e.key === 'preferred-language' || e.key === 'cs-lang') applyFrom(); };
+    window.addEventListener('cs-lang-change', onLangEvent);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('cs-lang-change', onLangEvent);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
 
   const t = (key) => {
     const keys = key.split('.');
