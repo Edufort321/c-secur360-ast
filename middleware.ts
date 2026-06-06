@@ -45,6 +45,7 @@ const publicRoutes = [
   '/demo/(.*)',      // Toutes les pages demo publiques
   '/scan',           // Fiche produit publique (QR inventaire) — ouvrable sans app
   '/scan/(.*)',      // /scan/<tenant>/<id>
+  '/zxing/(.*)',     // WASM du scanner ZXing hébergé localement (public/zxing/) — doit être accessible sans auth
   '/auth/admin',     // Accès super admin principal
   '/auth/client',    // Accès client admin
   '/pricing',
