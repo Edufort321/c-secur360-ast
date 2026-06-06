@@ -23,11 +23,12 @@ function SyncHostPrefs() {
     if (inv && inv.isDarkMode !== dark && typeof inv.setTheme === 'function') inv.setTheme(dark);
   }, [host?.theme, inv?.isDarkMode]);
 
-  // FR/EN : l'hôte pilote l'inventaire
+  // FR/EN : l'hôte pilote l'inventaire. Le contexte langue de l'inventaire expose changeLanguage
+  // (et non setLanguage) -> on utilise changeLanguage, avec repli setLanguage par robustesse.
   useEffect(() => {
-    if (invLang && hostLang?.lang && invLang.language !== hostLang.lang && typeof invLang.setLanguage === 'function') {
-      invLang.setLanguage(hostLang.lang);
-    }
+    if (!invLang || !hostLang?.lang || invLang.language === hostLang.lang) return;
+    const apply = invLang.changeLanguage || invLang.setLanguage;
+    if (typeof apply === 'function') apply(hostLang.lang);
   }, [hostLang?.lang, invLang?.language]);
 
   return null;
