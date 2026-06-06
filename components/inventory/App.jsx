@@ -1474,6 +1474,14 @@ function AppContent() {
     (async () => { try { const { data } = await supabase.from('company_settings').select('logo_url').eq('tenant_id', tenantId).maybeSingle(); if (active && data?.logo_url) setCompanyLogo(data.logo_url); } catch { /* défaut */ } })();
     return () => { active = false; };
   }, [tenantId]);
+  // Utilisateur CONNECTÉ À L'APP (hôte) -> sert d'identité par défaut pour les mouvements du scanner
+  // (au lieu des comptes démo internes admin/gestionnaire). Récupéré via /api/auth/me.
+  const [hostUserName, setHostUserName] = useState('');
+  useEffect(() => {
+    let active = true;
+    (async () => { try { const r = await fetch('/api/auth/me'); const j = await r.json(); if (active && j?.user?.name) setHostUserName(j.user.name); } catch { /* non connecté / hors ligne */ } })();
+    return () => { active = false; };
+  }, []);
   const [activeAdminTab, setActiveAdminTab] = useState('departments'); // Onglet actif dans Admin
   const [activeDepartmentTab, setActiveDepartmentTab] = useState('general'); // Onglet actif dans Département
   const [items, setItems] = useState([]);
@@ -2880,7 +2888,9 @@ function AppContent() {
     const [physicalCount, setPhysicalCount] = useState(''); // Pour le mode inventaire
     const [projectCode, setProjectCode] = useState(''); // Numéro de projet
     const [withdrawalType, setWithdrawalType] = useState('project'); // 'project' ou 'internal'
-    const [scannerUser, setScannerUser] = useState(currentUser?.username || ''); // Utilisateur qui scanne
+    const [scannerUser, setScannerUser] = useState(hostUserName || currentUser?.username || ''); // Identité par défaut = utilisateur connecté à l'app
+    // Si le nom de l'utilisateur connecté arrive après le montage, on remplit le champ (sans écraser une saisie).
+    useEffect(() => { if (hostUserName && !scannerUser) setScannerUser(hostUserName); }, [hostUserName]); // eslint-disable-line react-hooks/exhaustive-deps
     const scannerRef = useRef(null);
     const html5QrcodeRef = useRef(null);
     const handledRef = useRef(false); // anti double-décodage : la caméra décode ~15x/s, on ne traite qu'une fois par scan
