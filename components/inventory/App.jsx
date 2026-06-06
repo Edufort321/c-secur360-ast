@@ -2912,6 +2912,14 @@ function AppContent() {
       const next = !torchOn;
       try { await h.applyVideoConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* ignore */ }
     };
+    // Tap-to-focus : retoucher l'image relance la mise au point (utile si l'image reste floue).
+    const refocus = async () => {
+      const h = html5QrcodeRef.current; if (!h || !isScanning) return;
+      try {
+        await h.applyVideoConstraints({ advanced: [{ focusMode: 'manual' }] }); // petit reset
+        await h.applyVideoConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      } catch { /* ignore */ }
+    };
 
     // Scan via PHOTO (appareil photo natif) : bien plus fiable pour les QR imprimés (autofocus/HD natifs).
     // On décode l'image capturée avec scanFile, puis on route vers handleDecoded comme un scan caméra.
@@ -2977,17 +2985,18 @@ function AppContent() {
       h.start(
         { facingMode: 'environment' }, // caméra arrière (surchargé par videoConstraints ci-dessous)
         {
-          fps: 10, // un peu moins -> plus de temps de traitement par image = meilleure détection des QR imprimés
+          fps: 10,
           // Zone de scan large et ADAPTATIVE (75% du plus petit côté) : facilite le cadrage d'un QR imprimé.
           qrbox: (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; },
-          aspectRatio: 1.0,
-          // RÉSOLUTION caméra élevée (QHD) + AUTOFOCUS CONTINU -> chaque module du QR couvre plus de pixels,
-          // ce qui permet de lire les QR IMPRIMÉS (plus petits / moins contrastés qu'à l'écran).
+          // PAS d'aspectRatio forcé : la caméra garde son format natif (évite un recadrage qui floute / désactive l'autofocus).
+          // 1080p = net ET autofocus fiable (forcer du QHD désactive souvent l'AF continu sur mobile).
           videoConstraints: {
-            facingMode: 'environment',
-            width: { ideal: 2560 },
-            height: { ideal: 1440 },
-            advanced: [{ focusMode: 'continuous' }],
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
+            focusMode: 'continuous',                 // certains navigateurs lisent la clé à la racine
+            advanced: [{ focusMode: 'continuous' }], // d'autres uniquement dans advanced
           },
         },
         handleDecoded,
@@ -3005,6 +3014,8 @@ function AppContent() {
           } else { setZoomCaps(null); }
           // Lampe (torch) : capability booléenne exposée par la piste vidéo (Android Chrome).
           setTorchSupported(!!(caps && caps.torch));
+          // MISE AU POINT CONTINUE forcée sur la piste live (la contrainte initiale est souvent ignorée -> image floue).
+          try { await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
         } catch { setZoomCaps(null); setTorchSupported(false); }
       }).catch(err => {
         html5QrcodeRef.current = null;
@@ -3398,7 +3409,10 @@ function AppContent() {
             {/* Zone de scan */}
             <div className="mb-6">
               <div ref={scannerRef}>
-                <div id="qr-reader" className="rounded-xl overflow-hidden"></div>
+                <div id="qr-reader" className="rounded-xl overflow-hidden" onClick={refocus}></div>
+                {isScanning && (
+                  <p className="mt-1 text-center text-[11px] text-gray-400">{language === 'fr' ? '👆 Touche l’image pour refaire la mise au point' : '👆 Tap the image to refocus'}</p>
+                )}
                 {isScanning && (zoomCaps || torchSupported) && (
                   <div className="mt-3 space-y-2">
                     {torchSupported && (
