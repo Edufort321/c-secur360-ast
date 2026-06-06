@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Package, MapPin, DollarSign, Boxes, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+import { Package, MapPin, DollarSign, Boxes, AlertTriangle, ShieldCheck, Loader2, Plus, Minus, LogIn, CheckCircle2 } from 'lucide-react';
 
 type Item = any;
 
@@ -31,6 +31,27 @@ export default function PublicScanPage() {
   const [tenantName, setTenantName] = useState<string>('');
   const [state, setState] = useState<'loading' | 'ok' | 'notfound'>('loading');
 
+  // Session app (pour autoriser les mouvements de stock depuis la fiche scannee).
+  const [authUser, setAuthUser] = useState<{ name?: string; email?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Etat du panneau mouvement.
+  const [moveType, setMoveType] = useState<'entry' | 'exit'>('exit');
+  const [moveQty, setMoveQty] = useState<number>(1);
+  const [moveDept, setMoveDept] = useState<string>('');
+  const [moveReason, setMoveReason] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+  const [moveMsg, setMoveMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const reloadItem = async () => {
+    try {
+      const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
+      const list: Item[] = (data?.data?.items) || [];
+      const found = list.find(i => String(i.id) === id || i.code === id);
+      if (found) setItem(found);
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     (async () => {
       // Logo + nom du tenant (best-effort).
@@ -39,6 +60,11 @@ export default function PublicScanPage() {
         if (cs?.logo_url) setLogo(cs.logo_url);
         if (cs?.legal_name) setTenantName(cs.legal_name);
       } catch { /* défaut */ }
+      // Session app (best-effort) : si connecte, on affichera les boutons +/-.
+      try {
+        const r = await fetch('/api/auth/me', { credentials: 'include' });
+        if (r.ok) { const j = await r.json(); if (j?.user) setAuthUser({ name: j.user.name, email: j.user.email }); }
+      } catch { /* anon */ } finally { setAuthChecked(true); }
       // Article depuis l'instantané inventaire.
       try {
         const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
@@ -49,6 +75,40 @@ export default function PublicScanPage() {
       setState('notfound');
     })();
   }, [tenant, id]);
+
+  // Pre-selection de la succursale par defaut (article multi-emplacement).
+  useEffect(() => {
+    if (!item) return;
+    if (item.isMultiLocation && Array.isArray(item.locations) && item.locations.length && !moveDept) {
+      const first = item.locations[0];
+      if (first?.departmentCode) setMoveDept(String(first.departmentCode));
+    }
+  }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submitMovement = async () => {
+    if (!item || busy) return;
+    setMoveMsg(null);
+    const qty = Math.abs(Number(moveQty) || 0);
+    if (!(qty > 0)) { setMoveMsg({ kind: 'err', text: 'Entre une quantité valide.' }); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/inventory/movement', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant, itemId: String(item.id), departmentCode: moveDept || null, type: moveType, quantity: qty, reason: moveReason }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.success) {
+        const extra = j?.available != null ? ` (disponible : ${j.available})` : '';
+        setMoveMsg({ kind: 'err', text: (j?.error || 'Échec du mouvement') + extra });
+      } else {
+        setMoveMsg({ kind: 'ok', text: `${moveType === 'exit' ? 'Sortie' : 'Entrée'} de ${qty} enregistrée. Nouveau stock : ${j.quantity}.` });
+        setMoveReason('');
+        await reloadItem();
+      }
+    } catch (e: any) {
+      setMoveMsg({ kind: 'err', text: 'Réseau indisponible : ' + (e?.message || e) });
+    } finally { setBusy(false); }
+  };
 
   if (state === 'loading') {
     return <div className="min-h-screen grid place-items-center bg-slate-50 text-slate-400"><Loader2 className="animate-spin" /></div>;
@@ -128,6 +188,91 @@ export default function PublicScanPage() {
               <span>{item.location || locations.map((l: any) => `${l.location || l.name || l.department || ''}${(l.quantity ?? l.qty) != null ? ` (${l.quantity ?? l.qty})` : ''}`).filter(Boolean).join(' · ')}</span>
             </div>
           )}
+
+          {/* ===== Mouvement de stock (connecte uniquement) ===== */}
+          {authChecked && (authUser ? (
+            <div className="rounded-xl border-2 border-slate-200 bg-slate-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700">Mouvement de stock</span>
+                <span className="truncate pl-2 text-[11px] text-slate-400">{authUser.name || authUser.email}</span>
+              </div>
+
+              {/* Entree / Sortie */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setMoveType('entry')}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-bold transition ${moveType === 'entry' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-emerald-200 bg-white text-emerald-700'}`}
+                >
+                  <Plus size={16} /> Entrée
+                </button>
+                <button
+                  onClick={() => setMoveType('exit')}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-bold transition ${moveType === 'exit' ? 'border-red-500 bg-red-500 text-white' : 'border-red-200 bg-white text-red-700'}`}
+                >
+                  <Minus size={16} /> Sortie
+                </button>
+              </div>
+
+              {/* Succursale (si multi-emplacement) */}
+              {item.isMultiLocation && Array.isArray(item.locations) && item.locations.length > 0 && (
+                <select
+                  value={moveDept}
+                  onChange={(e) => setMoveDept(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800"
+                >
+                  {item.locations.map((l: any, i: number) => (
+                    <option key={i} value={String(l.departmentCode || '')}>
+                      {(l.department || l.location || `Emplacement ${i + 1}`)}{l.quantity != null ? ` — ${l.quantity} dispo` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Quantite */}
+              <div className="mt-2 flex items-center gap-2">
+                <button onClick={() => setMoveQty(q => Math.max(1, (Number(q) || 1) - 1))} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">−</button>
+                <input
+                  type="number" min={1} inputMode="numeric"
+                  value={moveQty}
+                  onChange={(e) => setMoveQty(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-center text-lg font-bold text-slate-900"
+                />
+                <button onClick={() => setMoveQty(q => (Number(q) || 1) + 1)} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">+</button>
+              </div>
+
+              {/* Raison (optionnel) */}
+              <input
+                type="text" value={moveReason} maxLength={300}
+                onChange={(e) => setMoveReason(e.target.value)}
+                placeholder="Raison (optionnel)"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800"
+              />
+
+              {/* Valider */}
+              <button
+                onClick={submitMovement}
+                disabled={busy}
+                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-base font-extrabold text-white shadow transition disabled:opacity-60 ${moveType === 'exit' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+              >
+                {busy ? <Loader2 className="animate-spin" size={18} /> : (moveType === 'exit' ? <Minus size={18} /> : <Plus size={18} />)}
+                {busy ? 'Enregistrement…' : `Confirmer la ${moveType === 'exit' ? 'sortie' : 'entrée'} de ${moveQty}`}
+              </button>
+
+              {moveMsg && (
+                <div className={`mt-2 flex items-start gap-2 rounded-lg p-2 text-sm ${moveMsg.kind === 'ok' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
+                  {moveMsg.kind === 'ok' ? <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" /> : <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />}
+                  <span>{moveMsg.text}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <a
+              href={`/${tenant}/login?redirect=${encodeURIComponent(`/scan/${tenant}/${id}`)}`}
+              className="flex items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-blue-50 py-3 text-sm font-bold text-blue-700"
+            >
+              <LogIn size={16} /> Se connecter pour faire une entrée / sortie
+            </a>
+          ))}
 
           <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-slate-400">
             <ShieldCheck size={13} /> Fiche officielle · C-Secur360
