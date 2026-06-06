@@ -1998,10 +1998,18 @@ function AppContent() {
   // ============== FILTRAGE ET TRI - DOIVENT être avant les returns ==============
   const filteredItems = useMemo(() => {
     return items.filter(item => {
+      const q = deferredSearchTerm.toLowerCase();
       const matchesSearch = !deferredSearchTerm ||
-        item.name.toLowerCase().includes(deferredSearchTerm.toLowerCase()) ||
-        item.code.toLowerCase().includes(deferredSearchTerm.toLowerCase()) ||
-        (item.description && item.description.toLowerCase().includes(deferredSearchTerm.toLowerCase()));
+        item.name.toLowerCase().includes(q) ||
+        item.code.toLowerCase().includes(q) ||
+        (item.description && item.description.toLowerCase().includes(q)) ||
+        // Recherche par SUCCURSALE / DÉPARTEMENT / EMPLACEMENT (mono ou multi-emplacement) :
+        // permet de retrouver facilement où un article est en stock.
+        (item.department && item.department.toLowerCase().includes(q)) ||
+        (item.location && item.location.toLowerCase().includes(q)) ||
+        (item.locations && item.locations.some(loc =>
+          (loc.department && loc.department.toLowerCase().includes(q)) ||
+          (loc.location && loc.location.toLowerCase().includes(q))));
 
       const activeCategory = dashboardFilters.category || filters.category;
       const activeSubcategory = dashboardFilters.subcategory || filters.subcategory;
