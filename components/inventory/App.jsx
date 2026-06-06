@@ -72,8 +72,8 @@ import ArticlesView from './views/ArticlesView';
 
 // Composants UI
 import { Logo } from './components/UI/Logo';
-import { ThemeSelector } from './components/UI/ThemeSelector';
-import { LanguageSelector } from './components/UI/LanguageSelector';
+// ThemeSelector / LanguageSelector retires : le theme (Jour/Nuit) et la langue (FR/EN) sont
+// piloter par le header principal de l'app (SyncHostPrefs dans Root.jsx) — un seul reglage global.
 import { InstallPWA } from './components/UI/InstallPWA';
 import { PWAInstallButton } from './components/UI/PWAInstallButton';
 import { ScanPage } from './components/ScanPage';
@@ -2727,8 +2727,7 @@ function AppContent() {
           )}
 
           <PWAInstallButton />
-          <LanguageSelector showLabel={false} compact={true} />
-          <ThemeSelector showLabel={false} compact={true} />
+          {/* Langue/Theme: piloter depuis le header principal de l'app (single source). */}
 
           {isAuthenticated ? (
             <button
@@ -5119,21 +5118,9 @@ function AppContent() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">{t('administration.settings')}</h2>
 
+            {/* Langue (FR/EN) et thème (Jour/Nuit) sont pilotes par le header principal de l'app
+                (un seul reglage pour toute la plateforme) — retires d'ici pour eviter les doublons. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('administration.language')}
-                </label>
-                <LanguageSelector showLabel={true} compact={false} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('administration.theme')}
-                </label>
-                <ThemeSelector showLabel={true} compact={false} />
-              </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   {t('administration.currency')}
