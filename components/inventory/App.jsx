@@ -2067,6 +2067,90 @@ function AppContent() {
     return { total, lowStock, overStock, optimal, totalCostValue, totalSellValue, margin, marginPercent };
   }, [items]);
 
+  // ============== ANALYTIQUE (réappro, ABC, stock dormant/rotation, comptage cyclique) ==============
+  // Tout est DÉRIVÉ (aucune donnée stockée en plus, sauf item.lastCountedAt posé au comptage).
+  // Bonnes pratiques : méthode Min/Max (PAR) pour le réappro ; ABC par valeur (80/15/5) ;
+  // fréquence de comptage selon la classe ABC (A hebdo, B mensuel, C trimestriel).
+  const DEAD_STOCK_DAYS = 90; // sans sortie depuis 90 j = dormant
+  const inventoryAnalytics = useMemo(() => {
+    const now = Date.now();
+    const DAY = 86400000;
+
+    // Valeur de stock par article + total (base de l'ABC).
+    const valueOf = (it) => (Number(it.costPrice) || 0) * (Number(it.quantity) || 0);
+    const totalValue = items.reduce((s, it) => s + valueOf(it), 0);
+    const abc = new Map();
+    let cum = 0;
+    [...items].sort((a, b) => valueOf(b) - valueOf(a)).forEach(it => {
+      cum += valueOf(it);
+      const pct = totalValue > 0 ? cum / totalValue : 1;
+      abc.set(it.id, pct <= 0.8 ? 'A' : pct <= 0.95 ? 'B' : 'C');
+    });
+
+    // Dernière SORTIE par article + quantité sortie sur 365 j (rotation).
+    const lastExit = new Map();
+    const exitQty365 = new Map();
+    movements.forEach(m => {
+      if (m.type !== 'exit') return;
+      const ts = new Date(m.timestamp || m.date).getTime();
+      if (isNaN(ts)) return;
+      if (!lastExit.has(m.itemId) || ts > lastExit.get(m.itemId)) lastExit.set(m.itemId, ts);
+      if (now - ts <= 365 * DAY) exitQty365.set(m.itemId, (exitQty365.get(m.itemId) || 0) + (Number(m.quantity) || 0));
+    });
+
+    // RÉAPPRO (par emplacement) : qté ≤ min -> à commander, suggestion = cible(max) − qté.
+    const reorder = [];
+    items.forEach(it => {
+      const locs = (it.isMultiLocation && Array.isArray(it.locations) && it.locations.length)
+        ? it.locations
+        : [{ department: it.department, location: it.location, quantity: it.quantity, minQuantity: it.minQuantity, maxQuantity: it.maxQuantity }];
+      locs.forEach(loc => {
+        const qty = Number(loc.quantity) || 0;
+        const mn = loc.minQuantity != null ? Number(loc.minQuantity) : (Number(it.minQuantity) || 0);
+        const mx = loc.maxQuantity != null ? Number(loc.maxQuantity) : (Number(it.maxQuantity) || 0);
+        if (mn > 0 && qty <= mn) {
+          const target = mx > mn ? mx : mn;
+          reorder.push({ id: it.id, code: it.code, name: it.name, abc: abc.get(it.id), department: loc.department || '—', qty, min: mn, max: mx, suggested: Math.max(1, target - qty), unit: it.unit || '' });
+        }
+      });
+    });
+    reorder.sort((a, b) => (a.qty / Math.max(1, a.min)) - (b.qty / Math.max(1, b.min)));
+
+    // STOCK DORMANT + ROTATION.
+    const dead = [];
+    const turnover = [];
+    items.forEach(it => {
+      const le = lastExit.get(it.id) || null;
+      const qty = Number(it.quantity) || 0;
+      const value = valueOf(it);
+      if (qty > 0 && (le == null || (now - le) > DEAD_STOCK_DAYS * DAY)) {
+        dead.push({ id: it.id, code: it.code, name: it.name, qty, unit: it.unit || '', value, daysSince: le ? Math.floor((now - le) / DAY) : null });
+      }
+      const exited = exitQty365.get(it.id) || 0;
+      turnover.push({ id: it.id, code: it.code, name: it.name, abc: abc.get(it.id), exited, qty, turns: qty > 0 ? exited / qty : 0 });
+    });
+    dead.sort((a, b) => b.value - a.value);
+    turnover.sort((a, b) => b.turns - a.turns);
+
+    // COMPTAGE CYCLIQUE : fréquence selon ABC, dû si jamais compté ou délai dépassé.
+    const freqDays = { A: 7, B: 30, C: 90 };
+    const cycleDue = [];
+    items.forEach(it => {
+      const cls = abc.get(it.id) || 'C';
+      const fd = freqDays[cls];
+      const last = it.lastCountedAt ? new Date(it.lastCountedAt).getTime() : null;
+      if (last == null || (now - last) >= fd * DAY) {
+        cycleDue.push({ id: it.id, code: it.code, name: it.name, abc: cls, freqDays: fd, lastCountedAt: it.lastCountedAt || null, daysSince: last ? Math.floor((now - last) / DAY) : null });
+      }
+    });
+    cycleDue.sort((a, b) => a.abc.localeCompare(b.abc) || (b.daysSince || 9999) - (a.daysSince || 9999));
+
+    const abcCounts = { A: 0, B: 0, C: 0 };
+    abc.forEach(v => { abcCounts[v]++; });
+
+    return { totalValue, abc, abcCounts, reorder, dead, turnover, cycleDue, deadDays: DEAD_STOCK_DAYS };
+  }, [items, movements]);
+
   const dashboardStats = useMemo(() => {
     const filteredItems = items.filter(item => {
       if (dashboardFilters.category && item.category !== dashboardFilters.category) return false;
@@ -2722,10 +2806,10 @@ function AppContent() {
       }
 
       // Decoupage en LOTS : un seul appel IA ne peut pas normaliser des milliers d'articles
-      // (limite de tokens de sortie). On envoie ~120 lignes par lot, en parallele limite (4),
+      // (limite de tokens de sortie). On envoie ~40 lignes par lot, en parallele limite (4),
       // puis on fusionne. Chaque lot est auto-descriptif (les cles = en-tetes), donc la detection
       // de colonnes est coherente d'un lot a l'autre.
-      const CHUNK = 120;
+      const CHUNK = 40;
       const catNames = categories.map(c => c.name);
       const deptNames = departments.map(d => d.name);
       const chunks = [];
@@ -7452,8 +7536,8 @@ function AppContent() {
               />
               <p className="mt-2 text-[11px] leading-relaxed text-purple-700 dark:text-purple-400">
                 {language === 'fr'
-                  ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 120 lignes (max 600 par lot). Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
-                  : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 120 rows (max 600 per batch). Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
+                  ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 40 lignes. Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
+                  : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 40 rows. Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
               </p>
             </div>
 
@@ -7701,8 +7785,8 @@ function AppContent() {
                 />
                 <p className="mt-2 text-[11px] leading-relaxed text-purple-700 dark:text-purple-400">
                   {language === 'fr'
-                    ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 120 lignes (max 600 par lot). Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
-                    : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 120 rows (max 600 per batch). Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
+                    ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 40 lignes. Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
+                    : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 40 rows. Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
                 </p>
               </div>
 

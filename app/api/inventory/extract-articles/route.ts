@@ -62,8 +62,10 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16000,
+        // Haiku 4.5 : tres rapide et suffisant pour de la detection de colonnes / normalisation
+        // structuree -> evite les timeouts (504) sur les gros imports (le client envoie de petits lots).
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 8000,
         messages: [{
           role: 'user',
           content: [
