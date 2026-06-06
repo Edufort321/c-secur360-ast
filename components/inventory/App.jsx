@@ -2,7 +2,6 @@
 // Application complète de gestion d'inventaire avec design professionnel moderne 2024
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 import {
   LayoutDashboard,
@@ -104,6 +103,14 @@ import { getCatalogues } from '@/lib/soumissions';
 // Écriture localStorage sûre (ignore les erreurs : mode privé Safari / quota dépassé).
 function saveLS(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+}
+
+// Chargement paresseux du moteur de décodage ZXing (WASM) — décodeur de QR robuste (remplace html5-qrcode).
+// Le module est mis en cache : le 1er appel charge le WASM, les suivants sont instantanés.
+let _zxingReaderPromise = null;
+function loadZxing() {
+  if (!_zxingReaderPromise) _zxingReaderPromise = import('zxing-wasm/reader');
+  return _zxingReaderPromise;
 }
 
 // ============== COMPOSANTS UI RÉUTILISABLES ==============
@@ -2891,9 +2898,12 @@ function AppContent() {
     const [scannerUser, setScannerUser] = useState(hostUserName || currentUser?.username || ''); // Identité par défaut = utilisateur connecté à l'app
     // Si le nom de l'utilisateur connecté arrive après le montage, on remplit le champ (sans écraser une saisie).
     useEffect(() => { if (hostUserName && !scannerUser) setScannerUser(hostUserName); }, [hostUserName]); // eslint-disable-line react-hooks/exhaustive-deps
-    const scannerRef = useRef(null);
-    const html5QrcodeRef = useRef(null);
-    const handledRef = useRef(false); // anti double-décodage : la caméra décode ~15x/s, on ne traite qu'une fois par scan
+    const videoRef = useRef(null);   // <video> natif (flux caméra net, plein contrôle)
+    const canvasRef = useRef(null);  // capture des frames pour ZXing
+    const streamRef = useRef(null);  // MediaStream actif
+    const trackRef = useRef(null);   // piste vidéo (zoom/torch/focus via applyConstraints)
+    const loopRef = useRef(null);    // timer de la boucle de décodage
+    const handledRef = useRef(false); // anti double-décodage : on ne traite qu'un code par scan
     const photoInputRef = useRef(null); // input appareil photo natif (capture="environment")
     const [zoom, setZoom] = useState(1);
     const [zoomCaps, setZoomCaps] = useState(null); // {min,max,step} si la caméra supporte le zoom (Android Chrome ; pas iOS)
@@ -2901,41 +2911,37 @@ function AppContent() {
     const [torchOn, setTorchOn] = useState(false);
     // Applique un niveau de zoom à la caméra en cours (aide à lire les petits QR imprimés).
     const applyZoom = async (z) => {
-      const h = html5QrcodeRef.current; if (!h || !zoomCaps) return;
+      const tr = trackRef.current; if (!tr || !zoomCaps) return;
       const v = Math.min(zoomCaps.max, Math.max(zoomCaps.min, Number(z) || zoomCaps.min));
       setZoom(v);
-      try { await h.applyVideoConstraints({ advanced: [{ zoom: v }] }); } catch { /* ignore */ }
+      try { await tr.applyConstraints({ advanced: [{ zoom: v }] }); } catch { /* ignore */ }
     };
     // Lampe (torch) : éclaire/réduit les reflets sur un QR imprimé. Android Chrome uniquement.
     const toggleTorch = async () => {
-      const h = html5QrcodeRef.current; if (!h || !torchSupported) return;
+      const tr = trackRef.current; if (!tr || !torchSupported) return;
       const next = !torchOn;
-      try { await h.applyVideoConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* ignore */ }
+      try { await tr.applyConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* ignore */ }
     };
-    // Tap-to-focus : retoucher l'image relance la mise au point (utile si l'image reste floue).
+    // Tap-to-focus : retoucher l'image relance la mise au point continue.
     const refocus = async () => {
-      const h = html5QrcodeRef.current; if (!h || !isScanning) return;
-      try {
-        await h.applyVideoConstraints({ advanced: [{ focusMode: 'manual' }] }); // petit reset
-        await h.applyVideoConstraints({ advanced: [{ focusMode: 'continuous' }] });
-      } catch { /* ignore */ }
+      const tr = trackRef.current; if (!tr) return;
+      try { await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
     };
 
-    // Scan via PHOTO (appareil photo natif) : bien plus fiable pour les QR imprimés (autofocus/HD natifs).
-    // On décode l'image capturée avec scanFile, puis on route vers handleDecoded comme un scan caméra.
+    // Scan via PHOTO (appareil photo natif) : ZXing décode directement le fichier image. Très fiable (imprimé).
     const scanFromPhoto = async (file) => {
       if (!file) return;
       setScannerError('');
       handledRef.current = false;
       try {
-        const fileScanner = new Html5Qrcode('qr-file-reader', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-        const text = await fileScanner.scanFile(file, false);
-        try { await fileScanner.clear(); } catch { /* ignore */ }
-        handleDecoded(text);
-      } catch {
-        setScannerError(language === 'fr'
+        const { readBarcodes } = await loadZxing();
+        const results = await readBarcodes(file, { tryHarder: true, formats: ['QRCode'], maxNumberOfSymbols: 1 });
+        if (results && results.length && results[0].text) handleDecoded(results[0].text);
+        else setScannerError(language === 'fr'
           ? "Aucun QR détecté sur la photo. Reprends-la bien nette, QR centré et à plat, avec un bon éclairage."
           : 'No QR detected in the photo. Retake it sharp, centered, flat and well lit.');
+      } catch {
+        setScannerError(language === 'fr' ? "Lecture de la photo impossible." : 'Photo read failed.');
       }
     };
 
@@ -2947,7 +2953,7 @@ function AppContent() {
         handledRef.current = true;
         setSelectedItem(departmentCode != null ? { ...item, scannedDepartmentCode: departmentCode } : item);
         setShowScannedModal(true);
-        try { html5QrcodeRef.current?.pause(true); } catch { /* ignore */ }
+        if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; } // pause le décodage (la caméra reste prête)
       };
       try {
         const url = new URL(decodedText);
@@ -2975,79 +2981,74 @@ function AppContent() {
       }
     };
 
-    // Initialiser le scanner avec l'API BAS NIVEAU Html5Qrcode : .start() ouvre la caméra
-    // DIRECTEMENT (getUserMedia) — bien plus fiable sur mobile que le widget Html5QrcodeScanner.
-    const initScanner = () => {
-      if (html5QrcodeRef.current) return;
-      if (!document.getElementById('qr-reader')) return;
-      const h = new Html5Qrcode('qr-reader', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-      html5QrcodeRef.current = h;
-      h.start(
-        { facingMode: 'environment' }, // caméra arrière (surchargé par videoConstraints ci-dessous)
-        {
-          fps: 10,
-          // Zone de scan large et ADAPTATIVE (75% du plus petit côté) : facilite le cadrage d'un QR imprimé.
-          qrbox: (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; },
-          // PAS d'aspectRatio forcé : la caméra garde son format natif (évite un recadrage qui floute / désactive l'autofocus).
-          // 1080p = net ET autofocus fiable (forcer du QHD désactive souvent l'AF continu sur mobile).
-          videoConstraints: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 },
-            focusMode: 'continuous',                 // certains navigateurs lisent la clé à la racine
-            advanced: [{ focusMode: 'continuous' }], // d'autres uniquement dans advanced
-          },
-        },
-        handleDecoded,
-        () => { /* erreurs de scan par frame : ignorer */ }
-      ).then(async () => {
-        // Détecte si la caméra supporte le ZOOM et démarre à 2x (aide à lire les petits QR imprimés).
+    // Boucle de décodage ZXing : capture une frame du <video> et la lit (~8 images/s). S'arrête au 1er code.
+    const tick = async () => {
+      if (!streamRef.current || handledRef.current) return;
+      const v = videoRef.current, c = canvasRef.current;
+      if (v && c && v.readyState >= 2 && v.videoWidth) {
+        const w = v.videoWidth, h = v.videoHeight;
+        if (c.width !== w) c.width = w;
+        if (c.height !== h) c.height = h;
         try {
-          const caps = html5QrcodeRef.current?.getRunningTrackCapabilities?.();
-          if (caps && caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > (caps.zoom.min || 1)) {
+          const ctx = c.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(v, 0, 0, w, h);
+          const img = ctx.getImageData(0, 0, w, h);
+          const { readBarcodes } = await loadZxing();
+          const results = await readBarcodes(img, { tryHarder: true, formats: ['QRCode'], maxNumberOfSymbols: 1 });
+          if (!handledRef.current && results && results.length && results[0].text) handleDecoded(results[0].text);
+        } catch { /* frame illisible -> on continue */ }
+      }
+      if (!handledRef.current && streamRef.current) loopRef.current = setTimeout(tick, 120);
+    };
+
+    // Démarrer le scan — appelé DANS le tap (geste utilisateur requis par iOS). getUserMedia + <video>
+    // natif (image NETTE + autofocus continu) ; décodage par ZXing (robuste, lit bien les QR imprimés).
+    const startScanning = async () => {
+      setScannerError('');
+      handledRef.current = false;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+          audio: false,
+        });
+        streamRef.current = stream;
+        const track = stream.getVideoTracks()[0];
+        trackRef.current = track;
+        const v = videoRef.current;
+        if (v) { v.srcObject = stream; v.setAttribute('playsinline', 'true'); v.muted = true; try { await v.play(); } catch { /* ignore */ } }
+        setIsScanning(true);
+        // Capacités caméra : zoom (démarre à 2x), lampe, autofocus continu.
+        try {
+          const caps = track.getCapabilities ? track.getCapabilities() : {};
+          if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > (caps.zoom.min || 1)) {
             const min = caps.zoom.min || 1, max = caps.zoom.max, step = caps.zoom.step || 0.1;
             setZoomCaps({ min, max, step });
-            const initial = Math.min(max, Math.max(min, 2));
-            setZoom(initial);
-            try { await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ zoom: initial }] }); } catch { /* ignore */ }
-          } else { setZoomCaps(null); }
-          // Lampe (torch) : capability booléenne exposée par la piste vidéo (Android Chrome).
-          setTorchSupported(!!(caps && caps.torch));
-          // MISE AU POINT CONTINUE forcée sur la piste live (la contrainte initiale est souvent ignorée -> image floue).
-          try { await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
-        } catch { setZoomCaps(null); setTorchSupported(false); }
-      }).catch(err => {
-        html5QrcodeRef.current = null;
+            const z = Math.min(max, Math.max(min, 2)); setZoom(z);
+            try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch { /* ignore */ }
+          } else setZoomCaps(null);
+          setTorchSupported(!!caps.torch);
+          try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
+        } catch { /* ignore */ }
+        loopRef.current = setTimeout(tick, 300);
+      } catch (e) {
         setIsScanning(false);
-        const denied = err && (err.name === 'NotAllowedError' || /denied|permission|notallowed/i.test(String(err)));
-        const noCam = err && (err.name === 'NotFoundError' || /not ?found|no camera/i.test(String(err)));
+        const denied = e && (e.name === 'NotAllowedError' || /denied|permission|notallowed/i.test(String(e)));
+        const noCam = e && (e.name === 'NotFoundError' || /not ?found|no camera/i.test(String(e)));
         setScannerError(
           denied ? "Accès à la caméra refusé. Autorise la caméra (icône cadenas dans la barre d'adresse), puis réessaie."
             : noCam ? "Aucune caméra détectée sur cet appareil. Utilise la recherche manuelle ci-dessous."
-              : "Impossible d'ouvrir la caméra : " + (err?.message || err) + ". Sur cellulaire, ouvre la page en HTTPS et autorise la caméra."
+              : "Impossible d'ouvrir la caméra : " + (e?.message || e) + ". Sur cellulaire, ouvre la page en HTTPS et autorise la caméra."
         );
-      });
-    };
-
-    // Démarrer le scan — appelé DANS le tap (geste utilisateur requis par iOS pour la caméra).
-    const startScanning = () => {
-      setScannerError('');
-      handledRef.current = false;
-      setIsScanning(true);
-      initScanner();
-    };
-
-    // Arrêter le scan proprement (Html5Qrcode.stop() est asynchrone).
-    const stopScanning = () => {
-      const h = html5QrcodeRef.current;
-      html5QrcodeRef.current = null;
-      if (h) {
-        try { h.stop().then(() => { try { h.clear(); } catch { /* ignore */ } }).catch(() => {}); }
-        catch { /* déjà arrêté */ }
       }
-      setIsScanning(false);
-      setZoomCaps(null); setZoom(1); setTorchSupported(false); setTorchOn(false);
+    };
+
+    // Arrêter le scan : stoppe la boucle + libère la caméra.
+    const stopScanning = () => {
+      if (loopRef.current) { clearTimeout(loopRef.current); loopRef.current = null; }
+      if (streamRef.current) { try { streamRef.current.getTracks().forEach(tr => tr.stop()); } catch { /* ignore */ } streamRef.current = null; }
+      trackRef.current = null;
+      const v = videoRef.current; if (v) { try { v.pause(); v.srcObject = null; } catch { /* ignore */ } }
+      setIsScanning(false); setZoomCaps(null); setZoom(1); setTorchSupported(false); setTorchOn(false);
     };
 
     // Forcer le mode inventaire si un inventaire global est actif
@@ -3066,9 +3067,9 @@ function AppContent() {
     // À la fermeture de la modale d'article scanné : reprendre la caméra et ré-armer le garde
     // (sinon la vidéo reste figée après un scan et l'utilisateur est bloqué).
     useEffect(() => {
-      if (!showScannedModal && isScanning && html5QrcodeRef.current) {
+      if (!showScannedModal && isScanning && streamRef.current && !loopRef.current) {
         handledRef.current = false;
-        try { html5QrcodeRef.current.resume(); } catch { /* ignore */ }
+        loopRef.current = setTimeout(tick, 120); // reprend le décodage après fermeture de la modale
       }
     }, [showScannedModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -3404,12 +3405,20 @@ function AppContent() {
               </div>
             </div>
             <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { scanFromPhoto(e.target.files?.[0]); e.currentTarget.value = ''; }} />
-            <div id="qr-file-reader" className="hidden"></div>
 
-            {/* Zone de scan */}
+            {/* Zone de scan : <video> natif (flux net) + canvas caché pour ZXing */}
             <div className="mb-6">
-              <div ref={scannerRef}>
-                <div id="qr-reader" className="rounded-xl overflow-hidden" onClick={refocus}></div>
+              <div>
+                <div className="relative overflow-hidden rounded-xl bg-black" onClick={refocus} style={{ aspectRatio: '4 / 3' }}>
+                  <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+                  {!isScanning && (
+                    <div className="absolute inset-0 grid place-items-center text-gray-400">
+                      <div className="text-center"><Camera size={40} className="mx-auto opacity-60" /><p className="mt-2 text-xs">{language === 'fr' ? 'Caméra arrêtée' : 'Camera off'}</p></div>
+                    </div>
+                  )}
+                  {isScanning && <div className="pointer-events-none absolute inset-[12%] rounded-2xl border-2 border-white/70"></div>}
+                </div>
+                <canvas ref={canvasRef} className="hidden" />
                 {isScanning && (
                   <p className="mt-1 text-center text-[11px] text-gray-400">{language === 'fr' ? '👆 Touche l’image pour refaire la mise au point' : '👆 Tap the image to refocus'}</p>
                 )}
