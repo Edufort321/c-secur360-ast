@@ -2897,12 +2897,20 @@ function AppContent() {
     const photoInputRef = useRef(null); // input appareil photo natif (capture="environment")
     const [zoom, setZoom] = useState(1);
     const [zoomCaps, setZoomCaps] = useState(null); // {min,max,step} si la caméra supporte le zoom (Android Chrome ; pas iOS)
+    const [torchSupported, setTorchSupported] = useState(false);
+    const [torchOn, setTorchOn] = useState(false);
     // Applique un niveau de zoom à la caméra en cours (aide à lire les petits QR imprimés).
     const applyZoom = async (z) => {
       const h = html5QrcodeRef.current; if (!h || !zoomCaps) return;
       const v = Math.min(zoomCaps.max, Math.max(zoomCaps.min, Number(z) || zoomCaps.min));
       setZoom(v);
       try { await h.applyVideoConstraints({ advanced: [{ zoom: v }] }); } catch { /* ignore */ }
+    };
+    // Lampe (torch) : éclaire/réduit les reflets sur un QR imprimé. Android Chrome uniquement.
+    const toggleTorch = async () => {
+      const h = html5QrcodeRef.current; if (!h || !torchSupported) return;
+      const next = !torchOn;
+      try { await h.applyVideoConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* ignore */ }
     };
 
     // Scan via PHOTO (appareil photo natif) : bien plus fiable pour les QR imprimés (autofocus/HD natifs).
@@ -2995,7 +3003,9 @@ function AppContent() {
             setZoom(initial);
             try { await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ zoom: initial }] }); } catch { /* ignore */ }
           } else { setZoomCaps(null); }
-        } catch { setZoomCaps(null); }
+          // Lampe (torch) : capability booléenne exposée par la piste vidéo (Android Chrome).
+          setTorchSupported(!!(caps && caps.torch));
+        } catch { setZoomCaps(null); setTorchSupported(false); }
       }).catch(err => {
         html5QrcodeRef.current = null;
         setIsScanning(false);
@@ -3026,7 +3036,7 @@ function AppContent() {
         catch { /* déjà arrêté */ }
       }
       setIsScanning(false);
-      setZoomCaps(null); setZoom(1);
+      setZoomCaps(null); setZoom(1); setTorchSupported(false); setTorchOn(false);
     };
 
     // Forcer le mode inventaire si un inventaire global est actif
@@ -3389,13 +3399,22 @@ function AppContent() {
             <div className="mb-6">
               <div ref={scannerRef}>
                 <div id="qr-reader" className="rounded-xl overflow-hidden"></div>
-                {isScanning && zoomCaps && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-500">{language === 'fr' ? 'Zoom' : 'Zoom'}</span>
-                    <button type="button" onClick={() => applyZoom(zoom - (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">−</button>
-                    <input type="range" min={zoomCaps.min} max={zoomCaps.max} step={zoomCaps.step} value={zoom} onChange={e => applyZoom(e.target.value)} className="flex-1 accent-slate-700" />
-                    <button type="button" onClick={() => applyZoom(zoom + (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">+</button>
-                    <span className="w-10 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">{zoom.toFixed(1)}x</span>
+                {isScanning && (zoomCaps || torchSupported) && (
+                  <div className="mt-3 space-y-2">
+                    {torchSupported && (
+                      <button type="button" onClick={toggleTorch} className={`flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
+                        🔦 {language === 'fr' ? (torchOn ? 'Lampe allumée' : 'Allumer la lampe') : (torchOn ? 'Light on' : 'Turn on light')}
+                      </button>
+                    )}
+                    {zoomCaps && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500">Zoom</span>
+                        <button type="button" onClick={() => applyZoom(zoom - (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">−</button>
+                        <input type="range" min={zoomCaps.min} max={zoomCaps.max} step={zoomCaps.step} value={zoom} onChange={e => applyZoom(e.target.value)} className="flex-1 accent-slate-700" />
+                        <button type="button" onClick={() => applyZoom(zoom + (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">+</button>
+                        <span className="w-10 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">{zoom.toFixed(1)}x</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {scannerError && (
