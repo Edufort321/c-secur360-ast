@@ -332,7 +332,7 @@ const ArticlesView = React.memo(({
                 }`}
                 title={t('articles.gridView')}
               >
-                <Grid size={18} /> <span className="hidden sm:inline">{t('common.gallery') || 'Galerie'}</span>
+                <Grid size={18} />
               </button>
               <button
                 onClick={() => setArticleViewMode('list')}
@@ -343,7 +343,7 @@ const ArticlesView = React.memo(({
                 }`}
                 title={t('articles.listView')}
               >
-                <List size={18} /> <span className="hidden sm:inline">{t('common.list') || 'Liste'}</span>
+                <List size={18} />
               </button>
             </div>
           </div>

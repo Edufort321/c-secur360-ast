@@ -1582,6 +1582,9 @@ function AppContent() {
   const [importErrors, setImportErrors] = useState([]);
   const [importStep, setImportStep] = useState('upload'); // 'upload', 'preview', 'complete'
   const fileInputRef = useRef(null);
+  const aiFileInputRef = useRef(null);     // input pour l'import IA (colonnes libres)
+  const [aiImporting, setAiImporting] = useState(false); // spinner pendant l'analyse IA
+  const [aiProgress, setAiProgress] = useState(null);    // {done,total} progression des lots (gros fichiers)
 
   // États pour le partage de produits
   const [showShareModal, setShowShareModal] = useState(false);
@@ -2648,6 +2651,138 @@ function AppContent() {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  // Import IA : on accepte N'IMPORTE QUELLE feuille Excel (colonnes libres). On lit les lignes
+  // brutes (SheetJS), l'IA detecte les colonnes et renvoie des articles normalises, puis on
+  // reutilise la MEME previsualisation/validation que l'import standard. Les categories et
+  // departements absents sont crees automatiquement pour ne pas bloquer l'import.
+  const handleAiFileUpload = async (file) => {
+    if (!file) return;
+    setAiImporting(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      // Choisir la feuille avec le plus de lignes (ignore une eventuelle feuille d'instructions).
+      let rows = [];
+      for (const name of wb.SheetNames) {
+        const r = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' });
+        if (r.length > rows.length) rows = r;
+      }
+      if (!rows.length) {
+        notify(language === 'fr' ? 'Feuille Excel vide ou illisible.' : 'Empty or unreadable Excel sheet.', 'error');
+        return;
+      }
+
+      // Decoupage en LOTS : un seul appel IA ne peut pas normaliser des milliers d'articles
+      // (limite de tokens de sortie). On envoie ~120 lignes par lot, en parallele limite (4),
+      // puis on fusionne. Chaque lot est auto-descriptif (les cles = en-tetes), donc la detection
+      // de colonnes est coherente d'un lot a l'autre.
+      const CHUNK = 120;
+      const catNames = categories.map(c => c.name);
+      const deptNames = departments.map(d => d.name);
+      const chunks = [];
+      for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
+      setAiProgress({ done: 0, total: chunks.length });
+
+      const results = new Array(chunks.length);
+      let nextIdx = 0, done = 0;
+      const worker = async () => {
+        while (nextIdx < chunks.length) {
+          const idx = nextIdx++;
+          const resp = await fetch('/api/inventory/extract-articles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: chunks[idx], categories: catNames, departments: deptNames }),
+          });
+          const j = await resp.json();
+          if (!resp.ok || j.error) throw new Error((j.error || 'Analyse IA echouee') + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : ''));
+          results[idx] = Array.isArray(j.articles) ? j.articles : [];
+          done++; setAiProgress({ done, total: chunks.length });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, chunks.length) }, () => worker()));
+      const aiArticles = results.flat().filter(Boolean);
+      if (!aiArticles.length) throw new Error(language === 'fr' ? 'Aucun article detecte dans la feuille.' : 'No article detected in the sheet.');
+
+      // Creer les categories/departements manquants (insensible casse/accents) pour ne pas bloquer.
+      const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const catSet = new Set(categories.map(c => norm(c.name)));
+      const deptSet = new Set(departments.map(d => norm(d.name)));
+      const newCats = [], newDepts = [];
+      aiArticles.forEach(a => {
+        const c = String(a.category || '').trim();
+        if (c && !catSet.has(norm(c))) { catSet.add(norm(c)); newCats.push(c); }
+        const d = String(a.department || '').trim();
+        if (d && !deptSet.has(norm(d))) { deptSet.add(norm(d)); newDepts.push(d); }
+      });
+      if (newCats.length) {
+        const stamp = Date.now().toString(36);
+        setCategories(prev => { const next = [...prev, ...newCats.map((name, i) => ({ id: `ai-${stamp}-c${i}`, name, code: '', subcategories: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-categories', next); return next; });
+      }
+      if (newDepts.length) {
+        const stamp = Date.now().toString(36);
+        setDepartments(prev => { const next = [...prev, ...newDepts.map((name, i) => ({ id: `ai-${stamp}-d${i}`, name, code: '', locations: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-departments', next); return next; });
+      }
+
+      // Construire les lignes validees (meme forme que handleFileUpload -> ImportPreviewContent/confirmImport).
+      const existingCodes = new Set(items.map(i => i.code));
+      const seen = new Set();
+      const validatedData = aiArticles.map((a, index) => {
+        const errors_row = [];
+        const code = String(a.code || '').trim();
+        const name = String(a.name || '').trim();
+        if (!code) errors_row.push(language === 'fr' ? 'Code manquant' : 'Missing code');
+        if (!name) errors_row.push(language === 'fr' ? 'Nom manquant' : 'Missing name');
+        const quantity = Math.max(0, Math.round(Number(a.quantity) || 0));
+        const minQuantity = Math.max(0, Math.round(Number(a.minQuantity) || 0));
+        let maxQuantity = Math.round(Number(a.maxQuantity) || 0);
+        if (maxQuantity <= minQuantity) maxQuantity = Math.max(minQuantity + 1, quantity, 1);
+        const costPrice = Math.max(0, Number(a.costPrice) || 0);
+        const salePrice = Math.max(0, Number(a.salePrice) || 0);
+        if (code && existingCodes.has(code)) errors_row.push(t('articles.excel.validation.codeExists'));
+        if (code && seen.has(code)) errors_row.push(t('articles.excel.validation.codeDuplicate'));
+        if (code) seen.add(code);
+        return {
+          code, name,
+          category: String(a.category || '').trim(),
+          department: String(a.department || '').trim(),
+          location: String(a.location || '').trim(),
+          quantity, minQuantity, maxQuantity, costPrice, salePrice,
+          unit: String(a.unit || '').trim() || 'Pièce',
+          description: String(a.description || '').trim(),
+          errors: errors_row,
+          lineNumber: index + 2,
+        };
+      });
+      const errors = validatedData.filter(d => d.errors.length > 0).map(d => ({ line: d.lineNumber, code: d.code || 'N/A', errors: d.errors }));
+
+      setImportData(validatedData);
+      setImportErrors(errors);
+      setImportStep('preview');
+
+      // CONTROLE D'EXACTITUDE : on compte les lignes de DONNEES reelles de la feuille (on exclut
+      // les lignes entierement vides) et on compare au nombre d'articles produits. Si l'IA en a
+      // ecarte (lignes de total, en-tetes repetes…), on le signale pour que rien ne parte en
+      // silence — l'utilisateur verifie dans la previsualisation avant d'enregistrer.
+      const dataRowCount = rows.filter(r => Object.values(r).some(v => String(v ?? '').trim() !== '')).length;
+      const skipped = dataRowCount - aiArticles.length;
+      const extra = [
+        newCats.length ? (language === 'fr' ? `${newCats.length} catégorie(s) créée(s)` : `${newCats.length} category(ies) created`) : '',
+        newDepts.length ? (language === 'fr' ? `${newDepts.length} département(s) créé(s)` : `${newDepts.length} department(s) created`) : '',
+      ].filter(Boolean).join(', ');
+      notify((language === 'fr' ? `IA : ${aiArticles.length} article(s) détecté(s) sur ${dataRowCount} ligne(s)` : `AI: ${aiArticles.length} article(s) detected from ${dataRowCount} row(s)`) + (extra ? ` — ${extra}` : '') + '.');
+      if (skipped > 0) {
+        notify((language === 'fr'
+          ? `⚠️ ${skipped} ligne(s) écartée(s) par l'IA (vides, totaux ou non reconnues). Vérifie la prévisualisation.`
+          : `⚠️ ${skipped} row(s) skipped by AI (empty, totals or unrecognized). Check the preview.`), 'warning');
+      }
+    } catch (e) {
+      notify((language === 'fr' ? 'Import IA échoué : ' : 'AI import failed: ') + (e?.message || e), 'error');
+    } finally {
+      setAiImporting(false);
+      setAiProgress(null);
+    }
   };
 
   // Confirmer l'importation
@@ -7134,6 +7269,51 @@ function AppContent() {
         {/* Étape 1: Upload */}
         {importStep === 'upload' && (
           <>
+            {/* IMPORT IA — n'importe quelle feuille, colonnes detectees automatiquement */}
+            <div className="rounded-xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-5">
+              <div className="mb-1 flex items-center gap-2">
+                <Zap size={18} className="text-purple-600 dark:text-purple-400" />
+                <h3 className="font-bold text-purple-900 dark:text-purple-300">{language === 'fr' ? 'Import intelligent (IA)' : 'Smart import (AI)'}</h3>
+              </div>
+              <p className="mb-3 text-sm text-purple-800 dark:text-purple-300">
+                {language === 'fr'
+                  ? "Pousse n'importe quelle feuille Excel : l'IA détecte les colonnes (code, nom, quantité, prix…) et crée tous les articles d'un coup."
+                  : 'Drop any Excel sheet: the AI detects the columns (code, name, quantity, price…) and creates all articles at once.'}
+              </p>
+              <button
+                onClick={() => aiFileInputRef.current?.click()}
+                disabled={aiImporting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-bold text-white shadow hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiImporting ? (
+                  <>
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    {aiProgress && aiProgress.total > 1
+                      ? (language === 'fr' ? `Analyse IA… lot ${aiProgress.done}/${aiProgress.total}` : `AI analysis… batch ${aiProgress.done}/${aiProgress.total}`)
+                      : (language === 'fr' ? 'Analyse IA…' : 'AI analysis…')}
+                  </>
+                ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
+              </button>
+              <input
+                ref={aiFileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAiFileUpload(f); e.currentTarget.value = ''; }}
+              />
+              <p className="mt-2 text-[11px] leading-relaxed text-purple-700 dark:text-purple-400">
+                {language === 'fr'
+                  ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 120 lignes (max 600 par lot). Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
+                  : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 120 rows (max 600 per batch). Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+              <span className="text-[11px] uppercase tracking-wide text-gray-400">{language === 'fr' ? 'ou import standard (modèle)' : 'or standard import (template)'}</span>
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+            </div>
+
             <div
               className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-green-500 transition-colors cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
@@ -7338,6 +7518,51 @@ function AppContent() {
           {/* Étape 1: Upload */}
           {importStep === 'upload' && (
             <>
+              {/* IMPORT IA — n'importe quelle feuille, colonnes detectees automatiquement */}
+              <div className="rounded-xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-5">
+                <div className="mb-1 flex items-center gap-2">
+                  <Zap size={18} className="text-purple-600 dark:text-purple-400" />
+                  <h3 className="font-bold text-purple-900 dark:text-purple-300">{language === 'fr' ? 'Import intelligent (IA)' : 'Smart import (AI)'}</h3>
+                </div>
+                <p className="mb-3 text-sm text-purple-800 dark:text-purple-300">
+                  {language === 'fr'
+                    ? "Pousse n'importe quelle feuille Excel : l'IA détecte les colonnes (code, nom, quantité, prix…) et crée tous les articles d'un coup."
+                    : 'Drop any Excel sheet: the AI detects the columns (code, name, quantity, price…) and creates all articles at once.'}
+                </p>
+                <button
+                  onClick={() => aiFileInputRef.current?.click()}
+                  disabled={aiImporting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-bold text-white shadow hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {aiImporting ? (
+                    <>
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      {aiProgress && aiProgress.total > 1
+                        ? (language === 'fr' ? `Analyse IA… lot ${aiProgress.done}/${aiProgress.total}` : `AI analysis… batch ${aiProgress.done}/${aiProgress.total}`)
+                        : (language === 'fr' ? 'Analyse IA…' : 'AI analysis…')}
+                    </>
+                  ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
+                </button>
+                <input
+                  ref={aiFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAiFileUpload(f); e.currentTarget.value = ''; }}
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-purple-700 dark:text-purple-400">
+                  {language === 'fr'
+                    ? "Aucune limite pratique sur le nombre total d'articles : les gros fichiers (plus de 1000) sont découpés automatiquement en lots de 120 lignes (max 600 par lot). Les catégories et départements absents sont créés au besoin. Rien n'est enregistré avant ta validation dans la prévisualisation."
+                    : 'No practical limit on total articles: large files (1000+) are auto-split into batches of 120 rows (max 600 per batch). Missing categories and departments are created as needed. Nothing is saved until you confirm in the preview.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                <span className="text-[11px] uppercase tracking-wide text-gray-400">{language === 'fr' ? 'ou import standard (modèle)' : 'or standard import (template)'}</span>
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+              </div>
+
               <div
                 className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-slate-600 transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
