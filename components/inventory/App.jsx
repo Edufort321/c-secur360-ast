@@ -2884,6 +2884,25 @@ function AppContent() {
     const scannerRef = useRef(null);
     const html5QrcodeRef = useRef(null);
     const handledRef = useRef(false); // anti double-décodage : la caméra décode ~15x/s, on ne traite qu'une fois par scan
+    const photoInputRef = useRef(null); // input appareil photo natif (capture="environment")
+
+    // Scan via PHOTO (appareil photo natif) : bien plus fiable pour les QR imprimés (autofocus/HD natifs).
+    // On décode l'image capturée avec scanFile, puis on route vers handleDecoded comme un scan caméra.
+    const scanFromPhoto = async (file) => {
+      if (!file) return;
+      setScannerError('');
+      handledRef.current = false;
+      try {
+        const fileScanner = new Html5Qrcode('qr-file-reader', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+        const text = await fileScanner.scanFile(file, false);
+        try { await fileScanner.clear(); } catch { /* ignore */ }
+        handleDecoded(text);
+      } catch {
+        setScannerError(language === 'fr'
+          ? "Aucun QR détecté sur la photo. Reprends-la bien nette, QR centré et à plat, avec un bon éclairage."
+          : 'No QR detected in the photo. Retake it sharp, centered, flat and well lit.');
+      }
+    };
 
     // Traiter un code détecté (QR URL publique, JSON, ou code simple).
     const handleDecoded = (decodedText) => {
@@ -3313,18 +3332,26 @@ function AppContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Scanner */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('scanner.scanQRCode')}</h2>
-              {isScanning ? (
-                <Button variant="danger" size="sm" icon={X} onClick={stopScanning}>
-                  {t('scanner.stopScanning')}
+              <div className="flex items-center gap-2">
+                {/* Scan via appareil photo natif (recommandé pour les QR IMPRIMÉS) */}
+                <Button variant="secondary" size="sm" icon={Camera} onClick={() => photoInputRef.current?.click()}>
+                  {language === 'fr' ? 'Photo' : 'Photo'}
                 </Button>
-              ) : (
-                <Button variant="primary" size="sm" icon={Camera} onClick={startScanning}>
-                  {t('scanner.startScanning')}
-                </Button>
-              )}
+                {isScanning ? (
+                  <Button variant="danger" size="sm" icon={X} onClick={stopScanning}>
+                    {t('scanner.stopScanning')}
+                  </Button>
+                ) : (
+                  <Button variant="primary" size="sm" icon={Camera} onClick={startScanning}>
+                    {t('scanner.startScanning')}
+                  </Button>
+                )}
+              </div>
             </div>
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { scanFromPhoto(e.target.files?.[0]); e.currentTarget.value = ''; }} />
+            <div id="qr-file-reader" className="hidden"></div>
 
             {/* Zone de scan */}
             <div className="mb-6">
