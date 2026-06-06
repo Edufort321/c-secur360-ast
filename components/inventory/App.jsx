@@ -2945,13 +2945,47 @@ function AppContent() {
       } catch { /* ignore */ }
     };
 
-    // Scan via PHOTO (appareil photo natif). On décode l'image VIA <img>+canvas -> ImageData
-    // (le navigateur gère JPEG/PNG/HEIC), puis ZXing sur les pixels. Plus robuste que de passer le fichier brut.
-    const scanFromPhoto = async (file) => {
-      if (!file) return;
-      setScannerError(''); handledRef.current = false;
+    // Decodeur NATIF du systeme (API BarcodeDetector). Sur Android Chrome c'est le moteur de
+    // Google Play Services -> EXACTEMENT le meme que l'appareil photo natif qui lit ces etiquettes
+    // instantanement. On l'essaie EN PREMIER ; ZXing (WASM) ne sert que de repli (iOS, vieux navigateurs).
+    // Retourne le texte decode, ou null si rien/indisponible.
+    const detectNative = async (file) => {
+      try {
+        if (typeof window === 'undefined' || !('BarcodeDetector' in window)) return null;
+        const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+        if (!formats || !formats.includes('qr_code')) return null;
+        const det = new window.BarcodeDetector({ formats: ['qr_code'] });
+        // createImageBitmap gere Blob JPEG/PNG/WEBP + orientation EXIF, pleine resolution.
+        let bitmap = null;
+        try { bitmap = await createImageBitmap(file); } catch { bitmap = null; }
+        if (!bitmap) return null;
+        const codes = await det.detect(bitmap);
+        try { bitmap.close && bitmap.close(); } catch { /* ignore */ }
+        if (codes && codes.length && codes[0].rawValue) return codes[0].rawValue;
+        return null;
+      } catch { return null; }
+    };
 
-      // 1) Charger le moteur ZXing. Si CECI échoue -> probleme de WASM, message distinct.
+    // Scan via PHOTO (appareil photo natif). Strategie en cascade, du plus fiable au repli :
+    //  0) BarcodeDetector natif (= moteur de la camera native qui marche deja) ;
+    //  1) ZXing sur le fichier brut ; 2) ZXing sur les pixels a plusieurs echelles.
+    const scanFromPhoto = async (file) => {
+      setScannerError(''); handledRef.current = false;
+      if (!file) {
+        // Pas de fichier (capture annulee, ou le navigateur n'a rien renvoye) -> on le dit au lieu du silence.
+        setScannerError(language === 'fr'
+          ? "Aucune photo recue de la camera. Reessaie : touche le bouton, prends la photo, puis valide."
+          : 'No photo received from the camera. Try again: tap the button, take the photo, then confirm.');
+        return;
+      }
+
+      // 0) DECODEUR NATIF DU TELEPHONE (le plus fiable — meme moteur que la camera native).
+      try {
+        const native = await detectNative(file);
+        if (native) { handleDecoded(native); return; }
+      } catch { /* on passe au repli ZXing */ }
+
+      // Repli ZXing (WASM). Si meme le chargement echoue -> message distinct.
       let readBarcodes;
       try {
         ({ readBarcodes } = await loadZxing());
@@ -2968,13 +3002,13 @@ function AppContent() {
       const hit = (results) => results && results.length && (results[0].text || results[0].bytes);
 
       try {
-        // 2) STRATEGIE A — passer le fichier BRUT a ZXing (il decode JPEG/PNG/WEBP nativement, pleine resolution).
+        // 1) ZXing sur le fichier BRUT (il decode JPEG/PNG/WEBP nativement, pleine resolution).
         try {
           const r = await readBarcodes(file, opts);
           if (hit(r)) { handleDecoded(r[0].text); return; }
         } catch { /* on tente la voie pixels ci-dessous */ }
 
-        // 3) STRATEGIE B — rendu via <img> + canvas -> ImageData, a PLUSIEURS echelles.
+        // 2) ZXing sur pixels via <img> + canvas -> ImageData, a PLUSIEURS echelles.
         //    (gere HEIC/orientation EXIF via le decodeur du navigateur ; plusieurs tailles aident les QR petits ou flous.)
         const url = URL.createObjectURL(file);
         let img;
@@ -2999,7 +3033,7 @@ function AppContent() {
           }
         } finally { URL.revokeObjectURL(url); }
 
-        // 4) Rien trouve : le moteur a bien tourne, mais aucun code lisible.
+        // 3) Rien trouve : le moteur a bien tourne, mais aucun code lisible.
         setScannerError(language === 'fr'
           ? "Aucun code QR n'a ete reconnu sur la photo. Reprends-la bien nette, QR centre et a plat, sans reflet ni ombre, avec un bon eclairage."
           : 'No QR code recognized in the photo. Retake it sharp, centered, flat, glare-free and well lit.');
