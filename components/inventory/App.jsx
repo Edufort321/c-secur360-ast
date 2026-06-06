@@ -106,10 +106,21 @@ function saveLS(key, value) {
 }
 
 // Chargement paresseux du moteur de décodage ZXing (WASM) — décodeur de QR robuste (remplace html5-qrcode).
-// Le module est mis en cache : le 1er appel charge le WASM, les suivants sont instantanés.
+// Le WASM est HÉBERGÉ DANS L'APP (public/zxing/zxing_reader.wasm) -> aucune dépendance CDN, marche hors-ligne.
+// (Si zxing-wasm est mis à jour, recopier dist/reader/zxing_reader.wasm vers public/zxing/.)
 let _zxingReaderPromise = null;
 function loadZxing() {
-  if (!_zxingReaderPromise) _zxingReaderPromise = import('zxing-wasm/reader');
+  if (!_zxingReaderPromise) {
+    _zxingReaderPromise = import('zxing-wasm/reader').then(mod => {
+      try {
+        mod.prepareZXingModule({
+          overrides: { locateFile: (path, prefix) => (path.endsWith('.wasm') ? '/zxing/zxing_reader.wasm' : (prefix || '') + path) },
+          fireImmediately: false,
+        });
+      } catch { /* défaut CDN si l'API change */ }
+      return mod;
+    });
+  }
   return _zxingReaderPromise;
 }
 
