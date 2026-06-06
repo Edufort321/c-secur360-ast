@@ -132,6 +132,11 @@
   .inventory-app .grid-cols-4,
   .inventory-app .grid-cols-5 { grid-template-columns: minmax(0, 1fr); }
 
+  /* Moins de marge/padding sur mobile -> les cartes/sections prennent toute la largeur de l'écran. */
+  .inventory-app .p-6 { padding: 0.75rem; }
+  .inventory-app .p-5 { padding: 0.75rem; }
+  .inventory-app .gap-6 { gap: 0.75rem; }
+
   /* Permettre aux enfants flex de rétrécir : sinon le texte pousse hors de la case (cause #1 du débordement) */
   .inventory-app .flex > * { min-width: 0; }
 

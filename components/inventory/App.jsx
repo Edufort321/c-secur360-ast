@@ -7277,7 +7277,7 @@ function AppContent() {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Navigation du module alignée sur les autres modules (PortalHeader unifié au-dessus) :
           barre d'onglets en pilules sur desktop + menu déroulant sur mobile (plus de sidebar verticale). */}
-      <div className="w-full px-3 py-4 sm:px-4">
+      <div className="w-full px-2 py-3 sm:px-3">
         {saveError && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
             <span>⚠️</span>
