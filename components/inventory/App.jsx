@@ -2945,20 +2945,35 @@ function AppContent() {
       } catch { /* ignore */ }
     };
 
-    // Scan via PHOTO (appareil photo natif) : ZXing décode directement le fichier image. Très fiable (imprimé).
+    // Scan via PHOTO (appareil photo natif). On décode l'image VIA <img>+canvas -> ImageData
+    // (le navigateur gère JPEG/PNG/HEIC), puis ZXing sur les pixels. Plus robuste que de passer le fichier brut.
     const scanFromPhoto = async (file) => {
       if (!file) return;
-      setScannerError('');
-      handledRef.current = false;
+      setScannerError(''); handledRef.current = false;
       try {
+        const url = URL.createObjectURL(file);
+        let img;
+        try {
+          img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('image')); im.src = url; });
+        } finally { /* revoke après usage */ }
+        // Downscale si très grande (perf + meilleure lecture).
+        const maxDim = 1800;
+        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        const scale = Math.min(1, maxDim / Math.max(w, h) || 1);
+        w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        const imgData = ctx.getImageData(0, 0, w, h);
         const { readBarcodes } = await loadZxing();
-        const results = await readBarcodes(file, { tryHarder: true, formats: ['QRCode'], maxNumberOfSymbols: 1 });
+        const results = await readBarcodes(imgData, { formats: ['QRCode'], tryHarder: true, tryInvert: true, tryRotate: true, maxNumberOfSymbols: 1 });
         if (results && results.length && results[0].text) handleDecoded(results[0].text);
         else setScannerError(language === 'fr'
           ? "Aucun QR détecté sur la photo. Reprends-la bien nette, QR centré et à plat, avec un bon éclairage."
           : 'No QR detected in the photo. Retake it sharp, centered, flat and well lit.');
-      } catch {
-        setScannerError(language === 'fr' ? "Lecture de la photo impossible." : 'Photo read failed.');
+      } catch (e) {
+        setScannerError((language === 'fr' ? "Lecture de la photo impossible : " : 'Photo read failed: ') + (e?.message || e));
       }
     };
 
