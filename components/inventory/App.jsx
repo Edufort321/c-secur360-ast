@@ -2950,28 +2950,59 @@ function AppContent() {
     const scanFromPhoto = async (file) => {
       if (!file) return;
       setScannerError(''); handledRef.current = false;
+
+      // 1) Charger le moteur ZXing. Si CECI échoue -> probleme de WASM, message distinct.
+      let readBarcodes;
       try {
+        ({ readBarcodes } = await loadZxing());
+        if (typeof readBarcodes !== 'function') throw new Error('readBarcodes indisponible');
+      } catch (e) {
+        setScannerError((language === 'fr'
+          ? "Moteur de lecture indisponible (WASM non charge). Verifie la connexion puis reessaie. Detail : "
+          : 'Reader engine unavailable (WASM not loaded). Check connection and retry. Detail: ') + (e?.message || e));
+        return;
+      }
+
+      // Options : TOUS formats (pas seulement QRCode), agressif. maxNumberOfSymbols 1 = on s'arrete au 1er.
+      const opts = { tryHarder: true, tryInvert: true, tryRotate: true, tryDownscale: true, maxNumberOfSymbols: 1 };
+      const hit = (results) => results && results.length && (results[0].text || results[0].bytes);
+
+      try {
+        // 2) STRATEGIE A — passer le fichier BRUT a ZXing (il decode JPEG/PNG/WEBP nativement, pleine resolution).
+        try {
+          const r = await readBarcodes(file, opts);
+          if (hit(r)) { handleDecoded(r[0].text); return; }
+        } catch { /* on tente la voie pixels ci-dessous */ }
+
+        // 3) STRATEGIE B — rendu via <img> + canvas -> ImageData, a PLUSIEURS echelles.
+        //    (gere HEIC/orientation EXIF via le decodeur du navigateur ; plusieurs tailles aident les QR petits ou flous.)
         const url = URL.createObjectURL(file);
         let img;
         try {
-          img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('image')); im.src = url; });
-        } finally { /* revoke après usage */ }
-        // Downscale si très grande (perf + meilleure lecture).
-        const maxDim = 1800;
-        let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-        const scale = Math.min(1, maxDim / Math.max(w, h) || 1);
-        w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
-        const ctx = c.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, w, h);
-        URL.revokeObjectURL(url);
-        const imgData = ctx.getImageData(0, 0, w, h);
-        const { readBarcodes } = await loadZxing();
-        const results = await readBarcodes(imgData, { formats: ['QRCode'], tryHarder: true, tryInvert: true, tryRotate: true, maxNumberOfSymbols: 1 });
-        if (results && results.length && results[0].text) handleDecoded(results[0].text);
-        else setScannerError(language === 'fr'
-          ? "Aucun QR détecté sur la photo. Reprends-la bien nette, QR centré et à plat, avec un bon éclairage."
-          : 'No QR detected in the photo. Retake it sharp, centered, flat and well lit.');
+          img = new Image();
+          img.src = url;
+          if (img.decode) { try { await img.decode(); } catch { /* fallback onload */ } }
+          if (!img.complete || !(img.naturalWidth || img.width)) {
+            await new Promise((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error('image illisible')); });
+          }
+          const ow = img.naturalWidth || img.width, oh = img.naturalHeight || img.height;
+          if (!ow || !oh) throw new Error('image vide');
+          for (const maxDim of [2200, 1400, 900]) {
+            const scale = Math.min(1, maxDim / Math.max(ow, oh));
+            const w = Math.max(1, Math.round(ow * scale)), h = Math.max(1, Math.round(oh * scale));
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, w, h);
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const r = await readBarcodes(imgData, opts);
+            if (hit(r)) { handleDecoded(r[0].text); return; }
+          }
+        } finally { URL.revokeObjectURL(url); }
+
+        // 4) Rien trouve : le moteur a bien tourne, mais aucun code lisible.
+        setScannerError(language === 'fr'
+          ? "Aucun code QR n'a ete reconnu sur la photo. Reprends-la bien nette, QR centre et a plat, sans reflet ni ombre, avec un bon eclairage."
+          : 'No QR code recognized in the photo. Retake it sharp, centered, flat, glare-free and well lit.');
       } catch (e) {
         setScannerError((language === 'fr' ? "Lecture de la photo impossible : " : 'Photo read failed: ') + (e?.message || e));
       }
@@ -3424,61 +3455,17 @@ function AppContent() {
               <button onClick={() => photoInputRef.current?.click()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-base font-bold text-white shadow hover:bg-slate-800">
                 <Camera size={20} /> {language === 'fr' ? '📷 Scanner une étiquette (photo)' : '📷 Scan a label (photo)'}
               </button>
-              <p className="mt-1 text-center text-[11px] text-gray-500 dark:text-gray-400">
-                {language === 'fr' ? 'Recommandé pour les codes IMPRIMÉS — ouvre ta caméra native (mise au point parfaite).' : 'Recommended for PRINTED codes — opens your native camera (perfect focus).'}
+              <p className="mt-2 text-center text-[11px] text-gray-500 dark:text-gray-400">
+                {language === 'fr' ? "Ouvre ta caméra, photographie le QR de l'étiquette, l'app le décode." : 'Opens your camera, photograph the label QR, the app decodes it.'}
               </p>
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-                <span className="text-xs font-semibold text-gray-400">{language === 'fr' ? 'ou scan en direct (écran) :' : 'or live scan (screen):'}</span>
-                {isScanning ? (
-                  <Button variant="danger" size="sm" icon={X} onClick={stopScanning}>{t('scanner.stopScanning')}</Button>
-                ) : (
-                  <Button variant="secondary" size="sm" icon={Camera} onClick={startScanning}>{t('scanner.startScanning')}</Button>
-                )}
-              </div>
             </div>
             <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { scanFromPhoto(e.target.files?.[0]); e.currentTarget.value = ''; }} />
 
-            {/* Zone de scan : <video> natif (flux net) + canvas caché pour ZXing */}
-            <div className="mb-6">
-              <div>
-                <div className="relative overflow-hidden rounded-xl bg-black" onClick={refocus} style={{ aspectRatio: '4 / 3' }}>
-                  <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
-                  {!isScanning && (
-                    <div className="absolute inset-0 grid place-items-center text-gray-400">
-                      <div className="text-center"><Camera size={40} className="mx-auto opacity-60" /><p className="mt-2 text-xs">{language === 'fr' ? 'Caméra arrêtée' : 'Camera off'}</p></div>
-                    </div>
-                  )}
-                  {isScanning && <div className="pointer-events-none absolute inset-[12%] rounded-2xl border-2 border-white/70"></div>}
-                </div>
-                <canvas ref={canvasRef} className="hidden" />
-                {isScanning && (
-                  <p className="mt-1 text-center text-[11px] text-gray-400">{language === 'fr' ? '👆 Touche l’image pour refaire la mise au point' : '👆 Tap the image to refocus'}</p>
-                )}
-                {isScanning && (zoomCaps || torchSupported) && (
-                  <div className="mt-3 space-y-2">
-                    {torchSupported && (
-                      <button type="button" onClick={toggleTorch} className={`flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
-                        🔦 {language === 'fr' ? (torchOn ? 'Lampe allumée' : 'Allumer la lampe') : (torchOn ? 'Light on' : 'Turn on light')}
-                      </button>
-                    )}
-                    {zoomCaps && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500">Zoom</span>
-                        <button type="button" onClick={() => applyZoom(zoom - (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">−</button>
-                        <input type="range" min={zoomCaps.min} max={zoomCaps.max} step={zoomCaps.step} value={zoom} onChange={e => applyZoom(e.target.value)} className="flex-1 accent-slate-700" />
-                        <button type="button" onClick={() => applyZoom(zoom + (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">+</button>
-                        <span className="w-10 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">{zoom.toFixed(1)}x</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {scannerError && (
-                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 rounded">
-                    <p className="text-sm text-red-900 dark:text-red-400">{scannerError}</p>
-                  </div>
-                )}
+            {scannerError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 rounded">
+                <p className="text-sm text-red-900 dark:text-red-400 whitespace-pre-line">{scannerError}</p>
               </div>
-            </div>
+            )}
 
             {/* Recherche manuelle */}
             <div className="space-y-3">
