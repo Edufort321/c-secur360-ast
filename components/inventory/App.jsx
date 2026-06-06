@@ -2933,10 +2933,16 @@ function AppContent() {
       const next = !torchOn;
       try { await tr.applyConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* ignore */ }
     };
-    // Tap-to-focus : retoucher l'image relance la mise au point continue.
+    // Tap-to-focus : « kick » d'autofocus (single-shot/manual puis continuous force un nouveau cycle d'AF).
     const refocus = async () => {
       const tr = trackRef.current; if (!tr) return;
-      try { await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
+      try {
+        const caps = tr.getCapabilities ? tr.getCapabilities() : {};
+        const modes = caps.focusMode || [];
+        if (modes.includes('single-shot')) { try { await tr.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] }); } catch { /* ignore */ } }
+        else if (modes.includes('manual')) { try { await tr.applyConstraints({ advanced: [{ focusMode: 'manual' }] }); } catch { /* ignore */ } }
+        if (modes.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      } catch { /* ignore */ }
     };
 
     // Scan via PHOTO (appareil photo natif) : ZXing décode directement le fichier image. Très fiable (imprimé).
@@ -3397,21 +3403,21 @@ function AppContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Scanner */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('scanner.scanQRCode')}</h2>
-              <div className="flex items-center gap-2">
-                {/* Scan via appareil photo natif (recommandé pour les QR IMPRIMÉS) */}
-                <Button variant="secondary" size="sm" icon={Camera} onClick={() => photoInputRef.current?.click()}>
-                  {language === 'fr' ? 'Photo' : 'Photo'}
-                </Button>
+              {/* MÉTHODE RECOMMANDÉE pour les codes IMPRIMÉS : la caméra native fait une mise au point parfaite. */}
+              <button onClick={() => photoInputRef.current?.click()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-base font-bold text-white shadow hover:bg-slate-800">
+                <Camera size={20} /> {language === 'fr' ? '📷 Scanner une étiquette (photo)' : '📷 Scan a label (photo)'}
+              </button>
+              <p className="mt-1 text-center text-[11px] text-gray-500 dark:text-gray-400">
+                {language === 'fr' ? 'Recommandé pour les codes IMPRIMÉS — ouvre ta caméra native (mise au point parfaite).' : 'Recommended for PRINTED codes — opens your native camera (perfect focus).'}
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <span className="text-xs font-semibold text-gray-400">{language === 'fr' ? 'ou scan en direct (écran) :' : 'or live scan (screen):'}</span>
                 {isScanning ? (
-                  <Button variant="danger" size="sm" icon={X} onClick={stopScanning}>
-                    {t('scanner.stopScanning')}
-                  </Button>
+                  <Button variant="danger" size="sm" icon={X} onClick={stopScanning}>{t('scanner.stopScanning')}</Button>
                 ) : (
-                  <Button variant="primary" size="sm" icon={Camera} onClick={startScanning}>
-                    {t('scanner.startScanning')}
-                  </Button>
+                  <Button variant="secondary" size="sm" icon={Camera} onClick={startScanning}>{t('scanner.startScanning')}</Button>
                 )}
               </div>
             </div>
