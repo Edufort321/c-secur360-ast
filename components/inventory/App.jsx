@@ -3151,10 +3151,11 @@ function AppContent() {
     }, []);
 
     return (
-      <div className="p-6 space-y-6">
+      // Pas de wrapper p-6 : on colle au conteneur (plein largeur) comme les autres onglets.
+      <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('scanner.title')}</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('scanner.scanQRCode')}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">{t('scanner.title')}</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{t('scanner.scanQRCode')}</p>
         </div>
 
         {/* Identification de l'utilisateur */}
@@ -3758,7 +3759,7 @@ function AppContent() {
     };
 
     return (
-      <div className="p-6 space-y-6">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('movements.title')}</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">{t('movements.fullHistory')}</p>
@@ -4028,7 +4029,7 @@ function AppContent() {
 
   // ============== VUE: RAPPORTS ==============
   const ReportsView = () => (
-    <div className="p-6 space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('reports.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">{t('reports.generateExport')}</p>
@@ -4281,7 +4282,7 @@ function AppContent() {
     };
 
     return (
-      <div className="p-6 space-y-6">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
