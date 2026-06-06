@@ -3115,6 +3115,7 @@ function AppContent() {
       { id: 'articles', icon: Package, label: t('nav.articles'), badge: stats.total },
       { id: 'scanner', icon: Camera, label: t('nav.scanner'), badge: null },
       { id: 'movements', icon: TrendingUp, label: t('nav.movements'), badge: movements.length },
+      { id: 'analytics', icon: Layers, label: language === 'fr' ? 'Analytique' : 'Analytics', badge: inventoryAnalytics.reorder.length || null },
       { id: 'reports', icon: FileText, label: t('nav.reports'), badge: null },
       { id: 'admin', icon: Settings, label: t('nav.administration'), badge: stats.lowStock > 0 ? stats.lowStock : null }
     ];
@@ -3651,6 +3652,9 @@ function AppContent() {
 
       const currentQuantity = scannedItem.quantity;
       const difference = countedQuantity - currentQuantity;
+
+      // Horodate le comptage physique sur l'article (alimente le COMPTAGE CYCLIQUE de l'analytique).
+      updateItem(scannedItem.id, { lastCountedAt: new Date().toISOString() });
 
       // Enregistrer le scan dans le mode inventaire global si actif
       if (globalInventoryMode.active) {
@@ -4760,6 +4764,145 @@ function AppContent() {
       </div>
     </div>
   );
+
+  // ============== VUE: ANALYTIQUE (réappro / ABC / dormant-rotation / comptage cyclique) ==============
+  const AnalyticsView = () => {
+    const a = inventoryAnalytics;
+    const fr = language === 'fr';
+    const money = (n) => '$' + (Number(n) || 0).toLocaleString(fr ? 'fr-CA' : 'en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const abcBadge = (cls) => (
+      <span className={`inline-flex h-5 w-5 items-center justify-center rounded text-[11px] font-bold ${cls === 'A' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : cls === 'B' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>{cls}</span>
+    );
+    const deadValue = a.dead.reduce((s, d) => s + d.value, 0);
+
+    const exportReorder = () => {
+      if (!a.reorder.length) return;
+      const rows = a.reorder.map(r => ({
+        [fr ? 'Code' : 'Code']: r.code,
+        [fr ? 'Article' : 'Item']: r.name,
+        ABC: r.abc,
+        [fr ? 'Succursale' : 'Branch']: r.department,
+        [fr ? 'Stock' : 'Stock']: r.qty,
+        Min: r.min, Max: r.max,
+        [fr ? 'À commander' : 'To order']: r.suggested,
+        [fr ? 'Unité' : 'Unit']: r.unit,
+      }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), fr ? 'A_commander' : 'To_order');
+      XLSX.writeFile(wb, `C-Secur360_Reappro_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    const Card = ({ icon: Icon, color, title, value, sub }) => (
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex items-center gap-3">
+          <div className={`rounded-lg p-2 ${color}`}><Icon size={20} className="text-white" /></div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
+            {sub && <p className="truncate text-[11px] text-gray-400">{sub}</p>}
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{fr ? 'Analytique & réappro' : 'Analytics & replenishment'}</h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">{fr ? 'Méthode Min/Max, classification ABC, stock dormant, comptage cyclique.' : 'Min/Max method, ABC classification, dead stock, cycle counting.'}</p>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Card icon={DollarSign} color="bg-blue-600" title={fr ? 'Valeur du stock' : 'Stock value'} value={money(a.totalValue)} sub={`A:${a.abcCounts.A} · B:${a.abcCounts.B} · C:${a.abcCounts.C}`} />
+          <Card icon={ShoppingCart} color="bg-orange-500" title={fr ? 'À commander' : 'To reorder'} value={a.reorder.length} sub={fr ? 'lignes sous le seuil min' : 'lines below min'} />
+          <Card icon={Clock} color="bg-slate-600" title={fr ? 'Stock dormant' : 'Dead stock'} value={a.dead.length} sub={`${money(deadValue)} · ${fr ? `sans sortie >${a.deadDays}j` : `no exit >${a.deadDays}d`}`} />
+          <Card icon={CheckCircle} color="bg-purple-600" title={fr ? 'Comptages dûs' : 'Counts due'} value={a.cycleDue.length} sub={fr ? 'selon classe ABC' : 'per ABC class'} />
+        </div>
+
+        {/* À COMMANDER */}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+            <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white"><ShoppingCart size={18} className="text-orange-500" /> {fr ? 'À commander' : 'To reorder'} <span className="text-sm font-normal text-gray-400">({a.reorder.length})</span></h2>
+            <button onClick={exportReorder} disabled={!a.reorder.length} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"><FileSpreadsheet size={15} /> {fr ? 'Exporter' : 'Export'}</button>
+          </div>
+          {a.reorder.length ? (
+            <div className="max-h-80 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                  <tr><th className="px-3 py-2">{fr ? 'Article' : 'Item'}</th><th className="px-3 py-2">{fr ? 'Succursale' : 'Branch'}</th><th className="px-3 py-2 text-right">{fr ? 'Stock' : 'Stock'}</th><th className="px-3 py-2 text-right">Min</th><th className="px-3 py-2 text-right">{fr ? 'À cmder' : 'Order'}</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {a.reorder.map((r, i) => (
+                    <tr key={`${r.id}-${i}`} className="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                      <td className="px-3 py-2"><div className="flex items-center gap-2">{abcBadge(r.abc)}<div className="min-w-0"><div className="truncate font-semibold text-gray-900 dark:text-white">{r.name}</div><div className="font-mono text-[11px] text-gray-400">{r.code}</div></div></div></td>
+                      <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{r.department}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-red-600">{r.qty}</td>
+                      <td className="px-3 py-2 text-right text-gray-400">{r.min}</td>
+                      <td className="px-3 py-2 text-right font-bold text-orange-600">+{r.suggested} <span className="text-[10px] font-normal text-gray-400">{r.unit}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun article sous son seuil minimal. ✅' : 'No item below its minimum. ✅'}</p>}
+        </div>
+
+        {/* STOCK DORMANT + ROTATION */}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+            <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white"><Clock size={18} className="text-slate-500" /> {fr ? 'Stock dormant & rotation' : 'Dead stock & turnover'} <span className="text-sm font-normal text-gray-400">({a.dead.length})</span></h2>
+            <p className="text-[11px] text-gray-400">{fr ? `Sans sortie depuis plus de ${a.deadDays} jours. Rotation = sorties sur 365 j / stock.` : `No exit for over ${a.deadDays} days. Turnover = 365-day exits / stock.`}</p>
+          </div>
+          {a.dead.length ? (
+            <div className="max-h-72 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                  <tr><th className="px-3 py-2">{fr ? 'Article' : 'Item'}</th><th className="px-3 py-2 text-right">{fr ? 'Stock' : 'Stock'}</th><th className="px-3 py-2 text-right">{fr ? 'Valeur' : 'Value'}</th><th className="px-3 py-2 text-right">{fr ? 'Dernière sortie' : 'Last exit'}</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {a.dead.slice(0, 100).map(d => (
+                    <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                      <td className="px-3 py-2"><div className="truncate font-semibold text-gray-900 dark:text-white">{d.name}</div><div className="font-mono text-[11px] text-gray-400">{d.code}</div></td>
+                      <td className="px-3 py-2 text-right text-gray-700 dark:text-gray-200">{d.qty} <span className="text-[10px] text-gray-400">{d.unit}</span></td>
+                      <td className="px-3 py-2 text-right font-semibold text-gray-900 dark:text-white">{money(d.value)}</td>
+                      <td className="px-3 py-2 text-right text-gray-500">{d.daysSince == null ? (fr ? 'jamais' : 'never') : (fr ? `il y a ${d.daysSince} j` : `${d.daysSince}d ago`)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Aucun stock dormant. ✅' : 'No dead stock. ✅'}</p>}
+        </div>
+
+        {/* COMPTAGE CYCLIQUE */}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+            <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white"><CheckCircle size={18} className="text-purple-500" /> {fr ? 'Comptage cyclique dû' : 'Cycle count due'} <span className="text-sm font-normal text-gray-400">({a.cycleDue.length})</span></h2>
+            <p className="text-[11px] text-gray-400">{fr ? 'Fréquence par classe : A = 7 j, B = 30 j, C = 90 j. Compte un article (mode Inventaire du scanner) pour le sortir de la liste.' : 'Frequency per class: A = 7d, B = 30d, C = 90d. Count an item (scanner Inventory mode) to clear it.'}</p>
+          </div>
+          {a.cycleDue.length ? (
+            <div className="max-h-72 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                  <tr><th className="px-3 py-2">{fr ? 'Article' : 'Item'}</th><th className="px-3 py-2 text-center">ABC</th><th className="px-3 py-2 text-right">{fr ? 'Dernier comptage' : 'Last count'}</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {a.cycleDue.slice(0, 150).map(c => (
+                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                      <td className="px-3 py-2"><div className="truncate font-semibold text-gray-900 dark:text-white">{c.name}</div><div className="font-mono text-[11px] text-gray-400">{c.code}</div></td>
+                      <td className="px-3 py-2 text-center">{abcBadge(c.abc)}</td>
+                      <td className="px-3 py-2 text-right text-gray-500">{c.lastCountedAt ? (fr ? `il y a ${c.daysSince} j` : `${c.daysSince}d ago`) : (fr ? 'jamais' : 'never')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="px-4 py-6 text-center text-sm text-gray-400">{fr ? 'Tous les comptages sont à jour. ✅' : 'All counts up to date. ✅'}</p>}
+        </div>
+      </div>
+    );
+  };
 
   // ============== VUE: ALERTES ==============
   const AlertsView = () => {
@@ -8037,6 +8180,7 @@ function AppContent() {
             { id: 'articles', icon: Package, label: t('nav.articles'), badge: stats.total || null },
             { id: 'scanner', icon: Camera, label: t('nav.scanner'), badge: null },
             { id: 'movements', icon: TrendingUp, label: t('nav.movements'), badge: movements.length || null },
+            { id: 'analytics', icon: Layers, label: language === 'fr' ? 'Analytique' : 'Analytics', badge: inventoryAnalytics.reorder.length || null },
             { id: 'reports', icon: FileText, label: t('nav.reports'), badge: null },
             { id: 'admin', icon: Settings, label: t('nav.administration'), badge: stats.lowStock > 0 ? stats.lowStock : null },
           ];
@@ -8148,6 +8292,7 @@ function AppContent() {
           {view === 'alerts' && <AlertsView />}
           {view === 'scanner' && <ScannerView />}
           {view === 'movements' && <MovementsView />}
+          {view === 'analytics' && <AnalyticsView />}
           {view === 'reports' && <ReportsView />}
           {view === 'admin' && <AdminView />}
         </main>
