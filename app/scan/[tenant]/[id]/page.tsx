@@ -76,12 +76,16 @@ export default function PublicScanPage() {
     })();
   }, [tenant, id]);
 
-  // Pre-selection de la succursale par defaut (article multi-emplacement).
+  // Pre-selection de la succursale (article multi-emplacement) : on prend d'abord le ?dept=
+  // de l'etiquette scannee, sinon le premier emplacement. (window.location pour eviter useSearchParams/Suspense.)
   useEffect(() => {
-    if (!item) return;
-    if (item.isMultiLocation && Array.isArray(item.locations) && item.locations.length && !moveDept) {
-      const first = item.locations[0];
-      if (first?.departmentCode) setMoveDept(String(first.departmentCode));
+    if (!item || moveDept) return;
+    if (item.isMultiLocation && Array.isArray(item.locations) && item.locations.length) {
+      let fromUrl = '';
+      try { fromUrl = new URLSearchParams(window.location.search).get('dept') || ''; } catch { /* ignore */ }
+      const match = fromUrl && item.locations.find((l: any) => String(l.departmentCode) === fromUrl);
+      const chosen = match ? fromUrl : (item.locations[0]?.departmentCode ? String(item.locations[0].departmentCode) : '');
+      if (chosen) setMoveDept(chosen);
     }
   }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
 
