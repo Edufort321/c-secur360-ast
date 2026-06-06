@@ -6664,6 +6664,25 @@ function AppContent() {
       return;
     }
 
+    // Validation quantités & prix (PARITÉ avec l'import Excel) : empêche d'enregistrer des seuils
+    // incohérents (min >= max) ou des valeurs négatives qui faussent le statut (low/optimal/surplus)
+    // et la valorisation du stock. Auparavant ces controles n'existaient que dans l'import.
+    if ((Number(newItemData.costPrice) || 0) < 0) {
+      notify(language === 'fr' ? 'Le prix coûtant ne peut pas être négatif.' : 'Cost price cannot be negative.', 'error');
+      return;
+    }
+    for (const loc of newItemData.locations) {
+      const q = Number(loc.quantity) || 0, mn = Number(loc.minQuantity) || 0, mx = Number(loc.maxQuantity) || 0;
+      if (q < 0 || mn < 0 || mx < 0) {
+        notify((language === 'fr' ? 'Quantités négatives interdites' : 'Negative quantities not allowed') + ` (${loc.department || (language === 'fr' ? 'emplacement' : 'location')}).`, 'error');
+        return;
+      }
+      if (mx > 0 && mn >= mx) {
+        notify((language === 'fr' ? 'La quantité min doit être inférieure à la max' : 'Min quantity must be less than max') + ` (${loc.department || (language === 'fr' ? 'emplacement' : 'location')}).`, 'error');
+        return;
+      }
+    }
+
     // Validation selon le type de code
     if (newItemData.differentCodes) {
       // Si codes différents: vérifier que chaque location a un code personnalisé
