@@ -2929,8 +2929,21 @@ function AppContent() {
       const h = new Html5Qrcode('qr-reader', { experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
       html5QrcodeRef.current = h;
       h.start(
-        { facingMode: 'environment' }, // caméra arrière
-        { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        { facingMode: 'environment' }, // caméra arrière (surchargé par videoConstraints ci-dessous)
+        {
+          fps: 10, // un peu moins -> plus de temps de traitement par image = meilleure détection des QR imprimés
+          // Zone de scan large et ADAPTATIVE (75% du plus petit côté) : facilite le cadrage d'un QR imprimé.
+          qrbox: (vw, vh) => { const m = Math.floor(Math.min(vw, vh) * 0.75); return { width: m, height: m }; },
+          aspectRatio: 1.0,
+          // RÉSOLUTION caméra élevée (QHD) + AUTOFOCUS CONTINU -> chaque module du QR couvre plus de pixels,
+          // ce qui permet de lire les QR IMPRIMÉS (plus petits / moins contrastés qu'à l'écran).
+          videoConstraints: {
+            facingMode: 'environment',
+            width: { ideal: 2560 },
+            height: { ideal: 1440 },
+            advanced: [{ focusMode: 'continuous' }],
+          },
+        },
         handleDecoded,
         () => { /* erreurs de scan par frame : ignorer */ }
       ).catch(err => {
