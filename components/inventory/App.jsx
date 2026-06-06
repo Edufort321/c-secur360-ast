@@ -2653,6 +2653,45 @@ function AppContent() {
     reader.readAsArrayBuffer(file);
   };
 
+  // Synchronise une liste de succursales vers l'admin Sites/Departements (table planner_succursales)
+  // comme SITES de niveau superieur (parent_id = null), en respectant la limite d'abonnement
+  // (tenants.max_sites). On cree jusqu'a la limite ; au-dela on BLOQUE (site supplementaire payant
+  // requis). Meme client/RLS que l'onglet admin. Best-effort : renvoie {created, blocked, ...} ou {error}.
+  const syncSitesToAdmin = async (siteNames) => {
+    const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    try {
+      const { data: rows, error } = await supabase
+        .from('planner_succursales').select('id,name,parent_id').eq('tenant_id', tenantId);
+      if (error) throw error;
+      const existingSites = (rows || []).filter(r => !r.parent_id);
+      const seen = new Set(existingSites.map(s => norm(s.name)));
+
+      let maxSites = Infinity;
+      try {
+        const { data: t, error: tErr } = await supabase.from('tenants').select('max_sites').eq('subdomain', tenantId).maybeSingle();
+        if (!tErr && t && t.max_sites != null) maxSites = Number(t.max_sites);
+      } catch { /* colonne absente (avant migration 078) -> illimite */ }
+
+      const missing = [];
+      siteNames.forEach(n => { const name = String(n || '').trim(); if (name && !seen.has(norm(name))) { seen.add(norm(name)); missing.push(name); } });
+
+      const slots = Number.isFinite(maxSites) ? Math.max(0, maxSites - existingSites.length) : Infinity;
+      const toCreate = Number.isFinite(slots) ? missing.slice(0, slots) : missing;
+      const blocked = Number.isFinite(slots) ? missing.slice(slots) : [];
+
+      let created = [];
+      if (toCreate.length) {
+        const { data: ins, error: insErr } = await supabase
+          .from('planner_succursales').insert(toCreate.map(name => ({ tenant_id: tenantId, name }))).select('id,name');
+        if (insErr) throw insErr;
+        created = ins || toCreate.map(name => ({ name }));
+      }
+      return { created, blocked, maxSites, existingCount: existingSites.length };
+    } catch (e) {
+      return { error: e?.message || String(e) };
+    }
+  };
+
   // Import IA : on accepte N'IMPORTE QUELLE feuille Excel (colonnes libres). On lit les lignes
   // brutes (SheetJS), l'IA detecte les colonnes et renvoie des articles normalises, puis on
   // reutilise la MEME previsualisation/validation que l'import standard. Les categories et
@@ -2725,13 +2764,29 @@ function AppContent() {
         setDepartments(prev => { const next = [...prev, ...newDepts.map((name, i) => ({ id: `ai-${stamp}-d${i}`, name, code: '', locations: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-departments', next); return next; });
       }
 
+      // Synchroniser les SUCCURSALES vers l'admin Sites/Departements (sites de niveau superieur),
+      // en respectant la limite d'abonnement (max_sites). Best-effort : n'empeche pas l'import.
+      let siteSync = null;
+      const distinctSites = [];
+      const siteSeen = new Set();
+      aiArticles.forEach(a => { const n = String(a.department || '').trim(); if (n && !siteSeen.has(norm(n))) { siteSeen.add(norm(n)); distinctSites.push(n); } });
+      if (distinctSites.length) siteSync = await syncSitesToAdmin(distinctSites);
+
       // Construire les lignes validees (meme forme que handleFileUpload -> ImportPreviewContent/confirmImport).
+      // RECONNAISSANCE PAR NOM : un article du MEME nom (existant ou repete dans la feuille, ex.
+      // meme produit dans une autre succursale) n'est PAS un doublon -> ce sera un AJOUT
+      // d'emplacement (multi-emplacement) gere a la confirmation. On ne bloque donc pas sur le code.
+      const existingNames = new Set(items.map(i => norm(i.name)));
       const existingCodes = new Set(items.map(i => i.code));
       const seen = new Set();
+      const seenNames = new Set();
       const validatedData = aiArticles.map((a, index) => {
         const errors_row = [];
         const code = String(a.code || '').trim();
         const name = String(a.name || '').trim();
+        const nameKey = norm(name);
+        const willMergeByName = !!nameKey && (existingNames.has(nameKey) || seenNames.has(nameKey));
+        if (name) seenNames.add(nameKey);
         if (!code) errors_row.push(language === 'fr' ? 'Code manquant' : 'Missing code');
         if (!name) errors_row.push(language === 'fr' ? 'Nom manquant' : 'Missing name');
         const quantity = Math.max(0, Math.round(Number(a.quantity) || 0));
@@ -2740,8 +2795,11 @@ function AppContent() {
         if (maxQuantity <= minQuantity) maxQuantity = Math.max(minQuantity + 1, quantity, 1);
         const costPrice = Math.max(0, Number(a.costPrice) || 0);
         const salePrice = Math.max(0, Number(a.salePrice) || 0);
-        if (code && existingCodes.has(code)) errors_row.push(t('articles.excel.validation.codeExists'));
-        if (code && seen.has(code)) errors_row.push(t('articles.excel.validation.codeDuplicate'));
+        // On ne signale le conflit de code que si ce n'est PAS une fusion par nom.
+        if (!willMergeByName) {
+          if (code && existingCodes.has(code)) errors_row.push(t('articles.excel.validation.codeExists'));
+          if (code && seen.has(code)) errors_row.push(t('articles.excel.validation.codeDuplicate'));
+        }
         if (code) seen.add(code);
         return {
           code, name,
@@ -2751,6 +2809,7 @@ function AppContent() {
           quantity, minQuantity, maxQuantity, costPrice, salePrice,
           unit: String(a.unit || '').trim() || 'Pièce',
           description: String(a.description || '').trim(),
+          mergeByName: willMergeByName,
           errors: errors_row,
           lineNumber: index + 2,
         };
@@ -2767,15 +2826,25 @@ function AppContent() {
       // silence — l'utilisateur verifie dans la previsualisation avant d'enregistrer.
       const dataRowCount = rows.filter(r => Object.values(r).some(v => String(v ?? '').trim() !== '')).length;
       const skipped = dataRowCount - aiArticles.length;
+      const createdSitesCount = siteSync && Array.isArray(siteSync.created) ? siteSync.created.length : 0;
       const extra = [
         newCats.length ? (language === 'fr' ? `${newCats.length} catégorie(s) créée(s)` : `${newCats.length} category(ies) created`) : '',
-        newDepts.length ? (language === 'fr' ? `${newDepts.length} département(s) créé(s)` : `${newDepts.length} department(s) created`) : '',
+        createdSitesCount ? (language === 'fr' ? `${createdSitesCount} site(s) créé(s) dans l'admin` : `${createdSitesCount} site(s) created in admin`) : '',
       ].filter(Boolean).join(', ');
       notify((language === 'fr' ? `IA : ${aiArticles.length} article(s) détecté(s) sur ${dataRowCount} ligne(s)` : `AI: ${aiArticles.length} article(s) detected from ${dataRowCount} row(s)`) + (extra ? ` — ${extra}` : '') + '.');
       if (skipped > 0) {
         notify((language === 'fr'
           ? `⚠️ ${skipped} ligne(s) écartée(s) par l'IA (vides, totaux ou non reconnues). Vérifie la prévisualisation.`
           : `⚠️ ${skipped} row(s) skipped by AI (empty, totals or unrecognized). Check the preview.`), 'warning');
+      }
+      // Sites bloques par la limite d'abonnement (site supplementaire payant requis).
+      if (siteSync && Array.isArray(siteSync.blocked) && siteSync.blocked.length) {
+        notify((language === 'fr'
+          ? `⛔ ${siteSync.blocked.length} site(s) non créé(s) — limite d'abonnement de ${siteSync.maxSites} site(s) atteinte : ${siteSync.blocked.join(', ')}. Ajoute un site supplémentaire (payant) dans l'admin pour les activer.`
+          : `⛔ ${siteSync.blocked.length} site(s) not created — subscription limit of ${siteSync.maxSites} site(s) reached: ${siteSync.blocked.join(', ')}. Add an extra (paid) site in admin to enable them.`), 'warning');
+      }
+      if (siteSync && siteSync.error) {
+        notify((language === 'fr' ? "⚠️ Sites non synchronisés vers l'admin : " : '⚠️ Sites not synced to admin: ') + siteSync.error, 'warning');
       }
     } catch (e) {
       notify((language === 'fr' ? 'Import IA échoué : ' : 'AI import failed: ') + (e?.message || e), 'error');
@@ -2785,42 +2854,95 @@ function AppContent() {
     }
   };
 
-  // Confirmer l'importation
+  // Confirmer l'importation. RECONNAISSANCE PAR NOM : si un article du meme nom existe deja (ou
+  // revient plusieurs fois dans la feuille, ex. meme produit dans une autre succursale/departement),
+  // on NE CREE PAS de doublon -> on ajoute simplement l'EMPLACEMENT (multi-emplacement) a l'article
+  // existant et on recalcule la quantite totale. Sinon on cree un nouvel article.
   const confirmImport = () => {
     const validItems = importData.filter(item => item.errors.length === 0);
+    if (!validItems.length) { setImportStep('complete'); return; }
 
-    validItems.forEach(itemData => {
-      const newItem = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        code: itemData.code,
-        name: itemData.name,
-        category: itemData.category,
-        department: itemData.department,
-        location: itemData.location,
-        quantity: itemData.quantity,
-        minQuantity: itemData.minQuantity,
-        maxQuantity: itemData.maxQuantity,
-        costPrice: itemData.costPrice,
-        salePrice: itemData.salePrice,
-        unit: itemData.unit,
-        description: itemData.description,
-        createdAt: new Date().toISOString(),
-        createdBy: currentUser?.username || 'import-excel'
-      };
-
-      setItems(prev => [...prev, newItem]);
-
-      // Ajouter un mouvement d'entrée
-      addMovement({
-        type: 'entry',
-        itemId: newItem.id,
-        itemName: newItem.name,
-        quantity: newItem.quantity,
-        reason: 'Import Excel',
-        user: currentUser?.username || 'import-excel'
-      });
+    const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const deptCodeOf = (deptName) => departments.find(d => norm(d.name) === norm(deptName))?.code || '';
+    const mkLoc = (it) => ({
+      department: it.department || '',
+      departmentCode: deptCodeOf(it.department),
+      location: it.location || '',
+      quantity: it.quantity || 0,
+      minQuantity: it.minQuantity || 0,
+      maxQuantity: it.maxQuantity || 0,
     });
 
+    const movementsToAdd = [];
+    let createdCount = 0, mergedCount = 0;
+
+    // On calcule le prochain etat HORS de l'updater (a partir de `items` courant) pour ne pas
+    // declencher d'effet de bord double en StrictMode. Confirmation = action utilisateur -> `items` a jour.
+    {
+      const next = items.map(i => ({ ...i })); // clone superficiel (on mute locations/quantity)
+      const byName = new Map();
+      next.forEach(i => { if (i.name) byName.set(norm(i.name), i); });
+
+      validItems.forEach(itemData => {
+        const key = norm(itemData.name);
+        const existing = key ? byName.get(key) : null;
+
+        if (existing) {
+          // Meme nom -> AJOUT D'EMPLACEMENT (conversion en multi-emplacement au besoin).
+          let locs = Array.isArray(existing.locations) ? [...existing.locations] : [];
+          if (!existing.isMultiLocation && !locs.length) {
+            locs.push({
+              department: existing.department || '',
+              departmentCode: existing.departmentCode || deptCodeOf(existing.department),
+              location: existing.location || '',
+              quantity: existing.quantity || 0,
+              minQuantity: existing.minQuantity || 0,
+              maxQuantity: existing.maxQuantity || 0,
+            });
+          }
+          const di = locs.findIndex(l => norm(l.department) === norm(itemData.department));
+          if (di >= 0) locs[di] = { ...locs[di], quantity: (locs[di].quantity || 0) + (itemData.quantity || 0) };
+          else locs.push(mkLoc(itemData));
+          existing.locations = locs;
+          existing.isMultiLocation = true;
+          existing.quantity = locs.reduce((s, l) => s + (l.quantity || 0), 0);
+          existing.updatedAt = new Date().toISOString();
+          mergedCount++;
+          movementsToAdd.push({
+            type: 'entry', itemId: existing.id, itemName: existing.name, quantity: itemData.quantity || 0,
+            department: itemData.department || '', departmentCode: deptCodeOf(itemData.department),
+            reason: (language === 'fr' ? 'Import — emplacement ajouté' : 'Import — location added') + (itemData.department ? ` (${itemData.department})` : ''),
+            user: currentUser?.username || 'import-excel',
+          });
+        } else {
+          // Nouvel article (avec son 1er emplacement).
+          const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+          const created = {
+            id,
+            code: itemData.code, name: itemData.name, category: itemData.category,
+            department: itemData.department, departmentCode: deptCodeOf(itemData.department), location: itemData.location,
+            quantity: itemData.quantity, minQuantity: itemData.minQuantity, maxQuantity: itemData.maxQuantity,
+            costPrice: itemData.costPrice, salePrice: itemData.salePrice, unit: itemData.unit, description: itemData.description,
+            createdAt: new Date().toISOString(), createdBy: currentUser?.username || 'import-excel',
+          };
+          next.push(created);
+          if (key) byName.set(key, created);
+          createdCount++;
+          movementsToAdd.push({
+            type: 'entry', itemId: id, itemName: created.name, quantity: created.quantity,
+            reason: 'Import Excel', user: currentUser?.username || 'import-excel',
+          });
+        }
+      });
+
+      saveLS('c-secur360-inventory-items', next);
+      setItems(next);
+    }
+
+    movementsToAdd.forEach(m => addMovement(m));
+    notify(language === 'fr'
+      ? `Import terminé : ${createdCount} article(s) créé(s), ${mergedCount} emplacement(s) ajouté(s) à des articles existants.`
+      : `Import done: ${createdCount} article(s) created, ${mergedCount} location(s) added to existing articles.`);
     setImportStep('complete');
   };
 
@@ -7924,8 +8046,8 @@ function AppContent() {
       {toasts.length > 0 && (
         <div className="fixed top-4 right-4 z-[60] flex max-w-[90vw] flex-col gap-2" role="status" aria-live="polite">
           {toasts.map(x => (
-            <div key={x.id} className={`flex items-start gap-2 rounded-xl px-4 py-3 text-sm shadow-lg ${x.type === 'error' ? 'bg-red-600 text-white' : x.type === 'info' ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white'}`}>
-              <span>{x.type === 'error' ? '⚠️' : x.type === 'info' ? 'ℹ️' : '✓'}</span>
+            <div key={x.id} className={`flex items-start gap-2 rounded-xl px-4 py-3 text-sm shadow-lg ${x.type === 'error' ? 'bg-red-600 text-white' : x.type === 'warning' ? 'bg-amber-500 text-white' : x.type === 'info' ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white'}`}>
+              <span>{x.type === 'error' ? '⚠️' : x.type === 'warning' ? '⚠️' : x.type === 'info' ? 'ℹ️' : '✓'}</span>
               <span className="flex-1 whitespace-pre-line">{x.message}</span>
               <button aria-label="Fermer" className="opacity-70 hover:opacity-100" onClick={() => setToasts(prev => prev.filter(t => t.id !== x.id))}>✕</button>
             </div>
