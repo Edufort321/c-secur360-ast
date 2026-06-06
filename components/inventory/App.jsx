@@ -2895,6 +2895,15 @@ function AppContent() {
     const html5QrcodeRef = useRef(null);
     const handledRef = useRef(false); // anti double-décodage : la caméra décode ~15x/s, on ne traite qu'une fois par scan
     const photoInputRef = useRef(null); // input appareil photo natif (capture="environment")
+    const [zoom, setZoom] = useState(1);
+    const [zoomCaps, setZoomCaps] = useState(null); // {min,max,step} si la caméra supporte le zoom (Android Chrome ; pas iOS)
+    // Applique un niveau de zoom à la caméra en cours (aide à lire les petits QR imprimés).
+    const applyZoom = async (z) => {
+      const h = html5QrcodeRef.current; if (!h || !zoomCaps) return;
+      const v = Math.min(zoomCaps.max, Math.max(zoomCaps.min, Number(z) || zoomCaps.min));
+      setZoom(v);
+      try { await h.applyVideoConstraints({ advanced: [{ zoom: v }] }); } catch { /* ignore */ }
+    };
 
     // Scan via PHOTO (appareil photo natif) : bien plus fiable pour les QR imprimés (autofocus/HD natifs).
     // On décode l'image capturée avec scanFile, puis on route vers handleDecoded comme un scan caméra.
@@ -2975,7 +2984,19 @@ function AppContent() {
         },
         handleDecoded,
         () => { /* erreurs de scan par frame : ignorer */ }
-      ).catch(err => {
+      ).then(async () => {
+        // Détecte si la caméra supporte le ZOOM et démarre à 2x (aide à lire les petits QR imprimés).
+        try {
+          const caps = html5QrcodeRef.current?.getRunningTrackCapabilities?.();
+          if (caps && caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > (caps.zoom.min || 1)) {
+            const min = caps.zoom.min || 1, max = caps.zoom.max, step = caps.zoom.step || 0.1;
+            setZoomCaps({ min, max, step });
+            const initial = Math.min(max, Math.max(min, 2));
+            setZoom(initial);
+            try { await html5QrcodeRef.current.applyVideoConstraints({ advanced: [{ zoom: initial }] }); } catch { /* ignore */ }
+          } else { setZoomCaps(null); }
+        } catch { setZoomCaps(null); }
+      }).catch(err => {
         html5QrcodeRef.current = null;
         setIsScanning(false);
         const denied = err && (err.name === 'NotAllowedError' || /denied|permission|notallowed/i.test(String(err)));
@@ -3005,6 +3026,7 @@ function AppContent() {
         catch { /* déjà arrêté */ }
       }
       setIsScanning(false);
+      setZoomCaps(null); setZoom(1);
     };
 
     // Forcer le mode inventaire si un inventaire global est actif
@@ -3367,6 +3389,15 @@ function AppContent() {
             <div className="mb-6">
               <div ref={scannerRef}>
                 <div id="qr-reader" className="rounded-xl overflow-hidden"></div>
+                {isScanning && zoomCaps && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-500">{language === 'fr' ? 'Zoom' : 'Zoom'}</span>
+                    <button type="button" onClick={() => applyZoom(zoom - (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">−</button>
+                    <input type="range" min={zoomCaps.min} max={zoomCaps.max} step={zoomCaps.step} value={zoom} onChange={e => applyZoom(e.target.value)} className="flex-1 accent-slate-700" />
+                    <button type="button" onClick={() => applyZoom(zoom + (zoomCaps.step * 5 || 0.5))} className="grid h-7 w-7 place-items-center rounded-lg bg-gray-200 dark:bg-gray-700 text-lg font-bold">+</button>
+                    <span className="w-10 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">{zoom.toFixed(1)}x</span>
+                  </div>
+                )}
                 {scannerError && (
                   <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 rounded">
                     <p className="text-sm text-red-900 dark:text-red-400">{scannerError}</p>

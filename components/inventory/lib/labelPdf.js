@@ -75,7 +75,9 @@ export async function generateLabelsPdf(labels, opts = {}) {
   const qrFor = async (url) => {
     if (qrCache.has(url)) return qrCache.get(url);
     let d = null;
-    try { d = await QRCode.toDataURL(url || ' ', { margin: 0, width: 240, errorCorrectionLevel: 'M' }); } catch { d = null; }
+    // width plus élevé = image plus nette à l'impression (taille physique inchangée, ne déborde pas).
+    // Quiet zone modeste (margin:2) ; EC 'M' garde des modules assez gros. Les bons scanners lisent déjà ces étiquettes.
+    try { d = await QRCode.toDataURL(url || ' ', { margin: 2, width: 512, errorCorrectionLevel: 'M' }); } catch { d = null; }
     qrCache.set(url, d);
     return d;
   };
@@ -97,7 +99,7 @@ export async function generateLabelsPdf(labels, opts = {}) {
     doc.roundedRect(x + 1.5, y + 1.5, fmt.labelW - 3, fmt.labelH - 3, 6, 6, 'S');
 
     const qrBox = Math.min(fmt.labelH - 2 * pad, isSmall ? fmt.labelH - 2 * pad : fmt.labelW * 0.42);
-    const qrInner = 4; // marge intérieure de la boîte QR
+    const qrInner = 4; // marge intérieure de la boîte QR (taille du QR inchangée -> ne déborde pas de l'étiquette)
     const qrSize = qrBox - 2 * qrInner;
     // Boîte blanche bordée autour du QR (style Équipement)
     doc.setDrawColor(180); doc.setLineWidth(0.6);
