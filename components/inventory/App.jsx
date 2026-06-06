@@ -2915,6 +2915,11 @@ function AppContent() {
     const loopRef = useRef(null);    // timer de la boucle de décodage
     const handledRef = useRef(false); // anti double-décodage : on ne traite qu'un code par scan
     const photoInputRef = useRef(null); // input appareil photo natif (capture="environment")
+    // Détecteur NATIF live (BarcodeDetector). Sur Android Chrome = moteur ML Kit de Google Play
+    // Services -> EXACTEMENT le même que l'appareil photo natif qui lit ces QR instantanément.
+    // On le réutilise frame après frame. undefined = pas encore testé ; null = indisponible (iOS
+    // Safari, vieux navigateurs) -> on bascule sur ZXing. Sinon : instance BarcodeDetector.
+    const liveDetectorRef = useRef(undefined);
     const [zoom, setZoom] = useState(1);
     const [zoomCaps, setZoomCaps] = useState(null); // {min,max,step} si la caméra supporte le zoom (Android Chrome ; pas iOS)
     const [torchSupported, setTorchSupported] = useState(false);
@@ -3077,21 +3082,50 @@ function AppContent() {
       }
     };
 
-    // Boucle de décodage ZXing : capture une frame du <video> et la lit (~8 images/s). S'arrête au 1er code.
+    // Obtient (en le mettant en cache) le détecteur natif live, ou null s'il est indisponible.
+    const getLiveDetector = async () => {
+      if (liveDetectorRef.current !== undefined) return liveDetectorRef.current;
+      try {
+        if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+          const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
+          if (formats && formats.includes('qr_code')) {
+            liveDetectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
+            return liveDetectorRef.current;
+          }
+        }
+      } catch { /* ignore */ }
+      liveDetectorRef.current = null; // indisponible -> on n'essaiera plus, repli ZXing
+      return null;
+    };
+
+    // Boucle de décodage : lit une frame du <video> (~8 images/s). S'arrête au 1er code.
+    // 1) DÉCODEUR NATIF (BarcodeDetector = ML Kit sur Android) directement sur le <video> :
+    //    c'est le MÊME moteur que l'appareil photo natif, donc il lit ces QR aussi vite que lui.
+    // 2) Repli ZXing (WASM) via canvas pour iOS Safari / navigateurs sans BarcodeDetector.
     const tick = async () => {
       if (!streamRef.current || handledRef.current) return;
       const v = videoRef.current, c = canvasRef.current;
-      if (v && c && v.readyState >= 2 && v.videoWidth) {
-        const w = v.videoWidth, h = v.videoHeight;
-        if (c.width !== w) c.width = w;
-        if (c.height !== h) c.height = h;
+      if (v && v.readyState >= 2 && v.videoWidth) {
         try {
-          const ctx = c.getContext('2d', { willReadFrequently: true });
-          ctx.drawImage(v, 0, 0, w, h);
-          const img = ctx.getImageData(0, 0, w, h);
-          const { readBarcodes } = await loadZxing();
-          const results = await readBarcodes(img, { tryHarder: true, formats: ['QRCode'], maxNumberOfSymbols: 1 });
-          if (!handledRef.current && results && results.length && results[0].text) handleDecoded(results[0].text);
+          const det = await getLiveDetector();
+          if (det) {
+            // Détection native directement sur l'élément vidéo (pleine résolution, sans copie canvas).
+            const codes = await det.detect(v);
+            if (!handledRef.current && codes && codes.length && codes[0].rawValue) {
+              handleDecoded(codes[0].rawValue);
+            }
+          } else if (c) {
+            // Repli ZXing : capture la frame dans un canvas puis décode les pixels.
+            const w = v.videoWidth, h = v.videoHeight;
+            if (c.width !== w) c.width = w;
+            if (c.height !== h) c.height = h;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(v, 0, 0, w, h);
+            const img = ctx.getImageData(0, 0, w, h);
+            const { readBarcodes } = await loadZxing();
+            const results = await readBarcodes(img, { tryHarder: true, formats: ['QRCode'], maxNumberOfSymbols: 1 });
+            if (!handledRef.current && results && results.length && results[0].text) handleDecoded(results[0].text);
+          }
         } catch { /* frame illisible -> on continue */ }
       }
       if (!handledRef.current && streamRef.current) loopRef.current = setTimeout(tick, 120);
