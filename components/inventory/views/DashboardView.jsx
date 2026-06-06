@@ -580,7 +580,7 @@ const DashboardView = React.memo(({
                 </div>
 
                 {/* Affichage avec coût, vente et EBITDA pour tous les articles */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">{t('dashboard.costValue')}</p>
                     <p className="text-lg font-bold text-blue-900 dark:text-blue-300">${costValue.toFixed(2)}</p>
@@ -617,7 +617,7 @@ const DashboardView = React.memo(({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="bg-blue-100 dark:bg-blue-900/40 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                     <p className="text-xs text-blue-700 dark:text-blue-400 font-bold mb-1 uppercase">{t('dashboard.costValue')}</p>
                     <p className="text-2xl font-black text-blue-900 dark:text-blue-200">${totalCost.toFixed(2)}</p>

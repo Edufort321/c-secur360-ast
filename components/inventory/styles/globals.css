@@ -126,6 +126,12 @@
      largeur de contenu et défile horizontalement dans son conteneur .overflow-x-auto. */
   .inventory-app th, .inventory-app td { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
 
+  /* Grilles fixes 3/4/5 colonnes -> 1 colonne sur mobile : sinon colonnes trop étroites, les
+     montants/valeurs cassent caractère-par-caractère et les encadrés s'étirent en hauteur. */
+  .inventory-app .grid-cols-3,
+  .inventory-app .grid-cols-4,
+  .inventory-app .grid-cols-5 { grid-template-columns: minmax(0, 1fr); }
+
   /* Permettre aux enfants flex de rétrécir : sinon le texte pousse hors de la case (cause #1 du débordement) */
   .inventory-app .flex > * { min-width: 0; }
 
