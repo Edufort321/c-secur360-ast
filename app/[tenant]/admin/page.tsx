@@ -1247,8 +1247,8 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
   return (
     <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-700">
       <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} className="text-blue-500" /> {tr('Sites du client', 'Client sites')} <span className="text-xs font-normal text-gray-400">({sites.length})</span></h3>
-        <button onClick={() => setSiteForm(emptySite())} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800"><Plus size={13} /> {tr('Site', 'Site')}</button>
+        <h3 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} className="text-blue-500" /> {sites.length > 1 ? tr('Sites du client', 'Client sites') : tr('Site du client', 'Client site')} <span className="text-xs font-normal text-gray-400">({sites.length})</span></h3>
+        <button onClick={() => setSiteForm(emptySite())} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800"><Plus size={13} /> {sites.length === 0 ? tr('Ajouter le site', 'Add site') : tr('Ajouter un site (expansion)', 'Add site (expansion)')}</button>
       </div>
       {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20">{err}</div>}
 
@@ -1281,7 +1281,7 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
       )}
 
       <div className="space-y-2">
-        {sites.map(s => {
+        {sites.map((s, si) => {
           const sc = contacts.filter(c => c.site_id === s.id);
           const open = openSite === s.id;
           return (
@@ -1290,7 +1290,12 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
                 <button onClick={() => setOpenSite(open ? null : (s.id || null))} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                   {open ? <ChevronDown size={15} className="text-gray-400" /> : <ChevronRight size={15} className="text-gray-400" />}
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">{s.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">{s.name}</span>
+                      {sites.length === 1
+                        ? <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tr('Site unique', 'Single site')}</span>
+                        : si === 0 && <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tr('Principal', 'Main')}</span>}
+                    </div>
                     <div className="truncate text-xs text-gray-500">{[s.address, s.city, s.province].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')} · {sc.length} {tr('contact(s)', 'contact(s)')}</div>
                     {s.billing_address && <div className="truncate text-[11px] text-emerald-600 dark:text-emerald-400">💳 {tr('Facturation', 'Billing')} : {[s.billing_address, s.billing_city, s.billing_province].filter(Boolean).join(', ')}</div>}
                   </div>
@@ -1336,7 +1341,7 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
             </div>
           );
         })}
-        {sites.length === 0 && !siteForm && <p className="text-center text-xs text-gray-400">{tr('Aucun site. Ajoute le premier site du client.', 'No site yet. Add the first client site.')}</p>}
+        {sites.length === 0 && !siteForm && <p className="text-center text-xs text-gray-400">{tr('Ajoute le site du client (adresse + contacts). Tu pourras en ajouter d’autres si le client a des expansions.', 'Add the client site (address + contacts). You can add more if the client expands.')}</p>}
       </div>
     </div>
   );
