@@ -532,12 +532,19 @@ export const DepartmentManagement = ({
                       <Building size={24} className="text-slate-600 dark:text-slate-400" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-                        {dept.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {dept.code}
-                      </p>
+                      {dept.isSite ? (
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                          <span className="text-blue-600 dark:text-blue-400">Site :</span> {dept.name}
+                        </h3>
+                      ) : (
+                        <>
+                          <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">Site : {dept.siteName || '—'}</p>
+                          <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                            <span className="text-gray-500 dark:text-gray-400 font-semibold">Département :</span> {dept.name}
+                          </h3>
+                        </>
+                      )}
+                      {dept.code && <p className="text-sm text-gray-600 dark:text-gray-400">{dept.code}</p>}
                     </div>
                   </div>
                 </div>

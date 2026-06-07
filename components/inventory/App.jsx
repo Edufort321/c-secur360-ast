@@ -1793,16 +1793,24 @@ function AppContent() {
           .from('planner_succursales').select('id,name,code,parent_id').eq('tenant_id', tenantId).order('name');
         if (!alive || error || !Array.isArray(data)) return;
         const byId = new Map(data.map(r => [r.id, r]));
-        const mapped = data.map(r => ({
-          id: 'adm-' + r.id,
-          adminId: r.id,
-          name: r.name,
-          code: r.code || '',
-          isSite: !r.parent_id,
-          siteName: r.parent_id ? (byId.get(r.parent_id)?.name || '') : r.name,
-          locations: [],
-          fromAdmin: true,
-        }));
+        const sites = data.filter(r => !r.parent_id);
+        const depts = data.filter(r => r.parent_id);
+        const sitesWithChildren = new Set(depts.map(d => d.parent_id));
+        // Une carte = un DÉPARTEMENT (niveau où vivent articles/emplacements), avec son site en
+        // contexte. Un site SANS département devient sa propre carte (sinon il serait inutilisable).
+        // -> on respecte la hiérarchie Site → Département (plus de doublon site+département).
+        const mapped = [
+          ...depts.map(r => ({
+            id: 'adm-' + r.id, adminId: r.id, name: r.name, code: r.code || '',
+            isSite: false, siteName: byId.get(r.parent_id)?.name || '', siteId: r.parent_id,
+            locations: [], fromAdmin: true,
+          })),
+          ...sites.filter(s => !sitesWithChildren.has(s.id)).map(r => ({
+            id: 'adm-' + r.id, adminId: r.id, name: r.name, code: r.code || '',
+            isSite: true, siteName: r.name, siteId: r.id,
+            locations: [], fromAdmin: true,
+          })),
+        ];
         // L'admin a repondu (succes) : il est la SOURCE -> on remplace, meme si vide (cela efface
         // les anciens defauts locaux Succursale A/B/Entrepot). En cas d'ERREUR reseau, on a deja
         // fait `return` plus haut -> on garde l'existant.
