@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Plus,
   Printer,
@@ -197,11 +197,26 @@ const ArticlesView = React.memo(({
   setShowViewModal,
   setSelectedItemForShare,
   setShowShareModal,
+  storageUnits,
   importFromCatalogue
 }) => {
   const { language } = useLanguage();
   // État pour les lignes expandables
   const [expandedRows, setExpandedRows] = useState(new Set());
+
+  // Emplacements pour le filtre = unités de stockage créées dans l'Administration (ex. A, CITERNE,
+  // G-H), filtrées par le département sélectionné s'il y a lieu. Repli : adresses des articles.
+  const locationOptions = useMemo(() => {
+    const set = new Set();
+    const deptFilter = dashboardFilters.department || filters.department;
+    (storageUnits || []).forEach(u => {
+      if (!u?.name) return;
+      if (deptFilter && u.departmentName && u.departmentName !== deptFilter) return;
+      set.add(u.name);
+    });
+    if (set.size === 0) (items || []).forEach(it => { if (it.location) set.add(String(it.location)); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+  }, [storageUnits, items, dashboardFilters.department, filters.department]);
 
   // État pour le dropdown d'impression
   const [showPrintDropdown, setShowPrintDropdown] = useState(false);
@@ -471,7 +486,7 @@ const ArticlesView = React.memo(({
                     onChange={(e) => setFilters({...filters, location: e.target.value})}
                   >
                     <option value="">Tous</option>
-                    {[...new Set(items.map(item => item.location).filter(Boolean))].map(loc => (
+                    {locationOptions.map(loc => (
                       <option key={loc} value={loc}>{loc}</option>
                     ))}
                   </select>

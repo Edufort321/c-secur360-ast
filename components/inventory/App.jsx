@@ -2117,7 +2117,11 @@ function AppContent() {
         else if (activeStatus === 'surplus') matchesStatus = item.quantity > item.maxQuantity;
       }
 
-      const matchesLocation = !activeLocation || item.location === activeLocation;
+      // Filtre par EMPLACEMENT (unité de stockage de l'admin, ex. « A », « CITERNE », « G-H ») :
+      // l'adresse d'un article est « EMPLACEMENT-TABLETTE-POSITION », donc on matche l'emplacement
+      // exact OU comme préfixe de l'adresse. Couvre aussi les articles multi-emplacement.
+      const locMatch = (loc) => { const s = String(loc || ''); return s === activeLocation || s.startsWith(activeLocation + '-'); };
+      const matchesLocation = !activeLocation || locMatch(item.location) || (Array.isArray(item.locations) && item.locations.some(l => locMatch(l.location)));
 
       return matchesSearch && matchesCategory && matchesSubcategory && matchesDepartment && matchesStatus && matchesLocation;
     });
@@ -8786,6 +8790,7 @@ function AppContent() {
             setShowItemForm={setShowItemForm}
             handlePrint={handlePrint}
             setShowViewModal={setShowViewModal}
+            storageUnits={storageUnits}
             getScanUrl={getScanUrl}
             setSearchTerm={setSearchTerm}
             importFromCatalogue={importFromCatalogue}
