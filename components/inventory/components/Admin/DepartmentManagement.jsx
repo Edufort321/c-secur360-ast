@@ -509,13 +509,10 @@ export const DepartmentManagement = ({
             {t('administration.departments.manageDepartmentsDescription')}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap"
-        >
-          <Plus size={20} />
-          {t('administration.departments.addDepartment')}
-        </button>
+        {/* Plus d'ajout local : les sites/departements sont geres dans l'Administration principale. */}
+        <span className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300 whitespace-nowrap">
+          ⓘ Gérés dans Administration → Sites / Départements
+        </span>
       </div>
 
       {/* Liste des départements - Responsive */}

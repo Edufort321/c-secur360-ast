@@ -1721,7 +1721,9 @@ function AppContent() {
       const savedTargetEbitda = localStorage.getItem('app-targetEbitda');
       if (savedItems) setItems(JSON.parse(savedItems)); else setItems(getDefaultItems());
       if (savedMovements) setMovements(JSON.parse(savedMovements));
-      if (savedDepartments) setDepartments(JSON.parse(savedDepartments)); else setDepartments(getDefaultDepartments());
+      // Departements : PLUS de defauts locaux — la source est l'Administration (planner_succursales),
+      // chargee par un effet dedie. On part du cache local si present, sinon vide (pas de re-semis).
+      if (savedDepartments) setDepartments(JSON.parse(savedDepartments)); else setDepartments([]);
       if (savedCategories) setCategories(JSON.parse(savedCategories)); else setCategories(getDefaultCategories());
       if (savedStorageUnits) setStorageUnits(JSON.parse(savedStorageUnits));
       if (savedBaseEbitda) setBaseEbitda(parseFloat(savedBaseEbitda));
@@ -1737,7 +1739,7 @@ function AppContent() {
           const s = data.data || {};
           if (Array.isArray(s.items)) setItems(s.items);
           if (Array.isArray(s.movements)) setMovements(s.movements);
-          if (Array.isArray(s.departments)) setDepartments(s.departments.length ? s.departments : getDefaultDepartments());
+          if (Array.isArray(s.departments)) setDepartments(s.departments); // pas de re-semis de defauts
           if (Array.isArray(s.categories)) setCategories(s.categories.length ? s.categories : getDefaultCategories());
           if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
           if (s.baseEbitda != null) setBaseEbitda(Number(s.baseEbitda));
@@ -1767,6 +1769,38 @@ function AppContent() {
     };
 
     initializeData();
+    return () => { alive = false; };
+  }, [tenantId]);
+
+  // SOURCE DES DÉPARTEMENTS = ADMINISTRATION (planner_succursales). On charge la hiérarchie
+  // Site → Département de l'admin et on en fait la liste `departments` de l'inventaire (sites ET
+  // départements). Plus de liste locale modifiable ni de défauts : c'est géré dans l'Administration
+  // principale. Si l'admin est indisponible (RLS/offline), on garde ce qui est déjà chargé.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('planner_succursales').select('id,name,code,parent_id').eq('tenant_id', tenantId).order('name');
+        if (!alive || error || !Array.isArray(data)) return;
+        const byId = new Map(data.map(r => [r.id, r]));
+        const mapped = data.map(r => ({
+          id: 'adm-' + r.id,
+          adminId: r.id,
+          name: r.name,
+          code: r.code || '',
+          isSite: !r.parent_id,
+          siteName: r.parent_id ? (byId.get(r.parent_id)?.name || '') : r.name,
+          locations: [],
+          fromAdmin: true,
+        }));
+        // L'admin a repondu (succes) : il est la SOURCE -> on remplace, meme si vide (cela efface
+        // les anciens defauts locaux Succursale A/B/Entrepot). En cas d'ERREUR reseau, on a deja
+        // fait `return` plus haut -> on garde l'existant.
+        setDepartments(mapped);
+        saveLS('c-secur360-inventory-departments', mapped);
+      } catch { /* admin indisponible -> on garde l'existant */ }
+    })();
     return () => { alive = false; };
   }, [tenantId]);
 
