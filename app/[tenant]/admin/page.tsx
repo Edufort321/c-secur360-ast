@@ -1116,52 +1116,9 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
           {notice && <div className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{notice}</div>}
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Entreprise *', 'Company *')}</label>
-            <input className={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Hydro-Québec" />
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Contact', 'Contact')}</label>
-              <input className={inp} value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="Jean Dupont" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Tél. direct', 'Direct phone')}</label>
-              <input className={inp} value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="514-555-0001" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel contact', 'Contact email')}</label>
-              <input type="email" className={inp} value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} placeholder="jean@exemple.com" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Tél. bureau', 'Office phone')}</label>
-              <input className={inp} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="514-555-0000" />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Courriel facturation', 'Billing email')}</label>
-            <input type="email" className={inp} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="facturation@exemple.com" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Adresse', 'Address')}</label>
-            <input className={inp} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 rue Principale" />
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Ville', 'City')}</label>
-              <input className={inp} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Montréal" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Province</label>
-              <select className={inp} value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))}>
-                {provinces.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Code postal', 'Postal code')}</label>
-            <input className={`${inp} uppercase`} value={form.postal_code} onChange={e => setForm(f => ({ ...f, postal_code: e.target.value.toUpperCase() }))} placeholder="H1A 2B3" />
+            <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">{tr('Nom du client *', 'Client name *')}</label>
+            <input className={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="ArcelorMittal" autoFocus />
+            <p className="mt-1 text-[11px] text-gray-400">{tr("Enregistre le client, puis ajoute ses sites (adresse + facturation par site) et leurs contacts ci-dessous.", 'Save the client, then add its sites (address + per-site billing) and their contacts below.')}</p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Notes</label>
@@ -1197,38 +1154,35 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 // Cascade Client -> SITES (un nom, plusieurs adresses) -> CONTACTS (personnes par site).
 // Ex. ArcelorMittal / Complexe Ouest / Marcel Dionne. Tables client_sites + client_contacts (133).
 function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Site = { id?: string; kind?: string; name: string; address: string; city: string; province: string; postal_code: string; active: boolean };
+  // Un SITE porte : son adresse d'exécution, son adresse de FACTURATION (peut différer par site),
+  // et ses CONTACTS. La facturation est donc PAR SITE (pas une section globale).
+  type Site = { id?: string; name: string; address: string; city: string; province: string; postal_code: string; billing_address: string; billing_city: string; billing_province: string; billing_postal_code: string; active: boolean };
   type Contact = { id?: string; site_id: string | null; name: string; title: string; email: string; phone: string; mobile: string; is_primary: boolean; active: boolean };
   const provinces = ['QC','ON','BC','AB','SK','MB','NB','NS','PE','NL','NT','YT','NU'];
-  const [allSites, setAllSites] = useState<Site[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [openSite, setOpenSite] = useState<string | null>(null);
   const [siteForm, setSiteForm] = useState<Site | null>(null);
-  const [billingForm, setBillingForm] = useState<Site | null>(null);
   const [contactForm, setContactForm] = useState<Contact | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const sites = allSites.filter(s => (s.kind || 'site') !== 'billing');     // sites d'exécution (avec contacts)
-  const billing = allSites.filter(s => (s.kind || 'site') === 'billing');   // adresses de facturation
 
   async function load() {
     const [{ data: s }, { data: c }] = await Promise.all([
       supabase.from('client_sites').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
       supabase.from('client_contacts').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
     ]);
-    setAllSites(s || []); setContacts(c || []);
+    setSites(s || []); setContacts(c || []);
   }
-  useEffect(() => { load(); setOpenSite(null); setSiteForm(null); setBillingForm(null); setContactForm(null); /* eslint-disable-next-line */ }, [clientId, tenant]);
+  useEffect(() => { load(); setOpenSite(null); setSiteForm(null); setContactForm(null); /* eslint-disable-next-line */ }, [clientId, tenant]);
 
-  async function saveSiteRow(form: Site | null, kind: 'site' | 'billing', done: () => void) {
-    if (!form || !form.name.trim()) return;
+  async function saveSite() {
+    if (!siteForm || !siteForm.name.trim()) return;
     setErr(null);
-    const p: any = { tenant_id: tenant, client_id: clientId, kind, name: form.name, address: form.address, city: form.city, province: form.province, postal_code: form.postal_code, active: form.active };
-    const res = form.id ? await supabase.from('client_sites').update(p).eq('id', form.id) : await supabase.from('client_sites').insert(p);
+    const p: any = { tenant_id: tenant, client_id: clientId, name: siteForm.name, address: siteForm.address, city: siteForm.city, province: siteForm.province, postal_code: siteForm.postal_code, billing_address: siteForm.billing_address, billing_city: siteForm.billing_city, billing_province: siteForm.billing_province, billing_postal_code: siteForm.billing_postal_code, active: siteForm.active };
+    const res = siteForm.id ? await supabase.from('client_sites').update(p).eq('id', siteForm.id) : await supabase.from('client_sites').insert(p);
     if (res.error) { setErr(res.error.message); return; }
-    done(); load();
+    setSiteForm(null); load();
   }
-  const saveSite = () => saveSiteRow(siteForm, 'site', () => setSiteForm(null));
-  const saveBilling = () => saveSiteRow(billingForm, 'billing', () => setBillingForm(null));
   async function delSite(id: string) {
     await supabase.from('client_contacts').delete().eq('site_id', id);
     await supabase.from('client_sites').delete().eq('id', id);
@@ -1245,7 +1199,7 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
   }
   async function delContact(id: string) { await supabase.from('client_contacts').delete().eq('id', id); load(); }
 
-  const emptySite = (): Site => ({ name: '', address: '', city: '', province: 'QC', postal_code: '', active: true });
+  const emptySite = (): Site => ({ name: '', address: '', city: '', province: 'QC', postal_code: '', billing_address: '', billing_city: '', billing_province: 'QC', billing_postal_code: '', active: true });
   const emptyContact = (siteId: string | null): Contact => ({ site_id: siteId, name: '', title: '', email: '', phone: '', mobile: '', is_primary: false, active: true });
   const lbl = 'mb-1 block text-[11px] font-semibold text-gray-500';
 
@@ -1265,6 +1219,19 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
             <div className="col-span-2"><label className={lbl}>{tr('Ville', 'City')}</label><input className={inp} value={siteForm.city} onChange={e => setSiteForm(s => s && ({ ...s, city: e.target.value }))} /></div>
             <div><label className={lbl}>Prov.</label><select className={inp} value={siteForm.province} onChange={e => setSiteForm(s => s && ({ ...s, province: e.target.value }))}>{provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
           </div>
+          <div><label className={lbl}>{tr('Code postal', 'Postal code')}</label><input className={`${inp} uppercase`} value={siteForm.postal_code} onChange={e => setSiteForm(s => s && ({ ...s, postal_code: e.target.value.toUpperCase() }))} placeholder="H1A 2B3" /></div>
+
+          {/* Adresse de FACTURATION de CE site (peut différer). Laisser vide = facturer à l'adresse du site. */}
+          <div className="mt-1 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2 dark:border-emerald-800 dark:bg-emerald-900/10">
+            <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300"><CreditCard size={12} /> {tr('Adresse de facturation (si différente du site)', 'Billing address (if different from site)')}</div>
+            <div><label className={lbl}>{tr('Adresse', 'Address')}</label><input className={inp} value={siteForm.billing_address} onChange={e => setSiteForm(s => s && ({ ...s, billing_address: e.target.value }))} placeholder={tr('Vide = même que le site', 'Empty = same as site')} /></div>
+            <div className="mt-1 grid grid-cols-4 gap-2">
+              <div className="col-span-2"><label className={lbl}>{tr('Ville', 'City')}</label><input className={inp} value={siteForm.billing_city} onChange={e => setSiteForm(s => s && ({ ...s, billing_city: e.target.value }))} /></div>
+              <div><label className={lbl}>Prov.</label><select className={inp} value={siteForm.billing_province} onChange={e => setSiteForm(s => s && ({ ...s, billing_province: e.target.value }))}>{provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+              <div><label className={lbl}>{tr('C. postal', 'Postal')}</label><input className={`${inp} uppercase`} value={siteForm.billing_postal_code} onChange={e => setSiteForm(s => s && ({ ...s, billing_postal_code: e.target.value.toUpperCase() }))} /></div>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button onClick={saveSite} disabled={!siteForm.name.trim()} className="flex-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{tr('Enregistrer le site', 'Save site')}</button>
             <button onClick={() => setSiteForm(null)} className="rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
@@ -1284,6 +1251,7 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold">{s.name}</div>
                     <div className="truncate text-xs text-gray-500">{[s.address, s.city, s.province].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')} · {sc.length} {tr('contact(s)', 'contact(s)')}</div>
+                    {s.billing_address && <div className="truncate text-[11px] text-emerald-600 dark:text-emerald-400">💳 {tr('Facturation', 'Billing')} : {[s.billing_address, s.billing_city, s.billing_province].filter(Boolean).join(', ')}</div>}
                   </div>
                 </button>
                 <button onClick={() => setSiteForm({ ...s })} className="text-gray-400 hover:text-blue-600" title={tr('Modifier', 'Edit')}><Settings size={14} /></button>
@@ -1328,45 +1296,6 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
           );
         })}
         {sites.length === 0 && !siteForm && <p className="text-center text-xs text-gray-400">{tr('Aucun site. Ajoute le premier site du client.', 'No site yet. Add the first client site.')}</p>}
-      </div>
-
-      {/* ===== Adresses de facturation (kind = billing) ===== */}
-      <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-1.5 text-sm font-bold"><CreditCard size={15} className="text-emerald-500" /> {tr('Adresses de facturation', 'Billing addresses')} <span className="text-xs font-normal text-gray-400">({billing.length})</span></h3>
-          <button onClick={() => setBillingForm(emptySite())} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800"><Plus size={13} /> {tr('Adresse', 'Address')}</button>
-        </div>
-
-        {billingForm && (
-          <div className="mt-2 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
-            <div><label className={lbl}>{tr('Libellé *', 'Label *')}</label><input className={inp} value={billingForm.name} onChange={e => setBillingForm(s => s && ({ ...s, name: e.target.value }))} placeholder={tr('Comptes payables', 'Accounts payable')} /></div>
-            <div><label className={lbl}>{tr('Adresse', 'Address')}</label><input className={inp} value={billingForm.address} onChange={e => setBillingForm(s => s && ({ ...s, address: e.target.value }))} placeholder="100 boul. Administratif" /></div>
-            <div className="grid grid-cols-4 gap-2">
-              <div className="col-span-2"><label className={lbl}>{tr('Ville', 'City')}</label><input className={inp} value={billingForm.city} onChange={e => setBillingForm(s => s && ({ ...s, city: e.target.value }))} /></div>
-              <div><label className={lbl}>Prov.</label><select className={inp} value={billingForm.province} onChange={e => setBillingForm(s => s && ({ ...s, province: e.target.value }))}>{provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-              <div><label className={lbl}>{tr('Code postal', 'Postal')}</label><input className={`${inp} uppercase`} value={billingForm.postal_code} onChange={e => setBillingForm(s => s && ({ ...s, postal_code: e.target.value.toUpperCase() }))} /></div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveBilling} disabled={!billingForm.name.trim()} className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{tr("Enregistrer l'adresse", 'Save address')}</button>
-              <button onClick={() => setBillingForm(null)} className="rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-2 space-y-2">
-          {billing.map(b => (
-            <div key={b.id} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 dark:border-gray-700">
-              <CreditCard size={14} className="shrink-0 text-emerald-500" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">{b.name}</div>
-                <div className="truncate text-xs text-gray-500">{[b.address, b.city, b.province, b.postal_code].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')}</div>
-              </div>
-              <button onClick={() => setBillingForm({ ...b })} className="text-gray-400 hover:text-emerald-600" title={tr('Modifier', 'Edit')}><Settings size={14} /></button>
-              <button onClick={() => delSite(b.id!)} className="text-gray-400 hover:text-red-600" title={tr('Supprimer', 'Delete')}><Trash2 size={14} /></button>
-            </div>
-          ))}
-          {billing.length === 0 && !billingForm && <p className="text-center text-xs text-gray-400">{tr('Aucune adresse de facturation.', 'No billing address.')}</p>}
-        </div>
       </div>
     </div>
   );
