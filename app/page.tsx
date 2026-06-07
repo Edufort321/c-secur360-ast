@@ -186,6 +186,7 @@ export default function LandingPage() {
   const [dbModules, setDbModules] = useState<DbModule[]>([])
   const [moduleSlides, setModuleSlides] = useState<Record<string, ModuleSlide[]>>({})
   const [perSitePrice, setPerSitePrice] = useState<number | null>(null)
+  const [aiPlans, setAiPlans] = useState<{ id: string; name_fr: string; name_en: string; price_cents: number; note_fr: string | null; note_en: string | null }[]>([])
   const [selectedModule, setSelectedModule] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -237,6 +238,18 @@ export default function LandingPage() {
       .maybeSingle()
       .then(({ data }) => {
         if (data?.per_site_monthly != null) setPerSitePrice(Number(data.per_site_monthly))
+      })
+  }, [])
+
+  // Load forfaits Assistant IA (jetons) — cartes de prix publiques (table ai_plans, migration 132)
+  useEffect(() => {
+    supabase
+      .from('ai_plans')
+      .select('id, name_fr, name_en, price_cents, note_fr, note_en, sort_order, active')
+      .eq('active', true)
+      .order('sort_order')
+      .then(({ data }) => {
+        if (data && data.length > 0) setAiPlans(data.map((p: any) => ({ ...p, price_cents: Number(p.price_cents || 0) })))
       })
   }, [])
 
@@ -764,6 +777,36 @@ export default function LandingPage() {
                       {fr ? `${freeLabel} GRATUITS` : `${freeLabel} FREE`}
                     </p>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Forfaits Assistant IA (jetons) — cartes ajustables via l'admin (table ai_plans) */}
+            {aiPlans.length > 0 && (
+              <div className="mt-16 max-w-5xl mx-auto">
+                <div className="text-center mb-6">
+                  <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+                    {fr ? 'Option · Assistants IA' : 'Add-on · AI assistants'}
+                  </p>
+                  <h3 className="text-2xl font-bold text-white">
+                    {fr ? 'Forfaits de jetons IA' : 'AI token plans'}
+                  </h3>
+                  <p className="text-slate-400 text-sm mt-1">
+                    {fr ? 'Recherche de prix, import intelligent et assistants — en sus de votre abonnement.' : 'Price research, smart import and assistants — on top of your subscription.'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {aiPlans.map(p => (
+                    <div key={p.id} className="group relative bg-[#111c30] border border-white/8 rounded-xl p-5 hover:border-orange-500/40 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-bold text-white">{fr ? p.name_fr : p.name_en}</h4>
+                        <span className="whitespace-nowrap rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-bold text-orange-400">{Math.round(p.price_cents / 100)}$/an</span>
+                      </div>
+                      {(fr ? p.note_fr : p.note_en) && (
+                        <p className="mt-2 text-xs text-slate-400">{fr ? p.note_fr : p.note_en}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

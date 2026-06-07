@@ -20,6 +20,7 @@ const TX_TYPE: Record<string, { label: string; cls: string }> = {
   refund:     { label: 'Remboursement', cls: 'bg-amber-100 text-amber-700' },
   credit:     { label: 'Crédit',        cls: 'bg-blue-100 text-blue-700' },
   adjustment: { label: 'Ajustement',    cls: 'bg-purple-100 text-purple-700' },
+  ai_token:   { label: 'Forfait IA',     cls: 'bg-fuchsia-100 text-fuchsia-700' },
 };
 const TX_STATUS: Record<string, string> = {
   completed:  'text-emerald-600',
@@ -97,7 +98,16 @@ export default function TenantManagePage() {
   // Sites supplémentaires : (sites inclus − 1) × prix mensuel × 12 (facture annuelle)
   const extraSites = Math.max(0, (Number(tenant?.max_sites) || 1) - 1);
   const sitesAnnual = extraSites * cfg.per_site_monthly * 12;
-  const total = subtotal * (1 - discountPct / 100) + sitesAnnual;
+  // Forfait IA (jetons) — facturé en SUS, prix payé par le client = tier_cents (dollars = /100).
+  const aiAnnual = (Number(aiTier) || 0) / 100;
+  const total = subtotal * (1 - discountPct / 100) + sitesAnnual + aiAnnual;
+  // Facturation IA CUMULÉE sur 12 mois (chaque renouvellement = 1 transaction type 'ai_token').
+  const aiYearTotal = useMemo(() => {
+    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 1);
+    return (txs || [])
+      .filter((t: any) => t.type === 'ai_token' && t.created_at && new Date(t.created_at) >= cutoff)
+      .reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+  }, [txs]);
   const subState = useMemo(() => computeSubState(sub), [sub]);
   const dirty = !!tenant && profileKey(tenant) !== savedJson;
 
@@ -352,7 +362,7 @@ export default function TenantManagePage() {
                     Alertes : 🟠 60 j avant · 🔴 15 j avant · ⛔ blocage auto après l'échéance si non réglé.
                     Au paiement : avance la date d'un an et clique « Conso à 0 ». Le client ne voit jamais ta marge (il voit son forfait + % consommé).
                   </span>
-                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setNotice('Consommation IA remise à 0 ✓'); } catch { setNotice('Erreur (migration 131 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 (renouvellement)</button>
+                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); if (aiTier > 0) { const today = new Date().toISOString().slice(0, 10); await supabase.from('tenant_transactions').insert({ tenant_id: id, type: 'ai_token', amount: aiTier / 100, status: 'completed', description: 'Renouvellement forfait Assistant IA', period_start: today, period_end: aiRenewal || null }); } setNotice('Consommation IA remise à 0 + facturation IA enregistrée ✓'); load(); } catch { setNotice('Erreur (migration 131 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 + facturer le renouvellement</button>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">
@@ -408,9 +418,11 @@ export default function TenantManagePage() {
                     <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Sous-total</span><span>{money(subtotal)}</span></div>
                     <div className="flex justify-between text-emerald-600"><span>Escompte ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
                     {extraSites > 0 && <div className="flex justify-between text-blue-600"><span>Sites suppl. ({extraSites} × {money(cfg.per_site_monthly)}/mois × 12)</span><span>+ {money(sitesAnnual)}</span></div>}
+                    {aiAnnual > 0 && <div className="flex justify-between text-purple-600"><span>Forfait Assistant IA (jetons)</span><span>+ {money(aiAnnual)}</span></div>}
                     <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
                   </div>
                   <p className="mt-2 text-xs text-gray-400">{cfg.discount_per_module}% par module additionnel (max {cfg.discount_cap}%).</p>
+                  {aiYearTotal > 0 && <p className="mt-1 text-xs font-semibold text-purple-600">Facturation IA cumulée (12 mois) : {money(aiYearTotal)} — {(txs || []).filter((t: any) => t.type === 'ai_token').length} renouvellement(s).</p>}
                 </div>
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
