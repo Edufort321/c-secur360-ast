@@ -160,12 +160,7 @@ export const CategoryManagement = ({
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (window.confirm(`Êtes-vous sûr de vouloir supprimer la catégorie "${editingCategory.name}" ?`)) {
-                  onDeleteCategory(editingCategory.id);
-                  setEditingCategory(null);
-                }
-              }}
+              onClick={() => { onDeleteCategory(editingCategory.id); setEditingCategory(null); }}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               <Trash2 size={20} />

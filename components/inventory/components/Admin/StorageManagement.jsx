@@ -136,12 +136,7 @@ export const StorageManagement = ({
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (window.confirm(t('messages.confirm.delete'))) {
-                  onDeleteStorageUnit(editingUnit.id);
-                  setEditingUnit(null);
-                }
-              }}
+              onClick={() => { onDeleteStorageUnit(editingUnit.id); setEditingUnit(null); }}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               <Trash2 size={20} />

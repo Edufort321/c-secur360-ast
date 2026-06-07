@@ -141,7 +141,7 @@ export const DepartmentManagement = ({
   };
 
   const handleDeleteStorage = (storageId) => {
-    if (!window.confirm('Supprimer cet emplacement ?')) return;
+    // L'approbation est gérée par le dialogue in-app du parent (onDeleteStorageUnit -> askConfirm).
     onDeleteStorageUnit(storageId);
   };
 
@@ -171,12 +171,7 @@ export const DepartmentManagement = ({
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (window.confirm(`Êtes-vous sûr de vouloir supprimer la succursale "${editingDepartment.name}" ?`)) {
-                  onDeleteDepartment(editingDepartment.id);
-                  setEditingDepartment(null);
-                }
-              }}
+              onClick={() => { onDeleteDepartment(editingDepartment.id); setEditingDepartment(null); }}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               <Trash2 size={20} />

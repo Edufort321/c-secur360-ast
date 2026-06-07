@@ -5572,18 +5572,40 @@ function AppContent() {
         ) : tree.length === 0 ? (
           <p className="text-sm text-gray-500">{fr ? 'Aucun site défini. Crée-les dans Administration → Sites / Départements.' : 'No site defined. Create them in Administration → Sites / Departments.'}</p>
         ) : (
-          <div className="space-y-2">
-            {tree.map(s => (
-              <div key={s.id} className="rounded-lg bg-white p-2 dark:bg-gray-800">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><Building size={14} className="text-blue-500" /> {s.name}</div>
-                {s.depts.length > 0 && (
-                  <div className="ml-5 mt-1 flex flex-wrap gap-1">
-                    {s.depts.map(d => <span key={d.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">{d.name}</span>)}
-                  </div>
-                )}
+          <>
+            {/* Mini-dashboard : totaux sites / départements */}
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-lg bg-white px-3 py-2 dark:bg-gray-800">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{fr ? 'Sites' : 'Sites'}</p>
+                <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{tree.length}</p>
               </div>
-            ))}
-          </div>
+              <div className="rounded-lg bg-white px-3 py-2 dark:bg-gray-800">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{fr ? 'Départements' : 'Departments'}</p>
+                <p className="text-xl font-bold text-slate-700 dark:text-slate-200">{tree.reduce((s2, s) => s2 + s.depts.length, 0)}</p>
+              </div>
+              <div className="rounded-lg bg-white px-3 py-2 dark:bg-gray-800">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{fr ? 'Moy. dépt/site' : 'Avg dept/site'}</p>
+                <p className="text-xl font-bold text-gray-700 dark:text-gray-200">{tree.length ? (tree.reduce((s2, s) => s2 + s.depts.length, 0) / tree.length).toFixed(1) : '0'}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {tree.map(s => (
+                <div key={s.id} className="rounded-lg bg-white p-2 dark:bg-gray-800">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><Building size={14} className="text-blue-500" /> {s.name}</div>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${s.depts.length ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                      {s.depts.length} {fr ? (s.depts.length > 1 ? 'départements' : 'département') : (s.depts.length > 1 ? 'depts' : 'dept')}
+                    </span>
+                  </div>
+                  {s.depts.length > 0 && (
+                    <div className="ml-5 mt-1 flex flex-wrap gap-1">
+                      {s.depts.map(d => <span key={d.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">{d.name}</span>)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );
