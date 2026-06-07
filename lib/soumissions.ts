@@ -54,8 +54,17 @@ export type Soumission = {
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
-/** Montant d'une ligne : MO = tech × (reg·taux + supp·taux·multSupp + maj·taux·multMaj) ; autres = quantité × coût. */
+/** Montant d'une ligne :
+ *  - MO = tech × (reg·taux + supp·taux·multSupp + maj·taux·multMaj)
+ *  - VOYAGEMENT = nb véhicules (tech) × km (quantity) × taux/km (unit_cost)
+ *  - autres = quantité × coût. */
 export function computeLigneMontant(ligne: SoumissionLigne, cat?: CatalogueTaux | null): number {
+  if (ligne.categorie === 'voyagement') {
+    const vehicules = Number(ligne.tech) || 1;
+    const km = Number(ligne.quantity) || 0;
+    const tauxKm = Number(ligne.unit_cost) || 0; // pré-rempli depuis le catalogue (extras.km)
+    return r2(vehicules * km * tauxKm);
+  }
   if (ligne.categorie === 'mo_bureau' || ligne.categorie === 'mo_chantier') {
     const taux = ligne.categorie === 'mo_bureau' ? (cat?.taux_mo_bureau || 0) : (cat?.taux_mo_chantier || 0);
     const multSupp = cat?.mult_supp ?? 1.5;

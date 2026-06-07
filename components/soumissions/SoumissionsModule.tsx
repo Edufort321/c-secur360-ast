@@ -147,7 +147,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const updItem = (i: number, patch: Partial<SoumissionItem>) => setItems(p => p.map((it, j) => j === i ? { ...it, ...patch } : it));
   const addItem = () => setItems(p => [...p, { name: `Item ${p.length + 1}`, total: 0, lignes: [] }]);
   const delItem = (i: number) => setItems(p => p.filter((_, j) => j !== i));
-  const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, blankLigne(c)] } : it));
+  const addLigne = (i: number, c: Categorie) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: [...it.lignes, c === 'voyagement' ? { ...blankLigne(c), tech: 1, unit: 'km', unit_cost: Number(cat?.extras?.km) || 0 } : blankLigne(c)] } : it));
   // Ajoute une ligne pre-remplie depuis un barEme additionnel du catalogue (classe a la bonne categorie).
   const addCatalogueLigne = (i: number, c: Categorie, label: string, value: number) => setItems(p => p.map((it, j) => {
     if (j !== i) return it;
@@ -591,7 +591,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                           <table className="w-full text-xs">
                             <thead><tr className="text-left text-gray-400">
                               <th className="px-2 py-1">Description</th>
-                              {isMO(c) ? (<><th className="px-2">Tech</th><th className="px-2">Rég</th><th className="px-2">Supp</th><th className="px-2">Maj</th></>) : (<><th className="px-2">Qté</th><th className="px-2">Unité</th><th className="px-2">Coût</th></>)}
+                              {isMO(c) ? (<><th className="px-2">Tech</th><th className="px-2">Rég</th><th className="px-2">Supp</th><th className="px-2">Maj</th></>) : c === 'voyagement' ? (<><th className="px-2">{tr('Véhicules', 'Vehicles')}</th><th className="px-2">Km</th><th className="px-2">{tr('Taux/km', 'Rate/km')}</th></>) : (<><th className="px-2">Qté</th><th className="px-2">Unité</th><th className="px-2">Coût</th></>)}
                               <th className="px-2 text-right">Montant</th><th className="px-2"></th>
                             </tr></thead>
                             <tbody>
@@ -619,6 +619,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                                       <td className="px-2"><input type="number" value={l.reg} onChange={e => updLigne(i, li, { reg: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
                                       <td className="px-2"><input type="number" value={l.supp} onChange={e => updLigne(i, li, { supp: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
                                       <td className="px-2"><input type="number" value={l.maj} onChange={e => updLigne(i, li, { maj: Number(e.target.value) })} className={`w-16 text-right ${inputCls}`} /></td>
+                                    </>
+                                  ) : c === 'voyagement' ? (
+                                    <>
+                                      {/* Voyagement : nb véhicules × km × taux/km (taux pré-rempli depuis le catalogue) */}
+                                      <td className="px-2"><input type="number" min={1} value={l.tech} onChange={e => updLigne(i, li, { tech: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} /></td>
+                                      <td className="px-2"><input type="number" value={l.quantity} onChange={e => updLigne(i, li, { quantity: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} placeholder="km" /></td>
+                                      <td className="px-2"><input type="number" step="0.01" value={l.unit_cost} onChange={e => updLigne(i, li, { unit_cost: Number(e.target.value) })} className={`w-20 text-right ${inputCls}`} title={tr('Taux $/km (catalogue)', 'Rate $/km (catalogue)')} /></td>
                                     </>
                                   ) : (
                                     <>
