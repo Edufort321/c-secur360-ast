@@ -1029,6 +1029,8 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [form, setForm] = useState<CRow>(empty());
+  const [viewMode, setViewMode] = useState<'grid' | 'gallery'>('grid'); // grille (défaut) ou galerie
+  const [counts, setCounts] = useState<Record<string, { sites: number; contacts: number }>>({});
   const inp = 'w-full rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-gray-600';
 
   async function load() {
@@ -1036,6 +1038,17 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     const { data } = await supabase.from('clients').select('*').eq('tenant_id', tenant).order('name');
     setRows(data || []);
     setLoading(false);
+    // Mini-dashboard par client : nb de sites + nb de contacts (best-effort, migration 133).
+    try {
+      const [{ data: s }, { data: c }] = await Promise.all([
+        supabase.from('client_sites').select('client_id').eq('tenant_id', tenant),
+        supabase.from('client_contacts').select('client_id').eq('tenant_id', tenant),
+      ]);
+      const map: Record<string, { sites: number; contacts: number }> = {};
+      (s || []).forEach((r: any) => { const k = String(r.client_id); (map[k] ||= { sites: 0, contacts: 0 }).sites++; });
+      (c || []).forEach((r: any) => { const k = String(r.client_id); (map[k] ||= { sites: 0, contacts: 0 }).contacts++; });
+      setCounts(map);
+    } catch { setCounts({}); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [tenant]);
 
@@ -1078,30 +1091,58 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
     <div className="grid gap-4 lg:grid-cols-3">
       {/* Liste */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-          <div><h2 className="font-bold">{tr('Répertoire clients', 'Client directory')}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+          <div><h2 className="font-bold">{tr('Répertoire clients', 'Client directory')} <span className="text-xs font-normal text-gray-400">({rows.length})</span></h2>
           <p className="text-xs text-gray-500">{tr('Prérempli automatiquement lors de la création de projets.', 'Auto-fills when creating projects.')}</p></div>
-          <button onClick={() => { deselect(); setForm(empty()); setSelected(-1); }}
-            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">
-            <Plus size={15} /> {tr('Nouveau', 'New')}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Bascule Grille / Galerie */}
+            <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-xs dark:border-gray-600">
+              <button onClick={() => setViewMode('grid')} className={`rounded-md px-2 py-1 font-semibold ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
+              <button onClick={() => setViewMode('gallery')} className={`rounded-md px-2 py-1 font-semibold ${viewMode === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
+            </div>
+            <button onClick={() => { deselect(); setForm(empty()); setSelected(-1); }}
+              className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">
+              <Plus size={15} /> {tr('Nouveau', 'New')}
+            </button>
+          </div>
         </div>
-        {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {rows.map((r, i) => (
-              <div key={r.id} onClick={() => select(i)}
-                className={`flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${selected === i ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 dark:bg-slate-700">
-                  <Building2 size={16} className="text-slate-500" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold text-sm">{r.name}</div>
-                  <div className="truncate text-xs text-gray-500">{[r.contact_name, r.city, r.province].filter(Boolean).join(' · ')}</div>
-                </div>
-                {!r.active && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-400 dark:bg-gray-700">{tr('Inactif', 'Inactive')}</span>}
-              </div>
-            ))}
-            {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-gray-400">{tr('Aucun client. Crée-en un.', 'No client. Create one.')}</div>}
+        {loading ? <div className="grid place-items-center py-12 text-gray-400"><Loader2 className="animate-spin" /></div> : rows.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm text-gray-400">{tr('Aucun client. Crée-en un.', 'No client. Create one.')}</div>
+        ) : (
+          <div className={`p-3 ${viewMode === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-2 gap-2 sm:grid-cols-3'}`}>
+            {rows.map((r, i) => {
+              const ct = counts[String(r.id)] || { sites: 0, contacts: 0 };
+              const sel = selected === i;
+              if (viewMode === 'gallery') {
+                return (
+                  <button key={r.id} onClick={() => select(i)} type="button"
+                    className={`rounded-xl border-2 p-3 text-left transition hover:shadow-md ${sel ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 dark:bg-slate-700"><Building2 size={16} className="text-slate-500" /></div>
+                      <div className="min-w-0 flex-1"><div className="truncate font-bold">{r.name}</div>{!r.active && <span className="text-[10px] text-gray-400">{tr('Inactif', 'Inactive')}</span>}</div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-lg font-bold text-blue-700 dark:text-blue-300">{ct.sites}</div><div className="text-[10px] text-blue-600/80 dark:text-blue-400">{tr('site(s)', 'site(s)')}</div></div>
+                      <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{ct.contacts}</div><div className="text-[10px] text-emerald-600/80 dark:text-emerald-400">{tr('contact(s)', 'contact(s)')}</div></div>
+                    </div>
+                  </button>
+                );
+              }
+              return (
+                <button key={r.id} onClick={() => select(i)} type="button"
+                  className={`flex flex-col gap-1 rounded-xl border p-2.5 text-left transition hover:shadow-sm ${sel ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <Building2 size={15} className="shrink-0 text-slate-400" />
+                    <span className="truncate text-sm font-semibold">{r.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    <span className="rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"><MapPin size={10} className="inline" /> {ct.sites}</span>
+                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">👤 {ct.contacts}</span>
+                    {!r.active && <span className="text-gray-400">· {tr('Inactif', 'Inactive')}</span>}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
