@@ -69,7 +69,8 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
             key: `ast_${r.permit_number}`, module: 'AST', icon: 'ast',
             title: `AST ${r.permit_number || ''} — ${v === 'nonconform' ? 'Non-conformité' : 'Correctif requis'}`,
             detail: d.projectInfo?.client || d.client || d.projectInfo?.location || '',
-            severity: v === 'nonconform' ? 'red' : 'orange', href: `/${tenant}/ast`, names, date: r.updated_at,
+            // Deep-link DIRECT vers la fiche AST concernée (au lieu de la liste générique).
+            severity: v === 'nonconform' ? 'red' : 'orange', href: `/${tenant}/ast/view/${encodeURIComponent(r.permit_number || '')}`, names, date: r.updated_at,
           });
         }
       } catch { /* table absente */ }
@@ -77,7 +78,7 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
       // 3. Inspections d'équipement non-conformes / retrait / conditionnel
       try {
         const { data } = await supabase.from('equipment_inspections')
-          .select('inspection_number, equipment_name, inspector_name, overall_result, inspection_date')
+          .select('id, inspection_number, equipment_name, inspector_name, overall_result, inspection_date')
           .eq('tenant_id', tenant);
         for (const r of (data || []) as any[]) {
           const res = r.overall_result;
@@ -87,7 +88,8 @@ export function AnomaliesPanel({ tenant }: { tenant: string }) {
             key: `insp_${r.inspection_number}`, module: 'Inspection', icon: 'inspection',
             title: `Inspection ${r.equipment_name || r.inspection_number || ''} — ${label}`,
             detail: r.inspector_name ? `Inspecteur : ${r.inspector_name}` : '',
-            severity: res === 'conditionnel' ? 'orange' : 'red', href: `/${tenant}/inspections`,
+            // Deep-link DIRECT vers l'inspection concernée (sinon repli sur la liste).
+            severity: res === 'conditionnel' ? 'orange' : 'red', href: r.id ? `/${tenant}/inspections/${r.id}` : `/${tenant}/inspections`,
             names: r.inspector_name ? [r.inspector_name] : [], date: r.inspection_date,
           });
         }
