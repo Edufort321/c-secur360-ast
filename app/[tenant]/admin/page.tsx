@@ -851,6 +851,7 @@ function Sites({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => s
 function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: string) => string; lang: string }) {
   const [mods, setMods] = useState<Mod[]>([]);
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30 });
+  const [aiTierCents, setAiTierCents] = useState(0); // forfait Assistant IA payé (cents)
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -863,6 +864,8 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
         const enabledSet = new Set((tm || []).filter((x: any) => x.enabled).map((x: any) => x.module_key));
         const { data: bc } = await supabase.from('billing_config').select('discount_per_module, discount_cap').eq('id', 'default').maybeSingle();
         if (bc) setCfg({ discount_per_module: Number(bc.discount_per_module), discount_cap: Number(bc.discount_cap) });
+        // Forfait Assistant IA (facturé en sus du total modules) — table ai_budgets.
+        try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents').eq('tenant_id', tenant).maybeSingle(); if (ab && active) setAiTierCents(Number(ab.tier_cents) || 0); } catch { /* migration 131 absente */ }
         if (active) setMods((catalog || []).map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price), enabled: enabledSet.has(m.key) })));
       } catch {
         if (active) setMods([]);
@@ -874,7 +877,8 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
   const selected = mods.filter(m => m.enabled);
   const subtotal = useMemo(() => selected.reduce((s, m) => s + (m.monthly_price || 0), 0), [mods]);
   const discountPct = Math.min(Math.max(selected.length - 1, 0) * cfg.discount_per_module, cfg.discount_cap);
-  const total = subtotal * (1 - discountPct / 100);
+  const aiAnnual = aiTierCents / 100; // forfait IA, facturé en sus (hors escompte modules)
+  const total = subtotal * (1 - discountPct / 100) + aiAnnual;
 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
   if (mods.length === 0) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Aucun module configuré. Contactez votre administrateur.', 'No module configured. Contact your administrator.')}</div>;
@@ -925,6 +929,9 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
           <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>{tr('Sous-total', 'Subtotal')}</span><span>{money(subtotal)}</span></div>
           {discountPct > 0 && (
             <div className="flex justify-between text-emerald-600"><span>{tr('Escompte', 'Discount')} ({discountPct}%)</span><span>− {money(subtotal * discountPct / 100)}</span></div>
+          )}
+          {aiAnnual > 0 && (
+            <div className="flex justify-between text-purple-600"><span>{tr('Forfait Assistant IA', 'AI Assistant plan')}</span><span>+ {money(aiAnnual)}</span></div>
           )}
           <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div>
         </div>
