@@ -1470,6 +1470,8 @@ function AppContent() {
   const tenantId = (typeof window !== 'undefined' ? (window.location.pathname.split('/').filter(Boolean)[0] || 'cerdia') : 'cerdia');
   const initialLoadDone = useRef(false);   // n'enregistre PAS dans le nuage tant que le chargement initial n'est pas fini
   const cloudSaveTimer = useRef(null);
+  const cloudLoadOk = useRef(false);       // le chargement nuage a-t-il REUSSI ? (sinon on n'ecrase PAS le nuage)
+  const cloudItemCount = useRef(0);        // nb d'articles charges depuis le nuage (anti-ecrasement par un etat vide)
   // Verrou d'édition : id de l'article en cours d'édition (ou '__new__') tant que la modale est ouverte.
   // Empêche le temps réel d'écraser l'article édité et l'effet de reset du formulaire (bug « les champs sautent »).
   const editingLockRef = useRef(null);
@@ -1737,7 +1739,8 @@ function AppContent() {
       // charge PAS depuis le cache local (qui peut contenir d'anciens defauts) -> on part vide et
       // l'effet admin remplit. (savedDepartments volontairement ignore.)
       setDepartments([]);
-      if (savedCategories) setCategories(JSON.parse(savedCategories)); else setCategories(getDefaultCategories());
+      // Categories : plus de defauts re-semes (la suppression doit etre definitive).
+      if (savedCategories) setCategories(JSON.parse(savedCategories)); else setCategories([]);
       if (savedStorageUnits) setStorageUnits(JSON.parse(savedStorageUnits));
       if (savedBaseEbitda) setBaseEbitda(parseFloat(savedBaseEbitda));
       if (savedTargetEbitda) setTargetEbitda(parseFloat(savedTargetEbitda));
@@ -1756,7 +1759,9 @@ function AppContent() {
           // planner_succursales, voir l'effet dédié). Évite que d'anciens défauts persistés dans le
           // snapshot nuage (Succursale A/B/Entrepôt) ne ressuscitent. (Isolation multi-tenant assurée
           // par le filtre tenant_id côté admin.)
-          if (Array.isArray(s.categories)) setCategories(s.categories.length ? s.categories : getDefaultCategories());
+          // CATEGORIES : plus de re-semis de defauts (sinon les categories supprimees ressuscitent,
+          // comme les succursales avant). On charge ce qui est dans le nuage, meme vide.
+          if (Array.isArray(s.categories)) setCategories(s.categories);
           if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
           if (s.baseEbitda != null) setBaseEbitda(Number(s.baseEbitda));
           if (s.targetEbitda != null) setTargetEbitda(Number(s.targetEbitda));
@@ -1769,14 +1774,19 @@ function AppContent() {
             localStorage.setItem('c-secur360-storage-units', JSON.stringify(s.storageUnits || []));
           } catch { /* quota */ }
           console.log('✅ Inventaire chargé depuis inventory_state (tenant ' + tenantId + ')');
+          cloudLoadOk.current = true;                                    // chargement nuage REUSSI -> on peut ecrire
+          cloudItemCount.current = Array.isArray(s.items) ? s.items.length : 0;
           initialLoadDone.current = true;
           if (alive) setIsLoading(false);
           return;
         }
-        // Aucune ligne nuage : on part du local, puis le 1er enregistrement créera la ligne.
+        // Aucune ligne nuage (PAS d'erreur) : tenant neuf -> on pourra creer la 1ere ligne.
         console.log('ℹ️ Aucun instantané nuage pour ' + tenantId + ' — bascule sur le cache local.');
+        cloudLoadOk.current = true; cloudItemCount.current = 0;
       } catch (e) {
-        console.warn('⚠️ inventory_state indisponible, repli localStorage:', e?.message || e);
+        // ERREUR de chargement nuage -> on NE marque PAS cloudLoadOk : l'autosave restera en LECTURE
+        // SEULE pour ce chargement, afin de NE PAS ECRASER le nuage avec un etat local vide/perimé.
+        console.warn('⚠️ inventory_state indisponible (lecture seule, pas d\'écrasement):', e?.message || e);
       }
       if (!alive) return;
       fromLocal();
@@ -1858,6 +1868,19 @@ function AppContent() {
   // (sinon on écraserait le nuage avec l'état vide initial).
   useEffect(() => {
     if (!initialLoadDone.current) return;
+    // GARDE 1 — LECTURE SEULE si le chargement nuage a ECHOUE : ne jamais ecraser le nuage avec un
+    // etat local (potentiellement vide/perimé) si on n'a pas pu lire le nuage au depart.
+    if (!cloudLoadOk.current) return;
+    // GARDE 2 — ANTI-ECRASEMENT : ne JAMAIS remplacer un inventaire nuage PLEIN par un etat VIDE
+    // (cause de la perte des 925 articles). Une vidange totale doit etre faite sciemment, pas via
+    // l'autosave silencieux.
+    if ((items?.length || 0) === 0 && cloudItemCount.current > 0) {
+      console.warn('🛑 Autosave ignoré : refus d\'écraser ' + cloudItemCount.current + ' article(s) nuage par un état vide.');
+      setSaveError(language === 'fr'
+        ? `🛡️ Sauvegarde bloquée (anti-perte) : inventaire vide non enregistré (le nuage garde ${cloudItemCount.current} articles). Recharge la page.`
+        : `Save blocked (anti-loss): empty inventory not saved (cloud keeps ${cloudItemCount.current}).`);
+      return;
+    }
     if (cloudSaveTimer.current) clearTimeout(cloudSaveTimer.current);
     cloudSaveTimer.current = setTimeout(async () => {
       try {
@@ -1868,7 +1891,7 @@ function AppContent() {
           updated_at: new Date().toISOString(),
         }, { onConflict: 'tenant_id' });
         if (error) { console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
-        else setSaveError(null);
+        else { setSaveError(null); cloudItemCount.current = items?.length || 0; } // baseline a jour apres ecriture reussie
       } catch (e) {
         console.warn('⚠️ Sauvegarde inventory_state échouée:', e?.message || e);
         setSaveError(e?.message || String(e));
@@ -2349,7 +2372,15 @@ function AppContent() {
       confirmLabel: language === 'fr' ? `Supprimer ${count}` : `Delete ${count}`,
       onConfirm: () => {
         const ids = new Set(selectedItems);
+        const deleted = items.filter(item => ids.has(item.id));
         setItems(prev => { const next = prev.filter(item => !ids.has(item.id)); saveLS('c-secur360-inventory-items', next); return next; });
+        // TRACE D'AUDIT : une suppression laisse desormais un mouvement (qui/quand/combien) -> on sait
+        // si un inventaire a fondu a cause d'une suppression et par qui.
+        addMovement({
+          type: 'delete', itemName: language === 'fr' ? `Suppression en masse : ${count} article(s)` : `Bulk delete: ${count} item(s)`,
+          quantity: count, reason: (language === 'fr' ? 'Suppression en masse — ' : 'Bulk delete — ') + deleted.slice(0, 30).map(i => `${i.code || ''} ${i.name || ''}`.trim()).join(' · ') + (deleted.length > 30 ? ` … (+${deleted.length - 30})` : ''),
+          user: currentUser?.username || hostUserName || 'system',
+        });
         setSelectedItems([]);
         notify(language === 'fr' ? `${count} article(s) supprimé(s).` : `${count} article(s) deleted.`);
       },
@@ -2473,7 +2504,12 @@ function AppContent() {
   };
 
   const deleteItem = (itemId) => {
-    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setItems(prev => prev.filter(item => item.id !== itemId)) });
+    askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => {
+      const it = items.find(i => i.id === itemId);
+      setItems(prev => prev.filter(item => item.id !== itemId));
+      // TRACE D'AUDIT : la suppression laisse un mouvement (qui/quand/quoi).
+      if (it) addMovement({ type: 'delete', itemId: it.id, itemName: it.name, quantity: it.quantity || 0, reason: (language === 'fr' ? 'Article supprimé' : 'Item deleted') + ` (${it.code || ''})`, user: currentUser?.username || hostUserName || 'system' });
+    } });
   };
 
   // Gestion des départements (MAJ fonctionnelles ; localStorage calculé depuis prev ; source unique = snapshot)
