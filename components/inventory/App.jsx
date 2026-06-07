@@ -3688,7 +3688,9 @@ function AppContent() {
       handledRef.current = false;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+          // Résolution la plus haute possible : plus de pixels sur un petit QR imprimé = lecture
+          // plus fiable (la caméra native, elle, capture en pleine résolution).
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 2560 }, height: { ideal: 1440 }, frameRate: { ideal: 30 }, focusMode: { ideal: 'continuous' } },
           audio: false,
         });
         streamRef.current = stream;
@@ -3697,19 +3699,21 @@ function AppContent() {
         const v = videoRef.current;
         if (v) { v.srcObject = stream; v.setAttribute('playsinline', 'true'); v.muted = true; try { await v.play(); } catch { /* ignore */ } }
         setIsScanning(true);
-        // Capacités caméra : zoom (démarre à 1x = PLEIN CADRE pour cadrer facilement le QR ;
-        // un zoom par défaut trop fort recadrait/floutait l'étiquette et empêchait la lecture),
-        // lampe, autofocus continu. L'utilisateur peut zoomer via le curseur si besoin.
+        // Capacités caméra : zoom, lampe, autofocus. Pour les ÉTIQUETTES IMPRIMÉES (petit QR), on
+        // démarre à ~2x : le QR occupe une plus grande part du cadre -> lecture bien plus fiable
+        // (l'utilisateur a confirmé que zoomer aide). Curseur pour ajuster.
         try {
           const caps = track.getCapabilities ? track.getCapabilities() : {};
           if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > (caps.zoom.min || 1)) {
             const min = caps.zoom.min || 1, max = caps.zoom.max, step = caps.zoom.step || 0.1;
             setZoomCaps({ min, max, step });
-            const z = min; setZoom(z);
+            const z = Math.min(max, Math.max(min, 2)); setZoom(z); // défaut ~2x pour QR imprimés
             try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch { /* ignore */ }
           } else setZoomCaps(null);
           setTorchSupported(!!caps.torch);
-          try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ }
+          // Autofocus continu (on NE force PAS focusDistance, ça figerait la mise au point).
+          const fmodes = caps.focusMode || [];
+          if (fmodes.includes('continuous')) { try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch { /* ignore */ } }
         } catch { /* ignore */ }
         loopRef.current = setTimeout(tick, 300);
       } catch (e) {
