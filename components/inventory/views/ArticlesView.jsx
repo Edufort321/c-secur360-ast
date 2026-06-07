@@ -300,16 +300,20 @@ const ArticlesView = React.memo(({
               </div>
             )}
           </div>
-          {/* Assistant Prix IA (recherche web du prix coûtant) sur la sélection */}
+          {/* Assistant Prix IA (recherche web du prix coûtant) : sélection, ou TOUTE la liste filtrée */}
           {onPriceAssistant && (
             <button
-              onClick={() => onPriceAssistant(filteredItems.filter(it => selectedItems.includes(it.id)))}
-              disabled={selectedItems.length === 0}
-              title={language === 'fr' ? 'Mettre à jour les prix via recherche web (IA)' : 'Update prices via AI web search'}
+              onClick={() => onPriceAssistant(selectedItems.length ? filteredItems.filter(it => selectedItems.includes(it.id)) : filteredItems)}
+              disabled={filteredItems.length === 0}
+              title={language === 'fr'
+                ? (selectedItems.length ? 'Mettre à jour les prix de la sélection (IA web)' : 'Mettre à jour TOUTE la liste affichée (IA web)')
+                : (selectedItems.length ? 'Update selected prices (AI web)' : 'Update the WHOLE displayed list (AI web)')}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
             >
               <Zap size={16} />
-              <span className="hidden sm:inline">{language === 'fr' ? `Prix IA${selectedItems.length ? ` (${selectedItems.length})` : ''}` : `AI price${selectedItems.length ? ` (${selectedItems.length})` : ''}`}</span>
+              <span className="hidden sm:inline">{selectedItems.length
+                ? (language === 'fr' ? `Prix IA (${selectedItems.length})` : `AI price (${selectedItems.length})`)
+                : (language === 'fr' ? 'Prix IA — tout' : 'AI price — all')}</span>
             </button>
           )}
           {/* Suppression EN MASSE des articles sélectionnés (nettoyage rapide d'un import) */}

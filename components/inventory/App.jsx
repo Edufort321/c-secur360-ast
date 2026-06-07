@@ -1564,6 +1564,7 @@ function AppContent() {
   // Assistant Prix IA (recherche web du prix coutant a jour) — onglet Articles.
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [priceProgress, setPriceProgress] = useState(null); // {done,total} lots (grandes listes)
   const [priceRows, setPriceRows] = useState([]); // [{id,code,name,supplierCost,webPrice,source,confidence,note,apply}]
   const [itemToPrint, setItemToPrint] = useState(null);
   const [labelFormat, setLabelFormat] = useState('avery35520'); // Format d'étiquette sélectionné
@@ -2340,31 +2341,71 @@ function AppContent() {
     });
   };
 
-  // Assistant Prix IA : lance la recherche web pour une liste d'articles et ouvre la modale comparative.
-  const handlePriceAssistant = async (targetItems) => {
-    const list = Array.isArray(targetItems) ? targetItems : [];
-    if (!list.length) { notify(language === 'fr' ? 'Sélectionne au moins un article.' : 'Select at least one item.', 'info'); return; }
-    if (list.length > 20) { notify(language === 'fr' ? 'Maximum 20 articles par recherche — sélectionne-en moins.' : 'Max 20 items per search — select fewer.', 'error'); return; }
+  // Assistant Prix IA : recherche web du prix coûtant. Accepte une liste de N'IMPORTE quelle taille
+  // (toute la liste « d'un coup ») -> découpée en LOTS de 15 (la recherche web se fait par paquets),
+  // exécutés en parallèle limité (2). Les résultats remplissent la modale au fur et à mesure.
+  const runPriceAssistant = async (list) => {
     setPriceLoading(true);
     setShowPriceModal(true);
     setPriceRows(list.map(it => ({ id: it.id, code: it.code, name: it.name, supplierCost: Number(it.costPrice) || 0, webPrice: null, source: '', confidence: '', note: '', apply: false })));
+    const CHUNK = 15;
+    const chunks = [];
+    for (let i = 0; i < list.length; i += CHUNK) chunks.push(list.slice(i, i + CHUNK));
+    let nextIdx = 0, doneChunks = 0;
+    let failed = 0;
+    const worker = async () => {
+      while (nextIdx < chunks.length) {
+        const chunk = chunks[nextIdx++];
+        try {
+          const resp = await fetch('/api/inventory/price-research', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: chunk.map(it => ({ code: it.code, name: it.name, supplier: it.supplier || '', unit: it.unit || '', currentCost: Number(it.costPrice) || 0 })) }),
+          });
+          const j = await resp.json();
+          if (!resp.ok || j.error) throw new Error(j.error || 'Recherche IA échouée');
+          const byCode = new Map((j.prices || []).map(p => [String(p.code), p]));
+          const ids = new Set(chunk.map(c => c.id));
+          setPriceRows(prev => prev.map(r => {
+            if (!ids.has(r.id)) return r;
+            const p = byCode.get(String(r.code));
+            const web = p ? Math.max(0, Number(p.webPrice) || 0) : 0;
+            return { ...r, webPrice: web, source: p?.source || '', confidence: p?.confidence || '', note: p?.note || '', apply: web > 0 && web !== r.supplierCost };
+          }));
+        } catch {
+          failed++;
+          const ids = new Set(chunk.map(c => c.id));
+          setPriceRows(prev => prev.map(r => ids.has(r.id) ? { ...r, webPrice: 0, note: language === 'fr' ? 'recherche échouée' : 'search failed' } : r));
+        }
+        doneChunks++;
+        if (chunks.length > 1) setPriceProgress({ done: doneChunks, total: chunks.length });
+      }
+    };
     try {
-      const resp = await fetch('/api/inventory/price-research', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: list.map(it => ({ code: it.code, name: it.name, supplier: it.supplier || '', unit: it.unit || '', currentCost: Number(it.costPrice) || 0 })) }),
+      await Promise.all(Array.from({ length: Math.min(2, chunks.length) }, () => worker()));
+      if (failed) notify((language === 'fr' ? `${failed} lot(s) en échec — réessaie pour ces articles.` : `${failed} batch(es) failed.`), 'warning');
+    } finally {
+      setPriceLoading(false);
+      setPriceProgress(null);
+    }
+  };
+
+  // Point d'entrée : confirme si la liste est grande (coût/temps IA), puis lance.
+  const handlePriceAssistant = (targetItems) => {
+    const list = Array.isArray(targetItems) ? targetItems.filter(Boolean) : [];
+    if (!list.length) { notify(language === 'fr' ? 'Aucun article à mettre à jour.' : 'No item to update.', 'info'); return; }
+    if (list.length > 30) {
+      askConfirm({
+        title: language === 'fr' ? 'Mettre à jour toute la liste ?' : 'Update the whole list?',
+        message: language === 'fr'
+          ? `Recherche web IA pour ${list.length} articles (découpée en lots). Cela peut prendre quelques minutes et consommer des crédits IA. Continuer ?`
+          : `AI web search for ${list.length} items (batched). This may take a few minutes and use AI credits. Continue?`,
+        confirmLabel: language === 'fr' ? 'Lancer' : 'Run',
+        danger: false,
+        onConfirm: () => runPriceAssistant(list),
       });
-      const j = await resp.json();
-      if (!resp.ok || j.error) throw new Error(j.error || 'Recherche IA échouée');
-      const byCode = new Map((j.prices || []).map(p => [String(p.code), p]));
-      setPriceRows(prev => prev.map(r => {
-        const p = byCode.get(String(r.code));
-        const web = p ? Math.max(0, Number(p.webPrice) || 0) : 0;
-        return { ...r, webPrice: web, source: p?.source || '', confidence: p?.confidence || '', note: p?.note || '', apply: web > 0 && web !== r.supplierCost };
-      }));
-    } catch (e) {
-      notify((language === 'fr' ? 'Assistant prix échoué : ' : 'Price assistant failed: ') + (e?.message || e), 'error');
-      setShowPriceModal(false);
-    } finally { setPriceLoading(false); }
+      return;
+    }
+    runPriceAssistant(list);
   };
 
   // Applique les prix choisis (mode IA/web) -> met a jour costPrice ; le dashboard s'ajuste tout seul.
@@ -8553,7 +8594,9 @@ function AppContent() {
             {priceLoading && (
               <div className="mb-3 flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
-                {language === 'fr' ? 'Recherche web en cours…' : 'Searching the web…'}
+                {priceProgress && priceProgress.total > 1
+                  ? (language === 'fr' ? `Recherche web… lot ${priceProgress.done}/${priceProgress.total}` : `Web search… batch ${priceProgress.done}/${priceProgress.total}`)
+                  : (language === 'fr' ? 'Recherche web en cours…' : 'Searching the web…')}
               </div>
             )}
             <div className="max-h-[55vh] overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
