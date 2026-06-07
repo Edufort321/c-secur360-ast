@@ -1197,33 +1197,38 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
 // Cascade Client -> SITES (un nom, plusieurs adresses) -> CONTACTS (personnes par site).
 // Ex. ArcelorMittal / Complexe Ouest / Marcel Dionne. Tables client_sites + client_contacts (133).
 function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId: string; tr: (f: string, e: string) => string; inp: string }) {
-  type Site = { id?: string; name: string; address: string; city: string; province: string; postal_code: string; active: boolean };
+  type Site = { id?: string; kind?: string; name: string; address: string; city: string; province: string; postal_code: string; active: boolean };
   type Contact = { id?: string; site_id: string | null; name: string; title: string; email: string; phone: string; mobile: string; is_primary: boolean; active: boolean };
   const provinces = ['QC','ON','BC','AB','SK','MB','NB','NS','PE','NL','NT','YT','NU'];
-  const [sites, setSites] = useState<Site[]>([]);
+  const [allSites, setAllSites] = useState<Site[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [openSite, setOpenSite] = useState<string | null>(null);
   const [siteForm, setSiteForm] = useState<Site | null>(null);
+  const [billingForm, setBillingForm] = useState<Site | null>(null);
   const [contactForm, setContactForm] = useState<Contact | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const sites = allSites.filter(s => (s.kind || 'site') !== 'billing');     // sites d'exécution (avec contacts)
+  const billing = allSites.filter(s => (s.kind || 'site') === 'billing');   // adresses de facturation
 
   async function load() {
     const [{ data: s }, { data: c }] = await Promise.all([
       supabase.from('client_sites').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
       supabase.from('client_contacts').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
     ]);
-    setSites(s || []); setContacts(c || []);
+    setAllSites(s || []); setContacts(c || []);
   }
-  useEffect(() => { load(); setOpenSite(null); setSiteForm(null); setContactForm(null); /* eslint-disable-next-line */ }, [clientId, tenant]);
+  useEffect(() => { load(); setOpenSite(null); setSiteForm(null); setBillingForm(null); setContactForm(null); /* eslint-disable-next-line */ }, [clientId, tenant]);
 
-  async function saveSite() {
-    if (!siteForm || !siteForm.name.trim()) return;
+  async function saveSiteRow(form: Site | null, kind: 'site' | 'billing', done: () => void) {
+    if (!form || !form.name.trim()) return;
     setErr(null);
-    const p: any = { tenant_id: tenant, client_id: clientId, name: siteForm.name, address: siteForm.address, city: siteForm.city, province: siteForm.province, postal_code: siteForm.postal_code, active: siteForm.active };
-    const res = siteForm.id ? await supabase.from('client_sites').update(p).eq('id', siteForm.id) : await supabase.from('client_sites').insert(p);
+    const p: any = { tenant_id: tenant, client_id: clientId, kind, name: form.name, address: form.address, city: form.city, province: form.province, postal_code: form.postal_code, active: form.active };
+    const res = form.id ? await supabase.from('client_sites').update(p).eq('id', form.id) : await supabase.from('client_sites').insert(p);
     if (res.error) { setErr(res.error.message); return; }
-    setSiteForm(null); load();
+    done(); load();
   }
+  const saveSite = () => saveSiteRow(siteForm, 'site', () => setSiteForm(null));
+  const saveBilling = () => saveSiteRow(billingForm, 'billing', () => setBillingForm(null));
   async function delSite(id: string) {
     await supabase.from('client_contacts').delete().eq('site_id', id);
     await supabase.from('client_sites').delete().eq('id', id);
@@ -1323,6 +1328,45 @@ function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId
           );
         })}
         {sites.length === 0 && !siteForm && <p className="text-center text-xs text-gray-400">{tr('Aucun site. Ajoute le premier site du client.', 'No site yet. Add the first client site.')}</p>}
+      </div>
+
+      {/* ===== Adresses de facturation (kind = billing) ===== */}
+      <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-1.5 text-sm font-bold"><CreditCard size={15} className="text-emerald-500" /> {tr('Adresses de facturation', 'Billing addresses')} <span className="text-xs font-normal text-gray-400">({billing.length})</span></h3>
+          <button onClick={() => setBillingForm(emptySite())} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:border-emerald-800"><Plus size={13} /> {tr('Adresse', 'Address')}</button>
+        </div>
+
+        {billingForm && (
+          <div className="mt-2 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
+            <div><label className={lbl}>{tr('Libellé *', 'Label *')}</label><input className={inp} value={billingForm.name} onChange={e => setBillingForm(s => s && ({ ...s, name: e.target.value }))} placeholder={tr('Comptes payables', 'Accounts payable')} /></div>
+            <div><label className={lbl}>{tr('Adresse', 'Address')}</label><input className={inp} value={billingForm.address} onChange={e => setBillingForm(s => s && ({ ...s, address: e.target.value }))} placeholder="100 boul. Administratif" /></div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="col-span-2"><label className={lbl}>{tr('Ville', 'City')}</label><input className={inp} value={billingForm.city} onChange={e => setBillingForm(s => s && ({ ...s, city: e.target.value }))} /></div>
+              <div><label className={lbl}>Prov.</label><select className={inp} value={billingForm.province} onChange={e => setBillingForm(s => s && ({ ...s, province: e.target.value }))}>{provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+              <div><label className={lbl}>{tr('Code postal', 'Postal')}</label><input className={`${inp} uppercase`} value={billingForm.postal_code} onChange={e => setBillingForm(s => s && ({ ...s, postal_code: e.target.value.toUpperCase() }))} /></div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={saveBilling} disabled={!billingForm.name.trim()} className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{tr("Enregistrer l'adresse", 'Save address')}</button>
+              <button onClick={() => setBillingForm(null)} className="rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-2 space-y-2">
+          {billing.map(b => (
+            <div key={b.id} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 dark:border-gray-700">
+              <CreditCard size={14} className="shrink-0 text-emerald-500" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold">{b.name}</div>
+                <div className="truncate text-xs text-gray-500">{[b.address, b.city, b.province, b.postal_code].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')}</div>
+              </div>
+              <button onClick={() => setBillingForm({ ...b })} className="text-gray-400 hover:text-emerald-600" title={tr('Modifier', 'Edit')}><Settings size={14} /></button>
+              <button onClick={() => delSite(b.id!)} className="text-gray-400 hover:text-red-600" title={tr('Supprimer', 'Delete')}><Trash2 size={14} /></button>
+            </div>
+          ))}
+          {billing.length === 0 && !billingForm && <p className="text-center text-xs text-gray-400">{tr('Aucune adresse de facturation.', 'No billing address.')}</p>}
+        </div>
       </div>
     </div>
   );

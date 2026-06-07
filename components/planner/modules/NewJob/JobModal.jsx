@@ -634,10 +634,11 @@ export function JobModal({
                 try {
                     const t = window.location.pathname.split('/')[1] || 'cerdia';
                     const [sRes, ctRes] = await Promise.all([
-                        supabase.from('client_sites').select('id, name, address, city, province').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
+                        supabase.from('client_sites').select('id, name, address, city, province, kind').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
                         supabase.from('client_contacts').select('id, site_id, name, title, phone, mobile, email').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
                     ]);
-                    const sites = sRes.data || [];
+                    // On exclut les adresses de FACTURATION (kind='billing') : seuls les sites d'exécution.
+                    const sites = (sRes.data || []).filter(s => (s.kind || 'site') !== 'billing');
                     setClientSites(sites);
                     setClientContacts(ctRes.data || []);
                     // Un seul site -> on le sélectionne et remplit directement l'adresse du mandat.
