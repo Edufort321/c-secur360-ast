@@ -4218,83 +4218,21 @@ function AppContent() {
                 <ScanLine size={22} className="text-orange-500" /> {t('scanner.scanQRCode')}
               </h2>
 
-              {/* ===== CAMÉRA LIVE DANS L'APP : détection automatique du QR (BarcodeDetector/ZXing) ===== */}
-              <div className="relative mt-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-black">
-                {/* Flux vidéo (toujours monté pour que startScanning puisse y attacher le stream) */}
-                <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
-
-                {/* Cadre de visée + consigne (visibles pendant le scan) */}
-                {isScanning && (
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                    {/* Cadre avec coins animés */}
-                    <div className="relative h-48 w-48 max-w-[70%] max-h-[70%]">
-                      <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-lg border-l-4 border-t-4 border-orange-400" />
-                      <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-lg border-r-4 border-t-4 border-orange-400" />
-                      <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-orange-400" />
-                      <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-lg border-b-4 border-r-4 border-orange-400" />
-                      {/* Ligne de balayage animée */}
-                      <span className="absolute inset-x-2 top-1/2 h-0.5 animate-pulse bg-orange-400/80" />
-                    </div>
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-1.5 text-center">
-                      <p className="text-sm font-semibold text-white">
-                        {language === 'fr' ? '🟢 Pointe le QR dans le cadre' : '🟢 Point the QR inside the frame'}
-                      </p>
-                      <p className="text-[11px] text-orange-200">
-                        {language === 'fr' ? 'Détection automatique…' : 'Auto-detecting…'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Écran d'accueil (caméra arrêtée) : bouton démarrer clair */}
-                {!isScanning && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-gray-800 to-black p-4 text-center">
-                    <QrCode size={40} className="text-orange-400" />
-                    <p className="text-sm font-medium text-gray-200">
-                      {language === 'fr' ? 'Scanne le QR de ton étiquette pour faire un mouvement' : 'Scan your label QR to make a movement'}
-                    </p>
-                    <button onClick={startScanning} className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-base font-bold text-white shadow-lg hover:bg-orange-600 active:scale-95 transition-all">
-                      <Camera size={20} /> {language === 'fr' ? 'Démarrer la caméra' : 'Start camera'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Contrôles en haut (pendant le scan) : torche + arrêt */}
-                {isScanning && (
-                  <div className="absolute right-2 top-2 flex gap-2">
-                    {torchSupported && (
-                      <button onClick={toggleTorch} className={`rounded-full p-2 shadow ${torchOn ? 'bg-yellow-400 text-black' : 'bg-black/60 text-white'}`} title={language === 'fr' ? 'Lampe' : 'Torch'}>
-                        <Zap size={18} />
-                      </button>
-                    )}
-                    <button onClick={stopScanning} className="rounded-full bg-black/60 p-2 text-white shadow hover:bg-black/80" title={language === 'fr' ? 'Arrêter' : 'Stop'}>
-                      <X size={18} />
-                    </button>
-                  </div>
-                )}
+              {/* ===== SCAN VIA LA CAMÉRA DE L'APPAREIL (photo) — fiable sur étiquettes imprimées =====
+                  L'ancienne caméra live (autofocus déficient sur petites étiquettes) est retirée :
+                  on ouvre directement la caméra native de l'appareil, qui fait le focus correctement. */}
+              <div className="mt-3 rounded-xl border-2 border-dashed border-orange-300 dark:border-orange-700 bg-orange-50/60 dark:bg-orange-900/10 p-6 text-center">
+                <QrCode size={42} className="mx-auto text-orange-400" />
+                <p className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {language === 'fr' ? "Ouvre la caméra de ton appareil et photographie le QR de l'étiquette." : 'Open your device camera and take a photo of the label QR.'}
+                </p>
+                <button onClick={() => photoInputRef.current?.click()} className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-base font-bold text-white shadow-lg hover:bg-orange-600 active:scale-95 transition-all">
+                  <Camera size={20} /> {language === 'fr' ? 'Ouvrir la caméra' : 'Open camera'}
+                </button>
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
+                  {language === 'fr' ? "Astuce : la caméra native de ton téléphone lit aussi ce QR directement (elle ouvre la fiche du produit)." : "Tip: your phone's native camera also reads this QR directly (opens the product sheet)."}
+                </p>
               </div>
-
-              {/* Zoom (si la caméra le supporte) */}
-              {isScanning && zoomCaps && (
-                <div className="mt-2 flex items-center gap-2">
-                  <Search size={14} className="text-gray-400" />
-                  <input type="range" min={zoomCaps.min} max={zoomCaps.max} step={zoomCaps.step} value={zoom} onChange={(e) => applyZoom(e.target.value)} className="h-2 flex-1 cursor-pointer accent-orange-500" />
-                  <span className="w-10 text-right text-xs text-gray-500 dark:text-gray-400">{Number(zoom).toFixed(1)}×</span>
-                </div>
-              )}
-
-              {/* Repli PHOTO (codes très petits, ou navigateurs sans caméra live) */}
-              <div className="mt-3 flex items-center gap-3">
-                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-                <span className="text-[11px] uppercase tracking-wide text-gray-400">{language === 'fr' ? 'ou' : 'or'}</span>
-                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-              </div>
-              <button onClick={() => photoInputRef.current?.click()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-sm font-bold text-white shadow hover:bg-slate-800">
-                <Camera size={18} /> {language === 'fr' ? '📷 Scanner par photo' : '📷 Scan by photo'}
-              </button>
-              <p className="mt-2 text-center text-[11px] text-gray-500 dark:text-gray-400">
-                {language === 'fr' ? "Prends une photo nette du QR ; l'app le décode." : 'Take a sharp photo of the QR; the app decodes it.'}
-              </p>
             </div>
             <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { scanFromPhoto(e.target.files?.[0]); e.currentTarget.value = ''; }} />
             <canvas ref={canvasRef} className="hidden" />
