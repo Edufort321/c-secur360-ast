@@ -3093,6 +3093,10 @@ function AppContent() {
           category: String(a.category || '').trim(),
           department: String(a.department || '').trim(),
           location: combineLoc(a),
+          // Composants d'emplacement (pour créer auto les emplacements/tablettes dans la carte) :
+          empName: String(a.location || '').trim(),
+          shelf: (a.shelf === '' || a.shelf == null) ? 0 : (Number(a.shelf) || 0),
+          position: (a.position === '' || a.position == null) ? 0 : (Number(a.position) || 0),
           quantity, minQuantity, maxQuantity, costPrice, salePrice,
           unit: 'Pièce',
           supplier: String(a.supplier || '').trim(),
@@ -3223,10 +3227,45 @@ function AppContent() {
       setItems(next);
     }
 
+    // EMPLACEMENTS AUTO : à partir des colonnes EMPLACEMENT / TABLETTE / POSITION, on crée (ou met à
+    // jour) les emplacements de stockage dans la carte du département. numberOfShelves = plus grande
+    // TABLETTE vue ; numberOfSpaces = plus grande POSITION vue (capacité couvrant l'import).
+    const deptIdOf = (deptName) => departments.find(d => norm(d.name) === norm(deptName))?.id || null;
+    const empAgg = new Map(); // key deptId|empName -> { deptId, name, shelves, spaces }
+    validItems.forEach(it => {
+      const empName = String(it.empName || '').trim();
+      if (!empName) return;
+      const deptId = deptIdOf(it.department);
+      if (!deptId) return;
+      const key = deptId + '|' + norm(empName);
+      const cur = empAgg.get(key) || { deptId, name: empName, shelves: 0, spaces: 0 };
+      cur.shelves = Math.max(cur.shelves, Number(it.shelf) || 0);
+      cur.spaces = Math.max(cur.spaces, Number(it.position) || 0);
+      empAgg.set(key, cur);
+    });
+    let empCreated = 0, empUpdated = 0;
+    if (empAgg.size) {
+      setStorageUnits(prev => {
+        const nextSU = [...prev];
+        empAgg.forEach(({ deptId, name, shelves, spaces }) => {
+          const i = nextSU.findIndex(u => u.departmentId === deptId && norm(u.name) === norm(name));
+          if (i >= 0) {
+            nextSU[i] = { ...nextSU[i], numberOfShelves: Math.max(nextSU[i].numberOfShelves || 0, shelves), numberOfSpaces: Math.max(nextSU[i].numberOfSpaces || 0, spaces), updated_at: new Date().toISOString() };
+            empUpdated++;
+          } else {
+            nextSU.push({ id: `imp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, name, code: '', departmentId: deptId, numberOfShelves: shelves, numberOfSpaces: spaces, shelves: [], created_at: new Date().toISOString() });
+            empCreated++;
+          }
+        });
+        saveLS('c-secur360-storage-units', nextSU);
+        return nextSU;
+      });
+    }
+
     movementsToAdd.forEach(m => addMovement(m));
     notify(language === 'fr'
-      ? `Import terminé : ${createdCount} article(s) créé(s), ${mergedCount} emplacement(s) ajouté(s) à des articles existants.`
-      : `Import done: ${createdCount} article(s) created, ${mergedCount} location(s) added to existing articles.`);
+      ? `Import terminé : ${createdCount} article(s) créé(s), ${mergedCount} emplacement(s) fusionné(s)${empCreated || empUpdated ? `, ${empCreated} emplacement(s) créé(s) / ${empUpdated} mis à jour dans les cartes` : ''}.`
+      : `Import done: ${createdCount} created, ${mergedCount} merged${empCreated || empUpdated ? `, ${empCreated} storage created / ${empUpdated} updated` : ''}.`);
     setImportStep('complete');
   };
 
