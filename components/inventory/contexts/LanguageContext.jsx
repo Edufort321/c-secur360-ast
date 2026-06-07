@@ -2162,19 +2162,53 @@ export const LanguageProvider = ({ children }) => {
     };
   }, []);
 
+  // Libellés de SECOURS pour des clés non présentes dans `translations` (évite d'afficher la clé
+  // brute du genre « articles.minMax »). Table plate clé->{fr,en}.
+  const FALLBACK = {
+    'alerts.manage': { fr: 'Gestion des alertes', en: 'Alerts management' },
+    'alerts.toOrder': { fr: 'À commander', en: 'To order' },
+    'articles.articlesNeedUpdate': { fr: 'Articles à mettre à jour', en: 'Articles to update' },
+    'articles.consumables': { fr: 'Consommables', en: 'Consumables' },
+    'articles.currentStock': { fr: 'Stock actuel', en: 'Current stock' },
+    'articles.equipment': { fr: 'Équipement', en: 'Equipment' },
+    'articles.inFormat': { fr: 'Format', en: 'Format' },
+    'articles.labels': { fr: 'Étiquettes', en: 'Labels' },
+    'articles.minMax': { fr: 'Min / Max', en: 'Min / Max' },
+    'articles.numberOfMonths': { fr: 'Nombre de mois', en: 'Number of months' },
+    'articles.printPreview': { fr: "Aperçu d'impression", en: 'Print preview' },
+    'articles.printerSetup': { fr: "Configuration de l'imprimante", en: 'Printer setup' },
+    'articles.productDetails': { fr: 'Détails du produit', en: 'Product details' },
+    'articles.stockLevel': { fr: 'Niveau de stock', en: 'Stock level' },
+    'articles.viewArticles': { fr: 'Voir les articles', en: 'View articles' },
+    'common.qty': { fr: 'Qté', en: 'Qty' },
+    'messages.error.codeRequired': { fr: 'Code requis', en: 'Code required' },
+    'messages.error.customCodeRequired': { fr: 'Code personnalisé requis', en: 'Custom code required' },
+    'messages.error.fileRead': { fr: 'Erreur de lecture du fichier', en: 'File read error' },
+    'messages.error.fillRequired': { fr: 'Veuillez remplir les champs obligatoires', en: 'Please fill required fields' },
+    'messages.error.selectAtLeastOne': { fr: 'Sélectionne au moins un article', en: 'Select at least one item' },
+    'messages.error.selectOneBranch': { fr: 'Sélectionne au moins une succursale', en: 'Select at least one branch' },
+    'messages.info.noUpdateNeeded': { fr: 'Aucune mise à jour nécessaire', en: 'No update needed' },
+    'messages.success.articleCreated': { fr: 'Article créé', en: 'Article created' },
+    'movements.fullHistory': { fr: 'Historique complet', en: 'Full history' },
+    'reports.generateExport': { fr: 'Générer / Exporter', en: 'Generate / Export' },
+    'scanner.readOnlyHint': { fr: 'Lecture seule', en: 'Read-only' },
+  };
+  const humanize = (key) => {
+    const seg = (key.split('.').pop() || key);
+    return seg.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/^./, c => c.toUpperCase());
+  };
+
   const t = (key) => {
     const keys = key.split('.');
     let value = translations[language];
-
     for (const k of keys) {
-      if (value && typeof value === 'object') {
-        value = value[k];
-      } else {
-        return key;
-      }
+      if (value && typeof value === 'object') value = value[k];
+      else { value = undefined; break; }
     }
-
-    return value || key;
+    if (value != null && typeof value !== 'object') return value;
+    // Non trouvé : libellé de secours (table) puis humanisation -> jamais la clé brute.
+    if (FALLBACK[key]) return FALLBACK[key][language] || FALLBACK[key].fr;
+    return humanize(key);
   };
 
   const changeLanguage = (newLanguage) => {
