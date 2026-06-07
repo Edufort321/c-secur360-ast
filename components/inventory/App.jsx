@@ -2273,6 +2273,25 @@ function AppContent() {
     ));
   };
 
+  // Suppression EN MASSE des articles sélectionnés (une seule confirmation). Utile pour nettoyer
+  // un import raté. Irréversible -> confirmation explicite avec le nombre.
+  const deleteSelectedItems = () => {
+    const count = selectedItems.length;
+    if (!count) return;
+    askConfirm({
+      message: language === 'fr'
+        ? `Supprimer ${count} article(s) sélectionné(s) ? Cette action est irréversible.`
+        : `Delete ${count} selected article(s)? This cannot be undone.`,
+      confirmLabel: language === 'fr' ? `Supprimer ${count}` : `Delete ${count}`,
+      onConfirm: () => {
+        const ids = new Set(selectedItems);
+        setItems(prev => { const next = prev.filter(item => !ids.has(item.id)); saveLS('c-secur360-inventory-items', next); return next; });
+        setSelectedItems([]);
+        notify(language === 'fr' ? `${count} article(s) supprimé(s).` : `${count} article(s) deleted.`);
+      },
+    });
+  };
+
   const deleteItem = (itemId) => {
     askConfirm({ message: t('messages.confirm.delete'), confirmLabel: language === 'fr' ? 'Supprimer' : 'Delete', onConfirm: () => setItems(prev => prev.filter(item => item.id !== itemId)) });
   };
@@ -3505,13 +3524,15 @@ function AppContent() {
         const v = videoRef.current;
         if (v) { v.srcObject = stream; v.setAttribute('playsinline', 'true'); v.muted = true; try { await v.play(); } catch { /* ignore */ } }
         setIsScanning(true);
-        // Capacités caméra : zoom (démarre à 2x), lampe, autofocus continu.
+        // Capacités caméra : zoom (démarre à 1x = PLEIN CADRE pour cadrer facilement le QR ;
+        // un zoom par défaut trop fort recadrait/floutait l'étiquette et empêchait la lecture),
+        // lampe, autofocus continu. L'utilisateur peut zoomer via le curseur si besoin.
         try {
           const caps = track.getCapabilities ? track.getCapabilities() : {};
           if (caps.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > (caps.zoom.min || 1)) {
             const min = caps.zoom.min || 1, max = caps.zoom.max, step = caps.zoom.step || 0.1;
             setZoomCaps({ min, max, step });
-            const z = Math.min(max, Math.max(min, 2)); setZoom(z);
+            const z = min; setZoom(z);
             try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch { /* ignore */ }
           } else setZoomCaps(null);
           setTorchSupported(!!caps.torch);
@@ -8273,6 +8294,7 @@ function AppContent() {
             handleSort={handleSort}
             setEditingItem={setEditingItem}
             deleteItem={deleteItem}
+            deleteSelectedItems={deleteSelectedItems}
             setSelectedItemForView={setSelectedItemForView}
             setShowShareModal={setShowShareModal}
             setSelectedItemForShare={setSelectedItemForShare}

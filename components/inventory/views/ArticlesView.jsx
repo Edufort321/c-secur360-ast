@@ -187,6 +187,7 @@ const ArticlesView = React.memo(({
   setShowItemForm,
   setEditingItem,
   deleteItem,
+  deleteSelectedItems,
   handlePrint,
   printCurrentView,
   setSelectedItemForView,
@@ -295,6 +296,18 @@ const ArticlesView = React.memo(({
               </div>
             )}
           </div>
+          {/* Suppression EN MASSE des articles sélectionnés (nettoyage rapide d'un import) */}
+          {deleteSelectedItems && (
+            <button
+              onClick={deleteSelectedItems}
+              disabled={selectedItems.length === 0}
+              title={selectedItems.length === 0 ? (t('actions.delete')) : `${t('actions.delete')} (${selectedItems.length})`}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              <Trash2 size={16} />
+              <span className="hidden sm:inline">{selectedItems.length > 0 ? `Supprimer (${selectedItems.length})` : 'Supprimer'}</span>
+            </button>
+          )}
           {importFromCatalogue && (
             <Button variant="secondary" icon={Layers} onClick={importFromCatalogue} className="whitespace-nowrap" title="Importer les articles du catalogue matériel standardisé">
               <span className="hidden sm:inline">Importer du catalogue</span>

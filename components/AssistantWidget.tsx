@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { PointerEvent as ReactPointerEvent, CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -20,7 +21,6 @@ type Msg = { role: 'user' | 'assistant'; content: string };
 const FAB_SIZE = 56;  // h-14 w-14
 const PANEL_W = 352;  // w-[22rem]
 const PANEL_H = 448;  // h-[28rem]
-const POS_KEY = 'cs-assistant-pos';
 
 export function AssistantWidget() {
   const [authed, setAuthed] = useState(false);
@@ -80,19 +80,27 @@ export function AssistantWidget() {
     };
   };
 
+  // Position PAR DÉFAUT : coin bas-droite. La bulle reste déplaçable, mais sa position n'est
+  // PAS mémorisée — elle revient à sa place par défaut à chaque changement de page (voir effet
+  // sur `pathname` ci-dessous).
+  const defaultPos = () => clampPos(window.innerWidth - FAB_SIZE - 20, window.innerHeight - FAB_SIZE - 20);
+
   useEffect(() => {
-    let saved: { x: number; y: number } | null = null;
-    try { saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); } catch { /* ignore */ }
-    setPos(
-      saved && typeof saved.x === 'number' && typeof saved.y === 'number'
-        ? clampPos(saved.x, saved.y)
-        : clampPos(window.innerWidth - FAB_SIZE - 20, window.innerHeight - FAB_SIZE - 20)
-    );
+    setPos(defaultPos());
     const onResize = () => setPos(p => (p ? clampPos(p.x, p.y) : p));
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Retour à la position par défaut (bas-droite) à CHAQUE changement de page ; on ferme aussi le chat.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setPos(defaultPos());
+    setOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const onFabPointerDown = (e: ReactPointerEvent) => {
     const cur = pos ?? clampPos(window.innerWidth - FAB_SIZE - 20, window.innerHeight - FAB_SIZE - 20);
@@ -112,9 +120,7 @@ export function AssistantWidget() {
     if (!draggingRef.current) return;
     draggingRef.current = false;
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    if (movedRef.current && pos) {
-      try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch { /* ignore */ }
-    }
+    // Pas de persistance : la position est volontairement réinitialisée au changement de page.
   };
   const onFabClick = () => {
     // Si on vient de glisser la bulle, on ne (de)clenche pas l'ouverture du chat.
