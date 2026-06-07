@@ -2352,7 +2352,18 @@ function AppContent() {
   // Assistant Prix IA : recherche web du prix coûtant. Accepte une liste de N'IMPORTE quelle taille
   // (toute la liste « d'un coup ») -> découpée en LOTS de 15 (la recherche web se fait par paquets),
   // exécutés en parallèle limité (2). Les résultats remplissent la modale au fur et à mesure.
+  // PLAFOND DE COÛT IA (demande Eric) : ~0,04 $/article estimé, max 200 $/an. Suivi par année
+  // dans localStorage (par tenant). Sert de garde-fou avant chaque recherche de prix.
+  const AI_COST_PER_ARTICLE = 0.04;
+  const AI_ANNUAL_CAP = 200;
+  const aiSpendKey = () => `cs-inv-aiprice-spend-${tenantId}`;
+  const readAiSpend = () => {
+    try { const j = JSON.parse(localStorage.getItem(aiSpendKey()) || 'null'); const y = new Date().getFullYear(); return (j && j.year === y) ? j : { year: y, total: 0 }; } catch { return { year: new Date().getFullYear(), total: 0 }; }
+  };
+  const addAiSpend = (amount) => { try { const s = readAiSpend(); localStorage.setItem(aiSpendKey(), JSON.stringify({ year: s.year, total: Math.round((s.total + amount) * 100) / 100 })); } catch { /* ignore */ } };
+
   const runPriceAssistant = async (list) => {
+    const estimate = list.length * AI_COST_PER_ARTICLE;
     setPriceLoading(true);
     setShowPriceModal(true);
     setPriceRows(list.map(it => ({ id: it.id, code: it.code, name: it.name, supplierCost: Number(it.costPrice) || 0, webPrice: null, source: '', confidence: '', note: '', apply: false })));
@@ -2392,6 +2403,8 @@ function AppContent() {
       await Promise.all(Array.from({ length: Math.min(2, chunks.length) }, () => worker()));
       if (failed) notify((language === 'fr' ? `${failed} lot(s) en échec — réessaie pour ces articles.` : `${failed} batch(es) failed.`), 'warning');
     } finally {
+      // Comptabilise la dépense estimée des lots réellement traités (plafond annuel).
+      addAiSpend((doneChunks / Math.max(1, chunks.length)) * estimate);
       setPriceLoading(false);
       setPriceProgress(null);
     }
@@ -2401,12 +2414,27 @@ function AppContent() {
   const handlePriceAssistant = (targetItems) => {
     const list = Array.isArray(targetItems) ? targetItems.filter(Boolean) : [];
     if (!list.length) { notify(language === 'fr' ? 'Aucun article à mettre à jour.' : 'No item to update.', 'info'); return; }
+    const spend = readAiSpend();
+    const estimate = list.length * AI_COST_PER_ARTICLE;
+    const remaining = Math.max(0, AI_ANNUAL_CAP - spend.total);
+    // PLAFOND ANNUEL 200 $ : si l'estimation dépasse le reste, on confirme explicitement (le patron décide).
+    if (spend.total + estimate > AI_ANNUAL_CAP) {
+      askConfirm({
+        title: language === 'fr' ? '⚠️ Plafond IA annuel' : '⚠️ Annual AI cap',
+        message: language === 'fr'
+          ? `Plafond annuel : ${AI_ANNUAL_CAP} $. Déjà dépensé (estimé) cette année : ${spend.total.toFixed(2)} $ · reste ${remaining.toFixed(2)} $.\nCette recherche (${list.length} articles) est estimée à ~${estimate.toFixed(2)} $ et dépasserait le plafond.\nAstuce : utilise « Périmés >3 mois » pour ne payer que le nécessaire. Lancer quand même ?`
+          : `Annual cap: $${AI_ANNUAL_CAP}. Spent (est.) this year: $${spend.total.toFixed(2)} · remaining $${remaining.toFixed(2)}.\nThis search (${list.length} items) ≈ $${estimate.toFixed(2)} would exceed the cap. Run anyway?`,
+        confirmLabel: language === 'fr' ? 'Lancer quand même' : 'Run anyway',
+        onConfirm: () => runPriceAssistant(list),
+      });
+      return;
+    }
     if (list.length > 30) {
       askConfirm({
         title: language === 'fr' ? 'Mettre à jour toute la liste ?' : 'Update the whole list?',
         message: language === 'fr'
-          ? `Recherche web IA pour ${list.length} articles (découpée en lots). Cela peut prendre quelques minutes et consommer des crédits IA. Continuer ?`
-          : `AI web search for ${list.length} items (batched). This may take a few minutes and use AI credits. Continue?`,
+          ? `Recherche web IA pour ${list.length} articles (≈ ${estimate.toFixed(2)} $, plafond annuel ${AI_ANNUAL_CAP} $ — déjà ${spend.total.toFixed(2)} $). Continuer ?`
+          : `AI web search for ${list.length} items (≈ $${estimate.toFixed(2)}). Continue?`,
         confirmLabel: language === 'fr' ? 'Lancer' : 'Run',
         danger: false,
         onConfirm: () => runPriceAssistant(list),
