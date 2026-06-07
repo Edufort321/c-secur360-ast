@@ -49,6 +49,7 @@ export default function ProjectsPage() {
   const [astCounts, setAstCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [pView, setPView] = useState<'grid' | 'gallery'>('grid'); // grille (défaut) / galerie
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -264,6 +265,17 @@ export default function ProjectsPage() {
           </div>
         )}
 
+        {/* Barre : compteur + bascule Grille / Galerie */}
+        {!loading && filtered.length > 0 && (
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-500">{filtered.length} {filtered.length > 1 ? 'projets' : 'projet'}</span>
+            <div className="flex items-center rounded-lg border border-slate-200 p-0.5 text-xs">
+              <button onClick={() => setPView('grid')} className={`rounded-md px-2 py-1 font-semibold ${pView === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>Grille</button>
+              <button onClick={() => setPView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${pView === 'gallery' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>Galerie</button>
+            </div>
+          </div>
+        )}
+
         {/* Liste */}
         {loading ? (
           <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white py-16 text-slate-400">
@@ -286,11 +298,11 @@ export default function ProjectsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={`grid gap-3 ${pView === 'gallery' ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
             {filtered.map(p => {
               const st = STATUS[p.status || 'soumission'] || STATUS.soumission;
               return (
-                <Link key={p.id} href={`/${tenant}/projects/${p.id}`} className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+                <Link key={p.id} href={`/${tenant}/projects/${p.id}`} className={`block rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md ${pView === 'gallery' ? 'p-5' : 'p-4'}`}>
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
                       <Hash size={13} /> {p.project_number}
