@@ -2372,15 +2372,18 @@ function AppContent() {
     for (let i = 0; i < list.length; i += CHUNK) chunks.push(list.slice(i, i + CHUNK));
     let nextIdx = 0, doneChunks = 0;
     let failed = 0;
+    let exhausted = false;
     const worker = async () => {
       while (nextIdx < chunks.length) {
+        if (exhausted) return; // forfait IA épuisé -> on arrête tout
         const chunk = chunks[nextIdx++];
         try {
           const resp = await fetch('/api/inventory/price-research', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: chunk.map(it => ({ code: it.code, name: it.name, supplier: it.supplier || '', unit: it.unit || '', currentCost: Number(it.costPrice) || 0 })) }),
+            body: JSON.stringify({ tenant: tenantId, items: chunk.map(it => ({ code: it.code, name: it.name, supplier: it.supplier || '', unit: it.unit || '', currentCost: Number(it.costPrice) || 0 })) }),
           });
           const j = await resp.json();
+          if (resp.status === 402 || j.exhausted) { exhausted = true; throw new Error(j.error || 'Forfait IA épuisé'); }
           if (!resp.ok || j.error) throw new Error(j.error || 'Recherche IA échouée');
           const byCode = new Map((j.prices || []).map(p => [String(p.code), p]));
           const ids = new Set(chunk.map(c => c.id));
@@ -2401,7 +2404,8 @@ function AppContent() {
     };
     try {
       await Promise.all(Array.from({ length: Math.min(2, chunks.length) }, () => worker()));
-      if (failed) notify((language === 'fr' ? `${failed} lot(s) en échec — réessaie pour ces articles.` : `${failed} batch(es) failed.`), 'warning');
+      if (exhausted) notify(language === 'fr' ? '⛔ Forfait IA épuisé — renouvelez votre forfait (Administration).' : '⛔ AI plan exhausted — renew your plan.', 'error');
+      else if (failed) notify((language === 'fr' ? `${failed} lot(s) en échec — réessaie pour ces articles.` : `${failed} batch(es) failed.`), 'warning');
     } finally {
       // Comptabilise la dépense estimée des lots réellement traités (plafond annuel).
       addAiSpend((doneChunks / Math.max(1, chunks.length)) * estimate);
