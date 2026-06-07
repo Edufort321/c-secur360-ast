@@ -52,6 +52,7 @@ export default function TenantManagePage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [savedJson, setSavedJson] = useState('');
+  const [aiPlans, setAiPlans] = useState<{ id: string; name_fr: string; price_cents: number }[]>([]);
   const [tsYear, setTsYear] = useState(new Date().getFullYear());
   const [tsData, setTsData] = useState<any[]>([]);
   const [tsLoading, setTsLoading] = useState(false);
@@ -72,6 +73,8 @@ export default function TenantManagePage() {
       if (t?.subdomain) {
         try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents, used_cents, renewal_date').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRenewal(ab.renewal_date ? String(ab.renewal_date).slice(0, 10) : ''); } } catch { /* table absente */ }
       }
+      // Forfaits IA = source unique (table ai_plans, éditée dans /admin/price-management).
+      try { const { data: ap } = await supabase.from('ai_plans').select('id, name_fr, price_cents, active, sort_order').eq('active', true).order('sort_order'); if (ap) setAiPlans(ap.map((p: any) => ({ id: p.id, name_fr: p.name_fr, price_cents: Number(p.price_cents) || 0 }))); } catch { /* migration 132 absente */ }
       const { data: catalog } = await supabase.from('modules').select('key, name_fr, monthly_price, sort_order').order('sort_order');
       const { data: tm } = await supabase.from('tenant_modules').select('module_key, enabled').eq('tenant_id', id);
       const enabledSet = new Set((tm || []).filter((x: any) => x.enabled).map((x: any) => x.module_key));
@@ -346,12 +349,17 @@ export default function TenantManagePage() {
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA</span>
                   <select className={inputCls} value={aiTier} onChange={e => setAiTier(Number(e.target.value))}>
                     <option value={0}>Aucun (illimité — non bloqué)</option>
-                    <option value={50000}>500 $ (budget IA ~350 $)</option>
-                    <option value={100000}>1000 $ (budget IA ~700 $)</option>
-                    <option value={150000}>1500 $ (budget IA ~1050 $)</option>
+                    {aiPlans.map(p => (
+                      <option key={p.id} value={p.price_cents}>{p.name_fr} — {Math.round(p.price_cents / 100)} $ (budget IA ~{Math.round(p.price_cents * 0.7 / 100)} $)</option>
+                    ))}
+                    {aiTier > 0 && !aiPlans.some(p => p.price_cents === aiTier) && (
+                      <option value={aiTier}>{Math.round(aiTier / 100)} $ (forfait personnalisé)</option>
+                    )}
                   </select>
                   <span className="mt-1 block text-[11px] text-gray-400">
-                    Budget de coût IA réel = prix × 70 % (marge 30 %). Consommé : {((aiUsed) / 100).toFixed(2)} $ · budget {((aiTier * 0.7) / 100).toFixed(2)} $.
+                    {aiPlans.length === 0
+                      ? 'Forfaits définis dans la Gestion des prix (table ai_plans, migration 132).'
+                      : <>Source unique : <a href="/admin/price-management" className="underline">Gestion des prix → Forfaits Assistant IA</a>.</>} Budget réel = prix × 70 % (marge 30 %). Consommé : {((aiUsed) / 100).toFixed(2)} $ · budget {((aiTier * 0.7) / 100).toFixed(2)} $.
                   </span>
                 </label>
                 <label className="block">
