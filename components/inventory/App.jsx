@@ -5176,6 +5176,7 @@ function AppContent() {
     const [selectedItems, setSelectedItems] = useState([]);
     // Quantité à commander AJUSTABLE manuellement (sinon défaut = max − stock).
     const [orderQty, setOrderQty] = useState({}); // { itemId: number }
+    const [poWithPrices, setPoWithPrices] = useState(false); // bon de commande : inclure les prix ? (défaut non)
     const suggestedQty = (item) => Math.max((Number(item.maxQuantity) || 0) - (Number(item.quantity) || 0), 0);
     const getOrderQty = (item) => {
       const v = orderQty[item.id];
@@ -5361,16 +5362,22 @@ function AppContent() {
       const dateStr = new Date().toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { day: '2-digit', month: 'long', year: 'numeric' });
       const bySupplier = {};
       selected.forEach(it => { const s = (it.supplier || '').trim() || L.unspec; (bySupplier[s] = bySupplier[s] || []).push(it); });
+      // PRIX OPTIONNELS : par défaut on n'imprime QUE les quantités à commander (les prix peuvent
+      // être périmés). L'utilisateur peut cocher « Inclure les prix » pour les ajouter.
+      const wp = poWithPrices;
       let grand = 0, body = '';
       Object.entries(bySupplier).forEach(([supplier, list]) => {
         const email = (list.find(i => i.supplierEmail)?.supplierEmail) || '';
         let st = 0;
         const rows = list.map((it, i) => {
           const q = getOrderQty(it); const sub = q * (Number(it.costPrice) || 0); st += sub;
-          return `<tr><td>${i + 1}</td><td><b>${esc(it.name)}</b><br><span class="muted">${esc(it.code)}</span></td><td>${esc(it.description || '')}</td><td class="r">${q} ${esc(it.unit || '')}</td><td class="r">$${(Number(it.costPrice) || 0).toFixed(2)}</td><td class="r">$${sub.toFixed(2)}</td></tr>`;
+          const priceCells = wp ? `<td class="r">$${(Number(it.costPrice) || 0).toFixed(2)}</td><td class="r">$${sub.toFixed(2)}</td>` : '';
+          return `<tr><td>${i + 1}</td><td><b>${esc(it.name)}</b><br><span class="muted">${esc(it.code)}</span></td><td>${esc(it.description || '')}</td><td class="r">${q} ${esc(it.unit || '')}</td>${priceCells}</tr>`;
         }).join('');
         grand += st;
-        body += `<div class="po"><h2>${L.title} — ${esc(supplier)}</h2>${email ? `<p class="muted">${esc(email)}</p>` : ''}<table><thead><tr><th>${L.num}</th><th>${L.item}</th><th>${L.desc}</th><th class="r">${L.qty}</th><th class="r">${L.price}</th><th class="r">${L.sub}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" class="r"><b>${L.total} — ${esc(supplier)}</b></td><td class="r"><b>$${st.toFixed(2)}</b></td></tr></tfoot></table></div>`;
+        const headPrice = wp ? `<th class="r">${L.price}</th><th class="r">${L.sub}</th>` : '';
+        const footRow = wp ? `<tfoot><tr><td colspan="5" class="r"><b>${L.total} — ${esc(supplier)}</b></td><td class="r"><b>$${st.toFixed(2)}</b></td></tr></tfoot>` : '';
+        body += `<div class="po"><h2>${L.title} — ${esc(supplier)}</h2>${email ? `<p class="muted">${esc(email)}</p>` : ''}<table><thead><tr><th>${L.num}</th><th>${L.item}</th><th>${L.desc}</th><th class="r">${L.qty}</th>${headPrice}</tr></thead><tbody>${rows}</tbody>${footRow}</table></div>`;
       });
       const w = window.open('', '_blank');
       if (!w) { notify(fr ? 'Autorise les fenêtres pop-up pour imprimer.' : 'Allow pop-ups to print.', 'error'); return; }
@@ -5387,7 +5394,7 @@ function AppContent() {
         tfoot td{background:#f4f1ea;font-size:13px}
       </style></head><body>
         <h1>${L.title} — C-Secur360</h1>
-        <div class="meta"><b>${L.date} :</b> ${dateStr} · <b>${Object.keys(bySupplier).length}</b> ${L.suppliers} · <b>${L.grand} :</b> $${grand.toFixed(2)}</div>
+        <div class="meta"><b>${L.date} :</b> ${dateStr} · <b>${Object.keys(bySupplier).length}</b> ${L.suppliers}${wp ? ` · <b>${L.grand} :</b> $${grand.toFixed(2)}` : ''}</div>
         ${body}
       </body></html>`);
       w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 300);
@@ -5532,6 +5539,10 @@ function AppContent() {
                 >
                   {language === 'fr' ? `Bon de commande PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}` : `Purchase order PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}`}
                 </Button>
+                <label className="flex items-center gap-1.5 px-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                  <input type="checkbox" checked={poWithPrices} onChange={(e) => setPoWithPrices(e.target.checked)} className="h-4 w-4 rounded accent-slate-700" />
+                  {language === 'fr' ? 'Inclure les prix' : 'Include prices'}
+                </label>
               </div>
             </div>
           </div>
