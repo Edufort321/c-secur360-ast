@@ -195,10 +195,13 @@ export default function TenantManagePage() {
         erp_company_id: tenant.erp_company_id || null,
         logo_url: tenant.logo_url || null,
       };
-      // max_sites ajouté à part : tolérant si la colonne (migration 078) n'existe pas encore
-      let { error } = await supabase.from('tenants').update({ ...base, max_sites: Math.max(1, Number(tenant.max_sites) || 1) }).eq('id', id);
-      if (error && /max_sites/i.test(error.message || '')) {
-        ({ error } = await supabase.from('tenants').update(base).eq('id', id));
+      // Colonnes optionnelles (tolérant si la migration n'est pas encore appliquée) :
+      // max_sites (078) et ai_tier_cents (131, forfait IA).
+      const optional = { max_sites: Math.max(1, Number(tenant.max_sites) || 1), ai_tier_cents: Math.max(0, Number(tenant.ai_tier_cents) || 0) };
+      let { error } = await supabase.from('tenants').update({ ...base, ...optional }).eq('id', id);
+      if (error) {
+        ({ error } = await supabase.from('tenants').update({ ...base, max_sites: optional.max_sites }).eq('id', id));
+        if (error && /max_sites/i.test(error.message || '')) ({ error } = await supabase.from('tenants').update(base).eq('id', id));
       }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -320,6 +323,19 @@ export default function TenantManagePage() {
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Nombre de sites inclus</span>
                   <input type="number" min={1} className={inputCls} value={tenant.max_sites ?? 1} onFocus={e => e.target.select()} onChange={e => setTenant((t: any) => ({ ...t, max_sites: e.target.value === '' ? '' : Number(e.target.value) }))} />
                   <span className="mt-1 block text-[11px] text-gray-400">1 site inclus ; chaque site supplémentaire est facturé (prix « site additionnel » dans la gestion des prix). Le tenant est bloqué au-delà de cette limite.</span>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA</span>
+                  <select className={inputCls} value={Number(tenant.ai_tier_cents) || 0} onChange={e => setTenant((t: any) => ({ ...t, ai_tier_cents: Number(e.target.value) }))}>
+                    <option value={0}>Aucun (illimité — non bloqué)</option>
+                    <option value={50000}>500 $ (budget IA ~350 $)</option>
+                    <option value={100000}>1000 $ (budget IA ~700 $)</option>
+                    <option value={150000}>1500 $ (budget IA ~1050 $)</option>
+                  </select>
+                  <span className="mt-1 block text-[11px] text-gray-400">
+                    Budget de coût IA réel = prix × 70 % (marge 30 %). Consommé : {(((Number(tenant.ai_used_cents) || 0)) / 100).toFixed(2)} $ · budget {(((Number(tenant.ai_tier_cents) || 0) * 0.7) / 100).toFixed(2)} $.
+                    Renouveler = remettre la conso à 0 (SQL fourni).
+                  </span>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">
