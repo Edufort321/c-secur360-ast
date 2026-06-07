@@ -19,21 +19,22 @@ export async function POST(req: NextRequest) {
   if (!items.length) return NextResponse.json({ error: 'Aucun article a rechercher.' }, { status: 400 });
   if (items.length > 20) return NextResponse.json({ error: `Trop d'articles (${items.length}). Maximum 20 par recherche.` }, { status: 400 });
 
-  const list = items.map((it, i) => `${i + 1}. code="${String(it.code || '').slice(0, 40)}" nom="${String(it.name || '').slice(0, 120)}"${it.supplier ? ` fournisseur="${String(it.supplier).slice(0, 60)}"` : ''}${it.unit ? ` unite="${String(it.unit).slice(0, 20)}"` : ''}`).join('\n');
+  const list = items.map((it, i) => `${i + 1}. code="${String(it.code || '').slice(0, 40)}" nom="${String(it.name || '').slice(0, 120)}"${it.supplier ? ` fournisseur="${String(it.supplier).slice(0, 60)}"` : ''}`).join('\n');
 
-  const prompt = `Tu es un assistant d'approvisionnement. Recherche sur le WEB le PRIX COUTANT UNITAIRE actuel (CAD, en dollars canadiens si possible, sinon convertis approximativement) de chaque article ci-dessous. Privilegie les fournisseurs industriels / grossistes / distributeurs (pas le detail grand public quand un prix grossiste existe). Indique la source (domaine).
-
+  // Prompt COMPACT (moins de tokens). Sortie JSON minimale.
+  const prompt = `Recherche le PRIX COUTANT unitaire actuel (CAD) de chaque article (fournisseurs industriels/grossistes en priorite). 1 recherche par article au plus.
 Articles :
 ${list}
-
-Reponds UNIQUEMENT avec un objet JSON valide, sans texte autour ni backticks, de la forme :
-{"prices":[{"code": string, "webPrice": number, "currency": "CAD", "source": string, "confidence": "haute"|"moyenne"|"faible", "note": string}]}
-Regles : un objet par article (meme "code" qu'en entree). Si introuvable, webPrice=0 et note explicative. webPrice = nombre simple (pas de symbole). Ne devine pas un prix sans source.`;
+Reponds UNIQUEMENT en JSON, sans texte ni backticks :
+{"prices":[{"code":string,"webPrice":number,"source":string,"confidence":"haute"|"moyenne"|"faible"}]}
+Un objet par article (meme code). Introuvable -> webPrice:0. webPrice = nombre sans symbole. Ne devine pas sans source.`;
 
   const baseBody: any = {
-    model: 'claude-opus-4-8',
-    max_tokens: 4000,
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(20, items.length * 2) }],
+    // OPTIMISATION COUTS : Sonnet 4.6 (moins cher qu'Opus, supporte la recherche web), sortie courte,
+    // 1 recherche web par article max (la recherche web est facturee a l'unite).
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(12, items.length) }],
     messages: [{ role: 'user', content: prompt }],
   };
 
