@@ -5103,6 +5103,13 @@ function AppContent() {
     const [selectedDepartment, setSelectedDepartment] = useState('all');
     const [selectedSupplier, setSelectedSupplier] = useState('all');
     const [selectedItems, setSelectedItems] = useState([]);
+    // Quantité à commander AJUSTABLE manuellement (sinon défaut = max − stock).
+    const [orderQty, setOrderQty] = useState({}); // { itemId: number }
+    const suggestedQty = (item) => Math.max((Number(item.maxQuantity) || 0) - (Number(item.quantity) || 0), 0);
+    const getOrderQty = (item) => {
+      const v = orderQty[item.id];
+      return v === undefined || v === '' ? suggestedQty(item) : Math.max(0, Math.round(Number(v) || 0));
+    };
 
     // Get alerts (items with low stock)
     const alerts = items.filter(item => item.quantity <= item.minQuantity);
@@ -5180,7 +5187,7 @@ function AppContent() {
         orderText += `\n${t('reports.supplierLabel')} ${supplier}\n`;
         orderText += '─────────────────────────────────\n';
         items.forEach(item => {
-          const qtyToOrder = Math.max(item.maxQuantity - item.quantity, 0);
+          const qtyToOrder = getOrderQty(item);
           orderText += `${item.name}\n`;
           orderText += `  ${t('common.codeWith')} ${item.code}\n`;
           orderText += `  ${t('common.department')}: ${item.department}\n`;
@@ -5236,7 +5243,7 @@ function AppContent() {
         let totalOrder = 0;
 
         supplierItems.forEach((item, index) => {
-          const qtyToOrder = Math.max(item.maxQuantity - item.quantity, 0);
+          const qtyToOrder = getOrderQty(item);
           const subtotal = qtyToOrder * item.costPrice;
           totalOrder += subtotal;
 
@@ -5262,6 +5269,57 @@ function AppContent() {
       });
 
       deselectAll();
+    };
+
+    // BON DE COMMANDE PDF (impression -> "Enregistrer en PDF"). Groupé par fournisseur, avec
+    // description + quantité à commander (ajustée), prix, sous-total par fournisseur et total.
+    // Prêt à envoyer au fournisseur.
+    const printPurchaseOrder = () => {
+      const selected = selectedItems.length ? items.filter(i => selectedItems.includes(i.id)) : filteredAlerts;
+      if (!selected.length) { notify(language === 'fr' ? 'Aucun article à commander (sélectionne ou ajuste les filtres).' : 'No item to order.', 'error'); return; }
+      const fr = language === 'fr';
+      const L = {
+        title: fr ? 'Bon de commande' : 'Purchase order', date: fr ? 'Date' : 'Date',
+        suppliers: fr ? 'fournisseur(s)' : 'supplier(s)', grand: fr ? 'Total général' : 'Grand total',
+        num: '#', item: fr ? 'Article' : 'Item', desc: fr ? 'Description' : 'Description',
+        qty: fr ? 'Qté à commander' : 'Qty to order', price: fr ? 'Prix unitaire' : 'Unit price',
+        sub: fr ? 'Sous-total' : 'Subtotal', total: fr ? 'Total' : 'Total',
+        unspec: fr ? 'Fournisseur non spécifié' : 'Unspecified supplier',
+      };
+      const esc = (x) => String(x ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      const dateStr = new Date().toLocaleDateString(fr ? 'fr-CA' : 'en-CA', { day: '2-digit', month: 'long', year: 'numeric' });
+      const bySupplier = {};
+      selected.forEach(it => { const s = (it.supplier || '').trim() || L.unspec; (bySupplier[s] = bySupplier[s] || []).push(it); });
+      let grand = 0, body = '';
+      Object.entries(bySupplier).forEach(([supplier, list]) => {
+        const email = (list.find(i => i.supplierEmail)?.supplierEmail) || '';
+        let st = 0;
+        const rows = list.map((it, i) => {
+          const q = getOrderQty(it); const sub = q * (Number(it.costPrice) || 0); st += sub;
+          return `<tr><td>${i + 1}</td><td><b>${esc(it.name)}</b><br><span class="muted">${esc(it.code)}</span></td><td>${esc(it.description || '')}</td><td class="r">${q} ${esc(it.unit || '')}</td><td class="r">$${(Number(it.costPrice) || 0).toFixed(2)}</td><td class="r">$${sub.toFixed(2)}</td></tr>`;
+        }).join('');
+        grand += st;
+        body += `<div class="po"><h2>${L.title} — ${esc(supplier)}</h2>${email ? `<p class="muted">${esc(email)}</p>` : ''}<table><thead><tr><th>${L.num}</th><th>${L.item}</th><th>${L.desc}</th><th class="r">${L.qty}</th><th class="r">${L.price}</th><th class="r">${L.sub}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" class="r"><b>${L.total} — ${esc(supplier)}</b></td><td class="r"><b>$${st.toFixed(2)}</b></td></tr></tfoot></table></div>`;
+      });
+      const w = window.open('', '_blank');
+      if (!w) { notify(fr ? 'Autorise les fenêtres pop-up pour imprimer.' : 'Allow pop-ups to print.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${L.title} ${dateStr}</title><style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#222}
+        h1{color:#0D1F3C;border-bottom:3px solid #f97316;padding-bottom:8px}
+        .meta{color:#555;margin-bottom:16px}
+        .po{margin-bottom:26px;page-break-inside:avoid}
+        h2{color:#0D1F3C;font-size:15px;margin:14px 0 6px}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th,td{border:1px solid #ddd;padding:7px;text-align:left;vertical-align:top}
+        th{background:#0D1F3C;color:#fff}
+        .r{text-align:right}.muted{color:#888;font-size:11px}
+        tfoot td{background:#f4f1ea;font-size:13px}
+      </style></head><body>
+        <h1>${L.title} — C-Secur360</h1>
+        <div class="meta"><b>${L.date} :</b> ${dateStr} · <b>${Object.keys(bySupplier).length}</b> ${L.suppliers} · <b>${L.grand} :</b> $${grand.toFixed(2)}</div>
+        ${body}
+      </body></html>`);
+      w.document.close(); w.focus(); setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 300);
     };
 
     return (
@@ -5394,6 +5452,15 @@ function AppContent() {
                 >
                   {t('alerts.sendOrderEmail')} ({selectedItems.length})
                 </Button>
+                <Button
+                  variant="secondary"
+                  icon={FileText}
+                  onClick={printPurchaseOrder}
+                  disabled={filteredAlerts.length === 0}
+                  title={language === 'fr' ? 'Bon de commande détaillé (PDF), groupé par fournisseur — sélection ou toutes les alertes' : 'Detailed purchase order (PDF) by supplier'}
+                >
+                  {language === 'fr' ? `Bon de commande PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}` : `Purchase order PDF${selectedItems.length ? ` (${selectedItems.length})` : ''}`}
+                </Button>
               </div>
             </div>
           </div>
@@ -5452,7 +5519,7 @@ function AppContent() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {deptAlerts.map((item, index) => {
-                        const qtyToOrder = Math.max(item.maxQuantity - item.quantity, 0);
+                        const qtyToOrder = getOrderQty(item);
                         const totalCost = qtyToOrder * item.costPrice;
 
                         return (
@@ -5499,9 +5566,13 @@ function AppContent() {
                               {item.minQuantity} / {item.maxQuantity}
                             </td>
                             <td className="px-4 py-3">
-                              <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full text-sm font-semibold">
-                                {qtyToOrder}
-                              </span>
+                              <input
+                                type="number" min="0"
+                                value={orderQty[item.id] !== undefined ? orderQty[item.id] : suggestedQty(item)}
+                                onChange={(e) => setOrderQty(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                className="w-20 rounded-lg border-2 border-green-300 bg-green-50 px-2 py-1 text-center text-sm font-bold text-green-800 focus:border-green-500 focus:outline-none dark:border-green-700 dark:bg-green-900/20 dark:text-green-300"
+                                title={language === 'fr' ? 'Quantité à commander (ajustable)' : 'Quantity to order (adjustable)'}
+                              />
                             </td>
                             <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">
                               ${item.costPrice.toFixed(2)}
