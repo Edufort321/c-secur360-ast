@@ -77,6 +77,7 @@ export default function AdminDashboard() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [vendors, setVendors] = useState<any[]>([]);
+  const [aiReq, setAiReq] = useState<{ requested: string[]; exhausted: string[] }>({ requested: [], exhausted: [] });
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [newVendor, setNewVendor] = useState({ name: '', email: '', phone: '', commission_rate: 20, notes: '' });
   const [savingVendor, setSavingVendor] = useState(false);
@@ -165,6 +166,8 @@ export default function AdminDashboard() {
         setStats(prev => ({ ...prev, totalClients: data.tenants.length }));
       }
     } catch { /* ignore */ }
+    // Demandes d'ajustement de forfait IA en attente (carte rouge « ajustement token requis »).
+    try { const r = await fetch('/api/admin/ai-requests'); const d = await r.json(); if (Array.isArray(d.requested)) setAiReq({ requested: d.requested, exhausted: Array.isArray(d.exhausted) ? d.exhausted : [] }); } catch { /* ignore */ }
   };
   const loadVendors = async () => {
     try {
@@ -536,6 +539,11 @@ export default function AdminDashboard() {
                       <div>
                         <p style={{ margin: '0 0 4px 0', fontWeight: '600' }}>{client.name}</p>
                         <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>/{client.subdomain}</p>
+                        {(aiReq.requested.includes(client.subdomain) || aiReq.exhausted.includes(client.subdomain)) && (
+                          <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: '#fee2e2', color: '#b91c1c' }}>
+                            🔴 {aiReq.requested.includes(client.subdomain) ? 'Ajustement token requis' : 'Forfait IA épuisé'}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={{ padding: '16px' }}>

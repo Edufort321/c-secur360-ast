@@ -449,80 +449,8 @@ const PriceManagementPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Forfaits Assistant IA (jetons) — cartes de prix publiques ajustables */}
-      <AiPlansEditor onMessage={showMessage} />
-    </div>
-  );
-};
-
-type AiPlan = { id: string; name_fr: string; name_en: string; price_cents: number; note_fr: string; note_en: string; sort_order: number; active: boolean };
-
-const AiPlansEditor: React.FC<{ onMessage: (t: 'success' | 'error', m: string) => void }> = ({ onMessage }) => {
-  const [plans, setPlans] = useState<AiPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [savingId, setSavingId] = useState<string | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const r = await fetch('/api/admin/ai-plans');
-      const d = await r.json();
-      if (r.ok && Array.isArray(d.plans)) setPlans(d.plans);
-      else onMessage('error', d.error || 'Forfaits IA indisponibles (migration 132 ?)');
-    } catch { onMessage('error', 'Erreur de connexion (forfaits IA)'); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-
-  const upd = (id: string, patch: Partial<AiPlan>) => setPlans(p => p.map(x => x.id === id ? { ...x, ...patch } : x));
-
-  const save = async (plan: AiPlan) => {
-    setSavingId(plan.id);
-    try {
-      const r = await fetch('/api/admin/ai-plans', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: plan.id, name_fr: plan.name_fr, name_en: plan.name_en, price_cents: plan.price_cents, note_fr: plan.note_fr, note_en: plan.note_en, active: plan.active, sort_order: plan.sort_order }),
-      });
-      const d = await r.json();
-      if (r.ok) onMessage('success', `Forfait « ${plan.name_fr} » enregistré`);
-      else onMessage('error', d.error || 'Échec de l\'enregistrement');
-    } catch { onMessage('error', 'Erreur réseau'); }
-    finally { setSavingId(null); }
-  };
-
-  return (
-    <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-      <div className="flex items-center mb-2">
-        <DollarSign className="text-fuchsia-600 mr-3" size={24} />
-        <h2 className="text-xl font-semibold">Forfaits Assistant IA (jetons)</h2>
-      </div>
-      <p className="text-sm text-gray-500 mb-4">Ces forfaits apparaissent comme cartes de prix sur la page publique. Le prix payé est public ; le budget de coût IA réel (×70 %, marge 30 %) reste interne.</p>
-      {loading ? (
-        <div className="text-gray-400 py-6 text-center">Chargement…</div>
-      ) : plans.length === 0 ? (
-        <div className="text-gray-400 py-6 text-center">Aucun forfait. Exécute la migration 132.</div>
-      ) : (
-        <div className="space-y-3">
-          {plans.map(p => (
-            <div key={p.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center border border-gray-100 rounded-lg p-3">
-              <input className="md:col-span-3 border rounded px-2 py-1.5 text-sm" value={p.name_fr} onChange={e => upd(p.id, { name_fr: e.target.value })} placeholder="Nom (FR)" />
-              <input className="md:col-span-3 border rounded px-2 py-1.5 text-sm" value={p.name_en} onChange={e => upd(p.id, { name_en: e.target.value })} placeholder="Name (EN)" />
-              <div className="md:col-span-2 flex items-center gap-1">
-                <input type="number" min={0} step={50} className="w-full border rounded px-2 py-1.5 text-sm" value={Math.round(p.price_cents / 100)} onChange={e => upd(p.id, { price_cents: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 })} />
-                <span className="text-xs text-gray-400">$/an</span>
-              </div>
-              <label className="md:col-span-2 flex items-center gap-1.5 text-sm text-gray-700">
-                <input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> Actif
-              </label>
-              <button onClick={() => save(p)} disabled={savingId === p.id} className="md:col-span-2 rounded-lg bg-fuchsia-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-fuchsia-700 disabled:opacity-50">
-                {savingId === p.id ? '…' : 'Enregistrer'}
-              </button>
-              <input className="md:col-span-12 border rounded px-2 py-1.5 text-xs text-gray-600" value={p.note_fr} onChange={e => upd(p.id, { note_fr: e.target.value })} placeholder="Note descriptive (FR) affichée sur la carte" />
-            </div>
-          ))}
-        </div>
-      )}
+      {/* NB : l'édition des forfaits Assistant IA est dans le PriceManager (carte « Gestion des
+          prix des modules ») — source unique. */}
     </div>
   );
 };

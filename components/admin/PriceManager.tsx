@@ -7,18 +7,21 @@ import { Save, Loader2, Tag, MapPin } from 'lucide-react';
 export default function PriceManager() {
   const [mods, setMods] = useState<any[]>([]);
   const [perSite, setPerSite] = useState<number>(0);
+  const [aiPlans, setAiPlans] = useState<any[]>([]); // forfaits Assistant IA (table ai_plans)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const [modsRes, configRes] = await Promise.all([
+    const [modsRes, configRes, aiRes] = await Promise.all([
       supabase.from('modules').select('key, name_fr, monthly_price, sort_order').order('sort_order'),
       supabase.from('billing_config').select('per_site_monthly').eq('id', 'default').maybeSingle(),
+      supabase.from('ai_plans').select('id, name_fr, name_en, price_cents, note_fr, sort_order, active').order('sort_order'),
     ]);
     setMods((modsRes.data || []).map((m: any) => ({ ...m, monthly_price: Number(m.monthly_price) })));
     if (configRes.data?.per_site_monthly != null) setPerSite(Number(configRes.data.per_site_monthly));
+    setAiPlans((aiRes.data || []).map((p: any) => ({ ...p, price_cents: Number(p.price_cents) || 0, active: p.active !== false })));
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -31,9 +34,16 @@ export default function PriceManager() {
       }
       await supabase.from('billing_config')
         .upsert({ id: 'default', per_site_monthly: perSite }, { onConflict: 'id' });
+      // Forfaits IA : ecriture via l'API admin (cle service) car ai_plans n'autorise que la lecture publique.
+      for (const p of aiPlans) {
+        await fetch('/api/admin/ai-plans', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: p.id, name_fr: p.name_fr, price_cents: p.price_cents, note_fr: p.note_fr, active: p.active }),
+        });
+      }
       setNotice('Prix enregistres avec succes');
     } catch {
-      setNotice('Erreur DB — migrations 011 et 052 executees ?');
+      setNotice('Erreur DB — migrations 011, 052 et 132 executees ?');
     } finally {
       setSaving(false);
     }
@@ -145,6 +155,53 @@ export default function PriceManager() {
               </div>
             </>
           )}
+
+          {/* Forfaits Assistant IA (jetons) — memes cartes que la page publique, prix ajustable ici */}
+          <div style={{ marginTop: '18px', borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <Tag size={16} color="#a21caf" />
+              <span style={{ fontSize: '15px', fontWeight: 700 }}>Forfaits Assistant IA (jetons)</span>
+            </div>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>
+              Cartes de prix affichees sur la page publique. Prix payE par le client ; le budget de cout IA reel (×70 %, marge 30 %) reste interne et n&apos;est jamais montre au client.
+            </p>
+            {aiPlans.length === 0 ? (
+              <div style={{ padding: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '13px', color: '#92400e' }}>
+                Aucun forfait IA — executez la migration 132 dans le SQL editor.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                {aiPlans.map((p, i) => (
+                  <div key={p.id} style={{ border: `1px solid ${p.active ? '#f5d0fe' : '#e5e7eb'}`, borderRadius: '10px', padding: '10px 12px', background: p.active ? '#fdf4ff' : '#fff' }}>
+                    <input
+                      value={p.name_fr}
+                      onChange={e => setAiPlans(prev => prev.map((x, j) => j === i ? { ...x, name_fr: e.target.value } : x))}
+                      style={{ width: '100%', border: '1px solid #e9d5ff', borderRadius: '6px', padding: '4px 8px', fontSize: '14px', fontWeight: 600, marginBottom: '6px' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <input
+                        type="number" min={0} step={50}
+                        value={Math.round(p.price_cents / 100)}
+                        onChange={e => setAiPlans(prev => prev.map((x, j) => j === i ? { ...x, price_cents: Math.max(0, Math.round(Number(e.target.value) || 0)) * 100 } : x))}
+                        onFocus={e => e.target.select()}
+                        style={{ width: '90px', textAlign: 'right', border: '1px solid #d8b4fe', borderRadius: '6px', padding: '4px 6px', fontSize: '14px' }}
+                      />
+                      <span style={{ fontSize: '13px', color: '#6b7280' }}>$/an</span>
+                      <label style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#6b7280' }}>
+                        <input type="checkbox" checked={p.active} onChange={e => setAiPlans(prev => prev.map((x, j) => j === i ? { ...x, active: e.target.checked } : x))} /> Actif
+                      </label>
+                    </div>
+                    <input
+                      value={p.note_fr || ''}
+                      onChange={e => setAiPlans(prev => prev.map((x, j) => j === i ? { ...x, note_fr: e.target.value } : x))}
+                      placeholder="Note affichee sur la carte"
+                      style={{ width: '100%', border: '1px solid #f3e8ff', borderRadius: '6px', padding: '4px 8px', fontSize: '12px', color: '#6b7280' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </section>

@@ -39,7 +39,7 @@ export default function TenantManagePage() {
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30, per_site_monthly: 0 });
   const [aiTier, setAiTier] = useState(0);   // forfait IA (cents) — table ai_budgets
   const [aiUsed, setAiUsed] = useState(0);    // conso IA (cents)
-  const [aiRenewal, setAiRenewal] = useState(''); // date de renouvellement (yyyy-mm-dd)
+  const [aiRequested, setAiRequested] = useState(false); // le client a demandé un ajustement de forfait
   const [sub, setSub] = useState<any>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
@@ -71,7 +71,7 @@ export default function TenantManagePage() {
       setVendorId(t?.vendor_id || '');
       // Forfait IA depuis la table dédiée ai_budgets (clé = sous-domaine).
       if (t?.subdomain) {
-        try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents, used_cents, renewal_date').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRenewal(ab.renewal_date ? String(ab.renewal_date).slice(0, 10) : ''); } } catch { /* table absente */ }
+        try { const { data: ab } = await supabase.from('ai_budgets').select('*').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRequested((ab as any).renewal_requested === true); } } catch { /* table absente */ }
       }
       // Forfaits IA = source unique (table ai_plans, éditée dans /admin/price-management).
       try { const { data: ap } = await supabase.from('ai_plans').select('id, name_fr, price_cents, active, sort_order').eq('active', true).order('sort_order'); if (ap) setAiPlans(ap.map((p: any) => ({ id: p.id, name_fr: p.name_fr, price_cents: Number(p.price_cents) || 0 }))); } catch { /* migration 132 absente */ }
@@ -222,7 +222,8 @@ export default function TenantManagePage() {
       }
       // Forfait IA : table DEDIEE ai_budgets (migration 131), clé = sous-domaine. Indépendant de `tenants`.
       if (tenant.subdomain) {
-        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), renewal_date: aiRenewal || null, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); } catch { /* table absente avant migration 131 */ }
+        // En enregistrant le forfait, on EFFACE toute demande d'ajustement en attente (Eric a ajusté).
+        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiRequested(false); } catch { /* table absente avant migration 131/135 */ }
       }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -345,8 +346,13 @@ export default function TenantManagePage() {
                   <input type="number" min={1} className={inputCls} value={tenant.max_sites ?? 1} onFocus={e => e.target.select()} onChange={e => setTenant((t: any) => ({ ...t, max_sites: e.target.value === '' ? '' : Number(e.target.value) }))} />
                   <span className="mt-1 block text-[11px] text-gray-400">1 site inclus ; chaque site supplémentaire est facturé (prix « site additionnel » dans la gestion des prix). Le tenant est bloqué au-delà de cette limite.</span>
                 </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA</span>
+                <label className="block sm:col-span-2 lg:col-span-1">
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA (jetons — sans date, jusqu'à épuisement)</span>
+                  {aiRequested && (
+                    <div className="mb-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300">
+                      🔴 Ajustement token requis — le client a demandé un renouvellement. Ajuste le forfait puis « Conso à 0 + facturer », ou enregistre le profil pour effacer la demande.
+                    </div>
+                  )}
                   <select className={inputCls} value={aiTier} onChange={e => setAiTier(Number(e.target.value))}>
                     <option value={0}>Aucun (illimité — non bloqué)</option>
                     {aiPlans.map(p => (
@@ -358,19 +364,10 @@ export default function TenantManagePage() {
                   </select>
                   <span className="mt-1 block text-[11px] text-gray-400">
                     {aiPlans.length === 0
-                      ? 'Forfaits définis dans la Gestion des prix (table ai_plans, migration 132).'
-                      : <>Source unique : <a href="/admin/price-management" className="underline">Gestion des prix → Forfaits Assistant IA</a>.</>} Budget réel = prix × 70 % (marge 30 %). Consommé : {((aiUsed) / 100).toFixed(2)} $ · budget {((aiTier * 0.7) / 100).toFixed(2)} $.
+                      ? 'Forfaits définis dans la Gestion des prix (carte « Gestion des prix des modules », table ai_plans).'
+                      : <>Prix : <a href="/admin/price-management" className="underline">Gestion des prix</a>.</>} Budget réel = prix × 70 % (marge 30 %, jamais montrée au client). Consommé : {((aiUsed) / 100).toFixed(2)} $ / {((aiTier * 0.7) / 100).toFixed(2)} $. Le forfait s'utilise jusqu'à épuisement (pas de date).
                   </span>
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Date d'échéance (anniversaire d'adhésion)</span>
-                  <input type="date" className={inputCls} value={aiRenewal} onChange={e => setAiRenewal(e.target.value)} />
-                  <span className="mt-1 block text-[11px] text-gray-400">
-                    Mets l'anniversaire d'ADHÉSION du client : le décompte va jusqu'à CETTE date (pas 365 j à partir d'aujourd'hui).
-                    Alertes : 🟠 60 j avant · 🔴 15 j avant · ⛔ blocage auto après l'échéance si non réglé.
-                    Au paiement : avance la date d'un an et clique « Conso à 0 ». Le client ne voit jamais ta marge (il voit son forfait + % consommé).
-                  </span>
-                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); if (aiTier > 0) { const today = new Date().toISOString().slice(0, 10); await supabase.from('tenant_transactions').insert({ tenant_id: id, type: 'ai_token', amount: aiTier / 100, status: 'completed', description: 'Renouvellement forfait Assistant IA', period_start: today, period_end: aiRenewal || null }); } setNotice('Consommation IA remise à 0 + facturation IA enregistrée ✓'); load(); } catch { setNotice('Erreur (migration 131 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 + facturer le renouvellement</button>
+                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, renewal_requested: false, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setAiRequested(false); if (aiTier > 0) { const today = new Date().toISOString().slice(0, 10); await supabase.from('tenant_transactions').insert({ tenant_id: id, type: 'ai_token', amount: aiTier / 100, status: 'completed', description: 'Renouvellement forfait Assistant IA', period_start: today }); } setNotice('Conso IA remise à 0 + facturation enregistrée + demande effacée ✓'); load(); } catch { setNotice('Erreur (migrations 131/135 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 + facturer le renouvellement</button>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">

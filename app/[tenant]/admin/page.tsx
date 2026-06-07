@@ -947,56 +947,74 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
 // Panneau FORFAIT IA (app-wide, par tenant) : solde, date de renouvellement, alertes 60j/15j, blocage.
 function AiPlanPanel({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
   const [b, setB] = useState<any>(null);
-  useEffect(() => { let a = true; (async () => { try { const r = await fetch(`/api/inventory/ai-budget?tenant=${encodeURIComponent(tenant)}`); if (r.ok && a) setB(await r.json()); } catch { /* ignore */ } })(); return () => { a = false; }; }, [tenant]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [wanted, setWanted] = useState<string>('');
+  const [requested, setRequested] = useState(false);
+  const [sending, setSending] = useState(false);
+  useEffect(() => { let a = true; (async () => {
+    try { const r = await fetch(`/api/inventory/ai-budget?tenant=${encodeURIComponent(tenant)}`); if (r.ok && a) { const j = await r.json(); setB(j); setRequested(!!j.renewalRequested); } } catch { /* ignore */ }
+    try { const { data } = await supabase.from('ai_plans').select('id, name_fr, price_cents, active, sort_order').eq('active', true).order('sort_order'); if (a && data) setPlans(data); } catch { /* migration 132 */ }
+  })(); return () => { a = false; }; }, [tenant]);
   if (!b || b.unlimited) return null; // aucun forfait configure -> rien a afficher
   const c2 = (cents: number) => '$' + ((Number(cents) || 0) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  // VUE CLIENT — on n'expose JAMAIS le budget de coût interne (tier × 70 %) ni notre marge.
-  // Le client voit : le PRIX de son forfait (ce qu'il paie) + sa consommation en POURCENTAGE.
-  const pct = b.budgetCents > 0 ? Math.min(100, Math.round((b.usedCents / b.budgetCents) * 100)) : 0;
-  const remPct = 100 - pct;
-  const budgetLow = remPct <= 15 && !b.exhausted;
-  const budgetExhausted = b.budgetExhausted; // épuisé par la conso (distinct de l'échéance)
+  // VUE CLIENT — jamais le budget interne (×70 %) ni la marge. Le forfait s'utilise jusqu'a
+  // epuisement (PAS de date). Le client voit son forfait + % restant + demande de renouvellement.
+  const remPct = typeof b.remainingPct === 'number' ? b.remainingPct : Math.max(0, 100 - (b.budgetCents > 0 ? Math.round((b.usedCents / b.budgetCents) * 100) : 0));
+  const pct = 100 - remPct;
+  const exhausted = b.exhausted;
+  const low = b.lowBalance && !exhausted; // <=10% restant
   const modPct = (cents: number) => b.budgetCents > 0 ? Math.round((Number(cents) / b.budgetCents) * 100) : 0;
   const mods = Object.entries(b.perModule || {}).filter(([, c]) => modPct(c as number) >= 1);
-  // Renouvellement — décompte basé sur la DATE D'ÉCHÉANCE stockée (anniversaire d'adhésion),
-  // PAS sur « aujourd'hui + 365 j ». Carte distincte du compteur de tokens.
-  const d = b.daysToRenewal;
-  const renewAmber = d != null && d <= 60 && d > 15;
-  const renewRed = d != null && d <= 15 && d >= 0;
-  const fmtDate = (s: string | null) => s ? new Date(s + 'T00:00:00').toLocaleDateString('fr-CA', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
-  return (
-    <div className="space-y-4">
-      {/* CARTE 1 — Consommation des assistants IA (jamais de $ interne, jamais de marge) */}
-      <div className={`rounded-2xl border-2 p-5 ${budgetExhausted ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : budgetLow ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2"><Zap size={18} className={budgetExhausted ? 'text-red-600' : 'text-purple-600'} /><h2 className="font-bold">{tr('Assistants IA — consommation', 'AI assistants — usage')}</h2></div>
-          <span className={`text-lg font-extrabold ${budgetExhausted ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
-            {budgetExhausted ? tr('Épuisé', 'Exhausted') : `${remPct}% ${tr('restant', 'left')}`}
-          </span>
-        </div>
-        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-          <div className={`h-full ${budgetExhausted ? 'bg-red-500' : budgetLow ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
-        </div>
-        <div className="mt-2 text-sm">
-          <span className="text-gray-500">{tr('Forfait', 'Plan')} :</span> <b>{c2(b.tierCents)}</b>
-          <span className="mx-2 text-gray-300">|</span>
-          <span className="text-gray-500">{tr('Consommé', 'Used')} :</span> <b>{pct}%</b>
-        </div>
-        {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${modPct(c as number)}%`).join(' · ')}</div>}
-        {budgetExhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Forfait IA épuisé — renouvelez pour continuer à utiliser les assistants.', 'AI plan exhausted — renew to keep using the assistants.')}</p>}
-        {budgetLow && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr('Forfait IA presque épuisé.', 'AI plan almost used up.')}</p>}
-      </div>
 
-      {/* CARTE 2 — Renouvellement de l'abonnement (séparée, basée sur la date d'adhésion) */}
-      <div className={`rounded-2xl border-2 p-5 ${b.expired ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : renewRed ? 'border-red-300 bg-red-50/60 dark:border-red-800 dark:bg-red-900/10' : renewAmber ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2"><CreditCard size={18} className={b.expired || renewRed ? 'text-red-600' : renewAmber ? 'text-amber-600' : 'text-gray-500'} /><h2 className="font-bold">{tr("Renouvellement de l'abonnement", 'Subscription renewal')}</h2></div>
-          {d != null && <span className={`text-sm font-bold ${b.expired ? 'text-red-700 dark:text-red-300' : renewRed ? 'text-red-600' : renewAmber ? 'text-amber-600' : 'text-gray-500'}`}>{d >= 0 ? tr(`dans ${d} j`, `in ${d}d`) : tr(`échu depuis ${-d} j`, `${-d}d overdue`)}</span>}
-        </div>
-        <div className="mt-2 text-sm"><span className="text-gray-500">{tr("Date d'échéance", 'Due date')} :</span> <b>{fmtDate(b.renewalDate)}</b></div>
-        {b.expired && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Abonnement échu — les assistants IA sont bloqués jusqu\'au règlement.', 'Subscription expired — AI assistants are blocked until payment.')}</p>}
-        {!b.expired && renewRed && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">🔴 {tr(`Échéance dans ${d} j — réglez pour éviter le blocage.`, `Due in ${d}d — pay to avoid blocking.`)}</p>}
-        {!b.expired && renewAmber && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr(`Échéance dans ${d} j.`, `Due in ${d}d.`)}</p>}
+  const requestRenewal = async () => {
+    setSending(true);
+    const chosen = plans.find(p => p.id === wanted);
+    try { await fetch('/api/inventory/ai-budget', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant, requestedTierCents: chosen?.price_cents }) }); setRequested(true); } catch { /* ignore */ }
+    const subject = `Demande d'ajustement de forfait IA — ${tenant}`;
+    const body = `Bonjour,\n\nLe client « ${tenant} » demande ${exhausted ? 'un renouvellement' : 'un ajustement'} de son forfait Assistant IA (jetons).\n${chosen ? `Forfait souhaité : ${chosen.name_fr} — ${Math.round(chosen.price_cents / 100)} $/an.\n` : ''}\nMerci de procéder à l'ajustement du forfait de jetons.\n`;
+    window.location.href = `mailto:eric.dufort@cerdia.ai?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSending(false);
+  };
+
+  return (
+    <div className={`rounded-2xl border-2 p-5 ${exhausted ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : low ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2"><Zap size={18} className={exhausted ? 'text-red-600' : 'text-purple-600'} /><h2 className="font-bold">{tr('Assistants IA — jetons', 'AI assistants — tokens')}</h2></div>
+        <span className={`text-lg font-extrabold ${exhausted ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
+          {exhausted ? tr('Épuisé', 'Exhausted') : `${remPct}% ${tr('restant', 'left')}`}
+        </span>
+      </div>
+      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+        <div className={`h-full ${exhausted ? 'bg-red-500' : low ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
+      </div>
+      <div className="mt-2 text-sm">
+        <span className="text-gray-500">{tr('Forfait', 'Plan')} :</span> <b>{c2(b.tierCents)}</b>
+        <span className="mx-2 text-gray-300">|</span>
+        <span className="text-gray-500">{tr('Consommé', 'Used')} :</span> <b>{pct}%</b>
+        <span className="ml-2 text-gray-400">{tr('(s\'utilise jusqu\'à épuisement, sans date)', '(used until depleted, no end date)')}</span>
+      </div>
+      {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${modPct(c as number)}%`).join(' · ')}</div>}
+      {exhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Forfait de jetons IA épuisé — demandez un renouvellement pour réactiver les assistants.', 'AI token plan exhausted — request a renewal to reactivate the assistants.')}</p>}
+      {low && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr('Forfait presque épuisé (≤ 10 %).', 'Plan almost depleted (≤ 10%).')}</p>}
+
+      {/* Demande de renouvellement / ajout de forfait -> courriel pré-rempli + drapeau côté admin */}
+      <div className="mt-3 border-t border-purple-200/60 pt-3 dark:border-purple-800/60">
+        {requested ? (
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✅ {tr('Demande envoyée — en attente de l\'ajustement par C-Secur360.', 'Request sent — awaiting adjustment by C-Secur360.')}</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {plans.length > 0 && (
+              <select value={wanted} onChange={e => setWanted(e.target.value)} className="rounded-lg border border-purple-300 bg-transparent px-2 py-1.5 text-sm dark:border-purple-700">
+                <option value="">{tr('Forfait souhaité…', 'Desired plan…')}</option>
+                {plans.map(p => <option key={p.id} value={p.id}>{p.name_fr} — {Math.round(p.price_cents / 100)} $/an</option>)}
+              </select>
+            )}
+            <button onClick={requestRenewal} disabled={sending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
+              <CreditCard size={15} /> {tr('Demander un renouvellement', 'Request a renewal')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

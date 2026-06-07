@@ -11,23 +11,28 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const AI_MARGIN = 0.30; // 30% de profit -> budget reel = prix x (1 - marge)
 
+// MODELE (decide avec Eric) : le forfait token s'utilise JUSQU'A EPUISEMENT — AUCUNE date de fin.
+// Quand le client approche (<=10% restant) ou est epuise, il demande un renouvellement via un
+// bouton (courriel pre-rempli) ; cela leve `renewalRequested` -> la carte du tenant passe au rouge
+// cote super-admin. La date de l'ABONNEMENT (modules) est un concept distinct, sans lien avec les jetons.
 export type AiBudget = {
   tierCents: number;      // prix forfait paye (cents)
   budgetCents: number;    // cout IA autorise = tier x 70%
   usedCents: number;      // cout IA consomme (cents)
   remainingCents: number; // budget - used (>=0)
-  exhausted: boolean;     // BLOQUE : budget epuise OU abonnement expire (renouvellement non paye)
-  budgetExhausted: boolean; // budget de cout epuise (independamment de la date)
+  remainingPct: number;   // % restant (0-100)
+  exhausted: boolean;     // BLOQUE : budget de cout epuise (consommation seule, pas de date)
+  budgetExhausted: boolean; // alias de exhausted (compat)
+  lowBalance: boolean;    // <=10% restant -> message client + demande de renouvellement
+  renewalRequested: boolean; // le client a demande un ajustement de forfait (carte rouge cote admin)
   unlimited: boolean;     // aucun forfait configure -> on NE bloque PAS (retro-compat avant migration)
-  renewalDate: string | null; // date du prochain renouvellement (ISO yyyy-mm-dd)
-  daysToRenewal: number | null; // jours avant renouvellement (negatif = expire)
-  expired: boolean;       // echeance depassee sans renouvellement -> blocage auto
 };
 
 // Taux par modele ($/1M tokens). Sert a estimer le cout d'un appel.
 const RATES: Record<string, { in: number; out: number }> = {
   'claude-opus-4-8': { in: 5, out: 25 },
   'claude-sonnet-4-6': { in: 3, out: 15 },
+  'claude-sonnet-4-20250514': { in: 3, out: 15 }, // DGA (analyze/inspect/extract/translate)
   'claude-haiku-4-5-20251001': { in: 1, out: 5 },
   'claude-haiku-4-5': { in: 1, out: 5 },
 };
@@ -44,33 +49,38 @@ export function aiCallCostCents(model: string, usage: any, webSearches = 0): num
 
 // Lit l'etat du budget d'un tenant. unlimited=true si la colonne n'existe pas encore (avant migration)
 // OU si aucun forfait n'est defini -> on ne bloque pas (retro-compat).
-const UNLIMITED: AiBudget = { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, exhausted: false, budgetExhausted: false, unlimited: true, renewalDate: null, daysToRenewal: null, expired: false };
+const UNLIMITED: AiBudget = { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, remainingPct: 100, exhausted: false, budgetExhausted: false, lowBalance: false, renewalRequested: false, unlimited: true };
 
 export async function getAiBudget(tenant: string): Promise<AiBudget> {
   try {
+    // select('*') : tolere l'absence de la colonne renewal_requested (avant migration 135).
     const { data, error } = await supabaseAdmin
-      .from('ai_budgets').select('tier_cents, used_cents, renewal_date').eq('tenant_id', tenant).maybeSingle();
+      .from('ai_budgets').select('*').eq('tenant_id', tenant).maybeSingle();
     if (error || !data) return UNLIMITED;
     const tierCents = Number(data.tier_cents) || 0;
     const usedCents = Number(data.used_cents) || 0;
-    if (tierCents <= 0) return { ...UNLIMITED, usedCents };
+    const renewalRequested = (data as any).renewal_requested === true;
+    if (tierCents <= 0) return { ...UNLIMITED, usedCents, renewalRequested };
     const budgetCents = Math.round(tierCents * (1 - AI_MARGIN));
     const remainingCents = Math.max(0, budgetCents - usedCents);
+    const remainingPct = budgetCents > 0 ? Math.round((remainingCents / budgetCents) * 100) : 0;
     const budgetExhausted = usedCents >= budgetCents;
-    // Echeance / renouvellement : on calcule les jours restants et l'expiration (blocage auto).
-    let renewalDate: string | null = data.renewal_date ? String(data.renewal_date).slice(0, 10) : null;
-    let daysToRenewal: number | null = null;
-    let expired = false;
-    if (renewalDate) {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const r = new Date(renewalDate + 'T00:00:00');
-      daysToRenewal = Math.round((r.getTime() - today.getTime()) / 86400000);
-      expired = daysToRenewal < 0; // echeance depassee, non renouvelee -> blocage
-    }
-    return { tierCents, budgetCents, usedCents, remainingCents, exhausted: budgetExhausted || expired, budgetExhausted, unlimited: false, renewalDate, daysToRenewal, expired };
+    // Jetons utilises JUSQU'A EPUISEMENT — pas de date. Seuil bas = <=10% restant.
+    const lowBalance = remainingPct <= 10;
+    return { tierCents, budgetCents, usedCents, remainingCents, remainingPct, exhausted: budgetExhausted, budgetExhausted, lowBalance, renewalRequested, unlimited: false };
   } catch {
     return UNLIMITED;
   }
+}
+
+// Le client demande un ajustement/renouvellement de forfait (leve un drapeau -> carte rouge admin).
+export async function setRenewalRequested(tenant: string, requested: boolean, requestedTierCents?: number): Promise<void> {
+  try {
+    const patch: any = { tenant_id: tenant, renewal_requested: requested, updated_at: new Date().toISOString() };
+    if (requested && requestedTierCents != null) patch.requested_tier_cents = requestedTierCents;
+    if (requested) patch.requested_at = new Date().toISOString();
+    await supabaseAdmin.from('ai_budgets').upsert(patch, { onConflict: 'tenant_id' });
+  } catch { /* colonnes absentes avant migration 135 */ }
 }
 
 // Enregistre le cout d'un appel : incremente tenants.ai_used_cents + insere une ligne ai_usage (par module).

@@ -219,6 +219,7 @@ export default function ModulesPage() {
           </div>
 
           {/* Vue d'ensemble des non-conformités/anomalies (coordination+ ou si nom dans le formulaire) */}
+          <AiTokenAlert tenant={tenant} tr={tr} />
           <div className="mb-4"><AnomaliesPanel tenant={tenant} /></div>
 
           {loading ? (
@@ -274,6 +275,27 @@ export default function ModulesPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Bandeau forfait IA (jetons) : alerte le client quand il reste <=10% ou est epuise. Le forfait
+// s'utilise jusqu'a epuisement (pas de date) ; le renouvellement se demande dans Admin -> Abonnement.
+function AiTokenAlert({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [b, setB] = useState<any>(null);
+  useEffect(() => { let a = true; (async () => { try { const r = await fetch(`/api/inventory/ai-budget?tenant=${encodeURIComponent(tenant)}`); if (r.ok && a) setB(await r.json()); } catch { /* ignore */ } })(); return () => { a = false; }; }, [tenant]);
+  if (!b || b.unlimited || (!b.lowBalance && !b.exhausted)) return null;
+  const exhausted = b.exhausted;
+  return (
+    <div className={`mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm ${exhausted ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300' : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300'}`}>
+      <span className="font-semibold">
+        {exhausted
+          ? tr('⛔ Forfait de jetons IA épuisé — les assistants IA sont en pause.', '⛔ AI token plan exhausted — AI assistants are paused.')
+          : tr(`🟠 Forfait IA presque épuisé (${b.remainingPct}% restant).`, `🟠 AI plan almost depleted (${b.remainingPct}% left).`)}
+      </span>
+      <Link href={`/${tenant}/admin`} className="shrink-0 rounded-lg bg-current/10 px-3 py-1 font-semibold underline">
+        {tr('Demander un renouvellement', 'Request a renewal')}
+      </Link>
     </div>
   );
 }
