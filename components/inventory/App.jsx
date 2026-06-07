@@ -1566,7 +1566,7 @@ function AppContent() {
   const [showDashboardFilters, setShowDashboardFilters] = useState(false);
 
   // États pour vues articles et impression
-  const [articleViewMode, setArticleViewMode] = useState('grid'); // 'grid', 'list', 'detailed'
+  const [articleViewMode, setArticleViewMode] = useState('list'); // 'list' (tableau, défaut) | 'grid' (cartes) | 'detailed'
   const [selectedItems, setSelectedItems] = useState([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printMode, setPrintMode] = useState('single'); // 'single', 'batch'
@@ -2741,97 +2741,98 @@ function AppContent() {
 
   // ============== FONCTIONS IMPORT/EXPORT EXCEL ==============
 
-  // Télécharger le modèle Excel
+  // Télécharger le modèle Excel — GABARIT STRICT identique aux consignes de l'import IA.
+  // Colonnes EXACTES (et dans cet ordre) attendues par l'extraction : SITE / DÉPARTEMENT /
+  // EMPLACEMENT sont OBLIGATOIRES, le reste est recommandé. Les en-têtes servent de reconnaissance
+  // par colonne -> on garde ces libellés canoniques.
   const downloadExcelTemplate = () => {
+    const fr = language === 'fr';
+    // En-têtes canoniques (ordre du gabarit affiché dans l'UI d'import).
+    const H = ['EMPLACEMENT', 'TABLETTE', 'POSITION', 'INVENTAIRE', 'IDENTIFICATION', 'MIN', 'MAX', 'SITE', 'DÉPARTEMENT', 'FOURNISSEUR', 'CATÉGORIE', 'PRIX ($)', 'CODE ITEM'];
+
+    // Exemple réaliste : on prend un vrai SITE / DÉPARTEMENT de l'Administration si disponible.
+    const sampleDept = departments.find(d => !d.isSite && d.siteName) || departments[0];
+    const exSite = sampleDept?.siteName || sampleDept?.name || 'Sherbrooke';
+    const exDept = sampleDept?.isSite ? '' : (sampleDept?.name || 'Bourque');
+    const exCat = categories[0]?.name || 'EPI - Respiratoire';
+
+    // 2 lignes d'exemple (mono-tablette + bac sans tablette -> TABLETTE laissée vide = 0).
     const templateData = [
-      {
-        [t('articles.excel.headers.code')]: 'EPI-001',
-        [t('articles.excel.headers.name')]: 'Masque N95',
-        [t('articles.excel.headers.category')]: 'EPI - Respiratoire',
-        [t('articles.excel.headers.department')]: 'Succursale A',
-        [t('articles.excel.headers.location')]: 'Allée 1',
-        [t('articles.excel.headers.quantity')]: 100,
-        [t('articles.excel.headers.minQuantity')]: 20,
-        [t('articles.excel.headers.maxQuantity')]: 200,
-        [t('articles.excel.headers.costPrice')]: 2.50,
-        [t('articles.excel.headers.salePrice')]: 4.99,
-        [t('articles.excel.headers.unit')]: 'Pièce',
-        [t('articles.excel.headers.description')]: 'Masque de protection respiratoire N95'
-      }
+      { 'EMPLACEMENT': 'Étagère A', 'TABLETTE': 2, 'POSITION': 1, 'INVENTAIRE': 100, 'IDENTIFICATION': 'Masque N95', 'MIN': 20, 'MAX': 200, 'SITE': exSite, 'DÉPARTEMENT': exDept, 'FOURNISSEUR': '3M', 'CATÉGORIE': exCat, 'PRIX ($)': 2.50, 'CODE ITEM': 'EPI-001' },
+      { 'EMPLACEMENT': 'Bac réception', 'TABLETTE': '', 'POSITION': 1, 'INVENTAIRE': 0, 'IDENTIFICATION': 'Gants nitrile (boîte 100)', 'MIN': 5, 'MAX': 50, 'SITE': exSite, 'DÉPARTEMENT': exDept, 'FOURNISSEUR': 'Uline', 'CATÉGORIE': '', 'PRIX ($)': '', 'CODE ITEM': '' },
     ];
+
+    const colDesc = fr ? [
+      ['SITE', 'OBLIGATOIRE — doit correspondre EXACTEMENT à un site de l\'Administration.'],
+      ['DÉPARTEMENT', 'OBLIGATOIRE — département du site (ex. Bourque).'],
+      ['EMPLACEMENT', 'OBLIGATOIRE — nom du meuble/support (ex. Étagère A, Bac réception). Créé automatiquement s\'il n\'existe pas.'],
+      ['TABLETTE', 'No de tablette. Vide = 0 (support sans tablette, ex. bac).'],
+      ['POSITION', 'No de position sur la tablette. Vide = 1.'],
+      ['INVENTAIRE', 'Quantité comptée. Case vide = 0.'],
+      ['IDENTIFICATION', 'Nom / description de l\'article.'],
+      ['MIN', 'Seuil de réapprovisionnement (alerte stock bas). Vide = 0.'],
+      ['MAX', 'Quantité maximale visée. Vide = 0.'],
+      ['FOURNISSEUR', 'Fournisseur (optionnel).'],
+      ['CATÉGORIE', 'Catégorie EXACTE de la colonne. Laissée vide si absente — l\'IA n\'invente JAMAIS de catégorie.'],
+      ['PRIX ($)', 'Prix coûtant unitaire (optionnel).'],
+      ['CODE ITEM', 'Code/SKU de l\'article (optionnel).'],
+    ] : [
+      ['SITE', 'REQUIRED — must EXACTLY match a site from Administration.'],
+      ['DÉPARTEMENT', 'REQUIRED — department of the site (e.g. Bourque).'],
+      ['EMPLACEMENT', 'REQUIRED — storage unit name (e.g. Shelf A, Receiving bin). Auto-created if missing.'],
+      ['TABLETTE', 'Shelf number. Empty = 0 (units without shelves, e.g. bins).'],
+      ['POSITION', 'Position on the shelf. Empty = 1.'],
+      ['INVENTAIRE', 'Counted quantity. Empty cell = 0.'],
+      ['IDENTIFICATION', 'Item name / description.'],
+      ['MIN', 'Reorder threshold (low-stock alert). Empty = 0.'],
+      ['MAX', 'Target maximum quantity. Empty = 0.'],
+      ['FOURNISSEUR', 'Supplier (optional).'],
+      ['CATÉGORIE', 'EXACT category from the column. Left empty if absent — the AI NEVER invents a category.'],
+      ['PRIX ($)', 'Unit cost price (optional).'],
+      ['CODE ITEM', 'Item code/SKU (optional).'],
+    ];
+
+    // Sites / départements valides depuis l'Administration (pour copier-coller sans erreur).
+    const adminSites = Array.from(new Set(departments.map(d => d.siteName).filter(Boolean)));
+    const adminPairs = departments.filter(d => !d.isSite).map(d => [`• ${d.siteName || '?'} / ${d.name}`]);
 
     const instructions = [
-      [t('articles.excel.template.title')],
+      [fr ? 'GABARIT D\'IMPORT INVENTAIRE — C-Secur360' : 'INVENTORY IMPORT TEMPLATE — C-Secur360'],
       [''],
-      [t('articles.excel.template.requiredColumns')],
-      [t('articles.excel.template.col1'), t('articles.excel.template.col1Desc')],
-      [t('articles.excel.template.col2'), t('articles.excel.template.col2Desc')],
-      [t('articles.excel.template.col3'), t('articles.excel.template.col3Desc')],
-      [t('articles.excel.template.col4'), t('articles.excel.template.col4Desc')],
-      [t('articles.excel.template.col5'), t('articles.excel.template.col5Desc')],
-      [t('articles.excel.template.col6'), t('articles.excel.template.col6Desc')],
-      [t('articles.excel.template.col7'), t('articles.excel.template.col7Desc')],
-      [t('articles.excel.template.col8'), t('articles.excel.template.col8Desc')],
-      [t('articles.excel.template.col9'), t('articles.excel.template.col9Desc')],
-      [t('articles.excel.template.col10'), t('articles.excel.template.col10Desc')],
-      [t('articles.excel.template.col11'), t('articles.excel.template.col11Desc')],
-      [t('articles.excel.template.col12'), t('articles.excel.template.col12Desc')],
+      [fr ? '⚠️ COLONNES OBLIGATOIRES : SITE, DÉPARTEMENT, EMPLACEMENT.' : '⚠️ REQUIRED COLUMNS: SITE, DÉPARTEMENT, EMPLACEMENT.'],
+      [fr ? 'Sans ces 3 colonnes, la feuille est REFUSÉE à l\'import.' : 'Without these 3 columns, the sheet is REFUSED on import.'],
       [''],
-      [t('articles.excel.template.importantRules')],
-      [t('articles.excel.template.ruleUnique')],
-      [t('articles.excel.template.ruleQuantities')],
-      [t('articles.excel.template.rulePrices')],
-      [t('articles.excel.template.ruleMinMax')],
-      [t('articles.excel.template.ruleExist')],
+      [fr ? 'COLONNES (ordre recommandé) :' : 'COLUMNS (recommended order):'],
+      [H.join('  ·  ')],
       [''],
-      [t('articles.excel.template.availableCategories')],
-      ...categories.map(cat => [`• ${cat.name}`]),
+      [fr ? 'DESCRIPTION DE CHAQUE COLONNE :' : 'COLUMN DESCRIPTIONS:'],
+      ...colDesc,
       [''],
-      [t('articles.excel.template.availableDepartments')],
-      ...departments.map(dept => [`• ${dept.name}`, `  Localisations: ${dept.locations.join(', ')}`]),
+      [fr ? 'RÈGLES :' : 'RULES:'],
+      [fr ? '• Case vide dans INVENTAIRE/MIN/MAX = 0.' : '• Empty cell in INVENTAIRE/MIN/MAX = 0.'],
+      [fr ? '• TABLETTE vide = 0 ; POSITION vide = 1.' : '• Empty TABLETTE = 0; empty POSITION = 1.'],
+      [fr ? '• Adresse de rangement = EMPLACEMENT-TABLETTE-POSITION (générée automatiquement).' : '• Storage address = EMPLACEMENT-TABLETTE-POSITION (auto-generated).'],
+      [fr ? '• Même IDENTIFICATION sur un autre site -> AJOUT d\'emplacement (pas de doublon).' : '• Same IDENTIFICATION on another site -> location ADDED (no duplicate).'],
+      [fr ? '• L\'IA n\'invente JAMAIS de catégorie : elle reprend la colonne CATÉGORIE telle quelle.' : '• The AI NEVER invents categories: it uses the CATÉGORIE column as-is.'],
       [''],
-      [t('articles.excel.template.exampleImport')],
-      [t('articles.excelInstruction1')],
+      [fr ? `SITES DISPONIBLES (Administration) : ${adminSites.length ? adminSites.join(', ') : '— configure-les dans l\'Administration —'}` : `AVAILABLE SITES (Administration): ${adminSites.length ? adminSites.join(', ') : '— set them up in Administration —'}`],
+      [fr ? 'SITE / DÉPARTEMENT valides :' : 'Valid SITE / DÉPARTEMENT:'],
+      ...(adminPairs.length ? adminPairs : [[fr ? '• (aucun département configuré dans l\'Administration)' : '• (no department configured in Administration)']]),
       [''],
-      [t('articles.excel.template.importSteps')],
-      ['1. ' + t('articles.excelInstruction2')],
-      [t('articles.excel.template.step2')],
-      ['3. ' + t('articles.excelInstruction3')],
-      ['4. ' + t('actions.select')],
-      [t('articles.excel.template.step5')],
-      [t('articles.excel.template.step6')],
-      [''],
-      [t('articles.excel.template.support')],
-      [t('articles.excel.template.supportText')]
+      [fr ? 'CATÉGORIES EXISTANTES (optionnel) :' : 'EXISTING CATEGORIES (optional):'],
+      ...(categories.length ? categories.map(cat => [`• ${cat.name}`]) : [[fr ? '• (aucune)' : '• (none)']]),
     ];
 
-    // Créer le workbook
     const wb = XLSX.utils.book_new();
 
-    // Ajouter la feuille d'instructions
     const wsInstructions = XLSX.utils.aoa_to_sheet(instructions);
-    wsInstructions['!cols'] = [{ wch: 25 }, { wch: 60 }];
-    XLSX.utils.book_append_sheet(wb, wsInstructions, t('articles.excel.template.sheetInstructions'));
+    wsInstructions['!cols'] = [{ wch: 28 }, { wch: 70 }];
+    XLSX.utils.book_append_sheet(wb, wsInstructions, fr ? 'Instructions' : 'Instructions');
 
-    // Ajouter la feuille de données exemple
-    const wsData = XLSX.utils.json_to_sheet(templateData);
-    wsData['!cols'] = [
-      { wch: 12 }, // Code
-      { wch: 25 }, // Nom
-      { wch: 20 }, // Catégorie
-      { wch: 18 }, // Département
-      { wch: 15 }, // Localisation
-      { wch: 10 }, // Quantité
-      { wch: 12 }, // Quantité Min
-      { wch: 12 }, // Quantité Max
-      { wch: 12 }, // Prix Coût
-      { wch: 12 }, // Prix Vente
-      { wch: 10 }, // Unité
-      { wch: 40 }  // Description
-    ];
-    XLSX.utils.book_append_sheet(wb, wsData, t('articles.excel.template.sheetData'));
+    const wsData = XLSX.utils.json_to_sheet(templateData, { header: H });
+    wsData['!cols'] = [{ wch: 16 }, { wch: 9 }, { wch: 9 }, { wch: 11 }, { wch: 28 }, { wch: 7 }, { wch: 7 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 10 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsData, fr ? 'Données' : 'Data');
 
-    // Télécharger
     XLSX.writeFile(wb, 'C-Secur360_Modele_Import_Inventaire.xlsx');
   };
 
@@ -2877,96 +2878,95 @@ function AppContent() {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
 
-        // Lire la première feuille (ou la feuille "Données Exemple")
-        const sheetName = workbook.SheetNames.includes(t('articles.excel.template.sheetData'))
-          ? t('articles.excel.template.sheetData')
-          : workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+        // Choisir la feuille de DONNÉES : on saute la feuille "Instructions" du gabarit.
+        const dataSheet = workbook.SheetNames.find(n => /donn[ée]es|data/i.test(n))
+          || workbook.SheetNames.find(n => !/instruction/i.test(n))
+          || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[dataSheet];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         // Valider et convertir les données
         const validatedData = [];
         const errors = [];
 
+        // GABARIT STRICT (identique à l'import IA) : SITE / DÉPARTEMENT / EMPLACEMENT / IDENTIFICATION
+        // obligatoires. Case vide = 0 ; TABLETTE vide = 0 ; reconnaissance par NOM (multi-emplacement).
+        // On produit la MÊME forme que l'import IA -> `confirmImport` crée les emplacements auto.
+        const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const get = (row, ...keys) => { for (const k of keys) { if (row[k] != null && String(row[k]).trim() !== '') return row[k]; } return ''; };
+        const existingNames = new Set(items.map(i => norm(i.name)));
+        const existingCodes = new Set(items.map(i => i.code));
+        const seen = new Set();
+        const seenNames = new Set();
+
         jsonData.forEach((row, index) => {
           const lineNumber = index + 2; // +2 car ligne 1 = headers
           const errors_row = [];
 
-          // Récupérer les noms de colonnes traduits
-          const codeCol = t('articles.excel.headers.code');
-          const nameCol = t('articles.excel.headers.name');
-          const categoryCol = t('articles.excel.headers.category');
-          const departmentCol = t('articles.excel.headers.department');
-          const locationCol = t('articles.excel.headers.location');
-          const quantityCol = t('articles.excel.headers.quantity');
-          const minQuantityCol = t('articles.excel.headers.minQuantity');
-          const maxQuantityCol = t('articles.excel.headers.maxQuantity');
-          const costPriceCol = t('articles.excel.headers.costPrice');
-          const salePriceCol = t('articles.excel.headers.salePrice');
+          const name = String(get(row, 'IDENTIFICATION', 'Identification', 'Nom', 'Name')).trim();
+          const site = String(get(row, 'SITE', 'Site')).trim();
+          const department = String(get(row, 'DÉPARTEMENT', 'DEPARTEMENT', 'Département', 'Departement', 'Department')).trim();
+          const empName = String(get(row, 'EMPLACEMENT', 'Emplacement', 'Localisation', 'Location')).trim();
+          const category = String(get(row, 'CATÉGORIE', 'CATEGORIE', 'Catégorie', 'Categorie', 'Category')).trim();
+          const supplier = String(get(row, 'FOURNISSEUR', 'Fournisseur', 'Supplier')).trim();
+          let code = String(get(row, 'CODE ITEM', 'CODE', 'Code', 'SKU')).trim();
+          const shelfRaw = get(row, 'TABLETTE', 'Tablette', 'Shelf');
+          const posRaw = get(row, 'POSITION', 'Position');
+          const qtyRaw = get(row, 'INVENTAIRE', 'Inventaire', 'Quantité', 'Quantite', 'Quantity', 'Qté');
+          const minRaw = get(row, 'MIN', 'Min', 'Quantité Min', 'Quantite Min');
+          const maxRaw = get(row, 'MAX', 'Max', 'Quantité Max', 'Quantite Max');
+          const priceRaw = get(row, 'PRIX ($)', 'PRIX', 'Prix', 'Prix Coût', 'Prix Cout', 'Cost');
 
-          // Validation des champs obligatoires
-          if (!row[codeCol]) errors_row.push('Code manquant');
-          if (!row[nameCol]) errors_row.push('Nom manquant');
-          if (!row[categoryCol]) errors_row.push('Catégorie manquante');
-          if (!row[departmentCol]) errors_row.push('Département manquant');
-          if (!row[locationCol]) errors_row.push('Localisation manquante');
-
-          // Validation des nombres
-          const quantity = parseInt(row[quantityCol]);
-          const minQuantity = parseInt(row[minQuantityCol]);
-          const maxQuantity = parseInt(row[maxQuantityCol]);
-          const costPrice = parseFloat(row[costPriceCol]);
-          const salePrice = parseFloat(row[salePriceCol]);
-
-          if (isNaN(quantity) || quantity < 0) errors_row.push(t('articles.excel.validation.invalidQuantity'));
-          if (isNaN(minQuantity) || minQuantity < 0) errors_row.push(t('articles.excel.validation.invalidMinQuantity'));
-          if (isNaN(maxQuantity) || maxQuantity < 0) errors_row.push(t('articles.excel.validation.invalidMaxQuantity'));
-          if (isNaN(costPrice) || costPrice < 0) errors_row.push(t('articles.excel.validation.invalidCostPrice'));
-          if (isNaN(salePrice) || salePrice < 0) errors_row.push(t('articles.excel.validation.invalidSalePrice'));
-
-          if (minQuantity >= maxQuantity) errors_row.push(t('articles.excel.validation.minMaxError'));
-
-          // Vérifier les doublons de code
-          if (items.find(item => item.code === row[codeCol])) {
-            errors_row.push(t('articles.excel.validation.codeExists'));
-          }
-          if (validatedData.find(item => item.code === row[codeCol])) {
-            errors_row.push(t('articles.excel.validation.codeDuplicate'));
+          // Obligatoires (gabarit)
+          if (!name) errors_row.push(language === 'fr' ? 'Identification (nom) manquante' : 'Missing identification (name)');
+          if (!site) errors_row.push(language === 'fr' ? 'Site manquant' : 'Missing site');
+          if (!department) errors_row.push(language === 'fr' ? 'Département manquant' : 'Missing department');
+          if (!empName) errors_row.push(language === 'fr' ? 'Emplacement manquant' : 'Missing emplacement');
+          // DÉPARTEMENT doit exister dans l'Administration (source unique des sites/départements).
+          if (department && !departments.find(d => norm(d.name) === norm(department))) {
+            errors_row.push(language === 'fr' ? `Département « ${department} » introuvable (Administration)` : `Department "${department}" not found (Administration)`);
           }
 
-          // Vérifier catégorie et département
-          if (!categories.find(cat => cat.name === row[categoryCol])) {
-            errors_row.push(t('articles.excel.validation.categoryNotFound'));
-          }
-          if (!departments.find(dept => dept.name === row[departmentCol])) {
-            errors_row.push(t('articles.excel.validation.departmentNotFound'));
-          }
+          // Case vide = 0 (règle Eric). TABLETTE vide = 0 ; POSITION conservée.
+          const shelf = (shelfRaw === '' || shelfRaw == null) ? 0 : (Number(shelfRaw) || 0);
+          const position = (posRaw === '' || posRaw == null) ? 0 : (Number(posRaw) || 0);
+          const quantity = Math.max(0, Math.round(Number(qtyRaw) || 0));
+          const minQuantity = Math.max(0, Math.round(Number(minRaw) || 0));
+          const maxQuantity = Math.max(0, Math.round(Number(maxRaw) || 0));
+          const costPrice = Math.max(0, Number(priceRaw) || 0);
+          const salePrice = costPrice > 0 ? Math.round(costPrice * (1 + (Number(targetEbitda) || 0) / 100) * 100) / 100 : 0;
 
-          const itemData = {
-            code: row[codeCol],
-            name: row[nameCol],
-            category: row[categoryCol],
-            department: row[departmentCol],
-            location: row[locationCol],
-            quantity,
-            minQuantity,
-            maxQuantity,
-            costPrice,
-            salePrice,
-            unit: row[t('articles.excel.headers.unit')] || 'Pièce',
-            description: row[t('articles.excel.headers.description')] || '',
-            errors: errors_row,
-            lineNumber
-          };
+          const nameKey = norm(name);
+          const willMergeByName = !!nameKey && (existingNames.has(nameKey) || seenNames.has(nameKey));
+          if (name) seenNames.add(nameKey);
 
-          validatedData.push(itemData);
+          // CODE ITEM optionnel -> auto-généré si vide.
+          if (!code) code = (name ? name.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, '') : 'ART') + '-' + lineNumber;
+          if (!willMergeByName) {
+            if (code && existingCodes.has(code)) errors_row.push(t('articles.excel.validation.codeExists'));
+            if (code && seen.has(code)) errors_row.push(t('articles.excel.validation.codeDuplicate'));
+          }
+          if (code) seen.add(code);
+
+          const parts = [];
+          if (empName) parts.push(empName);
+          parts.push(String(shelf)); // tablette toujours présente, 0 par défaut
+          if (position) parts.push(String(position));
+
+          validatedData.push({
+            code, name, site,
+            category, // reprise telle quelle (jamais inventée)
+            department,
+            location: parts.join('-'),
+            empName, shelf, position,
+            quantity, minQuantity, maxQuantity, costPrice, salePrice,
+            unit: 'Pièce', supplier, description: '',
+            mergeByName: willMergeByName,
+            errors: errors_row, lineNumber,
+          });
 
           if (errors_row.length > 0) {
-            errors.push({
-              line: lineNumber,
-              code: row['Code'] || 'N/A',
-              errors: errors_row
-            });
+            errors.push({ line: lineNumber, code: code || 'N/A', errors: errors_row });
           }
         });
 

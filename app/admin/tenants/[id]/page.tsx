@@ -345,11 +345,12 @@ export default function TenantManagePage() {
                   </span>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Date de renouvellement IA</span>
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Date d'échéance (anniversaire d'adhésion)</span>
                   <input type="date" className={inputCls} value={aiRenewal} onChange={e => setAiRenewal(e.target.value)} />
                   <span className="mt-1 block text-[11px] text-gray-400">
-                    Alertes au dashboard : 🟠 60 j avant · 🔴 15 j avant · ⛔ blocage auto après l'échéance si non réglé.
-                    Au paiement : remets la date (+1 an) et clique « Conso à 0 ».
+                    Mets l'anniversaire d'ADHÉSION du client : le décompte va jusqu'à CETTE date (pas 365 j à partir d'aujourd'hui).
+                    Alertes : 🟠 60 j avant · 🔴 15 j avant · ⛔ blocage auto après l'échéance si non réglé.
+                    Au paiement : avance la date d'un an et clique « Conso à 0 ». Le client ne voit jamais ta marge (il voit son forfait + % consommé).
                   </span>
                   <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setNotice('Consommation IA remise à 0 ✓'); } catch { setNotice('Erreur (migration 131 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 (renouvellement)</button>
                 </label>

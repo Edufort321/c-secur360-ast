@@ -943,36 +943,54 @@ function AiPlanPanel({ tenant, tr }: { tenant: string; tr: (f: string, e: string
   useEffect(() => { let a = true; (async () => { try { const r = await fetch(`/api/inventory/ai-budget?tenant=${encodeURIComponent(tenant)}`); if (r.ok && a) setB(await r.json()); } catch { /* ignore */ } })(); return () => { a = false; }; }, [tenant]);
   if (!b || b.unlimited) return null; // aucun forfait configure -> rien a afficher
   const c2 = (cents: number) => '$' + ((Number(cents) || 0) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // VUE CLIENT — on n'expose JAMAIS le budget de coût interne (tier × 70 %) ni notre marge.
+  // Le client voit : le PRIX de son forfait (ce qu'il paie) + sa consommation en POURCENTAGE.
   const pct = b.budgetCents > 0 ? Math.min(100, Math.round((b.usedCents / b.budgetCents) * 100)) : 0;
   const remPct = 100 - pct;
+  const budgetLow = remPct <= 15 && !b.exhausted;
+  const budgetExhausted = b.budgetExhausted; // épuisé par la conso (distinct de l'échéance)
+  const modPct = (cents: number) => b.budgetCents > 0 ? Math.round((Number(cents) / b.budgetCents) * 100) : 0;
+  const mods = Object.entries(b.perModule || {}).filter(([, c]) => modPct(c as number) >= 1);
+  // Renouvellement — décompte basé sur la DATE D'ÉCHÉANCE stockée (anniversaire d'adhésion),
+  // PAS sur « aujourd'hui + 365 j ». Carte distincte du compteur de tokens.
   const d = b.daysToRenewal;
-  // Alertes echeance : 60 j avant = ambre, 15 j avant = rouge, expire = bloque.
   const renewAmber = d != null && d <= 60 && d > 15;
   const renewRed = d != null && d <= 15 && d >= 0;
-  const budgetLow = remPct <= 15 && !b.exhausted;
-  const danger = b.exhausted || renewRed;
-  const warn = renewAmber || budgetLow;
-  const mods = Object.entries(b.perModule || {});
   const fmtDate = (s: string | null) => s ? new Date(s + 'T00:00:00').toLocaleDateString('fr-CA', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
   return (
-    <div className={`rounded-2xl border-2 p-5 ${danger ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : warn ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2"><Zap size={18} className={danger ? 'text-red-600' : 'text-purple-600'} /><h2 className="font-bold">{tr('Forfait Assistant IA', 'AI Assistant plan')}</h2></div>
-        <span className={`text-lg font-extrabold ${danger ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
-          {b.exhausted ? (b.expired ? tr('Bloqué — échéance dépassée', 'Blocked — expired') : tr('Épuisé', 'Exhausted')) : `${c2(b.remainingCents)} ${tr('restant', 'left')}`}
-        </span>
+    <div className="space-y-4">
+      {/* CARTE 1 — Consommation des assistants IA (jamais de $ interne, jamais de marge) */}
+      <div className={`rounded-2xl border-2 p-5 ${budgetExhausted ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : budgetLow ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2"><Zap size={18} className={budgetExhausted ? 'text-red-600' : 'text-purple-600'} /><h2 className="font-bold">{tr('Assistants IA — consommation', 'AI assistants — usage')}</h2></div>
+          <span className={`text-lg font-extrabold ${budgetExhausted ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
+            {budgetExhausted ? tr('Épuisé', 'Exhausted') : `${remPct}% ${tr('restant', 'left')}`}
+          </span>
+        </div>
+        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <div className={`h-full ${budgetExhausted ? 'bg-red-500' : budgetLow ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
+        </div>
+        <div className="mt-2 text-sm">
+          <span className="text-gray-500">{tr('Forfait', 'Plan')} :</span> <b>{c2(b.tierCents)}</b>
+          <span className="mx-2 text-gray-300">|</span>
+          <span className="text-gray-500">{tr('Consommé', 'Used')} :</span> <b>{pct}%</b>
+        </div>
+        {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${modPct(c as number)}%`).join(' · ')}</div>}
+        {budgetExhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Forfait IA épuisé — renouvelez pour continuer à utiliser les assistants.', 'AI plan exhausted — renew to keep using the assistants.')}</p>}
+        {budgetLow && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr('Forfait IA presque épuisé.', 'AI plan almost used up.')}</p>}
       </div>
-      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-        <div className={`h-full ${b.exhausted ? 'bg-red-500' : budgetLow ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
+
+      {/* CARTE 2 — Renouvellement de l'abonnement (séparée, basée sur la date d'adhésion) */}
+      <div className={`rounded-2xl border-2 p-5 ${b.expired ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : renewRed ? 'border-red-300 bg-red-50/60 dark:border-red-800 dark:bg-red-900/10' : renewAmber ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2"><CreditCard size={18} className={b.expired || renewRed ? 'text-red-600' : renewAmber ? 'text-amber-600' : 'text-gray-500'} /><h2 className="font-bold">{tr("Renouvellement de l'abonnement", 'Subscription renewal')}</h2></div>
+          {d != null && <span className={`text-sm font-bold ${b.expired ? 'text-red-700 dark:text-red-300' : renewRed ? 'text-red-600' : renewAmber ? 'text-amber-600' : 'text-gray-500'}`}>{d >= 0 ? tr(`dans ${d} j`, `in ${d}d`) : tr(`échu depuis ${-d} j`, `${-d}d overdue`)}</span>}
+        </div>
+        <div className="mt-2 text-sm"><span className="text-gray-500">{tr("Date d'échéance", 'Due date')} :</span> <b>{fmtDate(b.renewalDate)}</b></div>
+        {b.expired && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {tr('Abonnement échu — les assistants IA sont bloqués jusqu\'au règlement.', 'Subscription expired — AI assistants are blocked until payment.')}</p>}
+        {!b.expired && renewRed && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">🔴 {tr(`Échéance dans ${d} j — réglez pour éviter le blocage.`, `Due in ${d}d — pay to avoid blocking.`)}</p>}
+        {!b.expired && renewAmber && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr(`Échéance dans ${d} j.`, `Due in ${d}d.`)}</p>}
       </div>
-      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-        <div><span className="text-gray-500">{tr('Utilisé', 'Used')} :</span> <b>{c2(b.usedCents)}</b> / {c2(b.budgetCents)} <span className="text-gray-400">({tr('forfait', 'plan')} {c2(b.tierCents)})</span></div>
-        <div><span className="text-gray-500">{tr('Renouvellement', 'Renewal')} :</span> <b>{fmtDate(b.renewalDate)}</b>{d != null && <span className={`ml-1 ${renewRed ? 'text-red-600 font-bold' : renewAmber ? 'text-amber-600 font-semibold' : 'text-gray-400'}`}>({d >= 0 ? tr(`dans ${d} j`, `in ${d}d`) : tr(`échue depuis ${-d} j`, `${-d}d overdue`)})</span>}</div>
-      </div>
-      {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${c2(c as number)}`).join(' · ')}</div>}
-      {b.exhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {b.expired ? tr('Abonnement IA échu — réglez pour réactiver les assistants.', 'AI subscription expired — pay to reactivate.') : tr('Forfait IA épuisé — renouvelez pour continuer.', 'AI plan exhausted — renew to continue.')}</p>}
-      {!b.exhausted && renewRed && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">🔴 {tr(`Renouvellement dans ${d} j — réglez pour éviter le blocage.`, `Renewal in ${d}d — pay to avoid blocking.`)}</p>}
-      {!b.exhausted && renewAmber && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr(`Renouvellement dans ${d} j.`, `Renewal in ${d}d.`)}</p>}
     </div>
   );
 }
