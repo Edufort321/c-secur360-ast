@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // #DGA — Analyseur IA expert. Connaissances normatives intégrées (IEEE C57.104, IEC 60599, Duval,
 // Rogers, Doernenburg, qualité d'huile, furannes/DP, tendances). Proxy serveur (clé non exposée).
@@ -76,6 +77,8 @@ export async function POST(req: NextRequest) {
   const dossier = body.dossier || {};
   const measures = Array.isArray(body.measures) ? body.measures : [];
   if (!measures.length) return NextResponse.json({ error: 'Aucune mesure a analyser' }, { status: 400 });
+  const tenant = String(body.tenant || dossier.tenant_id || '').trim();
+  if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   const isOltc = !!(dossier.extra?.is_oltc);
   const oilType = dossier.oil_type || dossier.extra?.oil_type || null;
@@ -100,6 +103,7 @@ Analyse l'évolution et donne ton diagnostic expert.`;
       return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 });
     }
     const data = await resp.json();
+    if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'analyze' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: any = null;

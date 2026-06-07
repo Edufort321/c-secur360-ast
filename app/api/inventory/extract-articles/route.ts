@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // #Inventaire — Import IA d'articles depuis une feuille Excel STRICTE (gabarit impose).
 // Calque sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote
@@ -56,8 +57,11 @@ export async function POST(req: NextRequest) {
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const rows: any[] = Array.isArray(body.rows) ? body.rows : [];
+  const tenant = String(body.tenant || '').trim();
   if (!rows.length) return NextResponse.json({ error: 'Aucune ligne a importer (feuille vide).' }, { status: 400 });
   if (rows.length > 600) return NextResponse.json({ error: `Lot trop grand (${rows.length} lignes). Maximum 600 par requete — decoupez en lots plus petits.` }, { status: 400 });
+  // Forfait IA : bloque si le budget du tenant est epuise (sauf "illimite" = pas de forfait).
+  if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -83,6 +87,8 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await resp.json();
+    // Decompte REEL par tenant : cout = tokens Anthropic (usage) au tarif du modele.
+    if (tenant) { try { const cost = aiCallCostCents('claude-haiku-4-5-20251001', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'inventaire', cost, { feature: 'import', rows: rows.length }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: any = null;

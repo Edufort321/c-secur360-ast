@@ -143,9 +143,9 @@ export async function generateLabelsPdf(labels, opts = {}) {
 
   // opts.print : ouvre directement le dialogue d'impression du navigateur sur le PDF (cadre + min/max
   // + nombre de copies EXACT), au lieu de window.print() de la page (qui imprimait en boucle).
-  if (opts.print) {
+  if (opts.print || opts.preview) {
     try {
-      doc.autoPrint();
+      if (opts.print) doc.autoPrint(); // APERÇU = ouvre sans imprimer ; IMPRIMER = autoPrint
       const url = doc.output('bloburl');
       const w = window.open(url, '_blank');
       if (!w) { doc.save(opts.filename || 'etiquettes-inventaire.pdf'); } // popup bloqué -> repli téléchargement

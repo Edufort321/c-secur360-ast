@@ -254,7 +254,7 @@ export function TransfoView(props: {
     const other = lang === 'fr' ? 'en' : 'fr';
     if (!currentText.trim() || !dossier.id) return;
     try {
-      const r = await fetch('/api/dga/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: currentText, target: other }) });
+      const r = await fetch('/api/dga/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: currentText, target: other, tenant }) });
       const j = await r.json();
       if (r.ok && typeof j.text === 'string') updateExtra({ ['manual_reco_' + lang]: currentText, ['manual_reco_' + other]: j.text, manual_reco: currentText });
       else if (j.error) setNotice(tr('Traduction impossible : ', 'Translation failed: ') + j.error);
@@ -266,7 +266,7 @@ export function TransfoView(props: {
     if (!dossier.id) return;
     setAiBusy(true); setNotice(null);
     try {
-      const resp = await fetch('/api/dga/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dossier: form, measures: data }) });
+      const resp = await fetch('/api/dga/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dossier: form, measures: data, tenant }) });
       const j = await resp.json();
       if (!resp.ok || j.error) throw new Error(j.error || 'IA');
       const a = j.analysis;

@@ -147,10 +147,13 @@ export function AssistantWidget() {
     try {
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token;
+      // Tenant = 1er segment d'URL (routes [tenant]). Exclut les routes systeme -> aucune contamination.
+      const seg = (pathname || '').split('/').filter(Boolean)[0] || '';
+      const tenant = ['admin', 'api', 'login', 'scan', 'pricing', 'privacy', 'terms'].includes(seg) ? '' : seg;
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: next, tenant }),
       });
       const json = await res.json().catch(() => ({}));
       setMessages(m => [...m, { role: 'assistant', content: json?.reply || json?.error || 'Réponse indisponible.' }]);

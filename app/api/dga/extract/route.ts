@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // #DGA — Extraction IA d'un rapport PDF de labo (DGA + qualité huile) vers JSON structuré.
 // Proxy SERVEUR de l'appel Anthropic : la clé (ANTHROPIC_API_KEY) reste côté serveur — jamais
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const pdfBase64: string = body.pdfBase64 || '';
   if (!pdfBase64) return NextResponse.json({ error: 'pdfBase64 requis' }, { status: 400 });
+  const tenant = String(body.tenant || '').trim();
+  if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -57,6 +60,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 });
     }
     const data = await resp.json();
+    if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'extract' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     // Le modele doit renvoyer du JSON pur ; on tolere un eventuel encadrement.
     const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();

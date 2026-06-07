@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // #DGA — Traduction du commentaire/recommandation expert (FR <-> EN), pour le mode
 // « traduction auto selon la langue du header ». Proxy serveur (clé non exposée).
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const text = String(body.text || '').trim();
   const target = body.target === 'en' ? 'en' : 'fr';
+  const tenant = String(body.tenant || '').trim();
   if (!text) return NextResponse.json({ ok: true, text: '' });
 
   const langName = target === 'en' ? 'English' : 'français';
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 200)}` }, { status: 502 }); }
     const data = await resp.json();
+    if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'translate' }); } catch { /* best-effort */ } }
     const out = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     return NextResponse.json({ ok: true, text: out });
   } catch (e: any) {

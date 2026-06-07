@@ -3060,7 +3060,7 @@ function AppContent() {
       const callChunk = async (idx) => {
         const resp = await fetch('/api/inventory/extract-articles', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: chunks[idx] }), signal: controller.signal,
+          body: JSON.stringify({ rows: chunks[idx], tenant: tenantId }), signal: controller.signal,
         });
         const j = await resp.json();
         if (!resp.ok || j.error) throw new Error((j.error || 'Analyse IA echouee') + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : ''));
@@ -7049,7 +7049,7 @@ function AppContent() {
     const pdfFmt = LABEL_FORMATS[pdfFmtKey];
     const perPage = pdfFmt.cols * pdfFmt.rows;
     const toggleSkip = (idx) => setLabelSkip(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
-    const exportLabelsPdf = async (printDirect = false) => {
+    const exportLabelsPdf = async (mode = 'download') => { // 'download' | 'print' | 'preview'
       if (pdfBusy) return;
       setPdfBusy(true);
       try {
@@ -7064,7 +7064,7 @@ function AppContent() {
           });
         });
         if (!labels.length) { notify(language === 'fr' ? 'Aucune étiquette à générer.' : 'No label to generate.', 'error'); return; }
-        await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, print: printDirect === true, filename: `etiquettes-${tenantId}.pdf` });
+        await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, print: mode === 'print', preview: mode === 'preview', filename: `etiquettes-${tenantId}.pdf` });
       } catch (e) { notify((language === 'fr' ? 'Export PDF impossible : ' : 'PDF export failed: ') + (e?.message || e), 'error'); }
       finally { setPdfBusy(false); }
     };
@@ -7082,10 +7082,13 @@ function AppContent() {
             <Button variant="secondary" onClick={() => setShowPrintModal(false)}>
               Annuler
             </Button>
-            <Button variant="secondary" onClick={() => exportLabelsPdf(false)} disabled={pdfBusy}>
+            <Button variant="secondary" onClick={() => exportLabelsPdf('preview')} disabled={pdfBusy}>
+              {pdfBusy ? '…' : (language === 'fr' ? 'Aperçu' : 'Preview')}
+            </Button>
+            <Button variant="secondary" onClick={() => exportLabelsPdf('download')} disabled={pdfBusy}>
               {pdfBusy ? '…' : (language === 'fr' ? 'Télécharger PDF' : 'Download PDF')}
             </Button>
-            <Button variant="primary" icon={Printer} onClick={() => exportLabelsPdf(true)} disabled={pdfBusy}>
+            <Button variant="primary" icon={Printer} onClick={() => exportLabelsPdf('print')} disabled={pdfBusy}>
               {pdfBusy ? '…' : 'Imprimer'}
             </Button>
           </>

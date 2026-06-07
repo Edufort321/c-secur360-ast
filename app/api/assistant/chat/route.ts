@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { TENANT_SYSTEM_PROMPT } from '@/lib/assistant/knowledge-base';
 import { requireAIUser } from '@/lib/auth/ai-guard';
+import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // Assistant TENANT (interne). Auth OBLIGATOIRE + quota par utilisateur. Ne lit aucune donnée tenant.
 // Jamais throw vers le client : message de repli propre.
@@ -18,7 +19,10 @@ export async function POST(req: NextRequest) {
   if (!apiKey) return NextResponse.json({ reply: REPLY_FALLBACK });
 
   let messages: any[] = [];
-  try { ({ messages } = await req.json()); } catch { /* corps invalide */ }
+  let tenant = '';
+  try { const body = await req.json(); messages = body.messages; tenant = String(body.tenant || '').trim(); } catch { /* corps invalide */ }
+  // Forfait IA : si le tenant a un forfait epuise, l'assistant est en pause.
+  if (tenant) { try { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ reply: "Le forfait d'assistance IA est épuisé. Demandez un renouvellement dans Administration → Abonnement." }); } catch { /* ignore */ } }
 
   const safe = (Array.isArray(messages) ? messages : [])
     .slice(-10)
@@ -34,6 +38,7 @@ export async function POST(req: NextRequest) {
       system: [{ type: 'text', text: TENANT_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: safe as any,
     });
+    if (tenant) { try { const cost = aiCallCostCents('claude-haiku-4-5-20251001', (resp as any).usage); if (cost > 0) await recordAiUsage(tenant, 'assistant', cost, { feature: 'chat' }); } catch { /* best-effort */ } }
     const reply = (resp.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n').trim();
     return NextResponse.json({ reply: reply || REPLY_FALLBACK });
   } catch (e) {

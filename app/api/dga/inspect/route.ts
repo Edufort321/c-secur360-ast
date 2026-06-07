@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAiBudget, recordAiUsage, aiCallCostCents } from '@/lib/aiBudget';
 
 // #DGA — Aide technique IA pour l'inspection de routine d'un transformateur à l'huile.
 // À partir des points en ANOMALIE relevés, propose des correctifs concrets (cause probable +
@@ -21,6 +22,8 @@ export async function POST(req: NextRequest) {
   const dossier = body.dossier || {};
   const anomalies = Array.isArray(body.anomalies) ? body.anomalies : [];
   if (!anomalies.length) return NextResponse.json({ error: 'Aucune anomalie à analyser' }, { status: 400 });
+  const tenant = String(body.tenant || dossier.tenant_id || '').trim();
+  if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   const userMsg = `Équipement : ${JSON.stringify({ ident: dossier.ident, kv: dossier.kv, mva: dossier.mva, oil_type: dossier.oil_type, manufacturer: dossier.manufacturer, year: dossier.year })}
 Anomalies relevées (catégorie · point · note/mesure) :
@@ -35,6 +38,7 @@ Donne les correctifs.`;
     });
     if (!resp.ok) { const e = await resp.text(); return NextResponse.json({ error: `Anthropic ${resp.status}: ${e.slice(0, 300)}` }, { status: 502 }); }
     const data = await resp.json();
+    if (tenant) { try { const cost = aiCallCostCents('claude-sonnet-4-20250514', data?.usage); if (cost > 0) await recordAiUsage(tenant, 'dga', cost, { feature: 'inspect' }); } catch { /* best-effort */ } }
     const text = (data?.content || []).map((b: any) => b?.text || '').join('').trim();
     const jsonStr = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
     let parsed: any = null;
