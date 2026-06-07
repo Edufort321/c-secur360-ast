@@ -58,6 +58,7 @@ import {
   Mail,
   ClipboardCheck,
   ScanLine,
+  RefreshCw,
   Zap
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -3545,6 +3546,24 @@ function AppContent() {
     window.print();
   };
 
+  // Actualiser depuis le nuage : recharge items/mouvements/catégories/emplacements depuis
+  // inventory_state (utile quand un autre appareil a bougé du stock — le temps réel est désactivé).
+  const refreshFromCloud = async () => {
+    try {
+      const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenantId).maybeSingle();
+      const s = data?.data || {};
+      if (Array.isArray(s.items)) { setItems(s.items); cloudItemCount.current = s.items.length; }
+      if (Array.isArray(s.movements)) setMovements(s.movements);
+      if (Array.isArray(s.categories)) setCategories(s.categories);
+      if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
+      notify(language === 'fr' ? 'Mouvements et inventaire actualisés ✓' : 'Movements and inventory refreshed ✓');
+      return true;
+    } catch (e) {
+      notify((language === 'fr' ? 'Actualisation impossible : ' : 'Refresh failed: ') + (e?.message || e), 'error');
+      return false;
+    }
+  };
+
   // Gestion de la sélection multiple
   const toggleItemSelection = (itemId) => {
     setSelectedItems(prev =>
@@ -4752,6 +4771,13 @@ function AppContent() {
               </div>
             </div>
             <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                icon={RefreshCw}
+                onClick={refreshFromCloud}
+              >
+                {language === 'fr' ? 'Actualiser' : 'Refresh'}
+              </Button>
               <Button
                 variant="secondary"
                 icon={Printer}
