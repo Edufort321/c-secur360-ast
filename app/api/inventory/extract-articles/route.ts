@@ -31,6 +31,7 @@ Regles :
   - unit : unite, unit, uom, mesure, conditionnement.
   - description : description, details, note, remarque, commentaire.
 - Nombres : convertis en nombre (retire symboles monetaires, espaces, separateurs de milliers ; la virgule decimale devient un point). Si une valeur numerique est absente, mets 0 — SAUF maxQuantity : si absent, mets le plus grand entre (quantity) et (minQuantity*2) et au minimum 1.
+- PRIX (costPrice/salePrice) : ce sont de PETITES valeurs monetaires unitaires (typiquement < 10000). N'utilise JAMAIS un code-barres, un EAN/UPC, un numero de reference/SKU ou un identifiant comme prix. En cas de doute (nombre tres grand a 6+ chiffres, ou colonne qui ressemble a un code), mets 0 plutot que de deviner. salePrice >= costPrice en general.
 - category et department : si la valeur de la ligne ressemble (insensible a la casse/aux accents) a une valeur de la liste fournie ci-dessous, RENVOIE EXACTEMENT la valeur de la liste. Sinon, renvoie la valeur brute telle quelle.
 - code : si absent, fabrique un code court en MAJUSCULES a partir du nom (ex: "Masque N95" -> "MASQUE-N95"). Jamais vide.
 - unit : si absent, mets "Piece".

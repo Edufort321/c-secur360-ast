@@ -1585,6 +1585,10 @@ function AppContent() {
   const aiFileInputRef = useRef(null);     // input pour l'import IA (colonnes libres)
   const [aiImporting, setAiImporting] = useState(false); // spinner pendant l'analyse IA
   const [aiProgress, setAiProgress] = useState(null);    // {done,total} progression des lots (gros fichiers)
+  const aiAbortRef = useRef(null);         // AbortController pour ANNULER l'import IA en cours
+
+  // Annule l'import IA en cours (interrompt les lots restants).
+  const cancelAiImport = () => { try { aiAbortRef.current?.abort(); } catch { /* ignore */ } };
 
   // États pour le partage de produits
   const [showShareModal, setShowShareModal] = useState(false);
@@ -2809,6 +2813,8 @@ function AppContent() {
   // departements absents sont crees automatiquement pour ne pas bloquer l'import.
   const handleAiFileUpload = async (file) => {
     if (!file) return;
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
     setAiImporting(true);
     try {
       const buf = await file.arrayBuffer();
@@ -2839,11 +2845,13 @@ function AppContent() {
       let nextIdx = 0, done = 0;
       const worker = async () => {
         while (nextIdx < chunks.length) {
+          if (controller.signal.aborted) return; // import annulé -> on arrête de traiter
           const idx = nextIdx++;
           const resp = await fetch('/api/inventory/extract-articles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rows: chunks[idx], categories: catNames, departments: deptNames }),
+            signal: controller.signal,
           });
           const j = await resp.json();
           if (!resp.ok || j.error) throw new Error((j.error || 'Analyse IA echouee') + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : ''));
@@ -2958,10 +2966,15 @@ function AppContent() {
         notify((language === 'fr' ? "⚠️ Sites non synchronisés vers l'admin : " : '⚠️ Sites not synced to admin: ') + siteSync.error, 'warning');
       }
     } catch (e) {
-      notify((language === 'fr' ? 'Import IA échoué : ' : 'AI import failed: ') + (e?.message || e), 'error');
+      if (controller.signal.aborted || e?.name === 'AbortError') {
+        notify(language === 'fr' ? 'Import IA annulé.' : 'AI import cancelled.', 'info');
+      } else {
+        notify((language === 'fr' ? 'Import IA échoué : ' : 'AI import failed: ') + (e?.message || e), 'error');
+      }
     } finally {
       setAiImporting(false);
       setAiProgress(null);
+      aiAbortRef.current = null;
     }
   };
 
@@ -7691,6 +7704,11 @@ function AppContent() {
                   </>
                 ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
               </button>
+              {aiImporting && (
+                <button onClick={cancelAiImport} className="mt-2 w-full rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                  {language === 'fr' ? "Annuler l'import" : 'Cancel import'}
+                </button>
+              )}
               <input
                 ref={aiFileInputRef}
                 type="file"
@@ -7940,6 +7958,11 @@ function AppContent() {
                     </>
                   ) : (language === 'fr' ? '✨ Importer via IA (Excel)' : '✨ Import via AI (Excel)')}
                 </button>
+                {aiImporting && (
+                  <button onClick={cancelAiImport} className="mt-2 w-full rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20">
+                    {language === 'fr' ? "Annuler l'import" : 'Cancel import'}
+                  </button>
+                )}
                 <input
                   ref={aiFileInputRef}
                   type="file"

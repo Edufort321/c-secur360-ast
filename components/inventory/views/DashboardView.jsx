@@ -723,9 +723,11 @@ const DashboardView = React.memo(({
           />
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Défilement de TOUS les articles (plus de pagination) : on affine via la recherche/les
+            filtres. En-têtes collantes pour rester visibles en scrollant. */}
+        <div className="overflow-auto max-h-[70vh]">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-6 py-4 text-left">
                   <button
@@ -770,7 +772,7 @@ const DashboardView = React.memo(({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {paginatedItems.map((item, index) => (
+              {sortedItems.map((item, index) => (
                 <tr
                   key={item.id}
                   className={`
@@ -853,47 +855,10 @@ const DashboardView = React.memo(({
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Page {currentPage} sur {totalPages} ({sortedItems.length} articles)
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Précédent
-                </Button>
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`
-                      px-3 py-1 rounded-lg text-sm font-medium transition-colors
-                      ${currentPage === i + 1
-                        ? 'bg-slate-700 text-white'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }
-                    `}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Suivant
-                </Button>
-              </div>
-            </div>
+        {/* Compteur (remplace la pagination) : tout défile, on affine via recherche/filtres. */}
+        {sortedItems.length > 0 && (
+          <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            {sortedItems.length} {sortedItems.length > 1 ? 'articles' : 'article'} {filteredItems.length !== items.length ? '(filtrés)' : ''}
           </div>
         )}
 
