@@ -1561,6 +1561,10 @@ function AppContent() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printMode, setPrintMode] = useState('single'); // 'single', 'batch'
+  // Assistant Prix IA (recherche web du prix coutant a jour) — onglet Articles.
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceRows, setPriceRows] = useState([]); // [{id,code,name,supplierCost,webPrice,source,confidence,note,apply}]
   const [itemToPrint, setItemToPrint] = useState(null);
   const [labelFormat, setLabelFormat] = useState('avery35520'); // Format d'étiquette sélectionné
   const [bulkPrintByLocation, setBulkPrintByLocation] = useState(false); // Impression en volume par emplacement
@@ -2329,6 +2333,48 @@ function AppContent() {
         notify(language === 'fr' ? `${count} article(s) supprimé(s).` : `${count} article(s) deleted.`);
       },
     });
+  };
+
+  // Assistant Prix IA : lance la recherche web pour une liste d'articles et ouvre la modale comparative.
+  const handlePriceAssistant = async (targetItems) => {
+    const list = Array.isArray(targetItems) ? targetItems : [];
+    if (!list.length) { notify(language === 'fr' ? 'Sélectionne au moins un article.' : 'Select at least one item.', 'info'); return; }
+    if (list.length > 20) { notify(language === 'fr' ? 'Maximum 20 articles par recherche — sélectionne-en moins.' : 'Max 20 items per search — select fewer.', 'error'); return; }
+    setPriceLoading(true);
+    setShowPriceModal(true);
+    setPriceRows(list.map(it => ({ id: it.id, code: it.code, name: it.name, supplierCost: Number(it.costPrice) || 0, webPrice: null, source: '', confidence: '', note: '', apply: false })));
+    try {
+      const resp = await fetch('/api/inventory/price-research', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: list.map(it => ({ code: it.code, name: it.name, supplier: it.supplier || '', unit: it.unit || '', currentCost: Number(it.costPrice) || 0 })) }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || j.error) throw new Error(j.error || 'Recherche IA échouée');
+      const byCode = new Map((j.prices || []).map(p => [String(p.code), p]));
+      setPriceRows(prev => prev.map(r => {
+        const p = byCode.get(String(r.code));
+        const web = p ? Math.max(0, Number(p.webPrice) || 0) : 0;
+        return { ...r, webPrice: web, source: p?.source || '', confidence: p?.confidence || '', note: p?.note || '', apply: web > 0 && web !== r.supplierCost };
+      }));
+    } catch (e) {
+      notify((language === 'fr' ? 'Assistant prix échoué : ' : 'Price assistant failed: ') + (e?.message || e), 'error');
+      setShowPriceModal(false);
+    } finally { setPriceLoading(false); }
+  };
+
+  // Applique les prix choisis (mode IA/web) -> met a jour costPrice ; le dashboard s'ajuste tout seul.
+  const applyPriceUpdates = () => {
+    const toApply = priceRows.filter(r => r.apply && Number(r.webPrice) > 0);
+    if (!toApply.length) { setShowPriceModal(false); return; }
+    toApply.forEach(r => updateItem(r.id, {
+      costPrice: Number(r.webPrice),
+      salePrice: Math.round(Number(r.webPrice) * (1 + (Number(targetEbitda) || 0) / 100) * 100) / 100,
+      lastPriceUpdate: new Date().toISOString(),
+    }));
+    notify(language === 'fr'
+      ? `${toApply.length} prix coûtant mis à jour. Le dashboard s'ajuste automatiquement.`
+      : `${toApply.length} cost price(s) updated. Dashboard updates automatically.`);
+    setShowPriceModal(false);
   };
 
   const deleteItem = (itemId) => {
@@ -8451,6 +8497,7 @@ function AppContent() {
             setEditingItem={setEditingItem}
             deleteItem={deleteItem}
             deleteSelectedItems={deleteSelectedItems}
+            onPriceAssistant={handlePriceAssistant}
             setSelectedItemForView={setSelectedItemForView}
             setShowShareModal={setShowShareModal}
             setSelectedItemForShare={setSelectedItemForShare}
@@ -8487,6 +8534,61 @@ function AppContent() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Assistant Prix IA — comparatif prix fournisseur (actuel) vs prix web (IA) */}
+      {showPriceModal && (
+        <Modal isOpen onClose={() => setShowPriceModal(false)} title={language === 'fr' ? '💡 Assistant prix (IA — recherche web)' : '💡 Price assistant (AI — web search)'}>
+          <div className="p-2">
+            <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+              {language === 'fr'
+                ? "Le prix web est souvent du prix de détail (plus élevé que le coût fournisseur). Coche les lignes à appliquer, puis confirme — le tableau de bord s'ajuste automatiquement."
+                : 'Web prices are often retail (higher than supplier cost). Tick the rows to apply, then confirm — the dashboard adjusts automatically.'}
+            </p>
+            {priceLoading && (
+              <div className="mb-3 flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+                {language === 'fr' ? 'Recherche web en cours…' : 'Searching the web…'}
+              </div>
+            )}
+            <div className="max-h-[55vh] overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                  <tr>
+                    <th className="px-2 py-2"><input type="checkbox" checked={priceRows.length > 0 && priceRows.every(r => r.apply)} onChange={(e) => setPriceRows(prev => prev.map(r => ({ ...r, apply: e.target.checked && Number(r.webPrice) > 0 })))} /></th>
+                    <th className="px-2 py-2">{language === 'fr' ? 'Article' : 'Item'}</th>
+                    <th className="px-2 py-2 text-right">{language === 'fr' ? 'Coût fournisseur' : 'Supplier cost'}</th>
+                    <th className="px-2 py-2 text-right">{language === 'fr' ? 'Prix web (IA)' : 'Web price (AI)'}</th>
+                    <th className="px-2 py-2">{language === 'fr' ? 'Source' : 'Source'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {priceRows.map(r => {
+                    const web = Number(r.webPrice) || 0;
+                    const higher = web > r.supplierCost;
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                        <td className="px-2 py-2"><input type="checkbox" disabled={web <= 0} checked={!!r.apply} onChange={(e) => setPriceRows(prev => prev.map(x => x.id === r.id ? { ...x, apply: e.target.checked } : x))} /></td>
+                        <td className="px-2 py-2"><div className="truncate font-semibold text-gray-900 dark:text-white">{r.name}</div><div className="font-mono text-[11px] text-gray-400">{r.code}</div>{r.note && <div className="text-[11px] text-amber-600 dark:text-amber-400">{r.note}</div>}</td>
+                        <td className="px-2 py-2 text-right text-gray-700 dark:text-gray-200">${r.supplierCost.toFixed(2)}</td>
+                        <td className={`px-2 py-2 text-right font-bold ${web <= 0 ? 'text-gray-400' : higher ? 'text-red-600' : 'text-green-600'}`}>{priceLoading && r.webPrice === null ? '…' : (web > 0 ? `$${web.toFixed(2)}` : '—')}{r.confidence && <span className="ml-1 text-[10px] font-normal text-gray-400">({r.confidence})</span>}</td>
+                        <td className="px-2 py-2 text-[11px] text-blue-600 dark:text-blue-400 truncate max-w-[140px]">{r.source}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button onClick={() => setShowPriceModal(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                {language === 'fr' ? 'Garder le prix fournisseur' : 'Keep supplier price'}
+              </button>
+              <button onClick={applyPriceUpdates} disabled={priceLoading || !priceRows.some(r => r.apply)} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50">
+                {language === 'fr' ? `Appliquer le prix IA (${priceRows.filter(r => r.apply).length})` : `Apply AI price (${priceRows.filter(r => r.apply).length})`}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Dialogue de confirmation in-app (remplace window.confirm, inopérant en PWA) */}

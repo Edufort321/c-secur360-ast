@@ -20,11 +20,13 @@ import {
   QrCode,
   ChevronDown,
   ChevronRight,
-  FileText
+  FileText,
+  Zap
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import SearchInput from '../components/SearchInput';
 import { getScanUrl } from '../config/app';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ============== UI COMPONENTS ==============
 
@@ -188,6 +190,7 @@ const ArticlesView = React.memo(({
   setEditingItem,
   deleteItem,
   deleteSelectedItems,
+  onPriceAssistant,
   handlePrint,
   printCurrentView,
   setSelectedItemForView,
@@ -196,6 +199,7 @@ const ArticlesView = React.memo(({
   setShowShareModal,
   importFromCatalogue
 }) => {
+  const { language } = useLanguage();
   // État pour les lignes expandables
   const [expandedRows, setExpandedRows] = useState(new Set());
 
@@ -296,6 +300,18 @@ const ArticlesView = React.memo(({
               </div>
             )}
           </div>
+          {/* Assistant Prix IA (recherche web du prix coûtant) sur la sélection */}
+          {onPriceAssistant && (
+            <button
+              onClick={() => onPriceAssistant(filteredItems.filter(it => selectedItems.includes(it.id)))}
+              disabled={selectedItems.length === 0}
+              title={language === 'fr' ? 'Mettre à jour les prix via recherche web (IA)' : 'Update prices via AI web search'}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+            >
+              <Zap size={16} />
+              <span className="hidden sm:inline">{language === 'fr' ? `Prix IA${selectedItems.length ? ` (${selectedItems.length})` : ''}` : `AI price${selectedItems.length ? ` (${selectedItems.length})` : ''}`}</span>
+            </button>
+          )}
           {/* Suppression EN MASSE des articles sélectionnés (nettoyage rapide d'un import) */}
           {deleteSelectedItems && (
             <button
