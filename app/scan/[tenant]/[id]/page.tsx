@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Package, MapPin, DollarSign, Boxes, AlertTriangle, ShieldCheck, Loader2, Plus, Minus, LogIn, CheckCircle2 } from 'lucide-react';
+import { Package, MapPin, DollarSign, Boxes, AlertTriangle, ShieldCheck, Loader2, Plus, Minus, LogIn, CheckCircle2, X, ClipboardCheck } from 'lucide-react';
 
 type Item = any;
 
@@ -35,13 +35,27 @@ export default function PublicScanPage() {
   const [authUser, setAuthUser] = useState<{ name?: string; email?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Etat du panneau mouvement.
-  const [moveType, setMoveType] = useState<'entry' | 'exit'>('exit');
+  // Etat du panneau mouvement. 'count' = MODE INVENTAIRE (quantite reelle comptee vs affichee).
+  const [moveType, setMoveType] = useState<'entry' | 'exit' | 'count'>('exit');
   const [moveQty, setMoveQty] = useState<number>(1);
+  const [countedQty, setCountedQty] = useState<string>(''); // quantite reelle comptee (mode inventaire)
   const [moveDept, setMoveDept] = useState<string>('');
   const [moveReason, setMoveReason] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [moveMsg, setMoveMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  // Bouton X : ressortir vite (referme l'onglet ouvert par la camera native, sinon retour arriere).
+  const closeAndScanNext = () => { try { window.close(); } catch { /* ignore */ } try { window.history.back(); } catch { /* ignore */ } };
+
+  // Quantite systeme de l'emplacement courant (pour l'ecart du mode inventaire).
+  const currentLocQty = (): number => {
+    if (!item) return 0;
+    if (item.isMultiLocation && Array.isArray(item.locations) && moveDept) {
+      const l = item.locations.find((x: any) => String(x.departmentCode) === moveDept);
+      if (l) return Number(l.quantity ?? l.qty ?? 0) || 0;
+    }
+    return availableQty(item);
+  };
 
   const reloadItem = async () => {
     try {
@@ -92,18 +106,30 @@ export default function PublicScanPage() {
   const submitMovement = async () => {
     if (!item || busy) return;
     setMoveMsg(null);
+    const isCount = moveType === 'count';
     const qty = Math.abs(Number(moveQty) || 0);
-    if (!(qty > 0)) { setMoveMsg({ kind: 'err', text: 'Entre une quantité valide.' }); return; }
+    const counted = Math.max(0, Math.round(Number(countedQty) || 0));
+    if (!isCount && !(qty > 0)) { setMoveMsg({ kind: 'err', text: 'Entre une quantité valide.' }); return; }
+    if (isCount && countedQty === '') { setMoveMsg({ kind: 'err', text: 'Entre la quantité réelle comptée.' }); return; }
     setBusy(true);
     try {
+      const payload: any = { tenant, itemId: String(item.id), departmentCode: moveDept || null, type: isCount ? 'adjustment' : moveType, reason: moveReason };
+      if (isCount) payload.countedQuantity = counted; else payload.quantity = qty;
       const res = await fetch('/api/inventory/movement', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant, itemId: String(item.id), departmentCode: moveDept || null, type: moveType, quantity: qty, reason: moveReason }),
+        body: JSON.stringify(payload),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.success) {
         const extra = j?.available != null ? ` (disponible : ${j.available})` : '';
         setMoveMsg({ kind: 'err', text: (j?.error || 'Échec du mouvement') + extra });
+      } else if (isCount) {
+        const d = Number(j.discrepancy || 0);
+        setMoveMsg({ kind: 'ok', text: d === 0
+          ? `Inventaire confirmé : ${counted} — aucun écart. ✅`
+          : `Inventaire ajusté : écart ${d > 0 ? '+' : ''}${d} (système → compté). Nouveau stock : ${j.quantity}. Écart enregistré (balancement).` });
+        setMoveReason('');
+        await reloadItem();
       } else {
         setMoveMsg({ kind: 'ok', text: `${moveType === 'exit' ? 'Sortie' : 'Entrée'} de ${qty} enregistrée. Nouveau stock : ${j.quantity}.` });
         setMoveReason('');
@@ -143,7 +169,13 @@ export default function PublicScanPage() {
         <div className="flex items-center justify-between rounded-t-2xl bg-white px-5 py-4 shadow">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logo} alt="logo" className="h-9 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/c-secur360-logo.png'; }} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{tenantName || tenant}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{tenantName || tenant}</span>
+            {/* X : ressortir vite vers la camera pour le prochain scan */}
+            <button onClick={closeAndScanNext} aria-label="Fermer" title="Fermer / scanner le suivant" className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4 rounded-b-2xl bg-white px-5 pb-6 pt-2 shadow">
@@ -201,19 +233,25 @@ export default function PublicScanPage() {
                 <span className="truncate pl-2 text-[11px] text-slate-400">{authUser.name || authUser.email}</span>
               </div>
 
-              {/* Entree / Sortie */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Entree / Sortie / Inventaire */}
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setMoveType('entry')}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-bold transition ${moveType === 'entry' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-emerald-200 bg-white text-emerald-700'}`}
+                  className={`flex items-center justify-center gap-1 rounded-lg border-2 py-2 text-xs font-bold transition ${moveType === 'entry' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-emerald-200 bg-white text-emerald-700'}`}
                 >
-                  <Plus size={16} /> Entrée
+                  <Plus size={14} /> Entrée
                 </button>
                 <button
                   onClick={() => setMoveType('exit')}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-bold transition ${moveType === 'exit' ? 'border-red-500 bg-red-500 text-white' : 'border-red-200 bg-white text-red-700'}`}
+                  className={`flex items-center justify-center gap-1 rounded-lg border-2 py-2 text-xs font-bold transition ${moveType === 'exit' ? 'border-red-500 bg-red-500 text-white' : 'border-red-200 bg-white text-red-700'}`}
                 >
-                  <Minus size={16} /> Sortie
+                  <Minus size={14} /> Sortie
+                </button>
+                <button
+                  onClick={() => { setMoveType('count'); setCountedQty(String(currentLocQty())); }}
+                  className={`flex items-center justify-center gap-1 rounded-lg border-2 py-2 text-xs font-bold transition ${moveType === 'count' ? 'border-purple-500 bg-purple-500 text-white' : 'border-purple-200 bg-white text-purple-700'}`}
+                >
+                  <ClipboardCheck size={14} /> Inventaire
                 </button>
               </div>
 
@@ -232,17 +270,41 @@ export default function PublicScanPage() {
                 </select>
               )}
 
-              {/* Quantite */}
-              <div className="mt-2 flex items-center gap-2">
-                <button onClick={() => setMoveQty(q => Math.max(1, (Number(q) || 1) - 1))} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">−</button>
-                <input
-                  type="number" min={1} inputMode="numeric"
-                  value={moveQty}
-                  onChange={(e) => setMoveQty(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
-                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-center text-lg font-bold text-slate-900"
-                />
-                <button onClick={() => setMoveQty(q => (Number(q) || 1) + 1)} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">+</button>
-              </div>
+              {moveType === 'count' ? (
+                /* MODE INVENTAIRE : quantite reelle comptee (selectionnee au focus pour ecraser vite) + ecart */
+                <>
+                  <div className="mt-2">
+                    <label className="text-[11px] font-semibold text-purple-700">Quantité réelle comptée</label>
+                    <input
+                      type="number" min={0} inputMode="numeric" autoFocus
+                      value={countedQty}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onChange={(e) => setCountedQty(e.target.value)}
+                      className="mt-1 h-12 w-full rounded-lg border-2 border-purple-300 bg-purple-50 px-3 text-center text-2xl font-extrabold text-purple-900"
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-center gap-4 rounded-lg bg-slate-50 py-2 text-sm">
+                    <span className="text-slate-500">Système : <strong className="text-slate-800">{currentLocQty()}</strong></span>
+                    <span className="text-slate-300">→</span>
+                    {(() => { const d = (Math.max(0, Math.round(Number(countedQty) || 0))) - currentLocQty(); return (
+                      <span className={d === 0 ? 'text-slate-500' : d > 0 ? 'text-emerald-700 font-bold' : 'text-red-700 font-bold'}>Écart : {d > 0 ? '+' : ''}{countedQty === '' ? '—' : d}</span>
+                    ); })()}
+                  </div>
+                </>
+              ) : (
+                /* ENTREE / SORTIE : +/- (selection au focus pour ecraser vite) */
+                <div className="mt-2 flex items-center gap-2">
+                  <button onClick={() => setMoveQty(q => Math.max(1, (Number(q) || 1) - 1))} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">−</button>
+                  <input
+                    type="number" min={1} inputMode="numeric"
+                    value={moveQty}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => setMoveQty(Math.max(1, parseInt(e.target.value || '1', 10) || 1))}
+                    className="h-10 w-full rounded-lg border border-slate-300 px-3 text-center text-lg font-bold text-slate-900"
+                  />
+                  <button onClick={() => setMoveQty(q => (Number(q) || 1) + 1)} className="h-10 w-10 flex-shrink-0 rounded-lg border border-slate-300 bg-white text-lg font-bold text-slate-600">+</button>
+                </div>
+              )}
 
               {/* Raison (optionnel) */}
               <input
@@ -256,10 +318,10 @@ export default function PublicScanPage() {
               <button
                 onClick={submitMovement}
                 disabled={busy}
-                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-base font-extrabold text-white shadow transition disabled:opacity-60 ${moveType === 'exit' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-base font-extrabold text-white shadow transition disabled:opacity-60 ${moveType === 'exit' ? 'bg-red-600 hover:bg-red-700' : moveType === 'count' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               >
-                {busy ? <Loader2 className="animate-spin" size={18} /> : (moveType === 'exit' ? <Minus size={18} /> : <Plus size={18} />)}
-                {busy ? 'Enregistrement…' : `Confirmer la ${moveType === 'exit' ? 'sortie' : 'entrée'} de ${moveQty}`}
+                {busy ? <Loader2 className="animate-spin" size={18} /> : (moveType === 'exit' ? <Minus size={18} /> : moveType === 'count' ? <ClipboardCheck size={18} /> : <Plus size={18} />)}
+                {busy ? 'Enregistrement…' : moveType === 'count' ? `Confirmer l'inventaire (compté : ${countedQty || '—'})` : `Confirmer la ${moveType === 'exit' ? 'sortie' : 'entrée'} de ${moveQty}`}
               </button>
 
               {moveMsg && (
