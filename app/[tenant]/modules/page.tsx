@@ -43,6 +43,8 @@ export default function ModulesPage() {
   const [todoStats, setTodoStats] = useState({ total: 0, todo: 0, in_progress: 0, done: 0 });
   const [logbookStats, setLogbookStats] = useState({ vehicles: 0, kmWeek: 0, kmYear: 0 });
   const [dgaStats, setDgaStats] = useState({ all: 0, overdue: 0, soon: 0, ok: 0, critical: 0, inspDue: 0 });
+  const [inspStats, setInspStats] = useState({ total: 0, nonConf: 0 });
+  const [tsStats, setTsStats] = useState({ total: 0, pending: 0 });
 
   // Modules activés : tenant hardcodé (cerdia) → liste fixe, sinon Supabase tenant_modules, sinon tout.
   const entitlements = useEntitlements(tenant);
@@ -132,7 +134,21 @@ export default function ModulesPage() {
           });
         } catch { /* dégradé */ }
 
-        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); }
+        // Inspections d'équipement — même table que le module (equipment_inspections).
+        const insp = { total: 0, nonConf: 0 };
+        try {
+          const { data: inspData } = await supabase.from('equipment_inspections').select('overall_result').eq('tenant_id', tenant);
+          (inspData || []).forEach((x: any) => { insp.total += 1; if (['non_conforme', 'retrait', 'conditionnel'].includes(x.overall_result)) insp.nonConf += 1; });
+        } catch { /* table absente */ }
+
+        // Feuilles de temps — table timesheets ; 'submitted' = en attente d'approbation.
+        const ts = { total: 0, pending: 0 };
+        try {
+          const { data: tsData } = await supabase.from('timesheets').select('status').eq('tenant_id', tenant);
+          (tsData || []).forEach((x: any) => { ts.total += 1; if (x.status === 'submitted') ts.pending += 1; });
+        } catch { /* table absente */ }
+
+        if (active) { setProj(pr); setAst(a); setPermit(pm); setEvt(e); setPlan(pl); setInvCount(ic || 0); setUserCount(uc || 0); setTodoStats(td); setLogbookStats(lb); setDgaStats(dga); setInspStats(insp); setTsStats(ts); }
       } catch { /* dégradé */ } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -149,8 +165,8 @@ export default function ModulesPage() {
   if (has('permits')) cards.push({ key: 'permits', title: tr('Permis', 'Permits'), href: `/${tenant}/permits`, big: String(permit.total), sub: `${permit.active} ${tr('actifs', 'active')}`, available: true });
   if (has('accidents') || has('near_miss')) cards.push({ key: 'events', title: tr('Accidents & Presque-acc.', 'Accidents & Near-miss'), href: `/${tenant}/near-miss`, big: String(evt.total), sub: `${evt.quasi} ${tr('quasi', 'near')} · ${evt.accident} ${tr('acc.', 'acc.')} · ${evt.year} ${tr('cette année', 'this yr')}`, available: true });
   if (has('inventory')) cards.push({ key: 'inventory', title: tr('Inventaire', 'Inventory'), href: `/${tenant}/inventory`, big: String(invCount), sub: tr('articles', 'items'), available: true });
-  if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: '—', sub: tr('à venir', 'soon'), available: true });
-  if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: '—', sub: tr('paie · à venir', 'payroll · soon'), available: true });
+  if (has('inspections')) cards.push({ key: 'inspections', title: tr("Inspections", 'Inspections'), href: `/${tenant}/inspections`, big: String(inspStats.total), sub: inspStats.nonConf ? `${inspStats.nonConf} ${tr('non conforme(s)', 'non-conform')}` : tr('toutes conformes', 'all conform'), available: true });
+  if (has('timesheets')) cards.push({ key: 'timesheets', title: tr('Feuille de temps', 'Timesheets'), href: `/${tenant}/timesheets`, big: String(tsStats.total), sub: tsStats.pending ? `${tsStats.pending} ${tr('à approuver', 'to approve')}` : tr('aucune en attente', 'none pending'), available: true });
   if (has('logbook')) cards.push({ key: 'logbook', title: tr('Logbook véhicules', 'Vehicle logbook'), href: `/${tenant}/logbook`, big: `${Math.round(logbookStats.kmWeek).toLocaleString('fr-CA')} km`, sub: `${logbookStats.vehicles} ${tr('véhicules actifs', 'active vehicles')} · ${Math.round(logbookStats.kmYear).toLocaleString('fr-CA')} km ${tr('cette année', 'this year')}`, available: true });
   if (has('todo')) cards.push({ key: 'todo', title: 'To-Do', href: `/${tenant}/todo`, big: String(todoStats.total), sub: `${todoStats.todo} ${tr('à faire', 'to do')} · ${todoStats.in_progress} ${tr('en cours', 'wip')} · ${todoStats.done} ${tr('terminé', 'done')}`, available: true });
   if (has('dga')) cards.push({ key: 'dga', title: tr('Diagnostic DGA', 'DGA Diagnostic'), href: `/${tenant}/dga`, big: String(dgaStats.all), sub: `${dgaStats.overdue} ${tr('en retard', 'overdue')} · ${dgaStats.soon} ${tr('bientôt', 'soon')} · ${dgaStats.ok} ${tr('à jour', 'ok')} · ${dgaStats.critical} ${tr('niv. > 3', 'lvl > 3')}${dgaStats.inspDue ? ` · ${dgaStats.inspDue} ${tr('insp. dues', 'insp. due')}` : ''}`, available: true });
