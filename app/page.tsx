@@ -886,7 +886,7 @@ export default function LandingPage() {
                 : '© 2025 C-Secur360. Industrial safety SaaS platform. All rights reserved.'}
             </p>
             <div className="flex items-center gap-4 text-xs">
-              <Link href="/privacy" className="text-slate-400 hover:text-orange-400 transition">
+              <Link href="/confidentialite" className="text-slate-400 hover:text-orange-400 transition">
                 {fr ? 'Politique de confidentialité' : 'Privacy policy'}
               </Link>
               <span className="text-slate-600">·</span>
