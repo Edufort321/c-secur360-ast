@@ -205,8 +205,8 @@ export default function PublicScanPage() {
             </div>
           </div>
 
-          {/* Min / Max */}
-          {(min != null || max != null) && (
+          {/* Min / Max — détails internes : visibles UNIQUEMENT pour un utilisateur connecté. */}
+          {authUser && (min != null || max != null) && (
             <div className="flex items-center justify-center gap-6 rounded-lg bg-slate-50 py-2 text-sm">
               <span className="text-slate-500">Min : <strong className="text-slate-800">{min ?? '—'}</strong></span>
               <span className="text-slate-300">|</span>
@@ -214,11 +214,11 @@ export default function PublicScanPage() {
             </div>
           )}
 
-          {/* Description */}
+          {/* Description (info produit, publique) */}
           {item.description && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.description}</p>}
 
-          {/* Emplacement(s) */}
-          {(item.location || locations.length > 0) && (
+          {/* Emplacement(s) — interne : visible UNIQUEMENT pour un utilisateur connecté. */}
+          {authUser && (item.location || locations.length > 0) && (
             <div className="flex items-start gap-2 text-sm text-slate-600">
               <MapPin size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />
               <span>{item.location || locations.map((l: any) => `${l.location || l.name || l.department || ''}${(l.quantity ?? l.qty) != null ? ` (${l.quantity ?? l.qty})` : ''}`).filter(Boolean).join(' · ')}</span>
