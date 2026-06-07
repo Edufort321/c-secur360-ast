@@ -1158,8 +1158,147 @@ function Clients({ tenant, tr }: { tenant: string; tr: (f: string, e: string) =>
               </button>
             )}
           </div>
+
+          {/* Cascade : Sites (adresses) -> Contacts. Disponible une fois le client enregistré. */}
+          {form.id
+            ? <ClientCascade tenant={tenant} clientId={form.id} tr={tr} inp={inp} />
+            : <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{tr('Enregistre le client pour ajouter ses sites et contacts.', 'Save the client to add its sites and contacts.')}</p>}
         </div>
       )}
+    </div>
+  );
+}
+
+// Cascade Client -> SITES (un nom, plusieurs adresses) -> CONTACTS (personnes par site).
+// Ex. ArcelorMittal / Complexe Ouest / Marcel Dionne. Tables client_sites + client_contacts (133).
+function ClientCascade({ tenant, clientId, tr, inp }: { tenant: string; clientId: string; tr: (f: string, e: string) => string; inp: string }) {
+  type Site = { id?: string; name: string; address: string; city: string; province: string; postal_code: string; active: boolean };
+  type Contact = { id?: string; site_id: string | null; name: string; title: string; email: string; phone: string; mobile: string; is_primary: boolean; active: boolean };
+  const provinces = ['QC','ON','BC','AB','SK','MB','NB','NS','PE','NL','NT','YT','NU'];
+  const [sites, setSites] = useState<Site[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [openSite, setOpenSite] = useState<string | null>(null);
+  const [siteForm, setSiteForm] = useState<Site | null>(null);
+  const [contactForm, setContactForm] = useState<Contact | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function load() {
+    const [{ data: s }, { data: c }] = await Promise.all([
+      supabase.from('client_sites').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
+      supabase.from('client_contacts').select('*').eq('tenant_id', tenant).eq('client_id', clientId).order('name'),
+    ]);
+    setSites(s || []); setContacts(c || []);
+  }
+  useEffect(() => { load(); setOpenSite(null); setSiteForm(null); setContactForm(null); /* eslint-disable-next-line */ }, [clientId, tenant]);
+
+  async function saveSite() {
+    if (!siteForm || !siteForm.name.trim()) return;
+    setErr(null);
+    const p: any = { tenant_id: tenant, client_id: clientId, name: siteForm.name, address: siteForm.address, city: siteForm.city, province: siteForm.province, postal_code: siteForm.postal_code, active: siteForm.active };
+    const res = siteForm.id ? await supabase.from('client_sites').update(p).eq('id', siteForm.id) : await supabase.from('client_sites').insert(p);
+    if (res.error) { setErr(res.error.message); return; }
+    setSiteForm(null); load();
+  }
+  async function delSite(id: string) {
+    await supabase.from('client_contacts').delete().eq('site_id', id);
+    await supabase.from('client_sites').delete().eq('id', id);
+    if (openSite === id) setOpenSite(null);
+    load();
+  }
+  async function saveContact() {
+    if (!contactForm || !contactForm.name.trim()) return;
+    setErr(null);
+    const p: any = { tenant_id: tenant, client_id: clientId, site_id: contactForm.site_id, name: contactForm.name, title: contactForm.title, email: contactForm.email, phone: contactForm.phone, mobile: contactForm.mobile, is_primary: contactForm.is_primary, active: contactForm.active };
+    const res = contactForm.id ? await supabase.from('client_contacts').update(p).eq('id', contactForm.id) : await supabase.from('client_contacts').insert(p);
+    if (res.error) { setErr(res.error.message); return; }
+    setContactForm(null); load();
+  }
+  async function delContact(id: string) { await supabase.from('client_contacts').delete().eq('id', id); load(); }
+
+  const emptySite = (): Site => ({ name: '', address: '', city: '', province: 'QC', postal_code: '', active: true });
+  const emptyContact = (siteId: string | null): Contact => ({ site_id: siteId, name: '', title: '', email: '', phone: '', mobile: '', is_primary: false, active: true });
+  const lbl = 'mb-1 block text-[11px] font-semibold text-gray-500';
+
+  return (
+    <div className="mt-4 space-y-3 border-t border-gray-100 pt-4 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold"><MapPin size={15} className="text-blue-500" /> {tr('Sites du client', 'Client sites')} <span className="text-xs font-normal text-gray-400">({sites.length})</span></h3>
+        <button onClick={() => setSiteForm(emptySite())} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800"><Plus size={13} /> {tr('Site', 'Site')}</button>
+      </div>
+      {err && <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20">{err}</div>}
+
+      {siteForm && (
+        <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
+          <div><label className={lbl}>{tr('Nom du site *', 'Site name *')}</label><input className={inp} value={siteForm.name} onChange={e => setSiteForm(s => s && ({ ...s, name: e.target.value }))} placeholder="Complexe Ouest" /></div>
+          <div><label className={lbl}>{tr('Adresse', 'Address')}</label><input className={inp} value={siteForm.address} onChange={e => setSiteForm(s => s && ({ ...s, address: e.target.value }))} placeholder="1 rue de l'Aciérie" /></div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2"><label className={lbl}>{tr('Ville', 'City')}</label><input className={inp} value={siteForm.city} onChange={e => setSiteForm(s => s && ({ ...s, city: e.target.value }))} /></div>
+            <div><label className={lbl}>Prov.</label><select className={inp} value={siteForm.province} onChange={e => setSiteForm(s => s && ({ ...s, province: e.target.value }))}>{provinces.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={saveSite} disabled={!siteForm.name.trim()} className="flex-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{tr('Enregistrer le site', 'Save site')}</button>
+            <button onClick={() => setSiteForm(null)} className="rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {sites.map(s => {
+          const sc = contacts.filter(c => c.site_id === s.id);
+          const open = openSite === s.id;
+          return (
+            <div key={s.id} className="rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button onClick={() => setOpenSite(open ? null : (s.id || null))} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  {open ? <ChevronDown size={15} className="text-gray-400" /> : <ChevronRight size={15} className="text-gray-400" />}
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{s.name}</div>
+                    <div className="truncate text-xs text-gray-500">{[s.address, s.city, s.province].filter(Boolean).join(', ') || tr('Aucune adresse', 'No address')} · {sc.length} {tr('contact(s)', 'contact(s)')}</div>
+                  </div>
+                </button>
+                <button onClick={() => setSiteForm({ ...s })} className="text-gray-400 hover:text-blue-600" title={tr('Modifier', 'Edit')}><Settings size={14} /></button>
+                <button onClick={() => delSite(s.id!)} className="text-gray-400 hover:text-red-600" title={tr('Supprimer', 'Delete')}><Trash2 size={14} /></button>
+              </div>
+
+              {open && (
+                <div className="space-y-2 border-t border-gray-100 bg-gray-50/50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/30">
+                  {sc.map(c => (
+                    <div key={c.id} className="flex items-center gap-2 rounded-lg bg-white px-2 py-1.5 dark:bg-gray-800">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{c.name} {c.is_primary && <span className="ml-1 rounded bg-emerald-100 px-1 text-[10px] text-emerald-700">{tr('Principal', 'Primary')}</span>}</div>
+                        <div className="truncate text-xs text-gray-500">{[c.title, c.phone || c.mobile, c.email].filter(Boolean).join(' · ')}</div>
+                      </div>
+                      <button onClick={() => setContactForm({ ...c })} className="text-gray-400 hover:text-blue-600"><Settings size={13} /></button>
+                      <button onClick={() => delContact(c.id!)} className="text-gray-400 hover:text-red-600"><Trash2 size={13} /></button>
+                    </div>
+                  ))}
+                  {contactForm && contactForm.site_id === s.id ? (
+                    <div className="space-y-2 rounded-lg border border-emerald-200 bg-white p-2 dark:border-emerald-800 dark:bg-gray-800">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><label className={lbl}>{tr('Nom *', 'Name *')}</label><input className={inp} value={contactForm.name} onChange={e => setContactForm(c => c && ({ ...c, name: e.target.value }))} placeholder="Marcel Dionne" /></div>
+                        <div><label className={lbl}>{tr('Fonction', 'Title')}</label><input className={inp} value={contactForm.title} onChange={e => setContactForm(c => c && ({ ...c, title: e.target.value }))} placeholder={tr('Contremaître', 'Foreman')} /></div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div><label className={lbl}>{tr('Tél.', 'Phone')}</label><input className={inp} value={contactForm.phone} onChange={e => setContactForm(c => c && ({ ...c, phone: e.target.value }))} /></div>
+                        <div><label className={lbl}>{tr('Cell.', 'Mobile')}</label><input className={inp} value={contactForm.mobile} onChange={e => setContactForm(c => c && ({ ...c, mobile: e.target.value }))} /></div>
+                        <div><label className={lbl}>{tr('Courriel', 'Email')}</label><input className={inp} value={contactForm.email} onChange={e => setContactForm(c => c && ({ ...c, email: e.target.value }))} /></div>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={contactForm.is_primary} onChange={e => setContactForm(c => c && ({ ...c, is_primary: e.target.checked }))} /> {tr('Contact principal du site', 'Primary site contact')}</label>
+                      <div className="flex gap-2">
+                        <button onClick={saveContact} disabled={!contactForm.name.trim()} className="flex-1 rounded-lg bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{tr('Enregistrer le contact', 'Save contact')}</button>
+                        <button onClick={() => setContactForm(null)} className="rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-600">{tr('Annuler', 'Cancel')}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setContactForm(emptyContact(s.id || null))} className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700"><Plus size={13} /> {tr('Ajouter un contact', 'Add a contact')}</button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {sites.length === 0 && !siteForm && <p className="text-center text-xs text-gray-400">{tr('Aucun site. Ajoute le premier site du client.', 'No site yet. Add the first client site.')}</p>}
+      </div>
     </div>
   );
 }
