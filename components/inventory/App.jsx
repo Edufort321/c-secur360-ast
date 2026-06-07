@@ -7045,7 +7045,7 @@ function AppContent() {
     const pdfFmt = LABEL_FORMATS[pdfFmtKey];
     const perPage = pdfFmt.cols * pdfFmt.rows;
     const toggleSkip = (idx) => setLabelSkip(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
-    const exportLabelsPdf = async () => {
+    const exportLabelsPdf = async (printDirect = false) => {
       if (pdfBusy) return;
       setPdfBusy(true);
       try {
@@ -7060,7 +7060,7 @@ function AppContent() {
           });
         });
         if (!labels.length) { notify(language === 'fr' ? 'Aucune étiquette à générer.' : 'No label to generate.', 'error'); return; }
-        await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, filename: `etiquettes-${tenantId}.pdf` });
+        await generateLabelsPdf(labels, { formatKey: pdfFmtKey, skipPositions: labelSkip, logoUrl, print: printDirect === true, filename: `etiquettes-${tenantId}.pdf` });
       } catch (e) { notify((language === 'fr' ? 'Export PDF impossible : ' : 'PDF export failed: ') + (e?.message || e), 'error'); }
       finally { setPdfBusy(false); }
     };
@@ -7078,14 +7078,11 @@ function AppContent() {
             <Button variant="secondary" onClick={() => setShowPrintModal(false)}>
               Annuler
             </Button>
-            <Button variant="secondary" onClick={() => window.print()}>
-              {language === 'fr' ? 'Aperçu' : 'Preview'}
+            <Button variant="secondary" onClick={() => exportLabelsPdf(false)} disabled={pdfBusy}>
+              {pdfBusy ? '…' : (language === 'fr' ? 'Télécharger PDF' : 'Download PDF')}
             </Button>
-            <Button variant="secondary" onClick={exportLabelsPdf} disabled={pdfBusy}>
-              {pdfBusy ? '…' : (language === 'fr' ? 'Exporter PDF' : 'Export PDF')}
-            </Button>
-            <Button variant="primary" icon={Printer} onClick={executePrint}>
-              Imprimer
+            <Button variant="primary" icon={Printer} onClick={() => exportLabelsPdf(true)} disabled={pdfBusy}>
+              {pdfBusy ? '…' : 'Imprimer'}
             </Button>
           </>
         }

@@ -141,6 +141,17 @@ export async function generateLabelsPdf(labels, opts = {}) {
     placed += 1; i += 1; cell += 1;
   }
 
-  doc.save(opts.filename || 'etiquettes-inventaire.pdf');
+  // opts.print : ouvre directement le dialogue d'impression du navigateur sur le PDF (cadre + min/max
+  // + nombre de copies EXACT), au lieu de window.print() de la page (qui imprimait en boucle).
+  if (opts.print) {
+    try {
+      doc.autoPrint();
+      const url = doc.output('bloburl');
+      const w = window.open(url, '_blank');
+      if (!w) { doc.save(opts.filename || 'etiquettes-inventaire.pdf'); } // popup bloqué -> repli téléchargement
+    } catch { doc.save(opts.filename || 'etiquettes-inventaire.pdf'); }
+  } else {
+    doc.save(opts.filename || 'etiquettes-inventaire.pdf');
+  }
   return { placed, pages: page };
 }
