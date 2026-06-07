@@ -39,6 +39,7 @@ import { TwilioProvider } from '../contexts/TwilioContext'
 import { Providers } from './providers'
 import { SwRegister } from '@/components/SwRegister'
 import { CookieConsent } from '@/components/CookieConsent'
+import { SelectNumberOnFocus } from '@/components/SelectNumberOnFocus'
 
 export default function RootLayout({
   children,
@@ -59,6 +60,7 @@ export default function RootLayout({
         <Providers>
           <TwilioProvider>
             <SwRegister />
+            <SelectNumberOnFocus />
             {children}
             <CookieConsent />
           </TwilioProvider>
