@@ -2420,6 +2420,7 @@ function AppContent() {
     notify(language === 'fr'
       ? `${toApply.length} prix coûtant mis à jour. Le dashboard s'ajuste automatiquement.`
       : `${toApply.length} cost price(s) updated. Dashboard updates automatically.`);
+    setPriceRows([]); // résultats consommés -> la pastille flottante disparaît
     setShowPriceModal(false);
   };
 
@@ -8582,6 +8583,19 @@ function AppContent() {
         </div>
       )}
 
+      {/* Pastille flottante : la recherche de prix IA tourne EN ARRIÈRE-PLAN (on peut naviguer
+          ailleurs et revenir). Cliquer rouvre la fenêtre pour voir/appliquer les prix. */}
+      {!showPriceModal && (priceLoading || priceRows.length > 0) && (
+        <button
+          onClick={() => setShowPriceModal(true)}
+          className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-2 rounded-full bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-purple-700"
+        >
+          {priceLoading
+            ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />{language === 'fr' ? `Prix IA… ${priceProgress ? `lot ${priceProgress.done}/${priceProgress.total}` : ''}` : `AI prices… ${priceProgress ? `${priceProgress.done}/${priceProgress.total}` : ''}`}</>
+            : <><Zap size={16} />{language === 'fr' ? `${priceRows.filter(r => Number(r.webPrice) > 0).length} prix prêts — Voir` : `${priceRows.filter(r => Number(r.webPrice) > 0).length} prices ready — View`}</>}
+        </button>
+      )}
+
       {/* Assistant Prix IA — comparatif prix fournisseur (actuel) vs prix web (IA) */}
       {showPriceModal && (
         <Modal isOpen onClose={() => setShowPriceModal(false)} title={language === 'fr' ? '💡 Assistant prix (IA — recherche web)' : '💡 Price assistant (AI — web search)'}>
@@ -8628,8 +8642,8 @@ function AppContent() {
               </table>
             </div>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button onClick={() => setShowPriceModal(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
-                {language === 'fr' ? 'Garder le prix fournisseur' : 'Keep supplier price'}
+              <button onClick={() => { if (!priceLoading) setPriceRows([]); setShowPriceModal(false); }} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200">
+                {priceLoading ? (language === 'fr' ? 'Réduire (continue en arrière-plan)' : 'Minimize (keeps running)') : (language === 'fr' ? 'Garder le prix fournisseur' : 'Keep supplier price')}
               </button>
               <button onClick={applyPriceUpdates} disabled={priceLoading || !priceRows.some(r => r.apply)} className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50">
                 {language === 'fr' ? `Appliquer le prix IA (${priceRows.filter(r => r.apply).length})` : `Apply AI price (${priceRows.filter(r => r.apply).length})`}
