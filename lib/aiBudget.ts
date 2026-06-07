@@ -5,11 +5,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 // de COUT IA reel autorise = prix forfait x 70% (la marge de 30% est la difference). On suit le
 // cout IA consomme (ai_used_cents) — UN budget partage par client, consommation tracee PAR MODULE.
 //
-// Colonnes attendues sur `tenants` (voir migration) :
-//   ai_tier_cents  integer  -- prix du forfait paye par le client, en cents (0 = aucun forfait)
-//   ai_used_cents  integer  -- cout IA consomme (cents) sur la periode
-//   ai_period_start date     -- debut de periode (renouvellement)
-// Table `ai_usage` (tenant_id, module, cost_cents, meta, created_at) pour le detail par module.
+// Tables dediees (voir migration 131) — AUCUNE dependance sur `tenants` (qui peut ne pas exister) :
+//   ai_budgets (tenant_id PK, tier_cents, used_cents, period_start, assistants_enabled)
+//   ai_usage   (tenant_id, module, cost_cents, meta, created_at) — detail par module.
 
 export const AI_MARGIN = 0.30; // 30% de profit -> budget reel = prix x (1 - marge)
 
@@ -45,12 +43,12 @@ export function aiCallCostCents(model: string, usage: any, webSearches = 0): num
 export async function getAiBudget(tenant: string): Promise<AiBudget> {
   try {
     const { data, error } = await supabaseAdmin
-      .from('tenants').select('ai_tier_cents, ai_used_cents').eq('subdomain', tenant).maybeSingle();
-    if (error || !data || data.ai_tier_cents == null) {
+      .from('ai_budgets').select('tier_cents, used_cents').eq('tenant_id', tenant).maybeSingle();
+    if (error || !data) {
       return { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, exhausted: false, unlimited: true };
     }
-    const tierCents = Number(data.ai_tier_cents) || 0;
-    const usedCents = Number(data.ai_used_cents) || 0;
+    const tierCents = Number(data.tier_cents) || 0;
+    const usedCents = Number(data.used_cents) || 0;
     const budgetCents = Math.round(tierCents * (1 - AI_MARGIN));
     if (tierCents <= 0) {
       // Aucun forfait achete -> par defaut on NE bloque pas (le patron active les forfaits quand il veut).
@@ -67,11 +65,11 @@ export async function getAiBudget(tenant: string): Promise<AiBudget> {
 export async function recordAiUsage(tenant: string, module: string, costCents: number, meta?: any): Promise<void> {
   if (!(costCents > 0)) return;
   try {
-    // Increment atomique best-effort (read-modify-write ; suffisant pour ce volume).
-    const { data } = await supabaseAdmin.from('tenants').select('ai_used_cents').eq('subdomain', tenant).maybeSingle();
-    const cur = Number((data as any)?.ai_used_cents) || 0;
-    await supabaseAdmin.from('tenants').update({ ai_used_cents: cur + costCents }).eq('subdomain', tenant);
-  } catch { /* colonne absente avant migration -> on ignore */ }
+    // Increment best-effort (read-modify-write ; suffisant pour ce volume). Cree la ligne au besoin.
+    const { data } = await supabaseAdmin.from('ai_budgets').select('used_cents').eq('tenant_id', tenant).maybeSingle();
+    const cur = Number((data as any)?.used_cents) || 0;
+    await supabaseAdmin.from('ai_budgets').upsert({ tenant_id: tenant, used_cents: cur + costCents, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' });
+  } catch { /* table absente avant migration -> on ignore */ }
   try {
     await supabaseAdmin.from('ai_usage').insert({ tenant_id: tenant, module, cost_cents: costCents, meta: meta || null });
   } catch { /* table absente avant migration -> on ignore */ }

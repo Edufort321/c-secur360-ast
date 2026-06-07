@@ -1,16 +1,20 @@
--- 131 — Forfaits / budget IA par tenant.
--- Modele : le client achete un FORFAIT en $ (ai_tier_cents : 50000=500$, 100000=1000$, 150000=1500$).
--- Le budget de COUT IA reel autorise = prix forfait x 70% (marge 30%). On suit le cout consomme
--- (ai_used_cents) — UN budget partage par client, conso tracee PAR MODULE dans ai_usage.
--- 0 / NULL = aucun forfait -> l'app ne bloque pas (illimite, retro-compat).
--- NB: noms de tables NON qualifies (comme les migrations 013/014) -> resolus via search_path.
+-- 131 — Forfaits / budget IA par tenant. AUTONOME : aucune dependance sur la table `tenants`
+-- (qui peut ne pas exister dans ce projet). Tout est dans 2 nouvelles tables.
+--
+-- Modele (decide avec Eric) : le client achete un FORFAIT en $ (tier_cents : 50000=500$,
+-- 100000=1000$, 150000=1500$). Le budget de COUT IA reel autorise = prix x 70% (marge 30%).
+-- On suit le cout consomme (used_cents) — UN budget partage par client, conso tracee PAR MODULE.
+-- tenant_id = le sous-domaine / 1er segment d'URL (ex. 'cerdia').
 
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ai_tier_cents  INTEGER DEFAULT 0;
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ai_used_cents  INTEGER DEFAULT 0;
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ai_period_start DATE;
-ALTER TABLE tenants ADD COLUMN IF NOT EXISTS ai_assistants_enabled BOOLEAN DEFAULT TRUE;
+CREATE TABLE IF NOT EXISTS ai_budgets (
+  tenant_id          TEXT PRIMARY KEY,
+  tier_cents         INTEGER NOT NULL DEFAULT 0,   -- prix du forfait paye (0 = aucun = illimite)
+  used_cents         INTEGER NOT NULL DEFAULT 0,   -- cout IA consomme sur la periode
+  period_start       DATE,
+  assistants_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
--- Detail de consommation IA par appel (ventilation par module).
 CREATE TABLE IF NOT EXISTS ai_usage (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id   TEXT NOT NULL,
@@ -23,7 +27,10 @@ CREATE INDEX IF NOT EXISTS ai_usage_tenant_idx ON ai_usage (tenant_id);
 CREATE INDEX IF NOT EXISTS ai_usage_tenant_module_idx ON ai_usage (tenant_id, module);
 
 -- Les routes serveur utilisent la cle service (supabaseAdmin) qui bypass RLS.
-ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_usage   ENABLE ROW LEVEL SECURITY;
 
--- Renouvellement (au paiement / periodiquement) : remettre la conso a 0.
---   UPDATE tenants SET ai_used_cents = 0, ai_period_start = current_date WHERE subdomain = '<tenant>';
+-- Definir/renouveler un forfait :
+--   INSERT INTO ai_budgets (tenant_id, tier_cents) VALUES ('cerdia', 50000)
+--     ON CONFLICT (tenant_id) DO UPDATE SET tier_cents = EXCLUDED.tier_cents;
+--   UPDATE ai_budgets SET used_cents = 0, period_start = current_date WHERE tenant_id = 'cerdia';

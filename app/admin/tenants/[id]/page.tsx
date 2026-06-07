@@ -36,6 +36,8 @@ export default function TenantManagePage() {
   const [tenant, setTenant] = useState<any>(null);
   const [mods, setMods] = useState<Mod[]>([]);
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30, per_site_monthly: 0 });
+  const [aiTier, setAiTier] = useState(0);   // forfait IA (cents) — table ai_budgets
+  const [aiUsed, setAiUsed] = useState(0);    // conso IA (cents)
   const [sub, setSub] = useState<any>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
@@ -64,6 +66,10 @@ export default function TenantManagePage() {
       const { data: t } = await supabase.from('tenants').select('*').eq('id', id).maybeSingle();
       setTenant(t); setSavedJson(profileKey(t));
       setVendorId(t?.vendor_id || '');
+      // Forfait IA depuis la table dédiée ai_budgets (clé = sous-domaine).
+      if (t?.subdomain) {
+        try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents, used_cents').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); } } catch { /* table absente */ }
+      }
       const { data: catalog } = await supabase.from('modules').select('key, name_fr, monthly_price, sort_order').order('sort_order');
       const { data: tm } = await supabase.from('tenant_modules').select('module_key, enabled').eq('tenant_id', id);
       const enabledSet = new Set((tm || []).filter((x: any) => x.enabled).map((x: any) => x.module_key));
@@ -195,13 +201,14 @@ export default function TenantManagePage() {
         erp_company_id: tenant.erp_company_id || null,
         logo_url: tenant.logo_url || null,
       };
-      // Colonnes optionnelles (tolérant si la migration n'est pas encore appliquée) :
-      // max_sites (078) et ai_tier_cents (131, forfait IA).
-      const optional = { max_sites: Math.max(1, Number(tenant.max_sites) || 1), ai_tier_cents: Math.max(0, Number(tenant.ai_tier_cents) || 0) };
-      let { error } = await supabase.from('tenants').update({ ...base, ...optional }).eq('id', id);
-      if (error) {
-        ({ error } = await supabase.from('tenants').update({ ...base, max_sites: optional.max_sites }).eq('id', id));
-        if (error && /max_sites/i.test(error.message || '')) ({ error } = await supabase.from('tenants').update(base).eq('id', id));
+      // max_sites ajouté à part : tolérant si la colonne (migration 078) n'existe pas encore.
+      let { error } = await supabase.from('tenants').update({ ...base, max_sites: Math.max(1, Number(tenant.max_sites) || 1) }).eq('id', id);
+      if (error && /max_sites/i.test(error.message || '')) {
+        ({ error } = await supabase.from('tenants').update(base).eq('id', id));
+      }
+      // Forfait IA : table DEDIEE ai_budgets (migration 131), clé = sous-domaine. Indépendant de `tenants`.
+      if (tenant.subdomain) {
+        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); } catch { /* table absente avant migration 131 */ }
       }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -326,15 +333,15 @@ export default function TenantManagePage() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Forfait Assistant IA</span>
-                  <select className={inputCls} value={Number(tenant.ai_tier_cents) || 0} onChange={e => setTenant((t: any) => ({ ...t, ai_tier_cents: Number(e.target.value) }))}>
+                  <select className={inputCls} value={aiTier} onChange={e => setAiTier(Number(e.target.value))}>
                     <option value={0}>Aucun (illimité — non bloqué)</option>
                     <option value={50000}>500 $ (budget IA ~350 $)</option>
                     <option value={100000}>1000 $ (budget IA ~700 $)</option>
                     <option value={150000}>1500 $ (budget IA ~1050 $)</option>
                   </select>
                   <span className="mt-1 block text-[11px] text-gray-400">
-                    Budget de coût IA réel = prix × 70 % (marge 30 %). Consommé : {(((Number(tenant.ai_used_cents) || 0)) / 100).toFixed(2)} $ · budget {(((Number(tenant.ai_tier_cents) || 0) * 0.7) / 100).toFixed(2)} $.
-                    Renouveler = remettre la conso à 0 (SQL fourni).
+                    Budget de coût IA réel = prix × 70 % (marge 30 %). Consommé : {((aiUsed) / 100).toFixed(2)} $ · budget {((aiTier * 0.7) / 100).toFixed(2)} $.
+                    Renouveler = remettre la conso à 0 (table ai_budgets).
                   </span>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
