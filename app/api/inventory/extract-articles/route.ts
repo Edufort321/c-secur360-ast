@@ -28,7 +28,7 @@ GABARIT OFFICIEL des colonnes (synonymes/accents/casse toleres) :
 - SITE (site, succursale, branch, etablissement) -> site
 - DEPARTEMENT (departement, departement, dept, service) -> department
 - FOURNISSEUR (fournisseur, supplier, vendor) -> supplier
-- CATEGORIE (categorie, category, famille, type) -> category
+- CATEGORIE (categorie, category, famille) -> category. STRICT : category = la valeur EXACTE de la colonne CATEGORIE, telle quelle (ne traduis pas, ne normalise pas, ne regroupe pas). Si AUCUNE colonne categorie claire -> category = "". N'INVENTE JAMAIS de categorie et ne deduis pas une categorie a partir du nom de l'article ou d'une autre colonne.
 - PRIX (prix, prix $, cout, cost, prix unitaire) -> costPrice
 - CODE ITEM (code item, code, sku, reference, ref) -> code
 
@@ -42,7 +42,7 @@ Sinon (les 3 criteres minimum sont presents), retourne EXACTEMENT :
 
 Regles d'extraction (quand conforme) :
 - Un objet par article (par ligne de donnees). Ignore lignes vides, entetes repetes, totaux/sous-totaux, lignes d'instructions.
-- DONNEES EN PLUS (colonnes hors gabarit) : classe-les dans le champ le plus pertinent ; si rien ne convient, concatene dans "description". Ne perds aucune information utile.
+- DONNEES EN PLUS (colonnes hors gabarit) : ajoute-les UNIQUEMENT dans "description". NE LES METS JAMAIS dans category, site, department, supplier ni code (ces champs ne viennent QUE de leur propre colonne). Ne perds aucune info utile.
 - Nombres : convertis (retire symboles monetaires, espaces, separateurs de milliers ; virgule decimale -> point). TOUTE case vide ou absente = 0 (y compris quantity, minQuantity, maxQuantity, costPrice).
 - PRIX (costPrice) : PETITE valeur monetaire unitaire (typiquement < 10000). N'utilise JAMAIS un code-barres/EAN/SKU/identifiant comme prix. En cas de doute (nombre a 6+ chiffres ou colonne qui ressemble a un code), mets 0.
 - code : si absent, fabrique-le en MAJUSCULES a partir du nom. Jamais vide.
