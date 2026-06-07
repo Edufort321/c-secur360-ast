@@ -1586,6 +1586,7 @@ function AppContent() {
   const [aiImporting, setAiImporting] = useState(false); // spinner pendant l'analyse IA
   const [aiProgress, setAiProgress] = useState(null);    // {done,total} progression des lots (gros fichiers)
   const aiAbortRef = useRef(null);         // AbortController pour ANNULER l'import IA en cours
+  const [aiRefusal, setAiRefusal] = useState(null); // {missing:[...]} quand la feuille n'est PAS conforme
 
   // Annule l'import IA en cours (interrompt les lots restants).
   const cancelAiImport = () => { try { aiAbortRef.current?.abort(); } catch { /* ignore */ } };
@@ -2801,25 +2802,31 @@ function AppContent() {
         if (insErr) throw insErr;
         created = ins || toCreate.map(name => ({ name }));
       }
-      return { created, blocked, maxSites, existingCount: existingSites.length };
+      // Ensemble des sites VALIDES apres synchro (existants + crees) : sert a refuser les articles
+      // dont le site n'existe pas / est bloque par la limite d'abonnement.
+      const valid = new Set(existingSites.map(s => norm(s.name)));
+      created.forEach(c => valid.add(norm(c.name)));
+      return { created, blocked, maxSites, existingCount: existingSites.length, valid };
     } catch (e) {
-      return { error: e?.message || String(e) };
+      // En cas d'echec (RLS, reseau…), on renvoie valid=null -> on n'imposera pas le filtre site.
+      return { error: e?.message || String(e), valid: null };
     }
   };
 
-  // Import IA : on accepte N'IMPORTE QUELLE feuille Excel (colonnes libres). On lit les lignes
-  // brutes (SheetJS), l'IA detecte les colonnes et renvoie des articles normalises, puis on
-  // reutilise la MEME previsualisation/validation que l'import standard. Les categories et
-  // departements absents sont crees automatiquement pour ne pas bloquer l'import.
+  // Import IA STRICT : le Excel doit respecter le gabarit (min. SITE / DÉPARTEMENT / EMPLACEMENT).
+  // 1) l'IA verifie la conformite -> sinon REFUS avec directives ; 2) les Sites sont valides
+  // contre l'Administration (planner_succursales, limite d'abonnement) -> les articles d'un site
+  // inexistant/bloque sont REFUSES ; 3) on reutilise la previsualisation/validation existante.
   const handleAiFileUpload = async (file) => {
     if (!file) return;
     const controller = new AbortController();
     aiAbortRef.current = controller;
+    setAiRefusal(null);
     setAiImporting(true);
+    const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      // Choisir la feuille avec le plus de lignes (ignore une eventuelle feuille d'instructions).
       let rows = [];
       for (const name of wb.SheetNames) {
         const r = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' });
@@ -2830,41 +2837,56 @@ function AppContent() {
         return;
       }
 
-      // Decoupage en LOTS : un seul appel IA ne peut pas normaliser des milliers d'articles
-      // (limite de tokens de sortie). On envoie ~40 lignes par lot, en parallele limite (4),
-      // puis on fusionne. Chaque lot est auto-descriptif (les cles = en-tetes), donc la detection
-      // de colonnes est coherente d'un lot a l'autre.
       const CHUNK = 40;
-      const catNames = categories.map(c => c.name);
-      const deptNames = departments.map(d => d.name);
       const chunks = [];
       for (let i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
       setAiProgress({ done: 0, total: chunks.length });
 
+      const callChunk = async (idx) => {
+        const resp = await fetch('/api/inventory/extract-articles', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: chunks[idx] }), signal: controller.signal,
+        });
+        const j = await resp.json();
+        if (!resp.ok || j.error) throw new Error((j.error || 'Analyse IA echouee') + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : ''));
+        return j;
+      };
+
+      // 1) CONFORMITE : on teste le 1er lot. Si non conforme -> refus avec directives, on s'arrete.
+      const first = await callChunk(0);
+      if (first.conforme === false) {
+        setAiRefusal({ missing: Array.isArray(first.missing) ? first.missing : ['SITE', 'DÉPARTEMENT', 'EMPLACEMENT'] });
+        return;
+      }
       const results = new Array(chunks.length);
-      let nextIdx = 0, done = 0;
+      results[0] = Array.isArray(first.articles) ? first.articles : [];
+      let done = 1; setAiProgress({ done, total: chunks.length });
+
+      // 2) Lots restants en parallele.
+      let nextIdx = 1;
       const worker = async () => {
         while (nextIdx < chunks.length) {
-          if (controller.signal.aborted) return; // import annulé -> on arrête de traiter
+          if (controller.signal.aborted) return;
           const idx = nextIdx++;
-          const resp = await fetch('/api/inventory/extract-articles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rows: chunks[idx], categories: catNames, departments: deptNames }),
-            signal: controller.signal,
-          });
-          const j = await resp.json();
-          if (!resp.ok || j.error) throw new Error((j.error || 'Analyse IA echouee') + (chunks.length > 1 ? ` (lot ${idx + 1}/${chunks.length})` : ''));
+          const j = await callChunk(idx);
           results[idx] = Array.isArray(j.articles) ? j.articles : [];
           done++; setAiProgress({ done, total: chunks.length });
         }
       };
-      await Promise.all(Array.from({ length: Math.min(4, chunks.length) }, () => worker()));
+      await Promise.all(Array.from({ length: Math.min(4, Math.max(1, chunks.length - 1)) }, () => worker()));
       const aiArticles = results.flat().filter(Boolean);
       if (!aiArticles.length) throw new Error(language === 'fr' ? 'Aucun article detecte dans la feuille.' : 'No article detected in the sheet.');
 
-      // Creer les categories/departements manquants (insensible casse/accents) pour ne pas bloquer.
-      const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      // 3) SITES : valides contre l'Administration (cree jusqu'a la limite, bloque le surplus).
+      const distinctSites = [];
+      const siteSeen = new Set();
+      aiArticles.forEach(a => { const n = String(a.site || '').trim(); if (n && !siteSeen.has(norm(n))) { siteSeen.add(norm(n)); distinctSites.push(n); } });
+      let siteSync = null;
+      if (distinctSites.length) siteSync = await syncSitesToAdmin(distinctSites);
+      const validSites = siteSync && siteSync.valid instanceof Set ? siteSync.valid : null; // null = pas de filtre (echec admin)
+      const blockedSet = new Set((siteSync?.blocked || []).map(norm));
+
+      // 4) Categories + departements (locaux) absents crees automatiquement (pour confirmImport).
       const catSet = new Set(categories.map(c => norm(c.name)));
       const deptSet = new Set(departments.map(d => norm(d.name)));
       const newCats = [], newDepts = [];
@@ -2883,50 +2905,62 @@ function AppContent() {
         setDepartments(prev => { const next = [...prev, ...newDepts.map((name, i) => ({ id: `ai-${stamp}-d${i}`, name, code: '', locations: [], created_at: new Date().toISOString() }))]; saveLS('c-secur360-departments', next); return next; });
       }
 
-      // Synchroniser les SUCCURSALES vers l'admin Sites/Departements (sites de niveau superieur),
-      // en respectant la limite d'abonnement (max_sites). Best-effort : n'empeche pas l'import.
-      let siteSync = null;
-      const distinctSites = [];
-      const siteSeen = new Set();
-      aiArticles.forEach(a => { const n = String(a.department || '').trim(); if (n && !siteSeen.has(norm(n))) { siteSeen.add(norm(n)); distinctSites.push(n); } });
-      if (distinctSites.length) siteSync = await syncSitesToAdmin(distinctSites);
-
-      // Construire les lignes validees (meme forme que handleFileUpload -> ImportPreviewContent/confirmImport).
-      // RECONNAISSANCE PAR NOM : un article du MEME nom (existant ou repete dans la feuille, ex.
-      // meme produit dans une autre succursale) n'est PAS un doublon -> ce sera un AJOUT
-      // d'emplacement (multi-emplacement) gere a la confirmation. On ne bloque donc pas sur le code.
+      // 5) Lignes validees. Adresse = EMPLACEMENT-TABLETTE-POSITION (auto-generee sous le
+      // site/departement). TABLETTE = 0 si absente (ex. bac/bin dans un support sans tablette) ;
+      // on garde quand meme la position.
+      const combineLoc = (a) => {
+        const emp = String(a.location ?? '').trim();
+        const shelf = (a.shelf === '' || a.shelf == null) ? 0 : (Number(a.shelf) || 0);
+        const pos = String(a.position ?? '').trim();
+        const parts = [];
+        if (emp) parts.push(emp);
+        parts.push(String(shelf)); // tablette toujours presente, 0 par defaut
+        if (pos) parts.push(pos);
+        return parts.join('-');
+      };
       const existingNames = new Set(items.map(i => norm(i.name)));
       const existingCodes = new Set(items.map(i => i.code));
       const seen = new Set();
       const seenNames = new Set();
+      let refusedSiteCount = 0;
       const validatedData = aiArticles.map((a, index) => {
         const errors_row = [];
         const code = String(a.code || '').trim();
         const name = String(a.name || '').trim();
+        const site = String(a.site || '').trim();
         const nameKey = norm(name);
         const willMergeByName = !!nameKey && (existingNames.has(nameKey) || seenNames.has(nameKey));
         if (name) seenNames.add(nameKey);
         if (!code) errors_row.push(language === 'fr' ? 'Code manquant' : 'Missing code');
         if (!name) errors_row.push(language === 'fr' ? 'Nom manquant' : 'Missing name');
+        if (!site) errors_row.push(language === 'fr' ? 'Site manquant' : 'Missing site');
+        // SITE doit exister/etre autorise dans l'Administration (sinon refuse).
+        if (site && validSites) {
+          if (blockedSet.has(norm(site)) || !validSites.has(norm(site))) {
+            errors_row.push(language === 'fr' ? `Site « ${site} » inexistant ou non autorisé (abonnement)` : `Site "${site}" missing or not allowed (subscription)`);
+            refusedSiteCount++;
+          }
+        }
+        // Case vide = 0 (regle Eric). Aucun forcage du max.
         const quantity = Math.max(0, Math.round(Number(a.quantity) || 0));
         const minQuantity = Math.max(0, Math.round(Number(a.minQuantity) || 0));
-        let maxQuantity = Math.round(Number(a.maxQuantity) || 0);
-        if (maxQuantity <= minQuantity) maxQuantity = Math.max(minQuantity + 1, quantity, 1);
+        const maxQuantity = Math.max(0, Math.round(Number(a.maxQuantity) || 0));
         const costPrice = Math.max(0, Number(a.costPrice) || 0);
-        const salePrice = Math.max(0, Number(a.salePrice) || 0);
-        // On ne signale le conflit de code que si ce n'est PAS une fusion par nom.
+        // Prix de vente derive du PRIX (cout) via l'EBITDA cible du module (coherent avec le formulaire).
+        const salePrice = costPrice > 0 ? Math.round(costPrice * (1 + (Number(targetEbitda) || 0) / 100) * 100) / 100 : 0;
         if (!willMergeByName) {
           if (code && existingCodes.has(code)) errors_row.push(t('articles.excel.validation.codeExists'));
           if (code && seen.has(code)) errors_row.push(t('articles.excel.validation.codeDuplicate'));
         }
         if (code) seen.add(code);
         return {
-          code, name,
+          code, name, site,
           category: String(a.category || '').trim(),
           department: String(a.department || '').trim(),
-          location: String(a.location || '').trim(),
+          location: combineLoc(a),
           quantity, minQuantity, maxQuantity, costPrice, salePrice,
-          unit: String(a.unit || '').trim() || 'Pièce',
+          unit: 'Pièce',
+          supplier: String(a.supplier || '').trim(),
           description: String(a.description || '').trim(),
           mergeByName: willMergeByName,
           errors: errors_row,
@@ -2939,31 +2973,20 @@ function AppContent() {
       setImportErrors(errors);
       setImportStep('preview');
 
-      // CONTROLE D'EXACTITUDE : on compte les lignes de DONNEES reelles de la feuille (on exclut
-      // les lignes entierement vides) et on compare au nombre d'articles produits. Si l'IA en a
-      // ecarte (lignes de total, en-tetes repetes…), on le signale pour que rien ne parte en
-      // silence — l'utilisateur verifie dans la previsualisation avant d'enregistrer.
       const dataRowCount = rows.filter(r => Object.values(r).some(v => String(v ?? '').trim() !== '')).length;
-      const skipped = dataRowCount - aiArticles.length;
       const createdSitesCount = siteSync && Array.isArray(siteSync.created) ? siteSync.created.length : 0;
       const extra = [
         newCats.length ? (language === 'fr' ? `${newCats.length} catégorie(s) créée(s)` : `${newCats.length} category(ies) created`) : '',
         createdSitesCount ? (language === 'fr' ? `${createdSitesCount} site(s) créé(s) dans l'admin` : `${createdSitesCount} site(s) created in admin`) : '',
       ].filter(Boolean).join(', ');
       notify((language === 'fr' ? `IA : ${aiArticles.length} article(s) détecté(s) sur ${dataRowCount} ligne(s)` : `AI: ${aiArticles.length} article(s) detected from ${dataRowCount} row(s)`) + (extra ? ` — ${extra}` : '') + '.');
-      if (skipped > 0) {
+      if (refusedSiteCount > 0) {
         notify((language === 'fr'
-          ? `⚠️ ${skipped} ligne(s) écartée(s) par l'IA (vides, totaux ou non reconnues). Vérifie la prévisualisation.`
-          : `⚠️ ${skipped} row(s) skipped by AI (empty, totals or unrecognized). Check the preview.`), 'warning');
-      }
-      // Sites bloques par la limite d'abonnement (site supplementaire payant requis).
-      if (siteSync && Array.isArray(siteSync.blocked) && siteSync.blocked.length) {
-        notify((language === 'fr'
-          ? `⛔ ${siteSync.blocked.length} site(s) non créé(s) — limite d'abonnement de ${siteSync.maxSites} site(s) atteinte : ${siteSync.blocked.join(', ')}. Ajoute un site supplémentaire (payant) dans l'admin pour les activer.`
-          : `⛔ ${siteSync.blocked.length} site(s) not created — subscription limit of ${siteSync.maxSites} site(s) reached: ${siteSync.blocked.join(', ')}. Add an extra (paid) site in admin to enable them.`), 'warning');
+          ? `⛔ ${refusedSiteCount} article(s) refusé(s) — site inexistant ou non autorisé (limite d'abonnement). Crée le site dans Administration ou ajoute un site payant.`
+          : `⛔ ${refusedSiteCount} article(s) refused — site missing or not allowed (subscription limit).`), 'warning');
       }
       if (siteSync && siteSync.error) {
-        notify((language === 'fr' ? "⚠️ Sites non synchronisés vers l'admin : " : '⚠️ Sites not synced to admin: ') + siteSync.error, 'warning');
+        notify((language === 'fr' ? "⚠️ Sites non vérifiés (admin indisponible) : " : '⚠️ Sites not verified (admin unavailable): ') + siteSync.error, 'warning');
       }
     } catch (e) {
       if (controller.signal.aborted || e?.name === 'AbortError') {
@@ -2989,6 +3012,7 @@ function AppContent() {
     const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const deptCodeOf = (deptName) => departments.find(d => norm(d.name) === norm(deptName))?.code || '';
     const mkLoc = (it) => ({
+      site: it.site || '',
       department: it.department || '',
       departmentCode: deptCodeOf(it.department),
       location: it.location || '',
@@ -3044,6 +3068,7 @@ function AppContent() {
           const created = {
             id,
             code: itemData.code, name: itemData.name, category: itemData.category,
+            site: itemData.site || '', supplier: itemData.supplier || '',
             department: itemData.department, departmentCode: deptCodeOf(itemData.department), location: itemData.location,
             quantity: itemData.quantity, minQuantity: itemData.minQuantity, maxQuantity: itemData.maxQuantity,
             costPrice: itemData.costPrice, salePrice: itemData.salePrice, unit: itemData.unit, description: itemData.description,
@@ -7679,7 +7704,7 @@ function AppContent() {
         {/* Étape 1: Upload */}
         {importStep === 'upload' && (
           <>
-            {/* IMPORT IA — n'importe quelle feuille, colonnes detectees automatiquement */}
+            {/* IMPORT IA — gabarit strict (SITE/DÉPARTEMENT/EMPLACEMENT obligatoires) */}
             <div className="rounded-xl border-2 border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 p-5">
               <div className="mb-1 flex items-center gap-2">
                 <Zap size={18} className="text-purple-600 dark:text-purple-400" />
@@ -7687,9 +7712,18 @@ function AppContent() {
               </div>
               <p className="mb-3 text-sm text-purple-800 dark:text-purple-300">
                 {language === 'fr'
-                  ? "Pousse n'importe quelle feuille Excel : l'IA détecte les colonnes (code, nom, quantité, prix…) et crée tous les articles d'un coup."
-                  : 'Drop any Excel sheet: the AI detects the columns (code, name, quantity, price…) and creates all articles at once.'}
+                  ? "Le fichier doit suivre le gabarit. Colonnes obligatoires : SITE, DÉPARTEMENT, EMPLACEMENT. Sinon la feuille est refusée. L'IA classe les autres colonnes au bon endroit."
+                  : 'The file must follow the template. Required columns: SITE, DEPARTMENT, EMPLACEMENT. Otherwise the sheet is refused. The AI maps the other columns.'}
               </p>
+              {aiRefusal && (
+                <div className="mb-3 rounded-lg border-2 border-red-400 bg-red-50 p-3 text-sm dark:border-red-700 dark:bg-red-900/20">
+                  <p className="font-bold text-red-700 dark:text-red-300">⛔ {language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
+                  <p className="mt-1 text-red-700 dark:text-red-300">{language === 'fr' ? 'Critère(s) minimum manquant(s) :' : 'Missing minimum criteria:'} <strong>{aiRefusal.missing.join(', ')}</strong></p>
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">{language === 'fr'
+                    ? 'Le tableau doit contenir des colonnes claires SITE, DÉPARTEMENT et EMPLACEMENT (au minimum). Colonnes complètes recommandées : EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DÉPARTEMENT · FOURNISSEUR · CATÉGORIE · PRIX ($) · CODE ITEM.'
+                    : 'The table must contain clear SITE, DEPARTMENT and EMPLACEMENT columns (minimum). Recommended full columns: EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DEPARTMENT · FOURNISSEUR · CATEGORIE · PRIX ($) · CODE ITEM.'}</p>
+                </div>
+              )}
               <button
                 onClick={() => aiFileInputRef.current?.click()}
                 disabled={aiImporting}
@@ -7941,9 +7975,18 @@ function AppContent() {
                 </div>
                 <p className="mb-3 text-sm text-purple-800 dark:text-purple-300">
                   {language === 'fr'
-                    ? "Pousse n'importe quelle feuille Excel : l'IA détecte les colonnes (code, nom, quantité, prix…) et crée tous les articles d'un coup."
-                    : 'Drop any Excel sheet: the AI detects the columns (code, name, quantity, price…) and creates all articles at once.'}
+                    ? "Le fichier doit suivre le gabarit. Colonnes obligatoires : SITE, DÉPARTEMENT, EMPLACEMENT. Sinon la feuille est refusée. L'IA classe les autres colonnes au bon endroit."
+                    : 'The file must follow the template. Required columns: SITE, DEPARTMENT, EMPLACEMENT. Otherwise the sheet is refused. The AI maps the other columns.'}
                 </p>
+                {aiRefusal && (
+                  <div className="mb-3 rounded-lg border-2 border-red-400 bg-red-50 p-3 text-sm dark:border-red-700 dark:bg-red-900/20">
+                    <p className="font-bold text-red-700 dark:text-red-300">⛔ {language === 'fr' ? 'Feuille refusée — non conforme' : 'Sheet refused — not conforming'}</p>
+                    <p className="mt-1 text-red-700 dark:text-red-300">{language === 'fr' ? 'Critère(s) minimum manquant(s) :' : 'Missing minimum criteria:'} <strong>{aiRefusal.missing.join(', ')}</strong></p>
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-400">{language === 'fr'
+                      ? 'Colonnes recommandées : EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DÉPARTEMENT · FOURNISSEUR · CATÉGORIE · PRIX ($) · CODE ITEM.'
+                      : 'Recommended columns: EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MIN · MAX · SITE · DEPARTMENT · FOURNISSEUR · CATEGORIE · PRIX ($) · CODE ITEM.'}</p>
+                  </div>
+                )}
                 <button
                   onClick={() => aiFileInputRef.current?.click()}
                   disabled={aiImporting}

@@ -1,47 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// #Inventaire — Import IA d'articles depuis une feuille Excel quelconque (colonnes libres).
-// Calqué sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (la clé ANTHROPIC_API_KEY
-// reste côté serveur, jamais exposée au navigateur). Le client lit le .xlsx (SheetJS) et nous
-// envoie les lignes brutes en JSON ; l'IA détecte les colonnes et renvoie des articles normalisés.
+// #Inventaire — Import IA d'articles depuis une feuille Excel STRICTE (gabarit impose).
+// Calque sur /api/dga/extract : proxy SERVEUR de l'appel Anthropic (cle ANTHROPIC_API_KEY cote
+// serveur). Le client lit le .xlsx (SheetJS) et envoie les lignes brutes ; l'IA detecte les
+// colonnes du gabarit, refuse si les 3 criteres minimum sont absents, et normalise.
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+// Gabarit officiel attendu (entetes, tolerant aux synonymes/accents/casse) :
+//   EMPLACEMENT · TABLETTE · POSITION · INVENTAIRE · IDENTIFICATION · MAX · MIN ·
+//   SITE · DEPARTEMENT · FOURNISSEUR · CATEGORIE · PRIX ($) · CODE ITEM
+// Minimum OBLIGATOIRE : SITE, DEPARTEMENT, EMPLACEMENT. Sinon -> refus (conforme:false).
 const ARTICLE_SCHEMA =
-  "{code, name, category, department, location, quantity:number, minQuantity:number, maxQuantity:number, costPrice:number, salePrice:number, unit, description}";
+  "{site, department, location, shelf, position, quantity:number, name, maxQuantity:number, minQuantity:number, supplier, category, costPrice:number, code, description}";
 
-function buildPrompt(categories: string[], departments: string[]): string {
-  return `Tu es un assistant d'import d'inventaire. On te donne les LIGNES BRUTES d'une feuille Excel (tableau JSON, une entree par ligne, les cles sont les en-tetes de colonnes tels quels). Les en-tetes peuvent etre dans n'importe quelle langue/forme.
-Detecte a quelle information correspond chaque colonne, puis retourne UNIQUEMENT un objet JSON valide, sans texte autour, sans backticks, avec cette forme exacte :
-{"articles": [${ARTICLE_SCHEMA}]}
-Regles :
-- Un objet par article (par ligne de donnees). Ignore les lignes vides, les lignes d'en-tete repetees, les lignes de total/sous-total et les lignes d'instructions.
-- Reconnais les synonymes FR/EN des colonnes :
-  - code : code, sku, reference, ref, no, numero, item code.
-  - name : nom, designation, libelle, article, name, title, produit.
-  - category : categorie, category, famille, type, classe.
-  - department : departement, succursale, branch, site, magasin, entrepot, depot.
-  - location : localisation, emplacement, allee, etagere, bin, location, lieu.
-  - quantity : quantite, qte, qty, stock, quantity, en stock, on hand.
-  - minQuantity : min, quantite min, seuil min, minimum, reorder, point de commande.
-  - maxQuantity : max, quantite max, maximum, capacite.
-  - costPrice : prix cout, cout, cost, prix d'achat, achat, cost price, pamp.
-  - salePrice : prix vente, prix de vente, vente, sale price, prix, price, pvp.
-  - unit : unite, unit, uom, mesure, conditionnement.
-  - description : description, details, note, remarque, commentaire.
-- Nombres : convertis en nombre (retire symboles monetaires, espaces, separateurs de milliers ; la virgule decimale devient un point). Si une valeur numerique est absente, mets 0 — SAUF maxQuantity : si absent, mets le plus grand entre (quantity) et (minQuantity*2) et au minimum 1.
-- PRIX (costPrice/salePrice) : ce sont de PETITES valeurs monetaires unitaires (typiquement < 10000). N'utilise JAMAIS un code-barres, un EAN/UPC, un numero de reference/SKU ou un identifiant comme prix. En cas de doute (nombre tres grand a 6+ chiffres, ou colonne qui ressemble a un code), mets 0 plutot que de deviner. salePrice >= costPrice en general.
-- category et department : si la valeur de la ligne ressemble (insensible a la casse/aux accents) a une valeur de la liste fournie ci-dessous, RENVOIE EXACTEMENT la valeur de la liste. Sinon, renvoie la valeur brute telle quelle.
-- code : si absent, fabrique un code court en MAJUSCULES a partir du nom (ex: "Masque N95" -> "MASQUE-N95"). Jamais vide.
-- unit : si absent, mets "Piece".
-- Champs texte absents = "" (chaine vide). Ne devine pas d'information non presente.
+const PROMPT = `Tu es un controleur+extracteur d'import d'inventaire. On te donne les LIGNES BRUTES d'une feuille Excel (tableau JSON, une entree par ligne, les cles = entetes de colonnes tels quels, langue/forme libres).
 
-Categories existantes : ${categories.length ? categories.join(' | ') : '(aucune)'}
-Departements existants : ${departments.length ? departments.join(' | ') : '(aucune)'}
+GABARIT OFFICIEL des colonnes (synonymes/accents/casse toleres) :
+- EMPLACEMENT (emplacement, allee, racking, rangee) -> location
+- TABLETTE (tablette, etagere, shelf, niveau) -> shelf. Si ABSENTE ou non reconnue (ex. bac/bin dans un support sans tablette), mets shelf=0 et ajoute dans "description" la mention "tablette non reconnue".
+- POSITION (position, pos, no, numero) -> position
+- INVENTAIRE (inventaire, quantite, qte, stock, on hand) -> quantity
+- IDENTIFICATION (identification, nom, designation, libelle, article, description courte) -> name
+- MAX (max, quantite max, maximum) -> maxQuantity
+- MIN (min, quantite min, minimum, seuil) -> minQuantity
+- SITE (site, succursale, branch, etablissement) -> site
+- DEPARTEMENT (departement, departement, dept, service) -> department
+- FOURNISSEUR (fournisseur, supplier, vendor) -> supplier
+- CATEGORIE (categorie, category, famille, type) -> category
+- PRIX (prix, prix $, cout, cost, prix unitaire) -> costPrice
+- CODE ITEM (code item, code, sku, reference, ref) -> code
 
-Retourne le JSON et rien d'autre.`;
-}
+REGLE DE CONFORMITE (ABSOLUE) : si tu ne peux PAS identifier de maniere fiable les TROIS colonnes
+minimum SITE, DEPARTEMENT et EMPLACEMENT, retourne EXACTEMENT :
+{"conforme": false, "missing": [<noms des criteres minimum manquants parmi "SITE","DEPARTEMENT","EMPLACEMENT">]}
+et RIEN d'autre.
+
+Sinon (les 3 criteres minimum sont presents), retourne EXACTEMENT :
+{"conforme": true, "articles": [${ARTICLE_SCHEMA}]}
+
+Regles d'extraction (quand conforme) :
+- Un objet par article (par ligne de donnees). Ignore lignes vides, entetes repetes, totaux/sous-totaux, lignes d'instructions.
+- DONNEES EN PLUS (colonnes hors gabarit) : classe-les dans le champ le plus pertinent ; si rien ne convient, concatene dans "description". Ne perds aucune information utile.
+- Nombres : convertis (retire symboles monetaires, espaces, separateurs de milliers ; virgule decimale -> point). TOUTE case vide ou absente = 0 (y compris quantity, minQuantity, maxQuantity, costPrice).
+- PRIX (costPrice) : PETITE valeur monetaire unitaire (typiquement < 10000). N'utilise JAMAIS un code-barres/EAN/SKU/identifiant comme prix. En cas de doute (nombre a 6+ chiffres ou colonne qui ressemble a un code), mets 0.
+- code : si absent, fabrique-le en MAJUSCULES a partir du nom. Jamais vide.
+- Champs texte absents = "" (chaine vide). Ne devine pas d'info non presente.
+Retourne UNIQUEMENT le JSON, sans texte autour ni backticks.`;
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -50,12 +56,7 @@ export async function POST(req: NextRequest) {
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
   const rows: any[] = Array.isArray(body.rows) ? body.rows : [];
-  const categories: string[] = Array.isArray(body.categories) ? body.categories.map(String) : [];
-  const departments: string[] = Array.isArray(body.departments) ? body.departments.map(String) : [];
   if (!rows.length) return NextResponse.json({ error: 'Aucune ligne a importer (feuille vide).' }, { status: 400 });
-  // Cap PAR REQUETE (le client decoupe les gros fichiers en lots) : borne de securite pour ne pas
-  // depasser la fenetre de tokens de sortie du modele. Les imports >1000 articles passent par
-  // plusieurs requetes (chunks) cote client.
   if (rows.length > 600) return NextResponse.json({ error: `Lot trop grand (${rows.length} lignes). Maximum 600 par requete — decoupez en lots plus petits.` }, { status: 400 });
 
   try {
@@ -63,14 +64,13 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        // Haiku 4.5 : tres rapide et suffisant pour de la detection de colonnes / normalisation
-        // structuree -> evite les timeouts (504) sur les gros imports (le client envoie de petits lots).
+        // Haiku 4.5 : rapide et suffisant pour la detection de colonnes / normalisation structuree.
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 8000,
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: buildPrompt(categories, departments) },
+            { type: 'text', text: PROMPT },
             { type: 'text', text: 'LIGNES BRUTES (JSON) :\n' + JSON.stringify(rows).slice(0, 180000) },
           ],
         }],
@@ -92,9 +92,14 @@ export async function POST(req: NextRequest) {
     }
     if (!parsed) return NextResponse.json({ error: 'Reponse IA non parsable', raw: text.slice(0, 500) }, { status: 422 });
 
+    // Refus de conformite : on remonte la liste des criteres minimum manquants.
+    if (parsed.conforme === false) {
+      return NextResponse.json({ ok: true, conforme: false, missing: Array.isArray(parsed.missing) ? parsed.missing : ['SITE', 'DEPARTEMENT', 'EMPLACEMENT'] });
+    }
+
     let articles: any[] = Array.isArray(parsed.articles) ? parsed.articles : (Array.isArray(parsed) ? parsed : []);
     articles = articles.filter((a: any) => a && (a.name || a.code));
-    return NextResponse.json({ ok: true, articles });
+    return NextResponse.json({ ok: true, conforme: true, articles });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });
   }
