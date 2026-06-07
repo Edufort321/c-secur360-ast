@@ -1725,9 +1725,10 @@ function AppContent() {
       const savedTargetEbitda = localStorage.getItem('app-targetEbitda');
       if (savedItems) setItems(JSON.parse(savedItems)); else setItems(getDefaultItems());
       if (savedMovements) setMovements(JSON.parse(savedMovements));
-      // Departements : PLUS de defauts locaux — la source est l'Administration (planner_succursales),
-      // chargee par un effet dedie. On part du cache local si present, sinon vide (pas de re-semis).
-      if (savedDepartments) setDepartments(JSON.parse(savedDepartments)); else setDepartments([]);
+      // Departements : source UNIQUE = Administration (planner_succursales, effet dedie). On ne
+      // charge PAS depuis le cache local (qui peut contenir d'anciens defauts) -> on part vide et
+      // l'effet admin remplit. (savedDepartments volontairement ignore.)
+      setDepartments([]);
       if (savedCategories) setCategories(JSON.parse(savedCategories)); else setCategories(getDefaultCategories());
       if (savedStorageUnits) setStorageUnits(JSON.parse(savedStorageUnits));
       if (savedBaseEbitda) setBaseEbitda(parseFloat(savedBaseEbitda));
@@ -1743,7 +1744,10 @@ function AppContent() {
           const s = data.data || {};
           if (Array.isArray(s.items)) setItems(s.items);
           if (Array.isArray(s.movements)) setMovements(s.movements);
-          if (Array.isArray(s.departments)) setDepartments(s.departments); // pas de re-semis de defauts
+          // DÉPARTEMENTS : PLUS chargés depuis inventory_state (source unique = Administration /
+          // planner_succursales, voir l'effet dédié). Évite que d'anciens défauts persistés dans le
+          // snapshot nuage (Succursale A/B/Entrepôt) ne ressuscitent. (Isolation multi-tenant assurée
+          // par le filtre tenant_id côté admin.)
           if (Array.isArray(s.categories)) setCategories(s.categories.length ? s.categories : getDefaultCategories());
           if (Array.isArray(s.storageUnits)) setStorageUnits(s.storageUnits);
           if (s.baseEbitda != null) setBaseEbitda(Number(s.baseEbitda));
@@ -1843,7 +1847,8 @@ function AppContent() {
       try {
         const { error } = await supabase.from('inventory_state').upsert({
           tenant_id: tenantId,
-          data: { items, movements, departments, categories, storageUnits, baseEbitda, targetEbitda },
+          // NB: `departments` n'est PLUS persisté ici — source unique = Administration (planner_succursales).
+          data: { items, movements, categories, storageUnits, baseEbitda, targetEbitda },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'tenant_id' });
         if (error) { console.warn('⚠️ Sauvegarde inventory_state échouée:', error.message); setSaveError(error.message || 'Erreur inconnue'); }
