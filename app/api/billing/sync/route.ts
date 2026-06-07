@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { audit, auditHelpers } from '@/lib/audit';
 
+// Route cron/dynamique (lit les en-têtes) -> jamais de pré-rendu statique (supprime l'avertissement build).
+export const dynamic = 'force-dynamic';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
