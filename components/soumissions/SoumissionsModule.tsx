@@ -31,6 +31,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [hdr, setHdr] = useState<Soumission>(blankHdr());
   const [items, setItems] = useState<SoumissionItem[]>([]);
   const [clientName, setClientName] = useState('');
+  const [listView, setListView] = useState<'grid' | 'gallery'>('grid'); // liste soumissions : grille (défaut) / galerie
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -651,32 +652,46 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-          <table className="mobile-cards w-full text-sm">
-            <thead><tr className="text-left text-xs text-gray-500 dark:text-gray-400"><th className="px-4 py-2">{tr('N°', '#')}</th><th className="px-4">{tr('Rév.', 'Rev.')}</th><th className="px-4">{tr('Client', 'Client')}</th><th className="px-4">{tr('Année', 'Year')}</th><th className="px-4 text-right">{tr('Total', 'Total')}</th><th className="px-4">{tr('Statut', 'Status')}</th><th className="px-4"></th></tr></thead>
-            <tbody>
+        <div className="space-y-3">
+          {/* Bascule Grille / Galerie */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-500">{soumissions.length} {tr('soumission(s)', 'quote(s)')}</span>
+            <div className="flex items-center rounded-lg border border-gray-200 p-0.5 text-xs dark:border-gray-600">
+              <button onClick={() => setListView('grid')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Grille', 'Grid')}</button>
+              <button onClick={() => setListView('gallery')} className={`rounded-md px-2 py-1 font-semibold ${listView === 'gallery' ? 'bg-blue-600 text-white' : 'text-gray-500'}`}>{tr('Galerie', 'Gallery')}</button>
+            </div>
+          </div>
+
+          {soumissions.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">{tr('Aucune soumission.', 'No quote yet.')}</div>
+          ) : (
+            <div className={listView === 'gallery' ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3'}>
               {soumissions.map(s => (
-                <tr key={s.id} className="border-t border-gray-50 dark:border-gray-700/50">
-                  <td className="px-4 py-2 font-mono text-xs" data-label="N°">{s.numero}</td>
-                  <td className="px-4 py-2" data-label={tr('Rév.', 'Rev.')}>{s.revision}</td>
-                  <td className="px-4 py-2" data-label={tr('Client', 'Client')}>{s.client_snapshot?.name || '—'}</td>
-                  <td className="px-4 py-2" data-label={tr('Année', 'Year')}>{s.year || '—'}</td>
-                  <td className="px-4 py-2 text-right font-medium" data-label={tr('Total', 'Total')}>{mny(s.total)}</td>
-                  <td className="px-4 py-2" data-label={tr('Statut', 'Status')}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span></td>
-                  <td className="px-4 py-2 text-right" data-label="">
-                    {canEdit && <div className="flex flex-wrap justify-end gap-2 text-xs">
-                      <button onClick={() => editSoumission(s)} className="text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
+                <div key={s.id} className={`rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 ${listView === 'gallery' ? 'p-4' : 'p-3'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs text-gray-400">{s.numero}{s.revision > 1 ? ` · rév. ${s.revision}` : ''}</div>
+                      <div className="truncate font-bold text-gray-900 dark:text-white">{s.client_snapshot?.name || '—'}</div>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[s.status]}`}>{STATUS[s.status]}</span>
+                  </div>
+                  <div className={`mt-2 flex items-baseline justify-between ${listView === 'gallery' ? '' : 'text-sm'}`}>
+                    <span className="text-xs text-gray-400">{s.year || '—'}</span>
+                    <span className={`font-extrabold text-gray-900 dark:text-white ${listView === 'gallery' ? 'text-2xl' : 'text-lg'}`}>{mny(s.total)}</span>
+                  </div>
+                  {canEdit && (
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs dark:border-gray-700">
+                      <button onClick={() => editSoumission(s)} className="font-semibold text-blue-600 hover:underline">{tr('Éditer', 'Edit')}</button>
                       {s.status !== 'archived' && <button onClick={() => revise(s)} className="text-indigo-600 hover:underline">{tr('Réviser', 'Revise')}</button>}
                       {s.status !== 'accepted' && s.status !== 'archived' && <button onClick={() => accept(s)} className="text-emerald-600 hover:underline">{tr('Accepter → Projet', 'Accept → Project')}</button>}
                       {s.status === 'accepted' && <button onClick={() => facturer(s)} className="text-violet-600 hover:underline">{tr('Facturer', 'Invoice')}</button>}
-                      <button onClick={() => remove(s)} className="text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
-                    </div>}
-                  </td>
-                </tr>
+                      <button onClick={() => remove(s)} className="ml-auto text-red-500 hover:underline">{tr('Suppr.', 'Del.')}</button>
+                    </div>
+                  )}
+                </div>
               ))}
-              {soumissions.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{tr('Aucune soumission.', 'No quote yet.')}</td></tr>}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       )}
     </div>
