@@ -16,7 +16,6 @@ import {
   LayoutGrid,
   Grid
 } from 'lucide-react';
-import { PersonnelManagement } from './PersonnelManagement';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export const DepartmentManagement = ({
@@ -219,17 +218,7 @@ export const DepartmentManagement = ({
                 <Grid className="inline-block mr-2" size={18} />
                 Emplacements ({storageUnits?.filter(s => s.departmentId === editingDepartment.id).length || 0})
               </button>
-              <button
-                onClick={() => setEditingDepartmentTab('personnel')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                  editingDepartmentTab === 'personnel'
-                    ? 'border-orange-600 text-orange-600 dark:text-orange-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
-              >
-                <Users className="inline-block mr-2" size={18} />
-                Personnel
-              </button>
+              {/* Onglet Personnel retiré : l'identité vient de l'admin principal + auth de connexion. */}
             </div>
           </div>
 
@@ -352,13 +341,7 @@ export const DepartmentManagement = ({
               </div>
             )}
 
-            {/* Onglet Personnel */}
-            {editingDepartmentTab === 'personnel' && (
-              <PersonnelManagement
-                departments={[editingDepartment]}
-                defaultDepartmentId={editingDepartment.id}
-              />
-            )}
+            {/* Onglet Personnel retiré (identité = admin principal + auth de connexion). */}
           </div>
         </div>
 
@@ -509,11 +492,7 @@ export const DepartmentManagement = ({
           </div>
         </div>
 
-        {/* Gestion du personnel pour ce département */}
-        <PersonnelManagement
-          departments={[selectedDepartment]}
-          defaultDepartmentId={selectedDepartment.id}
-        />
+        {/* Personnel retiré de l'inventaire (identité = admin principal + auth). */}
       </div>
     );
   }

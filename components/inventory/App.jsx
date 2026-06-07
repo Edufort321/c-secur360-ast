@@ -5401,6 +5401,59 @@ function AppContent() {
     );
   };
 
+  // Panneau LECTURE SEULE des Sites/Départements gérés dans l'Administration principale
+  // (table planner_succursales). Source de vérité de la hiérarchie Site → Département pour
+  // l'inventaire (l'import valide les SITE contre cette liste). Géré dans Administration.
+  const AdminSitesPanel = () => {
+    const [loading, setLoading] = useState(true);
+    const [tree, setTree] = useState([]); // [{id,name,depts:[{id,name}]}]
+    useEffect(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const { data, error } = await supabase.from('planner_succursales').select('id,name,parent_id').eq('tenant_id', tenantId).order('name');
+          if (!alive) return;
+          if (error) { setTree([]); setLoading(false); return; }
+          const rows = data || [];
+          const sites = rows.filter(r => !r.parent_id).map(s => ({ id: s.id, name: s.name, depts: rows.filter(d => d.parent_id === s.id).map(d => ({ id: d.id, name: d.name })) }));
+          setTree(sites);
+        } catch { if (alive) setTree([]); }
+        if (alive) setLoading(false);
+      })();
+      return () => { alive = false; };
+    }, []);
+    const fr = language === 'fr';
+    return (
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+        <div className="mb-2 flex items-center gap-2">
+          <Building size={18} className="text-blue-600 dark:text-blue-400" />
+          <h3 className="font-bold text-blue-900 dark:text-blue-200">{fr ? 'Sites & Départements (Administration)' : 'Sites & Departments (Administration)'}</h3>
+        </div>
+        <p className="mb-3 text-xs text-blue-700 dark:text-blue-300">
+          {fr ? "Hiérarchie Site → Département gérée dans l'onglet Administration principal (lecture seule ici). C'est la source des SITE/DÉPARTEMENT pour l'import." : 'Site → Department hierarchy managed in the main Administration tab (read-only here). This is the source for SITE/DEPARTMENT on import.'}
+        </p>
+        {loading ? (
+          <p className="text-sm text-gray-500">{fr ? 'Chargement…' : 'Loading…'}</p>
+        ) : tree.length === 0 ? (
+          <p className="text-sm text-gray-500">{fr ? 'Aucun site défini. Crée-les dans Administration → Sites / Départements.' : 'No site defined. Create them in Administration → Sites / Departments.'}</p>
+        ) : (
+          <div className="space-y-2">
+            {tree.map(s => (
+              <div key={s.id} className="rounded-lg bg-white p-2 dark:bg-gray-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><Building size={14} className="text-blue-500" /> {s.name}</div>
+                {s.depts.length > 0 && (
+                  <div className="ml-5 mt-1 flex flex-wrap gap-1">
+                    {s.depts.map(d => <span key={d.id} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-200">{d.name}</span>)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ============== VUE: ADMINISTRATION ==============
   const AdminView = () => {
     // activeAdminTab est maintenant géré par AppContent pour persister entre les re-renders
@@ -5460,6 +5513,8 @@ function AppContent() {
       <div className="mt-6">
         {/* Onglet Départements & Personnel */}
         {activeAdminTab === 'departments' && (
+          <>
+          <AdminSitesPanel />
           <DepartmentManagement
             departments={departments}
             articles={items}
@@ -5474,6 +5529,7 @@ function AppContent() {
             setActiveTab={setActiveDepartmentTab}
             t={t}
           />
+          </>
         )}
 
         {/* Onglet Catégories */}

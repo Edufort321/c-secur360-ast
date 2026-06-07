@@ -717,7 +717,7 @@ const translations = {
 
       // Tabs
       tabs: {
-        departmentsPersonnel: 'Départements & Personnel',
+        departmentsPersonnel: 'Site/département',
         departments: 'Départements',
         categories: 'Catégories',
         inventoryMode: 'Mode Inventaire',
@@ -1776,7 +1776,7 @@ const translations = {
 
       // Tabs
       tabs: {
-        departmentsPersonnel: 'Departments & Personnel',
+        departmentsPersonnel: 'Site/Department',
         departments: 'Departments',
         categories: 'Categories',
         inventoryMode: 'Inventory Mode',
