@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Loader2, Trash2, Copy, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -31,6 +31,29 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [hdr, setHdr] = useState<Soumission>(blankHdr());
   const [items, setItems] = useState<SoumissionItem[]>([]);
   const [clientName, setClientName] = useState('');
+  // Recherche dynamique des clients existants (admin/clients) — comme le planner.
+  const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
+  const [clientSearching, setClientSearching] = useState(false);
+  const clientTimer = useRef<any>(null);
+  const searchClients = (text: string) => {
+    clearTimeout(clientTimer.current);
+    const q = (text || '').trim();
+    clientTimer.current = setTimeout(async () => {
+      setClientSearching(true);
+      try {
+        let req = supabase.from('clients').select('id, name, city, province, address').eq('tenant_id', tenant).eq('active', true).order('name').limit(q.length < 2 ? 25 : 8);
+        if (q.length >= 2) req = supabase.from('clients').select('id, name, city, province, address').eq('tenant_id', tenant).eq('active', true).ilike('name', `%${q}%`).order('name').limit(8);
+        const { data } = await req;
+        setClientSuggestions(data || []);
+      } catch { setClientSuggestions([]); }
+      setClientSearching(false);
+    }, q.length < 2 ? 0 : 300);
+  };
+  const applyClient = (c: any) => {
+    setClientName(c.name);
+    setHdr(h => ({ ...h, client_snapshot: { ...(h.client_snapshot || {}), name: c.name, clientId: c.id, lieu: c.address || [c.city, c.province].filter(Boolean).join(', ') || (h.client_snapshot as any)?.lieu } }));
+    setClientSuggestions([]);
+  };
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState<CatalogueTaux | null>(null);
   const [sitePrefix, setSitePrefix] = useState('XX'); // initiales du site de l'utilisateur, pour la numerotation
@@ -489,7 +512,26 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid gap-3 sm:grid-cols-4">
               <label className="text-xs font-semibold text-gray-500">{tr('N° soumission', 'Quote #')}<input value={hdr.numero} onChange={e => setHdr(h => ({ ...h, numero: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
-              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Client', 'Client')}<input value={clientName} onChange={e => setClientName(e.target.value)} className={`mt-1 w-full ${inputCls}`} /></label>
+              <label className="relative text-xs font-semibold text-gray-500 sm:col-span-2">
+                {tr('Client', 'Client')}{clientSearching && <span className="ml-2 font-normal text-gray-400">{tr('Recherche…', 'Searching…')}</span>}
+                <input value={clientName}
+                  onChange={e => { setClientName(e.target.value); setHdr(h => ({ ...h, client_snapshot: { ...(h.client_snapshot || {}), name: e.target.value } })); searchClients(e.target.value); }}
+                  onFocus={() => searchClients(clientName)}
+                  onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
+                  placeholder={tr('Nom du client…', 'Client name…')} autoComplete="off"
+                  className={`mt-1 w-full ${inputCls}`} />
+                {clientSuggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                    {clientSuggestions.map(c => (
+                      <button key={c.id} type="button" onMouseDown={() => applyClient(c)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{c.name}</span>
+                        {(c.city || c.province) && <span className="ml-auto text-xs text-gray-400">{[c.city, c.province].filter(Boolean).join(', ')}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </label>
               <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={hdr.year || nowYear} onChange={e => setHdr(h => ({ ...h, year: Number(e.target.value) }))} className={`mt-1 w-full ${inputCls}`} /></label>
               <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Catalogue de taux', 'Rate catalogue')}
                 <select value={hdr.catalogue_id || ''} onChange={e => setHdr(h => ({ ...h, catalogue_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
