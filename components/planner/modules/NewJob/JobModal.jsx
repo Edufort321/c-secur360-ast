@@ -117,6 +117,10 @@ export function JobModal({
     // Autocomplete client + projets
     const [clientSuggestions, setClientSuggestions] = useState([]);
     const [clientSearching, setClientSearching]     = useState(false);
+    // Cascade client -> sites (adresses) -> contacts (migration 133). Chargés à la sélection d'un client.
+    const [clientSites, setClientSites]       = useState([]);
+    const [clientContacts, setClientContacts] = useState([]);
+    const [selectedSiteId, setSelectedSiteId] = useState('');
     const clientSearchTimer = useRef(null);
 
     // Sélecteur de source — Préparation et matériel
@@ -584,25 +588,35 @@ export function JobModal({
     };
 
     // ── Recherche client + projets (debounce 300ms) ──
+    // text vide/<2 caractères -> on affiche quand même la LISTE des clients existants (au focus/clic),
+    // triés par nom ; dès qu'on tape, la recherche dynamique filtre clients + projets.
     const searchClientsAndProjects = (text) => {
         clearTimeout(clientSearchTimer.current);
-        if (!text || text.length < 2) { setClientSuggestions([]); return; }
+        const q = (text || '').trim();
         clientSearchTimer.current = setTimeout(async () => {
             setClientSearching(true);
             try {
                 const t = window.location.pathname.split('/')[1] || 'cerdia';
-                const [cRes, pRes] = await Promise.all([
-                    supabase.from('clients').select('id, name, city, province, contact_name, address')
-                        .eq('tenant_id', t).ilike('name', `%${text}%`).eq('active', true).limit(6),
-                    supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status')
-                        .eq('tenant_id', t).or(`client_name.ilike.%${text}%,title.ilike.%${text}%`).limit(8),
-                ]);
-                const clients  = (cRes.data  || []).map(c => ({ ...c, _type: 'client' }));
-                const projects = (pRes.data  || []).map(p => ({ ...p, _type: 'project' }));
-                setClientSuggestions([...clients, ...projects]);
+                if (q.length < 2) {
+                    // Liste par défaut : tous les clients actifs (max 25), par ordre alphabétique.
+                    const { data } = await supabase.from('clients')
+                        .select('id, name, city, province, contact_name, address')
+                        .eq('tenant_id', t).eq('active', true).order('name').limit(25);
+                    setClientSuggestions((data || []).map(c => ({ ...c, _type: 'client' })));
+                } else {
+                    const [cRes, pRes] = await Promise.all([
+                        supabase.from('clients').select('id, name, city, province, contact_name, address')
+                            .eq('tenant_id', t).ilike('name', `%${q}%`).eq('active', true).order('name').limit(8),
+                        supabase.from('projects').select('id, project_number, title, client_name, end_client_id, location, status')
+                            .eq('tenant_id', t).or(`client_name.ilike.%${q}%,title.ilike.%${q}%`).limit(8),
+                    ]);
+                    const clients  = (cRes.data  || []).map(c => ({ ...c, _type: 'client' }));
+                    const projects = (pRes.data  || []).map(p => ({ ...p, _type: 'project' }));
+                    setClientSuggestions([...clients, ...projects]);
+                }
             } catch { /* silencieux */ }
             setClientSearching(false);
-        }, 300);
+        }, q.length < 2 ? 0 : 300);
     };
 
     // ── Appliquer une suggestion (client ou projet) ──
@@ -615,6 +629,28 @@ export function JobModal({
                 clientId: item.id || prev.clientId,
                 lieu: item.address || [item.city, item.province].filter(Boolean).join(', ') || prev.lieu,
             }));
+            // Cascade : charge les SITES (adresses) et CONTACTS du client (migration 133).
+            (async () => {
+                try {
+                    const t = window.location.pathname.split('/')[1] || 'cerdia';
+                    const [sRes, ctRes] = await Promise.all([
+                        supabase.from('client_sites').select('id, name, address, city, province').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
+                        supabase.from('client_contacts').select('id, site_id, name, title, phone, mobile, email').eq('tenant_id', t).eq('client_id', item.id).eq('active', true).order('name'),
+                    ]);
+                    const sites = sRes.data || [];
+                    setClientSites(sites);
+                    setClientContacts(ctRes.data || []);
+                    // Un seul site -> on le sélectionne et remplit directement l'adresse du mandat.
+                    if (sites.length === 1) {
+                        const s = sites[0];
+                        setSelectedSiteId(String(s.id));
+                        const addr = [s.address, s.city, s.province].filter(Boolean).join(', ');
+                        if (addr) setFormData(prev => ({ ...prev, lieu: addr }));
+                    } else {
+                        setSelectedSiteId('');
+                    }
+                } catch { setClientSites([]); setClientContacts([]); setSelectedSiteId(''); }
+            })();
         } else if (item._type === 'project') {
             // Interconnexion : on lie le mandat au PROJET (projectId) et au client du projet.
             setFormData(prev => ({
@@ -3170,6 +3206,7 @@ export function JobModal({
                                                     setFormData(prev => ({ ...prev, client: e.target.value }));
                                                     searchClientsAndProjects(e.target.value);
                                                 }}
+                                                onFocus={() => searchClientsAndProjects(formData.client)}
                                                 onBlur={() => setTimeout(() => setClientSuggestions([]), 200)}
                                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 placeholder={L('Nom du client ou projet…', 'Client or project name…')}
@@ -3220,6 +3257,53 @@ export function JobModal({
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* 2b. Site / adresse du client (cascade) — visible si le client a des sites */}
+                                        {clientSites.length > 0 && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                                                    {L('Site / adresse du client', 'Client site / address')}
+                                                </label>
+                                                <select
+                                                    value={selectedSiteId}
+                                                    onChange={(e) => {
+                                                        const sid = e.target.value;
+                                                        setSelectedSiteId(sid);
+                                                        const s = clientSites.find(x => String(x.id) === sid);
+                                                        if (s) {
+                                                            const addr = [s.address, s.city, s.province].filter(Boolean).join(', ');
+                                                            setFormData(prev => ({ ...prev, lieu: addr || prev.lieu }));
+                                                        }
+                                                    }}
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-800"
+                                                >
+                                                    <option value="">{L('— Choisir un site —', '— Choose a site —')}</option>
+                                                    {clientSites.map(s => (
+                                                        <option key={s.id} value={String(s.id)}>
+                                                            {s.name}{[s.city, s.province].filter(Boolean).length ? ` (${[s.city, s.province].filter(Boolean).join(', ')})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {/* Contacts du site choisi (ou tous les contacts du client) — référence rapide */}
+                                                {(() => {
+                                                    const shown = clientContacts.filter(c => !selectedSiteId || String(c.site_id) === selectedSiteId || c.site_id == null);
+                                                    if (!shown.length) return null;
+                                                    return (
+                                                        <div className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-2 text-xs">
+                                                            <div className="mb-1 font-semibold text-gray-500 dark:text-gray-400">{L('Contacts', 'Contacts')}</div>
+                                                            {shown.map(c => (
+                                                                <div key={c.id} className="flex flex-wrap items-center gap-x-2 text-gray-700 dark:text-gray-300">
+                                                                    <span className="font-medium">{c.name}</span>
+                                                                    {c.title && <span className="text-gray-400">· {c.title}</span>}
+                                                                    {(c.phone || c.mobile) && <span className="text-gray-400">· {c.phone || c.mobile}</span>}
+                                                                    {c.email && <span className="text-gray-400">· {c.email}</span>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
 
                                         {/* 3. Nom du mandat */}
                                         <div>
