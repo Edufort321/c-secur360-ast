@@ -16,8 +16,12 @@ export type AiBudget = {
   budgetCents: number;    // cout IA autorise = tier x 70%
   usedCents: number;      // cout IA consomme (cents)
   remainingCents: number; // budget - used (>=0)
-  exhausted: boolean;     // plus de budget
+  exhausted: boolean;     // BLOQUE : budget epuise OU abonnement expire (renouvellement non paye)
+  budgetExhausted: boolean; // budget de cout epuise (independamment de la date)
   unlimited: boolean;     // aucun forfait configure -> on NE bloque PAS (retro-compat avant migration)
+  renewalDate: string | null; // date du prochain renouvellement (ISO yyyy-mm-dd)
+  daysToRenewal: number | null; // jours avant renouvellement (negatif = expire)
+  expired: boolean;       // echeance depassee sans renouvellement -> blocage auto
 };
 
 // Taux par modele ($/1M tokens). Sert a estimer le cout d'un appel.
@@ -40,24 +44,32 @@ export function aiCallCostCents(model: string, usage: any, webSearches = 0): num
 
 // Lit l'etat du budget d'un tenant. unlimited=true si la colonne n'existe pas encore (avant migration)
 // OU si aucun forfait n'est defini -> on ne bloque pas (retro-compat).
+const UNLIMITED: AiBudget = { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, exhausted: false, budgetExhausted: false, unlimited: true, renewalDate: null, daysToRenewal: null, expired: false };
+
 export async function getAiBudget(tenant: string): Promise<AiBudget> {
   try {
     const { data, error } = await supabaseAdmin
-      .from('ai_budgets').select('tier_cents, used_cents').eq('tenant_id', tenant).maybeSingle();
-    if (error || !data) {
-      return { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, exhausted: false, unlimited: true };
-    }
+      .from('ai_budgets').select('tier_cents, used_cents, renewal_date').eq('tenant_id', tenant).maybeSingle();
+    if (error || !data) return UNLIMITED;
     const tierCents = Number(data.tier_cents) || 0;
     const usedCents = Number(data.used_cents) || 0;
+    if (tierCents <= 0) return { ...UNLIMITED, usedCents };
     const budgetCents = Math.round(tierCents * (1 - AI_MARGIN));
-    if (tierCents <= 0) {
-      // Aucun forfait achete -> par defaut on NE bloque pas (le patron active les forfaits quand il veut).
-      return { tierCents: 0, budgetCents: 0, usedCents, remainingCents: 0, exhausted: false, unlimited: true };
-    }
     const remainingCents = Math.max(0, budgetCents - usedCents);
-    return { tierCents, budgetCents, usedCents, remainingCents, exhausted: usedCents >= budgetCents, unlimited: false };
+    const budgetExhausted = usedCents >= budgetCents;
+    // Echeance / renouvellement : on calcule les jours restants et l'expiration (blocage auto).
+    let renewalDate: string | null = data.renewal_date ? String(data.renewal_date).slice(0, 10) : null;
+    let daysToRenewal: number | null = null;
+    let expired = false;
+    if (renewalDate) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const r = new Date(renewalDate + 'T00:00:00');
+      daysToRenewal = Math.round((r.getTime() - today.getTime()) / 86400000);
+      expired = daysToRenewal < 0; // echeance depassee, non renouvelee -> blocage
+    }
+    return { tierCents, budgetCents, usedCents, remainingCents, exhausted: budgetExhausted || expired, budgetExhausted, unlimited: false, renewalDate, daysToRenewal, expired };
   } catch {
-    return { tierCents: 0, budgetCents: 0, usedCents: 0, remainingCents: 0, exhausted: false, unlimited: true };
+    return UNLIMITED;
   }
 }
 

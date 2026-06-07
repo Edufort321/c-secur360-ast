@@ -8724,36 +8724,7 @@ function AppContent() {
         })()}
 
         <main className="overflow-x-hidden" key={view}>
-          {view === 'dashboard' && aiBudget && !aiBudget.unlimited && (() => {
-            const c2 = (cents) => '$' + ((Number(cents) || 0) / 100).toLocaleString(language === 'fr' ? 'fr-CA' : 'en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const pct = aiBudget.budgetCents > 0 ? Math.min(100, Math.round((aiBudget.usedCents / aiBudget.budgetCents) * 100)) : 0;
-            const remPct = 100 - pct;
-            const low = remPct <= 15;
-            const mods = Object.entries(aiBudget.perModule || {});
-            return (
-              <div className={`mb-4 rounded-xl border-2 p-4 ${aiBudget.exhausted ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : low ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Zap size={18} className={aiBudget.exhausted ? 'text-red-600' : 'text-purple-600 dark:text-purple-400'} />
-                    <h3 className="font-bold text-gray-900 dark:text-white">{language === 'fr' ? 'Solde Assistant IA' : 'AI Assistant balance'}</h3>
-                  </div>
-                  <span className={`text-lg font-extrabold ${aiBudget.exhausted ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
-                    {aiBudget.exhausted ? (language === 'fr' ? 'Épuisé' : 'Exhausted') : `${c2(aiBudget.remainingCents)} ${language === 'fr' ? 'restant' : 'left'}`}
-                  </span>
-                </div>
-                <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div className={`h-full ${aiBudget.exhausted ? 'bg-red-500' : low ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-                  <span>{language === 'fr' ? 'Utilisé' : 'Used'} : {c2(aiBudget.usedCents)} / {c2(aiBudget.budgetCents)}</span>
-                  {mods.length > 0 && <span>{mods.map(([m, c]) => `${m}: ${c2(c)}`).join(' · ')}</span>}
-                </div>
-                {aiBudget.exhausted && (
-                  <p className="mt-2 text-sm font-semibold text-red-700 dark:text-red-300">⛔ {language === 'fr' ? 'Forfait IA épuisé — renouvelez votre forfait dans Administration.' : 'AI plan exhausted — renew in Administration.'}</p>
-                )}
-              </div>
-            );
-          })()}
+          {/* Le compteur de forfait IA n'est PLUS ici : il est app-wide, dans Administration → Abonnement. */}
           {view === 'dashboard' && <DashboardView
             key="dashboard-view"
             t={t}

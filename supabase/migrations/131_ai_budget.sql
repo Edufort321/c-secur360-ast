@@ -11,9 +11,12 @@ CREATE TABLE IF NOT EXISTS ai_budgets (
   tier_cents         INTEGER NOT NULL DEFAULT 0,   -- prix du forfait paye (0 = aucun = illimite)
   used_cents         INTEGER NOT NULL DEFAULT 0,   -- cout IA consomme sur la periode
   period_start       DATE,
+  renewal_date       DATE,                         -- echeance / prochain renouvellement (apres = blocage)
   assistants_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Si la table existait deja (1ere version) :
+ALTER TABLE ai_budgets ADD COLUMN IF NOT EXISTS renewal_date DATE;
 
 CREATE TABLE IF NOT EXISTS ai_usage (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

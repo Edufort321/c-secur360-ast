@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload } from 'lucide-react';
+import { Settings, CreditCard, Save, Loader2, Plus, Check, MapPin, Trash2, Car, Building2, Wrench, Clock, DollarSign, Layers, HardHat, ExternalLink, UserCog, Banknote, Gift, Timer, ChevronDown, ChevronRight, Award, TrendingUp, BookOpen, Receipt, ShoppingCart, Paperclip, FileText, ClipboardList, Download, Upload, Zap } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { SoumissionsModule } from '@/components/soumissions/SoumissionsModule';
 import { BonsCommandeModule } from '@/components/bons/BonsCommandeModule';
@@ -880,6 +880,8 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
   if (mods.length === 0) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{tr('Aucun module configuré. Contactez votre administrateur.', 'No module configured. Contact your administrator.')}</div>;
 
   return (
+    <div className="space-y-4">
+      <AiPlanPanel tenant={tenant} tr={tr} />
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -930,6 +932,47 @@ function Abonnement({ tenant, tr, lang }: { tenant: string; tr: (f: string, e: s
           {tr('Pour modifier votre abonnement, contactez votre administrateur C-Secur360.', 'To modify your subscription, contact your C-Secur360 administrator.')}
         </p>
       </div>
+    </div>
+    </div>
+  );
+}
+
+// Panneau FORFAIT IA (app-wide, par tenant) : solde, date de renouvellement, alertes 60j/15j, blocage.
+function AiPlanPanel({ tenant, tr }: { tenant: string; tr: (f: string, e: string) => string }) {
+  const [b, setB] = useState<any>(null);
+  useEffect(() => { let a = true; (async () => { try { const r = await fetch(`/api/inventory/ai-budget?tenant=${encodeURIComponent(tenant)}`); if (r.ok && a) setB(await r.json()); } catch { /* ignore */ } })(); return () => { a = false; }; }, [tenant]);
+  if (!b || b.unlimited) return null; // aucun forfait configure -> rien a afficher
+  const c2 = (cents: number) => '$' + ((Number(cents) || 0) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = b.budgetCents > 0 ? Math.min(100, Math.round((b.usedCents / b.budgetCents) * 100)) : 0;
+  const remPct = 100 - pct;
+  const d = b.daysToRenewal;
+  // Alertes echeance : 60 j avant = ambre, 15 j avant = rouge, expire = bloque.
+  const renewAmber = d != null && d <= 60 && d > 15;
+  const renewRed = d != null && d <= 15 && d >= 0;
+  const budgetLow = remPct <= 15 && !b.exhausted;
+  const danger = b.exhausted || renewRed;
+  const warn = renewAmber || budgetLow;
+  const mods = Object.entries(b.perModule || {});
+  const fmtDate = (s: string | null) => s ? new Date(s + 'T00:00:00').toLocaleDateString('fr-CA', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+  return (
+    <div className={`rounded-2xl border-2 p-5 ${danger ? 'border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20' : warn ? 'border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-900/20'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2"><Zap size={18} className={danger ? 'text-red-600' : 'text-purple-600'} /><h2 className="font-bold">{tr('Forfait Assistant IA', 'AI Assistant plan')}</h2></div>
+        <span className={`text-lg font-extrabold ${danger ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300'}`}>
+          {b.exhausted ? (b.expired ? tr('Bloqué — échéance dépassée', 'Blocked — expired') : tr('Épuisé', 'Exhausted')) : `${c2(b.remainingCents)} ${tr('restant', 'left')}`}
+        </span>
+      </div>
+      <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+        <div className={`h-full ${b.exhausted ? 'bg-red-500' : budgetLow ? 'bg-amber-500' : 'bg-purple-500'}`} style={{ width: `${remPct}%` }} />
+      </div>
+      <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+        <div><span className="text-gray-500">{tr('Utilisé', 'Used')} :</span> <b>{c2(b.usedCents)}</b> / {c2(b.budgetCents)} <span className="text-gray-400">({tr('forfait', 'plan')} {c2(b.tierCents)})</span></div>
+        <div><span className="text-gray-500">{tr('Renouvellement', 'Renewal')} :</span> <b>{fmtDate(b.renewalDate)}</b>{d != null && <span className={`ml-1 ${renewRed ? 'text-red-600 font-bold' : renewAmber ? 'text-amber-600 font-semibold' : 'text-gray-400'}`}>({d >= 0 ? tr(`dans ${d} j`, `in ${d}d`) : tr(`échue depuis ${-d} j`, `${-d}d overdue`)})</span>}</div>
+      </div>
+      {mods.length > 0 && <div className="mt-1 text-[11px] text-gray-500">{tr('Par module', 'Per module')} : {mods.map(([m, c]) => `${m} ${c2(c as number)}`).join(' · ')}</div>}
+      {b.exhausted && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">⛔ {b.expired ? tr('Abonnement IA échu — réglez pour réactiver les assistants.', 'AI subscription expired — pay to reactivate.') : tr('Forfait IA épuisé — renouvelez pour continuer.', 'AI plan exhausted — renew to continue.')}</p>}
+      {!b.exhausted && renewRed && <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">🔴 {tr(`Renouvellement dans ${d} j — réglez pour éviter le blocage.`, `Renewal in ${d}d — pay to avoid blocking.`)}</p>}
+      {!b.exhausted && renewAmber && <p className="mt-2 text-sm font-semibold text-amber-700 dark:text-amber-300">🟠 {tr(`Renouvellement dans ${d} j.`, `Renewal in ${d}d.`)}</p>}
     </div>
   );
 }

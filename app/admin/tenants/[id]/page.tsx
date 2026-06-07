@@ -38,6 +38,7 @@ export default function TenantManagePage() {
   const [cfg, setCfg] = useState({ discount_per_module: 5, discount_cap: 30, per_site_monthly: 0 });
   const [aiTier, setAiTier] = useState(0);   // forfait IA (cents) — table ai_budgets
   const [aiUsed, setAiUsed] = useState(0);    // conso IA (cents)
+  const [aiRenewal, setAiRenewal] = useState(''); // date de renouvellement (yyyy-mm-dd)
   const [sub, setSub] = useState<any>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [txForm, setTxForm] = useState({ open: false, type: 'payment', amount: '', description: '', reference: '', period_start: '', period_end: '' });
@@ -68,7 +69,7 @@ export default function TenantManagePage() {
       setVendorId(t?.vendor_id || '');
       // Forfait IA depuis la table dédiée ai_budgets (clé = sous-domaine).
       if (t?.subdomain) {
-        try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents, used_cents').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); } } catch { /* table absente */ }
+        try { const { data: ab } = await supabase.from('ai_budgets').select('tier_cents, used_cents, renewal_date').eq('tenant_id', t.subdomain).maybeSingle(); if (ab) { setAiTier(Number(ab.tier_cents) || 0); setAiUsed(Number(ab.used_cents) || 0); setAiRenewal(ab.renewal_date ? String(ab.renewal_date).slice(0, 10) : ''); } } catch { /* table absente */ }
       }
       const { data: catalog } = await supabase.from('modules').select('key, name_fr, monthly_price, sort_order').order('sort_order');
       const { data: tm } = await supabase.from('tenant_modules').select('module_key, enabled').eq('tenant_id', id);
@@ -208,7 +209,7 @@ export default function TenantManagePage() {
       }
       // Forfait IA : table DEDIEE ai_budgets (migration 131), clé = sous-domaine. Indépendant de `tenants`.
       if (tenant.subdomain) {
-        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); } catch { /* table absente avant migration 131 */ }
+        try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), tier_cents: Math.max(0, Number(aiTier) || 0), renewal_date: aiRenewal || null, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); } catch { /* table absente avant migration 131 */ }
       }
       if (error) throw error;
       setNotice('Profil enregistré ✓');
@@ -341,8 +342,16 @@ export default function TenantManagePage() {
                   </select>
                   <span className="mt-1 block text-[11px] text-gray-400">
                     Budget de coût IA réel = prix × 70 % (marge 30 %). Consommé : {((aiUsed) / 100).toFixed(2)} $ · budget {((aiTier * 0.7) / 100).toFixed(2)} $.
-                    Renouveler = remettre la conso à 0 (table ai_budgets).
                   </span>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Date de renouvellement IA</span>
+                  <input type="date" className={inputCls} value={aiRenewal} onChange={e => setAiRenewal(e.target.value)} />
+                  <span className="mt-1 block text-[11px] text-gray-400">
+                    Alertes au dashboard : 🟠 60 j avant · 🔴 15 j avant · ⛔ blocage auto après l'échéance si non réglé.
+                    Au paiement : remets la date (+1 an) et clique « Conso à 0 ».
+                  </span>
+                  <button type="button" onClick={async () => { if (tenant?.subdomain) { try { await supabase.from('ai_budgets').upsert({ tenant_id: String(tenant.subdomain), used_cents: 0, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id' }); setAiUsed(0); setNotice('Consommation IA remise à 0 ✓'); } catch { setNotice('Erreur (migration 131 ?)'); } } }} className="mt-2 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300">Conso à 0 (renouvellement)</button>
                 </label>
                 <div className="mt-1 border-t border-gray-100 pt-2 text-xs font-bold uppercase tracking-wide text-gray-400 sm:col-span-2 lg:col-span-3 dark:border-gray-700">Logo du client</div>
                 <label className="block sm:col-span-2">
