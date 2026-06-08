@@ -12,7 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 type Loc = { department: string; departmentCode: string | null; location?: string | null; quantity: number };
 type Item = { id: string; code: string; name: string; unit?: string | null; costPrice?: number | null; quantity: number; isMultiLocation?: boolean; locations: Loc[] };
-type Mvt = { id?: string; itemId: string; itemName?: string; quantity: number; department?: string | null; reason?: string | null; date?: string; timestamp?: string; projectCode?: string };
+type Mvt = { id?: string; type?: string; itemId: string; itemName?: string; quantity: number; department?: string | null; reason?: string | null; date?: string; timestamp?: string; projectCode?: string };
 
 const money = (n: number) => `${(Math.round((n || 0) * 100) / 100).toLocaleString('fr-CA', { minimumFractionDigits: 2 })} $`;
 
@@ -54,7 +54,7 @@ export function ConsumeMaterialPanel({ tenant, projectNumber }: { tenant: string
       if (!Array.isArray(snap.items)) { setUnavailable(true); setLoading(false); return; }
       setItems((snap.items || []).map(toItem));
       const mvs: Mvt[] = Array.isArray(snap.movements) ? snap.movements : [];
-      setMoves(mvs.filter(m => m.type === 'exit' as any && (m.projectCode === projectNumber || String(m.reason || '').includes(projectNumber))));
+      setMoves(mvs.filter(m => m.type === 'exit' && (m.projectCode === projectNumber || String(m.reason || '').includes(projectNumber))));
     } catch { setUnavailable(true); }
     setLoading(false);
   }
