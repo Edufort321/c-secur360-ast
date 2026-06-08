@@ -255,10 +255,26 @@ export default function DgaPage() {
     if (!file) return;
     setImporting(true); setImportErr(null); setNotice(null);
     try {
-      const b64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(new Error('read')); r.readAsDataURL(file); });
-      const resp = await fetch('/api/dga/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pdfBase64: b64, tenant }) });
-      const j = await resp.json();
-      if (!resp.ok || j.error) throw new Error(j.error || 'extraction');
+      // Limite plateforme (~4,5 Mo de body). On envoie le fichier BRUT en multipart
+      // (pas de base64 qui gonfle de +33 %), et on pré-vérifie la taille pour un message clair.
+      const MAX = 4.3 * 1024 * 1024;
+      if (file.size > MAX) throw new Error(tr(
+        `Fichier trop volumineux (${(file.size / 1048576).toFixed(1)} Mo). Limite ~4 Mo — compresse ou divise le PDF.`,
+        `File too large (${(file.size / 1048576).toFixed(1)} MB). Limit ~4 MB — compress or split the PDF.`));
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('tenant', tenant);
+      const resp = await fetch('/api/dga/extract', { method: 'POST', body: fd });
+      // Parsing défensif : un 413 (ou erreur proxy) renvoie du TEXTE, pas du JSON.
+      const raw = await resp.text();
+      let j: any = {};
+      if (raw) { try { j = JSON.parse(raw); } catch {
+        if (resp.status === 413) throw new Error(tr(
+          `Fichier trop volumineux (${(file.size / 1048576).toFixed(1)} Mo). Limite ~4 Mo — compresse ou divise le PDF.`,
+          `File too large (${(file.size / 1048576).toFixed(1)} MB). Limit ~4 MB — compress or split the PDF.`));
+        throw new Error(raw.slice(0, 200) || `Erreur ${resp.status}`);
+      } }
+      if (!resp.ok || j.error) throw new Error(j.error || `Erreur ${resp.status}`);
       const transformers: any[] = Array.isArray(j.transformers) && j.transformers.length ? j.transformers : (j.equipment ? [{ equipment: j.equipment, measurements: j.measurements }] : []);
       if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le PDF.', 'No transformer detected in the PDF.'));
       // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
@@ -311,7 +327,7 @@ export default function DgaPage() {
 
   return (
     <Shell tenant={tenant}>
-      <div className={`mx-auto px-4 py-6 ${view === 'fiche' ? 'max-w-screen-2xl' : 'max-w-7xl'}`}>
+      <div className="w-full max-w-none px-3 py-6 sm:px-5 lg:px-8 xl:px-10">
         {view === 'list' && <BackButton fallback={`/${tenant}/modules`} className="mb-3" />}
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

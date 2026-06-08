@@ -32,11 +32,24 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'IA non configuree (ANTHROPIC_API_KEY absente).' }, { status: 503 });
 
-  let body: any = {};
-  try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
-  const pdfBase64: string = body.pdfBase64 || '';
+  // Accepte le fichier BRUT en multipart (préféré, plus léger) ou l'ancien JSON base64 (compat).
+  let pdfBase64 = '';
+  let tenant = '';
+  const ctype = req.headers.get('content-type') || '';
+  if (ctype.includes('multipart/form-data')) {
+    try {
+      const fd = await req.formData();
+      const file = fd.get('file') as File | null;
+      tenant = String(fd.get('tenant') || '').trim();
+      if (file) { const buf = Buffer.from(await file.arrayBuffer()); pdfBase64 = buf.toString('base64'); }
+    } catch { return NextResponse.json({ error: 'Fichier invalide' }, { status: 400 }); }
+  } else {
+    let body: any = {};
+    try { body = await req.json(); } catch { return NextResponse.json({ error: 'JSON invalide' }, { status: 400 }); }
+    pdfBase64 = body.pdfBase64 || '';
+    tenant = String(body.tenant || '').trim();
+  }
   if (!pdfBase64) return NextResponse.json({ error: 'pdfBase64 requis' }, { status: 400 });
-  const tenant = String(body.tenant || '').trim();
   if (tenant) { const budget = await getAiBudget(tenant); if (budget.exhausted) return NextResponse.json({ error: 'Forfait IA épuisé — demandez un renouvellement.', exhausted: true }, { status: 402 }); }
 
   try {
