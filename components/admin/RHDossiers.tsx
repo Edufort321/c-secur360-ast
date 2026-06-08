@@ -11,6 +11,9 @@ type Pers = { id: string; name: string; email?: string; role?: string; succursal
 type Doc = { id?: string; type: string; name: string; url: string; expiry_date?: string | null };
 type Cert = { id?: string; name: string; issuer: string; issued_date?: string | null; expiry_date?: string | null; doc_url?: string };
 type Onb = { id?: string; phase: string; item: string; done: boolean; sort_order: number };
+type Incident = { id: string; report_number: string; incident_type: string; status: string; created_at: string };
+
+const INC_LABEL: Record<string, string> = { accident: 'Accident', near_miss: 'Passé proche', vehicle: 'Véhicule', property: 'Matériel', medical: 'Médical' };
 
 const money = (n?: number) => n != null ? `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 0 })} $` : '—';
 function expStatus(d?: string | null): 'ok' | 'soon' | 'expired' | null {
@@ -31,6 +34,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   const [onb, setOnb] = useState<Onb[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -39,6 +43,13 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
         .select('*')
         .eq('tenant_id', tenant).order('name');
       setPers((data || []).filter((p: any) => p.name) as Pers[]);
+      // Accidents / incidents récents (lecture) — surfacés dans le hub RH.
+      try {
+        const { data: inc } = await supabase.from('incident_reports')
+          .select('id, report_number, incident_type, status, created_at')
+          .eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(12);
+        setIncidents((inc || []) as Incident[]);
+      } catch { /* module accidents indisponible */ }
       setLoading(false);
     })();
   }, [tenant]);
@@ -76,6 +87,31 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
     <div className="space-y-4">
       {/* Guide de conformité (Loi 25 + SST) — toujours accessible en tête du module RH */}
       <ComplianceGuide tr={tr} open={showGuide} setOpen={setShowGuide} />
+
+      {/* Accidents / incidents — hébergés dans le module RH (lecture), source = module Accidents */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-gray-800 dark:text-gray-100"><AlertTriangle size={15} className="text-rose-500" /> {tr('Accidents et incidents', 'Accidents & incidents')} ({incidents.length})</h3>
+          <a href={`/${tenant}/accidents`} className="text-xs font-semibold text-blue-600 hover:underline">{tr('Ouvrir le module', 'Open module')} →</a>
+        </div>
+        {incidents.length === 0 ? (
+          <p className="py-2 text-center text-xs text-gray-400">{tr('Aucun rapport d’accident ou d’incident.', 'No accident or incident report.')}</p>
+        ) : (
+          <div className="space-y-1">
+            {incidents.map(r => {
+              const st = r.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : r.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600';
+              return (
+                <a key={r.id} href={`/${tenant}/accidents`} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-100 px-2 py-1.5 text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/40">
+                  <span className="font-mono text-gray-400">{r.report_number}</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{INC_LABEL[r.incident_type] || r.incident_type}</span>
+                  <span className="text-gray-400">{String(r.created_at).slice(0, 10)}</span>
+                  <span className={`ml-auto rounded-full px-2 py-0.5 font-semibold ${st}`}>{r.status === 'closed' ? tr('Fermé', 'Closed') : r.status === 'submitted' ? tr('Soumis', 'Submitted') : tr('Brouillon', 'Draft')}</span>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
     <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
       {/* Liste employés */}
