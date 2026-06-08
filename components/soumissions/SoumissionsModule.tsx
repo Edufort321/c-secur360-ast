@@ -105,13 +105,36 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     catch { setMigMissing(true); }
     // Liste du personnel pour le champ « Vendeur » (best-effort).
     try { const { data: pl } = await supabase.from('planner_personnel').select('id, name, email, current_grid_id').eq('tenant_id', tenant).order('name'); setPersonnel(pl || []); } catch { /* ignore */ }
-    // Resoudre le site de l'utilisateur connecte -> prefixe de numerotation (initiales du site)
+    // Prefixe de numerotation = 1re lettre du TENANT + 1re lettre du SITE + 1re lettre du DEPARTEMENT.
+    // Source = Administration (planner_succursales : Site -> Departement). Ex. CERDIA / Sherbrooke /
+    // Bourque -> « CSB ». Sans departement -> « CS ». Numero : CSB26001S / CSB26001P.
+    const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
+    let companyName = tenant;
+    try { const { data: cs } = await supabase.from('company_settings').select('legal_name').eq('tenant_id', tenant).maybeSingle(); if (cs?.legal_name) companyName = cs.legal_name; } catch { /* defaut */ }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
         const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
         if (p?.id) { setSellerId(p.id); setMeId(p.id); }
-        if (p?.succursale) setSitePrefix(siteInitials(p.succursale)); else setSitePrefix(siteInitials(tenant));
+        const tLetter = firstAlpha(companyName);
+        // Hierarchie des sites (Administration) : on resout le SITE et le DEPARTEMENT du poste de l'utilisateur.
+        let siteName = '', deptName = '';
+        try {
+          const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant);
+          const list = sucs || [];
+          const byId = new Map(list.map((x: any) => [x.id, x]));
+          const norm = (v: string) => String(v || '').trim().toLowerCase();
+          const mine = list.find((x: any) => norm(x.name) === norm(p?.succursale || '')) // correspondance exacte
+            || list.find((x: any) => p?.succursale && norm(p.succursale).includes(norm(x.name)) && x.parent_id); // dept inclus dans la chaine
+          if (mine) {
+            if (mine.parent_id && byId.get(mine.parent_id)) { siteName = byId.get(mine.parent_id).name; deptName = mine.name; }
+            else { siteName = mine.name; } // c'est un site sans departement
+          }
+        } catch { /* admin indisponible */ }
+        // Repli : si rien via l'admin, on decoupe la chaine succursale (« Sherbrooke Bourque »).
+        if (!siteName) { const w = String(p?.succursale || '').normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean); siteName = w[0] || tenant; deptName = w[1] || ''; }
+        const px = (tLetter + firstAlpha(siteName) + (deptName ? firstAlpha(deptName) : ''));
+        setSitePrefix(px.length >= 2 ? px : ((px + 'XX').slice(0, 2)) || 'XX');
         // Montant max que CE poste peut approuver (colonne approval_max_amount sur la grille — facultative).
         if (p?.current_grid_id) {
           try { const { data: g } = await supabase.from('poste_salary_grids').select('approval_max_amount').eq('id', p.current_grid_id).maybeSingle(); if (g && (g as any).approval_max_amount != null) setMeApprovalMax(Number((g as any).approval_max_amount) || 0); } catch { /* colonne absente */ }
@@ -148,6 +171,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   }
   async function accept(s: Soumission) {
     setNotice(null);
+    // BLOCAGE : si un niveau d'approbation est requis (catalogue), la soumission DOIT être approuvée avant l'acceptation.
+    const scat = catalogues.find(c => c.id === s.catalogue_id) || cat;
+    const reqLevel = approvalForAmount(scat, Number(s.total) || 0);
+    if (reqLevel && !(s as any).approved_by) {
+      setNotice(tr(`⛔ Approbation de niveau requise avant d'accepter (${reqLevel.level_name}${reqLevel.approver_label ? ' — ' + reqLevel.approver_label : ''}). Ouvre la soumission, fais approuver, puis enregistre.`, `⛔ Level approval required before accepting (${reqLevel.level_name}). Open the quote, get it approved, then save.`));
+      return;
+    }
     try { const r = await accepterSoumission(tenant, s.id!); setNotice(tr(`Soumission acceptée → projet ${r.projectNumber} créé/mis à jour.${r.commission ? ' Commission : ' + r.commission : ''}`, `Quote accepted → project ${r.projectNumber}.${r.commission ? ' Commission: ' + r.commission : ''}`)); await load(); }
     catch (e: any) { setNotice(e?.message || tr('Erreur.', 'Error.')); }
   }
