@@ -3,7 +3,7 @@
 // #73 — Hub RH « Dossier 360 » : agrège l'info existante (employé/éval/paie/sites) EN LECTURE
 // et ajoute ce qui manque (documents, certifications avec expiration, onboarding). Pas de doublon.
 import React, { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { uploadReceipt } from '@/lib/transactions';
 
@@ -30,6 +30,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   const [certs, setCerts] = useState<Cert[]>([]);
   const [onb, setOnb] = useState<Onb[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +73,10 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   if (loading) return <div className="grid place-items-center rounded-2xl border border-gray-200 bg-white py-16 text-gray-400 dark:border-gray-700 dark:bg-gray-800"><Loader2 className="animate-spin" /></div>;
 
   return (
+    <div className="space-y-4">
+      {/* Guide de conformité (Loi 25 + SST) — toujours accessible en tête du module RH */}
+      <ComplianceGuide tr={tr} open={showGuide} setOpen={setShowGuide} />
+
     <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
       {/* Liste employés */}
       <div className="rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
@@ -126,6 +131,12 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
 
           {/* Documents */}
           <Section icon={<FileText size={15} />} title={tr('Documents', 'Documents')} onAdd={addDoc} addLabel={tr('Document', 'Document')}>
+            <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
+              <Info size={13} className="mt-0.5 shrink-0" />
+              <span>{tr(
+                'Votre organisation est responsable des documents déposés ici (licéité, exactitude, conservation, accès). Ne déposez que les renseignements nécessaires et légalement justifiés ; restreignez l’accès aux personnes autorisées. Les renseignements sensibles ou de santé exigent une prudence accrue.',
+                'Your organization is responsible for the documents stored here (lawfulness, accuracy, retention, access). Only upload necessary and legally justified information; restrict access to authorized people. Sensitive or health data requires extra care.')}</span>
+            </div>
             {docs.length === 0 ? <Empty tr={tr} /> : docs.map((d, i) => (
               <div key={d.id || i} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 p-2 dark:border-gray-700">
                 <select className={`${inp} w-32`} value={d.type} onChange={e => updDoc(i, { type: e.target.value })}>
@@ -151,6 +162,7 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
         </div>
       )}
     </div>
+    </div>
   );
 }
 
@@ -166,3 +178,65 @@ function Section({ icon, title, onAdd, addLabel, children }: { icon: React.React
   );
 }
 function Empty({ tr }: { tr: (f: string, e: string) => string }) { return <p className="py-2 text-center text-xs text-gray-400">{tr('Aucun élément.', 'None.')}</p>; }
+
+// Guide de conformité (Québec) intégré au module RH : SST (LSST/CNESST) + protection des
+// renseignements personnels (Loi 25). Liste de référence des documents et obligations usuels.
+function ComplianceGuide({ tr, open, setOpen }: { tr: (f: string, e: string) => string; open: boolean; setOpen: (v: boolean) => void }) {
+  const blocks: { title: string; items: string[] }[] = [
+    {
+      title: tr('Santé et sécurité du travail (LSST / CNESST)', 'Occupational health & safety (CNESST)'),
+      items: [
+        tr('Programme de prévention ou plan d’action (selon le secteur et la taille).', 'Prevention program or action plan (per sector and size).'),
+        tr('Registre des accidents, incidents et premiers soins (à jour).', 'Register of accidents, incidents and first aid (kept current).'),
+        tr('Analyses sécuritaires de tâches (AST) et identification des risques.', 'Job safety analyses (JSA) and hazard identification.'),
+        tr('Fiches de données de sécurité (SIMDUT/SDS) accessibles aux travailleurs.', 'Safety data sheets (WHMIS/SDS) accessible to workers.'),
+        tr('Permis de travail (cadenassage, espace clos, travail à chaud, hauteur, excavation).', 'Work permits (LOTO, confined space, hot work, height, excavation).'),
+        tr('Inspections et entretien préventif des équipements documentés.', 'Documented equipment inspections and preventive maintenance.'),
+        tr('Comité ou représentant SST ; mécanisme de participation des travailleurs.', 'OHS committee or representative; worker participation mechanism.'),
+        tr('Politique contre le harcèlement psychologique et la violence au travail.', 'Policy against psychological harassment and workplace violence.'),
+      ],
+    },
+    {
+      title: tr('Certifications et formations obligatoires', 'Mandatory certifications & training'),
+      items: [
+        tr('SIMDUT, cadenassage, espace clos, secourisme, ASP Construction selon les tâches.', 'WHMIS, LOTO, confined space, first aid, sector cards per tasks.'),
+        tr('Suivi des dates d’expiration (alertes dans la fiche de l’employé).', 'Track expiry dates (alerts in the employee file).'),
+        tr('Preuves de formation conservées au dossier de chaque travailleur.', 'Proof of training kept in each worker’s file.'),
+      ],
+    },
+    {
+      title: tr('Protection des renseignements personnels (Loi 25)', 'Personal information protection (Law 25)'),
+      items: [
+        tr('Responsable de la protection des renseignements personnels désigné.', 'Designated privacy officer.'),
+        tr('Politique de confidentialité publiée et à jour.', 'Published and up-to-date privacy policy.'),
+        tr('Collecte limitée au nécessaire ; finalités déterminées ; accès par rôle.', 'Minimal collection; defined purposes; role-based access.'),
+        tr('Registre des incidents de confidentialité ; avis à la CAI si risque sérieux.', 'Register of confidentiality incidents; notify CAI on serious risk.'),
+        tr('Droits des personnes (accès, rectification, suppression) traités sous 30 jours.', 'Individual rights (access, rectification, deletion) handled within 30 days.'),
+        tr('Conservation limitée puis destruction/anonymisation ; encadrement des sous-traitants.', 'Limited retention then destruction/anonymization; vendor agreements.'),
+      ],
+    },
+  ];
+  return (
+    <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/40 dark:bg-emerald-900/10">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left">
+        <span className="flex items-center gap-2 font-bold text-emerald-800 dark:text-emerald-300">
+          <ShieldCheck size={18} /> {tr('Guide de conformité (SST + Loi 25)', 'Compliance guide (OHS + Law 25)')}
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-emerald-700 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="grid gap-3 px-4 pb-4 md:grid-cols-3">
+          {blocks.map(b => (
+            <div key={b.title} className="rounded-xl border border-emerald-100 bg-white p-3 dark:border-emerald-900/30 dark:bg-gray-800">
+              <h4 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-gray-800 dark:text-gray-100"><BookOpen size={14} className="text-emerald-600" /> {b.title}</h4>
+              <ul className="space-y-1.5">
+                {b.items.map((it, i) => <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-300"><span className="mt-0.5 text-emerald-500">✓</span><span>{it}</span></li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+      {open && <p className="px-4 pb-3 text-[11px] text-emerald-700/80 dark:text-emerald-400/70">{tr('Liste de référence non exhaustive — adaptez à votre secteur et à la réglementation applicable.', 'Non-exhaustive reference list — adapt to your sector and applicable regulations.')}</p>}
+    </div>
+  );
+}
