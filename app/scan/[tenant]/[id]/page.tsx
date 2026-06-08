@@ -40,7 +40,12 @@ export default function PublicScanPage() {
   const [moveQty, setMoveQty] = useState<number>(1);
   const [countedQty, setCountedQty] = useState<string>(''); // quantite reelle comptee (mode inventaire)
   const [moveDept, setMoveDept] = useState<string>('');
-  const [moveReason, setMoveReason] = useState<string>('');
+  // RAISON OBLIGATOIRE (entrée/sortie) : projet OU code interne (mêmes choix que le scanner in-app).
+  const [reasonSource, setReasonSource] = useState<'project' | 'internal'>('project');
+  const [reasonProject, setReasonProject] = useState<string>('');
+  const [reasonInternal, setReasonInternal] = useState<string>('');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [reasonCodes, setReasonCodes] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [moveMsg, setMoveMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -79,11 +84,15 @@ export default function PublicScanPage() {
         const r = await fetch('/api/auth/me', { credentials: 'include' });
         if (r.ok) { const j = await r.json(); if (j?.user) setAuthUser({ name: j.user.name, email: j.user.email }); }
       } catch { /* anon */ } finally { setAuthChecked(true); }
-      // Article depuis l'instantané inventaire.
+      // Projets (raison) — best-effort.
+      try { const { data: pr } = await supabase.from('projects').select('project_number, title, submission_number').eq('tenant_id', tenant).order('project_number', { ascending: false }); if (Array.isArray(pr)) setProjects(pr.filter((p: any) => p.project_number)); } catch { /* ignore */ }
+      // Article + codes internes depuis l'instantané inventaire.
       try {
         const { data } = await supabase.from('inventory_state').select('data').eq('tenant_id', tenant).maybeSingle();
-        const list: Item[] = (data?.data?.items) || [];
-        const found = list.find(i => String(i.id) === id || i.code === id);
+        const snap: any = data?.data || {};
+        if (Array.isArray(snap.reasonCodes)) setReasonCodes(snap.reasonCodes);
+        const list: Item[] = snap.items || [];
+        const found = list.find((i: any) => String(i.id) === id || i.code === id);
         if (found) { setItem(found); setState('ok'); return; }
       } catch { /* ignore */ }
       setState('notfound');
@@ -111,9 +120,21 @@ export default function PublicScanPage() {
     const counted = Math.max(0, Math.round(Number(countedQty) || 0));
     if (!isCount && !(qty > 0)) { setMoveMsg({ kind: 'err', text: 'Entre une quantité valide.' }); return; }
     if (isCount && countedQty === '') { setMoveMsg({ kind: 'err', text: 'Entre la quantité réelle comptée.' }); return; }
+    // RAISON OBLIGATOIRE pour entrée/sortie (pas pour le comptage d'inventaire).
+    let reason = '';
+    if (!isCount) {
+      if (reasonSource === 'project') {
+        if (!reasonProject) { setMoveMsg({ kind: 'err', text: 'Sélectionne un projet (raison obligatoire).' }); return; }
+        reason = `${moveType === 'exit' ? 'Sortie' : 'Entrée'} — Projet ${reasonProject}`;
+      } else {
+        if (!reasonInternal) { setMoveMsg({ kind: 'err', text: 'Sélectionne un code interne (raison obligatoire).' }); return; }
+        const rc = reasonCodes.find((c: any) => c.code === reasonInternal);
+        reason = `${moveType === 'exit' ? 'Sortie' : 'Entrée'} — Code ${reasonInternal}${rc?.label ? ` (${rc.label})` : ''}`;
+      }
+    }
     setBusy(true);
     try {
-      const payload: any = { tenant, itemId: String(item.id), departmentCode: moveDept || null, type: isCount ? 'adjustment' : moveType, reason: moveReason };
+      const payload: any = { tenant, itemId: String(item.id), departmentCode: moveDept || null, type: isCount ? 'adjustment' : moveType, reason, projectCode: reasonSource === 'project' ? reasonProject : '' };
       if (isCount) payload.countedQuantity = counted; else payload.quantity = qty;
       const res = await fetch('/api/inventory/movement', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
@@ -128,11 +149,11 @@ export default function PublicScanPage() {
         setMoveMsg({ kind: 'ok', text: d === 0
           ? `Inventaire confirmé : ${counted} — aucun écart. ✅`
           : `Inventaire ajusté : écart ${d > 0 ? '+' : ''}${d} (système → compté). Nouveau stock : ${j.quantity}. Écart enregistré (balancement).` });
-        setMoveReason('');
+        setReasonProject(''); setReasonInternal('');
         await reloadItem();
       } else {
         setMoveMsg({ kind: 'ok', text: `${moveType === 'exit' ? 'Sortie' : 'Entrée'} de ${qty} enregistrée. Nouveau stock : ${j.quantity}.` });
-        setMoveReason('');
+        setReasonProject(''); setReasonInternal('');
         await reloadItem();
       }
     } catch (e: any) {
@@ -306,13 +327,32 @@ export default function PublicScanPage() {
                 </div>
               )}
 
-              {/* Raison (optionnel) */}
-              <input
-                type="text" value={moveReason} maxLength={300}
-                onChange={(e) => setMoveReason(e.target.value)}
-                placeholder="Raison (optionnel)"
-                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800"
-              />
+              {/* Raison OBLIGATOIRE (entrée/sortie) : Projet ou Code interne. Pas pour le comptage. */}
+              {moveType !== 'count' && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => { setReasonSource('project'); setReasonInternal(''); }} className={`flex-1 rounded-lg border-2 py-1.5 text-xs font-bold ${reasonSource === 'project' ? 'border-yellow-500 bg-yellow-50 text-yellow-800' : 'border-slate-200 bg-white text-slate-600'}`}>Projet</button>
+                    <button onClick={() => { setReasonSource('internal'); setReasonProject(''); }} className={`flex-1 rounded-lg border-2 py-1.5 text-xs font-bold ${reasonSource === 'internal' ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-600'}`}>Code interne</button>
+                  </div>
+                  {reasonSource === 'project' ? (
+                    <>
+                      <select value={reasonProject} onChange={(e) => setReasonProject(e.target.value)} className="w-full rounded-lg border-2 border-yellow-400 bg-white px-3 py-2 text-sm text-slate-800">
+                        <option value="">— Projet (raison obligatoire) —</option>
+                        {projects.map((p: any) => <option key={p.project_number} value={p.project_number}>{p.project_number}{p.title ? ` — ${p.title}` : ''}{p.submission_number ? ` (soum. ${p.submission_number})` : ''}</option>)}
+                      </select>
+                      {projects.length === 0 && <p className="text-[11px] text-amber-700">Aucun projet — utilise un code interne.</p>}
+                    </>
+                  ) : (
+                    <>
+                      <select value={reasonInternal} onChange={(e) => setReasonInternal(e.target.value)} className="w-full rounded-lg border-2 border-blue-400 bg-white px-3 py-2 text-sm text-slate-800">
+                        <option value="">— Code interne (raison obligatoire) —</option>
+                        {reasonCodes.map((c: any) => <option key={c.id} value={c.code}>{c.code}{c.label ? ` — ${c.label}` : ''}</option>)}
+                      </select>
+                      {reasonCodes.length === 0 && <p className="text-[11px] text-amber-700">Aucun code interne — à créer dans Administration → Codes internes.</p>}
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Valider */}
               <button
