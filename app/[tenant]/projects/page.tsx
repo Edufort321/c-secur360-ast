@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   FolderKanban, Plus, Search, Building2, MapPin, Calendar,
-  FileText, X, DollarSign, Hash, Loader2, Download, ChevronDown,
+  FileText, X, Hash, Loader2, Download, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PortalHeader } from '@/components/PortalHeader';
@@ -338,24 +338,49 @@ export default function ProjectsPage() {
             </button>
           </div>
         ) : (
-          <div className={`grid gap-3 ${pView === 'gallery' ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={pView === 'gallery' ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3' : 'space-y-2'}>
             {filtered.map(p => {
-              const st = STATUS[p.status || 'soumission'] || STATUS.soumission;
+              const st = STATUS[p.status || 'sans-soumission'] || STATUS.soumission;
+              const astN = p.project_number ? (astCounts[p.project_number] || 0) : 0;
+
+              if (pView === 'grid') {
+                // GRILLE = une LIGNE COMPLÈTE par projet, avec mini-dashboard inline (façon soumission).
+                return (
+                  <Link key={p.id} href={`/${tenant}/projects/${p.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition hover:shadow-md">
+                    <div className="min-w-[160px] flex-1">
+                      <div className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-400"><Hash size={11} /> {p.project_number}</div>
+                      <div className="truncate font-bold text-slate-900">{p.title || 'Sans titre'}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                      {p.client_name && <span className="inline-flex items-center gap-1"><Building2 size={13} /> {p.client_name}</span>}
+                      {p.location && <span className="inline-flex items-center gap-1"><MapPin size={13} /> {p.location}</span>}
+                      {p.date_work_start && <span className="inline-flex items-center gap-1"><Calendar size={13} /> {p.date_work_start}</span>}
+                      {astN > 0 && <span className="inline-flex items-center gap-1"><FileText size={13} /> {astN} AST</span>}
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
+                    </div>
+                    {p.po_amount != null && <div className="ml-auto text-lg font-extrabold text-slate-900">{Number(p.po_amount).toLocaleString('fr-CA')} $</div>}
+                  </Link>
+                );
+              }
+
+              // GALERIE = carte + mini-dashboard.
               return (
-                <Link key={p.id} href={`/${tenant}/projects/${p.id}`} className={`block rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md ${pView === 'gallery' ? 'p-5' : 'p-4'}`}>
+                <Link key={p.id} href={`/${tenant}/projects/${p.id}`} className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
                   <div className="mb-2 flex items-start justify-between gap-2">
                     <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
                       <Hash size={13} /> {p.project_number}
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>{st.label}</span>
                   </div>
-                  <h3 className="mb-2 line-clamp-1 font-semibold text-slate-900">{p.title || 'Sans titre'}</h3>
-                  <div className="space-y-1 text-sm text-slate-500">
+                  <h3 className="mb-3 line-clamp-1 font-semibold text-slate-900">{p.title || 'Sans titre'}</h3>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-slate-50 p-2"><div className="text-lg font-bold text-slate-700">{astN || '—'}</div><div className="text-[10px] text-slate-500">AST</div></div>
+                    <div className="rounded-lg bg-blue-50 p-2"><div className="truncate text-sm font-bold text-blue-700">{p.date_work_start || '—'}</div><div className="text-[10px] text-blue-600/80">début</div></div>
+                    <div className="rounded-lg bg-emerald-50 p-2"><div className="text-base font-extrabold text-emerald-700">{p.po_amount != null ? `${Number(p.po_amount).toLocaleString('fr-CA')} $` : '—'}</div><div className="text-[10px] text-emerald-600/80">BC</div></div>
+                  </div>
+                  <div className="mt-3 space-y-1 text-sm text-slate-500">
                     {p.client_name && <div className="flex items-center gap-1.5"><Building2 size={14} /> {p.client_name}</div>}
                     {p.location && <div className="flex items-center gap-1.5"><MapPin size={14} /> {p.location}</div>}
-                    {p.date_work_start && <div className="flex items-center gap-1.5"><Calendar size={14} /> {p.date_work_start}</div>}
-                    {p.po_amount != null && <div className="flex items-center gap-1.5"><DollarSign size={14} /> {Number(p.po_amount).toLocaleString('fr-CA')} $</div>}
-                    {p.project_number && (astCounts[p.project_number] || 0) > 0 && <div className="flex items-center gap-1.5"><FileText size={14} /> {astCounts[p.project_number]} AST</div>}
                   </div>
                 </Link>
               );
