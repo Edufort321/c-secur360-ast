@@ -52,6 +52,10 @@ export type Soumission = {
   status: 'draft' | 'sent' | 'accepted' | 'archived'; total: number; notes?: string | null;
   // Suivi (migration 138) : transmission (début relance), heures totales, majoration appliquée.
   sent_at?: string | null; total_hours?: number; markup_pct?: number; created_at?: string;
+  // Partage de commission entre vendeurs (migration 140) : [{ seller_id, pct }].
+  sellers_split?: { seller_id: string; pct: number }[] | null;
+  // Approbation (migration 139).
+  approved_by?: string | null; approved_at?: string | null; approval_note?: string | null;
 };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -307,6 +311,10 @@ export async function saveSoumissionFull(tenant: string, header: Soumission, ite
     status: header.status || 'draft', total, notes: header.notes ?? null, updated_at: new Date().toISOString(),
     // Suivi (migration 138) — retirés automatiquement si les colonnes n'existent pas encore.
     sent_at: sentAt, total_hours: computeSoumissionHours(items), markup_pct: Number(header.markup_pct) || 0,
+    // Partage de commission (migration 140).
+    sellers_split: Array.isArray(header.sellers_split) && header.sellers_split.length ? header.sellers_split : null,
+    // Approbation (migration 139).
+    approved_by: header.approved_by ?? null, approved_at: header.approved_at ?? null, approval_note: header.approval_note ?? null,
   };
   let id = header.id;
   // Upsert résilient : si une colonne de suivi manque (migration 138 non passée), on la retire et on réessaie.
@@ -395,11 +403,20 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
     client_name: s.client_snapshot?.name || null,
     location: s.client_snapshot?.lieu || null,
     submission_number: s.numero, project_type: 'budgetaire',
-    // 'vente' = vente conclue -> declenche la commission du vendeur (lib/commission.ts)
-    status: 'vente', primary_seller_id: s.seller_id || null,
+    // 'vente' = vente conclue -> declenche la commission du/des vendeur(s) (lib/commission.ts)
+    status: 'vente', primary_seller_id: s.seller_id || (s.sellers_split?.[0]?.seller_id) || null,
+    sellers_split: Array.isArray(s.sellers_split) && s.sellers_split.length ? s.sellers_split : null,
     global_price: s.total, po_amount: s.total, estimate, updated_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('*').single();
+  // Upsert tolérant : si une colonne récente manque (ex. sellers_split avant migration 140), on la retire.
+  let { data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('*').single();
+  let guardP = 0;
+  while (error && guardP < 4) {
+    const m = String(error.message || '').match(/'([a-z_]+)' column|column "?([a-z_]+)"? .*does not exist|could not find the '([a-z_]+)'/i);
+    const col = m ? (m[1] || m[2] || m[3]) : null;
+    if (col && col in payload && !['tenant_id', 'project_number', 'status'].includes(col)) { delete payload[col]; ({ data, error } = await supabase.from('projects').upsert(payload, { onConflict: 'tenant_id,project_number' }).select('*').single()); guardP++; }
+    else break;
+  }
   if (error) throw error;
   await supabase.from('soumissions').update({ project_id: data.id, status: 'accepted', updated_at: new Date().toISOString() }).eq('id', soumissionId).eq('tenant_id', tenant);
 

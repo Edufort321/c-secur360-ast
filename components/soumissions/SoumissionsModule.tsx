@@ -602,8 +602,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             {canEdit && <button type="button" onClick={() => { const ni = items.length; addItem(); setTab(ni); }} className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+ {tr('Item', 'Item')}</button>}
           </div>
 
-          {tab === 'sommaire' && (<>
-          {/* ===== SOMMAIRE : mini-dashboard global + majoration + calculateur de ressources ===== */}
+          {/* ===== TOUJOURS AU-DESSUS DES ITEMS : mini-dashboard global + majoration + calculateur ===== */}
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
@@ -668,7 +667,65 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             );
           })()}
 
-          {/* SOMMAIRE GLOBAL PAR ITEM : toutes les colonnes ; une colonne vide = 0 $ */}
+          {/* ===== Vendeurs (partage de commission) + Approbation de niveau ===== */}
+          {(() => {
+            const split = hdr.sellers_split || [];
+            const splitSum = split.reduce((s, x) => s + (Number(x.pct) || 0), 0);
+            const canApprove = canEdit && (meApprovalMax == null || meApprovalMax <= 0 || totals <= meApprovalMax);
+            const approverName = hdr.approved_by ? (personnel.find(p => p.id === hdr.approved_by)?.name || tr('approuvée', 'approved')) : '';
+            return (
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-bold">👥 {tr('Vendeurs & approbation', 'Sellers & approval')}</span>
+                  {editAppr && <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: (editAppr.color || '#64748b') + '22', color: editAppr.color || '#64748b' }}>{tr('Niveau requis', 'Required level')} : {editAppr.level_name}{editAppr.approver_label ? ` (${editAppr.approver_label})` : ''}</span>}
+                </div>
+
+                {/* Partage de commission (2-3 vendeurs). Vide = 100 % au vendeur principal du haut. */}
+                <div className="mt-2">
+                  <div className="mb-1 text-xs font-semibold text-gray-500">{tr('Partage de commission (optionnel)', 'Commission split (optional)')}</div>
+                  {split.map((sp, idx) => (
+                    <div key={idx} className="mb-1 flex items-center gap-2">
+                      <select value={sp.seller_id} onChange={e => setHdr(h => ({ ...h, sellers_split: (h.sellers_split || []).map((x, i) => i === idx ? { ...x, seller_id: e.target.value } : x) }))} className={`flex-1 ${inputCls}`}>
+                        <option value="">{tr('— Vendeur —', '— Seller —')}</option>
+                        {personnel.map(p => <option key={p.id} value={p.id}>{p.name || p.email}</option>)}
+                      </select>
+                      <input type="number" min={0} max={100} value={sp.pct} onChange={e => setHdr(h => ({ ...h, sellers_split: (h.sellers_split || []).map((x, i) => i === idx ? { ...x, pct: Number(e.target.value) || 0 } : x) }))} className={`w-20 text-right ${inputCls}`} />
+                      <span className="text-xs text-gray-400">%</span>
+                      <button type="button" onClick={() => setHdr(h => ({ ...h, sellers_split: (h.sellers_split || []).filter((_, i) => i !== idx) }))} className="text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                    </div>
+                  ))}
+                  {canEdit && split.length < 3 && (
+                    <button type="button" onClick={() => setHdr(h => ({ ...h, sellers_split: [...(h.sellers_split || []), { seller_id: h.seller_id || '', pct: split.length === 0 ? 100 : 0 }] }))} className="text-xs font-semibold text-blue-600 hover:underline">+ {tr('Ajouter un vendeur', 'Add a seller')}</button>
+                  )}
+                  {split.length > 0 && <span className={`ml-3 text-xs font-semibold ${splitSum === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>{tr('Somme', 'Sum')} : {splitSum} %{splitSum !== 100 ? tr(' (≠ 100 %)', ' (≠ 100%)') : ''}</span>}
+                  <p className="mt-1 text-[11px] text-gray-400">{tr('Vide = 100 % au vendeur principal. Sinon, chacun touche sa commission sur SA part, à SON % de grille, à la vente.', 'Empty = 100% to the primary seller. Otherwise each gets commission on their share, at their own grid %, on sale.')}</p>
+                </div>
+
+                {/* Approbation de niveau (selon le plafond du poste) */}
+                {canEdit && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    {hdr.approved_by ? (
+                      <>
+                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✅ {tr('Approuvée par', 'Approved by')} {approverName}{hdr.approved_at ? ` · ${String(hdr.approved_at).slice(0, 10)}` : ''}</span>
+                        <button type="button" onClick={() => setHdr(h => ({ ...h, approved_by: null, approved_at: null }))} className="text-xs text-gray-400 hover:underline">{tr('Retirer', 'Remove')}</button>
+                      </>
+                    ) : canApprove ? (
+                      <button type="button" onClick={() => { setHdr(h => ({ ...h, approved_by: meId, approved_at: new Date().toISOString() })); setNotice(tr('Approuvée — enregistre pour confirmer.', 'Approved — save to confirm.')); }}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">✓ {tr('Approuver', 'Approve')}</button>
+                    ) : (
+                      <span className="text-xs font-semibold text-amber-600">⛔ {tr('Au-dessus de ton plafond d\'approbation', 'Above your approval limit')}{meApprovalMax ? ` (${mny(meApprovalMax)})` : ''} — {tr('escalade requise', 'escalation required')}</span>
+                    )}
+                    <button type="button" onClick={() => { const n = window.prompt(tr('Note de révision :', 'Revision note:'), hdr.approval_note || ''); if (n != null) { setHdr(h => ({ ...h, approval_note: n, status: 'draft', approved_by: null, approved_at: null })); setNotice(tr('Révision demandée — enregistre.', 'Revision requested — save.')); } }}
+                      className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-700">✎ {tr('Demander une révision', 'Request revision')}</button>
+                    {hdr.approval_note && <span className="text-[11px] italic text-gray-500">« {hdr.approval_note} »</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {tab === 'sommaire' && (
+          /* SOMMAIRE GLOBAL PAR ITEM : toutes les colonnes ; une colonne vide = 0 $ */
           <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <table className="w-full text-xs">
               <thead><tr className="border-b border-gray-100 text-left text-gray-500 dark:border-gray-700">
@@ -702,7 +759,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               </tfoot>
             </table>
           </div>
-          </>)}
+          )}
 
           {items.map((it, i) => {
             if (tab !== i) return null; // navigation : on n'affiche que l'item de l'onglet actif
