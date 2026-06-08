@@ -37,6 +37,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [planDays, setPlanDays] = useState(5);
   const [planHoursPerDay, setPlanHoursPerDay] = useState(8); // 24 = couverture 24/24
   const [planPerVehicle, setPlanPerVehicle] = useState(4);   // personnes par véhicule
+  const [inclBureau, setInclBureau] = useState(true);        // inclure MO Bureau dans le calcul ressources
+  const [inclChantier, setInclChantier] = useState(true);    // inclure MO Chantier dans le calcul ressources
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -610,27 +612,39 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               </div>
             )}
           </div>
-          {/* Calculateur intelligent de ressources */}
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-              <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-              <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
-              <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
-              <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{editHoursByCat.bureau} h</div><div className="text-[10px] text-gray-500">{tr('MO Bureau', 'Office labor')}</div></div>
-              <div className="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20"><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{editHoursByCat.chantier} h</div><div className="text-[10px] text-gray-500">{tr('MO Chantier', 'Field labor')}</div></div>
-              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{editHoursByCat.bureau > 0 ? Math.ceil(editHoursByCat.bureau / planCap) : 0}</div><div className="text-[10px] text-gray-500">{tr('Pers. bureau', 'Office people')}</div></div>
-              <div className="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20"><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0}</div><div className="text-[10px] text-gray-500">{tr('Pers. chantier', 'Field people')}</div></div>
-              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{editHoursByCat.chantier > 0 ? Math.ceil((Math.ceil(editHoursByCat.chantier / planCap)) / Math.max(1, Number(planPerVehicle) || 1)) : 0}</div><div className="text-[10px] text-gray-500">{tr('Véhicules', 'Vehicles')}</div></div>
-              <div className="rounded-lg bg-purple-50 p-2 text-center dark:bg-purple-900/20"><div className="text-xl font-extrabold text-purple-700 dark:text-purple-300">{(editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0) * (Number(planDays) || 0)}</div><div className="text-[10px] text-gray-500">{tr('Subsistances (repas-j)', 'Meals (per-day)')}</div></div>
-              <div className="rounded-lg bg-rose-50 p-2 text-center dark:bg-rose-900/20"><div className="text-xl font-extrabold text-rose-700 dark:text-rose-300">{(editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0) * (Number(planDays) || 0)}</div><div className="text-[10px] text-gray-500">{tr('Hébergement (nuitées)', 'Lodging (nights)')}</div></div>
-            </div>
-            <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes = heures ÷ (jours × heures/jour). Gestion séparée Bureau / Chantier. 24/24 = couverture continue. Sert pour voyagement, subsistances, hébergement.', 'People = hours ÷ (days × hours/day). Office/Field tracked separately. 24/24 = continuous. Feeds travel, meals, lodging.')}</p>
-          </div>
+          {/* Calculateur intelligent de ressources (cases Inclure/Exclure MO Bureau / Chantier) */}
+          {(() => {
+            const pBureau = inclBureau && editHoursByCat.bureau > 0 ? Math.ceil(editHoursByCat.bureau / planCap) : 0;
+            const pChantier = inclChantier && editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0;
+            const resPeople = pBureau + pChantier; // personnes retenues pour les ressources
+            const vehicules = resPeople > 0 ? Math.ceil(resPeople / Math.max(1, Number(planPerVehicle) || 1)) : 0;
+            const repasJours = resPeople * (Number(planDays) || 0);
+            const nuitees = resPeople * (Number(planDays) || 0);
+            return (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
+                  <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
+                  <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><input type="checkbox" checked={inclBureau} onChange={e => setInclBureau(e.target.checked)} /> {tr('Inclure Bureau', 'Include Office')}</label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><input type="checkbox" checked={inclChantier} onChange={e => setInclChantier(e.target.checked)} /> {tr('Inclure Chantier', 'Include Field')}</label>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                  <div className={`rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20 ${inclBureau ? '' : 'opacity-40'}`}><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{editHoursByCat.bureau} h</div><div className="text-[10px] text-gray-500">{tr('MO Bureau', 'Office labor')}</div></div>
+                  <div className={`rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20 ${inclChantier ? '' : 'opacity-40'}`}><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{editHoursByCat.chantier} h</div><div className="text-[10px] text-gray-500">{tr('MO Chantier', 'Field labor')}</div></div>
+                  <div className={`rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20 ${inclBureau ? '' : 'opacity-40'}`}><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{pBureau}</div><div className="text-[10px] text-gray-500">{tr('Pers. bureau', 'Office people')}</div></div>
+                  <div className={`rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20 ${inclChantier ? '' : 'opacity-40'}`}><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{pChantier}</div><div className="text-[10px] text-gray-500">{tr('Pers. chantier', 'Field people')}</div></div>
+                  <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{vehicules}</div><div className="text-[10px] text-gray-500">{tr('Véhicules', 'Vehicles')}</div></div>
+                  <div className="rounded-lg bg-purple-50 p-2 text-center dark:bg-purple-900/20"><div className="text-xl font-extrabold text-purple-700 dark:text-purple-300">{repasJours}</div><div className="text-[10px] text-gray-500">{tr('Subsistances (repas-j)', 'Meals (per-day)')}</div></div>
+                  <div className="rounded-lg bg-rose-50 p-2 text-center dark:bg-rose-900/20"><div className="text-xl font-extrabold text-rose-700 dark:text-rose-300">{nuitees}</div><div className="text-[10px] text-gray-500">{tr('Hébergement (nuitées)', 'Lodging (nights)')}</div></div>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes = heures ÷ (jours × heures/jour). Coche/décoche Bureau ou Chantier pour les inclure dans les véhicules / subsistances / hébergement.', 'People = hours ÷ (days × hours/day). Tick/untick Office or Field to include them in vehicles / meals / lodging.')}</p>
+              </div>
+            );
+          })()}
 
           {items.map((it, i) => {
             const ih = hoursByCategory([it]); // heures de CET item (gestion séparée Bureau/Chantier)
