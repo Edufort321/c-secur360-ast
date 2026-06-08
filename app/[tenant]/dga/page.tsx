@@ -58,6 +58,7 @@ export default function DgaPage() {
   const [importing, setImporting] = useState(false);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [importPreview, setImportPreview] = useState<any>(null);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null); // lots (gros PDF)
   const [dragOver, setDragOver] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>('/c-secur360-logo.png');
   const [tenantName, setTenantName] = useState<string>('');
@@ -251,31 +252,95 @@ export default function DgaPage() {
     FURAN_FIELDS.forEach(f => { if (mm[f.key] != null) oil_quality[f.key] = Number(mm[f.key]); });
     return { sample_date: mm.date || null, h2: num(mm.H2), ch4: num(mm.CH4), c2h6: num(mm.C2H6), c2h4: num(mm.C2H4), c2h2: num(mm.C2H2), co: num(mm.CO), co2: num(mm.CO2), o2: mm.O2 != null ? num(mm.O2) : null, n2: mm.N2 != null ? num(mm.N2) : null, oil_quality };
   }
+  // Découpe un gros PDF en sous-PDF (par pages) pour passer sous la limite de body de la plateforme,
+  // comme l'import Excel de l'inventaire découpe en lots. Petit fichier = 1 seul lot (fichier brut).
+  async function splitPdfForUpload(file: File): Promise<Blob[]> {
+    const SAFE = 3.5 * 1024 * 1024; // marge sous la limite multipart (~4,5 Mo)
+    if (file.size <= SAFE) return [file];
+    try {
+      const { PDFDocument } = await import('pdf-lib');
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+      const n = src.getPageCount();
+      if (n <= 1) return [file]; // 1 page indivisible -> on tente l'envoi direct
+      const perBatch = Math.max(1, Math.floor((n * SAFE) / Math.max(bytes.length, 1)));
+      const out: Blob[] = [];
+      for (let i = 0; i < n; i += perBatch) {
+        const sub = await PDFDocument.create();
+        const idxs: number[] = [];
+        for (let k = i; k < Math.min(i + perBatch, n); k++) idxs.push(k);
+        const pages = await sub.copyPages(src, idxs);
+        pages.forEach(pg => sub.addPage(pg));
+        const data = await sub.save();
+        out.push(new Blob([data], { type: 'application/pdf' }));
+      }
+      return out.length ? out : [file];
+    } catch {
+      return [file]; // pdf-lib indisponible/illisible -> envoi direct (le parsing défensif gère l'échec)
+    }
+  }
+
+  // Extrait un lot (un sous-PDF) via l'API ; parsing défensif (un 413 renvoie du texte, pas du JSON).
+  async function extractBatch(blob: Blob, total: number, idx: number): Promise<any[]> {
+    const fd = new FormData();
+    fd.append('file', blob, 'part.pdf');
+    fd.append('tenant', tenant);
+    const resp = await fetch('/api/dga/extract', { method: 'POST', body: fd });
+    const raw = await resp.text();
+    let j: any = {};
+    if (raw) { try { j = JSON.parse(raw); } catch {
+      if (resp.status === 413) throw new Error(tr(
+        `Lot ${idx + 1}/${total} trop dense pour la limite — réduis la résolution du PDF.`,
+        `Batch ${idx + 1}/${total} too dense for the limit — lower the PDF resolution.`));
+      throw new Error((raw.slice(0, 160) || `Erreur ${resp.status}`) + (total > 1 ? ` (lot ${idx + 1}/${total})` : ''));
+    } }
+    if (!resp.ok || j.error) throw new Error((j.error || `Erreur ${resp.status}`) + (total > 1 ? ` (lot ${idx + 1}/${total})` : ''));
+    return Array.isArray(j.transformers) && j.transformers.length ? j.transformers : (j.equipment ? [{ equipment: j.equipment, measurements: j.measurements }] : []);
+  }
+
+  // Fusionne les transformateurs venant de plusieurs lots (un même transfo peut être coupé entre 2 pages).
+  function mergeTransformers(list: any[]): any[] {
+    const byKey = new Map<string, any>();
+    let anon = 0;
+    for (const t of list) {
+      const eq = t?.equipment || {};
+      const key = String(eq.serialNo || eq.equipNo || eq.identification || eq.description || `__${anon++}`).trim().toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, { equipment: { ...eq }, measurements: [...(t?.measurements || [])] });
+      else {
+        const g = byKey.get(key);
+        g.measurements.push(...(t?.measurements || []));
+        for (const [k, v] of Object.entries(eq)) { if (v != null && g.equipment[k] == null) g.equipment[k] = v; } // complète les trous
+      }
+    }
+    for (const g of byKey.values()) {
+      const seen = new Set<string>();
+      g.measurements = g.measurements.filter((m: any) => { const d = String(m?.date || JSON.stringify(m)); if (seen.has(d)) return false; seen.add(d); return true; });
+    }
+    return [...byKey.values()];
+  }
+
   async function handleImport(file: File) {
     if (!file) return;
-    setImporting(true); setImportErr(null); setNotice(null);
+    setImporting(true); setImportErr(null); setNotice(null); setImportProgress(null);
     try {
-      // Limite plateforme (~4,5 Mo de body). On envoie le fichier BRUT en multipart
-      // (pas de base64 qui gonfle de +33 %), et on pré-vérifie la taille pour un message clair.
-      const MAX = 4.3 * 1024 * 1024;
-      if (file.size > MAX) throw new Error(tr(
-        `Fichier trop volumineux (${(file.size / 1048576).toFixed(1)} Mo). Limite ~4 Mo — compresse ou divise le PDF.`,
-        `File too large (${(file.size / 1048576).toFixed(1)} MB). Limit ~4 MB — compress or split the PDF.`));
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('tenant', tenant);
-      const resp = await fetch('/api/dga/extract', { method: 'POST', body: fd });
-      // Parsing défensif : un 413 (ou erreur proxy) renvoie du TEXTE, pas du JSON.
-      const raw = await resp.text();
-      let j: any = {};
-      if (raw) { try { j = JSON.parse(raw); } catch {
-        if (resp.status === 413) throw new Error(tr(
-          `Fichier trop volumineux (${(file.size / 1048576).toFixed(1)} Mo). Limite ~4 Mo — compresse ou divise le PDF.`,
-          `File too large (${(file.size / 1048576).toFixed(1)} MB). Limit ~4 MB — compress or split the PDF.`));
-        throw new Error(raw.slice(0, 200) || `Erreur ${resp.status}`);
-      } }
-      if (!resp.ok || j.error) throw new Error(j.error || `Erreur ${resp.status}`);
-      const transformers: any[] = Array.isArray(j.transformers) && j.transformers.length ? j.transformers : (j.equipment ? [{ equipment: j.equipment, measurements: j.measurements }] : []);
+      // 1) Découpe le PDF en lots (sous la limite plateforme), comme l'import Excel inventaire.
+      const blobs = await splitPdfForUpload(file);
+      setImportProgress({ done: 0, total: blobs.length });
+      // 2) Traite les lots en parallèle (pool de 2), avec progression.
+      const results: any[] = new Array(blobs.length);
+      let nextIdx = 0, done = 0;
+      const worker = async () => {
+        while (nextIdx < blobs.length) {
+          const idx = nextIdx++;
+          results[idx] = await extractBatch(blobs[idx], blobs.length, idx);
+          done++; setImportProgress({ done, total: blobs.length });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(2, blobs.length) }, () => worker()));
+      // 3) Fusionne tous les transformateurs de tous les lots.
+      const all: any[] = [];
+      results.forEach(r => { if (Array.isArray(r)) all.push(...r); });
+      const transformers = mergeTransformers(all);
       if (!transformers.length) throw new Error(tr('Aucun transformateur détecté dans le PDF.', 'No transformer detected in the PDF.'));
       // Un PDF peut contenir PLUSIEURS transformateurs -> un item par transformateur (séparés).
       const items = transformers.map((t: any) => {
@@ -288,7 +353,7 @@ export default function DgaPage() {
       });
       setImportPreview({ items });
     } catch (e: any) { setImportErr(e?.message || String(e)); }
-    finally { setImporting(false); }
+    finally { setImporting(false); setImportProgress(null); }
   }
   async function applyImport() {
     const items: any[] = importPreview?.items || [];
@@ -340,7 +405,7 @@ export default function DgaPage() {
         {notice && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{notice}</div>}
 
         {view === 'list' && (
-          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
+          <ListView {...{ tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree, siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche: (d: Dossier) => { setSelId(d.id!); setView('fiche'); } }} />
         )}
 
         {view === 'fiche' && selected_d && (
@@ -388,7 +453,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 // ── LISTE EN CARTES ──
 function ListView(p: any) {
-  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
+  const { tr, lang, dossiers, filtered, lastByDossier, measuresByDossier, dueCounts, query, setQuery, dueFilter, setDueFilter, sortBy, setSortBy, sitesTree = [], siteFilter, setSiteFilter, delMode, setDelMode, selected, toggleSel, exitDelMode, selectAllFiltered, deleteSelected, onDeleteOne, importing, importProgress, dragOver, setDragOver, fileRef, handleImport, newT, setNewT, startNewT, saveNewT, busy, openFiche } = p;
   const inp = 'rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-rose-500 dark:border-gray-600';
   const selCount = Object.values(selected).filter(Boolean).length;
   const filterTabs: [string, string, number, string][] = [
@@ -417,7 +482,9 @@ function ListView(p: any) {
         onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleImport(f); }}
         className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-5 text-center ${dragOver ? 'border-rose-400 bg-rose-50 dark:bg-rose-500/10' : 'border-gray-300 dark:border-gray-600'}`}>
         {importing ? <Loader2 className="animate-spin text-rose-500" /> : <Upload className="text-gray-400" />}
-        <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo (DGA) ici — extraction IA, fusion par date', 'Drop a lab PDF (DGA) here — AI extraction, merge by date')}</p>
+        {importing && importProgress && importProgress.total > 1
+          ? <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">{tr(`Extraction IA… lot ${importProgress.done}/${importProgress.total}`, `AI extraction… batch ${importProgress.done}/${importProgress.total}`)}</p>
+          : <p className="text-sm text-gray-600 dark:text-gray-300">{tr('Glissez un PDF de labo (DGA) ici — gros fichier découpé en lots, extraction IA, fusion par date', 'Drop a lab PDF (DGA) here — large files split into batches, AI extraction, merge by date')}</p>}
         <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImport(f); e.currentTarget.value = ''; }} />
         <button onClick={() => fileRef.current?.click()} className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-semibold dark:border-gray-600">📄 {tr('Importer PDF', 'Import PDF')}</button>
       </div>
