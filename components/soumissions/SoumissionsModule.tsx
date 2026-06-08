@@ -66,6 +66,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [globalMargin, setGlobalMargin] = useState(''); // marge % appliquée à tous les articles du catalogue
   const [numDraft, setNumDraft] = useState<Record<string, string>>({}); // texte en cours de frappe pour les champs numériques (permet . ou , et décimales)
   const [sellerId, setSellerId] = useState<string | null>(null); // vendeur = createur (pour la commission au transfert)
+  const [personnel, setPersonnel] = useState<any[]>([]); // liste pour le champ « Vendeur »
+  const [meId, setMeId] = useState<string | null>(null); // mon planner_personnel.id (pour droits d'approbation)
+  const [meApprovalMax, setMeApprovalMax] = useState<number | null>(null); // montant max que je peux approuver (poste)
 
   const mny = (n: number) => `${(Number(n) || 0).toLocaleString('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
   // Parse un nombre en acceptant le point OU la virgule comme séparateur décimal.
@@ -95,14 +98,19 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     setLoading(true); setMigMissing(false);
     try { const [s, c] = await Promise.all([getSoumissions(tenant), getCatalogues(tenant)]); setSoumissions(s); setCatalogues(c); }
     catch { setMigMissing(true); }
+    // Liste du personnel pour le champ « Vendeur » (best-effort).
+    try { const { data: pl } = await supabase.from('planner_personnel').select('id, name, email, current_grid_id').eq('tenant_id', tenant).order('name'); setPersonnel(pl || []); } catch { /* ignore */ }
     // Resoudre le site de l'utilisateur connecte -> prefixe de numerotation (initiales du site)
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
-        const { data: p } = await supabase.from('planner_personnel').select('id, succursale').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
-        if (p?.id) setSellerId(p.id);
-        if (p?.succursale) setSitePrefix(siteInitials(p.succursale));
-        else setSitePrefix(siteInitials(tenant));
+        const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+        if (p?.id) { setSellerId(p.id); setMeId(p.id); }
+        if (p?.succursale) setSitePrefix(siteInitials(p.succursale)); else setSitePrefix(siteInitials(tenant));
+        // Montant max que CE poste peut approuver (colonne approval_max_amount sur la grille — facultative).
+        if (p?.current_grid_id) {
+          try { const { data: g } = await supabase.from('poste_salary_grids').select('approval_max_amount').eq('id', p.current_grid_id).maybeSingle(); if (g && (g as any).approval_max_amount != null) setMeApprovalMax(Number((g as any).approval_max_amount) || 0); } catch { /* colonne absente */ }
+        }
       }
     } catch { /* defaut XX */ }
     setLoading(false);
@@ -202,6 +210,8 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const rawTotal = computeSoumissionTotal(items, cat);
   const totals = applyMarkup(rawTotal, hdr.markup_pct); // total final (majoration + arrondi)
   const editHours = computeSoumissionHours(items);      // heures MO totales (live)
+  const editHoursByCat = hoursByCategory(items);        // heures live ventilées Bureau / Chantier
+  const planCap = Math.max(1, (Number(planDays) || 1) * (Number(planHoursPerDay) || 1)); // h dispo / personne
   const editAppr = approvalForAmount(cat, totals);      // niveau d'approbation requis (catalogue)
   const subTabs: [SubTab, string][] = [['liste', tr('Soumissions', 'Quotes')], ['catalogue', tr('Catalogue de taux', 'Rate catalogue')], ['stats', tr('Tableau de bord', 'Dashboard')]];
 
@@ -558,6 +568,13 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <option value="archived">{tr('Fermée / archivée', 'Closed / archived')}</option>
                 </select>
               </label>
+              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Vendeur (commission au transfert)', 'Seller (commission on transfer)')}
+                <select value={hdr.seller_id || ''} onChange={e => setHdr(h => ({ ...h, seller_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
+                  <option value="">{tr('— Aucun —', '— None —')}</option>
+                  {personnel.map(p => <option key={p.id} value={p.id}>{p.name || p.email}{p.id === meId ? tr(' (moi)', ' (me)') : ''}</option>)}
+                </select>
+                <span className="mt-0.5 block text-[10px] font-normal text-gray-400">{tr('La commission de vente est créditée selon sa grille salariale quand la soumission devient une VENTE.', 'Sales commission is credited per their salary grid when the quote becomes a SALE.')}</span>
+              </label>
             </div>
             <div className="mt-2 text-xs text-gray-500">
               {cat ? tr(`Tarification : ${cat.name} ${cat.year} rév.${cat.revision} (MO bureau ${mny(cat.taux_mo_bureau)}/h, chantier ${mny(cat.taux_mo_chantier)}/h)`, `Pricing: ${cat.name} ${cat.year}`) : <span className="text-amber-600">{tr('⚠ Aucun catalogue actif pour cette année — montants MO à 0. Créez un catalogue.', '⚠ No active catalogue for this year.')}</span>}
@@ -571,11 +588,63 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             ))}
           </datalist>
 
-          {items.map((it, i) => (
+          {/* ===== EN HAUT : mini-dashboard global + majoration + calculateur de ressources ===== */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
+              <div className="rounded-lg bg-slate-50 p-2 text-center dark:bg-slate-900/30"><div className="text-sm font-bold text-slate-700 dark:text-slate-200">{mny(rawTotal)}</div><div className="text-[10px] text-slate-500">{tr('sous-total', 'subtotal')}</div></div>
+              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{mny(totals)}</div><div className="text-[10px] text-emerald-600/80">{tr('total final', 'final total')}</div></div>
+              <div className="rounded-lg p-2 text-center" style={{ background: editAppr ? (editAppr.color || '#64748b') + '18' : undefined }}>
+                <div className="text-sm font-bold" style={{ color: editAppr?.color || '#64748b' }}>{editAppr ? editAppr.level_name : '—'}</div>
+                <div className="text-[10px] text-gray-400">{tr('approbation', 'approval')}{editAppr?.approver_label ? ` · ${editAppr.approver_label}` : ''}</div>
+              </div>
+            </div>
+            {canEdit && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <span className="text-xs font-semibold text-gray-500">{tr('Majoration / arrondi', 'Markup / rounding')} :</span>
+                <input type="number" step="0.5" value={hdr.markup_pct ?? 0} onChange={e => setHdr(h => ({ ...h, markup_pct: Number(e.target.value) || 0 }))} className={`w-20 text-right ${inputCls}`} />
+                <span className="text-xs text-gray-400">%</span>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 10 }))} className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+10 %</button>
+                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 0 }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">0 %</button>
+                <span className="ml-auto text-[11px] text-gray-400">{tr('Total arrondi au dollar', 'Total rounded to the dollar')}</span>
+              </div>
+            )}
+          </div>
+          {/* Calculateur intelligent de ressources */}
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+              <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+              <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
+              <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
+              <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{editHoursByCat.bureau} h</div><div className="text-[10px] text-gray-500">{tr('MO Bureau', 'Office labor')}</div></div>
+              <div className="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20"><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{editHoursByCat.chantier} h</div><div className="text-[10px] text-gray-500">{tr('MO Chantier', 'Field labor')}</div></div>
+              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-extrabold text-blue-700 dark:text-blue-300">{editHoursByCat.bureau > 0 ? Math.ceil(editHoursByCat.bureau / planCap) : 0}</div><div className="text-[10px] text-gray-500">{tr('Pers. bureau', 'Office people')}</div></div>
+              <div className="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-900/20"><div className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0}</div><div className="text-[10px] text-gray-500">{tr('Pers. chantier', 'Field people')}</div></div>
+              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{editHoursByCat.chantier > 0 ? Math.ceil((Math.ceil(editHoursByCat.chantier / planCap)) / Math.max(1, Number(planPerVehicle) || 1)) : 0}</div><div className="text-[10px] text-gray-500">{tr('Véhicules', 'Vehicles')}</div></div>
+              <div className="rounded-lg bg-purple-50 p-2 text-center dark:bg-purple-900/20"><div className="text-xl font-extrabold text-purple-700 dark:text-purple-300">{(editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0) * (Number(planDays) || 0)}</div><div className="text-[10px] text-gray-500">{tr('Subsistances (repas-j)', 'Meals (per-day)')}</div></div>
+              <div className="rounded-lg bg-rose-50 p-2 text-center dark:bg-rose-900/20"><div className="text-xl font-extrabold text-rose-700 dark:text-rose-300">{(editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0) * (Number(planDays) || 0)}</div><div className="text-[10px] text-gray-500">{tr('Hébergement (nuitées)', 'Lodging (nights)')}</div></div>
+            </div>
+            <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes = heures ÷ (jours × heures/jour). Gestion séparée Bureau / Chantier. 24/24 = couverture continue. Sert pour voyagement, subsistances, hébergement.', 'People = hours ÷ (days × hours/day). Office/Field tracked separately. 24/24 = continuous. Feeds travel, meals, lodging.')}</p>
+          </div>
+
+          {items.map((it, i) => {
+            const ih = hoursByCategory([it]); // heures de CET item (gestion séparée Bureau/Chantier)
+            return (
             <div key={i} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/40">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/40">
                 <input value={it.name} onChange={e => updItem(i, { name: e.target.value })} className={`font-semibold ${inputCls}`} />
                 <div className="flex items-center gap-3">
+                  {(ih.bureau > 0 || ih.chantier > 0) && (
+                    <span className="text-[11px] text-gray-500">
+                      {ih.bureau > 0 && <span className="mr-2 rounded bg-blue-50 px-1.5 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">{tr('Bureau', 'Office')} {ih.bureau} h</span>}
+                      {ih.chantier > 0 && <span className="rounded bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">{tr('Chantier', 'Field')} {ih.chantier} h</span>}
+                    </span>
+                  )}
                   <span className="text-sm font-bold">{mny(computeItemTotal(it, cat))}</span>
                   {canEdit && <button onClick={() => delItem(i)} className="text-gray-300 hover:text-red-500"><Trash2 size={15} /></button>}
                 </div>
@@ -663,67 +732,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 })}
               </div>
             </div>
-          ))}
+          ); })}
 
           {canEdit && <button onClick={addItem} className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-blue-600 dark:border-gray-700">+ {tr('Ajouter un item', 'Add item')}</button>}
-
-          {/* Mini-dashboard + Majoration / arrondi du prix */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
-              <div className="rounded-lg bg-slate-50 p-2 text-center dark:bg-slate-900/30"><div className="text-sm font-bold text-slate-700 dark:text-slate-200">{mny(rawTotal)}</div><div className="text-[10px] text-slate-500">{tr('sous-total', 'subtotal')}</div></div>
-              <div className="rounded-lg bg-emerald-50 p-2 text-center dark:bg-emerald-900/20"><div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{mny(totals)}</div><div className="text-[10px] text-emerald-600/80">{tr('total final', 'final total')}</div></div>
-              <div className="rounded-lg p-2 text-center" style={{ background: editAppr ? (editAppr.color || '#64748b') + '18' : undefined }}>
-                <div className="text-sm font-bold" style={{ color: editAppr?.color || '#64748b' }}>{editAppr ? editAppr.level_name : '—'}</div>
-                <div className="text-[10px] text-gray-400">{tr('approbation', 'approval')}{editAppr?.approver_label ? ` · ${editAppr.approver_label}` : ''}</div>
-              </div>
-            </div>
-            {canEdit && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-                <span className="text-xs font-semibold text-gray-500">{tr('Majoration / arrondi', 'Markup / rounding')} :</span>
-                <input type="number" step="0.5" value={hdr.markup_pct ?? 0} onChange={e => setHdr(h => ({ ...h, markup_pct: Number(e.target.value) || 0 }))} className={`w-20 text-right ${inputCls}`} />
-                <span className="text-xs text-gray-400">%</span>
-                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 10 }))} className="rounded-lg border border-blue-200 px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+10 %</button>
-                <button type="button" onClick={() => setHdr(h => ({ ...h, markup_pct: 0 }))} className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 dark:border-gray-700">0 %</button>
-                <span className="ml-auto text-[11px] text-gray-400">{tr('Total arrondi au dollar', 'Total rounded to the dollar')}</span>
-              </div>
-            )}
-          </div>
-          {/* ===== Calculateur intelligent de ressources ===== */}
-          {(() => {
-            const hc = hoursByCategory(items);
-            const cap = Math.max(1, (Number(planDays) || 1) * (Number(planHoursPerDay) || 1)); // h dispo / personne
-            const pplChantier = hc.chantier > 0 ? Math.ceil(hc.chantier / cap) : 0;
-            const pplBureau = hc.bureau > 0 ? Math.ceil(hc.bureau / cap) : 0;
-            const vehicules = pplChantier > 0 ? Math.ceil(pplChantier / Math.max(1, Number(planPerVehicle) || 1)) : 0;
-            const repasJours = pplChantier * (Number(planDays) || 0);   // subsistances (repas-jours)
-            const nuitees = pplChantier * (Number(planDays) || 0);      // hébergement (nuitées)
-            const Stat = ({ v, l, cls }: { v: any; l: string; cls?: string }) => (
-              <div className={`rounded-lg p-2 text-center ${cls || 'bg-slate-50 dark:bg-slate-900/30'}`}><div className="text-xl font-extrabold">{v}</div><div className="text-[10px] text-gray-500">{l}</div></div>
-            );
-            return (
-              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
-                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-                  <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-                  <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
-                  <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
-                  <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                  <Stat v={`${hc.bureau} h`} l={tr('MO Bureau', 'Office labor')} cls="bg-blue-50 dark:bg-blue-900/20" />
-                  <Stat v={`${hc.chantier} h`} l={tr('MO Chantier', 'Field labor')} cls="bg-amber-50 dark:bg-amber-900/20" />
-                  <Stat v={pplBureau} l={tr('Pers. bureau', 'Office people')} cls="bg-blue-50 dark:bg-blue-900/20" />
-                  <Stat v={pplChantier} l={tr('Pers. chantier', 'Field people')} cls="bg-amber-50 dark:bg-amber-900/20" />
-                  <Stat v={vehicules} l={tr('Véhicules', 'Vehicles')} cls="bg-emerald-50 dark:bg-emerald-900/20" />
-                  <Stat v={repasJours} l={tr('Subsistances (repas-j)', 'Meals (per-day)')} cls="bg-purple-50 dark:bg-purple-900/20" />
-                  <Stat v={nuitees} l={tr('Hébergement (nuitées)', 'Lodging (nights)')} cls="bg-rose-50 dark:bg-rose-900/20" />
-                </div>
-                <p className="mt-2 text-[11px] text-gray-400">{tr('Calcul auto : personnes = heures ÷ (jours × heures/jour). Mets 24/24 pour une couverture continue. Utilise ces chiffres pour le voyagement, les subsistances et l’hébergement.', 'Auto: people = hours ÷ (days × hours/day). Use 24/24 for continuous coverage. Use these numbers for travel, meals and lodging.')}</p>
-              </div>
-            );
-          })()}
 
           <div className="flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Retour', 'Back')}</button>
