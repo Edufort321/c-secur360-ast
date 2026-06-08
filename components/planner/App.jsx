@@ -31,22 +31,23 @@ function AppContent({ tenant = 'cerdia' }) {
     useEffect(() => {
         (async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user?.email) return;
-                // 1. Rôle global (super_admin/client_admin/user)
-                const { data: u } = await supabase.from('users').select('name, role').ilike('email', user.email).maybeSingle();
-                if (u?.role === 'super_admin') {
+                // Identité via la session serveur (cookie). On ne lit PLUS `users` côté client
+                // (table fermée à l'anon pour empêcher la fuite de courriels/rôles).
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
+                const u = res.ok ? (await res.json())?.user : null;
+                if (!u?.email) return;
+                if (u.role === 'super_admin') {
                     setCurrentUser({ id: 'super', nom: u.name || 'Super-utilisateur', niveauAcces: 'super_user' });
                     return;
                 }
-                // 2. Raffinement par planner_personnel
-                const { data: personnel } = await supabase.from('planner_personnel').select('id, name, niveauAcces').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+                // Raffinement par planner_personnel
+                const { data: personnel } = await supabase.from('planner_personnel').select('id, name, niveauAcces').eq('tenant_id', tenant).ilike('email', u.email).maybeSingle();
                 if (personnel) {
                     setCurrentUser({ id: personnel.id, nom: personnel.name, niveauAcces: personnel.niveauAcces || (u?.role === 'client_admin' ? 'direction' : 'consultation') });
                 } else if (u?.role === 'client_admin') {
                     setCurrentUser({ id: 'admin', nom: u.name || 'Admin', niveauAcces: 'direction' });
                 }
-            } catch { /* Supabase non dispo → garde la valeur par défaut */ }
+            } catch { /* session non dispo → garde la valeur par défaut */ }
         })();
     }, [tenant]);
 

@@ -40,19 +40,20 @@ function useCurrentAccess(tenant: string) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          setUserEmail(user.email);
-          // 1. Rôle Supabase Auth — prioritaire
-          const { data: u } = await supabase.from('users').select('role').ilike('email', user.email).maybeSingle();
-          if (u?.role === 'super_admin') { setNiveauAcces('super_user'); setLoading(false); return; }
-          // 2. Raffinement par planner_personnel
-          const { data: p } = await supabase.from('planner_personnel').select('niveauAcces').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
+        // Identité via la session serveur (cookie) — on ne lit PLUS la table `users` côté client
+        // (fermée à l'anon pour empêcher la fuite de courriels/rôles).
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        const me = res.ok ? (await res.json())?.user : null;
+        if (me?.email) {
+          setUserEmail(me.email);
+          if (me.role === 'super_admin') { setNiveauAcces('super_user'); setLoading(false); return; }
+          // Raffinement par planner_personnel (niveau d'accès du poste).
+          const { data: p } = await supabase.from('planner_personnel').select('niveauAcces').eq('tenant_id', tenant).ilike('email', me.email).maybeSingle();
           if (p?.niveauAcces) setNiveauAcces(p.niveauAcces as AccessLevel);
-          else if (u?.role === 'client_admin') setNiveauAcces('direction');
-          else if (u?.role === 'user') setNiveauAcces('consultation');
+          else if (me.role === 'client_admin') setNiveauAcces('direction');
+          else if (me.role === 'user') setNiveauAcces('consultation');
         }
-      } catch { /* Supabase indispo → garde super_user */ }
+      } catch { /* session indispo → garde le défaut */ }
       setLoading(false);
     })();
   }, [tenant]);
