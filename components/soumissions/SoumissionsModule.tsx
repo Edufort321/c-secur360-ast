@@ -11,6 +11,7 @@ import {
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats,
 } from '@/lib/soumissions';
+import { exportSoumissionPdf } from '@/lib/soumissions/pdf';
 
 type SubTab = 'liste' | 'catalogue' | 'stats';
 
@@ -47,6 +48,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [companyLetter, setCompanyLetter] = useState('X'); // 1re lettre du tenant
   const [selSiteId, setSelSiteId] = useState('');
   const [selDeptId, setSelDeptId] = useState('');
+  // Export PDF (façon DGA) : Sommaire + items à inclure ; logo tenant.
+  const [expSummary, setExpSummary] = useState(true);
+  const [expExcluded, setExpExcluded] = useState<number[]>([]); // items décochés
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [logoUrl, setLogoUrl] = useState('/c-secur360-logo.png');
+  const [companyName, setCompanyName] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -115,7 +122,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     // Bourque -> « CSB ». Sans departement -> « CS ». Numero : CSB26001S / CSB26001P.
     const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
     let companyName = tenant;
-    try { const { data: cs } = await supabase.from('company_settings').select('legal_name').eq('tenant_id', tenant).maybeSingle(); if (cs?.legal_name) companyName = cs.legal_name; } catch { /* defaut */ }
+    try { const { data: cs } = await supabase.from('company_settings').select('legal_name, logo_url').eq('tenant_id', tenant).maybeSingle(); if (cs?.legal_name) { companyName = cs.legal_name; setCompanyName(cs.legal_name); } if (cs?.logo_url) setLogoUrl(cs.logo_url); } catch { /* defaut */ }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
@@ -225,6 +232,24 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
     const px = prefixFromSel(siteId, deptId);
     setSitePrefix(px);
     if (!hdr.project_id) { try { const num = await genSoumissionNumero(tenant, px); setHdr(h => ({ ...h, numero: num })); } catch { /* ignore */ } }
+  };
+
+  // Export PDF (Sommaire + items cochés) avec logo, et partage par lien.
+  const doExportPdf = async () => {
+    if (pdfBusy) return; setPdfBusy(true);
+    try {
+      const idxs = items.map((_, i) => i).filter(i => !expExcluded.includes(i));
+      await exportSoumissionPdf({ ...hdr, client_snapshot: { ...(hdr.client_snapshot || {}), name: clientName } } as Soumission, items, {
+        cat, logoUrl, companyName, includeSummary: expSummary,
+        itemIndexes: idxs.length === items.length ? null : idxs, filename: `${hdr.numero || 'soumission'}.pdf`,
+      });
+    } catch (e: any) { setNotice(tr('Export PDF impossible : ', 'PDF export failed: ') + (e?.message || e)); }
+    finally { setPdfBusy(false); }
+  };
+  const copyShareLink = async () => {
+    const url = `${window.location.origin}/${tenant}/projects/soumissions?id=${hdr.id || ''}`;
+    try { await navigator.clipboard.writeText(url); setNotice(tr('Lien de la soumission copié.', 'Quote link copied.')); }
+    catch { window.prompt(tr('Copie ce lien :', 'Copy this link:'), url); }
   };
 
   async function saveCat() {
@@ -826,6 +851,24 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               </tfoot>
             </table>
           </div>
+          )}
+
+          {/* Export PDF (façon DGA : cases à cocher) + partage par lien — onglet Sommaire */}
+          {tab === 'sommaire' && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-2 text-sm font-bold">📄 {tr('Export PDF / partage', 'PDF export / share')}</div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <label className="flex items-center gap-1.5 font-semibold text-gray-600"><input type="checkbox" checked={expSummary} onChange={e => setExpSummary(e.target.checked)} /> {tr('Sommaire', 'Summary')}</label>
+                {items.map((it, i) => (
+                  <label key={i} className="flex items-center gap-1.5 text-gray-600"><input type="checkbox" checked={!expExcluded.includes(i)} onChange={e => setExpExcluded(prev => e.target.checked ? prev.filter(x => x !== i) : [...prev, i])} /> {it.name || `Item ${i + 1}`}</label>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={doExportPdf} disabled={pdfBusy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{pdfBusy ? '…' : tr('Exporter le PDF (sélection)', 'Export PDF (selection)')}</button>
+                {hdr.id && <button type="button" onClick={copyShareLink} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">🔗 {tr('Copier le lien', 'Copy link')}</button>}
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">{tr('Coche les sections à inclure (façon DGA). Logo du tenant en haut à gauche (sinon C-Secur360).', 'Tick the sections to include. Tenant logo top-left (else C-Secur360).')}</p>
+            </div>
           )}
 
           {items.map((it, i) => {
