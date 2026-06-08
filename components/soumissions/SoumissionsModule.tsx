@@ -35,7 +35,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [listView, setListView] = useState<'grid' | 'gallery'>('grid'); // liste soumissions : grille (défaut) / galerie
   // Calculateur de ressources : durée des travaux + couverture -> personnel/véhicules/subsistances.
   const [planDays, setPlanDays] = useState(5);
-  const [planHoursPerDay, setPlanHoursPerDay] = useState(8); // 24 = couverture 24/24
+  const [planHoursPerDay, setPlanHoursPerDay] = useState(8); // heures par QUART (max réaliste / personne)
+  const [plan2424, setPlan2424] = useState(false);           // couverture 24/24 -> fait apparaître « nombre de quarts »
+  const [planShifts, setPlanShifts] = useState(3);           // nombre de quarts / jour (24/24 = 3 × 8 h)
   const [planPerVehicle, setPlanPerVehicle] = useState(4);   // personnes par véhicule
   const [inclBureau, setInclBureau] = useState(true);        // inclure MO Bureau dans le calcul ressources
   const [inclChantier, setInclChantier] = useState(true);    // inclure MO Chantier dans le calcul ressources
@@ -616,7 +618,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           {(() => {
             const pBureau = inclBureau && editHoursByCat.bureau > 0 ? Math.ceil(editHoursByCat.bureau / planCap) : 0;
             const pChantier = inclChantier && editHoursByCat.chantier > 0 ? Math.ceil(editHoursByCat.chantier / planCap) : 0;
-            const resPeople = pBureau + pChantier; // personnes retenues pour les ressources
+            const resPeople = pBureau + pChantier; // personnes retenues pour les ressources (total distinct)
+            const shifts = plan2424 ? Math.max(1, Number(planShifts) || 1) : 1;
+            const perShift = Math.ceil(pChantier / shifts); // personnes simultanées par quart (chantier)
             const vehicules = resPeople > 0 ? Math.ceil(resPeople / Math.max(1, Number(planPerVehicle) || 1)) : 0;
             const repasJours = resPeople * (Number(planDays) || 0);
             const nuitees = resPeople * (Number(planDays) || 0);
@@ -625,9 +629,11 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                 <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-                  <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
-                  <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
-                  <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
+                  <label className="text-xs font-semibold text-gray-500">{tr('Heures / quart', 'Hours / shift')}<input type="number" min={1} max={12} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><input type="checkbox" checked={plan2424} onChange={e => { setPlan2424(e.target.checked); if (e.target.checked) setPlanShifts(Math.max(1, Math.round(24 / (Number(planHoursPerDay) || 8)))); }} /> {tr('Couverture 24/24', '24/7 coverage')}</label>
+                  {plan2424 && (
+                    <label className="text-xs font-semibold text-indigo-600">{tr('Nombre de quarts', 'Number of shifts')}<input type="number" min={1} max={4} value={planShifts} onChange={e => setPlanShifts(Math.max(1, Number(e.target.value) || 1))} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  )}
                   <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
                   <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><input type="checkbox" checked={inclBureau} onChange={e => setInclBureau(e.target.checked)} /> {tr('Inclure Bureau', 'Include Office')}</label>
                   <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600"><input type="checkbox" checked={inclChantier} onChange={e => setInclChantier(e.target.checked)} /> {tr('Inclure Chantier', 'Include Field')}</label>
@@ -641,7 +647,12 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   <div className="rounded-lg bg-purple-50 p-2 text-center dark:bg-purple-900/20"><div className="text-xl font-extrabold text-purple-700 dark:text-purple-300">{repasJours}</div><div className="text-[10px] text-gray-500">{tr('Subsistances (repas-j)', 'Meals (per-day)')}</div></div>
                   <div className="rounded-lg bg-rose-50 p-2 text-center dark:bg-rose-900/20"><div className="text-xl font-extrabold text-rose-700 dark:text-rose-300">{nuitees}</div><div className="text-[10px] text-gray-500">{tr('Hébergement (nuitées)', 'Lodging (nights)')}</div></div>
                 </div>
-                <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes = heures ÷ (jours × heures/jour). Coche/décoche Bureau ou Chantier pour les inclure dans les véhicules / subsistances / hébergement.', 'People = hours ÷ (days × hours/day). Tick/untick Office or Field to include them in vehicles / meals / lodging.')}</p>
+                {plan2424 && pChantier > 0 && (
+                  <div className="mt-2 rounded-lg bg-indigo-100/60 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                    🕐 {tr('24/24', '24/7')} : {pChantier} {tr('personnes au total réparties sur', 'people total across')} {shifts} {tr('quarts', 'shifts')} → ≈ {perShift} {tr('personnes / quart', 'people / shift')}.
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-gray-400">{tr('Personnes (total) = heures ÷ (jours × heures par QUART). Le total sert aux véhicules/subsistances/hébergement ; en 24/24 il se répartit sur les quarts (≈ personnes/quart).', 'People (total) = hours ÷ (days × hours per SHIFT). Total feeds vehicles/meals/lodging; with 24/7 it splits across shifts (≈ people/shift).')}</p>
               </div>
             );
           })()}
