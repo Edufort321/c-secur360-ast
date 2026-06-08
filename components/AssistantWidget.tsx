@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import type { PointerEvent as ReactPointerEvent, CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
+import { scopeForModule } from '@/lib/norms/registry';
 
 // Assistant TENANT (dashboard). Ne s'affiche que pour un utilisateur connecté.
 // Envoie le token Bearer de la session Supabase (le cookie de session sert de repli côté serveur).
@@ -28,6 +29,11 @@ export function AssistantWidget() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  // Onglet « Normes à jour » (recherche web des normes/législation du module en cours).
+  const [mode, setMode] = useState<'chat' | 'norms'>('chat');
+  const [norms, setNorms] = useState<any | null>(null);
+  const [normsLoading, setNormsLoading] = useState(false);
+  const [normsErr, setNormsErr] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -163,6 +169,28 @@ export function AssistantWidget() {
     setLoading(false);
   }
 
+  // Module courant (segment d'URL après le tenant) -> normes ciblées.
+  const segsNow = (pathname || '').split('/').filter(Boolean);
+  const sysSegs = ['admin', 'api', 'login', 'scan', 'pricing', 'privacy', 'terms', 'confidentialite'];
+  const tenantSeg = sysSegs.includes(segsNow[0]) ? '' : (segsNow[0] || '');
+  const moduleKey = segsNow[1] || '';
+  const moduleLabel = scopeForModule(moduleKey).scope.label;
+
+  async function loadNorms() {
+    if (normsLoading) return;
+    setNormsLoading(true); setNormsErr(null);
+    try {
+      const res = await fetch('/api/norms', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module: moduleKey, tenant: tenantSeg, province: 'QC', query: input.trim() || undefined }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || j.error) throw new Error(j.error || 'Indisponible');
+      setNorms(j); setInput('');
+    } catch (e: any) { setNormsErr(e?.message || 'Indisponible'); }
+    finally { setNormsLoading(false); }
+  }
+
   if (!authed) return null;
 
   return (
@@ -183,13 +211,59 @@ export function AssistantWidget() {
 
       {open && (
         <div ref={panelRef} style={panelStyle()} className="fixed z-[60] flex h-[28rem] max-h-[calc(100vh-2rem)] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-          <div className="flex items-center gap-2 bg-[#0D1F3C] px-4 py-3 text-white">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
-            <div className="text-sm font-bold">Assistant C-Secur360</div>
-            <span className="ml-auto h-2 w-2 rounded-full bg-orange-500" aria-hidden />
+          <div className="bg-[#0D1F3C] px-4 py-2.5 text-white">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="C-Secur360" className="h-6 w-auto" />
+              <div className="text-sm font-bold">C-Secur360</div>
+              <span className="ml-auto h-2 w-2 rounded-full bg-orange-500" aria-hidden />
+            </div>
+            <div className="mt-2 flex gap-1">
+              <button onClick={() => setMode('chat')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'chat' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>💬 Assistant</button>
+              <button onClick={() => setMode('norms')} className={`rounded-md px-2.5 py-1 text-xs font-semibold ${mode === 'norms' ? 'bg-white text-[#0D1F3C]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}>📋 Normes à jour</button>
+            </div>
           </div>
 
+          {mode === 'norms' ? (
+            <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 text-xs text-gray-500">Module : <b className="text-gray-800">{moduleLabel}</b> · QC</div>
+                <button onClick={loadNorms} disabled={normsLoading} className="shrink-0 rounded-lg bg-[#0D1F3C] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#16294a] disabled:opacity-50">{normsLoading ? '…' : 'Mettre à jour'}</button>
+              </div>
+              {!norms && !normsLoading && !normsErr && (
+                <p className="text-gray-600">Obtenez les <b>normes et la législation en vigueur</b> pour ce module (recherche web sur sources officielles : CNESST, LégisQuébec, CSA, IEEE…). Vous pouvez préciser une question ci-dessous avant de mettre à jour.</p>
+              )}
+              {normsErr && <p className="rounded-lg bg-red-50 p-2 text-red-600">{normsErr}</p>}
+              {normsLoading && <div className="text-xs text-gray-400">Recherche des normes en vigueur…</div>}
+              {norms && (
+                <>
+                  {norms.asOf && <div className="text-[10px] text-gray-400">À jour au {norms.asOf}</div>}
+                  {(norms.items || []).map((it: any, i: number) => (
+                    <div key={i} className="rounded-lg border border-gray-200 bg-white p-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {it.type && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-blue-700">{it.type}</span>}
+                        <span className="text-xs font-bold text-gray-900">{it.ref}</span>
+                      </div>
+                      {it.title && <div className="mt-0.5 text-xs font-semibold text-gray-700">{it.title}</div>}
+                      {it.summary && <p className="mt-0.5 text-xs text-gray-600">{it.summary}</p>}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-gray-400">
+                        {it.authority && <span>{it.authority}</span>}
+                        {it.lastUpdate && <span>· {it.lastUpdate}</span>}
+                        {it.url && <a href={it.url} target="_blank" rel="noreferrer" className="text-blue-600 underline">source officielle ↗</a>}
+                      </div>
+                    </div>
+                  ))}
+                  {Array.isArray(norms.keyObligations) && norms.keyObligations.length > 0 && (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
+                      <div className="text-[11px] font-bold text-emerald-800">Obligations clés</div>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-emerald-800">{norms.keyObligations.map((o: string, i: number) => <li key={i}>{o}</li>)}</ul>
+                    </div>
+                  )}
+                  {norms.disclaimer && <p className="text-[10px] leading-tight text-gray-400">⚠️ {norms.disclaimer}</p>}
+                </>
+              )}
+            </div>
+          ) : (
           <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-3 text-sm">
             {messages.length === 0 && (
               <div className="space-y-2">
@@ -211,17 +285,18 @@ export function AssistantWidget() {
             {loading && <div className="text-xs text-gray-400">L'assistant écrit…</div>}
             <div ref={endRef} />
           </div>
+          )}
 
-          <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-center gap-2 border-t border-gray-100 p-2">
+          <form onSubmit={(e) => { e.preventDefault(); if (mode === 'norms') loadNorms(); else send(input); }} className="flex items-center gap-2 border-t border-gray-100 p-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Votre question…"
+              placeholder={mode === 'norms' ? 'Préciser (facultatif) puis Entrée…' : 'Votre question…'}
               className="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
-            <button type="submit" disabled={loading || !input.trim()} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40">➤</button>
+            <button type="submit" disabled={mode === 'norms' ? normsLoading : (loading || !input.trim())} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40">➤</button>
           </form>
-          <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">Assistant informatif — ne voit aucune donnée réelle. Validez toute décision de sécurité avec votre responsable HSE/SST.</p>
+          <p className="px-3 pb-2 text-[10px] leading-tight text-gray-400">{mode === 'norms' ? 'Normes indicatives à jour au mieux de la recherche — la source officielle prévaut.' : 'Assistant informatif — ne voit aucune donnée réelle. Validez toute décision de sécurité avec votre responsable HSE/SST.'}</p>
         </div>
       )}
     </>
