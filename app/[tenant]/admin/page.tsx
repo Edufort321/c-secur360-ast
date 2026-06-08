@@ -5182,6 +5182,7 @@ function SitesDepts({ tenant, tr }: { tenant: string; tr: (f: string, e: string)
             <h2 className="font-bold">{tr('Sites / Départements', 'Sites / Departments')}</h2>
             <p className="text-xs text-gray-500">{tr('Hiérarchie : Site → Département', 'Hierarchy: Site → Department')}
               {Number.isFinite(maxSites) && <span className={`ml-2 font-semibold ${sites.length >= maxSites ? 'text-red-600' : 'text-gray-400'}`}>· {sites.length}/{maxSites} {tr('sites', 'sites')}</span>}
+              <span className="ml-2 font-semibold text-gray-400">· {depts.length} {tr('département(s)', 'department(s)')}</span>
             </p>
           </div>
           <div className="flex gap-2">
