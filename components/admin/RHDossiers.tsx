@@ -3,7 +3,7 @@
 // #73 — Hub RH « Dossier 360 » : agrège l'info existante (employé/éval/paie/sites) EN LECTURE
 // et ajoute ce qui manque (documents, certifications avec expiration, onboarding). Pas de doublon.
 import React, { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info } from 'lucide-react';
+import { Loader2, Plus, Trash2, Paperclip, FileText, Award, ClipboardList, AlertTriangle, ShieldCheck, BookOpen, ChevronDown, Info, UploadCloud, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { uploadReceipt } from '@/lib/transactions';
 
@@ -35,6 +35,9 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
   const [busy, setBusy] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [genDocs, setGenDocs] = useState<Doc[]>([]);
+  const [classifying, setClassifying] = useState(false);
+  const [review, setReview] = useState<any | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -50,9 +53,49 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
           .eq('tenant_id', tenant).order('created_at', { ascending: false }).limit(12);
         setIncidents((inc || []) as Incident[]);
       } catch { /* module accidents indisponible */ }
+      // Documents généraux (non rattachés à un employé).
+      try {
+        const { data: gd } = await supabase.from('hr_documents').select('*').eq('tenant_id', tenant).is('personnel_id', null).order('created_at', { ascending: false });
+        setGenDocs((gd || []) as Doc[]);
+      } catch { /* migration 142 non appliquée */ }
       setLoading(false);
     })();
   }, [tenant]);
+
+  // ── Dépôt + classement automatique par IA (type, catégorie, employé concerné, expiration) ──
+  const norm = (s: string) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  async function handleClassify(file: File) {
+    setClassifying(true); setReview(null);
+    try {
+      const url = await uploadReceipt(tenant, file);
+      const fd = new FormData(); fd.append('file', file); fd.append('tenant', tenant);
+      const resp = await fetch('/api/hr/classify', { method: 'POST', body: fd });
+      const raw = await resp.text();
+      let j: any = {};
+      try { j = raw ? JSON.parse(raw) : {}; } catch { throw new Error(raw.slice(0, 160) || `Erreur ${resp.status}`); }
+      if (!resp.ok || j.error) throw new Error(j.error || 'Classement impossible');
+      const c = j.classification || {};
+      // Rapprochement employé LOCAL (le roster n'est jamais envoyé à l'IA).
+      let matched = '';
+      if (c.personName && !c.isGeneral) {
+        const pn = norm(c.personName);
+        const hit = pers.find(p => norm(p.name) === pn) || pers.find(p => pn && (norm(p.name).includes(pn) || pn.includes(norm(p.name))));
+        if (hit) matched = hit.id;
+      }
+      setReview({ url, type: c.type || 'autre', category: c.category || 'autre', title: c.title || file.name, expiry_date: c.expiryDate || '', personnel_id: matched, personName: c.personName || '' });
+    } catch (e: any) { setReview({ error: e?.message || 'Erreur' }); }
+    finally { setClassifying(false); }
+  }
+  async function saveClassified() {
+    if (!review || review.error) return;
+    const payload: any = { tenant_id: tenant, personnel_id: review.personnel_id || null, type: review.type, category: review.category, name: review.title, url: review.url, expiry_date: review.expiry_date || null, classified_by: 'ia' };
+    const { data } = await supabase.from('hr_documents').insert(payload).select().single();
+    if (data) {
+      if (!payload.personnel_id) setGenDocs(p => [data as Doc, ...p]);
+      else if (sel && payload.personnel_id === sel.id) setDocs(p => [...p, data as Doc]);
+    }
+    setReview(null);
+  }
 
   async function openFiche(p: Pers) {
     setSel(p); setDocs([]); setCerts([]); setOnb([]);
@@ -109,6 +152,76 @@ export function RHDossiers({ tenant, tr }: { tenant: string; tr: (f: string, e: 
                 </a>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Dépôt centralisé + classement automatique par IA (employé concerné ou général) */}
+      <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-800/40 dark:bg-violet-900/10">
+        <h3 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-violet-800 dark:text-violet-300"><Sparkles size={15} /> {tr('Déposer un document — classement automatique', 'Drop a document — auto-filing')}</h3>
+        <p className="mb-3 text-[11px] text-violet-700/80 dark:text-violet-300/70">{tr('L’IA détecte le type, la catégorie, l’employé concerné et la date d’expiration, puis range le document dans le bon dossier (ou en général). Vous validez avant l’enregistrement.', 'AI detects type, category, the employee and expiry date, then files the document (or marks it general). You confirm before saving.')}</p>
+        <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-violet-300 bg-white px-4 py-4 text-sm font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-800 ${classifying ? 'pointer-events-none opacity-60' : ''}`}>
+          {classifying ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+          {classifying ? tr('Analyse en cours…', 'Analyzing…') : tr('Choisir un fichier (PDF ou image)', 'Pick a file (PDF or image)')}
+          <input type="file" accept="image/*,.pdf" className="hidden" disabled={classifying} onChange={e => { const f = e.target.files?.[0]; if (f) handleClassify(f); e.currentTarget.value = ''; }} />
+        </label>
+
+        {/* Carte de revue de la classification */}
+        {review && (
+          <div className="mt-3 rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800/40 dark:bg-gray-800">
+            {review.error ? (
+              <div className="flex items-center justify-between gap-2 text-sm text-red-600"><span><AlertTriangle size={14} className="mr-1 inline" />{review.error}</span><button onClick={() => setReview(null)}><X size={15} /></button></div>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-bold text-violet-700 dark:text-violet-300"><Sparkles size={12} className="mr-1 inline" />{tr('Classement proposé', 'Suggested filing')}</span>
+                  <button onClick={() => setReview(null)} className="text-gray-300 hover:text-red-500"><X size={15} /></button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="text-[10px] text-gray-400">{tr('Titre', 'Title')}<input className={`${inp} block w-full`} value={review.title} onChange={e => setReview({ ...review, title: e.target.value })} /></label>
+                  <label className="text-[10px] text-gray-400">{tr('Type', 'Type')}
+                    <select className={`${inp} block w-full`} value={review.type} onChange={e => setReview({ ...review, type: e.target.value })}>
+                      {['contrat', 'cv', 'certification', 'attestation', 'carte_competence', 'politique', 'formulaire', 'paie', 'evaluation', 'medical', 'autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-[10px] text-gray-400">{tr('Catégorie', 'Category')}
+                    <select className={`${inp} block w-full`} value={review.category} onChange={e => setReview({ ...review, category: e.target.value })}>
+                      {['SST', 'Loi25', 'paie', 'contrat', 'formation', 'administratif', 'autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-[10px] text-gray-400">{tr('Employé concerné', 'Employee')}
+                    <select className={`${inp} block w-full`} value={review.personnel_id} onChange={e => setReview({ ...review, personnel_id: e.target.value })}>
+                      <option value="">{tr('— Général (aucun employé) —', '— General (no employee) —')}</option>
+                      {pers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-[10px] text-gray-400">{tr('Expiration', 'Expiry')}<input type="date" className={`${inp} block w-full`} value={review.expiry_date || ''} onChange={e => setReview({ ...review, expiry_date: e.target.value })} /></label>
+                </div>
+                {review.personName && !review.personnel_id && <p className="mt-1 text-[10px] text-amber-600">{tr(`Nom détecté « ${review.personName} » non rapproché — choisissez l’employé ou laissez en général.`, `Detected name “${review.personName}” not matched — pick the employee or keep general.`)}</p>}
+                <div className="mt-2 flex justify-end gap-2">
+                  <a href={review.url} target="_blank" rel="noreferrer" className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:border-gray-600">{tr('Aperçu', 'Preview')}</a>
+                  <button onClick={saveClassified} className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700">{tr('Classer le document', 'File document')}</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Documents généraux */}
+        {genDocs.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-violet-700/70 dark:text-violet-300/60">{tr('Documents généraux', 'General documents')} ({genDocs.length})</div>
+            <div className="space-y-1">
+              {genDocs.map((d, i) => (
+                <div key={d.id || i} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 bg-white px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800">
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600 dark:bg-gray-700">{d.type}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-gray-800 dark:text-gray-100">{d.name}</span>
+                  {d.expiry_date && <span className="text-gray-400">{tr('exp.', 'exp.')} {d.expiry_date}</span>}
+                  {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="font-semibold text-emerald-600">📎</a>}
+                  <button onClick={async () => { if (d.id) await supabase.from('hr_documents').delete().eq('id', d.id); setGenDocs(p => p.filter((_, j) => j !== i)); }} className="text-gray-300 hover:text-red-500"><Trash2 size={12} /></button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
