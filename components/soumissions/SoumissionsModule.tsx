@@ -744,6 +744,27 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                           ))}
                         </div>
                       )}
+                      {/* Subsistance / Hébergement : taux du catalogue (extras) en clic rapide (comme le km du voyagement) */}
+                      {canEdit && c === 'subsistance' && cat?.extras && (
+                        <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-3 py-1.5 dark:border-gray-700">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{tr('Du catalogue', 'From catalogue')} :</span>
+                          {([['sub_h5', tr('Subsistance 5h', 'Per diem 5h')], ['sub_h12', tr('Subsistance 12h', 'Per diem 12h')], ['sub_h15', tr('Subsistance 15h', 'Per diem 15h')], ['sub_nuitee', tr('Subsistance nuitée', 'Per diem overnight')]] as const).filter(([k]) => Number((cat.extras as any)[k]) > 0).map(([k, label]) => (
+                            <button key={k} type="button" onClick={() => addCatalogueLigne(i, c, label, Number((cat.extras as any)[k]) || 0)}
+                              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                              + {label} ({mny(Number((cat.extras as any)[k]) || 0)})
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {canEdit && c === 'hebergement' && Number(cat?.extras?.hebergement) > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-3 py-1.5 dark:border-gray-700">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{tr('Du catalogue', 'From catalogue')} :</span>
+                          <button type="button" onClick={() => addCatalogueLigne(i, c, tr('Hébergement (nuit)', 'Lodging (night)'), Number(cat?.extras?.hebergement) || 0)}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            + {tr('Hébergement / nuit', 'Lodging / night')} ({mny(Number(cat?.extras?.hebergement) || 0)})
+                          </button>
+                        </div>
+                      )}
                       {lignes.length > 0 && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
