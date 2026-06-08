@@ -95,6 +95,17 @@ export function computeSoumissionHours(items: SoumissionItem[]): number {
   return r2(h);
 }
 
+/** Heures MO ventilées par statut : bureau vs chantier (pour le calculateur de ressources). */
+export function hoursByCategory(items: SoumissionItem[]): { bureau: number; chantier: number; total: number } {
+  let bureau = 0, chantier = 0;
+  for (const it of items || []) for (const l of it.lignes || []) {
+    const h = (Number(l.tech) || 1) * ((Number(l.reg) || 0) + (Number(l.supp) || 0) + (Number(l.maj) || 0));
+    if (l.categorie === 'mo_bureau') bureau += h;
+    else if (l.categorie === 'mo_chantier') chantier += h;
+  }
+  return { bureau: r2(bureau), chantier: r2(chantier), total: r2(bureau + chantier) };
+}
+
 /** Applique la MAJORATION (%) au total et ARRONDIT au dollar (prix de soumission « propre »). */
 export function applyMarkup(total: number, markupPct?: number): number {
   const m = Number(markupPct) || 0;

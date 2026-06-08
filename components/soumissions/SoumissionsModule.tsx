@@ -7,7 +7,7 @@ import {
   getCatalogues, saveCatalogue, deleteCatalogue, setPreferredCatalogue, getSoumissions, getSoumissionFull, saveSoumissionFull,
   reviseSoumission, accepterSoumission, genererFactureDepuisSoumission, deleteSoumission,
   genSoumissionNumero, siteInitials, computeLigneMontant, computeItemTotal, computeSoumissionTotal,
-  computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo,
+  computeSoumissionHours, applyMarkup, approvalForAmount, relanceInfo, hoursByCategory,
   getSoumissionStats, catLabel, CATEGORIE_LABELS, CATEGORIES_MO,
   type CatalogueTaux, type Soumission, type SoumissionItem, type SoumissionLigne, type Categorie, type SoumissionStats,
 } from '@/lib/soumissions';
@@ -33,6 +33,10 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [items, setItems] = useState<SoumissionItem[]>([]);
   const [clientName, setClientName] = useState('');
   const [listView, setListView] = useState<'grid' | 'gallery'>('grid'); // liste soumissions : grille (défaut) / galerie
+  // Calculateur de ressources : durée des travaux + couverture -> personnel/véhicules/subsistances.
+  const [planDays, setPlanDays] = useState(5);
+  const [planHoursPerDay, setPlanHoursPerDay] = useState(8); // 24 = couverture 24/24
+  const [planPerVehicle, setPlanPerVehicle] = useState(4);   // personnes par véhicule
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -685,6 +689,42 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
               </div>
             )}
           </div>
+          {/* ===== Calculateur intelligent de ressources ===== */}
+          {(() => {
+            const hc = hoursByCategory(items);
+            const cap = Math.max(1, (Number(planDays) || 1) * (Number(planHoursPerDay) || 1)); // h dispo / personne
+            const pplChantier = hc.chantier > 0 ? Math.ceil(hc.chantier / cap) : 0;
+            const pplBureau = hc.bureau > 0 ? Math.ceil(hc.bureau / cap) : 0;
+            const vehicules = pplChantier > 0 ? Math.ceil(pplChantier / Math.max(1, Number(planPerVehicle) || 1)) : 0;
+            const repasJours = pplChantier * (Number(planDays) || 0);   // subsistances (repas-jours)
+            const nuitees = pplChantier * (Number(planDays) || 0);      // hébergement (nuitées)
+            const Stat = ({ v, l, cls }: { v: any; l: string; cls?: string }) => (
+              <div className={`rounded-lg p-2 text-center ${cls || 'bg-slate-50 dark:bg-slate-900/30'}`}><div className="text-xl font-extrabold">{v}</div><div className="text-[10px] text-gray-500">{l}</div></div>
+            );
+            return (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-800 dark:bg-indigo-900/10">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">🧮 {tr('Calculateur de ressources', 'Resource calculator')}</div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="text-xs font-semibold text-gray-500">{tr('Durée (jours)', 'Duration (days)')}<input type="number" min={1} value={planDays} onChange={e => setPlanDays(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <label className="text-xs font-semibold text-gray-500">{tr('Heures / jour', 'Hours / day')}<input type="number" min={1} max={24} value={planHoursPerDay} onChange={e => setPlanHoursPerDay(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                  <button type="button" onClick={() => setPlanHoursPerDay(24)} className="rounded-lg border border-indigo-200 px-2 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800">24/24</button>
+                  <button type="button" onClick={() => setPlanHoursPerDay(8)} className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 dark:border-gray-700">8 h</button>
+                  <label className="text-xs font-semibold text-gray-500">{tr('Pers. / véhicule', 'People / vehicle')}<input type="number" min={1} value={planPerVehicle} onChange={e => setPlanPerVehicle(Number(e.target.value) || 1)} className={`mt-1 w-20 ${inputCls}`} /></label>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                  <Stat v={`${hc.bureau} h`} l={tr('MO Bureau', 'Office labor')} cls="bg-blue-50 dark:bg-blue-900/20" />
+                  <Stat v={`${hc.chantier} h`} l={tr('MO Chantier', 'Field labor')} cls="bg-amber-50 dark:bg-amber-900/20" />
+                  <Stat v={pplBureau} l={tr('Pers. bureau', 'Office people')} cls="bg-blue-50 dark:bg-blue-900/20" />
+                  <Stat v={pplChantier} l={tr('Pers. chantier', 'Field people')} cls="bg-amber-50 dark:bg-amber-900/20" />
+                  <Stat v={vehicules} l={tr('Véhicules', 'Vehicles')} cls="bg-emerald-50 dark:bg-emerald-900/20" />
+                  <Stat v={repasJours} l={tr('Subsistances (repas-j)', 'Meals (per-day)')} cls="bg-purple-50 dark:bg-purple-900/20" />
+                  <Stat v={nuitees} l={tr('Hébergement (nuitées)', 'Lodging (nights)')} cls="bg-rose-50 dark:bg-rose-900/20" />
+                </div>
+                <p className="mt-2 text-[11px] text-gray-400">{tr('Calcul auto : personnes = heures ÷ (jours × heures/jour). Mets 24/24 pour une couverture continue. Utilise ces chiffres pour le voyagement, les subsistances et l’hébergement.', 'Auto: people = hours ÷ (days × hours/day). Use 24/24 for continuous coverage. Use these numbers for travel, meals and lodging.')}</p>
+              </div>
+            );
+          })()}
+
           <div className="flex justify-end gap-2">
             <button onClick={() => setView('list')} className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-700">{tr('Retour', 'Back')}</button>
             {canEdit && <button onClick={save} disabled={saving} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40">{saving ? <Loader2 size={15} className="inline animate-spin" /> : tr('Enregistrer', 'Save')}</button>}
