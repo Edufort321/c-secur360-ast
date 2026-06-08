@@ -41,6 +41,7 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [planPerVehicle, setPlanPerVehicle] = useState(4);   // personnes par véhicule
   const [inclBureau, setInclBureau] = useState(true);        // inclure MO Bureau dans le calcul ressources
   const [inclChantier, setInclChantier] = useState(true);    // inclure MO Chantier dans le calcul ressources
+  const [tab, setTab] = useState<'sommaire' | number>('sommaire'); // navigation édition : Sommaire ou item #i
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -592,7 +593,17 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             ))}
           </datalist>
 
-          {/* ===== EN HAUT : mini-dashboard global + majoration + calculateur de ressources ===== */}
+          {/* Navigation : Sommaire + un onglet par item + « + Item » (chaque item = sa page) */}
+          <div className="flex flex-wrap items-center gap-1 overflow-x-auto border-b border-gray-200 pb-2 dark:border-gray-700">
+            <button type="button" onClick={() => setTab('sommaire')} className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === 'sommaire' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>📋 {tr('Sommaire', 'Summary')}</button>
+            {items.map((it, i) => (
+              <button key={i} type="button" onClick={() => setTab(i)} className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold ${tab === i ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{it.name || `Item ${i + 1}`}</button>
+            ))}
+            {canEdit && <button type="button" onClick={() => { const ni = items.length; addItem(); setTab(ni); }} className="shrink-0 rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800">+ {tr('Item', 'Item')}</button>}
+          </div>
+
+          {tab === 'sommaire' && (<>
+          {/* ===== SOMMAIRE : mini-dashboard global + majoration + calculateur de ressources ===== */}
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-900/20"><div className="text-xl font-bold text-blue-700 dark:text-blue-300">{editHours || 0}</div><div className="text-[10px] text-blue-600/80">{tr('heures MO', 'labor hours')}</div></div>
@@ -657,7 +668,44 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
             );
           })()}
 
+          {/* SOMMAIRE GLOBAL PAR ITEM : toutes les colonnes ; une colonne vide = 0 $ */}
+          <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <table className="w-full text-xs">
+              <thead><tr className="border-b border-gray-100 text-left text-gray-500 dark:border-gray-700">
+                <th className="px-3 py-2">{tr('Item', 'Item')}</th>
+                {CATS.map(c => <th key={c} className="px-2 text-right">{catLabel(cat, c === 'voyagement' ? 'km' : c, CATEGORIE_LABELS[c])}</th>)}
+                <th className="px-2 text-right">{tr('Heures', 'Hours')}</th>
+                <th className="px-3 text-right">{tr('Total', 'Total')}</th>
+              </tr></thead>
+              <tbody>
+                {items.map((it, i) => {
+                  const ih = hoursByCategory([it]);
+                  const catTotal = (c: Categorie) => (it.lignes || []).filter(l => l.categorie === c).reduce((s, l) => s + computeLigneMontant(l, cat), 0);
+                  return (
+                    <tr key={i} onClick={() => setTab(i)} className="cursor-pointer border-t border-gray-50 hover:bg-blue-50/50 dark:border-gray-700/50 dark:hover:bg-blue-900/10">
+                      <td className="px-3 py-2 font-semibold text-blue-600">{it.name || `Item ${i + 1}`}</td>
+                      {CATS.map(c => <td key={c} className="px-2 text-right">{mny(catTotal(c))}</td>)}
+                      <td className="px-2 text-right">{ih.total} h</td>
+                      <td className="px-3 text-right font-bold">{mny(computeItemTotal(it, cat))}</td>
+                    </tr>
+                  );
+                })}
+                {items.length === 0 && <tr><td colSpan={CATS.length + 3} className="px-3 py-6 text-center text-gray-400">{tr('Aucun item. Clique « + Item ».', 'No item. Click "+ Item".')}</td></tr>}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-600">
+                  <td className="px-3 py-2">{tr('Total', 'Total')}</td>
+                  {CATS.map(c => <td key={c} className="px-2 text-right">{mny(items.reduce((s, it) => s + (it.lignes || []).filter(l => l.categorie === c).reduce((ss, l) => ss + computeLigneMontant(l, cat), 0), 0))}</td>)}
+                  <td className="px-2 text-right">{editHours} h</td>
+                  <td className="px-3 text-right text-emerald-700 dark:text-emerald-300">{mny(rawTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          </>)}
+
           {items.map((it, i) => {
+            if (tab !== i) return null; // navigation : on n'affiche que l'item de l'onglet actif
             const ih = hoursByCategory([it]); // heures de CET item (gestion séparée Bureau/Chantier)
             return (
             <div key={i} className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
