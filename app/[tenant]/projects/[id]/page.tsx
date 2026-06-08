@@ -272,7 +272,6 @@ export default function ProjectDetailPage() {
                   <Field label={tr('Titre', 'Title')}><input className="inp" value={p.title || ''} onChange={e => set('title', e.target.value)} /></Field>
                   <Field label={tr('Client', 'Client')}><input className="inp" value={p.client_name || ''} onChange={e => set('client_name', e.target.value)} /></Field>
                   <Field label={tr('Lieu', 'Location')}><input className="inp" value={p.location || ''} onChange={e => set('location', e.target.value)} /></Field>
-                  <Field label={tr('N° dossier', 'File #')}><input className="inp" value={p.dossier || ''} onChange={e => set('dossier', e.target.value)} /></Field>
                   <Field label={tr('N° soumission', 'Quote #')}><input className="inp" value={p.submission_number || ''} onChange={e => set('submission_number', e.target.value)} /></Field>
                   <Field label={tr('N° bon de commande', 'PO #')}><input className="inp" value={p.po_number || ''} onChange={e => set('po_number', e.target.value)} /></Field>
                   <Field label={tr('Montant BC ($)', 'PO amount ($)')}><input type="number" className="inp" value={p.po_amount ?? ''} onChange={e => set('po_amount', e.target.value)} /></Field>

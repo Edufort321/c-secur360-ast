@@ -406,6 +406,8 @@ export async function accepterSoumission(tenant: string, soumissionId: string): 
     // 'vente' = vente conclue -> declenche la commission du/des vendeur(s) (lib/commission.ts)
     status: 'vente', primary_seller_id: s.seller_id || (s.sellers_split?.[0]?.seller_id) || null,
     sellers_split: Array.isArray(s.sellers_split) && s.sellers_split.length ? s.sellers_split : null,
+    // Date de soumission (transmission, sinon création) -> suit dans le projet.
+    date_submission: s.sent_at ? String(s.sent_at).slice(0, 10) : (s.created_at ? String(s.created_at).slice(0, 10) : null),
     global_price: s.total, po_amount: s.total, estimate, updated_at: new Date().toISOString(),
   };
   // Upsert tolérant : si une colonne récente manque (ex. sellers_split avant migration 140), on la retire.

@@ -648,6 +648,9 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
                   </div>
                 )}
               </label>
+              <label className="text-xs font-semibold text-gray-500 sm:col-span-2">{tr('Titre / Nom du mandat', 'Title / Mandate name')}
+                <input value={hdr.client_snapshot?.projet || ''} onChange={e => setHdr(h => ({ ...h, client_snapshot: { ...(h.client_snapshot || {}), projet: e.target.value } }))} placeholder={tr('Ex. Arrêt planifié 2026 (sinon le n° de soumission)', 'e.g. Planned shutdown 2026 (else the quote #)')} className={`mt-1 w-full ${inputCls}`} />
+              </label>
               <label className="text-xs font-semibold text-gray-500">{tr('Année', 'Year')}<input type="number" value={hdr.year || nowYear} onChange={e => setHdr(h => ({ ...h, year: Number(e.target.value) }))} className={`mt-1 w-full ${inputCls}`} /></label>
               <label className="text-xs font-semibold text-gray-500">{tr('Catalogue de taux', 'Rate catalogue')}
                 <select value={hdr.catalogue_id || ''} onChange={e => setHdr(h => ({ ...h, catalogue_id: e.target.value || null }))} className={`mt-1 w-full ${inputCls}`}>
