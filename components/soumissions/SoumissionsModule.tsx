@@ -42,6 +42,11 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   const [inclBureau, setInclBureau] = useState(true);        // inclure MO Bureau dans le calcul ressources
   const [inclChantier, setInclChantier] = useState(true);    // inclure MO Chantier dans le calcul ressources
   const [tab, setTab] = useState<'sommaire' | number>('sommaire'); // navigation édition : Sommaire ou item #i
+  // Cascade Site -> Département (Administration) pour le PRÉFIXE du numéro (1re lettre de chaque niveau).
+  const [sitesTree, setSitesTree] = useState<any[]>([]);
+  const [companyLetter, setCompanyLetter] = useState('X'); // 1re lettre du tenant
+  const [selSiteId, setSelSiteId] = useState('');
+  const [selDeptId, setSelDeptId] = useState('');
   // Recherche dynamique des clients existants (admin/clients) — comme le planner.
   const [clientSuggestions, setClientSuggestions] = useState<any[]>([]);
   const [clientSearching, setClientSearching] = useState(false);
@@ -117,24 +122,26 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
         const { data: p } = await supabase.from('planner_personnel').select('id, succursale, current_grid_id').eq('tenant_id', tenant).ilike('email', user.email).maybeSingle();
         if (p?.id) { setSellerId(p.id); setMeId(p.id); }
         const tLetter = firstAlpha(companyName);
+        setCompanyLetter(tLetter);
         // Hierarchie des sites (Administration) : on resout le SITE et le DEPARTEMENT du poste de l'utilisateur.
         let siteName = '', deptName = '';
         try {
-          const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant);
+          const { data: sucs } = await supabase.from('planner_succursales').select('id, name, parent_id').eq('tenant_id', tenant).order('name');
           const list = sucs || [];
+          setSitesTree(list); // alimente le selecteur cascade Site -> Departement
           const byId = new Map(list.map((x: any) => [x.id, x]));
           const norm = (v: string) => String(v || '').trim().toLowerCase();
           const mine = list.find((x: any) => norm(x.name) === norm(p?.succursale || '')) // correspondance exacte
             || list.find((x: any) => p?.succursale && norm(p.succursale).includes(norm(x.name)) && x.parent_id); // dept inclus dans la chaine
           if (mine) {
-            if (mine.parent_id && byId.get(mine.parent_id)) { siteName = byId.get(mine.parent_id).name; deptName = mine.name; }
-            else { siteName = mine.name; } // c'est un site sans departement
+            if (mine.parent_id && byId.get(mine.parent_id)) { siteName = byId.get(mine.parent_id).name; deptName = mine.name; setSelSiteId(mine.parent_id); setSelDeptId(mine.id); }
+            else { siteName = mine.name; setSelSiteId(mine.id); } // c'est un site sans departement
           }
         } catch { /* admin indisponible */ }
         // Repli : si rien via l'admin, on decoupe la chaine succursale (« Sherbrooke Bourque »).
         if (!siteName) { const w = String(p?.succursale || '').normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean); siteName = w[0] || tenant; deptName = w[1] || ''; }
         const px = (tLetter + firstAlpha(siteName) + (deptName ? firstAlpha(deptName) : ''));
-        setSitePrefix(px.length >= 2 ? px : ((px + 'XX').slice(0, 2)) || 'XX');
+        setSitePrefix(px || 'XX'); // pas de longueur max
         // Montant max que CE poste peut approuver (colonne approval_max_amount sur la grille — facultative).
         if (p?.current_grid_id) {
           try { const { data: g } = await supabase.from('poste_salary_grids').select('approval_max_amount').eq('id', p.current_grid_id).maybeSingle(); if (g && (g as any).approval_max_amount != null) setMeApprovalMax(Number((g as any).approval_max_amount) || 0); } catch { /* colonne absente */ }
@@ -205,6 +212,20 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
   }));
   const updLigne = (i: number, li: number, patch: Partial<SoumissionLigne>) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.map((l, k) => k === li ? { ...l, ...patch } : l) } : it));
   const delLigne = (i: number, li: number) => setItems(p => p.map((it, j) => j === i ? { ...it, lignes: it.lignes.filter((_, k) => k !== li) } : it));
+
+  // ── Préfixe du numéro = 1re lettre de chaque sélection (tenant + site + département), sans longueur max ──
+  const firstAlpha = (s: string) => (String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '')[0] || '').toUpperCase();
+  const siteNameOf = (id: string) => sitesTree.find((x: any) => x.id === id)?.name || '';
+  const sitesOnly = sitesTree.filter((x: any) => !x.parent_id);
+  const deptsOf = (siteId: string) => sitesTree.filter((x: any) => x.parent_id === siteId);
+  const prefixFromSel = (siteId: string, deptId: string) => (companyLetter + firstAlpha(siteNameOf(siteId)) + (deptId ? firstAlpha(siteNameOf(deptId)) : '')) || 'XX';
+  // Change Site/Département -> recalcule le préfixe et régénère le numéro (brouillon non transféré).
+  const applySiteDept = async (siteId: string, deptId: string) => {
+    setSelSiteId(siteId); setSelDeptId(deptId);
+    const px = prefixFromSel(siteId, deptId);
+    setSitePrefix(px);
+    if (!hdr.project_id) { try { const num = await genSoumissionNumero(tenant, px); setHdr(h => ({ ...h, numero: num })); } catch { /* ignore */ } }
+  };
 
   async function saveCat() {
     if (!catForm) return;
@@ -566,6 +587,22 @@ export function SoumissionsModule({ tenant, tr, canEdit, allowed = ['liste', 'ca
           <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <div className="grid gap-3 sm:grid-cols-4">
               <label className="text-xs font-semibold text-gray-500">{tr('N° soumission', 'Quote #')}<input value={hdr.numero} onChange={e => setHdr(h => ({ ...h, numero: e.target.value }))} className={`mt-1 w-full ${inputCls}`} /></label>
+              {sitesOnly.length > 0 && (
+                <label className="text-xs font-semibold text-gray-500">{tr('Site (préfixe n°)', 'Site (number prefix)')}
+                  <select value={selSiteId} onChange={e => applySiteDept(e.target.value, '')} className={`mt-1 w-full ${inputCls}`}>
+                    <option value="">{tr('— Site —', '— Site —')}</option>
+                    {sitesOnly.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </label>
+              )}
+              {selSiteId && deptsOf(selSiteId).length > 0 && (
+                <label className="text-xs font-semibold text-gray-500">{tr('Département', 'Department')}
+                  <select value={selDeptId} onChange={e => applySiteDept(selSiteId, e.target.value)} className={`mt-1 w-full ${inputCls}`}>
+                    <option value="">{tr('— Aucun —', '— None —')}</option>
+                    {deptsOf(selSiteId).map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </label>
+              )}
               <label className="relative text-xs font-semibold text-gray-500 sm:col-span-2">
                 {tr('Client', 'Client')}{clientSearching && <span className="ml-2 font-normal text-gray-400">{tr('Recherche…', 'Searching…')}</span>}
                 <input value={clientName}
