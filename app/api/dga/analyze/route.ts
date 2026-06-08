@@ -82,7 +82,9 @@ export async function POST(req: NextRequest) {
 
   const isOltc = !!(dossier.extra?.is_oltc);
   const oilType = dossier.oil_type || dossier.extra?.oil_type || null;
-  const userMsg = `Équipement : ${JSON.stringify({ ident: dossier.ident, client: dossier.client, serie: dossier.serie, kv: dossier.kv, mva: dossier.mva, oil_type: oilType, manufacturer: dossier.manufacturer, year: dossier.year, is_oltc: isOltc })}
+  // Loi 25 — minimisation : on n'envoie AUCUN identifiant de client à l'IA (nom client retiré).
+  // Seules les caractéristiques techniques de l'équipement sont transmises.
+  const userMsg = `Équipement : ${JSON.stringify({ ident: dossier.ident, serie: dossier.serie, kv: dossier.kv, mva: dossier.mva, oil_type: oilType, manufacturer: dossier.manufacturer, year: dossier.year, is_oltc: isOltc })}
 ${isOltc ? 'TYPE = CHANGEUR DE PRISES EN CHARGE (OLTC) : applique IMPÉRATIVEMENT la grille OLTC (C57.139/CIGRE 443), PAS les seuils de cuve. L\'arc de commutation est normal ; juge par ratios/tendance/coking.\n' : 'TYPE = CUVE PRINCIPALE.\n'}Type d'huile = ${oilType || 'non précisé'} : adapte les seuils et l'interprétation à ce fluide (esters/silicone ≠ minérale).
 Historique des mesures (ancien -> récent) : ${JSON.stringify(measures)}
 Analyse l'évolution et donne ton diagnostic expert.`;

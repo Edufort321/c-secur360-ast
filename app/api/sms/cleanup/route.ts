@@ -124,6 +124,38 @@ export async function GET(request: NextRequest) {
         errorCount++;
       }
 
+      // 4. Loi 25 — purge des SESSIONS expirées depuis > 30 jours (IP + user-agent ne doivent pas trainer).
+      try {
+        const sessionCutoff = new Date();
+        sessionCutoff.setDate(sessionCutoff.getDate() - 30);
+        const { error: sessErr } = await supabase
+          .from('auth_sessions')
+          .delete()
+          .lt('expires_at', sessionCutoff.toISOString());
+        if (sessErr) { errors.push(`Auth sessions cleanup error: ${sessErr.message}`); errorCount++; }
+      } catch (e) { errors.push(`Auth sessions cleanup error: ${e instanceof Error ? e.message : 'unknown'}`); errorCount++; }
+
+      // 5. Loi 25 — minimisation : anonymise les DÉMOS verrouillées depuis > 90 jours
+      //    (la finalité « essai » est expirée). On garde la ligne (compteurs) mais on efface les DP.
+      try {
+        const demoCutoff = new Date();
+        demoCutoff.setDate(demoCutoff.getDate() - 90);
+        const { data: oldDemos } = await supabase
+          .from('demo_sessions')
+          .select('id')
+          .eq('status', 'locked')
+          .lt('session_expires_at', demoCutoff.toISOString())
+          .not('email', 'like', 'anon-%')
+          .limit(500);
+        for (const d of (oldDemos || [])) {
+          const { error: anonErr } = await supabase
+            .from('demo_sessions')
+            .update({ email: `anon-${d.id}`, name: null, phone: null, contact_notes: null })
+            .eq('id', d.id);
+          if (anonErr) { errors.push(`Demo anonymize error: ${anonErr.message}`); errorCount++; break; }
+        }
+      } catch (e) { errors.push(`Demo anonymize error: ${e instanceof Error ? e.message : 'unknown'}`); errorCount++; }
+
       await auditHelpers.config('sms_cleanup_complete', {
         deletedCount,
         errorCount,
